@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionAutoPostRuleRepository', () => {
   beforeEach(async () => {
@@ -19,8 +19,8 @@ describe('TransactionAutoPostRuleRepository', () => {
         conditions: [],
         actions: {
           disposition: 'auto_post',
-          sourceAccountId: 'acc-1',
-          categoryAccountId: 'acc-2',
+          sourceAccountId: 'acc-1' as AccountId,
+          categoryAccountId: 'acc-2' as AccountId,
         },
         isActive: true,
         priority: 150,

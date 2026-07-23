@@ -18,7 +18,6 @@ import { alert, confirm } from '@/src/utils/alerts';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { checkBackendSupport } from 'react-native-litert-lm';
 import { nativeAIProvider } from '../services/NativeAIProvider';
 
 const TEST_TRANSCRIPTS = [

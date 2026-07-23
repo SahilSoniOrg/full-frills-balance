@@ -1,8 +1,7 @@
-const noop = () => {};
 const mockProxy: any = new Proxy(
   {},
   {
-    get: (target, prop) => {
+    get: (_target, _prop) => {
       // Return a function that returns the proxy to allow chaining of method calls/accesses without throwing.
       return () => mockProxy;
     },

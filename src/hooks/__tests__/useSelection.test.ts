@@ -22,7 +22,7 @@ describe('useSelection', () => {
       .spyOn(BackHandler, 'addEventListener')
       .mockImplementation((event, callback) => {
         if (event === 'hardwareBackPress') {
-          backPressListeners.push(callback);
+          backPressListeners.push(callback as () => boolean);
         }
         return {
           remove: jest.fn(() => {

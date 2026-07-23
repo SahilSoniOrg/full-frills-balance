@@ -488,7 +488,7 @@ describe('JournalRepository', () => {
       });
 
       // 4. Update the journal to use account C instead of expenseAccountId
-      const updated = await journalService.updateJournal(
+      await journalService.updateJournal(
         journal.id as JournalId,
         {
           description: 'Reactive test',

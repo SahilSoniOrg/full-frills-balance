@@ -153,6 +153,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     const loadRule = async () => {
       try {
         const rule = await transactionAutoPostRuleRepository.find(id);
+        if (!rule) return;
         const conditions = parseConditions(rule);
         const actions = parseActions(rule);
         const structured = conditions.length > 0;
