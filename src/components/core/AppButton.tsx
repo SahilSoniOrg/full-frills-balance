@@ -124,6 +124,35 @@ export function AppButton({
     };
   }, [theme, variant, size, disabled, style, fonts, getVariantColors]);
 
+  const isTextContent = (node: React.ReactNode): boolean => {
+    if (typeof node === 'string' || typeof node === 'number') return true;
+    if (Array.isArray(node)) {
+      return node.every(
+        child =>
+          child === null ||
+          child === undefined ||
+          typeof child === 'boolean' ||
+          isTextContent(child),
+      );
+    }
+    return false;
+  };
+
+  const renderChildren = () => {
+    if (loading) {
+      return <ActivityIndicator size="small" color={finalTextColor} />;
+    }
+    if (isTextContent(children)) {
+      return <AppText style={textCombinedStyle}>{children}</AppText>;
+    }
+    return React.Children.map(children, child => {
+      if (typeof child === 'string' || typeof child === 'number') {
+        return <AppText style={textCombinedStyle}>{child}</AppText>;
+      }
+      return child;
+    });
+  };
+
   return (
     <TouchableOpacity
       style={buttonCombinedStyle}
@@ -134,13 +163,7 @@ export function AppButton({
       accessibilityState={{ disabled: disabled || loading }}
       {...props}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={finalTextColor} />
-      ) : typeof children === 'string' ? (
-        <AppText style={textCombinedStyle}>{children}</AppText>
-      ) : (
-        children
-      )}
+      {renderChildren()}
     </TouchableOpacity>
   );
 }

@@ -7,6 +7,16 @@ describe('AppButton', () => {
     expect(screen.getByText('Click Me')).toBeTruthy();
   });
 
+  it('renders with JSX interpolated array of text children', () => {
+    render(<AppButton onPress={() => {}}>🌿 {'Check in $0 Spend'}</AppButton>);
+    expect(screen.getByText('🌿 Check in $0 Spend')).toBeTruthy();
+  });
+
+  it('renders with numeric children wrapped in text', () => {
+    render(<AppButton onPress={() => {}}>{42}</AppButton>);
+    expect(screen.getByText('42')).toBeTruthy();
+  });
+
   it('calls onPress when pressed', () => {
     const onPressMock = jest.fn();
     render(<AppButton onPress={onPressMock}>Press</AppButton>);
