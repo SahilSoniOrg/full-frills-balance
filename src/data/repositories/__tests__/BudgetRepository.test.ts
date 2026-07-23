@@ -120,5 +120,48 @@ describe('BudgetRepository', () => {
       const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(updated?.assetAccountIds).toBe('');
     });
+
+    it('should fetch only active budgets for specified workplace', async () => {
+      const b1 = await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Active Budget',
+          amount: 500,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          active: true,
+        },
+        [accountId1 as AccountId],
+      );
+
+      await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Inactive Budget',
+          amount: 300,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          active: false,
+        },
+        [accountId1 as AccountId],
+      );
+
+      await budgetRepository.create(
+        'wp-2' as WorkplaceId,
+        {
+          name: 'Other Workplace Active Budget',
+          amount: 400,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          active: true,
+        },
+        [accountId1 as AccountId],
+      );
+
+      const activeBudgetsWp1 = await budgetRepository.fetchActive('wp-1' as WorkplaceId);
+      expect(activeBudgetsWp1).toHaveLength(1);
+      expect(activeBudgetsWp1[0].id).toBe(b1.id);
+      expect(activeBudgetsWp1[0].name).toBe('Active Budget');
+    });
   });
 });
