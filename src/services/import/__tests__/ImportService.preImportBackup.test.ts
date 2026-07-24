@@ -84,7 +84,11 @@ const mockPlugin: ImportPlugin = {
 
 describe('ImportService pre-import backup', () => {
   const workplaceId = 'wp-1' as WorkplaceId;
-  const context = { uri: 'file://x', name: 'x.json', rawBytes: new Uint8Array() } as ImportFileContext;
+  const context = {
+    uri: 'file://x',
+    name: 'x.json',
+    rawBytes: new Uint8Array(),
+  } as ImportFileContext;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -105,9 +109,7 @@ describe('ImportService pre-import backup', () => {
   });
 
   it('aborts import when backup fails and does not wipe', async () => {
-    (preImportBackupService.createBackup as jest.Mock).mockRejectedValue(
-      new Error('Disk full'),
-    );
+    (preImportBackupService.createBackup as jest.Mock).mockRejectedValue(new Error('Disk full'));
 
     await expect(importService.executeImport(mockPlugin, context, workplaceId)).rejects.toThrow(
       'Disk full',

@@ -455,12 +455,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const isAppCurrentlyLocked = useMemo(() => {
     const isActuallyBackgrounded = !session.isAppActive && !session.isLockAuthenticating;
     return isAppLockEnabled && (!session.isUnlocked || isActuallyBackgrounded);
-  }, [
-    isAppLockEnabled,
-    session.isUnlocked,
-    session.isAppActive,
-    session.isLockAuthenticating,
-  ]);
+  }, [isAppLockEnabled, session.isUnlocked, session.isAppActive, session.isLockAuthenticating]);
 
   const isAppReady = useMemo(
     () => session.isInitialized && session.fontsReady && session.loadedFontId === fontId,

@@ -56,9 +56,7 @@ describe('PreImportBackupService', () => {
     const result = await preImportBackupService.createBackup(workplaceId);
 
     expect(exportService.exportToJSON).toHaveBeenCalledWith(workplaceId, expect.any(Function));
-    expect(files.ensureDirectory).toHaveBeenCalledWith(
-      'file:///mock-documents/pre-import-backups',
-    );
+    expect(files.ensureDirectory).toHaveBeenCalledWith('file:///mock-documents/pre-import-backups');
     expect(files.writeContent).toHaveBeenCalledWith(
       expect.stringMatching(
         /file:\/\/\/mock-documents\/pre-import-backups\/pre-import-workplace-abc-.+\.zip$/,

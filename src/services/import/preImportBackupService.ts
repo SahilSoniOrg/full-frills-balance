@@ -8,9 +8,7 @@ import { logger } from '@/src/utils/logger';
 
 const PRE_IMPORT_BACKUP_DIR = 'pre-import-backups';
 
-export type PreImportBackupResult =
-  | { skipped: true; reason: 'empty_workplace' }
-  | { path: string };
+export type PreImportBackupResult = { skipped: true; reason: 'empty_workplace' } | { path: string };
 
 export class PreImportBackupService {
   async workplaceHasData(workplaceId: WorkplaceId): Promise<boolean> {
