@@ -114,8 +114,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     },
   } as any;
 
-  const simulate = async (overrides?: Partial<SimulationInput>) => {
-    const input: SimulationInput = {
+  const simulate = async (overrides?: Record<string, unknown>) => {
+    const input = {
       startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
       plannedPayments: [],
       plannedJournals: [],
@@ -128,7 +128,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       workplaceId: 'test-wp' as WorkplaceId,
       simulationDays: 60,
       ...overrides,
-    };
+    } as SimulationInput;
 
     // Mock metadata based on liabilityAccountBalances
     const metadataList = await Promise.all(
