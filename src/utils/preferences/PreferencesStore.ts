@@ -1,0 +1,464 @@
+import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { ShareFormat } from '@/src/types/sharing';
+import { logger } from '@/src/utils/logger';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { AppConfig } from '@/src/constants/app-config';
+import { migrateFromAsyncStorage, storage } from '../storage';
+import {
+  DEFAULT_UI_PREFERENCES,
+  LEGACY_PREFERENCE_KEYS,
+  PREFERENCES_KEY,
+  ThemeAppearance,
+  UIPreferences,
+} from './types';
+
+/**
+ * Single MMKV-backed preferences Implementation.
+ * Domain Modules (theme / AI / SMS / STS / privacy) write through this store.
+ */
+export class PreferencesStore {
+  private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
+  private legacyData: Record<string, any> = {};
+  private preferencesSubject = new BehaviorSubject<UIPreferences>(DEFAULT_UI_PREFERENCES);
+  private _loadPromise: Promise<UIPreferences> | null = null;
+
+  constructor() {
+    this.reloadFromStorage();
+  }
+
+  /**
+   * Returns the current preferences snapshot.
+   * Treat as immutable — mutations must go through update() / setters.
+   * Stable reference until the next preferences write (required by useSyncExternalStore).
+   */
+  getPreferences(): UIPreferences {
+    return this.preferences;
+  }
+
+  /** Alias for domain Modules that prefer store vocabulary. */
+  getSnapshot(): UIPreferences {
+    return this.preferences;
+  }
+
+  observeAll(): Observable<UIPreferences> {
+    return this.preferencesSubject.asObservable().pipe(distinctUntilChanged());
+  }
+
+  observe<K extends keyof UIPreferences>(key: K): Observable<UIPreferences[K]> {
+    return this.preferencesSubject.asObservable().pipe(
+      map(p => p[key]),
+      distinctUntilChanged(),
+    );
+  }
+
+  /** Sole write path for preferences mutations (including domain Modules). */
+  update(updates: Partial<UIPreferences>): void {
+    this.preferences = { ...this.preferences, ...this.sanitizePreferences(updates) };
+    this.preferencesSubject.next(this.preferences);
+    this.savePreferences();
+  }
+
+  private reloadFromStorage(): void {
+    try {
+      const stored = storage.getString(PREFERENCES_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (typeof parsed === 'object' && parsed !== null) {
+            LEGACY_PREFERENCE_KEYS.forEach(key => {
+              if (key in parsed) {
+                this.legacyData[key] = parsed[key];
+                delete parsed[key];
+              }
+            });
+
+            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
+            this.preferencesSubject.next(this.preferences);
+          }
+        } catch (parseError) {
+          logger.error('Failed to parse preferences, using defaults', { error: parseError });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to reload preferences from MMKV', { error });
+    }
+  }
+
+  private sanitizePreferences(input: Partial<UIPreferences>): Partial<UIPreferences> {
+    const sanitized: Partial<UIPreferences> = { ...input };
+
+    if (sanitized.theme && !['light', 'dark', 'system'].includes(sanitized.theme)) {
+      delete sanitized.theme;
+    }
+    if (sanitized.themeId && !Object.values(ThemeIds).includes(sanitized.themeId)) {
+      delete sanitized.themeId;
+    }
+    if (sanitized.fontId && !Object.values(FontIds).includes(sanitized.fontId)) {
+      delete sanitized.fontId;
+    }
+    if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
+      sanitized.dismissedPatternIds = [];
+    }
+    if (sanitized.safeToSpendDays && ![30, 60, 90].includes(sanitized.safeToSpendDays)) {
+      sanitized.safeToSpendDays = AppConfig.defaults.safeToSpendDays;
+    }
+    if (
+      sanitized.notificationCadence &&
+      !['none', 'daily', 'weekly'].includes(sanitized.notificationCadence)
+    ) {
+      delete sanitized.notificationCadence;
+    }
+    if (
+      sanitized.defaultShareFormat &&
+      !Object.values(ShareFormat).includes(sanitized.defaultShareFormat)
+    ) {
+      delete sanitized.defaultShareFormat;
+    }
+    if (
+      sanitized.notificationHour !== undefined &&
+      (typeof sanitized.notificationHour !== 'number' ||
+        sanitized.notificationHour < 0 ||
+        sanitized.notificationHour > 23)
+    ) {
+      delete sanitized.notificationHour;
+    }
+    if (
+      sanitized.notificationMinute !== undefined &&
+      (typeof sanitized.notificationMinute !== 'number' ||
+        sanitized.notificationMinute < 0 ||
+        sanitized.notificationMinute > 59)
+    ) {
+      delete sanitized.notificationMinute;
+    }
+    if (
+      sanitized.notificationWeekday !== undefined &&
+      (typeof sanitized.notificationWeekday !== 'number' ||
+        sanitized.notificationWeekday < 1 ||
+        sanitized.notificationWeekday > 7)
+    ) {
+      delete sanitized.notificationWeekday;
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * Initializes preferences. Performs one-time migration if needed.
+   * Promise is cached so concurrent callers share the same in-flight migration
+   * check and the storage layer is never hit twice during boot.
+   */
+  async loadPreferences(): Promise<UIPreferences> {
+    if (this._loadPromise) return this._loadPromise;
+
+    this._loadPromise = (async () => {
+      try {
+        const migrated = await migrateFromAsyncStorage();
+        if (migrated) {
+          this.reloadFromStorage();
+        }
+      } catch (error) {
+        logger.error('Failed to initialize preferences migration', { error });
+      }
+      return this.preferences;
+    })();
+
+    return this._loadPromise;
+  }
+
+  restorePreferences(data?: any): void {
+    const currentActiveId = this.preferences.activeWorkplaceId;
+
+    if (data && typeof data === 'object') {
+      LEGACY_PREFERENCE_KEYS.forEach(key => {
+        if (key in data) {
+          this.legacyData[key] = data[key];
+        }
+      });
+    }
+
+    this.preferences = {
+      ...DEFAULT_UI_PREFERENCES,
+      ...(data ? this.sanitizePreferences(data) : {}),
+    };
+
+    if (!this.preferences.activeWorkplaceId && currentActiveId) {
+      this.preferences.activeWorkplaceId = currentActiveId;
+    }
+
+    this.savePreferences();
+    this.preferencesSubject.next(this.preferences);
+  }
+
+  savePreferences(): void {
+    try {
+      const toStore = {
+        ...this.preferences,
+        ...this.legacyData,
+      };
+      storage.set(PREFERENCES_KEY, JSON.stringify(toStore));
+    } catch (error) {
+      logger.error('Failed to save preferences to MMKV', { error });
+    }
+  }
+
+  get onboardingCompleted(): boolean {
+    return this.preferences.onboardingCompleted;
+  }
+
+  setOnboardingCompleted(completed: boolean): void {
+    this.update({ onboardingCompleted: completed });
+  }
+
+  get userName(): string | undefined {
+    return this.preferences.userName;
+  }
+
+  setUserName(name: string): void {
+    this.update({ userName: name });
+  }
+
+  /** @internal */
+  get _legacyData(): Record<string, any> {
+    return this.legacyData;
+  }
+
+  /** @internal */
+  _save(): void {
+    this.savePreferences();
+  }
+
+  get lastSelectedAccountId(): string | undefined {
+    return this.preferences.lastSelectedAccountId;
+  }
+
+  setLastSelectedAccountId(accountId: AccountId | undefined): void {
+    this.update({ lastSelectedAccountId: accountId });
+  }
+
+  get lastDateRange(): { startDate: number; endDate: number } | undefined {
+    return this.preferences.lastDateRange;
+  }
+
+  setLastDateRange(range: { startDate: number; endDate: number } | undefined): void {
+    this.update({ lastDateRange: range });
+  }
+
+  get theme(): ThemeAppearance | undefined {
+    return this.preferences.theme;
+  }
+
+  setTheme(theme: ThemeAppearance): void {
+    this.update({ theme });
+  }
+
+  get themeId(): ThemeId | undefined {
+    return this.preferences.themeId;
+  }
+
+  setThemeId(themeId: ThemeId): void {
+    this.update({ themeId });
+  }
+
+  get fontId(): FontId | undefined {
+    return this.preferences.fontId;
+  }
+
+  setFontId(fontId: FontId): void {
+    this.update({ fontId });
+  }
+
+  get lastUsedSourceAccountId(): AccountId | undefined {
+    return this.preferences.lastUsedSourceAccountId;
+  }
+
+  setLastUsedSourceAccountId(accountId: AccountId | undefined): void {
+    this.update({ lastUsedSourceAccountId: accountId });
+  }
+
+  get lastUsedDestinationAccountId(): AccountId | undefined {
+    return this.preferences.lastUsedDestinationAccountId;
+  }
+
+  setLastUsedDestinationAccountId(accountId: AccountId | undefined): void {
+    this.update({ lastUsedDestinationAccountId: accountId });
+  }
+
+  get isPrivacyMode(): boolean {
+    return this.preferences.isPrivacyMode;
+  }
+
+  setIsPrivacyMode(isPrivacyMode: boolean): void {
+    this.update({ isPrivacyMode });
+  }
+
+  get isWidgetPrivacyEnabled(): boolean {
+    return this.preferences.isWidgetPrivacyEnabled;
+  }
+
+  setIsWidgetPrivacyEnabled(isEnabled: boolean): void {
+    this.update({ isWidgetPrivacyEnabled: isEnabled });
+  }
+
+  get isAppLockEnabled(): boolean {
+    return this.preferences.isAppLockEnabled;
+  }
+
+  setAppLockEnabled(isAppLockEnabled: boolean): void {
+    this.update({ isAppLockEnabled });
+  }
+
+  get showAccountMonthlyStats(): boolean {
+    return this.preferences.showAccountMonthlyStats;
+  }
+
+  setShowAccountMonthlyStats(show: boolean): void {
+    this.update({ showAccountMonthlyStats: show });
+  }
+
+  get advancedMode(): boolean {
+    return this.preferences.advancedMode;
+  }
+
+  setAdvancedMode(advancedMode: boolean): void {
+    this.update({ advancedMode });
+  }
+
+  get archetype(): string | undefined {
+    return this.preferences.archetype;
+  }
+
+  setArchetype(archetype: string): void {
+    this.update({ archetype });
+  }
+
+  get notificationCadence(): 'none' | 'daily' | 'weekly' {
+    return this.preferences.notificationCadence || 'none';
+  }
+
+  setNotificationCadence(cadence: 'none' | 'daily' | 'weekly'): void {
+    this.update({ notificationCadence: cadence });
+  }
+
+  get notificationHour(): number {
+    return this.preferences.notificationHour ?? 10;
+  }
+
+  setNotificationHour(hour: number): void {
+    this.update({ notificationHour: hour });
+  }
+
+  get notificationMinute(): number {
+    return this.preferences.notificationMinute ?? 0;
+  }
+
+  setNotificationMinute(minute: number): void {
+    this.update({ notificationMinute: minute });
+  }
+
+  get notificationWeekday(): number {
+    return this.preferences.notificationWeekday ?? 1;
+  }
+
+  setNotificationWeekday(weekday: number): void {
+    this.update({ notificationWeekday: weekday });
+  }
+
+  get isSmsImportEnabled(): boolean {
+    return this.preferences.isSmsImportEnabled ?? false;
+  }
+
+  setIsSmsImportEnabled(enabled: boolean): void {
+    this.update({ isSmsImportEnabled: enabled });
+  }
+
+  get isNativeAiEnabled(): boolean {
+    return this.preferences.isNativeAiEnabled ?? false;
+  }
+
+  setIsNativeAiEnabled(enabled: boolean): void {
+    this.update({ isNativeAiEnabled: enabled });
+  }
+
+  get preferredAiModelId(): string | undefined {
+    return this.preferences.preferredAiModelId;
+  }
+
+  setPreferredAiModelId(modelId: string): void {
+    this.update({ preferredAiModelId: modelId });
+  }
+
+  get aiInferenceMode(): 'single' | 'multi' {
+    return this.preferences.aiInferenceMode || 'multi';
+  }
+
+  setAiInferenceMode(mode: 'single' | 'multi'): void {
+    this.update({ aiInferenceMode: mode });
+  }
+
+  get defaultShareFormat(): ShareFormat {
+    return this.preferences.defaultShareFormat || ShareFormat.TEXT;
+  }
+
+  setDefaultShareFormat(format: ShareFormat): void {
+    this.update({ defaultShareFormat: format });
+  }
+
+  get safeToSpendDays(): number {
+    return this.preferences.safeToSpendDays ?? AppConfig.defaults.safeToSpendDays;
+  }
+
+  setSafeToSpendDays(days: number): void {
+    this.update({ safeToSpendDays: days });
+  }
+
+  get activeWorkplaceId(): WorkplaceId | undefined {
+    return this.preferences.activeWorkplaceId;
+  }
+
+  setActiveWorkplaceId(workplaceId?: WorkplaceId): void {
+    this.update({ activeWorkplaceId: workplaceId });
+  }
+
+  get dismissedPatternIds(): string[] {
+    return this.preferences.dismissedPatternIds;
+  }
+
+  get anonymizedId(): string | undefined {
+    return this.preferences.anonymizedId;
+  }
+
+  setAnonymizedId(id: string): void {
+    this.update({ anonymizedId: id });
+  }
+
+  dismissPattern(id: string): void {
+    const current = this.preferences.dismissedPatternIds;
+    if (!current.includes(id)) {
+      this.update({
+        dismissedPatternIds: [...current, id],
+      });
+    }
+  }
+
+  undismissPattern(id: string): void {
+    const current = this.preferences.dismissedPatternIds;
+    if (current.includes(id)) {
+      this.update({
+        dismissedPatternIds: current.filter(pId => pId !== id),
+      });
+    }
+  }
+
+  clearPreferences(): void {
+    this.preferences = { ...DEFAULT_UI_PREFERENCES };
+    this.legacyData = {};
+    this.preferencesSubject.next(this.preferences);
+    try {
+      storage.remove(PREFERENCES_KEY);
+    } catch (error) {
+      logger.warn('Failed to clear preferences from MMKV', { error });
+    }
+  }
+}

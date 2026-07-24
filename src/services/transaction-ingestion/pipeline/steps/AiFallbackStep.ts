@@ -37,7 +37,7 @@ export class AiFallbackStep implements PipelineStep {
       let timeoutOccurred = false;
       const aiParsed = await Promise.race([
         context.aiProvider.parse(context.transcript, aiContext, {
-          mode: preferences.aiInferenceMode,
+          mode: preferences.ai.aiInferenceMode,
         }),
         new Promise<null>(resolve =>
           setTimeout(() => {

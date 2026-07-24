@@ -102,7 +102,7 @@ export class InsightService {
         });
 
         trace.end();
-        const dismissedIds = preferences.dismissedPatternIds;
+        const dismissedIds = preferences.insights.dismissedPatternIds;
         if (onlyDismissed) {
           return finalPatterns.filter((p: Insight) => dismissedIds.includes(p.id));
         }
@@ -116,12 +116,12 @@ export class InsightService {
   }
 
   async dismissPattern(id: string): Promise<void> {
-    await preferences.dismissPattern(id);
+    await preferences.insights.dismissPattern(id);
     this.refreshTrigger.next(undefined);
   }
 
   async undismissPattern(id: string): Promise<void> {
-    await preferences.undismissPattern(id);
+    await preferences.insights.undismissPattern(id);
     this.refreshTrigger.next(undefined);
   }
 }

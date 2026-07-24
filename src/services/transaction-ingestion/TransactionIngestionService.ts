@@ -26,9 +26,9 @@ export class TransactionIngestionService {
   private getEffectiveAiProvider(): TransactionFallbackAIProvider {
     if (this.customAiProvider) return this.customAiProvider;
 
-    if (preferences.isNativeAiEnabled) {
+    if (preferences.ai.isNativeAiEnabled) {
       smallModelProvider.switchModel(
-        preferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
+        preferences.ai.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
       );
       return nativeAIProvider;
     }

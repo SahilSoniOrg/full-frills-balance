@@ -134,7 +134,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
         sharingService.init(),
         exchangeRateService.preWarmCache(defaultCurrencyCode),
         notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),
-        ...(Platform.OS === 'android' && preferences.isSmsImportEnabled && workplaceId
+        ...(Platform.OS === 'android' && preferences.sms.isSmsImportEnabled && workplaceId
           ? [
               import('@/src/services/sms-service').then(({ smsService }) =>
                 smsService.processUnprocessedSms(workplaceId),

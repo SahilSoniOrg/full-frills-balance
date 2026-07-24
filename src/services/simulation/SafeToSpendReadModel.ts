@@ -145,7 +145,7 @@ export class SafeToSpendReadModel {
       this.safeToSpendCache.clear();
     }
 
-    const obs = combineLatest([preferences.observe('safeToSpendDays')]).pipe(
+    const obs = combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([
           reactiveDataService.observeAccounts(workplaceId),
