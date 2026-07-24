@@ -6,7 +6,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
+import { observeDisplayTransactionsForAccounts } from '@/src/services/ledger/ledgerEnrichedDisplay';
 import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
@@ -174,7 +174,7 @@ export class BudgetReadService {
       switchMap(scopes => {
         if (scopes.length === 0) return of([]);
 
-        // Just extract the raw IDs mapped to the budget; ledgerReadService will resolve the leaves
+        // Just extract the raw IDs mapped to the budget; display observer resolves the leaves
         const rootAccountIds = scopes.map(s => s.account.id);
 
         let ref: number;
@@ -189,7 +189,7 @@ export class BudgetReadService {
           ref,
         );
 
-        return ledgerReadService.observeEnrichedForAccounts(
+        return observeDisplayTransactionsForAccounts(
           rootAccountIds,
           workplaceId,
           AppConfig.pagination.budgetDetailsTransactionsPageSize,

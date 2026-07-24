@@ -1,7 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import {
+  observeWorkplaceAccounts,
+  observeWorkplaceJournalMeta,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
@@ -28,8 +31,8 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
 
   const triggerObservable = useMemo(() => {
     return combineLatest([
-      accountRepository.observeAll(workplaceId),
-      journalRepository.observeStatusMeta(workplaceId), // Changed from transactionRepository to journalStatusMeta for performance
+      observeWorkplaceAccounts(workplaceId),
+      observeWorkplaceJournalMeta(workplaceId),
     ]).pipe(map(() => 0));
   }, [workplaceId]);
 

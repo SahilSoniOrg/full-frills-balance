@@ -2,7 +2,10 @@
 import './SmsExtractor';
 import './VoiceExtractor';
 
-export { ledgerReadService, LedgerReadService } from './ledgerReadService';
+export {
+  observeDisplayTransactionsForAccount,
+  observeDisplayTransactionsForAccounts,
+} from './ledgerEnrichedDisplay';
 export { ledgerWriteService, LedgerWriteService } from './ledgerWriteService';
 
 export type {

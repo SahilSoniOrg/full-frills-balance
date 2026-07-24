@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { DateRange, usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
+import { observeDisplayTransactionsForAccount } from '@/src/services/ledger/ledgerEnrichedDisplay';
 import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
@@ -12,7 +12,7 @@ export function useLedgerTransactionsForAccount(
 ) {
   const observe = useCallback(
     (limit: number, range?: DateRange) => {
-      return ledgerReadService.observeEnrichedForAccount(accountId, workplaceId, limit, range);
+      return observeDisplayTransactionsForAccount(accountId, workplaceId, limit, range);
     },
     [accountId, workplaceId],
   );

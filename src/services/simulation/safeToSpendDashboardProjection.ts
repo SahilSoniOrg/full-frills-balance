@@ -169,7 +169,8 @@ export function assembleSafeToSpendDashboard(input: {
     totalLiquidAssets,
     currencyCode: defaultCurrencyCode,
     liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-    dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
+    dailyBudgetBurn:
+      safeToSpendDays > 0 ? runResult.report.budget.currentMonthRemaining / safeToSpendDays : 0,
     projection: {
       history: historyPoints,
       projection: projectionPoints,

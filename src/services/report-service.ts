@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -131,15 +131,11 @@ export class ReportService {
     targetCurrency?: string,
     accountIds?: AccountId[],
   ): Observable<ExpenseCategory[]> {
-    return journalRepository
-      .observeStatusMeta(workplaceId)
-      .pipe(
-        switchMap(() =>
-          from(
-            this.getExpenseBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds),
-          ),
-        ),
-      );
+    return observeWorkplaceJournalMeta(workplaceId).pipe(
+      switchMap(() =>
+        from(this.getExpenseBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds)),
+      ),
+    );
   }
 
   /**
@@ -152,15 +148,11 @@ export class ReportService {
     targetCurrency?: string,
     accountIds?: string[],
   ): Observable<ExpenseCategory[]> {
-    return journalRepository
-      .observeStatusMeta(workplaceId)
-      .pipe(
-        switchMap(() =>
-          from(
-            this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds),
-          ),
-        ),
-      );
+    return observeWorkplaceJournalMeta(workplaceId).pipe(
+      switchMap(() =>
+        from(this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds)),
+      ),
+    );
   }
 
   private async getBreakdownInternal(
@@ -627,21 +619,13 @@ export class ReportService {
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Observable<ReportSnapshot> {
-    return journalRepository
-      .observeStatusMeta(workplaceId)
-      .pipe(
-        switchMap(() =>
-          from(
-            this.getReportSnapshot(
-              workplaceId,
-              startDate,
-              endDate,
-              targetCurrency,
-              filterAccountIds,
-            ),
-          ),
+    return observeWorkplaceJournalMeta(workplaceId).pipe(
+      switchMap(() =>
+        from(
+          this.getReportSnapshot(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
         ),
-      );
+      ),
+    );
   }
 
   private async getReportAccounts(
