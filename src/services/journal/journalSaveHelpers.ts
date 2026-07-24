@@ -1,7 +1,8 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { database } from '@/src/data/database/Database';
-import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
+import { checkJournal } from '@/src/services/accounting/BalanceEffects';
+import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { JournalEntryLine, WorkplaceId } from '@/src/types/domain';
 import { sanitizeAmount } from '@/src/utils/validation';
@@ -43,9 +44,7 @@ export function validateJournalEntryStructure(params: {
     return { success: false, error: 'All lines must have an account' };
   }
 
-  const distinctValidation = accountingService.validateDistinctAccounts(
-    params.lines.map(l => l.accountId),
-  );
+  const distinctValidation = validateDistinctAccounts(params.lines.map(l => l.accountId));
   if (!distinctValidation.isValid) {
     return { success: false, error: 'A journal entry must involve at least 2 distinct accounts' };
   }
@@ -83,7 +82,7 @@ export function validateJournalEntryBalance(
     accountCurrency: line.accountCurrency,
   }));
 
-  const balanceValidation = accountingService.validateJournal(domainLines);
+  const balanceValidation = checkJournal(domainLines);
   if (!balanceValidation.isValid) {
     return {
       success: false,
@@ -94,7 +93,9 @@ export function validateJournalEntryBalance(
   return null;
 }
 
-export function mapLinesToCreateTransactions(lines: JournalEntryLine[]): CreateJournalData['transactions'] {
+export function mapLinesToCreateTransactions(
+  lines: JournalEntryLine[],
+): CreateJournalData['transactions'] {
   return lines.map(l => ({
     accountId: l.accountId,
     amount: sanitizeAmount(l.amount) || 0,
