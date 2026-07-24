@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 
 /**
  * Maps an EnrichedJournal model to props compatible with TransactionCard

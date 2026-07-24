@@ -6,7 +6,7 @@ import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
 
 export interface PreparedJournalData {

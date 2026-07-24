@@ -15,7 +15,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { BudgetId, DisplayTransaction, JournalDisplayType, PlainBudget } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';

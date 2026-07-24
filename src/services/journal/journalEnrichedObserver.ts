@@ -4,7 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';

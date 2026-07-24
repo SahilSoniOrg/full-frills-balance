@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { AccountId, JournalDisplayType, SemanticType } from '@/src/types/domain';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 
 describe('JournalPresenter', () => {
   const accountTypes = new Map<AccountId, AccountType>([

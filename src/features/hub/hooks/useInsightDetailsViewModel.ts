@@ -13,7 +13,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 import { of } from 'rxjs';

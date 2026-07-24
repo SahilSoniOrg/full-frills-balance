@@ -10,7 +10,7 @@ import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
