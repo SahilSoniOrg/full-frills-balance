@@ -4,7 +4,18 @@ This document describes the technical architecture of Full Frills Balance, a dou
 
 ## Core Principles
 
-> **"Balances are derived, never cached"** — All account balances come from transaction sums, not stored values.
+> **"Balances are derived, and the cache is reconciled — never trusted blindly."**
+>
+> A balance is *defined* as the sum of its transactions. For performance it is
+> *served* from the `transactions.running_balance` column, which is a rebuildable
+> cache. `IntegrityService` recomputes balances from transaction sums and repairs
+> drift; `AccountingRebuildService` + `RebuildQueueService` maintain the cache
+> after writes.
+>
+> **Do not "fix" `BalanceService.getAccountBalance` to sum transactions inline** —
+> reading the cache is deliberate and load-bearing for the dashboard and list
+> hot paths. The correct invariant to protect is that the cache always converges
+> to the derived sum. See ADR-0002.
 
 1. **Double-Entry Accounting**: Every transaction touches exactly two accounts (debit + credit)
 2. **Journals Always Balance**: A journal entry must sum to zero (debits = credits)

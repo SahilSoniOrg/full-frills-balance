@@ -7,9 +7,12 @@ Track your net worth with proper accounting semantics — offline-first, no clou
 
 ## Philosophy
 
-> **"Balances are derived, never cached"**
+> **"Balances are derived, and the cache is reconciled — never trusted blindly"**
 
-- All balances are computed from transaction sums — never stored as editable totals.
+- A balance is *defined* as the sum of its transactions and is never an editable
+  total. For speed it is *served* from a rebuildable `running_balance` cache that
+  `IntegrityService` reconciles against the derived sum. See
+  [ADR-0002](docs/adr/0002-derived-balances-with-reconciled-cache.md).
 - Every journal must balance (`debits == credits`) before it can be persisted.
 - Offline-first — the full accounting engine runs locally on-device.
 - Every mutation is logged to an immutable audit trail.
@@ -119,13 +122,19 @@ Most apps tell you what you *have*. Safe to Spend tells you what you can *use*. 
 ### Prerequisites
 
 - Node.js 22+ (see `.nvmrc`)
+- [bun](https://bun.sh) — the project's package manager (`bun.lock` is committed,
+  and CI plus the git hooks all use bun)
 - [EAS CLI](https://docs.expo.dev/eas/) for native builds
 
 ### Install & Run
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (use bun — npm produces a different tree than CI)
+bun install
+
+# Optional: create a local env file. The app runs without any of these values;
+# only analytics, crash reporting and on-device AI downloads need them.
+cp .env.example .env.local
 
 # Start Expo dev server
 npx expo start

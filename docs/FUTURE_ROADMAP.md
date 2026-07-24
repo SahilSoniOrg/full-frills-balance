@@ -1,5 +1,7 @@
 # Future Roadmap
 
+**Active engineering queue:** see [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) (post–2026-07 audit).
+
 ## Phase 1: Polish & Hardening (Current)
 - [ ] **Simulation V2 Native Migration**: Move heavy simulation math to a native module for sub-10ms execution.
 - [ ] **Expanded Test Coverage**: Add dedicated tests for hub, commitments, and newer UI features.

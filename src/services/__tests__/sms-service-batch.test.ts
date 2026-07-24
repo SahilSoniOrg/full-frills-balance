@@ -71,10 +71,18 @@ jest.mock('@/src/services/WorkplaceService', () => ({
 jest.mock('@/src/data/repositories/JournalRepository', () => ({
   journalRepository: {
     getRuleDefinition: jest.fn(),
+    findMatchingDuplicateInJournals: jest.fn().mockReturnValue(null),
+  },
+}));
+// SmsSyncPipeline reads journal lookups from SmsJournalQueries directly, not via
+// the JournalRepository facade.
+jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
+  smsJournalQueries: {
+    findJournalByOriginalSmsId: jest.fn().mockResolvedValue(null),
     findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
+    findJournalBySmsFingerprint: jest.fn().mockResolvedValue(null),
     findJournalsBySmsFingerprints: jest.fn().mockResolvedValue(new Map()),
     findNearbyJournals: jest.fn().mockResolvedValue([]),
-    findMatchingDuplicateInJournals: jest.fn().mockReturnValue(null),
   },
 }));
 jest.mock('@/src/utils/logger');

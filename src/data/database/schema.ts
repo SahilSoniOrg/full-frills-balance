@@ -100,7 +100,11 @@ CREATE INDEX IF NOT EXISTS idx_journals_active_wp_status ON journals (workplace_
       columns: [
         { name: 'journal_id', type: 'string', isIndexed: true },
         { name: 'account_id', type: 'string', isIndexed: true },
-        { name: 'amount', type: 'number', isIndexed: true }, // in minor units, always positive
+        // Always positive. Stored as a DECIMAL float (e.g. 123.45), NOT integer
+        // minor units. Rounding is centralised in src/utils/money.ts
+        // (roundToPrecision / safeAdd / safeSubtract) — use those, never raw
+        // arithmetic, to avoid float drift. See ADR-0003.
+        { name: 'amount', type: 'number', isIndexed: true },
         { name: 'transaction_type', type: 'string' }, // DEBIT or CREDIT
         { name: 'currency_code', type: 'string', isIndexed: true },
         { name: 'transaction_date', type: 'number', isIndexed: true }, // timestamp

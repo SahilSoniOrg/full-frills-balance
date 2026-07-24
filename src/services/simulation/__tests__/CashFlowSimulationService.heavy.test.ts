@@ -118,7 +118,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     jest.useRealTimers();
   });
 
-  it.only('handles a dense mixed portfolio and preserves simulation invariants', async () => {
+  it('handles a dense mixed portfolio and preserves simulation invariants', async () => {
     const liquidAccounts = [
       makeAsset('cash', 'Checking'),
       makeAsset('savings', 'Savings'),
@@ -368,13 +368,32 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       flow =>
         flow.origin === FlowSource.PLANNED_PAYMENT || flow.origin === FlowSource.PLANNED_JOURNAL,
     );
-    const templateIds = new Set(plannedPayments.map(payment => payment.id));
     const generatedJournalIds = new Set(plannedJournals.map(journal => journal.id));
+    const journalFlows = plannedFlows.filter(flow => flow.origin === FlowSource.PLANNED_JOURNAL);
+    const templateFlows = plannedFlows.filter(flow => flow.origin === FlowSource.PLANNED_PAYMENT);
 
-    expect(plannedFlows).toHaveLength(plannedJournals.length);
-    expect(plannedFlows.every(flow => generatedJournalIds.has(flow.referenceId ?? ''))).toBe(true);
-    expect(plannedFlows.some(flow => templateIds.has(flow.referenceId ?? ''))).toBe(false);
-    expect(result.simulationResult.summary.safeToSpend).toBe(1334);
+    // Each generated journal contributes exactly one flow.
+    expect(journalFlows).toHaveLength(plannedJournals.length);
+    expect(journalFlows.every(flow => generatedJournalIds.has(flow.referenceId ?? ''))).toBe(true);
+
+    // A template must never emit a flow on a day its own generated journal already
+    // covers. Later uncovered occurrences (these are MONTHLY templates, so they
+    // recur again inside a 60-day horizon) are expected and must still be counted.
+    const plannedPaymentIdByJournalId = new Map(
+      plannedJournals.map(journal => [journal.id, journal.plannedPaymentId]),
+    );
+    const coveredKeys = new Set(
+      journalFlows.map(
+        flow => `${plannedPaymentIdByJournalId.get(flow.referenceId ?? '')}:${flow.dayOffset}`,
+      ),
+    );
+    expect(
+      templateFlows.some(flow => coveredKeys.has(`${flow.referenceId}:${flow.dayOffset}`)),
+    ).toBe(false);
+
+    // With no inflows, the minimum balance is the starting balance less every outflow.
+    const totalOutflow = plannedFlows.reduce((sum, flow) => sum + flow.amount, 0);
+    expect(result.simulationResult.summary.safeToSpend).toBe(2000 - totalOutflow);
     expect(result.simulationResult.summary.shortfall).toBe(0);
   });
 
