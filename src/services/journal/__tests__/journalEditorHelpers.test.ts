@@ -48,10 +48,30 @@ describe('journalEditorHelpers', () => {
       ];
 
       const normalized = normalizeJournalLinesForGuidedMode(lines);
-      expect(normalized[0].transactionType).toBe(TransactionType.CREDIT);
-      expect(normalized[0].id).toBe('1');
-      expect(normalized[1].transactionType).toBe(TransactionType.DEBIT);
-      expect(normalized[1].id).toBe('2');
+      expect(normalized.forceAdvancedMode).toBe(false);
+      expect(normalized.lines[0].transactionType).toBe(TransactionType.CREDIT);
+      expect(normalized.lines[0].id).toBe('1');
+      expect(normalized.lines[1].transactionType).toBe(TransactionType.DEBIT);
+      expect(normalized.lines[1].id).toBe('2');
+    });
+
+    it('forces advanced mode when credit or debit leg is missing', () => {
+      const lines: JournalEntryLine[] = [
+        {
+          id: 'x' as TransactionId,
+          accountId: 'a1' as any,
+          accountName: 'D',
+          accountType: AccountType.EXPENSE,
+          amount: '10',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '',
+        },
+      ];
+
+      const normalized = normalizeJournalLinesForGuidedMode(lines);
+      expect(normalized.forceAdvancedMode).toBe(true);
+      expect(normalized.lines).toEqual(lines);
     });
   });
 
@@ -103,6 +123,46 @@ describe('journalEditorHelpers', () => {
       ]);
       expect(result.forceAdvancedMode).toBe(false);
       expect(result.simpleTabType).toBe('expense');
+    });
+
+    it('forces advanced mode when account type is missing', () => {
+      const result = mapEnrichedLinesToEditorState([
+        {
+          id: '1',
+          accountId: 'a',
+          amount: 10,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: '2',
+          accountId: 'b',
+          amount: 10,
+          transactionType: TransactionType.CREDIT,
+          accountType: AccountType.ASSET,
+        },
+      ]);
+      expect(result.forceAdvancedMode).toBe(true);
+      expect(result.simpleTabType).toBeUndefined();
+    });
+
+    it('forces advanced mode for invalid transaction type', () => {
+      const result = mapEnrichedLinesToEditorState([
+        {
+          id: '1',
+          accountId: 'a',
+          amount: 10,
+          transactionType: 'NOT_A_TYPE',
+          accountType: AccountType.EXPENSE,
+        },
+        {
+          id: '2',
+          accountId: 'b',
+          amount: 10,
+          transactionType: TransactionType.CREDIT,
+          accountType: AccountType.ASSET,
+        },
+      ]);
+      expect(result.forceAdvancedMode).toBe(true);
     });
   });
 });

@@ -76,4 +76,13 @@ describe('transactionDetailsHelpers', () => {
     expect(info.amountText).toBeTruthy();
     expect(info.inboxRecordId).toBe('sms-1');
   });
+
+  it('mapSmsJournalMetadataDisplay fails closed on invalid json', () => {
+    const info = mapSmsJournalMetadataDisplay({
+      metadataJson: '{not-json',
+      originalSmsSender: 'BANK',
+    });
+    expect(info.sender).toBe('BANK');
+    expect(info.amountText).toBeUndefined();
+  });
 });

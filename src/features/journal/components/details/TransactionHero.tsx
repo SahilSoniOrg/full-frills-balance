@@ -1,6 +1,7 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
+import { JournalStatusChipVariant } from '@/src/services/journal/transactionDetailsHelpers';
 import React from 'react';
 
 interface TransactionHeroProps {
@@ -9,7 +10,7 @@ interface TransactionHeroProps {
   amountText: string;
   descriptionText: string;
   statusLabel: string;
-  statusVariant: any;
+  statusVariant: JournalStatusChipVariant;
   displayTypeLabel?: string;
 }
 

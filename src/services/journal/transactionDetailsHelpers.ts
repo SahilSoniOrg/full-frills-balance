@@ -2,6 +2,7 @@ import { ColorKey } from '@/src/constants';
 import { JournalDisplayType } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
+import { safeParseJSON } from '@/src/utils/serialization';
 
 export type JournalDetailsStatus = 'POSTED' | 'PLANNED' | 'DRAFT' | 'SKIPPED' | string;
 
@@ -13,10 +14,25 @@ export interface JournalDetailsInfo {
   date: number;
   status: JournalDetailsStatus;
   currency: string;
-  displayType: string;
+  displayType: JournalDisplayType;
   totalAmount: number;
   plannedPaymentId?: string | null;
   journalDate: number;
+}
+
+function parseJournalDisplayType(
+  value: string | JournalDisplayType | undefined,
+  fallback: JournalDisplayType = JournalDisplayType.EXPENSE,
+): JournalDisplayType {
+  if (
+    value === JournalDisplayType.INCOME ||
+    value === JournalDisplayType.EXPENSE ||
+    value === JournalDisplayType.TRANSFER ||
+    value === JournalDisplayType.MIXED
+  ) {
+    return value;
+  }
+  return fallback;
 }
 
 export function resolveJournalDetailsInfo(input: {
@@ -27,7 +43,7 @@ export function resolveJournalDetailsInfo(input: {
     journalDate: number;
     status: JournalDetailsStatus;
     currencyCode: string;
-    displayType: string;
+    displayType: JournalDisplayType | string;
     totalAmount?: number | null;
     plannedPaymentId?: string | null;
   } | null;
@@ -51,7 +67,7 @@ export function resolveJournalDetailsInfo(input: {
       date: input.journal.journalDate,
       status: input.journal.status,
       currency: input.journal.currencyCode,
-      displayType: input.journal.displayType,
+      displayType: parseJournalDisplayType(input.journal.displayType),
       totalAmount: input.journal.totalAmount || 0,
       plannedPaymentId: input.journal.plannedPaymentId,
       journalDate: input.journal.journalDate,
@@ -65,7 +81,7 @@ export function resolveJournalDetailsInfo(input: {
       date: routePreview.date ? Number(routePreview.date) : input.fallbackNow,
       status: 'DRAFT',
       currency: routePreview.currencyCode || input.fallbackCurrency,
-      displayType: routePreview.displayType || 'EXPENSE',
+      displayType: parseJournalDisplayType(routePreview.displayType),
       totalAmount: routePreview.amount ? Number(routePreview.amount) : 0,
       plannedPaymentId: null,
       journalDate: routePreview.date ? Number(routePreview.date) : input.fallbackNow,
@@ -80,7 +96,7 @@ export function resolveTransactionAmountPresentation(input: {
   paramTypeColor?: string;
   journalLoaded: boolean;
 }): { amountText: string; amountColor: ColorKey; isExpense: boolean } {
-  const journalDisplayType = input.journalInfo?.displayType as JournalDisplayType | undefined;
+  const journalDisplayType = input.journalInfo?.displayType;
   const isIncome = journalDisplayType === JournalDisplayType.INCOME;
   const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
 
@@ -149,6 +165,13 @@ export interface SmsJournalInfoDisplay {
   inboxRecordId?: string;
 }
 
+interface SmsMetadataFields {
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  referenceNumber?: string;
+  accountSource?: string;
+}
+
 export function mapSmsJournalMetadataDisplay(input: {
   originalSmsSender?: string | null;
   originalSmsBody?: string | null;
@@ -161,7 +184,7 @@ export function mapSmsJournalMetadataDisplay(input: {
     id?: string;
   } | null;
 }): SmsJournalInfoDisplay {
-  const parsedMetadata = input.metadataJson ? JSON.parse(input.metadataJson) : {};
+  const parsedMetadata = safeParseJSON<SmsMetadataFields>(input.metadataJson, {});
   return {
     sender: input.originalSmsSender || undefined,
     rawBody: input.originalSmsBody || undefined,
@@ -169,7 +192,7 @@ export function mapSmsJournalMetadataDisplay(input: {
       typeof parsedMetadata.parsedAmount === 'number'
         ? CurrencyFormatter.format(
             parsedMetadata.parsedAmount,
-            parsedMetadata.parsedCurrencyCode || undefined,
+            parsedMetadata.parsedCurrencyCode ?? '',
           )
         : undefined,
     referenceNumber: parsedMetadata.referenceNumber || input.inboxRecord?.referenceNumber,

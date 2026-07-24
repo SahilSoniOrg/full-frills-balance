@@ -138,10 +138,20 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   ]);
 
   const setGuidedModeInternal = useCallback((mode: boolean) => {
-    if (mode) {
-      setLines(current => normalizeJournalLinesForGuidedMode(current));
+    if (!mode) {
+      setIsGuidedMode(false);
+      return;
     }
-    setIsGuidedMode(mode);
+
+    setLines(current => {
+      const normalized = normalizeJournalLinesForGuidedMode(current);
+      if (normalized.forceAdvancedMode) {
+        setIsGuidedMode(false);
+        return current;
+      }
+      setIsGuidedMode(true);
+      return normalized.lines;
+    });
   }, []);
   const [description, setDescription] = useState(initialDescription || '');
   const [notes, setNotes] = useState(initialNotes || '');

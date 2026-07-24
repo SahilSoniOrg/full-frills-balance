@@ -15,6 +15,10 @@ export interface JournalEditorEnrichedLine {
   currencyCode?: string;
 }
 
+function isTransactionType(value: string): value is TransactionType {
+  return value === TransactionType.DEBIT || value === TransactionType.CREDIT;
+}
+
 /**
  * Infers simple-mode tab (expense / income / transfer) from credit and debit account types.
  * Credit leg is treated as the "source" in guided mode.
@@ -39,14 +43,27 @@ export function inferSimpleTabTypeFromTwoLegs(
   return 'transfer';
 }
 
+export interface NormalizeGuidedModeResult {
+  lines: JournalEntryLine[];
+  forceAdvancedMode: boolean;
+}
+
 /** Collapses journal lines to the two-leg credit-then-debit shape used in guided mode. */
-export function normalizeJournalLinesForGuidedMode(lines: JournalEntryLine[]): JournalEntryLine[] {
-  const debit = lines.find(l => l.transactionType === TransactionType.DEBIT) || lines[0];
-  const credit = lines.find(l => l.transactionType === TransactionType.CREDIT) || lines[1];
-  return [
-    { ...credit, id: '1' as TransactionId, transactionType: TransactionType.CREDIT },
-    { ...debit, id: '2' as TransactionId, transactionType: TransactionType.DEBIT },
-  ];
+export function normalizeJournalLinesForGuidedMode(
+  lines: JournalEntryLine[],
+): NormalizeGuidedModeResult {
+  const debit = lines.find(l => l.transactionType === TransactionType.DEBIT);
+  const credit = lines.find(l => l.transactionType === TransactionType.CREDIT);
+  if (!debit || !credit) {
+    return { lines, forceAdvancedMode: true };
+  }
+  return {
+    lines: [
+      { ...credit, id: '1' as TransactionId, transactionType: TransactionType.CREDIT },
+      { ...debit, id: '2' as TransactionId, transactionType: TransactionType.DEBIT },
+    ],
+    forceAdvancedMode: false,
+  };
 }
 
 export interface JournalEditorLoadFromEnrichedResult {
@@ -59,28 +76,39 @@ export interface JournalEditorLoadFromEnrichedResult {
 export function mapEnrichedLinesToEditorState(
   txs: JournalEditorEnrichedLine[],
 ): JournalEditorLoadFromEnrichedResult {
-  const forceAdvancedMode = txs.length > 2;
+  let forceAdvancedMode = txs.length > 2;
   let simpleTabType: TabType | undefined;
 
-  if (txs.length === 2) {
+  const lines: JournalEntryLine[] = txs.map(tx => {
+    const rawType = String(tx.transactionType);
+    const transactionType = isTransactionType(rawType) ? rawType : undefined;
+    if (!tx.accountType || !transactionType) {
+      forceAdvancedMode = true;
+    }
+
+    return {
+      id: tx.id as TransactionId,
+      accountId: tx.accountId as AccountId,
+      accountName: tx.accountName || '',
+      // Placeholder only when forcing advanced; guided mode requires real types.
+      accountType: tx.accountType ?? AccountType.ASSET,
+      amount: tx.amount.toString(),
+      transactionType: transactionType ?? TransactionType.DEBIT,
+      notes: tx.notes || '',
+      exchangeRate: tx.exchangeRate ? tx.exchangeRate.toString() : '',
+      accountCurrency: tx.currencyCode,
+    };
+  });
+
+  if (!forceAdvancedMode && txs.length === 2) {
     const creditTx = txs.find(t => t.transactionType === TransactionType.CREDIT);
     const debitTx = txs.find(t => t.transactionType === TransactionType.DEBIT);
-    if (creditTx && debitTx) {
+    if (creditTx?.accountType && debitTx?.accountType) {
       simpleTabType = inferSimpleTabTypeFromTwoLegs(creditTx.accountType, debitTx.accountType);
+    } else {
+      forceAdvancedMode = true;
     }
   }
-
-  const lines: JournalEntryLine[] = txs.map(tx => ({
-    id: tx.id as TransactionId,
-    accountId: tx.accountId as AccountId,
-    accountName: tx.accountName || '',
-    accountType: tx.accountType || AccountType.ASSET,
-    amount: tx.amount.toString(),
-    transactionType: tx.transactionType as TransactionType,
-    notes: tx.notes || '',
-    exchangeRate: tx.exchangeRate ? tx.exchangeRate.toString() : '',
-    accountCurrency: tx.currencyCode,
-  }));
 
   return { lines, forceAdvancedMode, simpleTabType };
 }

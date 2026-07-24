@@ -27,7 +27,7 @@ export function observeWorkplaceAccounts(workplaceId: WorkplaceId): Observable<A
   }
   const obs$ = accountRepository
     .observeAll(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
   accountsObsCache.set(workplaceId, obs$);
   return obs$;
 }
@@ -38,7 +38,7 @@ export function observeWorkplaceJournalMeta(workplaceId: WorkplaceId): Observabl
   }
   const obs$ = journalRepository
     .observeStatusMeta(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
   journalMetaObsCache.set(workplaceId, obs$);
   return obs$;
 }
@@ -51,7 +51,7 @@ export function observeWorkplaceActiveTransactionCount(
   }
   const obs$ = transactionRepository
     .observeActiveCount(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
   activeCountObsCache.set(workplaceId, obs$);
   return obs$;
 }

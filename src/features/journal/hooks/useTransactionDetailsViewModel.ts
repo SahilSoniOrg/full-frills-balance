@@ -11,6 +11,7 @@ import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
+  JournalStatusChipVariant,
   mapDisplayTransactionSplitPresentation,
   mapSmsJournalMetadataDisplay,
   resolveJournalDetailsInfo,
@@ -61,7 +62,7 @@ export interface TransactionDetailsViewModel {
   descriptionText: string;
   notesText?: string;
   statusLabel: string;
-  statusVariant: 'income' | 'expense';
+  statusVariant: JournalStatusChipVariant;
   displayTypeLabel?: string;
   formattedDate: string;
   journalIdShort: string;
@@ -350,7 +351,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     descriptionText,
     notesText: journalInfo?.notes || undefined,
     statusLabel: journalInfo?.status || '',
-    statusVariant: statusVariant as any,
+    statusVariant,
     displayTypeLabel: journalInfo?.displayType,
     formattedDate,
     journalIdShort: journalId?.substring(0, 8) || '...',
