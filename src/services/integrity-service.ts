@@ -8,23 +8,23 @@
  * All database writes are delegated to repositories.
  */
 
-import { AppConfig } from '@/src/constants/app-config';
 import { schema } from '@/src/data/database/schema';
 import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
+import {
+  cleanupDatabase as runDatabaseCleanup,
+  resetDatabase as runFactoryReset,
+  resetWorkplace as runWorkplaceReset,
+} from '@/src/services/integrity/integrityMaintenance';
 
-import { smsService } from '@/src/services/sms-service';
-import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
-import { preferences } from '@/src/utils/preferences';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 
@@ -491,76 +491,21 @@ export class IntegrityService {
     workplaceId: WorkplaceId,
     keepWorkplaceRecord: boolean = false,
   ): Promise<void> {
-    logger.warn(`[IntegrityService] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
-    try {
-      const scopedTables = [
-        'accounts',
-        'journals',
-        'transactions',
-        'audit_logs',
-        'budgets',
-        'budget_scopes',
-        'account_metadata',
-        'planned_payments',
-        'journal_metadata',
-        'transaction_auto_post_rules',
-        'transaction_inbox_records',
-        'balance_snapshots',
-      ];
-
-      // 1. Purge all data scoped to this workplace
-      await databaseRepository.purgeWorkplaceData(workplaceId, scopedTables);
-
-      // 2. Delete the workplace record itself if requested
-      if (!keepWorkplaceRecord) {
-        const { database } = await import('@/src/data/database/Database');
-        await database.write(async () => {
-          const workplace = await workplaceService.getWorkplace(workplaceId);
-          if (workplace) {
-            await workplace.destroyPermanently();
-          }
-        });
-        logger.info(`[IntegrityService] Workplace ${workplaceId} reset and deletion successful.`);
-      } else {
-        logger.info(`[IntegrityService] Workplace ${workplaceId} data reset (shell preserved).`);
-      }
-    } catch (error) {
-      logger.error(`[IntegrityService] Failed to reset workplace ${workplaceId}:`, error);
-      throw error;
-    }
+    return runWorkplaceReset(workplaceId, keepWorkplaceRecord);
   }
 
   /**
    * Factory Reset.
    */
   async resetDatabase(): Promise<void> {
-    logger.warn('[IntegrityService] STARTING FACTORY RESET...');
-    try {
-      await databaseRepository.resetDatabase();
-      await smsService.clearProcessedMessages();
-      preferences.clearPreferences();
-      logger.info('[IntegrityService] Database reset successful.');
-    } catch (error) {
-      logger.error('[IntegrityService] CRITICAL: Factory reset failed:', error);
-      throw error;
-    }
+    return runFactoryReset();
   }
 
   /**
    * Data Cleanup.
    */
   async cleanupDatabase(): Promise<{ deletedCount: number }> {
-    logger.info('[IntegrityService] Starting database cleanup...');
-    try {
-      const totalDeleted = await databaseRepository.cleanupDeletedRecords([
-        ...AppConfig.strings.audit.tables,
-      ]);
-      logger.info(`[IntegrityService] Cleanup complete. Removed ${totalDeleted} records.`);
-      return { deletedCount: totalDeleted };
-    } catch (error) {
-      logger.error('[IntegrityService] Cleanup failed:', error);
-      throw error;
-    }
+    return runDatabaseCleanup();
   }
 }
 

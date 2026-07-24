@@ -31,7 +31,7 @@ This document is the durable review artifact for deep-module design across Full 
 | 8 | ledgerRead pass-throughs | **Partial** — `ledgerEnrichedDisplay` + slim `ledgerReadService` |
 | 9 | Report / ReactiveData | **Partial** — account list metrics via `AccountListMetricsQueries` |
 | 10 | SimulationInput | **Done** |
-| 11–12 | PlannedPayment / Integrity splits | **Partial** — `plannedPaymentRecurrence` Module |
+| 11–12 | PlannedPayment / Integrity splits | **Partial** — `plannedPaymentRecurrence`; `integrityMaintenance` for destructive ops |
 | 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |
 | 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
 | 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |

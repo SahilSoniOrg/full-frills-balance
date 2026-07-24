@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { computeFirstOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, EMPTY_ACCOUNT_ID, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -118,7 +119,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
           });
         }
       } else {
-        const firstOccurrence = plannedPaymentService.computeFirstOccurrence(form.startDate, {
+        const firstOccurrence = computeFirstOccurrence(form.startDate, {
           intervalN: form.intervalN,
           intervalType: form.intervalType,
           recurrenceDay: form.recurrenceDay,
