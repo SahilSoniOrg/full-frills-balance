@@ -9,7 +9,8 @@ import TransactionInboxRecord, {
   InboxProcessingStatus,
   TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -154,8 +155,8 @@ export class SmsSyncPipeline {
     const fingerprints = parsedMessages.map(m => m.fingerprint);
 
     const [journalsById, journalsByFingerprint] = await Promise.all([
-      journalRepository.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-      journalRepository.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+      smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+      smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
     ]);
 
     const parsedWithAmounts = parsedMessages.filter(
@@ -296,7 +297,7 @@ export class SmsSyncPipeline {
     const maxDate =
       Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.dayWindowMs;
 
-    const journals = await journalRepository.findNearbyJournals(
+    const journals = await smsJournalQueries.findNearbyJournals(
       {
         centerDate: (minDate + maxDate) / 2,
         windowMs: (maxDate - minDate) / 2,

@@ -3,8 +3,8 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   AccountId,
   JournalDisplayType,
@@ -345,99 +345,28 @@ export class JournalRepository {
     originalSmsId: string,
     workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
-    const metadata = await this.journalMetadata
-      .query(Q.where('original_sms_id', originalSmsId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    if (metadata.length === 0) return null;
-    return this.find(workplaceId, metadata[0].journalId);
+    return smsJournalQueries.findJournalByOriginalSmsId(originalSmsId, workplaceId);
   }
 
   async findJournalsByOriginalSmsIds(
     smsIds: string[],
     workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
-    if (smsIds.length === 0) return new Map();
-    const metadataRecords = await this.journalMetadata
-      .query(Q.where('original_sms_id', Q.oneOf(smsIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    if (metadataRecords.length === 0) return new Map();
-
-    const journalIds = metadataRecords.map(m => m.journalId);
-    const journals = await this.findByIds(workplaceId, journalIds);
-    const journalMap = new Map(journals.map(j => [j.id, j]));
-
-    const resultMap = new Map<string, Journal>();
-    for (const metadata of metadataRecords) {
-      const journal = journalMap.get(metadata.journalId);
-      if (journal && metadata.originalSmsId) {
-        resultMap.set(metadata.originalSmsId, journal);
-      }
-    }
-    return resultMap;
+    return smsJournalQueries.findJournalsByOriginalSmsIds(smsIds, workplaceId);
   }
 
   async findJournalBySmsFingerprint(
     smsFingerprint: string,
     workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
-    const inboxRecords = await database.collections
-      .get<TransactionInboxRecord>('transaction_inbox_records')
-      .query(
-        Q.where('input_fingerprint', smsFingerprint),
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-      )
-      .fetch();
-
-    const record = inboxRecords.find(r => r.linkedJournalId);
-    if (!record || !record.linkedJournalId) return null;
-
-    return this.find(workplaceId, record.linkedJournalId);
+    return smsJournalQueries.findJournalBySmsFingerprint(smsFingerprint, workplaceId);
   }
 
   async findJournalsBySmsFingerprints(
     fingerprints: string[],
     workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
-    if (fingerprints.length === 0) return new Map();
-
-    const inboxRecords = await database.collections
-      .get<TransactionInboxRecord>('transaction_inbox_records')
-      .query(
-        Q.where('input_fingerprint', Q.oneOf(fingerprints)),
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-      )
-      .fetch();
-
-    const fingerprintToJournalId = new Map<string, JournalId>();
-    const journalIds: JournalId[] = [];
-
-    for (const record of inboxRecords) {
-      const linkedJournalId = record.linkedJournalId;
-      const smsFingerprint = record.inputFingerprint;
-      if (linkedJournalId && smsFingerprint) {
-        journalIds.push(linkedJournalId);
-        fingerprintToJournalId.set(smsFingerprint, linkedJournalId);
-      }
-    }
-
-    if (journalIds.length === 0) return new Map();
-
-    const journals = await this.findByIds(workplaceId, journalIds);
-    const journalMap = new Map(journals.map(j => [j.id, j]));
-    const resultMap = new Map<string, Journal>();
-
-    for (const [fingerprint, journalId] of fingerprintToJournalId) {
-      const journal = journalMap.get(journalId);
-      if (journal) {
-        resultMap.set(fingerprint, journal);
-      }
-    }
-
-    return resultMap;
+    return smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId);
   }
 
   async findNearbyJournals(
@@ -451,28 +380,7 @@ export class JournalRepository {
     },
     workplaceId: WorkplaceId,
   ): Promise<Journal[]> {
-    const { centerDate, windowMs, amount, amounts, excludeJournalId, limit = 10 } = params;
-    const clauses: Q.Clause[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-      Q.where('journal_date', Q.gte(centerDate - windowMs)),
-      Q.where('journal_date', Q.lte(centerDate + windowMs)),
-      Q.where('workplace_id', workplaceId),
-      Q.sortBy('journal_date', 'desc'),
-      Q.take(limit),
-    ];
-
-    if (typeof amount === 'number') {
-      clauses.unshift(Q.where('total_amount', amount));
-    } else if (amounts && amounts.length > 0) {
-      clauses.unshift(Q.where('total_amount', Q.oneOf(amounts)));
-    }
-
-    if (excludeJournalId) {
-      clauses.unshift(Q.where('id', Q.notEq(excludeJournalId)));
-    }
-
-    return this.journals.query(...clauses).fetch();
+    return smsJournalQueries.findNearbyJournals(params, workplaceId);
   }
 
   async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
