@@ -2,10 +2,18 @@ import { reportService } from '@/src/services/report-service';
 import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
+import { AppNavigation } from '@/src/utils/navigation';
 import { AccountId } from '@/src/types/domain';
 
 // Mock useReports
 jest.mock('../useReports');
+
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({
+    activeWorkplaceId: 'wp-1',
+    activeWorkplace: { id: 'wp-1', name: 'Personal' },
+  }),
+}));
 
 // Mock dependencies
 // Mock dependencies
@@ -24,6 +32,7 @@ jest.mock('@/src/hooks/use-theme', () => {
 
 jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
+    format: (val: number) => `$${val}`,
     formatWithPreference: (val: number) => `$${val}`,
   },
 }));
@@ -36,9 +45,11 @@ jest.mock('@/src/services/report-service', () => ({
   },
 }));
 
-const mockPush = jest.fn();
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock('@/src/utils/navigation', () => ({
+  AppNavigation: {
+    toJournalSearch: jest.fn(),
+    toAccountDetails: jest.fn(),
+  },
 }));
 
 describe('useReportsViewModel', () => {
@@ -50,7 +61,17 @@ describe('useReportsViewModel', () => {
       { date: 2, netWorth: 2000 },
     ],
     expenses: [],
-    incomeBreakdown: [],
+    expenseCategories: [],
+    incomeCategories: [{ category: 'Salary', amount: 1000, percentage: 100 }],
+    incomeBreakdown: [
+      {
+        accountId: 'a1' as AccountId,
+        accountName: 'Salary',
+        category: 'Salary',
+        amount: 1000,
+        percentage: 100,
+      },
+    ],
     incomeVsExpenseHistory: [
       {
         period: 'Jan',
@@ -80,7 +101,6 @@ describe('useReportsViewModel', () => {
   };
 
   beforeEach(() => {
-    mockPush.mockClear();
     (reportService.getExpenseBreakdown as jest.Mock).mockClear();
     (reportService.getIncomeBreakdown as jest.Mock).mockClear();
     mockUseReports.mockReturnValue(mockReportsData);
@@ -152,13 +172,10 @@ describe('useReportsViewModel', () => {
       result.current.onLegendRowPress('account-123' as AccountId);
     });
 
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/account-details',
-      params: {
-        accountId: 'account-123',
-        startDate: '1704067200000',
-        endDate: '1706745599999',
-      },
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['account-123'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
     });
   });
 });

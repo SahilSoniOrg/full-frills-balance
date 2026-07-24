@@ -1,3 +1,5 @@
+import { AnalyticsService } from '../analytics-service';
+
 // Mock PostHog
 jest.mock('posthog-react-native', () => {
   return {
@@ -11,16 +13,8 @@ jest.mock('posthog-react-native', () => {
   };
 });
 
-let AnalyticsService: any;
-
 describe('AnalyticsService', () => {
-  let analytics: any;
-
-  beforeAll(async () => {
-    // We import the service here to ensure env variables are set first
-    const module = await import('../analytics-service');
-    AnalyticsService = module.AnalyticsService;
-  });
+  let analytics: AnalyticsService;
 
   beforeEach(() => {
     jest.clearAllMocks();

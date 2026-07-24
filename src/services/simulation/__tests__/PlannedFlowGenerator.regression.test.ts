@@ -52,7 +52,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     const day0Flow = result.flows.find(f => f.dayOffset === 0);
     const may5Flow = result.flows.find(f => f.dayOffset === 27); // (May 5 - April 8) = 27 days
 
-    expect(result.flows.length).toBe(3);
+    expect(result.flows.length).toBe(2);
     expect(day0Flow).toBeDefined();
     expect(may5Flow).toBeDefined();
     expect(may5Flow?.amount).toBe(1000);

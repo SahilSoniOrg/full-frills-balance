@@ -13,6 +13,12 @@ jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/services/BalanceService');
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getDefaultCurrency: jest.fn().mockResolvedValue('USD'),
+    getCurrency: jest.fn().mockResolvedValue('USD'),
+  },
+}));
 jest.mock('@/src/utils/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
 }));

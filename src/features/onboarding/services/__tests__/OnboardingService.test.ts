@@ -1,4 +1,4 @@
-import { accountService } from '@/src/features/accounts';
+import { accountService } from '@/src/services/accounts/accountDomainService';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { onboardingService } from '../OnboardingService';
 
@@ -24,6 +24,7 @@ jest.mock('@/src/utils/preferences', () => ({
     setOnboardingCompleted: jest.fn(),
     setActiveWorkplaceId: jest.fn(),
   },
+  preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
 
 describe('OnboardingService', () => {

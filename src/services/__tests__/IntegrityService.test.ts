@@ -218,8 +218,8 @@ describe('IntegrityService', () => {
         .query(Q.where('account_id', cashAccountId))
         .fetch();
 
-      // Sort to identify first and second reliably
-      const sorted = [...allTxs].sort((a, b) => a.id.localeCompare(b.id));
+      // Sort to identify first and second reliably by amount
+      const sorted = [...allTxs].sort((a, b) => a.amount - b.amount);
       const tx1 = sorted[0];
       const tx2 = sorted[1];
 

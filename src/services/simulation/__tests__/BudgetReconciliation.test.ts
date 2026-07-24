@@ -6,7 +6,7 @@ import { FlowCategory, SimulationContext } from '../types';
 import { AccountId } from '@/src/types/domain';
 
 describe('BudgetReconciliation', () => {
-  const simulationStartMs = dayjs('2026-04-12T00:00:00Z').valueOf();
+  const simulationStartMs = dayjs('2026-04-01T00:00:00Z').valueOf();
   const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
   const context: SimulationContext = {
     simulationStartMs,

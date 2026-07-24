@@ -5,15 +5,16 @@
 
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
+import Journal from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
-import { journalService } from '@/src/services/journal/journalDomainService';
 import { transactionService } from '@/src/services/transaction-ingestion';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('JournalRepository', () => {
   let cashAccountId: string;
@@ -311,11 +312,8 @@ describe('JournalRepository', () => {
       await journalService.deleteJournal(journal.id as JournalId, 'wp-1' as WorkplaceId);
 
       // Don't wait for rebuild queue - this test only verifies soft-delete
-      const deletedJournal = await journalRepository.find(
-        'wp-1' as WorkplaceId,
-        journal.id as JournalId,
-      );
-      expect(deletedJournal?.deletedAt).toBeDefined();
+      const deletedJournal = await database.collections.get<Journal>('journals').find(journal.id);
+      expect(deletedJournal.deletedAt).toBeDefined();
     });
   });
 

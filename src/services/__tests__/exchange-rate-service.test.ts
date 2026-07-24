@@ -3,190 +3,193 @@ import { ExchangeRateService } from '@/src/services/exchange-rate-service';
 
 // Mock ExchangeRateRepository
 jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
-    exchangeRateRepository: {
-        getCachedRate: jest.fn().mockResolvedValue(null),
-        getAllRatesForBase: jest.fn().mockResolvedValue([]),
-        cacheRate: jest.fn().mockResolvedValue({}),
-    }
+  exchangeRateRepository: {
+    getCachedRate: jest.fn().mockResolvedValue(null),
+    getAllRatesForBase: jest.fn().mockResolvedValue([]),
+    cacheRate: jest.fn().mockResolvedValue({}),
+    cacheRatesBatch: jest.fn().mockResolvedValue([]),
+  },
 }));
 
 describe('ExchangeRateService', () => {
-    let service: ExchangeRateService;
-    const mockFetch = jest.fn();
-    global.fetch = mockFetch;
+  let service: ExchangeRateService;
+  const mockFetch = jest.fn();
+  global.fetch = mockFetch;
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        service = new ExchangeRateService();
-        // Reset defaults for each test
-        (exchangeRateRepository.getCachedRate as jest.Mock).mockResolvedValue(null);
-        (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([]);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new ExchangeRateService();
+    // Reset defaults for each test
+    (exchangeRateRepository.getCachedRate as jest.Mock).mockResolvedValue(null);
+    (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([]);
+  });
+
+  describe('getRate', () => {
+    it('returns 1.0 for same currency', async () => {
+      const rate = await service.getRate('USD', 'USD');
+      expect(rate).toBe(1.0);
     });
 
-    describe('getRate', () => {
-        it('returns 1.0 for same currency', async () => {
-            const rate = await service.getRate('USD', 'USD');
-            expect(rate).toBe(1.0);
-        });
+    it('fetches from API if not in cache', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          rates: { EUR: 0.85 },
+        }),
+      });
 
-        it('fetches from API if not in cache', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                headers: { get: () => 'application/json' },
-                json: async () => ({
-                    rates: { 'EUR': 0.85 }
-                })
-            });
-
-            const rate = await service.getRate('USD', 'EUR');
-            expect(rate).toBe(0.85);
-            expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
-            // Verify it was cached in DB
-            expect(exchangeRateRepository.cacheRate).toHaveBeenCalled();
-        });
-
-        it('uses DB cache if recent', async () => {
-            const recentDate = Date.now() - 1000;
-            (exchangeRateRepository.getCachedRate as jest.Mock).mockResolvedValue({
-                rate: 0.9,
-                effectiveDate: recentDate,
-                fromCurrency: 'USD',
-                toCurrency: 'EUR'
-            });
-
-            const rate = await service.getRate('USD', 'EUR');
-            expect(rate).toBe(0.9);
-            expect(mockFetch).not.toHaveBeenCalled();
-        });
+      const rate = await service.getRate('USD', 'EUR');
+      expect(rate).toBe(0.85);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
     });
 
-    describe('request deduplication (thundering herd)', () => {
-        it('only calls fetch once for concurrent requests to same base', async () => {
-            let resolvePromise: (value: any) => void;
-            const deferred = new Promise(resolve => {
-                resolvePromise = resolve;
-            });
+    it('uses DB cache if recent', async () => {
+      const recentDate = Date.now() - 1000;
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.9,
+          effectiveDate: recentDate,
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
 
-            mockFetch.mockReturnValue(deferred);
+      const rate = await service.getRate('USD', 'EUR');
+      expect(rate).toBe(0.9);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
 
-            // Trigger multiple concurrent requests
-            const p1 = service.fetchRatesForBase('USD');
-            const p2 = service.fetchRatesForBase('USD');
-            const p3 = service.fetchRatesForBase('USD');
+  describe('request deduplication (thundering herd)', () => {
+    it('only calls fetch once for concurrent requests to same base', async () => {
+      let resolvePromise: (value: any) => void;
+      const deferred = new Promise(resolve => {
+        resolvePromise = resolve;
+      });
 
-            // Complete the fetch
-            resolvePromise!({
-                ok: true,
-                headers: { get: () => 'application/json' },
-                json: async () => ({ rates: { 'EUR': 0.85 } })
-            });
+      mockFetch.mockReturnValue(deferred);
 
-            const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+      // Trigger multiple concurrent requests
+      const p1 = service.fetchRatesForBase('USD');
+      const p2 = service.fetchRatesForBase('USD');
+      const p3 = service.fetchRatesForBase('USD');
 
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-            expect(r1['EUR']).toBe(0.85);
-            expect(r2['EUR']).toBe(0.85);
-            expect(r3['EUR']).toBe(0.85);
-        });
+      // Complete the fetch
+      resolvePromise!({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.85 } }),
+      });
 
-        it('allows new fetch after previous one completed', async () => {
-            mockFetch.mockResolvedValue({
-                ok: true,
-                headers: { get: () => 'application/json' },
-                json: async () => ({ rates: { 'EUR': 0.85 } })
-            });
+      const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
 
-            await service.fetchRatesForBase('USD');
-            await service.fetchRatesForBase('USD');
-
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-        });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(r1['EUR']).toBe(0.85);
+      expect(r2['EUR']).toBe(0.85);
+      expect(r3['EUR']).toBe(0.85);
     });
 
-    describe('error handling', () => {
-        it('throws descriptive error if response is not JSON', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                headers: { get: () => 'text/html' },
-                text: async () => '<html>Error Page</html>'
-            });
+    it('allows new fetch after previous one completed', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.85 } }),
+      });
 
-            await expect(service.fetchRatesForBase('GBP'))
-                .rejects.toThrow(/Expected JSON response but got text\/html/);
-        });
+      await service.fetchRatesForBase('USD');
+      await service.fetchRatesForBase('USD', true);
 
-        it('throws descriptive error on non-ok response', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 429,
-                statusText: 'Too Many Requests',
-                text: async () => 'Rate limit exceeded'
-            });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
 
-            await expect(service.fetchRatesForBase('JPY'))
-                .rejects.toThrow(/Exchange rate API error \(429\): Too Many Requests/);
-        });
+  describe('error handling', () => {
+    it('throws descriptive error if response is not JSON', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'text/html' },
+        text: async () => '<html>Error Page</html>',
+      });
+
+      await expect(service.fetchRatesForBase('GBP')).rejects.toThrow(
+        /Expected JSON response but got text\/html/,
+      );
     });
 
-    describe('convert', () => {
-        it('converts amount correctly', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                headers: { get: () => 'application/json' },
-                json: async () => ({
-                    rates: { 'EUR': 0.85 }
-                })
-            });
+    it('throws descriptive error on non-ok response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        text: async () => 'Rate limit exceeded',
+      });
 
-            const result = await service.convert(100, 'USD', 'EUR');
-            expect(result.convertedAmount).toBe(85);
-            expect(result.rate).toBe(0.85);
-        });
+      await expect(service.fetchRatesForBase('JPY')).rejects.toThrow(
+        /Exchange rate API error \(429\): Too Many Requests/,
+      );
+    });
+  });
+
+  describe('convert', () => {
+    it('converts amount correctly', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          rates: { EUR: 0.85 },
+        }),
+      });
+
+      const result = await service.convert(100, 'USD', 'EUR');
+      expect(result.convertedAmount).toBe(85);
+      expect(result.rate).toBe(0.85);
+    });
+  });
+
+  describe('getRateSafe', () => {
+    it('returns 1.0 and triggers background fetch if not in cache', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          rates: { EUR: 0.85 },
+        }),
+      });
+
+      const rate = service.getRateSafe('USD', 'EUR');
+      expect(rate).toBe(1.0);
+
+      // Wait a bit for the background fetch to trigger
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
     });
 
-    describe('getRateSafe', () => {
-        it('returns 1.0 and triggers background fetch if not in cache', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                headers: { get: () => 'application/json' },
-                json: async () => ({
-                    rates: { 'EUR': 0.85 }
-                })
-            });
+    it('returns cached rate immediately', async () => {
+      // Pre-seed memory cache
+      (service as any).memoryCache.set('USD', {
+        rates: { EUR: 0.88 },
+        timestamp: Date.now(),
+      });
 
-            const rate = service.getRateSafe('USD', 'EUR');
-            expect(rate).toBe(1.0);
-
-            // Wait a bit for the background fetch to trigger
-            await new Promise(resolve => setTimeout(resolve, 0));
-            expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
-        });
-
-        it('returns cached rate immediately', async () => {
-            // Pre-seed memory cache
-            (service as any).memoryCache.set('USD', {
-                rates: { 'EUR': 0.88 },
-                timestamp: Date.now()
-            });
-
-            const rate = service.getRateSafe('USD', 'EUR');
-            expect(rate).toBe(0.88);
-            expect(mockFetch).not.toHaveBeenCalled();
-        });
+      const rate = service.getRateSafe('USD', 'EUR');
+      expect(rate).toBe(0.88);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
+  });
 
-    describe('fetchRatesForBase fallback', () => {
-        it('uses stale DB records if API fails', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  describe('fetchRatesForBase fallback', () => {
+    it('uses stale DB records if API fails', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-            (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
-                { toCurrency: 'EUR', rate: 0.88 },
-                { toCurrency: 'GBP', rate: 0.75 }
-            ]);
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        { toCurrency: 'EUR', rate: 0.88 },
+        { toCurrency: 'GBP', rate: 0.75 },
+      ]);
 
-            const rates = await service.fetchRatesForBase('CHF');
-            expect(rates['EUR']).toBe(0.88);
-            expect(rates['GBP']).toBe(0.75);
-        });
+      const rates = await service.fetchRatesForBase('CHF');
+      expect(rates['EUR']).toBe(0.88);
+      expect(rates['GBP']).toBe(0.75);
     });
+  });
 });

@@ -19,6 +19,7 @@ jest.mock('@/src/services/ledger', () => ({
 }));
 jest.mock('@/src/utils/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
+  preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

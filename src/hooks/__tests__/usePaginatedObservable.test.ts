@@ -64,7 +64,7 @@ describe('usePaginatedObservable', () => {
   });
 
   it('should reset pagination when dateRange changes', async () => {
-    const observe = jest.fn((_limit, _range) => of([]));
+    const observe = jest.fn((limit, _range) => of(Array(limit).fill('item')));
     const initialRange = { startDate: 100, endDate: 200 };
     const newRange = { startDate: 300, endDate: 400 };
 
@@ -74,6 +74,7 @@ describe('usePaginatedObservable', () => {
           observe,
           pageSize: 10,
           filter: props.range,
+          getFilterKey: (f: any) => `${f.startDate}-${f.endDate}`,
         }),
       {
         initialProps: { range: initialRange },
@@ -86,7 +87,7 @@ describe('usePaginatedObservable', () => {
     // Simulate loadMore to increase limit
     act(() => result.current.loadMore());
     // Verify limit increased
-    await waitFor(() => expect(observe).toHaveBeenCalledWith(10, initialRange, undefined));
+    await waitFor(() => expect(observe).toHaveBeenCalledWith(20, initialRange, undefined));
 
     // Change date range
     rerender({ range: newRange });

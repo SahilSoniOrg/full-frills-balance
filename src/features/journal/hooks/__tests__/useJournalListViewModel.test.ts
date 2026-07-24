@@ -30,6 +30,14 @@ jest.mock('@/src/contexts/UIContext', () => ({
   useUI: () => ({ defaultCurrency: 'USD', isInitialized: true }),
 }));
 
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({
+    activeWorkplaceId: 'wp-1',
+    activeWorkplace: { id: 'wp-1', name: 'Personal' },
+    defaultCurrencyCode: 'USD',
+  }),
+}));
+
 let mockRateMap: Record<string, number> = { EUR: 0.5 };
 jest.mock('@/src/hooks/useExchangeRates', () => ({
   useExchangeRates: () => ({
@@ -40,7 +48,7 @@ jest.mock('@/src/hooks/useExchangeRates', () => ({
 }));
 
 jest.mock('@/src/utils/logger', () => ({
-  logger: { warn: jest.fn(), error: jest.fn() },
+  logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
 
 jest.mock('@/src/constants', () => ({

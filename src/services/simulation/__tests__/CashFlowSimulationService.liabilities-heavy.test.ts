@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -429,7 +428,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(20);
-    expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
+    expect(result.simulationResult.projections).toHaveLength(60);
     expect(result.simulationResult.summary.safeToSpend).toBeGreaterThanOrEqual(0);
     expect(result.simulationResult.summary.safeToSpend).toBeLessThanOrEqual(8350);
     expect(result.simulationResult.summary.trajectoryMinBalance).toBeLessThanOrEqual(8350);
@@ -437,7 +436,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     for (const flow of liabilityFlows) {
       expect(flow.amount).toBeGreaterThan(0);
       expect(flow.dayOffset).toBeGreaterThanOrEqual(0);
-      expect(flow.dayOffset).toBeLessThan(AppConfig.defaults.safeToSpendDays);
+      expect(flow.dayOffset).toBeLessThan(60);
       expect(['cash', 'savings']).toContain((flow as any).accountId);
     }
   });

@@ -24,6 +24,7 @@ jest.mock('@/src/utils/preferences', () => ({
     dismissPattern: jest.fn(),
     undismissPattern: jest.fn(),
   },
+  preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
 
 describe('PatternService', () => {
@@ -39,6 +40,9 @@ describe('PatternService', () => {
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
+    (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(
+      of({ count: 1, lastUpdatedAt: new Date() }),
+    );
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
   });

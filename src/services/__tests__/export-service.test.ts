@@ -23,7 +23,10 @@ jest.mock('@/src/utils/preferences', () => ({
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/utils/compression', () => ({
   compression: {
-    createZipArchive: jest.fn(),
+    createZipArchive: jest.fn().mockResolvedValue({
+      base64: 'mockZipData',
+      cleanup: jest.fn(),
+    }),
   },
 }));
 
@@ -35,6 +38,14 @@ describe('ExportService', () => {
       fetch: jest.fn().mockResolvedValue(rows),
       fetchCount: jest.fn().mockResolvedValue(count),
     }),
+    find: jest
+      .fn()
+      .mockImplementation((id: string) =>
+        Promise.resolve(
+          rows.find((r: any) => r.id === id) ||
+            rows[0] || { id, name: 'Personal', createdAt: new Date(), updatedAt: new Date() },
+        ),
+      ),
   });
 
   beforeEach(() => {
@@ -46,6 +57,12 @@ describe('ExportService', () => {
       const FIXED_DATE = new Date('2024-01-01T12:00:00Z');
 
       const mockCollections = new Map<string, unknown>([
+        [
+          'workplaces',
+          createCollectionMock([
+            { id: 'wp-1', name: 'Personal', createdAt: FIXED_DATE, updatedAt: FIXED_DATE },
+          ]),
+        ],
         [
           'accounts',
           createCollectionMock([
@@ -195,11 +212,11 @@ describe('ExportService', () => {
       (preferences.loadPreferences as jest.Mock).mockResolvedValue({ theme: 'dark' });
 
       const zipData = await exportService.exportToJSON('test-workplace' as WorkplaceId);
-      expect(zipData).toBeInstanceOf(Uint8Array);
+      expect(typeof zipData).toBe('string');
 
       // Verify that the compression layer was called with a backup.json
       expect(compression.createZipArchive).toHaveBeenCalledWith(
-        expect.stringContaining('test-workplace'),
+        'export',
         expect.objectContaining({
           'backup.json': expect.any(String),
         }),

@@ -78,7 +78,6 @@ describe('transformAccountsToSections', () => {
     const withoutChild = transformAccountsToSections([parent], defaultOptions);
     expect(withoutChild[0].data[0].hasChildren).toBe(false);
 
-    // Child writes don't bump the parent's updatedAt, so this must bust the cache by key
     const child: PlainAccount = {
       id: 'acc_4' as AccountId,
       name: 'Child Account',
@@ -93,5 +92,72 @@ describe('transformAccountsToSections', () => {
 
     const childRemoved = transformAccountsToSections([parent], defaultOptions);
     expect(childRemoved[0].data[0].hasChildren).toBe(false);
+  });
+
+  it('masks balances when privacy mode is enabled', () => {
+    const account: PlainAccount = {
+      id: 'acc_priv' as AccountId,
+      name: 'Private Vault',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    };
+
+    const sections = transformAccountsToSections([account], {
+      ...defaultOptions,
+      isPrivacyMode: true,
+    });
+
+    const card = sections[0].data[0];
+    expect(card.balanceText).toBe('••••');
+    expect(card.monthlyIncomeText).toBe('••••');
+    expect(card.monthlyExpenseText).toBe('••••');
+  });
+
+  it('enables monthly stats when card is expanded or global stats toggle is on', () => {
+    const account: PlainAccount = {
+      id: 'acc_expanded' as AccountId,
+      name: 'Business Account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    };
+
+    const collapsedSections = transformAccountsToSections([account], defaultOptions);
+    expect(collapsedSections[0].data[0].showMonthlyStats).toBe(false);
+
+    const expandedSections = transformAccountsToSections([account], {
+      ...defaultOptions,
+      expandedAccountIds: new Set([account.id]),
+    });
+    expect(expandedSections[0].data[0].showMonthlyStats).toBe(true);
+
+    const globalStatsSections = transformAccountsToSections([account], {
+      ...defaultOptions,
+      showAccountMonthlyStats: true,
+    });
+    expect(globalStatsSections[0].data[0].showMonthlyStats).toBe(true);
+  });
+
+  it('assigns smart fallback icons based on accountType when icon property is omitted', () => {
+    const expenseAcc: PlainAccount = {
+      id: 'acc_exp' as AccountId,
+      name: 'Groceries',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+    };
+
+    const incomeAcc: PlainAccount = {
+      id: 'acc_inc' as AccountId,
+      name: 'Salary',
+      accountType: AccountType.INCOME,
+      currencyCode: 'USD',
+    };
+
+    const sections = transformAccountsToSections([expenseAcc, incomeAcc], defaultOptions);
+
+    const expenseCard = sections.find(s => s.title.includes('Expense'))?.data[0];
+    const incomeCard = sections.find(s => s.title.includes('Income'))?.data[0];
+
+    expect(expenseCard?.icon).toBeDefined();
+    expect(incomeCard?.icon).toBeDefined();
   });
 });
