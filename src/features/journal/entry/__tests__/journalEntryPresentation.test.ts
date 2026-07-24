@@ -5,9 +5,9 @@ import {
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
-} from '../journalEntryScreenHelpers';
+} from '../journalEntryPresentation';
 
-describe('journalEntryScreenHelpers', () => {
+describe('journalEntryPresentation', () => {
   it('parseJournalEntryRouteParams maps aliases and filters invalid enums', () => {
     const parsed = parseJournalEntryRouteParams({
       mode: 'simple',

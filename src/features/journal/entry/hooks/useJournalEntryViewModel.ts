@@ -22,7 +22,7 @@ import {
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
-} from '@/src/services/journal/journalEntryScreenHelpers';
+} from '@/src/features/journal/entry/journalEntryPresentation';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
