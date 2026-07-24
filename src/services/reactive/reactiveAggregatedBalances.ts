@@ -108,7 +108,7 @@ export function observeAggregatedAccountBalances(
         const finalBalances = Array.from(balancesMap.values());
         const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
         const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
-        const wealthSummary = wealthService.calculateSummarySync(leafBalances, targetCurrency);
+        const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
 
         snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
 
@@ -118,7 +118,7 @@ export function observeAggregatedAccountBalances(
         return {
           accounts,
           balancesMap: new Map(),
-          wealthSummary: wealthService.calculateSummarySync([], targetCurrency),
+          wealthSummary: await wealthService.calculateSummary([], targetCurrency),
         };
       } finally {
         trace.end();

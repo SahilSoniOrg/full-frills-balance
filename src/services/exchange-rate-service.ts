@@ -56,27 +56,6 @@ export class ExchangeRateService {
   }
 
   /**
-   * Non-blocking rate lookup.
-   * Returns cached rate immediately if available, or returns 1.0 and triggers
-   * a background fetch if not.
-   */
-  getRateSafe(fromCurrency: string, toCurrency: string): number {
-    if (fromCurrency === toCurrency) return 1.0;
-    if (!fromCurrency || !toCurrency) return 1.0;
-
-    const memCached = this.memoryCache.get(fromCurrency);
-    if (memCached && memCached.rates[toCurrency]) {
-      return memCached.rates[toCurrency];
-    }
-
-    // 2. Trigger background check/fetch (uses cache internally)
-    void this.fetchRatesForBase(fromCurrency).catch(() => {});
-
-    // 3. Return 1.0 immediately while fetch happens in background
-    return 1.0;
-  }
-
-  /**
    * Check if cached rate is still fresh
    */
   private isRateFresh(effectiveDate: number): boolean {

@@ -3,12 +3,14 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
 import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
+jest.mock('@/src/services/currencyConversion');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
@@ -29,7 +31,10 @@ describe('WealthService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default behaviors
+    (convertAmount as jest.Mock).mockImplementation(async ({ amount }) => ({
+      ok: true,
+      amount,
+    }));
     (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
       Promise.resolve({ convertedAmount: amount, rate: 1 }),
     );
@@ -90,13 +95,14 @@ describe('WealthService', () => {
     });
 
     it('should handle currency conversion', async () => {
-      // Mock conversion: EUR -> USD (x1.1)
-      (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from, to) => {
-        if (from === 'EUR' && to === 'USD') {
-          return Promise.resolve({ convertedAmount: amount * 1.1, rate: 1.1 });
-        }
-        return Promise.resolve({ convertedAmount: amount, rate: 1 });
-      });
+      (convertAmount as jest.Mock).mockImplementation(
+        async ({ amount, fromCurrency, toCurrency }) => {
+          if (fromCurrency === 'EUR' && toCurrency === 'USD') {
+            return { ok: true, amount: amount * 1.1 };
+          }
+          return { ok: true, amount };
+        },
+      );
 
       const balances = [
         {

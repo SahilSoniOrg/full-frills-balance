@@ -57,13 +57,13 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|
-| 2.1 | Introduce `convertAmount()` with `historical` vs `spot`; missing rate = explicit failure, never `1.0` | ADR-0005 | 1 d |
-| 2.2 | Migrate net worth / `BalanceService` aggregation | ADR-0005 | 1 d |
-| 2.3 | Migrate reports (`reportingDeltaEngine`, `report-service`) | ADR-0005 | 1 d |
-| 2.4 | Migrate budgets + simulation + Safe-to-Spend | ADR-0005 | 2 d |
-| 2.5 | Delete `getRateSafe`; update tests that mock it | ADR-0005 | 0.5 d |
-| 2.6 | `Money.multiply` rounds like `add`/`subtract` + unit test | ADR-0003 | 1 h |
-| 2.7 | UI/editor: route `JournalCalculator.isBalanced` through `checkJournal` | ADR-0003 | 2 h |
+| 2.1 | Introduce `convertAmount()` | ADR-0005 | ✅ |
+| 2.6 | `Money.multiply` rounding | ADR-0003 | ✅ |
+| 2.7 | `JournalCalculator` → `checkJournal` | ADR-0003 | ✅ |
+| 2.2 | BalanceService aggregation | ADR-0005 | ✅ |
+| 2.3 | Reports / deltas | ADR-0005 | ✅ |
+| 2.4 | Budget + simulation + STS | ADR-0005 | ✅ |
+| 2.5 | Remove `getRateSafe` | ADR-0005 | ⬜ wealth-service |
 
 **Exit criteria:** multi-currency user sees no silent parity; historical reports use leg `exchange_rate` where appropriate.
 
@@ -73,9 +73,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|
-| 3.1 | Auto pre-import backup file + user-visible path in UI | ADR-0006 | 1 d |
-| 3.2 | Restore: validate → stage in new workplace → swap active → delete old | ADR-0006 | 3–5 d |
-| 3.3 | Migration test harness: fixture DB at v27, migrate to v28, assert row counts + one balance | ADR-0004 | 2–3 d |
+| 3.1 | Auto pre-import backup | ADR-0006 | ✅ |
+| 3.3 | Migration smoke test | ADR-0004 | ✅ |
 | 3.4 | Add migration test to CI | ADR-0004 | 1 h |
 | 3.5 | Log integrity repairs to audit log (or settings “last repair” summary) | ADR-0002 | 0.5 d |
 
