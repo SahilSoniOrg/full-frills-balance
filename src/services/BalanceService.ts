@@ -4,6 +4,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
@@ -111,6 +112,12 @@ export class BalanceService {
         }
       }
 
+      await Promise.all(
+        Array.from(uniqueBaseCurrencies).map(base =>
+          exchangeRateService.fetchRatesForBase(base).catch(() => {}),
+        ),
+      );
+
       // 5. Staged aggregation setup (Transactional read consistency)
       // We aggregate into a separate structure to avoid exposing half-baked states to reactive readers.
       const stagedResults = new Map<
@@ -188,19 +195,37 @@ export class BalanceService {
           let convertedExpenses = myExpensesMoney;
 
           if (myBalance.currencyCode !== effectiveCurrency) {
-            // FAST: getRateSafe hits memory cache pre-warmed by fetchRatesForBase
-            const rate = exchangeRateService.getRateSafe(myBalance.currencyCode, effectiveCurrency);
+            const [balanceConv, incomeConv, expensesConv] = await Promise.all([
+              convertAmount({
+                amount: myStaged.balance,
+                fromCurrency: myBalance.currencyCode,
+                toCurrency: effectiveCurrency,
+                mode: 'spot',
+              }),
+              convertAmount({
+                amount: myStaged.monthlyIncome,
+                fromCurrency: myBalance.currencyCode,
+                toCurrency: effectiveCurrency,
+                mode: 'spot',
+              }),
+              convertAmount({
+                amount: myStaged.monthlyExpenses,
+                fromCurrency: myBalance.currencyCode,
+                toCurrency: effectiveCurrency,
+                mode: 'spot',
+              }),
+            ]);
 
-            // FX Integrity Guard: Fail fast if an exchange rate is invalid to prevent corrupted totals
-            if (!rate || rate <= 0) {
-              throw new Error(
-                `[BalanceService] Missing or invalid exchange rate for ${myBalance.currencyCode} -> ${effectiveCurrency}`,
+            if (!balanceConv.ok || !incomeConv.ok || !expensesConv.ok) {
+              logger.warn(
+                `[BalanceService] Skipping child aggregation for ${accountId}: FX unavailable (${myBalance.currencyCode} -> ${effectiveCurrency})`,
               );
+              continue;
             }
 
-            convertedBalance = Money.from(myStaged.balance * rate, effectiveCurrency);
-            convertedIncome = Money.from(myStaged.monthlyIncome * rate, effectiveCurrency);
-            convertedExpenses = Money.from(myStaged.monthlyExpenses * rate, effectiveCurrency);
+            convertedBalance = Money.from(balanceConv.amount, effectiveCurrency);
+            convertedIncome = Money.from(incomeConv.amount, effectiveCurrency);
+            convertedExpenses = Money.from(expensesConv.amount, effectiveCurrency);
 
             // Track mixed child balances (O(1) Map lookup instead of O(N) find)
             const existing = parentStaged.childBalancesMap.get(myBalance.currencyCode);

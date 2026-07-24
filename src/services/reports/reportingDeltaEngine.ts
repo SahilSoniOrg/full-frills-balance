@@ -1,4 +1,5 @@
 import Transaction from '@/src/data/models/Transaction';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import {
@@ -10,6 +11,28 @@ import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { effect } from '@/src/services/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
+
+async function convertReportingAmount(
+  amount: number,
+  fromCurrency: string,
+  targetCurrency: string,
+  storedExchangeRate?: number,
+): Promise<number | null> {
+  const result = await convertAmount({
+    amount,
+    fromCurrency,
+    toCurrency: targetCurrency,
+    mode: 'historical',
+    storedExchangeRate,
+  });
+  if (!result.ok) {
+    logger.warn(
+      `[reportingDeltaEngine] Skipping amount: FX unavailable (${fromCurrency} -> ${targetCurrency})`,
+    );
+    return null;
+  }
+  return result.amount;
+}
 
 /**
  * Pre-fetches exchange rates and converts a batch of raw Transaction records to the target
@@ -44,25 +67,32 @@ export async function convertReportTransactions(
     }),
   );
 
-  // 3. Synchronous conversion pass
-  return transactions
-    .map(tx => {
+  const converted = await Promise.all(
+    transactions.map(async tx => {
       const account = accountMap.get(tx.accountId);
       const accountType = account?.accountType;
       if (!accountType) return null;
 
       const txCurrency = tx.currencyCode || account?.currencyCode || targetCurrency;
-      const rate = exchangeRateService.getRateSafe(txCurrency, targetCurrency);
+      const amount = await convertReportingAmount(
+        tx.amount,
+        txCurrency,
+        targetCurrency,
+        tx.exchangeRate,
+      );
+      if (amount === null) return null;
 
       return {
         accountId: tx.accountId,
         accountType,
         transactionType: tx.transactionType,
         transactionDate: tx.transactionDate,
-        amount: tx.amount * rate,
+        amount,
       };
-    })
-    .filter((row): row is ConvertedReportTransaction => !!row);
+    }),
+  );
+
+  return converted.filter((row): row is ConvertedReportTransaction => !!row);
 }
 
 /**
@@ -86,10 +116,29 @@ export async function normalizeDeltas<T extends ReportingDeltaInput>(
     }),
   );
 
-  return deltas.map(d => {
-    const rate = exchangeRateService.getRateSafe(d.currencyCode, targetCurrency);
-    return { ...d, delta: d.delta * rate };
-  });
+  const normalized: T[] = [];
+  for (const row of await Promise.all(
+    deltas.map(async d => {
+      if (d.currencyCode === targetCurrency) {
+        return d;
+      }
+      const convertedDelta = await convertReportingAmount(
+        d.delta,
+        d.currencyCode,
+        targetCurrency,
+        d.exchangeRate,
+      );
+      if (convertedDelta === null) {
+        return null;
+      }
+      return { ...d, delta: convertedDelta, currencyCode: targetCurrency } as T;
+    }),
+  )) {
+    if (row !== null) {
+      normalized.push(row);
+    }
+  }
+  return normalized;
 }
 
 /**

@@ -5,7 +5,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { convertAmount } from '@/src/services/currencyConversion';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateCalendarHeatmapFromTransactions,
@@ -352,14 +352,20 @@ export class ReportService {
         )
           return null;
 
-        const { convertedAmount } = await exchangeRateService.convert(
-          tx.amount,
-          tx.currencyCode || acc.currencyCode || currency,
-          currency,
-        );
+        const fromCurrency = tx.currencyCode || acc.currencyCode || currency;
+        const conversion = await convertAmount({
+          amount: tx.amount,
+          fromCurrency,
+          toCurrency: currency,
+          mode: 'historical',
+          storedExchangeRate: tx.exchangeRate,
+        });
+        if (!conversion.ok) {
+          return null;
+        }
 
         return {
-          amount: Money.from(convertedAmount, currency),
+          amount: Money.from(conversion.amount, currency),
           type: acc.accountType,
           transactionType: tx.transactionType,
         };

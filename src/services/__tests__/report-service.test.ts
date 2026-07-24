@@ -30,11 +30,9 @@ describe('ReportService', () => {
     service = new ReportService();
     jest.clearAllMocks();
 
-    // Default exchange rate behavior: 1:1
-    (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
-      Promise.resolve({ convertedAmount: amount, rate: 1 }),
-    );
-    (exchangeRateService.getRateSafe as jest.Mock).mockReturnValue(1);
+    // Default exchange rate behavior for convertAmount fallback (same-currency txs need no mock)
+    (exchangeRateService.getRate as jest.Mock).mockResolvedValue(1);
+    (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
   });
 
   describe('getExpenseBreakdown', () => {
