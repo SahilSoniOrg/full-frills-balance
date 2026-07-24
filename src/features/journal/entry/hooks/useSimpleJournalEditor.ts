@@ -244,8 +244,8 @@ export function useSimpleJournalEditor({
   useEffect(() => {
     if (editor.isEdit) return; // Never apply defaults in Edit mode - use the journal's data
 
-    const lastSourceId = preferences.lastUsedSourceAccountId;
-    const lastDestId = preferences.lastUsedDestinationAccountId;
+    const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
+    const lastDestId = preferences.journalNav.lastUsedDestinationAccountId;
 
     let shouldUpdate = false;
     let newSourceId: AccountId | undefined;
@@ -339,9 +339,9 @@ export function useSimpleJournalEditor({
 
     // Save preferences
     if (type === 'expense' || type === 'transfer')
-      await preferences.setLastUsedSourceAccountId(sourceId);
+      await preferences.journalNav.setLastUsedSourceAccountId(sourceId);
     if (type === 'income' || type === 'transfer')
-      await preferences.setLastUsedDestinationAccountId(destinationId);
+      await preferences.journalNav.setLastUsedDestinationAccountId(destinationId);
 
     // Use the main editor submit
     await editor.submit(overrides);

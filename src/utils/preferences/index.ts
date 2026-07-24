@@ -17,6 +17,7 @@ export { createPreferencesFacade } from './PreferencesFacade';
 export type { PreferencesFacade } from './PreferencesFacade';
 export { AiPreferences } from './domains/AiPreferences';
 export { InsightPreferences } from './domains/InsightPreferences';
+export { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
 export { PrivacyPreferences } from './domains/PrivacyPreferences';
 export { SmsPreferences } from './domains/SmsPreferences';
 export { StsPreferences } from './domains/StsPreferences';

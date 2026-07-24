@@ -20,8 +20,12 @@ jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
-    setLastUsedSourceAccountId: jest.fn().mockResolvedValue(undefined),
-    setLastUsedDestinationAccountId: jest.fn().mockResolvedValue(undefined),
+    journalNav: {
+      lastUsedSourceAccountId: undefined,
+      lastUsedDestinationAccountId: undefined,
+      setLastUsedSourceAccountId: jest.fn().mockResolvedValue(undefined),
+      setLastUsedDestinationAccountId: jest.fn().mockResolvedValue(undefined),
+    },
   },
   preferencesMigration: {
     legacyCurrencyCode: undefined,
