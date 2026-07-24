@@ -1,5 +1,5 @@
 import { Animation, AppConfig } from '@/src/constants';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -13,16 +13,18 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import {
-  FlowSource,
-  FlowType,
-  SimulationResult,
-  SimulationRunResult,
-} from '@/src/services/simulation/types';
+  assembleSafeToSpendDashboard,
+  buildNetCashFlowByDay,
+  buildSafeToSpendHistoryPoints,
+  computeLiquidSafeDaysCount,
+  createEmptySafeToSpendDashboard,
+  mapSimulationToProjectionPoints,
+} from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
+import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
-import { Money, roundToPrecision } from '@/src/utils/money';
+import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -31,34 +33,13 @@ import dayjs from 'dayjs';
 import { Platform } from 'react-native';
 import { combineLatest, firstValueFrom, from, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
-
-export interface SafeToSpendDataPoint {
-  timestamp: number;
-  value: number;
-  isProjected: boolean;
-  details?: { name: string; amount: number; type: FlowType; context?: string }[];
-  dailyBurn?: number;
-}
-
-export interface SafeToSpendProjection {
-  history: SafeToSpendDataPoint[];
-  projection: SafeToSpendDataPoint[];
-  safeDaysCount: number | null;
-  safeToSpend: number;
-}
-
-export interface SafeToSpendResult {
-  summary: SimulationResult['summary'] & { safeCurrentBalance?: number };
-  report: SimulationRunResult['report'];
-  accountSummaries: SimulationRunResult['accountSummaries'];
-  totalLiquidAssets: number;
-  currencyCode: string;
-  liquidAssetSubtypes: AccountSubtype[];
-  dailyBudgetBurn: number;
-  projection: SafeToSpendProjection;
-  accountMap: Map<string, Account>;
-  safeToSpendDays: number;
-}
+import type { SafeToSpendResult } from '@/src/services/simulation/safeToSpendDashboardProjection';
+export type {
+  SafeToSpendDashboard,
+  SafeToSpendDataPoint,
+  SafeToSpendProjection,
+  SafeToSpendResult,
+} from '@/src/services/simulation/safeToSpendDashboardProjection';
 
 /** Widget / headline path — intentionally tiny. */
 export type SafeToSpendHeadline = {
@@ -223,7 +204,7 @@ export class SafeToSpendReadModel {
           );
 
           if (liquidAssets.length === 0) {
-            return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
+            return of(createEmptySafeToSpendDashboard(defaultCurrencyCode));
           }
 
           const budgetUsageObservables = budgets.map(b =>
@@ -315,105 +296,36 @@ export class SafeToSpendReadModel {
 
               trace.metric('simulation_complete');
 
-              const netCashFlowByDay = new Map<number, number>();
-              const deltas = rawDeltas || [];
-              for (const delta of deltas) {
-                let amount = delta.delta;
-                if (delta.currencyCode !== defaultCurrencyCode) {
-                  try {
-                    const rate = exchangeRateService.getRateSafe(
-                      delta.currencyCode,
-                      defaultCurrencyCode,
-                    );
-                    amount = roundToPrecision(amount * rate, 2);
-                  } catch (e) {
-                    logger.error('Failed to convert delta for history projection', e);
-                  }
-                }
-                const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
-                netCashFlowByDay.set(
-                  localDayStart,
-                  (netCashFlowByDay.get(localDayStart) || 0) + amount,
-                );
-              }
+              const netCashFlowByDay = buildNetCashFlowByDay(rawDeltas || [], defaultCurrencyCode);
 
-              const historyPoints: SafeToSpendDataPoint[] = [];
-              let runningBalance = totalLiquidMoney.amount;
-              for (let i = 0; i < safeToSpendDays; i++) {
-                const targetDay = startOfToday.subtract(i, 'day').valueOf();
-                const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
-                runningBalance -= flowThatDay;
-                historyPoints.push({
-                  timestamp: targetDay - 1000,
-                  value: runningBalance,
-                  isProjected: false,
-                });
-              }
-              historyPoints.reverse();
-
-              const projectionPoints = runResult.simulationResult.projections.map(p => {
-                const details = p.flows.map(f => ({
-                  name: f.label,
-                  amount: f.amount,
-                  type: f.kind === 'INFLOW' ? FlowType.INFLOW : FlowType.OUTFLOW,
-                  context: f.origin,
-                }));
-
-                const dailyBurn = p.flows
-                  .filter(f => {
-                    const isBudget = f.origin === FlowSource.BUDGET || f.resolvedFrom === 'BUDGET';
-                    return isBudget && f.kind === 'OUTFLOW';
-                  })
-                  .reduce((sum, f) => sum + f.amount, 0);
-
-                return {
-                  timestamp: p.timestamp,
-                  dayOffset: p.dayOffset,
-                  value: p.globalBalance,
-                  isProjected: true,
-                  accountBalances: p.accountBalances,
-                  details,
-                  dailyBurn: dailyBurn > 0 ? dailyBurn : undefined,
-                } as SafeToSpendDataPoint & { dayOffset: number };
+              const historyPoints = buildSafeToSpendHistoryPoints({
+                startOfToday,
+                safeToSpendDays,
+                totalLiquidAssets: totalLiquidMoney.amount,
+                netCashFlowByDay,
               });
 
-              const safeDaysCount = (function () {
-                const liquidIds = new Set(liquidAssetIds);
-                let startingGlobal = 0;
-                for (const [accountId, balance] of startingBalances.entries()) {
-                  if (liquidIds.has(accountId)) startingGlobal += balance;
-                }
-                if (startingGlobal < 0) return 0;
-                const firstNeg = runResult.simulationResult.projections.find(
-                  p => p.globalBalance < 0,
-                );
-                return firstNeg ? firstNeg.dayOffset + 1 : null;
-              })();
+              const projectionPoints = mapSimulationToProjectionPoints(runResult);
+
+              const safeDaysCount = computeLiquidSafeDaysCount({
+                liquidAssetIds,
+                startingBalances,
+                runResult,
+              });
 
               trace.end();
 
-              const result: SafeToSpendResult = {
-                summary: {
-                  ...runResult.simulationResult.summary,
-                  ...runResult.report.summary,
-                  safeCurrentBalance: totalLiquidMoney.amount,
-                  safeDaysCount,
-                },
-                report: runResult.report,
-                accountSummaries: runResult.accountSummaries,
-                totalLiquidAssets: totalLiquidMoney.amount,
-                currencyCode: defaultCurrencyCode,
-                liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-                dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
-                projection: {
-                  history: historyPoints,
-                  projection: projectionPoints as any,
-                  safeDaysCount,
-                  safeToSpend: runResult.simulationResult.summary.safeToSpend,
-                },
-                accountMap: runResult.accountMap,
+              const result = assembleSafeToSpendDashboard({
+                runResult,
+                defaultCurrencyCode,
                 safeToSpendDays,
-              };
+                totalLiquidAssets: totalLiquidMoney.amount,
+                liquidAssetIds,
+                startingBalances,
+                historyPoints,
+                projectionPoints,
+                safeDaysCount,
+              });
 
               try {
                 snapshotService.saveCustomSnapshot(workplaceId, 'safe_to_spend', result);
@@ -428,7 +340,7 @@ export class SafeToSpendReadModel {
                 `[SafeToSpendReadModel] Error in simulation pipeline (Workplace: ${workplaceId}):`,
                 err,
               );
-              return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
+              return of(createEmptySafeToSpendDashboard(defaultCurrencyCode));
             }),
           );
         },
@@ -438,65 +350,13 @@ export class SafeToSpendReadModel {
           `[SafeToSpendReadModel] Outer pipeline error (Workplace: ${workplaceId}):`,
           err,
         );
-        return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
+        return of(createEmptySafeToSpendDashboard(defaultCurrencyCode));
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
     this.safeToSpendCache.set(cacheKey, obs);
     return obs;
-  }
-
-  private getEmptySafeToSpendResult(resultCurrency: string): SafeToSpendResult {
-    return {
-      summary: {
-        safeToSpend: 0,
-        shortfall: 0,
-        trajectoryMinBalance: 0,
-        safeDaysCount: null,
-        totalFutureInflow: 0,
-        totalPlannedInflow: 0,
-        totalPlannedOutflow: 0,
-        totalCommittedPlanned: 0,
-        firstMajorInflowDay: null,
-      },
-      report: {
-        allFlows: [],
-        liabilities: {
-          total: 0,
-          totalCreditCard: 0,
-          totalOther: 0,
-          committed: 0,
-          committedCreditCard: 0,
-          committedOther: 0,
-        },
-        budget: {
-          currentMonthRemaining: 0,
-          nextMonthProjected: 0,
-          nextMonthDays: 0,
-        },
-        summary: {
-          firstMajorInflowDay: null,
-          totalFutureInflow: 0,
-          totalPlannedInflow: 0,
-          totalPlannedOutflow: 0,
-          totalCommittedPlanned: 0,
-        },
-      },
-      accountSummaries: [],
-      totalLiquidAssets: 0,
-      currencyCode: resultCurrency,
-      liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-      dailyBudgetBurn: 0,
-      projection: {
-        history: [],
-        projection: [],
-        safeDaysCount: null,
-        safeToSpend: 0,
-      },
-      accountMap: new Map(),
-      safeToSpendDays: 0,
-    };
   }
 }
 
