@@ -7,7 +7,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
-import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -112,11 +112,9 @@ export class AccountingRebuildService {
       const tx = rawTransactions[i];
       currentCount++;
 
-      const newBalance = accountingService.calculateNewBalance(
+      const newBalance = effect(account.accountType, tx.transactionType as TransactionType).apply(
         currentBalance,
         tx.amount,
-        account.accountType,
-        tx.transactionType as TransactionType,
         precision,
       );
 

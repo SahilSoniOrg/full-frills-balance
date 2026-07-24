@@ -6,7 +6,7 @@ import type {
   BatchImportData,
   ImportedTransaction,
 } from '@/src/data/repositories/ImportRepository';
-import { accountingDomainService } from '@/src/services/accounting/AccountingDomainService';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
@@ -67,11 +67,9 @@ export async function calculateImportRunningBalances(
           ? (t.transactionType as TransactionType)
           : TransactionType.DEBIT;
 
-        currentBalance = accountingDomainService.calculateNewBalance(
+        currentBalance = effect(accountType, transactionType).apply(
           currentBalance,
           roundedAmount,
-          accountType,
-          transactionType,
           precision,
         );
         t.runningBalance = currentBalance;

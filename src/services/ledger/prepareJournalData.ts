@@ -5,7 +5,7 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
-import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
+import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
 
@@ -49,12 +49,11 @@ export async function prepareJournalData(
     );
   }
 
-  const validation = accountingService.validateJournal(
+  const validation = checkJournal(
     roundedTransactions.map(t => ({
       amount: t.amount,
       type: t.transactionType,
       exchangeRate: t.exchangeRate,
-      accountCurrency: t.currencyCode,
     })),
     journalPrecision,
   );
@@ -79,11 +78,9 @@ export async function prepareJournalData(
           tx.accountId,
           data.journalDate,
         );
-        const balance = accountingService.calculateNewBalance(
+        const balance = effect(accountTypes.get(tx.accountId)!, tx.transactionType).apply(
           latestTx?.runningBalance || 0,
           tx.amount,
-          accountTypes.get(tx.accountId)!,
-          tx.transactionType,
           accountPrecisions.get(tx.accountId) ?? 2,
         );
         calculatedBalances.set(tx.accountId, balance);

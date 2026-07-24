@@ -1,30 +1,26 @@
+/**
+ * Accounting aggregates and compatibility wrappers over BalanceEffects.
+ * Prefer `effect` / `checkJournal` / `foldBalances` from BalanceEffects for new code.
+ */
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  checkJournal,
+  effect,
+  periodFlowSQL,
+  type JournalLineForCheck,
+} from '@/src/services/accounting/BalanceEffects';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
 
-export interface JournalLineInput {
-  amount: number;
-  type: TransactionType;
-  exchangeRate?: number;
-}
+export type { JournalLineForCheck as JournalLineInput };
 
 export function getBalanceImpactMultiplier(
   accountType: AccountType,
   transactionType: TransactionType,
 ): number {
-  switch (accountType) {
-    case AccountType.ASSET:
-    case AccountType.EXPENSE:
-      return transactionType === TransactionType.DEBIT ? 1 : -1;
-    case AccountType.LIABILITY:
-    case AccountType.EQUITY:
-    case AccountType.INCOME:
-      return transactionType === TransactionType.CREDIT ? 1 : -1;
-    default:
-      return 0;
-  }
+  return effect(accountType, transactionType).sign;
 }
 
 export function getAccountBalanceDelta(
@@ -32,21 +28,21 @@ export function getAccountBalanceDelta(
   accountType: AccountType,
   transactionType: TransactionType,
 ): number {
-  return amount * getBalanceImpactMultiplier(accountType, transactionType);
+  return effect(accountType, transactionType).delta(amount);
 }
 
 export function isLiquidInflow(
   accountType: AccountType,
   transactionType: TransactionType,
 ): boolean {
-  return accountType === AccountType.ASSET && transactionType === TransactionType.DEBIT;
+  return effect(accountType, transactionType).isLiquidInflow;
 }
 
 export function isLiquidOutflow(
   accountType: AccountType,
   transactionType: TransactionType,
 ): boolean {
-  return accountType === AccountType.ASSET && transactionType === TransactionType.CREDIT;
+  return effect(accountType, transactionType).isLiquidOutflow;
 }
 
 export function getLiquidNetWorthDelta(
@@ -54,19 +50,14 @@ export function getLiquidNetWorthDelta(
   accountType: AccountType,
   transactionType: TransactionType,
 ): number {
-  const balanceImpact = getAccountBalanceDelta(amount, accountType, transactionType);
-  return accountType === AccountType.LIABILITY ||
-    accountType === AccountType.EQUITY ||
-    accountType === AccountType.EXPENSE
-    ? -balanceImpact
-    : balanceImpact;
+  return effect(accountType, transactionType).netWorthDelta(amount);
 }
 
 export function isBalanceIncrease(
   accountType: AccountType,
   transactionType: TransactionType,
 ): boolean {
-  return getBalanceImpactMultiplier(accountType, transactionType) > 0;
+  return effect(accountType, transactionType).isIncrease;
 }
 
 export function isValueEntering(transactionType: TransactionType): boolean {
@@ -80,54 +71,18 @@ export function isValueLeaving(transactionType: TransactionType): boolean {
 export const isIncrease = isBalanceIncrease;
 
 export function getPeriodIncreaseSQLSnippet(): string {
-  return `
-    CASE 
-      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      ELSE 0 
-    END
-  `.trim();
+  return periodFlowSQL().increaseCase;
 }
 
 export function getPeriodDecreaseSQLSnippet(): string {
-  return `
-    CASE 
-      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      ELSE 0 
-    END
-  `.trim();
+  return periodFlowSQL().decreaseCase;
 }
 
 export function validateBalance(
-  lines: JournalLineInput[],
+  lines: JournalLineForCheck[],
   precision: number = AppConfig.constants.precision,
-): {
-  isValid: boolean;
-  imbalance: number;
-  totalDebits: number;
-  totalCredits: number;
-} {
-  const totalDebits = lines
-    .filter(l => l.type === TransactionType.DEBIT)
-    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
-
-  const totalCredits = lines
-    .filter(l => l.type === TransactionType.CREDIT)
-    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
-
-  const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
-
-  return {
-    isValid: Math.abs(imbalance) < Math.pow(10, -(precision + 1)),
-    imbalance,
-    totalDebits: roundToPrecision(totalDebits, precision),
-    totalCredits: roundToPrecision(totalCredits, precision),
-  };
+) {
+  return checkJournal(lines, precision);
 }
 
 export interface AccountPeriodFlows {

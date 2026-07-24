@@ -1,34 +1,29 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import {
-  getBalanceImpactMultiplier,
-  JournalLineInput,
-  validateBalance,
-} from '@/src/services/accounting/accountingHelpers';
-import { roundToPrecision } from '@/src/utils/money';
+import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
+import type { JournalLineForCheck } from '@/src/services/accounting/BalanceEffects';
 
-export interface JournalValidationResult {
-  isValid: boolean;
-  imbalance: number;
-  totalDebits: number;
-  totalCredits: number;
-}
+export type { JournalCheckResult as JournalValidationResult } from '@/src/services/accounting/BalanceEffects';
 
+/**
+ * @deprecated Prefer BalanceEffects (`effect`, `checkJournal`, `foldBalances`).
+ * Kept as a thin Adapter for remaining journal scaffolding call sites.
+ */
 export class AccountingDomainService {
   getImpactMultiplier(accountType: AccountType, transactionType: TransactionType): number {
-    return getBalanceImpactMultiplier(accountType, transactionType);
+    return effect(accountType, transactionType).sign;
   }
 
   getBalanceImpactMultiplier(accountType: AccountType, transactionType: TransactionType): number {
-    return getBalanceImpactMultiplier(accountType, transactionType);
+    return effect(accountType, transactionType).sign;
   }
 
   validateJournal(
-    transactions: JournalLineInput[],
+    transactions: JournalLineForCheck[],
     precision: number = AppConfig.constants.precision,
-  ): JournalValidationResult {
-    return validateBalance(transactions, precision);
+  ) {
+    return checkJournal(transactions, precision);
   }
 
   calculateNewBalance(
@@ -38,8 +33,7 @@ export class AccountingDomainService {
     transactionType: TransactionType,
     precision: number = AppConfig.constants.precision,
   ): number {
-    const multiplier = getBalanceImpactMultiplier(accountType, transactionType);
-    return roundToPrecision(currentBalance + amount * multiplier, precision);
+    return effect(accountType, transactionType).apply(currentBalance, amount, precision);
   }
 
   isBackdated(transactionDate: number, latestTransactionDate?: number): boolean {
