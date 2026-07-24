@@ -24,7 +24,7 @@ This document is the durable review artifact for deep-module design across Full 
 | 1 | Safe-to-Spend hybrid handle | **Done** — `forWorkplace` → `watch` / `watchHeadline` / `preWarm`; Notification façade removed |
 | 2 | BalanceEffects | **Done** |
 | 3 | SMS façade retirement | **Done** |
-| 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` uses theme/privacy/ai/sms/sts facades |
+| 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` + `journalNav` for last-used accounts |
 | 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` + `JournalEnrichmentQueries`; write lifecycle on `LedgerWriteService` |
 | 6 | Account/Transaction repo carve | Deferred (P2) — touch when next editing those Modules |
 | 7 | STS mapper / dashboard VMs | Partial via handle API; fat result type still used internally |
@@ -32,7 +32,7 @@ This document is the durable review artifact for deep-module design across Full 
 | 9 | Report / ReactiveData | Deferred (P2) |
 | 10 | SimulationInput | **Done** |
 | 11–12 | PlannedPayment / Integrity splits | Deferred (P2) |
-| 13 | Fat journal/account VMs | **Partial** — helpers extracted from editors + account details |
+| 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |
 | 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
 | 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |
 | 16 | journalPresenter home | **Done** → `services/accounting` |
