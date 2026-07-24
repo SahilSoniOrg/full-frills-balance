@@ -27,9 +27,9 @@ This document is the durable review artifact for deep-module design across Full 
 | 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` + `journalNav` for last-used accounts |
 | 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries`, `JournalEnrichmentQueries`, `JournalObserveQueries` (status meta, planned range, account tx, by-id observes); write lifecycle on `LedgerWriteService` |
 | 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries`, `accountListBalanceMapping`, `AccountMergeOperations` |
-| 7 | STS mapper / dashboard VMs | **Partial** — `SafeToSpendDashboard` + `safeToSpendDashboardProjection` Module |
-| 8 | ledgerRead pass-throughs | **Partial** — `ledgerEnrichedDisplay` + slim `ledgerReadService` |
-| 9 | Report / ReactiveData | **Partial** — `reactiveWorkplaceObserves`, `reactiveAggregatedBalances`; STS/insights use base streams |
+| 7 | STS mapper / dashboard VMs | **Partial** — `safeToSpendDashboardProjection`; `dailyBudgetBurn` guarded when STS days is 0 |
+| 8 | ledgerRead pass-throughs | **Done** — `ledgerEnrichedDisplay` only; `ledgerReadService` removed |
+| 9 | Report / ReactiveData | **Partial** — shared `reactiveWorkplaceObserves` / `reactiveAggregatedBalances`; reports invalidate via workplace meta |
 | 10 | SimulationInput | **Done** |
 | 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, **orchestration** (`plannedPaymentOrchestration`); `integrityMaintenance` (verify/repair still on service) |
 | 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen; `accountForm` / `accountsList` / `transactionDetails` helpers |
