@@ -18,11 +18,10 @@ import { Model } from '@nozbe/watermelondb';
  * Canonical journal write Module: prepare + audit + persist + rebuild enqueue.
  * Prefer this over calling JournalRepository create/update helpers directly.
  *
- * Rebuild enqueue policy:
- * - create / createMany / post / revert / delete / recover: enqueue inside the
- *   successful `database.write` callback (same pattern as create).
- * - update: enqueue after `updateJournalWithTransactions` returns, because that
- *   helper owns its own write transaction (nested writes are unsafe).
+ * Rebuild enqueue policy: enqueue inside the successful write callback for
+ * create / createMany / update / post / revert / delete / recover. Update passes
+ * an `afterBatch` hook into `updateJournalWithTransactions` (that helper owns the
+ * write; nested writes are unsafe).
  */
 export class LedgerWriteService {
   async prepareCreateJournal(
@@ -173,7 +172,14 @@ export class LedgerWriteService {
       );
     };
 
-    const journal = await journalRepository.updateJournalWithTransactions(
+    const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
+    const allAccountsToRebuild = new Set<AccountId>([
+      ...prepared.accountsToRebuild,
+      ...originalAccountIds,
+    ]);
+    const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
+
+    return journalRepository.updateJournalWithTransactions(
       workplaceId,
       journalId,
       {
@@ -185,18 +191,10 @@ export class LedgerWriteService {
         metadata: data.metadata,
       },
       extraOpCreator,
+      () => {
+        rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate, workplaceId);
+      },
     );
-
-    // Rebuild after write: updateJournalWithTransactions owns the DB write.
-    const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
-    const allAccountsToRebuild = new Set<AccountId>([
-      ...prepared.accountsToRebuild,
-      ...originalAccountIds,
-    ]);
-    const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
-    rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate, workplaceId);
-
-    return journal;
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {

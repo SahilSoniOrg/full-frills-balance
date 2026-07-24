@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
@@ -87,7 +87,7 @@ export function useJournals(
         maxAmount: range?.maxAmount,
         displayType: range?.displayType,
       };
-      return journalService.observeEnrichedJournals(
+      return observeEnrichedJournals(
         workplaceId,
         limit,
         range as any,

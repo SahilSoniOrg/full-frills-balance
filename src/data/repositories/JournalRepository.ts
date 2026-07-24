@@ -113,12 +113,7 @@ export class JournalRepository {
     dayStart: number,
     dayEnd: number,
   ) {
-    return journalPlannedQueries.findPlannedOnDay(
-      workplaceId,
-      plannedPaymentId,
-      dayStart,
-      dayEnd,
-    );
+    return journalPlannedQueries.findPlannedOnDay(workplaceId, plannedPaymentId, dayStart, dayEnd);
   }
 
   findByPlannedPaymentIds(workplaceId: WorkplaceId, plannedPaymentIds: PlannedPaymentId[]) {
@@ -445,6 +440,7 @@ export class JournalRepository {
     journalId: JournalId,
     journalData: PrepareCreateJournalData,
     extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
+    afterBatch?: () => void, // Runs inside the same write after batch (e.g. rebuild enqueue)
   ): Promise<Journal> {
     const {
       transactions: transactionData,
@@ -545,6 +541,7 @@ export class JournalRepository {
       if (extraOpCreator) batchOps.push(extraOpCreator());
 
       await database.batch(batchOps);
+      afterBatch?.();
 
       logger.info(
         `[Trace] JournalRepository.updateJournalWithTransactions: ${Date.now() - start}ms`,
@@ -764,7 +761,7 @@ export class JournalRepository {
 
   /**
    * Fetches transactions and account info for a batch of journals in a single raw query.
-   * Optimized for JournalService.observeEnrichedJournals.
+   * Optimized for observeEnrichedJournals.
    */
   async getEnrichmentDataRaw(journalIds: string[]): Promise<
     {

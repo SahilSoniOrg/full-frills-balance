@@ -2,7 +2,7 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
@@ -35,15 +35,11 @@ export function useInsightDetailsViewModel({
   const journals$ = useMemo(() => {
     if (journalIds.length === 0) return of([]);
 
-    return journalService.observeEnrichedJournals(
-      workplaceId,
-      AppConfig.defaults.insightDetailsFetchLimit,
-      {
-        startDate: 0,
-        endDate: getNow() + AppConfig.time.msPerDay,
-        journalIds: journalIds,
-      },
-    );
+    return observeEnrichedJournals(workplaceId, AppConfig.defaults.insightDetailsFetchLimit, {
+      startDate: 0,
+      endDate: getNow() + AppConfig.time.msPerDay,
+      journalIds: journalIds,
+    });
   }, [journalIds, workplaceId]);
 
   // Re-filtering journals locally to match the IDs

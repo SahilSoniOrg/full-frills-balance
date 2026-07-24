@@ -11,6 +11,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { transactionService } from '@/src/services/transaction-ingestion';
@@ -341,7 +342,7 @@ describe('JournalRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const observable = journalService.observeEnrichedJournals(
+      const observable = observeEnrichedJournals(
         'wp-1' as WorkplaceId,
         10,
         undefined,
@@ -382,7 +383,7 @@ describe('JournalRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const observable = journalService.observeEnrichedJournals(
+      const observable = observeEnrichedJournals(
         'wp-1' as WorkplaceId,
         10,
         undefined,
@@ -423,7 +424,7 @@ describe('JournalRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const observable = journalService.observeEnrichedJournals(
+      const observable = observeEnrichedJournals(
         'wp-1' as WorkplaceId,
         10,
         undefined,
@@ -467,7 +468,7 @@ describe('JournalRepository', () => {
       );
 
       // 2. Observe the enriched journals
-      const observable = journalService.observeEnrichedJournals('wp-1' as WorkplaceId, 10);
+      const observable = observeEnrichedJournals('wp-1' as WorkplaceId, 10);
 
       const states: any[][] = [];
       const sub = observable.subscribe(data => {

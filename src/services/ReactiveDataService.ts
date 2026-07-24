@@ -9,7 +9,7 @@ import {
   clearReactiveWorkplaceAccountsAndJournalMetaCache,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { getAccountDescendants } from '@/src/services/accounts/accountDescendants';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { WealthSummary } from '@/src/services/wealth-service';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
@@ -124,7 +124,7 @@ class ReactiveDataService {
     // Optimized: Derive from the high-performance SQL balance stream
     const obs$ = combineLatest([
       observeAggregatedAccountBalances(targetCurrency, workplaceId),
-      journalService.observeEnrichedJournals(
+      observeEnrichedJournals(
         workplaceId,
         AppConfig.pagination.dashboardPageSize,
         undefined,
