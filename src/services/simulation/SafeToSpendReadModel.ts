@@ -10,7 +10,11 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import {
+  observeWorkplaceAccounts,
+  observeWorkplaceActiveTransactionCount,
+  observeWorkplaceJournalMeta,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import {
   assembleSafeToSpendDashboard,
@@ -129,7 +133,7 @@ export class SafeToSpendReadModel {
     const obs = combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([
-          reactiveDataService.observeAccounts(workplaceId),
+          observeWorkplaceAccounts(workplaceId),
           budgetRepository.observeAllActive(workplaceId),
           plannedPaymentRepository.observeActive(workplaceId),
           journalRepository.observePlannedInRange(
@@ -137,8 +141,8 @@ export class SafeToSpendReadModel {
             dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
             dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
           ),
-          reactiveDataService.observeActiveCount(workplaceId),
-          reactiveDataService.observeJournalMeta(workplaceId),
+          observeWorkplaceActiveTransactionCount(workplaceId),
+          observeWorkplaceJournalMeta(workplaceId),
         ] as [
           Observable<Account[]>,
           Observable<Budget[]>,

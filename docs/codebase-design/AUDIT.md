@@ -29,7 +29,7 @@ This document is the durable review artifact for deep-module design across Full 
 | 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries` + `accountListBalanceMapping` |
 | 7 | STS mapper / dashboard VMs | **Partial** — `SafeToSpendDashboard` + `safeToSpendDashboardProjection` Module |
 | 8 | ledgerRead pass-throughs | **Partial** — `ledgerEnrichedDisplay` + slim `ledgerReadService` |
-| 9 | Report / ReactiveData | **Partial** — metrics mapping; `reactiveWorkplaceObserves` base streams |
+| 9 | Report / ReactiveData | **Partial** — `reactiveWorkplaceObserves`, `reactiveAggregatedBalances`; STS/insights use base streams |
 | 10 | SimulationInput | **Done** |
 | 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, `integrityMaintenance` |
 | 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |

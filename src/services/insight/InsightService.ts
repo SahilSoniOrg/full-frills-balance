@@ -8,7 +8,10 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
 import { shareReplay, switchMap, take } from 'rxjs/operators';
-import { reactiveDataService } from '../ReactiveDataService';
+import {
+  observeWorkplaceAccounts,
+  observeWorkplaceJournalMeta,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { calculateInsights } from './insightCalculator';
 import { Insight } from './insightTypes';
 
@@ -67,8 +70,8 @@ export class InsightService {
         const ninetyDaysAgo = Date.now() - lookbackDays * AppConfig.time.msPerDay;
 
         return combineLatest([
-          reactiveDataService.observeJournalMeta(workplaceId),
-          reactiveDataService.observeAccounts(workplaceId),
+          observeWorkplaceJournalMeta(workplaceId),
+          observeWorkplaceAccounts(workplaceId),
           plannedPaymentRepository.observeActive(workplaceId),
           this.refreshTrigger,
           of(ninetyDaysAgo),

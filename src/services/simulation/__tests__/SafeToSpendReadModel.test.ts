@@ -10,8 +10,8 @@ import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/domain';
 import { of } from 'rxjs';
 
@@ -32,11 +32,15 @@ jest.mock('@/src/utils/preferences', () => {
   return {
     preferences: {
       defaultCurrencyCode: 'USD',
-      dismissedPatternIds: [],
-      dismissPattern: jest.fn(),
-      undismissPattern: jest.fn(),
-      observe: jest.fn(() => of(60)),
-      safeToSpendDays: 60,
+      sts: {
+        observeSafeToSpendDays: jest.fn(() => of(60)),
+        safeToSpendDays: 60,
+      },
+      insights: {
+        dismissedPatternIds: [],
+        dismissPattern: jest.fn(),
+        undismissPattern: jest.fn(),
+      },
     },
   };
 });
@@ -44,7 +48,7 @@ jest.mock('@/src/utils/preferences', () => {
 describe('SafeToSpendReadModel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    reactiveDataService.clearCache();
+    clearReactiveWorkplaceObservesCache();
     safeToSpendReadModel.clearCache();
 
     (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));

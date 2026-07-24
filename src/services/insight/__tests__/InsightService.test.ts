@@ -5,7 +5,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { of } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { WorkplaceId } from '@/src/types/domain';
@@ -20,9 +20,11 @@ jest.mock('@/src/utils/logger');
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
-    dismissedPatternIds: [],
-    dismissPattern: jest.fn(),
-    undismissPattern: jest.fn(),
+    insights: {
+      dismissedPatternIds: [],
+      dismissPattern: jest.fn(),
+      undismissPattern: jest.fn(),
+    },
   },
   preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
@@ -30,7 +32,7 @@ jest.mock('@/src/utils/preferences', () => ({
 describe('PatternService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    reactiveDataService.clearCache();
+    clearReactiveWorkplaceObservesCache();
     patternService.clearCache();
 
     // Default simple mocks
