@@ -23,6 +23,18 @@ jest.mock('@/src/utils/preferences', () => ({
     setLastUsedSourceAccountId: jest.fn().mockResolvedValue(undefined),
     setLastUsedDestinationAccountId: jest.fn().mockResolvedValue(undefined),
   },
+  preferencesMigration: {
+    legacyCurrencyCode: undefined,
+    clearLegacyCurrencyCode: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({
+    activeWorkplaceId: 'wp-1',
+    activeWorkplace: { id: 'wp-1', name: 'Personal' },
+    defaultCurrencyCode: 'USD',
+  }),
 }));
 
 function createEditor(success: boolean) {

@@ -11,6 +11,10 @@ jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
   },
+  preferencesMigration: {
+    legacyCurrencyCode: undefined,
+    clearLegacyCurrencyCode: jest.fn(),
+  },
 }));
 
 jest.mock('@/src/constants', () => ({
