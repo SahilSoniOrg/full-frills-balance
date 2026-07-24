@@ -1,12 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
-import { database } from '@/src/data/database/Database';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import Transaction from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
@@ -14,7 +10,6 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
@@ -89,39 +84,7 @@ export async function postPlannedPaymentOccurrence(
     const postTime = Date.now();
 
     if (existingPlanned.length > 0) {
-      const j = existingPlanned[0];
-      const txs = await transactionRepository.findByJournal(workplaceId, j.id);
-      const originalDate = j.journalDate;
-
-      await database.write(async () => {
-        const metadataOp = await journalRepository.prepareMetadataPatch(
-          workplaceId,
-          j.id,
-          { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-          MetadataSources.MANUAL_POST,
-        );
-
-        const journalOp = j.prepareUpdate((record: Journal) => {
-          record.status = JournalStatus.POSTED;
-          record.journalDate = postTime;
-          record.updatedAt = new Date();
-        });
-
-        const txOps = txs.map((tx: Transaction) =>
-          tx.prepareUpdate((record: Transaction) => {
-            record.transactionDate = postTime;
-            record.updatedAt = new Date();
-          }),
-        );
-
-        await database.batch([metadataOp, journalOp, ...txOps]);
-      });
-
-      rebuildQueueService.enqueueMany(
-        new Set(txs.map((t: Transaction) => t.accountId)),
-        postTime,
-        workplaceId,
-      );
+      await ledgerWriteService.postJournal(existingPlanned[0].id, workplaceId);
     } else {
       if (!pp.toAccountId) {
         throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);

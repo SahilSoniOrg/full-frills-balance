@@ -270,20 +270,11 @@ describe('PlannedPaymentService', () => {
       const mockJournal = {
         id: 'existing-j-1',
         journalDate: new Date(2024, 0, 1).getTime(),
-        update: jest.fn().mockImplementation(async (fn: any) => fn(mockJournal)),
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => fn(mockJournal)),
-      };
-      const mockTransaction = {
-        id: 'tx-1',
-        journalId: 'existing-j-1',
-        transactionDate: new Date(2024, 0, 1).getTime(),
-        update: jest.fn().mockImplementation(async (fn: any) => fn(mockTransaction)),
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => fn(mockTransaction)),
       };
 
       (journalRepository.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
       (journalRepository.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
-      (transactionRepository.findByJournal as jest.Mock).mockResolvedValue([mockTransaction]);
+      (ledgerWriteService.postJournal as jest.Mock).mockResolvedValue({} as any);
 
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -302,16 +293,10 @@ describe('PlannedPaymentService', () => {
         expect.any(Number),
         expect.any(Number),
       );
-      // Should use database.write to patch status, NOT ledgerWriteService.createJournal
-      expect(database.write).toHaveBeenCalled();
-      expect(mockJournal.prepareUpdate).toHaveBeenCalled();
-      expect(mockTransaction.prepareUpdate).toHaveBeenCalled();
+      // Promote existing PLANNED journal via canonical ledger write path
+      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1');
       expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
       expect(updatePpSpy).toHaveBeenCalled();
-
-      // Verify date was updated to roughly "now" (not the old 2024 date)
-      expect(mockJournal.journalDate).toBeGreaterThan(new Date(2024, 1, 1).getTime());
-      expect(mockTransaction.transactionDate).toBe(mockJournal.journalDate);
     });
 
     test('Creates new POSTED journal if no PLANNED journal exists', async () => {
