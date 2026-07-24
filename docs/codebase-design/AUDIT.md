@@ -73,7 +73,7 @@ The codebase already has several **genuinely deep Modules** (balance aggregation
 Remaining systemic issues:
 
 1. **Wrong or leftover seams** — Safe-to-Spend still entered via `NotificationService`; SMS types re-exported through a façade; ARCHITECTURE.md still wrong about STS ownership.
-2. **Dual import paths** — `accountingHelpers` vs `AccountingDomainService`; domain presentation living in `utils/journalPresenter` while accounting lives under `services/accounting`.
+2. **Dual import paths** — `accountingHelpers` vs `AccountingDomainService` (BalanceEffects supersedes both for sign rules); journal presentation now lives under `services/accounting/journalPresenter`.
 3. **Fat Interfaces** — `SafeToSpendResult`, `JournalRepository` (~30 methods), `preferences` (~40 surface points), `sms-service` re-export barrel.
 4. **God view-models** — several 400–600 LOC feature hooks that mix orchestration, formatting, and domain rules (especially accounts + journal editors).
 5. **Real seams that are healthy** — `ImportPlugin`, `ShareProvider`, `PipelineStep`, `LLMEngine` (+ mock), simulation engines behind `CashFlowSimulationService`.
@@ -119,7 +119,7 @@ Counts and LOC are approximate (2026-07-24). Depth is about leverage, not LOC.
 | accountingHelpers | `services/accounting/accountingHelpers.ts` | 240 | ~15 free functions | Medium — one sign fact, many projections | in-process | P0 merge |
 | AccountingDomainService | `services/accounting/AccountingDomainService.ts` | 90 | ~7 methods; duplicates helpers | Shallow wrapper | in-process | P0 merge |
 | ImportBalanceCalculator | `services/import/ImportBalanceCalculator.ts` | 92 | 1 function | Medium — mutates batch in place | in-process + DB currencies | P2 purify |
-| journalPresenter | `utils/journalPresenter.ts` | 298 | object of display/semantic helpers | Medium — domain in utils | in-process | P1 relocate |
+| journalPresenter | `services/accounting/journalPresenter.ts` | 298 | object of display/semantic helpers | Medium | in-process | **Done** (relocated from utils) |
 | prepareJournalData | `services/ledger/prepareJournalData.ts` | — | prepare helpers | Medium | in-process | P2 |
 | ledgerRead / ledgerWrite | `services/ledger/ledger*Service.ts` | ~90–190 | small | Medium–Deep | local-substitutable | P3 |
 | AccountResolutionService | `services/ledger/AccountResolutionService.ts` | 629 | small entry, deep match logic | Deep | local-substitutable | P3 |

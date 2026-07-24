@@ -58,7 +58,7 @@ Scope: ~98 production `.ts` files under `/Users/sahilsoni/me/projects/full-frill
 - **Call sites:** 0 prod (self + test only)
 
 ### Related: `journalPresenter` (utils facade)
-- **Path:** `/Users/sahilsoni/me/projects/full-frills-balance/src/utils/journalPresenter.ts`
+- **Path:** `/Users/sahilsoni/me/projects/full-frills-balance/src/services/accounting/journalPresenter.ts`
 - **Interface size:** ~6 methods + label/color maps + types
 - **Depth:** deep (semantic matrix is non-trivial)
 - **Deletion test:** reappears across ~7 call sites (enrichment, prepareJournalData, feature VMs)

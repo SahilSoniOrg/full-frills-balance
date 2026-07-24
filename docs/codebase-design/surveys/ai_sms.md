@@ -395,7 +395,7 @@ No utils files that *only* re-export other Modules wholesale, except `test-utils
 |---|---|---|---|---|
 | dateUtils | `src/utils/dateUtils.ts` | ~384 / many exports | Wide Interface, deep calendar logic | Large surface |
 | dateHelpers | `src/utils/dateHelpers.ts` | ~25 | Shallow for clocks | Split from dateUtils |
-| journalPresenter | `src/utils/journalPresenter.ts` | ~298 | Moderate–deep | Presentation mapping |
+| journalPresenter | `src/services/accounting/journalPresenter.ts` | ~298 | Moderate–deep | Presentation mapping |
 | journalStatus | `src/utils/journalStatus.ts` | 3 | Trivial | Constant Module |
 | accountCategory | `src/utils/accountCategory.ts` | ~194 | Moderate | Domain helpers |
 | accountIcon / accountSubtypeUtils | utils | small | Shallow–moderate | Lookup tables |
