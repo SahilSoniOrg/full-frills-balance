@@ -6,11 +6,13 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
+import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import {
   calculateNextOccurrence as advancePlannedOccurrence,
   computeFirstOccurrence as computeFirstPlannedOccurrence,
@@ -19,7 +21,6 @@ import {
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
 
 export class PlannedPaymentService {
@@ -55,57 +56,7 @@ export class PlannedPaymentService {
    * Generates a PLANNED journal from a rule.
    */
   async generatePlannedJournal(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
-    try {
-      if (!pp.toAccountId) {
-        logger.warn(
-          `Planned payment ${pp.id} is missing toAccountId — skipping journal generation.`,
-        );
-        return;
-      }
-
-      const amount = Money.from(pp.amount, pp.currencyCode);
-      const transactions = [
-        {
-          accountId: pp.fromAccountId,
-          amount: amount.amount,
-          transactionType: TransactionType.CREDIT,
-          notes: pp.description,
-          currencyCode: amount.currencyCode,
-        },
-        {
-          accountId: pp.toAccountId,
-          amount: amount.amount,
-          transactionType: TransactionType.DEBIT,
-          notes: pp.description,
-          currencyCode: amount.currencyCode,
-        },
-      ];
-
-      const normalizedDate = normalizeToStartOfDay(occurrenceDate);
-
-      await ledgerWriteService.createJournal(
-        {
-          journalDate: normalizedDate,
-          description: pp.name,
-          currencyCode: pp.currencyCode,
-          transactions,
-          status: pp.isAutoPost ? JournalStatus.POSTED : JournalStatus.PLANNED,
-          plannedPaymentId: pp.id as PlannedPaymentId,
-        },
-        pp.workplaceId,
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : error != null
-            ? String(error)
-            : 'unknown error (null thrown)';
-      logger.error(
-        `Failed to generate planned journal for payment ${pp.id}: ${message}`,
-        error instanceof Error ? error : undefined,
-      );
-    }
+    return generatePlannedJournalForPayment(pp, occurrenceDate);
   }
 
   async postOccurrence(
@@ -190,30 +141,12 @@ export class PlannedPaymentService {
           throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
         }
 
-        const amount = Money.from(pp.amount, pp.currencyCode);
-        const transactions = [
-          {
-            accountId: pp.fromAccountId,
-            amount: amount.amount,
-            transactionType: TransactionType.CREDIT,
-            notes: pp.description,
-            currencyCode: amount.currencyCode,
-          },
-          {
-            accountId: pp.toAccountId,
-            amount: amount.amount,
-            transactionType: TransactionType.DEBIT,
-            notes: pp.description,
-            currencyCode: amount.currencyCode,
-          },
-        ];
-
         await ledgerWriteService.createJournal(
           {
             journalDate: postTime,
             description: pp.name,
             currencyCode: pp.currencyCode,
-            transactions,
+            transactions: buildPlannedPaymentTransferLines(pp),
             status: JournalStatus.POSTED,
             plannedPaymentId: pp.id as PlannedPaymentId,
           },
@@ -303,26 +236,15 @@ export class PlannedPaymentService {
             `[PlannedPaymentService] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
           );
         } else {
-          const amount = Money.from(pp.amount, pp.currencyCode);
-          const transactions = [
-            {
-              accountId: pp.fromAccountId,
-              amount: amount.amount,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: pp.toAccountId,
-              amount: amount.amount,
-              transactionType: TransactionType.DEBIT,
-            },
-          ];
-
           await ledgerWriteService.createJournal(
             {
               journalDate: normalizedDate,
               description: pp.name,
               currencyCode: pp.currencyCode,
-              transactions,
+              transactions: buildPlannedPaymentTransferLines(pp, {
+                includeNotes: false,
+                includeCurrency: false,
+              }),
               status: JournalStatus.SKIPPED,
               plannedPaymentId: pp.id as PlannedPaymentId,
             },

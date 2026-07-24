@@ -2,18 +2,16 @@ import { Animation, AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
+import { mapAccountListRowToBalance } from '@/src/data/repositories/account/accountListBalanceMapping';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceService } from '@/src/services/BalanceService';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import {
   AccountBalance,
   AccountId,
-  AccountType,
   EnrichedJournal,
   JournalDisplayType,
   PlainAccount,
@@ -24,6 +22,13 @@ import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { traceService } from '@/src/utils/TraceService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import {
+  clearReactiveWorkplaceObservesCache,
+  observeWorkplaceAccounts,
+  observeWorkplaceActiveTransactionCount,
+  observeWorkplaceJournalMeta,
+  clearReactiveWorkplaceAccountsAndJournalMetaCache,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
 import {
   combineLatest,
   distinctUntilChanged,
@@ -92,11 +97,6 @@ class ReactiveDataService {
     }>
   >();
 
-  // Base Shared Observables to avoid redundant initial fetches across different caches
-  private _accountsObsCache = new Map<WorkplaceId, Observable<Account[]>>();
-  private _journalMetaObsCache = new Map<WorkplaceId, Observable<Journal[]>>();
-  private _activeCountObsCache = new Map<WorkplaceId, Observable<number>>();
-
   /**
    * Clears all cached observables. Primarily used for unit test isolation.
    */
@@ -105,9 +105,7 @@ class ReactiveDataService {
     this._optimizedAccountListCache.clear();
     this._accountDashboardCache.clear();
     this._allBalancesCache.clear();
-    this._accountsObsCache.clear();
-    this._journalMetaObsCache.clear();
-    this._activeCountObsCache.clear();
+    clearReactiveWorkplaceObservesCache();
   }
 
   /**
@@ -115,42 +113,21 @@ class ReactiveDataService {
    * Shared and cached via shareReplay.
    */
   observeAccounts(workplaceId: WorkplaceId): Observable<Account[]> {
-    if (this._accountsObsCache.has(workplaceId)) {
-      return this._accountsObsCache.get(workplaceId)!;
-    }
-    const obs$ = accountRepository
-      .observeAll(workplaceId)
-      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
-    this._accountsObsCache.set(workplaceId, obs$);
-    return obs$;
+    return observeWorkplaceAccounts(workplaceId);
   }
 
   /**
    * Observe journal status metadata (posted/deleted counts).
    */
   observeJournalMeta(workplaceId: WorkplaceId): Observable<Journal[]> {
-    if (this._journalMetaObsCache.has(workplaceId)) {
-      return this._journalMetaObsCache.get(workplaceId)!;
-    }
-    const obs$ = journalRepository
-      .observeStatusMeta(workplaceId)
-      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
-    this._journalMetaObsCache.set(workplaceId, obs$);
-    return obs$;
+    return observeWorkplaceJournalMeta(workplaceId);
   }
 
   /**
    * Observe total active transaction count.
    */
   observeActiveCount(workplaceId: WorkplaceId): Observable<number> {
-    if (this._activeCountObsCache.has(workplaceId)) {
-      return this._activeCountObsCache.get(workplaceId)!;
-    }
-    const obs$ = transactionRepository
-      .observeActiveCount(workplaceId)
-      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
-    this._activeCountObsCache.set(workplaceId, obs$);
-    return obs$;
+    return observeWorkplaceActiveTransactionCount(workplaceId);
   }
 
   /**
@@ -194,8 +171,7 @@ class ReactiveDataService {
       this._dashboardCache.clear();
       this._optimizedAccountListCache.clear();
       this._accountDashboardCache.clear();
-      this._accountsObsCache.clear();
-      this._journalMetaObsCache.clear();
+      clearReactiveWorkplaceAccountsAndJournalMetaCache();
     }
 
     // Optimized: Derive from the high-performance SQL balance stream
@@ -410,7 +386,7 @@ class ReactiveDataService {
             : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
 
           const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
-            this.mapRawToBalance(item, now.getTime()),
+            mapAccountListRowToBalance(item, now.getTime()),
           );
 
           const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
@@ -580,38 +556,6 @@ class ReactiveDataService {
 
     this._accountDashboardCache.set(cacheKey, loggedObs$);
     return loggedObs$;
-  }
-
-  private mapRawToBalance(item: RawSQLRow, now: number): AccountBalance {
-    // Optimization: Direct access for known SQL aliases instead of expensive regex loop
-    const accountId = (item.id || item.accountId || item.account_id) as AccountId;
-    const balance = Number(item.direct_balance || item.directBalance || 0);
-    const currencyCode = (item.currency_code || item.currencyCode) as string;
-    const accountType = (item.account_type || item.accountType) as AccountType;
-    const income = Number(
-      item.periodIncrease ?? item.period_increase ?? item.monthly_income ?? item.monthlyIncome ?? 0,
-    );
-    const expenses = Number(
-      item.periodDecrease ??
-        item.period_decrease ??
-        item.monthly_expenses ??
-        item.monthlyExpenses ??
-        0,
-    );
-    const txCount = Number(item.direct_transaction_count || item.directTransactionCount || 0);
-
-    return {
-      accountId: accountId,
-      balance: balance,
-      directBalance: balance,
-      currencyCode: String(currencyCode),
-      transactionCount: txCount,
-      directTransactionCount: txCount,
-      asOfDate: now,
-      accountType: accountType,
-      monthlyIncome: Math.max(0, income),
-      monthlyExpenses: Math.max(0, expenses),
-    };
   }
 }
 

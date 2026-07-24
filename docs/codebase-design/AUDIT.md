@@ -26,12 +26,12 @@ This document is the durable review artifact for deep-module design across Full 
 | 3 | SMS façade retirement | **Done** |
 | 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` + `journalNav` for last-used accounts |
 | 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` + `JournalEnrichmentQueries`; write lifecycle on `LedgerWriteService` |
-| 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries` for list SQL metrics |
+| 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries` + `accountListBalanceMapping` |
 | 7 | STS mapper / dashboard VMs | **Partial** — `SafeToSpendDashboard` + `safeToSpendDashboardProjection` Module |
 | 8 | ledgerRead pass-throughs | **Partial** — `ledgerEnrichedDisplay` + slim `ledgerReadService` |
-| 9 | Report / ReactiveData | **Partial** — account list metrics via `AccountListMetricsQueries` |
+| 9 | Report / ReactiveData | **Partial** — metrics mapping; `reactiveWorkplaceObserves` base streams |
 | 10 | SimulationInput | **Done** |
-| 11–12 | PlannedPayment / Integrity splits | **Partial** — `plannedPaymentRecurrence`; `integrityMaintenance` for destructive ops |
+| 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, `integrityMaintenance` |
 | 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |
 | 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
 | 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |
