@@ -1,32 +1,16 @@
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import { observeEnrichedJournals as observeEnrichedJournalsHelper } from './journalEnrichedObserver';
-import {
-  assembleCreateJournalData,
-  validateJournalEntryStructure,
-} from './journalSaveHelpers';
+import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-
-export interface SimpleEntryParams {
-  type: 'expense' | 'income' | 'transfer';
-  amount: number;
-  sourceId: string;
-  destinationId: string;
-  journalDate: number;
-  description?: string;
-  exchangeRate?: number;
-  journalId?: string;
-}
 
 export interface SubmitJournalResult {
   success: boolean;
@@ -273,24 +257,6 @@ export class JournalService {
       logger.error('Failed to batch save bulk journals:', error);
       return { success: false, error: 'Failed to save journal entries atomically', summaries: [] };
     }
-  }
-
-  observeEnrichedJournals(
-    workplaceId: WorkplaceId,
-    limit: number,
-    dateRange?: AccountDateRange & { accountIds?: string[] },
-    searchQuery?: string,
-    status?: JournalStatus[],
-    options?: { minAmount?: number; maxAmount?: number; displayType?: string },
-  ) {
-    return observeEnrichedJournalsHelper(
-      workplaceId,
-      limit,
-      dateRange,
-      searchQuery,
-      status,
-      options,
-    );
   }
 
   async getJournalSuggestions(

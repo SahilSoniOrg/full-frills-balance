@@ -7,7 +7,7 @@ import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { Money } from '@/src/utils/money';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import dayjs from 'dayjs';
@@ -236,11 +236,7 @@ export const wealthService = {
       for (const tx of convertedTxs) {
         if (!tx) continue;
         const current = dailyDeltas.get(tx.dayKey) || { assets: 0, liabilities: 0 };
-        const impact = getAccountBalanceDelta(
-          tx.convertedAmount,
-          tx.accountType,
-          tx.transactionType,
-        );
+        const impact = effect(tx.accountType, tx.transactionType).delta(tx.convertedAmount);
         if (tx.accountType === AccountType.ASSET) {
           current.assets += impact;
         } else {

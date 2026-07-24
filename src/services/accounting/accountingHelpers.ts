@@ -1,89 +1,13 @@
 /**
- * Accounting aggregates and compatibility wrappers over BalanceEffects.
- * Prefer `effect` / `checkJournal` / `foldBalances` from BalanceEffects for new code.
+ * Accounting aggregates that are not mere BalanceEffects wrappers.
+ * Prefer `effect` / `checkJournal` / `foldBalances` / `periodFlowSQL` from BalanceEffects for signs.
  */
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import {
-  checkJournal,
-  effect,
-  periodFlowSQL,
-  type JournalLineForCheck,
-} from '@/src/services/accounting/BalanceEffects';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
-
-export type { JournalLineForCheck as JournalLineInput };
-
-export function getBalanceImpactMultiplier(
-  accountType: AccountType,
-  transactionType: TransactionType,
-): number {
-  return effect(accountType, transactionType).sign;
-}
-
-export function getAccountBalanceDelta(
-  amount: number,
-  accountType: AccountType,
-  transactionType: TransactionType,
-): number {
-  return effect(accountType, transactionType).delta(amount);
-}
-
-export function isLiquidInflow(
-  accountType: AccountType,
-  transactionType: TransactionType,
-): boolean {
-  return effect(accountType, transactionType).isLiquidInflow;
-}
-
-export function isLiquidOutflow(
-  accountType: AccountType,
-  transactionType: TransactionType,
-): boolean {
-  return effect(accountType, transactionType).isLiquidOutflow;
-}
-
-export function getLiquidNetWorthDelta(
-  amount: number,
-  accountType: AccountType,
-  transactionType: TransactionType,
-): number {
-  return effect(accountType, transactionType).netWorthDelta(amount);
-}
-
-export function isBalanceIncrease(
-  accountType: AccountType,
-  transactionType: TransactionType,
-): boolean {
-  return effect(accountType, transactionType).isIncrease;
-}
-
-export function isValueEntering(transactionType: TransactionType): boolean {
-  return transactionType === TransactionType.DEBIT;
-}
-
-export function isValueLeaving(transactionType: TransactionType): boolean {
-  return transactionType === TransactionType.CREDIT;
-}
-
-export const isIncrease = isBalanceIncrease;
-
-export function getPeriodIncreaseSQLSnippet(): string {
-  return periodFlowSQL().increaseCase;
-}
-
-export function getPeriodDecreaseSQLSnippet(): string {
-  return periodFlowSQL().decreaseCase;
-}
-
-export function validateBalance(
-  lines: JournalLineForCheck[],
-  precision: number = AppConfig.constants.precision,
-) {
-  return checkJournal(lines, precision);
-}
 
 export interface AccountPeriodFlows {
   totalIncrease: number;
@@ -101,7 +25,7 @@ export function calculateAccountPeriodFlows(
   let totalDecrease = 0;
 
   for (const tx of transactions) {
-    if (isBalanceIncrease(type, tx.transactionType)) {
+    if (effect(type, tx.transactionType).isIncrease) {
       totalIncrease += tx.amount;
     } else {
       totalDecrease += tx.amount;

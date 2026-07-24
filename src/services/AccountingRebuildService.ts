@@ -7,7 +7,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { foldBalances } from '@/src/services/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -104,19 +104,23 @@ export class AccountingRebuildService {
       transactionCount: number;
     }[] = [];
 
-    let currentBalance = runningBalance;
+    const { balances } = foldBalances(
+      runningBalance,
+      rawTransactions.map(tx => ({
+        amount: tx.amount,
+        accountType: account.accountType,
+        transactionType: tx.transactionType as TransactionType,
+      })),
+      precision,
+    );
+
     let currentCount = runningCount;
 
     // 3. Calculate new balances and identify new snapshots using plain objects
     for (let i = 0; i < rawTransactions.length; i++) {
       const tx = rawTransactions[i];
       currentCount++;
-
-      const newBalance = effect(account.accountType, tx.transactionType as TransactionType).apply(
-        currentBalance,
-        tx.amount,
-        precision,
-      );
+      const newBalance = balances[i];
 
       const isSnapshotPoint = currentCount % CHECKPOINT_INTERVAL === 0;
 
@@ -125,13 +129,11 @@ export class AccountingRebuildService {
         idsNeedingUpdate.set(tx.id, newBalance);
       }
 
-      currentBalance = newBalance;
-
       if (isSnapshotPoint) {
         snapshotsToCreate.push({
           transactionId: tx.id,
           transactionDate: tx.transactionDate,
-          absoluteBalance: currentBalance,
+          absoluteBalance: newBalance,
           transactionCount: currentCount,
         });
       }

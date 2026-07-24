@@ -6,7 +6,7 @@ import type {
   BatchImportData,
   ImportedTransaction,
 } from '@/src/data/repositories/ImportRepository';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { foldBalances } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
@@ -15,6 +15,13 @@ export type ImportBalancePatch = {
   transactionId: string;
   runningBalance: number;
   amount: number;
+};
+
+type OrderedImportTx = {
+  tx: ImportedTransaction;
+  isActive: boolean;
+  amount: number;
+  transactionType: TransactionType;
 };
 
 /**
@@ -61,35 +68,44 @@ export async function calculateImportRunningBalances(
       return a.id.localeCompare(b.id);
     });
 
-    let currentBalance = 0;
-    for (const t of ordered) {
+    const prepared: OrderedImportTx[] = ordered.map(t => {
       const journalStatus = journalStatusMap.get(t.journalId);
       const isDeleted = !!t.deletedAt;
       const isActive = !isDeleted && ACTIVE_JOURNAL_STATUSES.includes(journalStatus as any);
+      const transactionType = Object.values(TransactionType).includes(
+        t.transactionType as TransactionType,
+      )
+        ? (t.transactionType as TransactionType)
+        : TransactionType.DEBIT;
+      const amount = isActive ? roundToPrecision(t.amount, precision) : t.amount;
+      return { tx: t, isActive, amount, transactionType };
+    });
 
-      if (isActive) {
-        const roundedAmount = roundToPrecision(t.amount, precision);
-        const transactionType = Object.values(TransactionType).includes(
-          t.transactionType as TransactionType,
-        )
-          ? (t.transactionType as TransactionType)
-          : TransactionType.DEBIT;
+    const { balances } = foldBalances(
+      0,
+      prepared
+        .filter(p => p.isActive)
+        .map(p => ({
+          amount: p.amount,
+          accountType,
+          transactionType: p.transactionType,
+        })),
+      precision,
+    );
 
-        currentBalance = effect(accountType, transactionType).apply(
-          currentBalance,
-          roundedAmount,
-          precision,
-        );
+    let activeIdx = 0;
+    for (const item of prepared) {
+      if (item.isActive) {
         patches.push({
-          transactionId: t.id,
-          runningBalance: currentBalance,
-          amount: roundedAmount,
+          transactionId: item.tx.id,
+          runningBalance: balances[activeIdx++],
+          amount: item.amount,
         });
       } else {
         patches.push({
-          transactionId: t.id,
+          transactionId: item.tx.id,
           runningBalance: 0,
-          amount: t.amount,
+          amount: item.amount,
         });
       }
     }

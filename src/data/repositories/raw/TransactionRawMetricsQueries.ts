@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
@@ -226,7 +226,7 @@ export class TransactionRawMetricsQueries {
 
       const dayStart = dayjs(tx.transactionDate).startOf('day').valueOf();
       const key = `${dayStart}|${tx.currencyCode}|${accountType}`;
-      const delta = getAccountBalanceDelta(tx.amount, accountType, tx.transactionType);
+      const delta = effect(accountType, tx.transactionType).delta(tx.amount);
       const existing = grouped.get(key);
 
       if (existing) {
@@ -311,7 +311,7 @@ export class TransactionRawMetricsQueries {
       if (!accountType) continue;
 
       const key = `${tx.accountId}|${tx.currencyCode}`;
-      const delta = getAccountBalanceDelta(tx.amount, accountType, tx.transactionType);
+      const delta = effect(accountType, tx.transactionType).delta(tx.amount);
       const existing = grouped.get(key);
 
       if (existing) {

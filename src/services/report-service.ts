@@ -30,8 +30,8 @@ import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
-  getAccountBalanceDelta,
 } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -369,7 +369,7 @@ export class ReportService {
     for (const conv of conversions) {
       if (!conv) continue;
       const delta = Money.from(
-        getAccountBalanceDelta(conv.amount.amount, conv.type, conv.transactionType),
+        effect(conv.type, conv.transactionType).delta(conv.amount.amount),
         currency,
       );
       if (conv.type === AccountType.INCOME) {

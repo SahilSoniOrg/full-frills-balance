@@ -5,7 +5,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, DisplayTransaction, JournalId, WorkplaceId } from '@/src/types/domain';
-import { isBalanceIncrease, isValueEntering } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {
@@ -26,6 +26,7 @@ export class TransactionService {
     return transactions.map(tx => {
       const account = accountMap.get(tx.accountId);
       const accType = account?.accountType ?? AccountType.ASSET;
+      const bal = effect(accType, tx.transactionType);
       return {
         id: tx.id,
         amount: tx.amount,
@@ -37,13 +38,13 @@ export class TransactionService {
         exchangeRate: tx.exchangeRate,
         accountName: account?.name || 'Unknown Account',
         accountType: account?.accountType,
-        flowDirection: isValueEntering(tx.transactionType) ? 'IN' : 'OUT',
-        balanceImpact: isBalanceIncrease(accType, tx.transactionType) ? 'INCREASE' : 'DECREASE',
+        flowDirection: bal.flow,
+        balanceImpact: bal.isIncrease ? 'INCREASE' : 'DECREASE',
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
         journalDescription: journal?.description,
         displayTitle: journal?.description || 'Transaction',
-        isIncrease: isBalanceIncrease(accType, tx.transactionType),
+        isIncrease: bal.isIncrease,
       } as DisplayTransaction;
     });
   }
@@ -103,6 +104,7 @@ export class TransactionService {
         return validTransactions.map(tx => {
           const account = accountMap.get(tx.accountId);
           const accType = account?.accountType ?? AccountType.ASSET;
+          const bal = effect(accType, tx.transactionType);
           return {
             id: tx.id,
             amount: tx.amount,
@@ -114,13 +116,13 @@ export class TransactionService {
             exchangeRate: tx.exchangeRate,
             accountName: account?.name || 'Unknown Account',
             accountType: account?.accountType,
-            flowDirection: isValueEntering(tx.transactionType) ? 'IN' : 'OUT',
-            balanceImpact: isBalanceIncrease(accType, tx.transactionType) ? 'INCREASE' : 'DECREASE',
+            flowDirection: bal.flow,
+            balanceImpact: bal.isIncrease ? 'INCREASE' : 'DECREASE',
             createdAt: tx.createdAt,
             updatedAt: tx.updatedAt,
             journalDescription: journal?.description,
             displayTitle: journal?.description || 'Transaction',
-            isIncrease: isBalanceIncrease(accType, tx.transactionType),
+            isIncrease: bal.isIncrease,
           } as DisplayTransaction;
         });
       }),
@@ -180,7 +182,7 @@ export class TransactionService {
     const counterAccount = counterAccounts.length === 1 ? counterAccounts[0] : undefined;
 
     const accType = account?.accountType ?? AccountType.ASSET;
-    const isIncrease = isBalanceIncrease(accType, tx.transactionType);
+    const isIncrease = effect(accType, tx.transactionType).isIncrease;
 
     return {
       id: tx.id,

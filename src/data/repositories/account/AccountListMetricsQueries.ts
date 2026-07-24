@@ -3,10 +3,7 @@ import { AccountType, isAccountSubtype, isAccountType } from '@/src/data/models/
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import type { AccountListItemRaw } from '@/src/data/repositories/AccountRepository';
-import {
-  getPeriodDecreaseSQLSnippet,
-  getPeriodIncreaseSQLSnippet,
-} from '@/src/services/accounting/accountingHelpers';
+import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
 import { WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -32,6 +29,7 @@ export class AccountListMetricsQueries {
 
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
     const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
+    const { increaseCase, decreaseCase } = periodFlowSQL();
 
     const sql = `
       WITH LatestBalance AS (
@@ -54,8 +52,8 @@ export class AccountListMetricsQueries {
       Aggregates AS (
         SELECT 
           t.account_id,
-          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${getPeriodIncreaseSQLSnippet()} ELSE 0 END) as periodIncrease,
-          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${getPeriodDecreaseSQLSnippet()} ELSE 0 END) as periodDecrease
+          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${increaseCase} ELSE 0 END) as periodIncrease,
+          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${decreaseCase} ELSE 0 END) as periodDecrease
           ${includeTotalCount ? ', COUNT(*) as direct_transaction_count' : ''}
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id

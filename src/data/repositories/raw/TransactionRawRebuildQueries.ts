@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { AccountType } from '../../models/Account';
@@ -115,11 +115,10 @@ export class TransactionRawRebuildQueries {
           continue;
         }
         if (startFound) {
-          sum += getAccountBalanceDelta(
-            tx.amount,
+          sum += effect(
             isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
             tx.transactionType,
-          );
+          ).delta(tx.amount);
         }
         if (upToTransactionId && tx.id === upToTransactionId) {
           endReached = true;
@@ -135,11 +134,10 @@ export class TransactionRawRebuildQueries {
     return txs.reduce(
       (acc, tx) =>
         acc +
-        getAccountBalanceDelta(
-          tx.amount,
+        effect(
           isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
           tx.transactionType,
-        ),
+        ).delta(tx.amount),
       0,
     );
   }

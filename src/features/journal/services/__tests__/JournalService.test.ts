@@ -2,7 +2,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
+import * as BalanceEffects from '@/src/services/accounting/BalanceEffects';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
@@ -12,7 +12,6 @@ jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/CurrencyRepository');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
-jest.mock('@/src/services/accounting/AccountingDomainService');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/services/ledger', () => ({
   ledgerWriteService: {
@@ -37,24 +36,28 @@ jest.mock('@/src/services/WorkplaceService', () => ({
 
 describe('JournalService - saveJournalEntry', () => {
   let service: JournalService;
+  let checkJournalSpy: jest.SpyInstance;
 
   beforeEach(() => {
     service = new JournalService();
     jest.clearAllMocks();
 
-    // Default: Balance valid
-    (accountingService.validateJournal as jest.Mock).mockReturnValue({
+    checkJournalSpy = jest.spyOn(BalanceEffects, 'checkJournal').mockReturnValue({
       isValid: true,
       imbalance: 0,
+      totalDebits: 0,
+      totalCredits: 0,
     });
-    (accountingService.validateDistinctAccounts as jest.Mock).mockReturnValue({ isValid: true });
 
-    // Mock account lookups
     (accountRepository.find as jest.Mock).mockResolvedValue({ id: 'acc1', currencyCode: 'USD' });
     (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
       { id: 'acc1', currencyCode: 'USD' },
       { id: 'acc2', currencyCode: 'USD' },
     ]);
+  });
+
+  afterEach(() => {
+    checkJournalSpy.mockRestore();
   });
 
   describe('saveJournalEntry', () => {
@@ -116,9 +119,11 @@ describe('JournalService - saveJournalEntry', () => {
     });
 
     it('should fail if journal is unbalanced', async () => {
-      (accountingService.validateJournal as jest.Mock).mockReturnValue({
+      checkJournalSpy.mockReturnValue({
         isValid: false,
         imbalance: 10,
+        totalDebits: 100,
+        totalCredits: 90,
       });
 
       const result = await service.saveJournalEntry({

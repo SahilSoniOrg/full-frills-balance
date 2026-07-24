@@ -7,7 +7,7 @@ import {
   ReportingDeltaInput,
 } from '@/src/services/reports/reportTypes';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
+import { effect } from '@/src/services/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
 
@@ -104,7 +104,7 @@ export function mapTransactionsToReportingDeltas(
   return transactions.map(tx => {
     const acc = accountMap.get(tx.accountId);
     const type = acc?.accountType || tx.accountType;
-    const delta = getAccountBalanceDelta(tx.amount, type, tx.transactionType);
+    const delta = effect(type, tx.transactionType).delta(tx.amount);
 
     return {
       accountId: tx.accountId,
