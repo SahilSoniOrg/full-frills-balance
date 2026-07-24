@@ -3,6 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
+import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useObservable } from '@/src/hooks/useObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
@@ -76,16 +77,8 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [isInitialized]);
 
-  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
-
-  // Sync with global privacy mode when it changes (e.g. from settings)
-  React.useEffect(() => {
-    setTimeout(() => setIsLocalPrivacyMode(isPrivacyMode), 0);
-  }, [isPrivacyMode]);
-
-  const onTogglePrivacy = useCallback(() => {
-    setIsLocalPrivacyMode(prev => !prev);
-  }, []);
+  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode: onTogglePrivacy } =
+    useScreenPrivacyMode(isPrivacyMode);
 
   const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),

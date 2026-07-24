@@ -1,13 +1,21 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import {
+  filterAccountSectionsForTab,
+  filterAccountsBySearch,
+  filterAccountsForListTab,
+  resolveAccountListPressAction,
+  resolveInflowReportDateRange,
+  resolveInflowTotals,
+} from '@/src/features/accounts/helpers/accountsListHelpers';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import {
   AccountCardViewModel,
   transformAccountsToSections,
 } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { reportService } from '@/src/services/report-service';
@@ -15,7 +23,6 @@ import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
@@ -79,12 +86,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     logger.info('[AccountsList] Screen Mounted');
   }, []);
 
-  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState<boolean>(isPrivacyMode);
-
-  // Sync with global privacy mode when it changes (e.g. from settings)
-  useEffect(() => {
-    setTimeout(() => setIsLocalPrivacyMode(isPrivacyMode), 0);
-  }, [isPrivacyMode]);
+  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode } =
+    useScreenPrivacyMode(isPrivacyMode);
 
   const targetCurrency = workplaceCurrency;
 
@@ -144,8 +147,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { netWorth, totalAssets, totalLiabilities, totalEquity, totalIncome, totalExpense } =
     dashboardData.wealthSummary;
 
-  const togglePrivacyMode = useCallback(() => setIsLocalPrivacyMode(prev => !prev), []);
-
   const [activeTab, setActiveTab] = useState<'accounts' | 'categories'>('accounts');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']));
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
@@ -180,19 +181,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
     const fetchTotals = async () => {
       try {
-        let startDate: number;
-        let endDate: number;
+        const range = resolveInflowReportDateRange(inflowPeriod);
+        if (!range) return;
 
-        if (inflowPeriod === 'month') {
-          const range = getCurrentMonthRange();
-          startDate = range.startDate;
-          endDate = range.endDate;
-        } else {
-          const range = getLastNRange(30, 'days');
-          startDate = range.startDate;
-          endDate = range.endDate;
-        }
-
+        const { startDate, endDate } = range;
         const totals = await reportService.getIncomeVsExpense(
           workplaceId,
           startDate,
@@ -233,10 +225,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       const account = accounts.find(a => a.id === accountId);
       if (!account) return;
 
-      const hasChildren = accounts.some(a => a.parentAccountId === accountId);
-      const isExpanded = expandedAccountIds.has(accountId);
-
-      if (hasChildren && !isExpanded) {
+      if (resolveAccountListPressAction(accountId, accounts, expandedAccountIds) === 'expand') {
         setExpandedAccountIds(prev => {
           const next = new Set(prev);
           next.add(accountId);
@@ -292,11 +281,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     // Refresh is handled reactively by observables
   }, []);
 
-  const filteredAccounts = useMemo(() => {
-    if (!searchQuery) return accounts;
-    const lowercaseQuery = searchQuery.toLowerCase();
-    return accounts.filter(a => a.name.toLowerCase().includes(lowercaseQuery));
-  }, [accounts, searchQuery]);
+  const filteredAccounts = useMemo(
+    () => filterAccountsBySearch(accounts, searchQuery),
+    [accounts, searchQuery],
+  );
 
   // M-5 fix: Memoize transform options to prevent redundant re-transformations
   // when unrelated UI state (like filters or privacy mode) haven't changed.
@@ -336,29 +324,21 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   );
 
   const sections = useMemo(() => {
-    const accountsForTab = filteredAccounts.filter(a => {
-      const isCategory =
-        a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE;
-      return activeTab === 'categories' ? isCategory : !isCategory;
-    });
+    const accountsForTab = filterAccountsForListTab(filteredAccounts, activeTab);
     const rawSections = transformAccountsToSections(accountsForTab, transformOptions);
-    // Filter sections based on activeTab
-    if (activeTab === 'accounts') {
-      // Show Assets, Liabilities, Equity and fallback-other
-      return rawSections.filter(
-        s =>
-          !s.type ||
-          [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY].includes(
-            s.type as AccountType,
-          ),
-      );
-    } else {
-      // Show Income and Expense
-      return rawSections.filter(
-        s => s.type && [AccountType.INCOME, AccountType.EXPENSE].includes(s.type as AccountType),
-      );
-    }
+    return filterAccountSectionsForTab(rawSections, activeTab);
   }, [filteredAccounts, transformOptions, activeTab]);
+
+  const { inflowIncome, inflowExpense } = useMemo(
+    () =>
+      resolveInflowTotals({
+        inflowPeriod,
+        totalIncome,
+        totalExpense,
+        periodTotals,
+      }),
+    [inflowPeriod, totalIncome, totalExpense, periodTotals],
+  );
 
   return {
     sections,
@@ -381,8 +361,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     totalExpense,
     inflowPeriod,
     setInflowPeriod,
-    inflowIncome: inflowPeriod === 'overall' ? totalIncome : periodTotals?.income || 0,
-    inflowExpense: inflowPeriod === 'overall' ? totalExpense : periodTotals?.expense || 0,
+    inflowIncome,
+    inflowExpense,
     isPeriodLoading,
     currencyCode: workplaceCurrency,
     searchQuery,

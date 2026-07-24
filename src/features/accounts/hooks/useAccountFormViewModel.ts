@@ -16,6 +16,13 @@ import {
   useAccountBalance,
   useAccounts,
 } from '@/src/features/accounts/hooks/useAccounts';
+import {
+  filterPayFromAccountOptions,
+  filterPotentialParentAccounts,
+  isCategoryAccountType,
+  resolveAccountFormHeroCopy,
+  resolveInitialAccountType,
+} from '@/src/features/accounts/helpers/accountFormHelpers';
 import { useAccountMetadataForm } from '@/src/features/accounts/hooks/useAccountMetadataForm';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import {
@@ -153,26 +160,11 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const pathname = usePathname();
 
-  const getInitialAccountType = (): AccountType => {
-    if (pType) {
-      const upperType = pType.toUpperCase() as keyof typeof AccountType;
-      if (Object.values(AccountType).includes(upperType as AccountType)) {
-        return upperType as AccountType;
-      }
-    }
-    if (typeParam) {
-      const upperType = typeParam.toUpperCase() as keyof typeof AccountType;
-      if (Object.values(AccountType).includes(upperType as AccountType)) {
-        return upperType as AccountType;
-      }
-    }
-    if (pathname.includes('category-creation')) {
-      return AccountType.EXPENSE;
-    }
-    return AccountType.ASSET;
-  };
-
-  const initialType = getInitialAccountType();
+  const initialType = resolveInitialAccountType({
+    pathname,
+    typeParam,
+    previewType: pType,
+  });
 
   // Form State
   const [accountName, setAccountName] = useState(pName || '');
@@ -248,8 +240,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const onSave = async () => {
     logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
 
-    const isCurrentCategory =
-      accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
+    const isCurrentCategory = isCategoryAccountType(accountType);
 
     if (!isCurrentCategory && initialBalance && isNaN(Number(initialBalance))) {
       setLocalFormError('Initial balance must be a number');
@@ -290,45 +281,25 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   };
 
   const hasExistingAccounts = accounts.length > 0;
-  const heroTitle = isEditMode
-    ? accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
-      ? AppConfig.strings.accounts.categoryForm.formTitleEdit
-      : 'Edit Account'
-    : accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
-      ? AppConfig.strings.accounts.categoryForm.formTitleNew
-      : hasExistingAccounts
-        ? 'Create New Account'
-        : 'Create Your First Account';
-  const heroSubtitle =
-    accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
-      ? ''
-      : isEditMode
-        ? 'Update your account details'
-        : hasExistingAccounts
-          ? 'Add another source of funds'
-          : 'Start tracking your finances';
-
-  const saveLabel = isEditMode
-    ? accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
-      ? AppConfig.strings.accounts.categoryForm.saveChanges
-      : 'Save Changes'
-    : accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
-      ? AppConfig.strings.accounts.categoryForm.createCategory
-      : 'Create Account';
+  const { heroTitle, heroSubtitle, saveLabel } = resolveAccountFormHeroCopy({
+    isEditMode,
+    accountType,
+    hasExistingAccounts,
+  });
 
   const currencyLabel = useMemo(() => {
     return `Currency${isEditMode ? ' (cannot be changed)' : ''}`;
   }, [isEditMode]);
 
-  const potentialParents = useMemo(() => {
-    return accounts.filter(
-      a =>
-        a.id !== accountId &&
-        a.accountType === accountType &&
-        a.currencyCode === selectedCurrency &&
-        !a.parentAccountId,
-    );
-  }, [accounts, accountId, accountType, selectedCurrency]);
+  const potentialParents = useMemo(
+    () =>
+      filterPotentialParentAccounts(accounts, {
+        accountId,
+        accountType,
+        selectedCurrency,
+      }),
+    [accounts, accountId, accountType, selectedCurrency],
+  );
 
   const parentAccountName = useMemo(() => {
     if (!parentAccountId) return AppConfig.strings.common.none;
@@ -336,9 +307,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     return parent ? parent.name : AppConfig.strings.common.none;
   }, [parentAccountId, potentialParents]);
 
-  const payFromAccountOptions = useMemo(() => {
-    return accounts.filter(a => a.accountType === AccountType.ASSET && a.id !== accountId);
-  }, [accounts, accountId]);
+  const payFromAccountOptions = useMemo(
+    () => filterPayFromAccountOptions(accounts, accountId),
+    [accounts, accountId],
+  );
 
   const payFromAccountName = useMemo(() => {
     if (!metadataValues.payFromAccountId) return AppConfig.strings.common.none;
@@ -347,8 +319,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   }, [metadataValues.payFromAccountId, accounts]);
 
   const effectiveIsParent = isParent;
-  const isCurrentCategory =
-    accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
+  const isCurrentCategory = isCategoryAccountType(accountType);
   const showCurrency = !isCurrentCategory;
   const showBalance = !isCurrentCategory && !effectiveIsParent;
 

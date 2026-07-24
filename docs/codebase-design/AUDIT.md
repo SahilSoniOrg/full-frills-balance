@@ -32,12 +32,12 @@ This document is the durable review artifact for deep-module design across Full 
 | 9 | Report / ReactiveData | **Partial** — `reactiveWorkplaceObserves`, `reactiveAggregatedBalances`; STS/insights use base streams |
 | 10 | SimulationInput | **Done** |
 | 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, **orchestration** (`plannedPaymentOrchestration`); `integrityMaintenance` (verify/repair still on service) |
-| 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |
+| 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen; `accountForm` / `accountsList` / `transactionDetails` helpers |
 | 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
 | 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |
 | 16 | journalPresenter home | **Done** → `services/accounting` |
 | 17 | JournalValidator | **Done** (deleted earlier) |
-| 18–19 | AppText / date-range / privacy | Deferred (P2 UI) |
+| 18–19 | AppText / date-range / privacy | **Partial** — `useScreenPrivacyMode` for screen-local mask toggle; AppText / date-range still deferred |
 | 20 | CONTEXT LiteRTAdapter | **Done** → `SmallModelProvider` |
 
 **Protect list still holds:** BalanceService, sim engines, `ingest()` Pipeline, ImportPlugin, ShareProvider, RuleMatcher, raw SQL metrics.

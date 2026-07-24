@@ -1,0 +1,79 @@
+import { JournalDisplayType } from '@/src/types/domain';
+import {
+  mapDisplayTransactionSplitPresentation,
+  mapSmsJournalMetadataDisplay,
+  resolveJournalDetailsInfo,
+  resolveJournalStatusChipVariant,
+  resolveTransactionAmountPresentation,
+} from '../transactionDetailsHelpers';
+
+describe('transactionDetailsHelpers', () => {
+  it('resolveJournalDetailsInfo prefers loaded journal over route preview', () => {
+    const fromJournal = resolveJournalDetailsInfo({
+      journal: {
+        id: 'j1',
+        description: 'Coffee',
+        journalDate: 100,
+        status: 'POSTED',
+        currencyCode: 'USD',
+        displayType: 'EXPENSE',
+        totalAmount: 5,
+      },
+      routePreview: { title: 'Preview', amount: '99' },
+      fallbackCurrency: 'USD',
+      fallbackNow: 0,
+    });
+    expect(fromJournal?.description).toBe('Coffee');
+
+    const fromRoute = resolveJournalDetailsInfo({
+      journal: null,
+      routePreview: { title: 'Preview', amount: '12', currencyCode: 'EUR' },
+      fallbackCurrency: 'USD',
+      fallbackNow: 50,
+    });
+    expect(fromRoute?.totalAmount).toBe(12);
+    expect(fromRoute?.currency).toBe('EUR');
+  });
+
+  it('resolveTransactionAmountPresentation applies sign and color', () => {
+    const expense = resolveTransactionAmountPresentation({
+      journalInfo: {
+        description: 'x',
+        date: 1,
+        status: 'POSTED',
+        currency: 'USD',
+        displayType: JournalDisplayType.EXPENSE,
+        totalAmount: 10,
+        journalDate: 1,
+      },
+      journalLoaded: true,
+    });
+    expect(expense.amountText).toContain('-');
+    expect(expense.amountColor).toBe('error');
+    expect(expense.isExpense).toBe(true);
+  });
+
+  it('resolveJournalStatusChipVariant maps posted and planned', () => {
+    expect(resolveJournalStatusChipVariant({ status: 'POSTED' })).toBe('income');
+    expect(resolveJournalStatusChipVariant({ status: 'PLANNED' })).toBe('primary');
+  });
+
+  it('mapDisplayTransactionSplitPresentation labels debit as To', () => {
+    const debit = mapDisplayTransactionSplitPresentation({
+      transactionType: 'DEBIT',
+      amount: 5,
+      currencyCode: 'USD',
+    });
+    expect(debit.transactionTypeLabel).toContain('To');
+    expect(debit.amountText.startsWith('+')).toBe(true);
+  });
+
+  it('mapSmsJournalMetadataDisplay parses metadata json', () => {
+    const info = mapSmsJournalMetadataDisplay({
+      metadataJson: JSON.stringify({ parsedAmount: 42, parsedCurrencyCode: 'USD' }),
+      inboxRecord: { id: 'sms-1', inputDate: 1_700_000_000_000 },
+    });
+    expect(info.amountText).toBeTruthy();
+    expect(info.inboxRecordId).toBe('sms-1');
+  });
+});

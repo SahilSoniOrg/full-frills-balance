@@ -10,11 +10,18 @@ import { useJournalActions } from '@/src/features/journal/hooks/useJournalAction
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
+import {
+  mapDisplayTransactionSplitPresentation,
+  mapSmsJournalMetadataDisplay,
+  resolveJournalDetailsInfo,
+  resolveJournalStatusChipVariant,
+  resolveRevertPlannedActionLabels,
+  resolveTransactionAmountPresentation,
+} from '@/src/services/journal/transactionDetailsHelpers';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, DisplayTransaction, JournalDisplayType, JournalId } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, JournalId, PlannedPaymentId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -124,27 +131,14 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
           if (!metadata) return of(undefined);
 
           return from(smsService.findByLinkedJournalId(journalId)).pipe(
-            map(inboxRecord => {
-              const parsedMetadata = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {};
-              return {
-                sender: metadata.originalSmsSender,
-                rawBody: metadata.originalSmsBody,
-                amountText:
-                  typeof parsedMetadata.parsedAmount === 'number'
-                    ? CurrencyFormatter.format(
-                        parsedMetadata.parsedAmount,
-                        parsedMetadata.parsedCurrencyCode || undefined,
-                      )
-                    : undefined,
-                referenceNumber: parsedMetadata.referenceNumber || inboxRecord?.referenceNumber,
-                accountSource: parsedMetadata.accountSource || inboxRecord?.parsedAccountSource,
-                parseReason: inboxRecord?.parseReason,
-                smsDate: inboxRecord
-                  ? formatDate(inboxRecord.inputDate, { includeTime: true })
-                  : undefined,
-                inboxRecordId: inboxRecord?.id,
-              };
-            }),
+            map(inboxRecord =>
+              mapSmsJournalMetadataDisplay({
+                originalSmsSender: metadata.originalSmsSender,
+                originalSmsBody: metadata.originalSmsBody,
+                metadataJson: metadata.metadataJson,
+                inboxRecord: inboxRecord ?? null,
+              }),
+            ),
           );
         }),
       );
@@ -153,75 +147,49 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     undefined,
   );
 
-  const journalInfo = useMemo(() => {
-    if (journal) {
-      return {
-        id: journal.id,
-        version,
-        description: journal.description,
-        notes: journal.notes,
-        date: journal.journalDate,
-        status: journal.status,
-        currency: journal.currencyCode,
-        displayType: journal.displayType,
-        totalAmount: journal.totalAmount || 0,
-        plannedPaymentId: journal.plannedPaymentId,
-        journalDate: journal.journalDate,
-      };
-    }
-
-    // Fallback to params if database record isn't loaded yet
-    if (paramTitle || paramAmount) {
-      return {
-        description: paramTitle || 'Loading...',
-        date: paramDate ? Number(paramDate) : getNow(),
-        status: 'DRAFT', // Default to draft until loaded
-        currency: paramCurrency || workplaceCurrency,
-        displayType: paramDisplayType || 'EXPENSE',
-        totalAmount: paramAmount ? Number(paramAmount) : 0,
-        plannedPaymentId: null,
-        journalDate: paramDate ? Number(paramDate) : getNow(),
-      };
-    }
-
-    return null;
-  }, [
-    journal,
-    version,
-    paramTitle,
-    paramAmount,
-    paramDate,
-    paramCurrency,
-    paramDisplayType,
-    workplaceCurrency,
-  ]);
+  const journalInfo = useMemo(
+    () =>
+      resolveJournalDetailsInfo({
+        journal: journal ?? null,
+        journalVersion: version,
+        routePreview: {
+          title: paramTitle,
+          amount: paramAmount,
+          date: paramDate,
+          currencyCode: paramCurrency,
+          displayType: paramDisplayType,
+        },
+        fallbackCurrency: workplaceCurrency,
+        fallbackNow: getNow(),
+      }),
+    [
+      journal,
+      version,
+      paramTitle,
+      paramAmount,
+      paramDate,
+      paramCurrency,
+      paramDisplayType,
+      workplaceCurrency,
+    ],
+  );
 
   const isLoading = (isLoadingTransactions || isLoadingJournal) && !journalInfo;
 
-  const journalDisplayType = journalInfo?.displayType as JournalDisplayType;
-  const isIncome = journalDisplayType === JournalDisplayType.INCOME;
-  const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
-
-  const amountColor = useMemo((): ColorKey => {
-    if (paramTypeColor && !journal) return (paramTypeColor as ColorKey) || 'primary';
-    return isIncome ? 'income' : isExpense ? 'error' : 'primary';
-  }, [isIncome, isExpense, paramTypeColor, journal]);
-
-  const amountPrefix = isIncome ? '+' : isExpense ? '-' : '';
-  const amountText = journalInfo
-    ? `${amountPrefix}${CurrencyFormatter.format(journalInfo.totalAmount, journalInfo.currency)}`
-    : '';
+  const { amountText, amountColor, isExpense } = useMemo(
+    () =>
+      resolveTransactionAmountPresentation({
+        journalInfo,
+        paramTypeColor,
+        journalLoaded: Boolean(journal),
+      }),
+    [journalInfo, paramTypeColor, journal],
+  );
 
   const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
   const descriptionText = journalInfo?.description || 'No description';
 
-  const statusVariant = useMemo(() => {
-    if (!journalInfo) return 'default';
-    if (journalInfo.status === 'POSTED') return 'income';
-    if (journalInfo.status === 'PLANNED') return 'primary';
-    if (journalInfo.status === 'DRAFT') return 'default';
-    return 'default';
-  }, [journalInfo]);
+  const statusVariant = useMemo(() => resolveJournalStatusChipVariant(journalInfo), [journalInfo]);
 
   const handleDelete = useCallback(() => {
     showConfirmationAlert(
@@ -292,9 +260,9 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
   }, [journalId, journalInfo, postJournal, amountText]);
 
   const handleRevertToScheduled = useCallback(async () => {
-    const isSkipped = journalInfo?.status === 'SKIPPED';
-    const actionLabel = isSkipped ? 'Unskip' : 'Unpost';
-    const statusLabel = isSkipped ? 'skipped' : 'posted';
+    const { actionLabel, statusLabel } = resolveRevertPlannedActionLabels(
+      journalInfo?.status || '',
+    );
 
     if (!journalInfo || (journalInfo.status !== 'POSTED' && journalInfo.status !== 'SKIPPED'))
       return;
@@ -326,7 +294,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         try {
           const pp = await plannedPaymentRepository.find(
             workplaceId,
-            journalInfo.plannedPaymentId!,
+            journalInfo.plannedPaymentId! as PlannedPaymentId,
           );
           if (!pp) throw new Error('Planned payment rule not found.');
           await plannedPaymentService.skipOccurrence(workplaceId, pp, journalInfo.journalDate);
@@ -343,33 +311,27 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
 
   const splitItems = useMemo(() => {
     return transactions.map((item: DisplayTransaction) => {
-      const isDebit = item.transactionType === 'DEBIT';
-
-      // Flow-based logic for visual consistency:
-      // Debit (+) is an Inflow/Arrival -> Green
-      // Credit (-) is an Outflow/Departure -> Red
-      // This ensures + is always Green and - is always Red, creating a clear "From -> To" flow.
-      const isPositiveSentiment = isDebit;
-      const color: ColorKey = isPositiveSentiment ? 'income' : 'error';
-      const flowLabel = isDebit ? 'To' : 'From';
+      const presentation = mapDisplayTransactionSplitPresentation(item);
 
       return {
         id: item.id,
         accountId: item.accountId,
         accountName: item.accountName || 'Unknown Account',
-        transactionType: `${flowLabel} • ${item.transactionType}`,
-        // Signs should reflect flow direction: Debit (+) is INTO, Credit (-) is FROM
-        amountText: `${isDebit ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,
-        amountColor: color,
-        // Icons should reflect flow: Down (+) to account, Up (-) from account
+        transactionType: presentation.transactionTypeLabel,
+        amountText: presentation.amountText,
+        amountColor: presentation.amountColor,
         iconName: item.icon || null,
         fallbackIcon: getAccountFallbackIcon(item.accountType),
-        iconColor: color,
-        iconBackground: color,
+        iconColor: presentation.iconColor,
+        iconBackground: presentation.iconBackground,
         onPress: () => AppNavigation.toAccountDetails(item.accountId),
       };
     });
   }, [transactions]);
+
+  const revertLabels = journalInfo
+    ? resolveRevertPlannedActionLabels(journalInfo.status)
+    : undefined;
 
   return {
     theme,
@@ -401,10 +363,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
       !!journalInfo?.plannedPaymentId
         ? handleRevertToScheduled
         : undefined,
-    revertButtonLabel:
-      journalInfo?.status === 'SKIPPED'
-        ? 'Unskip (Revert to Scheduled)'
-        : 'Unpost (Revert to Scheduled)',
+    revertButtonLabel: revertLabels?.revertButtonLabel,
     onSkip:
       journalInfo?.status === 'PLANNED' && !!journalInfo?.plannedPaymentId ? handleSkip : undefined,
     splitItems,
