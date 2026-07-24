@@ -3,8 +3,9 @@ import { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   AccountId,
   JournalDisplayType,
@@ -16,7 +17,6 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
-import { map, of } from 'rxjs';
 // Imported here so the flush runs synchronously outside the write block —
 // before any observer sees the new transaction rows.
 
@@ -69,29 +69,8 @@ export class JournalRepository {
   }
 
   observeByIdsWithDeleted(workplaceId: WorkplaceId, journalIds: JournalId[]) {
-    if (journalIds.length === 0) {
-      return of([] as Journal[]);
-    }
-
-    return this.journals
-      .query(Q.where('id', Q.oneOf(journalIds)), Q.where('workplace_id', workplaceId))
-      .observeWithColumns([
-        'journal_date',
-        'description',
-        'notes',
-        'currency_code',
-        'status',
-        'total_amount',
-        'transaction_count',
-        'display_type',
-        'updated_at',
-        'deleted_at',
-      ]);
+    return journalObserveQueries.observeByIdsWithDeleted(workplaceId, journalIds);
   }
-
-  /**
-   * Reactive Observation Methods
-   */
 
   observeAccountTransactions(
     workplaceId: WorkplaceId,
@@ -99,101 +78,28 @@ export class JournalRepository {
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
-    const clauses: Q.Clause[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('account_id', accountId),
-      Q.where('workplace_id', workplaceId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-      ]),
-      Q.sortBy('transaction_date', 'desc'),
-      Q.take(limit),
-    ];
-
-    if (dateRange) {
-      clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
-      clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
-    }
-
-    return this.transactions
-      .query(...clauses)
-      .observeWithColumns([
-        'amount',
-        'currency_code',
-        'transaction_type',
-        'transaction_date',
-        'notes',
-        'running_balance',
-        'exchange_rate',
-        'account_id',
-        'journal_id',
-        'deleted_at',
-      ]);
+    return journalObserveQueries.observeAccountTransactions(
+      workplaceId,
+      accountId,
+      limit,
+      dateRange,
+    );
   }
 
   observeById(workplaceId: WorkplaceId, journalId: string, includeDeleted: boolean = false) {
-    const clauses = [Q.where('id', journalId), Q.where('workplace_id', workplaceId)];
-    if (!includeDeleted) {
-      clauses.push(Q.where('deleted_at', Q.eq(null)));
-    }
-
-    return this.journals
-      .query(...clauses)
-      .observeWithColumns([
-        'journal_date',
-        'description',
-        'notes',
-        'currency_code',
-        'status',
-        'total_amount',
-        'transaction_count',
-        'display_type',
-        'updated_at',
-        'deleted_at',
-      ])
-      .pipe(map(journals => journals[0] || null));
+    return journalObserveQueries.observeById(workplaceId, journalId, includeDeleted);
   }
 
   observeByIds(workplaceId: WorkplaceId, journalIds: JournalId[]) {
-    if (journalIds.length === 0) return of([] as Journal[]);
-    return this.journals
-      .query(
-        Q.where('id', Q.oneOf(journalIds)),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .observeWithColumns([
-        'journal_date',
-        'description',
-        'notes',
-        'currency_code',
-        'status',
-        'total_amount',
-        'transaction_count',
-        'display_type',
-        'updated_at',
-        'deleted_at',
-      ]);
+    return journalObserveQueries.observeByIds(workplaceId, journalIds);
   }
 
   observeStatusMeta(workplaceId: WorkplaceId) {
-    return this.journals
-      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
-      .observeWithColumns(['status', 'deleted_at', 'journal_date', 'updated_at', 'total_amount']);
+    return journalObserveQueries.observeStatusMeta(workplaceId);
   }
 
   observePlannedInRange(workplaceId: WorkplaceId, startDate: number, endDate: number) {
-    return this.journals
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('journal_date', Q.gte(startDate)),
-        Q.where('journal_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .observe();
+    return journalObserveQueries.observePlannedInRange(workplaceId, startDate, endDate);
   }
 
   /**
