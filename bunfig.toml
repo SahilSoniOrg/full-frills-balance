@@ -1,4 +1,0 @@
-[test]
-root = "src"
-ignore = ["e2e/**", "node_modules/**"]
-preload = ["./bun-preload.ts"]
