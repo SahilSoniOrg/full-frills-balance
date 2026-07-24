@@ -8,6 +8,7 @@ import Account, {
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
+import { accountMergeOperations } from '@/src/data/repositories/account/AccountMergeOperations';
 import { AccountId, WorkplaceId, SerializedAccountMetadataPayload } from '@/src/types/domain';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -504,98 +505,16 @@ export class AccountRepository {
     );
   }
 
-  /**
-   * Prepares WatermelonDB operations to merge accounts.
-   * Handles metadata references, sub-account parent updates, and soft-deletion of source accounts.
-   */
   async prepareMergeOperations(
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<(Account | AccountMetadata)[]> {
-    const metaToUpdate = await this.metadata
-      .query(
-        Q.where('pay_from_account_id', Q.oneOf(sourceAccountIds)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
-
-    const sourceMetadata = await this.metadata
-      .query(Q.where('account_id', Q.oneOf(sourceAccountIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    const subAccounts = await this.accounts
-      .query(
-        Q.where('parent_account_id', Q.oneOf(sourceAccountIds)),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-
-    const sourceAccounts = await this.accounts
-      .query(Q.where('id', Q.oneOf(sourceAccountIds)))
-      .fetch();
-
-    const accountMutations = new Map<
-      string,
-      { parentId?: AccountId; deleted?: boolean; record: Account }
-    >();
-    const metadataMutations = new Map<string, { payFromId?: AccountId; record: AccountMetadata }>();
-
-    // 1. Update metadata references (payFromAccountId)
-    metaToUpdate.forEach((m: AccountMetadata) => {
-      if (!metadataMutations.has(m.id)) {
-        metadataMutations.set(m.id, { record: m });
-      }
-      metadataMutations.get(m.id)!.payFromId = targetAccountId;
-    });
-
-    // 2. Update sub-accounts (move parent to target)
-    subAccounts.forEach((sa: Account) => {
-      if (!accountMutations.has(sa.id)) {
-        accountMutations.set(sa.id, { record: sa });
-      }
-      accountMutations.get(sa.id)!.parentId = targetAccountId;
-    });
-
-    // 3. Soft delete source accounts
-    sourceAccounts.forEach((s: Account) => {
-      if (!accountMutations.has(s.id)) {
-        accountMutations.set(s.id, { record: s });
-      }
-      accountMutations.get(s.id)!.deleted = true;
-    });
-
-    // 4. Update source metadata
-    sourceMetadata.forEach((m: AccountMetadata) => {
-      if (!metadataMutations.has(m.id)) {
-        metadataMutations.set(m.id, { record: m });
-      }
-      // No specific field update other than updatedAt (handled below)
-    });
-
-    const ops: (Account | AccountMetadata)[] = [];
-
-    accountMutations.forEach(({ record, parentId, deleted }) => {
-      ops.push(
-        record.prepareUpdate((r: Account) => {
-          if (parentId) r.parentAccountId = parentId;
-          if (deleted) r.deletedAt = new Date();
-          r.updatedAt = new Date();
-        }),
-      );
-    });
-
-    metadataMutations.forEach(({ record, payFromId }) => {
-      ops.push(
-        record.prepareUpdate((r: AccountMetadata) => {
-          if (payFromId) r.payFromAccountId = payFromId;
-          r.updatedAt = new Date();
-        }),
-      );
-    });
-
-    return ops;
+    return accountMergeOperations.prepareMergeOperations(
+      workplaceId,
+      sourceAccountIds,
+      targetAccountId,
+    );
   }
 }
 
