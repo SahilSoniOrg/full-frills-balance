@@ -7,9 +7,9 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import {
-  notificationService,
+  safeToSpendReadModel,
   SafeToSpendResult,
-} from '@/src/services/notification/NotificationService';
+} from '@/src/services/simulation/SafeToSpendReadModel';
 import { smsService } from '@/src/services/sms-service';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -53,7 +53,7 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const { workplaceId } = useWorkplace();
   const {
     userName,
     hasCompletedOnboarding,
@@ -88,9 +88,8 @@ export function useDashboardViewModel(): DashboardViewModel {
   }, []);
 
   const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
-    () =>
-      isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
-    [workplaceId, defaultCurrencyCode, isAppReady],
+    () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
+    [workplaceId, isAppReady],
     () => snapshotService.getCustomSnapshot(workplaceId, `safe_to_spend`),
   );
 

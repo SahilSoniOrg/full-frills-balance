@@ -1,7 +1,7 @@
 import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';

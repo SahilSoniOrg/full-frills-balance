@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
 

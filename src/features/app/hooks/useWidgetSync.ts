@@ -4,9 +4,9 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
-  notificationService,
-  SafeToSpendResult,
-} from '@/src/services/notification/NotificationService';
+  safeToSpendReadModel,
+  SafeToSpendHeadline,
+} from '@/src/services/simulation/SafeToSpendReadModel';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -101,21 +101,20 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const { theme, themeMode } = useTheme();
 
   // Delay safeToSpend calculation until the app is ready to avoid blocking hydration
-  const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
-    () =>
-      isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
-    [workplaceId, defaultCurrencyCode, isAppReady],
+  const { data: headline } = useObservable<SafeToSpendHeadline | null>(
+    () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watchHeadline() : EMPTY),
+    [workplaceId, isAppReady],
     null,
   );
 
-  const safeToSpend = safeToSpendData?.summary.safeToSpend;
-  const shortfall = safeToSpendData?.summary.shortfall;
-  const trajectoryMinBalance = safeToSpendData?.summary.trajectoryMinBalance;
-  const firstMajorInflowDayFromData = safeToSpendData?.summary.firstMajorInflowDay;
-  const rawCurrencyCode = safeToSpendData?.currencyCode;
+  const safeToSpend = headline?.safeToSpend;
+  const shortfall = headline?.shortfall;
+  const trajectoryMinBalance = headline?.trajectoryMinBalance;
+  const firstMajorInflowDayFromData = headline?.firstMajorInflowDay;
+  const rawCurrencyCode = headline?.currencyCode;
 
-  // Bulletproof data presence check: ensure both summary and currency exist
-  const isDataPresent = !!safeToSpendData?.summary && !!rawCurrencyCode;
+  // Bulletproof data presence check: ensure both headline and currency exist
+  const isDataPresent = !!headline && !!rawCurrencyCode;
   const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {

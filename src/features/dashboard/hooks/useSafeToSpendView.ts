@@ -1,6 +1,6 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
 import React, { useCallback, useMemo } from 'react';
 import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';

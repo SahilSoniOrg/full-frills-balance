@@ -6,7 +6,7 @@ import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { useHub } from '@/src/features/hub/hooks/useHub';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Insight } from '@/src/services/notification/NotificationService';
+import { Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo, useState } from 'react';
 

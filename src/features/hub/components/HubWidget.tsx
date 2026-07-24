@@ -2,7 +2,7 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Insight, insightService } from '@/src/services/notification/NotificationService';
+import { Insight, insightService } from '@/src/services/insight/InsightService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';

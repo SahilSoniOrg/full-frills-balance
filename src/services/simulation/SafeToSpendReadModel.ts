@@ -18,6 +18,7 @@ import {
   SimulationResult,
   SimulationRunResult,
 } from '@/src/services/simulation/types';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
@@ -27,8 +28,9 @@ import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
-import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
+import { Platform } from 'react-native';
+import { combineLatest, firstValueFrom, from, Observable, of } from 'rxjs';
+import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
 
 export interface SafeToSpendDataPoint {
   timestamp: number;
@@ -58,13 +60,77 @@ export interface SafeToSpendResult {
   safeToSpendDays: number;
 }
 
+/** Widget / headline path — intentionally tiny. */
+export type SafeToSpendHeadline = {
+  currencyCode: string;
+  safeToSpend: number;
+  shortfall: number;
+  trajectoryMinBalance: number;
+  firstMajorInflowDay: number | null;
+};
+
+export interface SafeToSpendHandle {
+  /** Dashboard default — currency and window resolved inside the Module. */
+  watch(): Observable<SafeToSpendResult>;
+  /** Widget sync — same underlying projection, headline fields only. */
+  watchHeadline(): Observable<SafeToSpendHeadline>;
+  /** Splash pre-warm — fire-and-forget first emission. */
+  preWarm(): Promise<void>;
+}
+
+function toHeadline(result: SafeToSpendResult): SafeToSpendHeadline {
+  return {
+    currencyCode: result.currencyCode,
+    safeToSpend: result.summary.safeToSpend,
+    shortfall: result.summary.shortfall,
+    trajectoryMinBalance: result.summary.trajectoryMinBalance,
+    firstMajorInflowDay: result.summary.firstMajorInflowDay ?? null,
+  };
+}
+
 export class SafeToSpendReadModel {
   private safeToSpendCache = new Map<string, Observable<SafeToSpendResult>>();
+  private workplaceWatchCache = new Map<string, Observable<SafeToSpendResult>>();
 
   clearCache(): void {
     this.safeToSpendCache.clear();
+    this.workplaceWatchCache.clear();
   }
 
+  /**
+   * Bind Safe-to-Spend to a workplace. Currency and safeToSpendDays are
+   * resolved inside the Implementation — callers do not pass them.
+   */
+  forWorkplace(workplaceId: WorkplaceId): SafeToSpendHandle {
+    return {
+      watch: () => this.watchWorkplace(workplaceId),
+      watchHeadline: () => this.watchWorkplace(workplaceId).pipe(map(toHeadline)),
+      preWarm: async () => {
+        if (Platform.OS === 'web') return;
+        try {
+          await firstValueFrom(this.watchWorkplace(workplaceId).pipe(take(1)));
+        } catch (error) {
+          logger.warn('[SafeToSpendReadModel] Pre-warm failed', { error });
+        }
+      },
+    };
+  }
+
+  private watchWorkplace(workplaceId: WorkplaceId): Observable<SafeToSpendResult> {
+    const cached = this.workplaceWatchCache.get(workplaceId);
+    if (cached) return cached;
+
+    const obs = workplaceService.observeCurrency(workplaceId).pipe(
+      switchMap(currencyCode => this.observeSafeToSpend(workplaceId, currencyCode)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.workplaceWatchCache.set(workplaceId, obs);
+    return obs;
+  }
+
+  /**
+   * @internal Prefer `forWorkplace(id).watch()` — kept for cache-key tests and direct currency override.
+   */
   observeSafeToSpend(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,

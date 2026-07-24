@@ -1,4 +1,4 @@
-import { Insight, insightService } from '@/src/services/notification/NotificationService';
+import { Insight, insightService } from '@/src/services/insight/InsightService';
 import { smsService } from '@/src/services/sms-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { useCallback, useEffect, useState } from 'react';

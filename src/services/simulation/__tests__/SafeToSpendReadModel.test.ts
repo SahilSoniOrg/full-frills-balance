@@ -5,22 +5,23 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { notificationService } from '@/src/services/notification/NotificationService';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { of } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
+import { of } from 'rxjs';
 
-// Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/BalanceService');
@@ -40,13 +41,12 @@ jest.mock('@/src/utils/preferences', () => {
   };
 });
 
-describe('NotificationService', () => {
+describe('SafeToSpendReadModel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     reactiveDataService.clearCache();
-    notificationService.clearCache();
+    safeToSpendReadModel.clearCache();
 
-    // Default simple mocks
     (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
     (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
     (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
@@ -67,6 +67,9 @@ describe('NotificationService', () => {
       of({ remaining: 0, spent: 0 }),
     );
     (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
+    (workplaceRepository.observeById as jest.Mock).mockReturnValue(
+      of({ defaultCurrencyCode: 'USD' }),
+    );
     (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
       simulationResult: {
         summary: { safeToSpend: 0, shortfall: 0, trajectoryMinBalance: 0 },
@@ -89,8 +92,8 @@ describe('NotificationService', () => {
   describe('observeSafeToSpend', () => {
     it('should calculate safe to spend using only liquid assets and liquid liabilities', done => {
       const mockAssets = [
-        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH }, // Liquid
-        { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT }, // Not liquid
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+        { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
       ];
 
       const mockLiabilities = [
@@ -98,8 +101,8 @@ describe('NotificationService', () => {
           id: 'l1',
           accountType: AccountType.LIABILITY,
           accountSubtype: AccountSubtype.CREDIT_CARD,
-        }, // Liquid liability
-        { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE }, // Not liquid liability
+        },
+        { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE },
       ];
 
       (accountRepository.observeByType as jest.Mock).mockImplementation((_workplaceId, type) => {
@@ -142,18 +145,14 @@ describe('NotificationService', () => {
         accountMap: new Map(),
       });
 
-      notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'USD').subscribe(result => {
-        // Expected:
-        // Liquid Assets = a1 (5000)
-        // Liquid Liabilities = l1 (1000)
-        // Net Cash = 5000 - 1000 = 4000
+      safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD').subscribe(result => {
         expect(result.totalLiquidAssets).toBe(5000);
         expect(result.summary.safeToSpend).toBe(4000);
         done();
       });
     });
 
-    it('should generate a new observable and calculate using the new currency when defaultCurrencyCode changes', done => {
+    it('should generate a new observable when currency changes', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
@@ -163,51 +162,37 @@ describe('NotificationService', () => {
         { accountId: 'a1', balance: 5000 },
       ]);
 
-      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
-        (
-          _startingBalances,
-          _plannedPayments,
-          _plannedJournals,
-          _liquidAssetIds,
-          _liabilityAccountBalances,
-          _budgets,
-          _usages,
-          _allAccounts,
-          _currency,
-        ) => {
-          return Promise.resolve({
-            simulationResult: {
-              summary: { safeToSpend: 5000, shortfall: 0, trajectoryMinBalance: 5000 },
-              projections: [],
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          simulationResult: {
+            summary: { safeToSpend: 5000, shortfall: 0, trajectoryMinBalance: 5000 },
+            projections: [],
+          },
+          report: {
+            summary: {
+              totalFutureInflow: 0,
+              totalPlannedInflow: 0,
+              totalPlannedOutflow: 0,
+              totalCommittedPlanned: 0,
             },
-            report: {
-              summary: {
-                totalFutureInflow: 0,
-                totalPlannedInflow: 0,
-                totalPlannedOutflow: 0,
-                totalCommittedPlanned: 0,
-              },
-              budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
-              allFlows: [],
-              liabilities: {
-                total: 0,
-                totalCreditCard: 0,
-                totalOther: 0,
-                committed: 0,
-                committedCreditCard: 0,
-                committedOther: 0,
-              },
+            budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
+            allFlows: [],
+            liabilities: {
+              total: 0,
+              totalCreditCard: 0,
+              totalOther: 0,
+              committed: 0,
+              committedCreditCard: 0,
+              committedOther: 0,
             },
-            accountSummaries: [],
-            accountMap: new Map(),
-          });
-        },
+          },
+          accountSummaries: [],
+          accountMap: new Map(),
+        }),
       );
 
-      // Call once with USD
-      const usdObs = notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
-      // Call again with EUR
-      const eurObs = notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
+      const usdObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
+      const eurObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
 
       expect(usdObs).not.toBe(eurObs);
 
@@ -215,6 +200,60 @@ describe('NotificationService', () => {
         expect(result.currencyCode).toBe('EUR');
         done();
       });
+    });
+  });
+
+  describe('forWorkplace', () => {
+    it('watchHeadline projects summary fields from the workplace watch', done => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 5000 },
+      ]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
+        simulationResult: {
+          summary: {
+            safeToSpend: 4200,
+            shortfall: 0,
+            trajectoryMinBalance: 4100,
+            firstMajorInflowDay: 3,
+          },
+          projections: [],
+        },
+        report: {
+          summary: {
+            totalFutureInflow: 0,
+            totalPlannedInflow: 0,
+            totalPlannedOutflow: 0,
+            totalCommittedPlanned: 0,
+            firstMajorInflowDay: 3,
+          },
+          budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
+          allFlows: [],
+          liabilities: {
+            total: 0,
+            totalCreditCard: 0,
+            totalOther: 0,
+            committed: 0,
+            committedCreditCard: 0,
+            committedOther: 0,
+          },
+        },
+        accountSummaries: [],
+        accountMap: new Map(),
+      });
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watchHeadline()
+        .subscribe(headline => {
+          expect(headline.currencyCode).toBe('USD');
+          expect(headline.safeToSpend).toBe(4200);
+          expect(headline.trajectoryMinBalance).toBe(4100);
+          done();
+        });
     });
   });
 });

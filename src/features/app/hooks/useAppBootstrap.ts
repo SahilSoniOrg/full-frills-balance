@@ -16,6 +16,7 @@ import { sharingService } from '@/src/services/SharingService';
 import { integrityService } from '@/src/services/integrity-service';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { notificationService } from '@/src/services/notification/NotificationService';
+import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
 
 /**
@@ -70,7 +71,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             currencyRepository.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
-            notificationService.preWarm(workplaceId, defaultCurrencyCode),
+            safeToSpendReadModel.forWorkplace(workplaceId).preWarm(),
           ]);
 
           logger.info(

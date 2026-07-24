@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';

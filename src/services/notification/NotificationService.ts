@@ -1,24 +1,15 @@
 import { AppConfig } from '@/src/constants';
-import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { firstValueFrom, Observable } from 'rxjs';
-import { take } from 'rxjs/operators';
-import { Insight, insightService } from '../insight/InsightService';
 
-import {
-  safeToSpendReadModel,
-  SafeToSpendDataPoint,
-  SafeToSpendProjection,
-  SafeToSpendResult,
-} from '@/src/services/simulation/SafeToSpendReadModel';
-
-export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
-export type { SafeToSpendDataPoint, SafeToSpendProjection, SafeToSpendResult };
-export { safeToSpendReadModel };
 
+/**
+ * OS notification scheduling only.
+ * Safe-to-Spend lives at `@/src/services/simulation/SafeToSpendReadModel`.
+ * Insights live at `@/src/services/insight/InsightService`.
+ */
 export class NotificationService {
   constructor() {
     if (Platform.OS === 'web') return;
@@ -43,10 +34,6 @@ export class NotificationService {
     }
   }
 
-  clearCache(): void {
-    safeToSpendReadModel.clearCache();
-  }
-
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false;
 
@@ -59,22 +46,6 @@ export class NotificationService {
     }
 
     return finalStatus === 'granted';
-  }
-
-  /**
-   * Pre-warms the Safe-to-Spend simulation pipeline in the background.
-   * This triggers the heavy data observation and cache hydration during the
-   * splash screen phase without blocking the first render.
-   */
-  async preWarm(workplaceId: WorkplaceId, defaultCurrencyCode: string): Promise<void> {
-    if (Platform.OS === 'web') return;
-    try {
-      // Trigger the simulation chain and wait for the first emission.
-      // The shareReplay(1) in observeSafeToSpend ensures the result is cached.
-      await firstValueFrom(this.observeSafeToSpend(workplaceId, defaultCurrencyCode).pipe(take(1)));
-    } catch (error) {
-      logger.warn('[NotificationService] Pre-warm failed', { error });
-    }
   }
 
   async checkPermissions(): Promise<boolean> {
@@ -175,13 +146,6 @@ export class NotificationService {
       },
       trigger: null,
     });
-  }
-
-  observeSafeToSpend(
-    workplaceId: WorkplaceId,
-    defaultCurrencyCode: string,
-  ): Observable<SafeToSpendResult> {
-    return safeToSpendReadModel.observeSafeToSpend(workplaceId, defaultCurrencyCode);
   }
 }
 

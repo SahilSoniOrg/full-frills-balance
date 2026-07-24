@@ -3,7 +3,7 @@ import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
 import React from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
