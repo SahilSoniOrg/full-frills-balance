@@ -24,8 +24,8 @@ This document is the durable review artifact for deep-module design across Full 
 | 1 | Safe-to-Spend hybrid handle | **Done** — `forWorkplace` → `watch` / `watchHeadline` / `preWarm`; Notification façade removed |
 | 2 | BalanceEffects | **Done** |
 | 3 | SMS façade retirement | **Done** |
-| 4 | preferences domain split | **Done** — store + `themePrefs` / `ai` / `sms` / `sts` / `privacy` / `insights` |
-| 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` extracted; write lifecycle on `LedgerWriteService` |
+| 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` uses theme/privacy/ai/sms/sts facades |
+| 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` + `JournalEnrichmentQueries`; write lifecycle on `LedgerWriteService` |
 | 6 | Account/Transaction repo carve | Deferred (P2) — touch when next editing those Modules |
 | 7 | STS mapper / dashboard VMs | Partial via handle API; fat result type still used internally |
 | 8 | ledgerRead pass-throughs | Deferred — still earns enriched observe hub |
