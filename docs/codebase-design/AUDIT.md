@@ -25,13 +25,13 @@ This document is the durable review artifact for deep-module design across Full 
 | 2 | BalanceEffects | **Done** |
 | 3 | SMS façade retirement | **Done** |
 | 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` + `journalNav` for last-used accounts |
-| 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` + `JournalEnrichmentQueries`; write lifecycle on `LedgerWriteService` |
+| 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries`, `JournalEnrichmentQueries`, `JournalObserveQueries` (status meta, planned range, account tx, by-id observes); write lifecycle on `LedgerWriteService` |
 | 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries` + `accountListBalanceMapping` |
 | 7 | STS mapper / dashboard VMs | **Partial** — `SafeToSpendDashboard` + `safeToSpendDashboardProjection` Module |
 | 8 | ledgerRead pass-throughs | **Partial** — `ledgerEnrichedDisplay` + slim `ledgerReadService` |
 | 9 | Report / ReactiveData | **Partial** — `reactiveWorkplaceObserves`, `reactiveAggregatedBalances`; STS/insights use base streams |
 | 10 | SimulationInput | **Done** |
-| 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, `integrityMaintenance` |
+| 11–12 | PlannedPayment / Integrity splits | **Partial** — recurrence, journal generation/lines, **orchestration** (`plannedPaymentOrchestration`); `integrityMaintenance` (verify/repair still on service) |
 | 13 | Fat journal/account VMs | **Partial** — editors, account details, journal entry screen helpers |
 | 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
 | 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |
@@ -197,7 +197,7 @@ Absorb selectors into projection; thin `SafeToSpendMapper` to format/privacy. De
 |--------|------|-------|----------|
 | budgetReadService | `services/budget/budgetReadService.ts` | Deep (usage observation) | P3 |
 | budgetWriteService | `services/budget/budgetWriteService.ts` | Medium | P3 |
-| PlannedPaymentService | `services/PlannedPaymentService.ts` ~701 | Deep (schedule generation) | P2 — watch Interface width |
+| PlannedPaymentService | `services/PlannedPaymentService.ts` ~200; `planned-payment/*` modules | Deep (schedule + orchestration split) | P2 — watch Interface width |
 | BudgetRepository / PlannedPaymentRepository | data | Medium repositories | P3 |
 
 ---
