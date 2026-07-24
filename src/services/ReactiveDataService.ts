@@ -1,6 +1,7 @@
 import { Animation, AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
+import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
@@ -395,7 +396,7 @@ class ReactiveDataService {
           ).getTime();
 
           // Fetch ALL balances raw (includes totals and deleted for maximum utility)
-          const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
+          const rawItemsResponse = await accountListMetricsQueries.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
             workplaceId,
