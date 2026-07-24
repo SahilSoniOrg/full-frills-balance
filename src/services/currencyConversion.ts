@@ -24,11 +24,7 @@ function isValidRate(rate: number | undefined | null): rate is number {
   return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
 }
 
-function isSilentParityRate(
-  fromCurrency: string,
-  toCurrency: string,
-  rate: number,
-): boolean {
+function isSilentParityRate(fromCurrency: string, toCurrency: string, rate: number): boolean {
   return fromCurrency !== toCurrency && rate === 1.0;
 }
 
