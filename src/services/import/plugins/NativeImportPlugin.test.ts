@@ -97,6 +97,15 @@ describe('NativeImportPlugin', () => {
         currencyCode: 'USD',
         transactionDate: '2024-01-01T00:00:00Z',
       },
+      {
+        id: 't2',
+        accountId: 'a1',
+        journalId: 'j1',
+        amount: 10,
+        transactionType: 'CREDIT',
+        currencyCode: 'USD',
+        transactionDate: '2024-01-01T00:00:00Z',
+      },
     ],
     auditLogs: [
       {
@@ -216,7 +225,7 @@ describe('NativeImportPlugin', () => {
 
       expect(stats.accounts).toBe(1);
       expect(stats.journals).toBe(1);
-      expect(stats.transactions).toBe(1);
+      expect(stats.transactions).toBe(2);
       expect(stats.budgets).toBe(1);
       expect(stats.auditLogs).toBe(1);
     });
@@ -234,6 +243,21 @@ describe('NativeImportPlugin', () => {
       await expect(
         importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
       ).rejects.toThrow(/missing required data/);
+    });
+
+    it('does not wipe workplace when journals are unbalanced', async () => {
+      const unbalanced = {
+        ...validNativeData,
+        transactions: [validNativeData.transactions[0]],
+      };
+      const context = { json: unbalanced } as ImportFileContext;
+
+      await expect(
+        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+      ).rejects.toThrow(/Import validation failed/);
+
+      expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
+      expect(importRepository.batchInsert).not.toHaveBeenCalled();
     });
 
     it('remaps IDs correctly and maintains references', async () => {

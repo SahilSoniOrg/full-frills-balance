@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import { schema } from '@/src/data/database/schema';
 import { exportService } from '@/src/services/export-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -221,6 +222,14 @@ describe('ExportService', () => {
           'backup.json': expect.any(String),
         }),
       );
+
+      const zipCall = (compression.createZipArchive as jest.Mock).mock.calls[0];
+      const backupJson = zipCall[1]['backup.json'] as string;
+      const parsed = JSON.parse(backupJson);
+      expect(parsed.schemaVersion).toBe(schema.version);
+      expect(parsed.currencies).toEqual(expect.any(Array));
+      expect(parsed.exchange_rates).toEqual(expect.any(Array));
+      expect(parsed.balance_snapshots).toEqual(expect.any(Array));
     });
 
     it('should handle errors', async () => {

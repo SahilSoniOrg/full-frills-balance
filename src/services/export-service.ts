@@ -252,6 +252,7 @@ const DATE_COLUMN_NAMES = [
 export interface ExportData {
   exportDate: string;
   version: string;
+  schemaVersion: number;
   preferences: UIPreferences;
   accounts: AccountExport[];
   journals: JournalExport[];
@@ -265,6 +266,9 @@ export interface ExportData {
   transactionAutoPostRules: TransactionAutoPostRuleExport[];
   transactionInboxRecords: SmsInboxRecordExport[];
   balanceSnapshots: BalanceSnapshotExport[];
+  currencies?: CurrencyExport[];
+  exchange_rates?: ExchangeRateExport[];
+  balance_snapshots?: BalanceSnapshotExport[];
   workplace?: WorkplaceExport;
 }
 
@@ -441,6 +445,9 @@ class ExportService {
         { name: 'Journal Metadata', table: 'journal_metadata' },
         { name: 'Rules', table: 'transaction_auto_post_rules' },
         { name: 'Inbox', table: 'transaction_inbox_records' },
+        { name: 'Currencies', table: 'currencies' },
+        { name: 'Exchange Rates', table: 'exchange_rates' },
+        { name: 'Balance Snapshots', table: 'balance_snapshots' },
       ];
 
       // Track sub-progress of each parallel task
@@ -487,6 +494,9 @@ class ExportService {
         journalMetadata,
         transactionAutoPostRules,
         transactionInboxRecords,
+        currencies,
+        exchangeRates,
+        balanceSnapshots,
       ] = fetchResults;
 
       onProgress?.('Processing preferences...', 0.53);
@@ -506,6 +516,7 @@ class ExportService {
       const metadataPart = JSON.stringify({
         exportDate: new Date().toISOString(),
         version: '1.4.0',
+        schemaVersion: schema.version,
         preferences: userPreferences,
         workplace: workplace
           ? {
@@ -534,6 +545,9 @@ class ExportService {
         { key: 'journalMetadata', data: journalMetadata },
         { key: 'transactionAutoPostRules', data: transactionAutoPostRules },
         { key: 'transactionInboxRecords', data: transactionInboxRecords },
+        { key: 'currencies', data: currencies },
+        { key: 'exchange_rates', data: exchangeRates },
+        { key: 'balance_snapshots', data: balanceSnapshots },
       ];
 
       let currentProgress = 0.55;
@@ -572,6 +586,9 @@ class ExportService {
         plannedPayments: plannedPayments.length,
         journalMetadata: journalMetadata.length,
         transactionAutoPostRules: transactionAutoPostRules.length,
+        currencies: currencies.length,
+        exchangeRates: exchangeRates.length,
+        balanceSnapshots: balanceSnapshots.length,
       });
 
       onProgress?.('Compressing ZIP archive...', 0.75);

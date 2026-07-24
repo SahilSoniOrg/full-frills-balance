@@ -9,6 +9,7 @@ import {
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
+import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
@@ -86,6 +87,8 @@ export class ImportService {
       defaultCurrency,
       onProgress: (msg, p) => parseProgress(msg, p),
     });
+
+    validateImportedData(parsedResult.data);
 
     // 2. Reset target workplace storage
     const wipeProgress = this.createProgressSegment(
