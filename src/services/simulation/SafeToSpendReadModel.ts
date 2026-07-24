@@ -298,7 +298,7 @@ export class SafeToSpendReadModel {
 
               trace.metric('fetch_balances_processed');
 
-              const runResult = await cashFlowSimulationService.simulate(
+              const runResult = await cashFlowSimulationService.simulate({
                 startingBalances,
                 plannedPayments,
                 plannedJournals,
@@ -307,11 +307,11 @@ export class SafeToSpendReadModel {
                 budgets,
                 usages,
                 allAccounts,
-                defaultCurrencyCode,
+                resultCurrency: defaultCurrencyCode,
                 workplaceId,
-                safeToSpendDays,
+                simulationDays: safeToSpendDays,
                 trace,
-              );
+              });
 
               trace.metric('simulation_complete');
 
