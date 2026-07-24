@@ -17,7 +17,7 @@ import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/d
 import { analytics } from '@/src/services/analytics-service';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences, usePreferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -37,8 +37,24 @@ export interface RestartOptions {
   stats?: ImportStats;
 }
 
+/** Session-only / boot state — not persisted in preferences. */
+interface UISessionState {
+  isLoading: boolean;
+  isInitialized: boolean;
+  isUnlocked: boolean;
+  hasUnlockedThisSession: boolean;
+  isAppActive: boolean;
+  isLockAuthenticating: boolean;
+  fontsReady: boolean;
+  loadedFontId: FontId | null;
+  isRestartRequired: boolean;
+  restartType: 'IMPORT' | 'RESET' | 'SEED_MOCK' | null;
+  importStats: ImportStats | null;
+  isDataHydrated: boolean;
+}
+
 // Simple UI state only - no domain data
-interface UIState {
+interface UIState extends UISessionState {
   // Onboarding state
   hasCompletedOnboarding: boolean;
 
@@ -47,10 +63,6 @@ interface UIState {
   themeId: ThemeId;
   fontId: FontId;
 
-  // Simple UI flags
-  isLoading: boolean;
-  isInitialized: boolean; // Track if preferences are loaded
-
   // User details
   userName: string;
 
@@ -58,12 +70,6 @@ interface UIState {
   isPrivacyMode: boolean;
   isWidgetPrivacyEnabled: boolean;
   isAppLockEnabled: boolean;
-  isUnlocked: boolean; // App lock transient state
-  hasUnlockedThisSession: boolean; // Session transient state for cold boot protection
-  isAppActive: boolean; // Track OS AppState in global context
-  isLockAuthenticating: boolean; // Track if biometric prompt is visible
-  fontsReady: boolean; // Track if fonts are loaded
-  loadedFontId: FontId | null; // Track which font set is currently loaded
 
   // Account Display
   showAccountMonthlyStats: boolean;
@@ -71,10 +77,6 @@ interface UIState {
   // Advanced Mode
   advancedMode: boolean;
 
-  // App Lifecycle
-  isRestartRequired: boolean;
-  restartType: 'IMPORT' | 'RESET' | 'SEED_MOCK' | null;
-  importStats: ImportStats | null;
   archetype: string;
   notificationCadence: 'none' | 'daily' | 'weekly';
   notificationHour: number;
@@ -86,7 +88,6 @@ interface UIState {
   isNativeAiEnabled: boolean;
   preferredAiModelId: string;
   aiInferenceMode: 'single' | 'multi';
-  isDataHydrated: boolean; // Tracks if core domain data is primed
 }
 interface UIContextType extends UIState {
   // Computed values
@@ -139,165 +140,102 @@ export function useThemeOverride() {
   return useContext(ThemeOverrideContext);
 }
 
+const INITIAL_SESSION: UISessionState = {
+  isLoading: false,
+  isInitialized: false,
+  isUnlocked: false,
+  hasUnlockedThisSession: false,
+  isAppActive: true,
+  isLockAuthenticating: false,
+  fontsReady: false,
+  loadedFontId: null,
+  isRestartRequired: false,
+  restartType: null,
+  importStats: null,
+  isDataHydrated: false,
+};
+
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
+  const prefs = usePreferences();
 
-  const [uiState, setUIState] = useState<UIState>({
-    hasCompletedOnboarding: false,
-    themePreference: 'system',
-    themeId: ThemeIds.DEEP_SPACE, // Default
-    fontId: FontIds.DEEP_SPACE, // Default
-    isLoading: false,
-    isInitialized: false,
-    userName: '',
-    isPrivacyMode: false,
-    isWidgetPrivacyEnabled: false,
-    isAppLockEnabled: false,
-    isUnlocked: false,
-    hasUnlockedThisSession: false,
-    isAppActive: true, // Default to true on boot
-    isLockAuthenticating: false, // Default to false
-    showAccountMonthlyStats: true,
-    advancedMode: false,
-    isRestartRequired: false,
-    restartType: null,
-    importStats: null,
-    archetype: AppConfig.defaults.archetype,
-    notificationCadence: 'none',
-    notificationHour: AppConfig.defaults.notifications.defaultHour,
-    notificationMinute: AppConfig.defaults.notifications.defaultMinute,
-    notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
-    fontsReady: false,
-    loadedFontId: null,
-    defaultShareFormat: ShareFormat.TEXT,
-    safeToSpendDays: AppConfig.defaults.safeToSpendDays,
-    isSmsImportEnabled: false,
-    isNativeAiEnabled: false,
-    preferredAiModelId: AppConfig.defaults.defaultAiModelId,
-    aiInferenceMode: 'multi',
-    isDataHydrated: false,
-  });
+  const [session, setSession] = useState<UISessionState>(INITIAL_SESSION);
 
-  // Load preferences on mount
+  // Ensure AsyncStorage → MMKV migration completes before marking ready
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        setUIState(prev => ({ ...prev, isLoading: true }));
-
-        const loadedPreferences = await preferences.loadPreferences();
-        const themePreference = loadedPreferences.theme || 'system';
-        const themeId = loadedPreferences.themeId || ThemeIds.DEEP_SPACE;
-        const fontId = loadedPreferences.fontId || FontIds.DEEP_SPACE;
-
-        setUIState(prev => ({
-          ...prev,
-          hasCompletedOnboarding: loadedPreferences.onboardingCompleted,
-          themePreference,
-          themeId,
-          fontId,
-          userName: loadedPreferences.userName || '',
-          isPrivacyMode: loadedPreferences.isPrivacyMode || false,
-          isWidgetPrivacyEnabled: loadedPreferences.isWidgetPrivacyEnabled || false,
-          isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
-          showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
-          advancedMode: loadedPreferences.advancedMode || false,
-          isRestartRequired: false,
-          restartType: null,
-          importStats: null,
-          isLoading: false,
-          isInitialized: true,
-          archetype: loadedPreferences.archetype || 'balance-glancer',
-          notificationCadence: loadedPreferences.notificationCadence || 'none',
-          notificationHour: loadedPreferences.notificationHour ?? 10,
-          notificationMinute: loadedPreferences.notificationMinute ?? 0,
-          notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
-          defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
-          safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
-          isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
-          isNativeAiEnabled: loadedPreferences.isNativeAiEnabled || false,
-          preferredAiModelId:
-            loadedPreferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
-          aiInferenceMode: loadedPreferences.aiInferenceMode || 'multi',
-        }));
+        setSession(prev => ({ ...prev, isLoading: true }));
+        await preferences.loadPreferences();
+        setSession(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       } catch (error) {
         logger.warn('[UIProvider] Failed to load preferences', { error });
-        setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }));
+        setSession(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       }
     };
 
     loadPreferences();
   }, []);
 
-  // Synchronize all preference changes automatically from preferences store
-  useEffect(() => {
-    const subscription = preferences.observeAll().subscribe(loadedPreferences => {
-      setUIState(prev => ({
-        ...prev,
-        hasCompletedOnboarding: loadedPreferences.onboardingCompleted,
-        themePreference: loadedPreferences.theme || 'system',
-        themeId: loadedPreferences.themeId || ThemeIds.DEEP_SPACE,
-        fontId: loadedPreferences.fontId || FontIds.DEEP_SPACE,
-        userName: loadedPreferences.userName || '',
-        isPrivacyMode: loadedPreferences.isPrivacyMode || false,
-        isWidgetPrivacyEnabled: loadedPreferences.isWidgetPrivacyEnabled || false,
-        isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
-        showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
-        advancedMode: loadedPreferences.advancedMode || false,
-        archetype: loadedPreferences.archetype || 'balance-glancer',
-        notificationCadence: loadedPreferences.notificationCadence || 'none',
-        notificationHour: loadedPreferences.notificationHour ?? 10,
-        notificationMinute: loadedPreferences.notificationMinute ?? 0,
-        notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
-        defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
-        safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
-        isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
-        isNativeAiEnabled: loadedPreferences.isNativeAiEnabled || false,
-        preferredAiModelId:
-          loadedPreferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
-        aiInferenceMode: loadedPreferences.aiInferenceMode || 'multi',
-      }));
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  const hasCompletedOnboarding = prefs.onboardingCompleted;
+  const themePreference = prefs.theme || 'system';
+  const themeId = prefs.themeId || ThemeIds.DEEP_SPACE;
+  const fontId = prefs.fontId || FontIds.DEEP_SPACE;
+  const userName = prefs.userName || '';
+  const isPrivacyMode = prefs.isPrivacyMode || false;
+  const isWidgetPrivacyEnabled = prefs.isWidgetPrivacyEnabled || false;
+  const isAppLockEnabled = prefs.isAppLockEnabled || false;
+  const showAccountMonthlyStats = prefs.showAccountMonthlyStats ?? true;
+  const advancedMode = prefs.advancedMode || false;
+  const archetype = prefs.archetype || AppConfig.defaults.archetype;
+  const notificationCadence = prefs.notificationCadence || 'none';
+  const notificationHour = prefs.notificationHour ?? AppConfig.defaults.notifications.defaultHour;
+  const notificationMinute =
+    prefs.notificationMinute ?? AppConfig.defaults.notifications.defaultMinute;
+  const notificationWeekday =
+    prefs.notificationWeekday ?? AppConfig.defaults.notifications.defaultWeekday;
+  const defaultShareFormat = prefs.defaultShareFormat || ShareFormat.TEXT;
+  const safeToSpendDays = prefs.safeToSpendDays || AppConfig.defaults.safeToSpendDays;
+  const isSmsImportEnabled = prefs.isSmsImportEnabled || false;
+  const isNativeAiEnabled = prefs.isNativeAiEnabled || false;
+  const preferredAiModelId = prefs.preferredAiModelId || AppConfig.defaults.defaultAiModelId;
+  const aiInferenceMode = prefs.aiInferenceMode || 'multi';
 
-  const setFontsReady = useCallback((fontsReady: boolean, fontId?: FontId) => {
-    setUIState(prev => ({
-      ...prev,
-      fontsReady,
-      loadedFontId: fontsReady ? (fontId ?? prev.fontId) : null,
-    }));
-  }, []);
+  const setFontsReady = useCallback(
+    (fontsReady: boolean, nextFontId?: FontId) => {
+      setSession(prev => ({
+        ...prev,
+        fontsReady,
+        loadedFontId: fontsReady ? (nextFontId ?? fontId) : null,
+      }));
+    },
+    [fontId],
+  );
 
   const setDataHydrated = useCallback((isDataHydrated: boolean) => {
-    setUIState(prev => ({ ...prev, isDataHydrated }));
+    setSession(prev => ({ ...prev, isDataHydrated }));
   }, []);
 
-  const completeOnboarding = useCallback(async (name: string, archetype?: string) => {
+  const completeOnboarding = useCallback(async (name: string, archetypeValue?: string) => {
     try {
       await preferences.setUserName(name);
-      if (archetype) await preferences.setArchetype(archetype);
+      if (archetypeValue) await preferences.setArchetype(archetypeValue);
       await preferences.setOnboardingCompleted(true);
-      setUIState(prev => ({
-        ...prev,
-        hasCompletedOnboarding: true,
-        userName: name,
-        archetype: archetype || prev.archetype,
-      }));
     } catch (error) {
       logger.warn('[UIContext] Failed to complete onboarding', { error });
-      setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }));
+      // Preserve prior behavior: allow the UI to proceed even if persistence fails.
+      try {
+        preferences.setOnboardingCompleted(true);
+      } catch {
+        /* ignore */
+      }
     }
   }, []);
 
-  const updateUserDetails = useCallback(async (name: string, archetype?: string) => {
+  const updateUserDetails = useCallback(async (name: string, archetypeValue?: string) => {
     try {
       if (name) await preferences.setUserName(name);
-      if (archetype) await preferences.setArchetype(archetype);
-      setUIState(prev => ({
-        ...prev,
-        userName: name || prev.userName,
-        archetype: archetype || prev.archetype,
-      }));
+      if (archetypeValue) await preferences.setArchetype(archetypeValue);
     } catch (error) {
       logger.warn('[UIContext] Failed to update user details', { error });
     }
@@ -307,78 +245,68 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     async (theme: 'light' | 'dark' | 'system') => {
       try {
         await preferences.themePrefs.setTheme(theme);
-        setUIState(prev => ({ ...prev, themePreference: theme }));
-        analytics.logThemeChanged(theme, uiState.themeId, uiState.fontId);
+        analytics.logThemeChanged(theme, themeId, fontId);
       } catch (error) {
         logger.warn('[UIContext] Failed to set theme preference', { error });
-        setUIState(prev => ({ ...prev, themePreference: theme }));
       }
     },
-    [uiState.themeId, uiState.fontId],
+    [themeId, fontId],
   );
 
   const setThemeId = useCallback(
-    async (themeId: ThemeId) => {
+    async (nextThemeId: ThemeId) => {
       try {
-        await preferences.themePrefs.setThemeId(themeId);
-        setUIState(prev => ({ ...prev, themeId }));
-        analytics.logThemeChanged(uiState.themePreference, themeId, uiState.fontId);
+        await preferences.themePrefs.setThemeId(nextThemeId);
+        analytics.logThemeChanged(themePreference, nextThemeId, fontId);
       } catch (error) {
         logger.warn('[UIContext] Failed to set theme ID', { error });
-        setUIState(prev => ({ ...prev, themeId }));
       }
     },
-    [uiState.themePreference, uiState.fontId],
+    [themePreference, fontId],
   );
 
   const setFontId = useCallback(
-    async (fontId: FontId) => {
+    async (nextFontId: FontId) => {
       try {
-        await preferences.themePrefs.setFontId(fontId);
-        setUIState(prev => ({ ...prev, fontId }));
-        analytics.logThemeChanged(uiState.themePreference, uiState.themeId, fontId);
+        await preferences.themePrefs.setFontId(nextFontId);
+        analytics.logThemeChanged(themePreference, themeId, nextFontId);
       } catch (error) {
         logger.warn('[UIContext] Failed to set font ID', { error });
-        setUIState(prev => ({ ...prev, fontId }));
       }
     },
-    [uiState.themePreference, uiState.themeId],
+    [themePreference, themeId],
   );
 
-  const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
+  const setPrivacyMode = useCallback(async (nextIsPrivacyMode: boolean) => {
     try {
-      await preferences.privacy.setIsPrivacyMode(isPrivacyMode);
-      setUIState(prev => ({ ...prev, isPrivacyMode }));
-      analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', { isPrivacyMode });
+      await preferences.privacy.setIsPrivacyMode(nextIsPrivacyMode);
+      analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', {
+        isPrivacyMode: nextIsPrivacyMode,
+      });
     } catch (error) {
       logger.warn('[UIContext] Failed to set privacy mode', { error });
-      setUIState(prev => ({ ...prev, isPrivacyMode }));
     }
   }, []);
 
-  const setWidgetPrivacyEnabled = useCallback(async (isWidgetPrivacyEnabled: boolean) => {
+  const setWidgetPrivacyEnabled = useCallback(async (enabled: boolean) => {
     try {
-      await preferences.privacy.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled);
-      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
+      await preferences.privacy.setIsWidgetPrivacyEnabled(enabled);
     } catch (error) {
       logger.warn('[UIContext] Failed to set widget privacy', { error });
-      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     }
   }, []);
 
-  const setAppLockEnabled = useCallback(async (isAppLockEnabled: boolean) => {
+  const setAppLockEnabled = useCallback(async (enabled: boolean) => {
     try {
-      await preferences.privacy.setAppLockEnabled(isAppLockEnabled);
-      setUIState(prev => ({ ...prev, isAppLockEnabled }));
+      await preferences.privacy.setAppLockEnabled(enabled);
     } catch (error) {
       logger.warn('[UIContext] Failed to set app lock', { error });
-      setUIState(prev => ({ ...prev, isAppLockEnabled }));
     }
   }, []);
 
   // Atomic Auth Action: ensuring consistency between unlock state and session access.
   const authenticateSession = useCallback((isUnlocked: boolean) => {
-    setUIState(prev => ({
+    setSession(prev => ({
       ...prev,
       isUnlocked,
       // Binding them together at the source as per hardened review.
@@ -387,82 +315,68 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setIsAppActive = useCallback((isAppActive: boolean) => {
-    setUIState(prev => ({ ...prev, isAppActive }));
+    setSession(prev => ({ ...prev, isAppActive }));
   }, []);
 
   const setIsLockAuthenticating = useCallback((isLockAuthenticating: boolean) => {
-    setUIState(prev => ({ ...prev, isLockAuthenticating }));
+    setSession(prev => ({ ...prev, isLockAuthenticating }));
   }, []);
 
-  const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
+  const setShowAccountMonthlyStats = useCallback(async (show: boolean) => {
     try {
-      await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats);
-      setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
+      await preferences.setShowAccountMonthlyStats(show);
     } catch (error) {
       logger.warn('[UIContext] Failed to set account stats preference', { error });
-      setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
     }
   }, []);
 
-  const setArchetype = useCallback(async (archetype: string) => {
+  const setArchetype = useCallback(async (nextArchetype: string) => {
     try {
-      await preferences.setArchetype(archetype);
-      setUIState(prev => ({ ...prev, archetype }));
+      await preferences.setArchetype(nextArchetype);
     } catch (error) {
       logger.warn('[UIContext] Failed to set archetype', { error });
-      setUIState(prev => ({ ...prev, archetype }));
     }
   }, []);
 
-  const setAdvancedMode = useCallback(async (advancedMode: boolean) => {
+  const setAdvancedMode = useCallback(async (nextAdvancedMode: boolean) => {
     try {
-      await preferences.setAdvancedMode(advancedMode);
-      setUIState(prev => ({ ...prev, advancedMode }));
+      await preferences.setAdvancedMode(nextAdvancedMode);
     } catch (error) {
       logger.warn('[UIContext] Failed to set advanced mode', { error });
-      setUIState(prev => ({ ...prev, advancedMode }));
     }
   }, []);
 
   const setNotificationCadence = useCallback(
     async (cadence: 'none' | 'daily' | 'weekly') => {
       try {
-        await preferences.setNotificationCadence(cadence);
-        setUIState(prev => ({ ...prev, notificationCadence: cadence }));
-        analytics.logNotificationPreferenceChanged(cadence, uiState.notificationHour);
+        await preferences.notifications.setNotificationCadence(cadence);
+        analytics.logNotificationPreferenceChanged(cadence, notificationHour);
       } catch (error) {
         logger.warn('[UIContext] Failed to set notification cadence', { error });
-        setUIState(prev => ({ ...prev, notificationCadence: cadence }));
       }
     },
-    [uiState.notificationHour],
+    [notificationHour],
   );
 
   const setNotificationTime = useCallback(async (hour: number, minute: number) => {
     try {
-      await preferences.setNotificationHour(hour);
-      await preferences.setNotificationMinute(minute);
-      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
+      await preferences.notifications.setNotificationTime(hour, minute);
     } catch (error) {
       logger.warn('[UIContext] Failed to set notification time', { error });
-      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
     }
   }, []);
 
   const setNotificationWeekday = useCallback(async (weekday: number) => {
     try {
-      await preferences.setNotificationWeekday(weekday);
-      setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
+      await preferences.notifications.setNotificationWeekday(weekday);
     } catch (error) {
       logger.warn('[UIContext] Failed to set notification weekday', { error });
-      setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
     }
   }, []);
 
   const setDefaultShareFormat = useCallback((format: ShareFormat) => {
     try {
       preferences.setDefaultShareFormat(format);
-      setUIState(prev => ({ ...prev, defaultShareFormat: format }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set default share format', { error });
     }
@@ -471,17 +385,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setSafeToSpendDays = useCallback(async (days: number) => {
     try {
       await preferences.sts.setSafeToSpendDays(days);
-      setUIState(prev => ({ ...prev, safeToSpendDays: days }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set safe to spend days', { error });
-      setUIState(prev => ({ ...prev, safeToSpendDays: days }));
     }
   }, []);
 
   const setIsSmsImportEnabled = useCallback(async (enabled: boolean) => {
     try {
       await preferences.sms.setIsSmsImportEnabled(enabled);
-      setUIState(prev => ({ ...prev, isSmsImportEnabled: enabled }));
       analytics.logSmsImportSettingsChanged(enabled);
     } catch (error) {
       logger.warn('[UIContext] Failed to set sms import preference', { error });
@@ -491,7 +402,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setIsNativeAiEnabled = useCallback(async (enabled: boolean) => {
     try {
       await preferences.ai.setIsNativeAiEnabled(enabled);
-      setUIState(prev => ({ ...prev, isNativeAiEnabled: enabled }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set native AI preference', { error });
     }
@@ -500,7 +410,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setPreferredAiModelId = useCallback(async (modelId: string) => {
     try {
       await preferences.ai.setPreferredAiModelId(modelId);
-      setUIState(prev => ({ ...prev, preferredAiModelId: modelId }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set preferred AI model', { error });
     }
@@ -509,14 +418,13 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setAiInferenceMode = useCallback(async (mode: 'single' | 'multi') => {
     try {
       await preferences.ai.setAiInferenceMode(mode);
-      setUIState(prev => ({ ...prev, aiInferenceMode: mode }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set AI inference mode', { error });
     }
   }, []);
 
   const requireRestart = useCallback((options: RestartOptions) => {
-    setUIState(prev => ({
+    setSession(prev => ({
       ...prev,
       isRestartRequired: true,
       restartType: options.type,
@@ -525,12 +433,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const themeMode = useMemo(() => {
-    return uiState.themePreference === 'system'
+    return themePreference === 'system'
       ? systemColorScheme === 'dark'
         ? 'dark'
         : 'light'
-      : uiState.themePreference;
-  }, [uiState.themePreference, systemColorScheme]);
+      : themePreference;
+  }, [themePreference, systemColorScheme]);
 
   /**
    * BULLETPROOF LOCK TRUTH:
@@ -544,23 +452,44 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
    * makes the app 'inactive'.
    */
   const isAppCurrentlyLocked = useMemo(() => {
-    const isActuallyBackgrounded = !uiState.isAppActive && !uiState.isLockAuthenticating;
-    return uiState.isAppLockEnabled && (!uiState.isUnlocked || isActuallyBackgrounded);
+    const isActuallyBackgrounded = !session.isAppActive && !session.isLockAuthenticating;
+    return isAppLockEnabled && (!session.isUnlocked || isActuallyBackgrounded);
   }, [
-    uiState.isAppLockEnabled,
-    uiState.isUnlocked,
-    uiState.isAppActive,
-    uiState.isLockAuthenticating,
+    isAppLockEnabled,
+    session.isUnlocked,
+    session.isAppActive,
+    session.isLockAuthenticating,
   ]);
 
   const isAppReady = useMemo(
-    () => uiState.isInitialized && uiState.fontsReady && uiState.loadedFontId === uiState.fontId,
-    [uiState.isInitialized, uiState.fontsReady, uiState.loadedFontId, uiState.fontId],
+    () => session.isInitialized && session.fontsReady && session.loadedFontId === fontId,
+    [session.isInitialized, session.fontsReady, session.loadedFontId, fontId],
   );
 
   const value = useMemo<UIContextType>(
     () => ({
-      ...uiState,
+      hasCompletedOnboarding,
+      themePreference,
+      themeId,
+      fontId,
+      userName,
+      isPrivacyMode,
+      isWidgetPrivacyEnabled,
+      isAppLockEnabled,
+      showAccountMonthlyStats,
+      advancedMode,
+      archetype,
+      notificationCadence,
+      notificationHour,
+      notificationMinute,
+      notificationWeekday,
+      defaultShareFormat,
+      safeToSpendDays,
+      isSmsImportEnabled,
+      isNativeAiEnabled,
+      preferredAiModelId,
+      aiInferenceMode,
+      ...session,
       themeMode,
       isAppCurrentlyLocked,
       isAppReady,
@@ -592,39 +521,28 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       requireRestart,
     }),
     [
-      uiState.hasCompletedOnboarding,
-      uiState.themePreference,
-      uiState.themeId,
-      uiState.fontId,
-      uiState.isLoading,
-      uiState.isInitialized,
-      uiState.userName,
-      uiState.isPrivacyMode,
-      uiState.isWidgetPrivacyEnabled,
-      uiState.isAppLockEnabled,
-      uiState.isUnlocked,
-      uiState.hasUnlockedThisSession,
-      uiState.isAppActive,
-      uiState.isLockAuthenticating,
-      uiState.showAccountMonthlyStats,
-      uiState.advancedMode,
-      uiState.isRestartRequired,
-      uiState.restartType,
-      uiState.importStats,
-      uiState.archetype,
-      uiState.notificationCadence,
-      uiState.notificationHour,
-      uiState.notificationMinute,
-      uiState.notificationWeekday,
-      uiState.fontsReady,
-      uiState.loadedFontId,
-      uiState.defaultShareFormat,
-      uiState.safeToSpendDays,
-      uiState.isSmsImportEnabled,
-      uiState.isNativeAiEnabled,
-      uiState.preferredAiModelId,
-      uiState.aiInferenceMode,
-      uiState.isDataHydrated,
+      hasCompletedOnboarding,
+      themePreference,
+      themeId,
+      fontId,
+      userName,
+      isPrivacyMode,
+      isWidgetPrivacyEnabled,
+      isAppLockEnabled,
+      showAccountMonthlyStats,
+      advancedMode,
+      archetype,
+      notificationCadence,
+      notificationHour,
+      notificationMinute,
+      notificationWeekday,
+      defaultShareFormat,
+      safeToSpendDays,
+      isSmsImportEnabled,
+      isNativeAiEnabled,
+      preferredAiModelId,
+      aiInferenceMode,
+      session,
       themeMode,
       isAppCurrentlyLocked,
       isAppReady,

@@ -219,13 +219,18 @@ export class PreferencesStore {
     this.update({ userName: name });
   }
 
-  /** @internal */
-  get _legacyData(): Record<string, any> {
-    return this.legacyData;
+  /**
+   * Legacy currency fields stripped from UIPreferences into side storage.
+   * Used only by WorkplaceService migration.
+   */
+  getLegacyCurrencyCode(): string | undefined {
+    const code = this.legacyData.defaultCurrencyCode ?? this.legacyData.defaultCurrency;
+    return typeof code === 'string' ? code : undefined;
   }
 
-  /** @internal */
-  _save(): void {
+  clearLegacyCurrencyFields(): void {
+    delete this.legacyData.defaultCurrencyCode;
+    delete this.legacyData.defaultCurrency;
     this.savePreferences();
   }
 

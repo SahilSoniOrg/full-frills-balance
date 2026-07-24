@@ -4,6 +4,7 @@ import type { UIPreferences } from './types';
 
 export type {
   AiPrefs,
+  NotificationPrefs,
   PrivacyPrefs,
   SmsPrefs,
   StsPrefs,
@@ -18,6 +19,8 @@ export type { PreferencesFacade } from './PreferencesFacade';
 export { AiPreferences } from './domains/AiPreferences';
 export { InsightPreferences } from './domains/InsightPreferences';
 export { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
+export { NotificationPreferences } from './domains/NotificationPreferences';
+export type { NotificationCadence } from './domains/NotificationPreferences';
 export { PrivacyPreferences } from './domains/PrivacyPreferences';
 export { SmsPreferences } from './domains/SmsPreferences';
 export { StsPreferences } from './domains/StsPreferences';
@@ -31,17 +34,10 @@ export const preferences = createPreferencesFacade();
  */
 export const preferencesMigration = {
   get legacyCurrencyCode(): string | undefined {
-    return (
-      (preferences as any)._legacyData?.defaultCurrencyCode ||
-      (preferences as any)._legacyData?.defaultCurrency
-    );
+    return preferences.getLegacyCurrencyCode();
   },
   clearLegacyCurrencyCode(): void {
-    if ((preferences as any)._legacyData) {
-      delete (preferences as any)._legacyData.defaultCurrencyCode;
-      delete (preferences as any)._legacyData.defaultCurrency;
-      (preferences as any)._save();
-    }
+    preferences.clearLegacyCurrencyFields();
   },
 };
 

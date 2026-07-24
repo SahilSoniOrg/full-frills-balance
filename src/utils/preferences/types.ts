@@ -50,6 +50,10 @@ export type AiPrefs = Pick<
 >;
 export type SmsPrefs = Pick<UIPreferences, 'isSmsImportEnabled'>;
 export type StsPrefs = Pick<UIPreferences, 'safeToSpendDays'>;
+export type NotificationPrefs = Pick<
+  UIPreferences,
+  'notificationCadence' | 'notificationHour' | 'notificationMinute' | 'notificationWeekday'
+>;
 
 export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   onboardingCompleted: false,

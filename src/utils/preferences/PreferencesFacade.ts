@@ -1,6 +1,7 @@
 import { PreferencesStore } from './PreferencesStore';
 import { AiPreferences } from './domains/AiPreferences';
 import { InsightPreferences } from './domains/InsightPreferences';
+import { NotificationPreferences } from './domains/NotificationPreferences';
 import { PrivacyPreferences } from './domains/PrivacyPreferences';
 import { SmsPreferences } from './domains/SmsPreferences';
 import { StsPreferences } from './domains/StsPreferences';
@@ -14,6 +15,7 @@ export type PreferencesFacade = PreferencesStore & {
   readonly ai: AiPreferences;
   readonly sms: SmsPreferences;
   readonly sts: StsPreferences;
+  readonly notifications: NotificationPreferences;
   readonly insights: InsightPreferences;
   readonly journalNav: JournalNavigationPreferences;
 };
@@ -30,6 +32,7 @@ export function createPreferencesFacade(): PreferencesFacade {
     ai: new AiPreferences(store),
     sms: new SmsPreferences(store),
     sts: new StsPreferences(store),
+    notifications: new NotificationPreferences(store),
     insights: new InsightPreferences(store),
     journalNav: new JournalNavigationPreferences(store),
   });
