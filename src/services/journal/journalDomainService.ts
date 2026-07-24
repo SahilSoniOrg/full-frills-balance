@@ -13,6 +13,7 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
+import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { observeEnrichedJournals as observeEnrichedJournalsHelper } from './journalEnrichedObserver';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
@@ -585,7 +586,7 @@ export class JournalService {
   async getJournalSuggestions(
     workplaceId: WorkplaceId,
   ): Promise<{ description: string; count: number }[]> {
-    return journalRepository.getRecentUniqueDescriptions(workplaceId);
+    return journalEnrichmentQueries.getRecentUniqueDescriptions(workplaceId);
   }
 }
 

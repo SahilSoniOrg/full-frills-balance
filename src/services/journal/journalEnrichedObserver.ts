@@ -1,6 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
@@ -97,7 +98,7 @@ export function observeEnrichedJournals(
       if (journals.length === 0) return [] as EnrichedJournal[];
 
       const journalIds = journals.map(j => j.id);
-      const enrichmentData = await journalRepository.getEnrichmentDataRaw(journalIds);
+      const enrichmentData = await journalEnrichmentQueries.getEnrichmentDataRaw(journalIds);
 
       const dataByJournal = new Map<string, typeof enrichmentData>();
       for (const row of enrichmentData) {
