@@ -4,7 +4,7 @@ import { Opacity, Spacing } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
-import type { SmsRuleSuggestion } from '@/src/services/sms-service';
+import type { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';

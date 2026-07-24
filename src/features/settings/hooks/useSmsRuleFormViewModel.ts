@@ -10,9 +10,9 @@ import {
   SmsRuleCondition,
   SmsRuleDisposition,
   SmsRuleMode,
-  SmsRulePreviewInput,
-  smsService,
-} from '@/src/services/sms-service';
+} from '@/src/services/ledger/RuleMatcher';
+import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
+import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -175,10 +175,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
           setAccountSourceContains(getConditionValue(conditions, 'account_source')?.value || '');
           setDirection(
             (getConditionValue(conditions, 'direction')?.value as
-              | ''
-              | 'debit'
-              | 'credit'
-              | undefined) || '',
+              '' | 'debit' | 'credit' | undefined) || '',
           );
           setCurrencyCode(getConditionValue(conditions, 'currency')?.value || '');
           const amountCondition = getConditionValue(conditions, 'amount');

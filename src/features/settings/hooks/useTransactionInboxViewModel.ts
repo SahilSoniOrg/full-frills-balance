@@ -6,7 +6,8 @@ import TransactionInboxRecord, {
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useAccounts } from '@/src/features/accounts';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { ParsedTransaction, smsService } from '@/src/services/sms-service';
+import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { smsService } from '@/src/services/sms-service';
 import {
   AccountId,
   EMPTY_ACCOUNT_ID,
