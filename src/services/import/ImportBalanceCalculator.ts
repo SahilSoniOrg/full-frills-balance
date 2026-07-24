@@ -11,13 +11,20 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
+export type ImportBalancePatch = {
+  transactionId: string;
+  runningBalance: number;
+  amount: number;
+};
+
 /**
- * Calculates running balances for imported transactions before bulk persistence.
+ * Pure calculation of running balances for imported transactions.
+ * Returns patches; caller assigns onto the batch (does not mutate `data`).
  */
 export async function calculateImportRunningBalances(
   data: BatchImportData,
   onProgress?: (message: string, progress?: number) => void,
-): Promise<void> {
+): Promise<ImportBalancePatch[]> {
   onProgress?.('Calculating transaction balances...', 0.02);
   logger.info('[ImportBalanceCalculator] Calculating transaction balances...');
 
@@ -35,6 +42,7 @@ export async function calculateImportRunningBalances(
   const currencies = await database.collections.get<Currency>('currencies').query().fetch();
   const precisionMap = new Map(currencies.map(c => [c.code, c.precision]));
 
+  const patches: ImportBalancePatch[] = [];
   let accountsProcessed = 0;
   const totalAccounts = transactionsByAccount.size;
 
@@ -47,14 +55,14 @@ export async function calculateImportRunningBalances(
       : AccountType.ASSET;
     const precision = precisionMap.get(account.currencyCode) ?? 2;
 
-    accountTransactions.sort((a, b) => {
+    const ordered = [...accountTransactions].sort((a, b) => {
       if (a.transactionDate !== b.transactionDate) return a.transactionDate - b.transactionDate;
       if (a.createdAt !== b.createdAt) return (a.createdAt || 0) - (b.createdAt || 0);
       return a.id.localeCompare(b.id);
     });
 
     let currentBalance = 0;
-    for (const t of accountTransactions) {
+    for (const t of ordered) {
       const journalStatus = journalStatusMap.get(t.journalId);
       const isDeleted = !!t.deletedAt;
       const isActive = !isDeleted && ACTIVE_JOURNAL_STATUSES.includes(journalStatus as any);
@@ -72,10 +80,17 @@ export async function calculateImportRunningBalances(
           roundedAmount,
           precision,
         );
-        t.runningBalance = currentBalance;
-        t.amount = roundedAmount;
+        patches.push({
+          transactionId: t.id,
+          runningBalance: currentBalance,
+          amount: roundedAmount,
+        });
       } else {
-        t.runningBalance = 0;
+        patches.push({
+          transactionId: t.id,
+          runningBalance: 0,
+          amount: t.amount,
+        });
       }
     }
 
@@ -86,5 +101,21 @@ export async function calculateImportRunningBalances(
         0.02 + (accountsProcessed / totalAccounts) * 0.08,
       );
     }
+  }
+
+  return patches;
+}
+
+/** Apply calculator patches onto a mutable import batch. */
+export function applyImportBalancePatches(
+  data: BatchImportData,
+  patches: ImportBalancePatch[],
+): void {
+  const byId = new Map(data.transactions.map(t => [t.id, t]));
+  for (const patch of patches) {
+    const tx = byId.get(patch.transactionId);
+    if (!tx) continue;
+    tx.runningBalance = patch.runningBalance;
+    tx.amount = patch.amount;
   }
 }

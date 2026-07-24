@@ -17,6 +17,33 @@ This document is the durable review artifact for deep-module design across Full 
 
 ---
 
+## 0. Implementation progress (2026-07-24)
+
+| Backlog # | Item | Status |
+|-----------|------|--------|
+| 1 | Safe-to-Spend hybrid handle | **Done** — `forWorkplace` → `watch` / `watchHeadline` / `preWarm`; Notification façade removed |
+| 2 | BalanceEffects | **Done** |
+| 3 | SMS façade retirement | **Done** |
+| 4 | preferences domain split | **Done** — store + `themePrefs` / `ai` / `sms` / `sts` / `privacy` / `insights` |
+| 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` extracted; write lifecycle on `LedgerWriteService` |
+| 6 | Account/Transaction repo carve | Deferred (P2) — touch when next editing those Modules |
+| 7 | STS mapper / dashboard VMs | Partial via handle API; fat result type still used internally |
+| 8 | ledgerRead pass-throughs | Deferred — still earns enriched observe hub |
+| 9 | Report / ReactiveData | Deferred (P2) |
+| 10 | SimulationInput | **Done** |
+| 11–12 | PlannedPayment / Integrity splits | Deferred (P2) |
+| 13 | Fat journal/account VMs | **Partial** — helpers extracted from editors + account details |
+| 14 | Analytics `track()` | Already present; `logX` wrappers remain as typed helpers |
+| 15 | ImportBalanceCalculator purity | **Done** — returns patches; caller applies |
+| 16 | journalPresenter home | **Done** → `services/accounting` |
+| 17 | JournalValidator | **Done** (deleted earlier) |
+| 18–19 | AppText / date-range / privacy | Deferred (P2 UI) |
+| 20 | CONTEXT LiteRTAdapter | **Done** → `SmallModelProvider` |
+
+**Protect list still holds:** BalanceService, sim engines, `ingest()` Pipeline, ImportPlugin, ShareProvider, RuleMatcher, raw SQL metrics.
+
+---
+
 ## 1. How to read this
 
 | Verdict | Meaning |
@@ -428,13 +455,13 @@ Details live in [surveys/](./surveys/). Highlights not fully expanded above:
 
 ### Journal / ledger ([surveys/journal.md](./surveys/journal.md))
 - `JournalService.observeEnrichedJournals` / `getJournalSuggestions` are shallow pass-throughs.
-- Create goes through `ledgerWriteService`; update through `journalRepository` — callers must know the split (Interface smell).
-- `ledgerReadService` ≈ repository mirror; deletion test fails for most methods.
+- Create/update/delete/recover go through `ledgerWriteService`; `JournalService` delegates lifecycle writes.
+- `ledgerReadService` ≈ repository mirror for some finds; enriched observes still earn the hub.
 - `prepareJournalData` is the right validation locality; editors still risk re-validating.
 
 ### AI / SMS ([surveys/ai_sms.md](./surveys/ai_sms.md), [surveys/sms_import.md](./surveys/sms_import.md))
 - `LLMEngine` has **one** production Adapter (`SmallModelProvider`) → production seam is mostly hypothetical; test mocks justify an *internal* seam.
-- CONTEXT’s `LiteRTAdapter` name is unused — glossary drift.
+- CONTEXT Inference Adapter name is `SmallModelProvider` (glossary aligned).
 - `TransactionFallbackAIProvider` **is** a real seam (Native + mock).
 - Pipeline steps are shallow individually; depth is in `ingest()` composition — keep steps internal, not a public export surface.
 - `SmsSyncPipeline` tends toward god-class; façade collapse is higher leverage than rewriting the pipeline first.

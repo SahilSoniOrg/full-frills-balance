@@ -36,7 +36,10 @@ import {
 } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
 import { logger } from '@/src/utils/logger';
-import { calculateImportRunningBalances } from '@/src/services/import/ImportBalanceCalculator';
+import {
+  calculateImportRunningBalances,
+  applyImportBalancePatches,
+} from '@/src/services/import/ImportBalanceCalculator';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -349,7 +352,8 @@ export class ImportRepository {
     data: BatchImportData,
     onProgress?: (message: string, progress?: number) => void,
   ): Promise<void> {
-    await calculateImportRunningBalances(data, onProgress);
+    const balancePatches = await calculateImportRunningBalances(data, onProgress);
+    applyImportBalancePatches(data, balancePatches);
 
     await database.write(async () => {
       const accountsCollection = database.collections.get<Account>('accounts');

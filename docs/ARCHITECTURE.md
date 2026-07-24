@@ -36,7 +36,8 @@ This document describes the technical architecture of Full Frills Balance, a dou
 │  CashFlowSimulationService — 30-day forward projection         │
 │  PlannedPaymentService  — recurring/one-off scheduling         │
 │  ReportService          — income/expense/wealth analytics      │
-│  NotificationService    — Safe to Spend + daily reminders      │
+│  SafeToSpendReadModel   — Safe to Spend watch/headline/preWarm │
+│  NotificationService    — OS notifications + daily reminders   │
 │  InsightService         — proactive financial insights         │
 │  IntegrityService       — startup balance verification         │
 │  SmsService             — bank SMS parsing + auto-posting      │
@@ -185,8 +186,11 @@ The simulation engine powers the **Safe to Spend** feature. Architecture: `Gener
 ### IntegrityService
 Runs on app startup. Recomputes actual balances from transaction sums, compares to cached `runningBalance`, and repairs discrepancies silently.
 
+### SafeToSpendReadModel
+Owns Safe to Spend. `forWorkplace(id)` → `watch()` / `watchHeadline()` / `preWarm()`; currency and horizon prefs live inside the Implementation. Feeds the dashboard and widgets.
+
 ### NotificationService
-Orchestrates the Safe to Spend observable pipeline. Combines account balances, planned payments, budgets, and liabilities into a reactive stream that feeds the dashboard and daily notifications.
+OS notification scheduling and local reminders (not Safe to Spend).
 
 ### ReportService
 Analytics engine producing income vs. expense trends, net worth charts, category breakdowns (donut), spending heatmaps, and flow visualizations (Sankey). Supports date range filtering.

@@ -3,7 +3,7 @@ import './SmsExtractor';
 import './VoiceExtractor';
 
 export { ledgerReadService, LedgerReadService } from './ledgerReadService';
-export { ledgerWriteService } from './ledgerWriteService';
+export { ledgerWriteService, LedgerWriteService } from './ledgerWriteService';
 
 export type {
   RawTransactionInput,
