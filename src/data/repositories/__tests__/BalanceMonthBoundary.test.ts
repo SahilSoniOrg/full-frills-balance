@@ -1,7 +1,7 @@
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { WorkplaceId } from '@/src/types/domain';
 
-describe('AccountRepository Month Boundary', () => {
+describe('AccountListMetricsQueries Month Boundary', () => {
   it('fetches correct balance', async () => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -15,7 +15,7 @@ describe('AccountRepository Month Boundary', () => {
       999,
     ).getTime();
 
-    const rawItems = await accountRepository.getAccountListItemsRaw(
+    const rawItems = await accountListMetricsQueries.getAccountListItemsRaw(
       startOfMonth,
       endOfMonth,
       'test-wp' as WorkplaceId,

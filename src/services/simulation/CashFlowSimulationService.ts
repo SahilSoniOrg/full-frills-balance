@@ -55,7 +55,9 @@ function isSimulationInput(value: unknown): value is SimulationInput {
 export class CashFlowSimulationService {
   /**
    * Cash flow simulation following the "Generate truth -> simulate once" architecture.
-   * Prefer the SimulationInput object form; positional args remain for existing tests.
+   * Prefer the SimulationInput object form.
+   * TODO: delete positional simulate(...) overload once CashFlowSimulationService tests
+   * migrate to SimulationInput (many call sites still use positional args).
    */
   async simulate(input: SimulationInput): Promise<SimulationRunResult>;
   async simulate(

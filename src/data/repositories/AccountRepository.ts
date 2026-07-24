@@ -7,7 +7,6 @@ import Account, {
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
-import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { accountMergeOperations } from '@/src/data/repositories/account/AccountMergeOperations';
 import { AccountId, WorkplaceId, SerializedAccountMetadataPayload } from '@/src/types/domain';
 import { ValidationError } from '@/src/utils/errors';
@@ -487,22 +486,6 @@ export class AccountRepository {
     if (!isSubtypeAllowedForType(accountType, subtype)) {
       throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`);
     }
-  }
-
-  async getAccountListItemsRaw(
-    startOfMonth: number,
-    endOfMonth: number,
-    workplaceId: WorkplaceId,
-    includeTotalCount: boolean = false,
-    includeDeleted: boolean = false,
-  ): Promise<AccountListItemRaw[] | null> {
-    return accountListMetricsQueries.getAccountListItemsRaw(
-      startOfMonth,
-      endOfMonth,
-      workplaceId,
-      includeTotalCount,
-      includeDeleted,
-    );
   }
 
   async prepareMergeOperations(

@@ -1,15 +1,11 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import Journal from '@/src/data/models/Journal';
 import {
   clearReactiveAggregatedBalancesCache,
   observeAggregatedAccountBalances,
 } from '@/src/services/reactive/reactiveAggregatedBalances';
 import {
   clearReactiveWorkplaceObservesCache,
-  observeWorkplaceAccounts,
-  observeWorkplaceActiveTransactionCount,
-  observeWorkplaceJournalMeta,
   clearReactiveWorkplaceAccountsAndJournalMetaCache,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { getAccountDescendants } from '@/src/services/accounts/accountDescendants';
@@ -20,11 +16,9 @@ import {
   AccountBalance,
   AccountId,
   EnrichedJournal,
-  JournalDisplayType,
   PlainAccount,
   WorkplaceId,
 } from '@/src/types/domain';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { firstValueFrom, combineLatest, Observable, shareReplay, switchMap } from 'rxjs';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -41,20 +35,10 @@ export interface DashboardData {
   wealthSummary: WealthSummary;
 }
 
-export type DashboardSummaryData = Omit<DashboardData, 'enrichedJournals'>;
-
 export interface LiveAccountsSummaryData {
   accounts: (Account | PlainAccount)[];
   balances: AccountBalance[];
   wealthSummary: WealthSummary;
-}
-
-/**
- * Monthly income and expense flow data.
- */
-export interface MonthlyFlowData {
-  income: number;
-  expense: number;
 }
 
 export interface AccountDashboardData {
@@ -71,6 +55,9 @@ export interface AccountDashboardData {
  * to eliminate duplicate subscriptions and reduce re-render overhead.
  *
  * Uses RxJS shareReplay(1) to multicast emissions to all subscribers.
+ *
+ * Workplace base observes live in `reactiveWorkplaceObserves` — import those
+ * directly instead of pass-through helpers on this service.
  */
 class ReactiveDataService {
   // M-1 fix: cache dashboard observables per currency and workplace so multiple hook subscribers
@@ -86,31 +73,8 @@ class ReactiveDataService {
     this._dashboardCache.clear();
     this._optimizedAccountListCache.clear();
     this._accountDashboardCache.clear();
-    this._accountDashboardCache.clear();
     clearReactiveWorkplaceObservesCache();
     clearReactiveAggregatedBalancesCache();
-  }
-
-  /**
-   * Observe all accounts for a workplace.
-   * Shared and cached via shareReplay.
-   */
-  observeAccounts(workplaceId: WorkplaceId): Observable<Account[]> {
-    return observeWorkplaceAccounts(workplaceId);
-  }
-
-  /**
-   * Observe journal status metadata (posted/deleted counts).
-   */
-  observeJournalMeta(workplaceId: WorkplaceId): Observable<Journal[]> {
-    return observeWorkplaceJournalMeta(workplaceId);
-  }
-
-  /**
-   * Observe total active transaction count.
-   */
-  observeActiveCount(workplaceId: WorkplaceId): Observable<number> {
-    return observeWorkplaceActiveTransactionCount(workplaceId);
   }
 
   /**
@@ -224,87 +188,6 @@ class ReactiveDataService {
 
     this._dashboardCache.set(cacheKey, loggedObs$);
     return loggedObs$;
-  }
-
-  /**
-   * Specialized lightweight observable for the Accounts List.
-   * Excludes raw transactions to minimize JS thread serialization overhead.
-   */
-  observeAccountsSummary(
-    targetCurrency: string,
-    workplaceId: WorkplaceId,
-  ): Observable<DashboardSummaryData> {
-    return this.observeDashboardData(targetCurrency, workplaceId).pipe(
-      // We map out the transactions to avoid cloning/serialization overhead for this subscriber
-      switchMap(async data => {
-        const { enrichedJournals, ...summary } = data;
-        return summary;
-      }),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    );
-  }
-
-  /**
-   * Observe monthly income and expense flow.
-   * Derives data from the shared dashboard observable.
-   */
-  observeMonthlyFlow(
-    targetCurrency: string,
-    workplaceId: WorkplaceId,
-  ): Observable<MonthlyFlowData> {
-    return this.observeDashboardData(targetCurrency, workplaceId).pipe(
-      switchMap(async ({ enrichedJournals }) => {
-        try {
-          const now = new Date();
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-          const endOfMonth = new Date(
-            now.getFullYear(),
-            now.getMonth() + 1,
-            0,
-            23,
-            59,
-            59,
-            999,
-          ).getTime();
-
-          let income = 0;
-          let expense = 0;
-
-          // Parallel currency conversion using exchangeRateService
-          const conversions = await Promise.all(
-            enrichedJournals.map(async j => {
-              if (j.journalDate < startOfMonth || j.journalDate > endOfMonth) return null;
-
-              const { convertedAmount } = await exchangeRateService.convert(
-                j.totalAmount,
-                j.currencyCode || targetCurrency,
-                targetCurrency,
-              );
-
-              return {
-                convertedAmount,
-                displayType: j.displayType,
-              };
-            }),
-          );
-
-          for (const conv of conversions) {
-            if (!conv) continue;
-            if (conv.displayType === JournalDisplayType.INCOME) {
-              income += conv.convertedAmount;
-            } else if (conv.displayType === JournalDisplayType.EXPENSE) {
-              expense += conv.convertedAmount;
-            }
-          }
-
-          return { income, expense };
-        } catch (error) {
-          logger.error('Failed to calculate monthly flow from enriched journals:', error);
-          return { income: 0, expense: 0 };
-        }
-      }),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    );
   }
 
   /**

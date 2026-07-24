@@ -13,7 +13,7 @@ import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSim
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/BudgetRepository');
@@ -45,6 +45,24 @@ jest.mock('@/src/utils/preferences', () => {
   };
 });
 
+const emptySimResult = {
+  simulationResult: {
+    summary: { safeToSpend: 0, shortfall: 0, trajectoryMinBalance: 0 },
+    projections: [],
+  },
+  report: {
+    summary: {
+      totalFutureInflow: 0,
+      totalPlannedInflow: 0,
+      totalPlannedOutflow: 0,
+      totalCommittedPlanned: 0,
+    },
+    budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
+  },
+  accountSummaries: [],
+  accountMap: new Map(),
+};
+
 describe('SafeToSpendReadModel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -74,23 +92,7 @@ describe('SafeToSpendReadModel', () => {
     (workplaceRepository.observeById as jest.Mock).mockReturnValue(
       of({ defaultCurrencyCode: 'USD' }),
     );
-    (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
-      simulationResult: {
-        summary: { safeToSpend: 0, shortfall: 0, trajectoryMinBalance: 0 },
-        projections: [],
-      },
-      report: {
-        summary: {
-          totalFutureInflow: 0,
-          totalPlannedInflow: 0,
-          totalPlannedOutflow: 0,
-          totalCommittedPlanned: 0,
-        },
-        budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
-      },
-      accountSummaries: [],
-      accountMap: new Map(),
-    });
+    (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue(emptySimResult);
   });
 
   describe('observeSafeToSpend', () => {
@@ -156,23 +158,57 @@ describe('SafeToSpendReadModel', () => {
       });
     });
 
-    it('should generate a new observable when currency changes', done => {
+    it('does not cache by currency — each call builds a fresh uncached pipeline', () => {
+      const usdObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
+      const eurObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
+      const usdAgain = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
+
+      expect(usdObs).not.toBe(eurObs);
+      expect(usdObs).not.toBe(usdAgain);
+    });
+  });
+
+  describe('forWorkplace cache policy', () => {
+    it('reuses one workplace-keyed observable for watch and watchHeadline', () => {
+      const handle = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId);
+      const watchA = handle.watch();
+      const watchB = handle.watch();
+      const watchFromSecondHandle = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch();
+
+      expect(watchA).toBe(watchB);
+      expect(watchA).toBe(watchFromSecondHandle);
+    });
+
+    it('evicts prior workplace cache when switching workplaces', () => {
+      const first = safeToSpendReadModel.forWorkplace('wp-a' as WorkplaceId).watch();
+      const second = safeToSpendReadModel.forWorkplace('wp-b' as WorkplaceId).watch();
+      const firstAgain = safeToSpendReadModel.forWorkplace('wp-a' as WorkplaceId).watch();
+
+      expect(first).not.toBe(second);
+      // After switching to wp-b, wp-a was evicted — a new pipeline is created.
+      expect(firstAgain).not.toBe(first);
+      expect(firstAgain).not.toBe(second);
+    });
+
+    it('switchMaps currency on the same workplace stream', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeByType as jest.Mock).mockReturnValue(of(mockAssets));
       (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
-
-      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(() =>
-        Promise.resolve({
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async (input: { resultCurrency: string }) => ({
+          ...emptySimResult,
           simulationResult: {
             summary: { safeToSpend: 5000, shortfall: 0, trajectoryMinBalance: 5000 },
             projections: [],
           },
           report: {
+            ...emptySimResult.report,
             summary: {
               totalFutureInflow: 0,
               totalPlannedInflow: 0,
@@ -190,24 +226,31 @@ describe('SafeToSpendReadModel', () => {
               committedOther: 0,
             },
           },
-          accountSummaries: [],
-          accountMap: new Map(),
+          // Currency comes from assemble using defaultCurrencyCode passed into pipeline
+          currencyEcho: input.resultCurrency,
         }),
       );
 
-      const usdObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
-      const eurObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
+      const currency$ = new BehaviorSubject({ defaultCurrencyCode: 'USD' });
+      (workplaceRepository.observeById as jest.Mock).mockReturnValue(currency$.asObservable());
 
-      expect(usdObs).not.toBe(eurObs);
-
-      eurObs.subscribe(result => {
-        expect(result.currencyCode).toBe('EUR');
-        done();
-      });
+      const currencies: string[] = [];
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          currencies.push(result.currencyCode);
+          if (currencies.length === 1) {
+            expect(result.currencyCode).toBe('USD');
+            currency$.next({ defaultCurrencyCode: 'EUR' });
+          } else if (currencies.length === 2) {
+            expect(result.currencyCode).toBe('EUR');
+            sub.unsubscribe();
+            done();
+          }
+        });
     });
-  });
 
-  describe('forWorkplace', () => {
     it('watchHeadline projects summary fields from the workplace watch', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },

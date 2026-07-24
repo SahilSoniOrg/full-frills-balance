@@ -74,11 +74,10 @@ function toHeadline(result: SafeToSpendResult): SafeToSpendHeadline {
 }
 
 export class SafeToSpendReadModel {
-  private safeToSpendCache = new Map<string, Observable<SafeToSpendResult>>();
-  private workplaceWatchCache = new Map<string, Observable<SafeToSpendResult>>();
+  /** Single workplace-keyed cache — currency switchMaps inside the pipeline. */
+  private workplaceWatchCache = new Map<WorkplaceId, Observable<SafeToSpendResult>>();
 
   clearCache(): void {
-    this.safeToSpendCache.clear();
     this.workplaceWatchCache.clear();
   }
 
@@ -105,32 +104,35 @@ export class SafeToSpendReadModel {
     const cached = this.workplaceWatchCache.get(workplaceId);
     if (cached) return cached;
 
+    // Cap to one active workplace so abandoned workplace pipelines are not sticky.
+    if (this.workplaceWatchCache.size > 0) {
+      this.workplaceWatchCache.clear();
+    }
+
     const obs = workplaceService.observeCurrency(workplaceId).pipe(
-      switchMap(currencyCode => this.observeSafeToSpend(workplaceId, currencyCode)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      switchMap(currencyCode => this.buildSafeToSpendPipeline(workplaceId, currencyCode)),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
     this.workplaceWatchCache.set(workplaceId, obs);
     return obs;
   }
 
   /**
-   * @internal Prefer `forWorkplace(id).watch()` — kept for cache-key tests and direct currency override.
+   * @internal Uncached pipeline — prefer `forWorkplace(id).watch()`.
+   * Kept for direct currency override in tests.
    */
   observeSafeToSpend(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
   ): Observable<SafeToSpendResult> {
-    const cacheKey = `${workplaceId}_${defaultCurrencyCode}`;
-    const cached = this.safeToSpendCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    return this.buildSafeToSpendPipeline(workplaceId, defaultCurrencyCode);
+  }
 
-    if (this.safeToSpendCache.size > 0) {
-      this.safeToSpendCache.clear();
-    }
-
-    const obs = combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
+  private buildSafeToSpendPipeline(
+    workplaceId: WorkplaceId,
+    defaultCurrencyCode: string,
+  ): Observable<SafeToSpendResult> {
+    return combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([
           observeWorkplaceAccounts(workplaceId),
@@ -356,11 +358,7 @@ export class SafeToSpendReadModel {
         );
         return of(createEmptySafeToSpendDashboard(defaultCurrencyCode));
       }),
-      shareReplay({ bufferSize: 1, refCount: false }),
     );
-
-    this.safeToSpendCache.set(cacheKey, obs);
-    return obs;
   }
 }
 
