@@ -4,7 +4,6 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
@@ -16,13 +15,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 import { observeEnrichedJournals as observeEnrichedJournalsHelper } from './journalEnrichedObserver';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import {
-  AccountId,
-  JournalEntryLine,
-  JournalId,
-  WorkplaceId,
-  mapTransactionToAudit,
-} from '@/src/types/domain';
+import { AccountId, JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
 import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -53,149 +46,15 @@ export class JournalService {
     data: CreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(workplaceId, journalId);
-    if (!originalJournal) throw new Error('Journal not found');
-
-    const originalTransactions = await transactionRepository.findByJournal(workplaceId, journalId);
-    const prepared = await prepareJournalData(data, workplaceId);
-
-    const extraOpCreator = () => {
-      const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
-      const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
-      return auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: {
-              description: originalJournal.description,
-              journalDate: originalJournal.journalDate,
-              currencyCode: originalJournal.currencyCode,
-              status: originalJournal.status,
-              totalAmount: originalJournal.totalAmount,
-              transactions: mappedBeforeTransactions,
-            },
-            after: {
-              description: data.description,
-              journalDate: data.journalDate,
-              transactions: mappedAfterTransactions,
-            },
-          },
-        },
-        workplaceId,
-      );
-    };
-
-    const journal = await journalRepository.updateJournalWithTransactions(
-      workplaceId,
-      journalId,
-      {
-        ...data,
-        transactions: prepared.transactions,
-        totalAmount: prepared.totalAmount,
-        displayType: prepared.displayType,
-        calculatedBalances: prepared.calculatedBalances,
-        metadata: data.metadata,
-      },
-      extraOpCreator,
-    );
-
-    const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
-    const allAccountsToRebuild = new Set<AccountId>([
-      ...prepared.accountsToRebuild,
-      ...originalAccountIds,
-    ]);
-    const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
-    rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate, workplaceId);
-
-    return journal;
+    return ledgerWriteService.updateJournal(journalId, data, workplaceId);
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
-    if (!prepared) return;
-
-    const { journal, transactions } = prepared;
-
-    await database.write(async () => {
-      const now = new Date();
-      const journalOp = journal.prepareUpdate(j => {
-        j.deletedAt = now;
-        j.updatedAt = now;
-      });
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = now;
-          t.updatedAt = now;
-        }),
-      );
-
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.DELETE,
-          changes: {
-            before: {
-              description: journal.description,
-              totalAmount: journal.totalAmount,
-              currencyCode: journal.currencyCode,
-              transactions: transactions.map(t => mapTransactionToAudit(t)),
-            },
-            after: { deletedAt: now },
-          },
-        },
-        workplaceId,
-      );
-
-      await database.batch([journalOp, ...txOps, auditOp]);
-    });
-
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
+    return ledgerWriteService.deleteJournal(journalId, workplaceId);
   }
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
-    if (!prepared) throw new Error('Journal not found');
-
-    const { journal, transactions } = prepared;
-    const prevDeletedAt = journal.deletedAt ? new Date(journal.deletedAt.getTime()) : undefined;
-
-    await database.write(async () => {
-      const now = new Date();
-      const journalOp = journal.prepareUpdate(j => {
-        j.deletedAt = undefined;
-        j.updatedAt = now;
-      });
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = undefined;
-          t.updatedAt = now;
-        }),
-      );
-
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: { deletedAt: prevDeletedAt },
-            after: { restoredAt: now },
-          },
-        },
-        workplaceId,
-      );
-
-      await database.batch([journalOp, ...txOps, auditOp]);
-    });
-
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
-
-    return journal;
+    return ledgerWriteService.recoverJournal(journalId, workplaceId);
   }
 
   async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
