@@ -18,7 +18,7 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
-import { executeBoundedBatchWrite } from '@/src/utils/dbGuardrails';
+
 import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
@@ -379,13 +379,14 @@ export class IntegrityService {
           .query(Q.where('id', Q.oneOf(repairedAccountIds)))
           .fetch();
 
-        const updateOps = accountsToNotify.map(a =>
-          a.prepareUpdate((record: Account) => {
-            record.updatedAt = new Date();
-          }),
-        );
-
-        await executeBoundedBatchWrite(database, updateOps);
+        await database.write(async () => {
+          const updateOps = accountsToNotify.map(a =>
+            a.prepareUpdate((record: Account) => {
+              record.updatedAt = new Date();
+            }),
+          );
+          await database.batch(updateOps);
+        });
       }
     } else {
       onProgress?.('No discrepancies found. All balances correct.', 0.9);

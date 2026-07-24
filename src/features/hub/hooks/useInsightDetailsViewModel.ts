@@ -2,7 +2,7 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { journalService } from '@/src/features/journal';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';

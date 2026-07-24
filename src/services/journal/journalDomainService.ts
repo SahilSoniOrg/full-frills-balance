@@ -2,8 +2,8 @@ import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants'
 import { database } from '@/src/data/database/Database';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -11,10 +11,10 @@ import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
+import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { executeBoundedBatchWrite } from '@/src/utils/dbGuardrails';
 
+import { observeEnrichedJournals as observeEnrichedJournalsHelper } from './journalEnrichedObserver';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   AccountId,
@@ -23,7 +23,6 @@ import {
   WorkplaceId,
   mapTransactionToAudit,
 } from '@/src/types/domain';
-import { observeEnrichedJournals as observeEnrichedJournalsHelper } from '@/src/features/journal/services/journalEnrichedObserver';
 import { accountingService } from '@/src/utils/accountingService';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -598,10 +597,9 @@ export class JournalService {
       }
     }
 
-    const preparedList: {
+    const preparedDataList: {
       journalData: CreateJournalData;
-      ops: Model[];
-      accountsToRebuild: Set<AccountId>;
+      prepared: PreparedJournalData;
       description: string;
       amount: number;
       currency: string;
@@ -641,15 +639,12 @@ export class JournalService {
           })),
         };
 
-        const { ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(
-          journalData,
-          workplaceId,
-        );
+        // Async data prep only (no DB mutations)
+        const prepared = await prepareJournalData(journalData, workplaceId);
 
-        preparedList.push({
+        preparedDataList.push({
           journalData,
-          ops,
-          accountsToRebuild,
+          prepared,
           description: entry.description,
           amount: parseFloat(entry.lines[0].amount),
           currency: currencyCode,
@@ -661,26 +656,34 @@ export class JournalService {
     }
 
     try {
-      const allOps = preparedList.flatMap(p => p.ops);
       const allAccountsToRebuild = new Set<AccountId>();
-      const minDate = Math.min(...preparedList.map(p => p.journalData.journalDate));
+      const minDate = Math.min(...preparedDataList.map(p => p.journalData.journalDate));
 
-      // Chunks commit independently: enqueue rebuilds even on partial failure so
-      // already-committed chunks don't leave balances stale. Rebuild is idempotent.
+      // Synchronous phase: all prepareCreate + batch inside one write block
       try {
-        await executeBoundedBatchWrite(database, allOps);
-      } finally {
-        for (const p of preparedList) {
-          for (const accountId of p.accountsToRebuild) {
-            allAccountsToRebuild.add(accountId);
+        await database.write(async () => {
+          const allOps: Model[] = [];
+          for (const p of preparedDataList) {
+            const { ops, accountsToRebuild } =
+              ledgerWriteService.prepareCreateJournalFromPreparedData(
+                p.journalData,
+                p.prepared,
+                workplaceId,
+              );
+            allOps.push(...ops);
+            for (const accountId of accountsToRebuild) {
+              allAccountsToRebuild.add(accountId);
+            }
           }
-        }
+          await database.batch(allOps);
+        });
+      } finally {
         if (allAccountsToRebuild.size > 0) {
           rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
         }
       }
 
-      for (const p of preparedList) {
+      for (const p of preparedDataList) {
         analytics.logTransactionCreated('simple', 'create', p.currency);
         analytics.trackConversion(
           'transaction_created',
@@ -689,7 +692,7 @@ export class JournalService {
         );
       }
 
-      const summaries = preparedList.map(p => ({
+      const summaries = preparedDataList.map(p => ({
         description: p.description,
         amount: p.amount,
         currency: p.currency,

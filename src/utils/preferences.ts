@@ -515,13 +515,15 @@ export const preferences = new PreferencesHelper();
 export const preferencesMigration = {
   get legacyCurrencyCode(): string | undefined {
     return (
-      (preferences as any)._legacyData.defaultCurrencyCode ||
-      (preferences as any)._legacyData.defaultCurrency
+      (preferences as any)._legacyData?.defaultCurrencyCode ||
+      (preferences as any)._legacyData?.defaultCurrency
     );
   },
   clearLegacyCurrencyCode(): void {
-    delete (preferences as any)._legacyData.defaultCurrencyCode;
-    delete (preferences as any)._legacyData.defaultCurrency;
-    (preferences as any)._save();
+    if ((preferences as any)._legacyData) {
+      delete (preferences as any)._legacyData.defaultCurrencyCode;
+      delete (preferences as any)._legacyData.defaultCurrency;
+      (preferences as any)._save();
+    }
   },
 };

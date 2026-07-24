@@ -1,6 +1,12 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import { InboxParseStatus } from '@/src/data/models/TransactionInboxRecord';
+import { InboxParseStatus, TransactionDirection } from '@/src/data/models/TransactionInboxRecord';
 import { SmsExtractor } from '@/src/services/ledger/SmsExtractor';
+
+export function toTransactionDirection(type: 'debit' | 'credit' | 'unknown'): TransactionDirection {
+  if (type === 'debit') return TransactionDirection.DEBIT;
+  if (type === 'credit') return TransactionDirection.CREDIT;
+  return TransactionDirection.UNKNOWN;
+}
 
 export interface ParsedTransaction {
   id: string;

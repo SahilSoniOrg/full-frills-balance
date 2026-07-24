@@ -172,9 +172,9 @@ export const journalPresenter = {
     const { source, destination } = this.getSourceAndDestTypes(txs, accountTypes);
 
     // Map semantic pairs to high-level display types
-    if (source === AccountType.INCOME || destination === AccountType.EQUITY)
+    if (source === AccountType.INCOME || source === AccountType.EQUITY)
       return JournalDisplayType.INCOME;
-    if (destination === AccountType.EXPENSE || source === AccountType.EQUITY)
+    if (destination === AccountType.EXPENSE || destination === AccountType.EQUITY)
       return JournalDisplayType.EXPENSE;
 
     return JournalDisplayType.TRANSFER;

@@ -1,15 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { Insight } from './InsightService';
-
-export interface CalculationInput {
-  recurringCandidates: any[];
-  expenseTransactions: any[];
-  accounts: any[];
-  activePlannedPayments: any[];
-  workplaceId: string;
-}
+import { CalculationInput, Insight } from './insightTypes';
 
 /**
  * Pure calculation logic for identifying financial insights.

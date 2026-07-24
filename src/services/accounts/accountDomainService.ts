@@ -598,40 +598,44 @@ export class AccountService {
       sourceAccounts,
     );
 
-    const [transactionOps, plannedOps, smsOps, budgetOps, accountOps, snapshotOps] =
-      await Promise.all([
-        (async () => {
-          const transactions = await transactionRepository.findAllByAccountIds(
+    await database.write(async () => {
+      const [transactionOps, plannedOps, smsOps, budgetOps, accountOps, snapshotOps] =
+        await Promise.all([
+          (async () => {
+            const transactions = await transactionRepository.findAllByAccountIds(
+              workplaceId,
+              filteredSourceIds,
+            );
+            return transactions.map(tx =>
+              tx.prepareUpdate(r => {
+                r.accountId = targetAccountId;
+                r.runningBalance = null;
+                r.updatedAt = new Date();
+              }),
+            );
+          })(),
+          plannedPaymentService.prepareMergeOperations(
             workplaceId,
             filteredSourceIds,
-          );
-          return transactions.map(tx =>
-            tx.prepareUpdate(r => {
-              r.accountId = targetAccountId;
-              r.runningBalance = null;
-              r.updatedAt = new Date();
-            }),
-          );
-        })(),
-        plannedPaymentService.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ),
-        transactionAutoPostRuleRepository.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ),
-        budgetWriteService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
-        accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
-        balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
-          ...filteredSourceIds,
-          targetAccountId,
-        ]),
-      ]);
+            targetAccountId,
+          ),
+          transactionAutoPostRuleRepository.prepareMergeOperations(
+            workplaceId,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+          budgetWriteService.prepareMergeOperations(
+            workplaceId,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+          accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+          balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
+            ...filteredSourceIds,
+            targetAccountId,
+          ]),
+        ]);
 
-    await database.write(async () => {
       await database.batch([
         ...transactionOps,
         ...plannedOps,

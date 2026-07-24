@@ -99,6 +99,7 @@ export function useObservable<T>(
   if (!areDepsEqual(prevDeps, deps)) {
     setPrevDeps(deps);
     setDepsRevision(r => r + 1);
+    setError(null);
   }
 
   useEffect(() => {
@@ -112,9 +113,6 @@ export function useObservable<T>(
       setIsLoading(true);
     }
 
-    // Reset error state
-    setTimeout(() => setError(null), 0);
-
     const subscription = stableFactory().subscribe({
       next: result => {
         if (!isActive) return;
@@ -126,6 +124,7 @@ export function useObservable<T>(
 
         dataRef.current = result;
         setData(result);
+        setError(null);
         setVersion(v => v + 1);
         setIsLoading(false);
       },
@@ -217,7 +216,7 @@ export function useObservableWithEnrichment<T, E>(
     }
 
     // Reset error state
-    setTimeout(() => setError(null), 0);
+    setError(null);
 
     const subscription = stableFactory().subscribe({
       next: async result => {

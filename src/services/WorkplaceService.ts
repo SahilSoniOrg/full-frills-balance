@@ -42,7 +42,7 @@ export class WorkplaceService {
   ): Promise<void> {
     const { initialAccounts = [], initialCategories = [], currencyCode } = options;
 
-    const { accountService } = await import('@/src/features/accounts');
+    const { accountService } = await import('@/src/services/accounts/accountDomainService');
     // 1. Ensure system accounts exist
     await accountService.getOpeningBalancesAccountId(currencyCode, workplaceId);
     await accountService.findOrCreateBalanceCorrectionAccount(currencyCode, workplaceId);

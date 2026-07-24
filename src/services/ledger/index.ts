@@ -2,13 +2,13 @@
 import './SmsExtractor';
 import './VoiceExtractor';
 
-export { ledgerReadService } from './ledgerReadService';
+export { ledgerReadService, LedgerReadService } from './ledgerReadService';
 export { ledgerWriteService } from './ledgerWriteService';
 
-export {
+export type {
   RawTransactionInput,
   ExtractedInfo,
   TransactionChannel,
   TransactionExtractor,
-  transactionExtractorRegistry,
 } from './TransactionExtractor';
+export { transactionExtractorRegistry } from './TransactionExtractor';

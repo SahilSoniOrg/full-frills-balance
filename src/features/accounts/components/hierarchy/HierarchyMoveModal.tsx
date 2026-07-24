@@ -5,7 +5,16 @@ import Account from '@/src/data/models/Account';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
-import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  DimensionValue,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
@@ -40,10 +49,10 @@ export function HierarchyMoveModal({
       onRequestClose={() => onSelectAccount(null)}
     >
       <Pressable
-        style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}
+        style={[styles.modalOverlay, { backgroundColor: theme.overlay } as ViewStyle]}
         onPress={() => onSelectAccount(null)}
       >
-        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.surface } as ViewStyle]}>
           <View style={styles.modalHeader}>
             <AppText variant="subheading" weight="bold">
               {AppConfig.strings.accounts.hierarchy.modalTitle}
@@ -62,7 +71,10 @@ export function HierarchyMoveModal({
                 {addChildCandidates.map(candidate => (
                   <TouchableOpacity
                     key={candidate.id}
-                    style={[styles.destinationItem, { borderBottomColor: theme.divider }]}
+                    style={[
+                      styles.destinationItem,
+                      { borderBottomColor: theme.divider } as ViewStyle,
+                    ]}
                     onPress={() =>
                       selectedAccountId && void onAddChild(selectedAccountId, candidate.id)
                     }
@@ -94,7 +106,10 @@ export function HierarchyMoveModal({
               {parentCandidates.map(candidate => (
                 <TouchableOpacity
                   key={candidate.id}
-                  style={[styles.destinationItem, { borderBottomColor: theme.divider }]}
+                  style={[
+                    styles.destinationItem,
+                    { borderBottomColor: theme.divider } as ViewStyle,
+                  ]}
                   onPress={() =>
                     selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
                   }
@@ -138,7 +153,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Shape.radius.r2,
     borderTopRightRadius: Shape.radius.r2,
     padding: Spacing.lg,
-    maxHeight: AppConfig.layout.hierarchyModalHeightPercent,
+    maxHeight: AppConfig.layout.hierarchyModalHeightPercent as DimensionValue,
   },
   modalHeader: {
     marginBottom: Spacing.lg,

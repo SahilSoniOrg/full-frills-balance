@@ -1,8 +1,7 @@
 import { AppConfig } from '@/src/constants';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { WorkplaceId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
@@ -11,20 +10,9 @@ import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer }
 import { shareReplay, switchMap, take } from 'rxjs/operators';
 import { reactiveDataService } from '../ReactiveDataService';
 import { calculateInsights } from './insightCalculator';
+import { Insight } from './insightTypes';
 
-export interface Insight {
-  id: string;
-  type: 'slow-leak' | 'phantom-surplus' | 'subscription-amnesiac' | 'lifestyle-drift';
-  severity: 'low' | 'medium' | 'high';
-  message: string;
-  description: string;
-  suggestion: string;
-  journalIds: string[];
-  amount?: number;
-  currencyCode?: string;
-  accountSubtype?: AccountSubtype;
-  accountName?: string;
-}
+export type { Insight };
 
 export class InsightService {
   private refreshTrigger = new BehaviorSubject<void>(undefined);
@@ -79,7 +67,7 @@ export class InsightService {
         const ninetyDaysAgo = Date.now() - lookbackDays * AppConfig.time.msPerDay;
 
         return combineLatest([
-          transactionRepository.observeByDateRange(workplaceId, ninetyDaysAgo),
+          reactiveDataService.observeJournalMeta(workplaceId),
           reactiveDataService.observeAccounts(workplaceId),
           plannedPaymentRepository.observeActive(workplaceId),
           this.refreshTrigger,

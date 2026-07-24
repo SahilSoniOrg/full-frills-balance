@@ -1,4 +1,3 @@
-import { IconName } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Account, {
   AccountSubtype,
@@ -19,14 +18,14 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
-  TransactionDirection,
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionChannel,
+  TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import {
   AccountId,
   BudgetId,
@@ -36,10 +35,11 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { IconName } from '@/src/types/domainIcons';
 import { accountingService } from '@/src/utils/accountingService';
-import { roundToPrecision } from '@/src/utils/money';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
+import { roundToPrecision } from '@/src/utils/money';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -284,6 +284,16 @@ export interface BatchImportData {
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET;
 
+function setRecordTimestamps(
+  record: Model,
+  timestamps: { createdAt?: number; updatedAt?: number; deletedAt?: number | null },
+): void {
+  const raw = record._raw as Record<string, unknown>;
+  if (timestamps.createdAt !== undefined) raw.created_at = timestamps.createdAt;
+  if (timestamps.updatedAt !== undefined) raw.updated_at = timestamps.updatedAt;
+  if (timestamps.deletedAt !== undefined) raw.deleted_at = timestamps.deletedAt;
+}
+
 function toAccountType(value: AccountType | string): AccountType {
   return isAccountType(value) ? value : DEFAULT_ACCOUNT_TYPE;
 }
@@ -443,9 +453,11 @@ export class ImportRepository {
             record.reconciledAt = new Date(acc.reconciledAt);
           }
           record._raw._status = 'synced';
-          if (acc.createdAt) (record as any)._raw.created_at = acc.createdAt;
-          if (acc.updatedAt) (record as any)._raw.updated_at = acc.updatedAt;
-          if (acc.deletedAt) (record as any)._raw.deleted_at = acc.deletedAt;
+          setRecordTimestamps(record, {
+            createdAt: acc.createdAt,
+            updatedAt: acc.updatedAt,
+            deletedAt: acc.deletedAt,
+          });
         }),
       );
 
@@ -465,9 +477,11 @@ export class ImportRepository {
           record.displayType = j.displayType;
           if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
           record._raw._status = 'synced';
-          if (j.createdAt) (record as any)._raw.created_at = j.createdAt;
-          if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt;
-          if (j.deletedAt) (record as any)._raw.deleted_at = j.deletedAt;
+          setRecordTimestamps(record, {
+            createdAt: j.createdAt,
+            updatedAt: j.updatedAt,
+            deletedAt: j.deletedAt,
+          });
         }),
       );
 
@@ -485,9 +499,11 @@ export class ImportRepository {
           record.exchangeRate = t.exchangeRate;
           record.runningBalance = t.runningBalance;
           record._raw._status = 'synced';
-          if (t.createdAt) (record as any)._raw.created_at = t.createdAt;
-          if (t.updatedAt) (record as any)._raw.updated_at = t.updatedAt;
-          if (t.deletedAt) (record as any)._raw.deleted_at = t.deletedAt;
+          setRecordTimestamps(record, {
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+            deletedAt: t.deletedAt,
+          });
         }),
       );
 

@@ -7,7 +7,7 @@ import {
   readFileAsBytes,
   sanitizeContent,
 } from '@/src/services/import';
-import { importRunner } from '@/src/services/import/runner';
+import { importService } from '@/src/services/import/ImportService';
 import { ImportFileContext } from '@/src/services/import/types';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
@@ -103,7 +103,7 @@ export function useImport() {
 
           logger.info(`[useImport] Using plugin: ${plugin.id}`);
 
-          const stats = await importRunner.runImport(
+          const stats = await importService.executeImport(
             plugin,
             context,
             resolvedWorkplaceId,

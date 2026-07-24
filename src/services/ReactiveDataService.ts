@@ -6,7 +6,7 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { journalService } from '@/src/features/journal';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceService } from '@/src/services/BalanceService';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import {

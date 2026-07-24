@@ -144,7 +144,13 @@ export class ExchangeRateService {
         const fetchDuration = Date.now() - fetchStart;
 
         if (!response.ok) {
-          throw new Error(`API error ${response.status}`);
+          const statusText = response.statusText ? `: ${response.statusText}` : '';
+          throw new Error(`Exchange rate API error (${response.status})${statusText}`);
+        }
+
+        const contentType = response.headers?.get?.('content-type') || '';
+        if (contentType && !contentType.includes('application/json')) {
+          throw new Error(`Expected JSON response but got ${contentType}`);
         }
 
         const data = await response.json();
