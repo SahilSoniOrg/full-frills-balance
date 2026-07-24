@@ -23,6 +23,9 @@ jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
+jest.mock('@/src/services/currencyConversion', () => ({
+  convertAmount: jest.fn(async ({ amount }: { amount: number }) => ({ ok: true, amount })),
+}));
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
@@ -84,7 +87,6 @@ describe('SafeToSpendReadModel', () => {
     (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
-    (exchangeRateService.getRateSafe as jest.Mock).mockReturnValue(1);
     (budgetReadService.observeBudgetUsage as jest.Mock).mockReturnValue(
       of({ remaining: 0, spent: 0 }),
     );

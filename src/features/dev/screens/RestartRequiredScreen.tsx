@@ -141,6 +141,16 @@ export const RestartRequiredScreen = () => {
                   </AppText>
                 </View>
               )}
+              {importStats.preImportBackupPath ? (
+                <View style={styles.backupPathBlock}>
+                  <AppText variant="body" weight="medium">
+                    {AppConfig.strings.maintenance.stats.preImportBackup}
+                  </AppText>
+                  <AppText variant="caption" color="secondary" style={styles.backupPath}>
+                    {importStats.preImportBackupPath}
+                  </AppText>
+                </View>
+              ) : null}
             </View>
           </AppCard>
         )}
@@ -194,6 +204,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  backupPathBlock: {
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  backupPath: {
+    lineHeight: 18,
   },
   footer: {
     width: '100%',

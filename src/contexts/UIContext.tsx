@@ -30,6 +30,7 @@ export interface ImportStats {
   plannedPayments?: number;
   skippedTransactions: number;
   skippedItems?: { id: string; reason: string; description?: string }[];
+  preImportBackupPath?: string;
 }
 
 export interface RestartOptions {

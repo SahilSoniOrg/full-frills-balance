@@ -303,7 +303,10 @@ export class SafeToSpendReadModel {
 
               trace.metric('simulation_complete');
 
-              const netCashFlowByDay = buildNetCashFlowByDay(rawDeltas || [], defaultCurrencyCode);
+              const netCashFlowByDay = await buildNetCashFlowByDay(
+                rawDeltas || [],
+                defaultCurrencyCode,
+              );
 
               const historyPoints = buildSafeToSpendHistoryPoints({
                 startOfToday,

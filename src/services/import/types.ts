@@ -19,6 +19,8 @@ export interface ImportStats {
   plannedPayments?: number;
   skippedTransactions: number;
   skippedItems?: { id: string; reason: string; description?: string }[];
+  /** Local path when a pre-import safety backup was written (ADR-0006). */
+  preImportBackupPath?: string;
 }
 
 export interface ParsedImportResult {

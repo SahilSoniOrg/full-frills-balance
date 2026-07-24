@@ -3,7 +3,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { convertAmount } from '@/src/services/currencyConversion';
 import {
   cashFlowSimulationService,
   SimulationInput,
@@ -39,10 +39,15 @@ jest.mock('@/src/data/repositories/AccountRepository', () => ({
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
-    convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
-    getRateSafe: jest.fn().mockReturnValue(1),
   },
+}));
+
+jest.mock('@/src/services/currencyConversion', () => ({
+  convertAmount: jest.fn(async ({ amount, fromCurrency, toCurrency }: any) => ({
+    ok: true,
+    amount: fromCurrency === toCurrency ? amount : amount,
+  })),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -160,8 +165,11 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       totalDecrease: 0,
       totalIncrease: 0,
     });
-    (exchangeRateService.convert as jest.Mock).mockImplementation((amount: number) =>
-      Promise.resolve({ convertedAmount: amount }),
+    (convertAmount as jest.Mock).mockImplementation(
+      async ({ amount, fromCurrency, toCurrency }: any) => ({
+        ok: true,
+        amount: fromCurrency === toCurrency ? amount : amount,
+      }),
     );
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
@@ -324,18 +332,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       emiAmount: 50,
     });
 
-    (exchangeRateService.convert as jest.Mock).mockImplementation(
-      (amount: number, from: string, to: string) => {
-        if (from === to) return Promise.resolve({ convertedAmount: amount });
-        if (from === 'EUR' && to === 'USD') return Promise.resolve({ convertedAmount: amount * 2 });
-        return Promise.resolve({ convertedAmount: amount });
-      },
-    );
-    (exchangeRateService.getRateSafe as jest.Mock).mockImplementation(
-      (from: string, to: string) => {
-        if (from === to) return 1;
-        if (from === 'EUR' && to === 'USD') return 2;
-        return 1;
+    (convertAmount as jest.Mock).mockImplementation(
+      async ({ amount, fromCurrency, toCurrency }: any) => {
+        if (fromCurrency === toCurrency) return { ok: true, amount };
+        if (fromCurrency === 'EUR' && toCurrency === 'USD') {
+          return { ok: true, amount: amount * 2 };
+        }
+        return { ok: true, amount };
       },
     );
 

@@ -5,7 +5,9 @@ import Budget from '@/src/data/models/Budget';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { logger } from '@/src/utils/logger';
 import { observeDisplayTransactionsForAccounts } from '@/src/services/ledger/ledgerEnrichedDisplay';
 import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -108,7 +110,7 @@ export class BudgetReadService {
         return database.collections
           .get<Transaction>('transactions')
           .query(...clauses)
-          .observeWithColumns(['amount', 'transaction_type', 'currency_code'])
+          .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate'])
           .pipe(
             switchMap(async transactions => {
               const budgetMoney = Money.from(observedBudget.amount, observedBudget.currencyCode);
@@ -129,16 +131,22 @@ export class BudgetReadService {
               for (const tx of transactions) {
                 let txAmount = tx.amount;
                 if (tx.currencyCode !== budgetMoney.currencyCode) {
-                  try {
-                    // FAST: getRateSafe hits the memory cache we just pre-warmed
-                    const rate = exchangeRateService.getRateSafe(
-                      tx.currencyCode,
-                      budgetMoney.currencyCode,
-                    );
-                    txAmount = tx.amount * rate;
-                  } catch {
-                    // Fallback to raw amount if conversion fails
+                  const converted = await convertAmount({
+                    amount: tx.amount,
+                    fromCurrency: tx.currencyCode,
+                    toCurrency: budgetMoney.currencyCode,
+                    mode: 'historical',
+                    storedExchangeRate: tx.exchangeRate,
+                  });
+                  if (!converted.ok) {
+                    logger.warn('[BudgetReadService] FX unavailable for budget usage', {
+                      from: tx.currencyCode,
+                      to: budgetMoney.currencyCode,
+                      transactionId: tx.id,
+                    });
+                    continue;
                   }
+                  txAmount = converted.amount;
                 }
 
                 const txMoney = Money.from(txAmount, budgetMoney.currencyCode);

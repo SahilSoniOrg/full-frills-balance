@@ -37,18 +37,23 @@ jest.mock('@/src/data/repositories/AccountRepository', () => ({
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
-    convert: jest.fn((amount: number, from?: string) =>
-      Promise.resolve({ convertedAmount: from === 'EUR' ? amount * 2 : amount }),
-    ),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
-    getRateSafe: jest.fn((from?: string) => (from === 'EUR' ? 2 : 1)),
   },
+}));
+
+jest.mock('@/src/services/currencyConversion', () => ({
+  convertAmount: jest.fn(async ({ amount, fromCurrency, toCurrency }: any) => {
+    if (fromCurrency === toCurrency) return { ok: true, amount };
+    if (fromCurrency === 'EUR') return { ok: true, amount: amount * 2 };
+    return { ok: true, amount };
+  }),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
+    warn: jest.fn(),
     metric: jest.fn(),
   },
 }));
@@ -497,8 +502,8 @@ describe('CashFlowSimulationService', () => {
       plannedJournals: [],
       liquidAssetIds: [liquidAccountId],
       liabilityAccountBalances: [{ account: ccAccount, balance: 800 }],
-      budgets: // Current balance 800
-      [],
+      // Current balance 800
+      budgets: [],
       usages: [],
       allAccounts: [liquidAccount, ccAccount],
       resultCurrency: 'USD',

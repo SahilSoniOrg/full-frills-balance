@@ -7,6 +7,12 @@ import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
+jest.mock('@/src/services/import/preImportBackupService', () => ({
+  preImportBackupService: {
+    createBackup: jest.fn().mockResolvedValue({ skipped: true, reason: 'empty_workplace' }),
+  },
+}));
+
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
   importRepository: {
     batchInsert: jest.fn().mockResolvedValue(true),

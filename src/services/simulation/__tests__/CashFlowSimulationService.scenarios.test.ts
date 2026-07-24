@@ -4,7 +4,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { convertAmount } from '@/src/services/currencyConversion';
 import {
   cashFlowSimulationService,
   SimulationInput,
@@ -49,10 +49,15 @@ jest.mock('@/src/data/repositories/AccountRepository', () => ({
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
-    convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
-    getRateSafe: jest.fn().mockReturnValue(1),
   },
+}));
+
+jest.mock('@/src/services/currencyConversion', () => ({
+  convertAmount: jest.fn(async ({ amount, fromCurrency, toCurrency }: any) => ({
+    ok: true,
+    amount: fromCurrency === toCurrency ? amount : amount,
+  })),
 }));
 
 describe('CashFlowSimulationService scenario coverage', () => {
@@ -583,14 +588,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
       { budgetId: 'b-dining', accountId: dining.id, account: dining },
     ]);
-    (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from) => {
-      if (from === 'EUR') return Promise.resolve({ convertedAmount: amount * 1.1 });
-      return Promise.resolve({ convertedAmount: amount });
-    });
-    (exchangeRateService.getRateSafe as jest.Mock).mockImplementation((from: string) => {
-      if (from === 'EUR') return 1.1;
-      return 1;
-    });
+    (convertAmount as jest.Mock).mockImplementation(
+      async ({ amount, fromCurrency, toCurrency }: any) => {
+        if (fromCurrency === toCurrency) return { ok: true, amount };
+        if (fromCurrency === 'EUR') return { ok: true, amount: amount * 1.1 };
+        return { ok: true, amount };
+      },
+    );
 
     const result = await simulate({
       startingBalances: new Map([['cash' as AccountId, 1000]]),

@@ -30,10 +30,15 @@ jest.mock('@/src/data/repositories/BudgetRepository', () => ({
 }));
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
-    convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
-    getRateSafe: jest.fn().mockReturnValue(1),
   },
+}));
+
+jest.mock('@/src/services/currencyConversion', () => ({
+  convertAmount: jest.fn(async ({ amount, fromCurrency, toCurrency }: any) => ({
+    ok: true,
+    amount: fromCurrency === toCurrency ? amount : amount,
+  })),
 }));
 
 jest.mock('@/src/data/repositories/AccountRepository', () => ({

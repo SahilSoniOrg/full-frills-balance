@@ -1,0 +1,135 @@
+/* eslint-disable import/first -- jest mocks must be hoisted before imports */
+jest.mock('@/src/services/import/preImportBackupService', () => ({
+  preImportBackupService: {
+    createBackup: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/ImportRepository', () => ({
+  importRepository: {
+    batchInsert: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+jest.mock('@/src/services/integrity-service', () => ({
+  integrityService: {
+    resetWorkplace: jest.fn().mockResolvedValue(true),
+    forceRunCheck: jest.fn().mockResolvedValue({}),
+  },
+}));
+
+jest.mock('@/src/utils/preferences', () => ({
+  preferences: {
+    restorePreferences: jest.fn().mockResolvedValue(true),
+    setActiveWorkplaceId: jest.fn(),
+    setOnboardingCompleted: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    collections: {
+      get: jest.fn().mockReturnValue({
+        find: jest.fn().mockResolvedValue({ defaultCurrencyCode: 'USD' }),
+        query: jest.fn().mockReturnValue({ fetch: jest.fn().mockResolvedValue([]) }),
+      }),
+    },
+  },
+}));
+
+jest.mock('@/src/services/currency-init-service', () => ({
+  currencyInitService: {
+    initialize: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: {
+    syncTodayRates: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    updateWorkplace: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+import { importService } from '@/src/services/import/ImportService';
+import { preImportBackupService } from '@/src/services/import/preImportBackupService';
+import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
+import { integrityService } from '@/src/services/integrity-service';
+import { WorkplaceId } from '@/src/types/domain';
+
+const mockPlugin: ImportPlugin = {
+  id: 'test',
+  name: 'Test',
+  description: 'Test plugin',
+  icon: 'T',
+  detect: () => true,
+  parse: jest.fn().mockResolvedValue({
+    data: {
+      accounts: [],
+      journals: [],
+      transactions: [],
+    },
+    stats: {
+      accounts: 0,
+      journals: 0,
+      transactions: 0,
+      skippedTransactions: 0,
+    },
+  }),
+};
+
+describe('ImportService pre-import backup', () => {
+  const workplaceId = 'wp-1' as WorkplaceId;
+  const context = { uri: 'file://x', name: 'x.json', rawBytes: new Uint8Array() } as ImportFileContext;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('runs backup before wipe and returns backup path in stats', async () => {
+    const backupPath = 'file:///docs/pre-import-backups/pre-import-wp-1.zip';
+    (preImportBackupService.createBackup as jest.Mock).mockResolvedValue({ path: backupPath });
+
+    const stats = await importService.executeImport(mockPlugin, context, workplaceId);
+
+    expect(preImportBackupService.createBackup).toHaveBeenCalledWith(
+      workplaceId,
+      expect.any(Function),
+    );
+    expect(integrityService.resetWorkplace).toHaveBeenCalledWith(workplaceId, true);
+    expect(stats.preImportBackupPath).toBe(backupPath);
+  });
+
+  it('aborts import when backup fails and does not wipe', async () => {
+    (preImportBackupService.createBackup as jest.Mock).mockRejectedValue(
+      new Error('Disk full'),
+    );
+
+    await expect(importService.executeImport(mockPlugin, context, workplaceId)).rejects.toThrow(
+      'Disk full',
+    );
+
+    expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
+  });
+
+  it('reports progress with backup saved message', async () => {
+    const backupPath = 'file:///docs/pre-import-backups/safety.zip';
+    (preImportBackupService.createBackup as jest.Mock).mockImplementation(
+      async (_id, onProgress) => {
+        onProgress?.(`Safety backup saved: ${backupPath}`, 1);
+        return { path: backupPath };
+      },
+    );
+
+    const messages: string[] = [];
+    await importService.executeImport(mockPlugin, context, workplaceId, message => {
+      messages.push(message);
+    });
+
+    expect(messages.some(m => m.includes('Safety backup saved'))).toBe(true);
+  });
+});

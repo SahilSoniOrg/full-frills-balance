@@ -9,6 +9,7 @@ import {
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
+import { preImportBackupService } from '@/src/services/import/preImportBackupService';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -58,11 +59,12 @@ export class ImportService {
 
     const SEGMENTS = {
       PARSE: { start: 0, end: 0.15 },
-      WIPE: { start: 0.15, end: 0.25 },
-      INIT: { start: 0.25, end: 0.3 },
-      INSERT: { start: 0.3, end: 0.8 },
-      RATES: { start: 0.8, end: 0.88 },
-      INTEGRITY: { start: 0.88, end: 1.0 },
+      BACKUP: { start: 0.15, end: 0.22 },
+      WIPE: { start: 0.22, end: 0.3 },
+      INIT: { start: 0.3, end: 0.34 },
+      INSERT: { start: 0.34, end: 0.82 },
+      RATES: { start: 0.82, end: 0.9 },
+      INTEGRITY: { start: 0.9, end: 1.0 },
     };
 
     // 1. Parse file via plugin
@@ -90,7 +92,23 @@ export class ImportService {
 
     validateImportedData(parsedResult.data);
 
-    // 2. Reset target workplace storage
+    // 2. Safety backup before destructive wipe (ADR-0006 phase 3.1)
+    const backupProgress = this.createProgressSegment(
+      onProgress,
+      SEGMENTS.BACKUP.start,
+      SEGMENTS.BACKUP.end,
+    );
+    const backupResult = await preImportBackupService.createBackup(workplaceId, (message, p) =>
+      backupProgress(message, p),
+    );
+    let preImportBackupPath: string | undefined;
+    if ('path' in backupResult) {
+      preImportBackupPath = backupResult.path;
+    } else {
+      backupProgress('No existing ledger data to back up', 1);
+    }
+
+    // 3. Reset target workplace storage
     const wipeProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.WIPE.start,
@@ -100,7 +118,7 @@ export class ImportService {
     await integrityService.resetWorkplace(workplaceId, true);
     wipeProgress('Resetting workplace storage...', 1);
 
-    // 3. Initialize native currencies
+    // 4. Initialize native currencies
     const initProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.INIT.start,
@@ -110,7 +128,7 @@ export class ImportService {
     await currencyInitService.initialize();
     initProgress('Initializing native currencies...', 1);
 
-    // 4. Insert data using ImportRepository primitives (calculates balances & persists)
+    // 5. Insert data using ImportRepository primitives (calculates balances & persists)
     const insertProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.INSERT.start,
@@ -127,7 +145,7 @@ export class ImportService {
       insertProgress(msg, p ?? 0),
     );
 
-    // 5. Update workplace metadata if provided
+    // 6. Update workplace metadata if provided
     if (
       parsedResult.workplace?.name ||
       parsedResult.workplace?.defaultCurrencyCode ||
@@ -143,7 +161,7 @@ export class ImportService {
       }
     }
 
-    // 6. Synchronize exchange rates for used currencies
+    // 7. Synchronize exchange rates for used currencies
     const ratesProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.RATES.start,
@@ -172,7 +190,7 @@ export class ImportService {
       );
     }
 
-    // 7. Verify data integrity & rebuild balance snapshots
+    // 8. Verify data integrity & rebuild balance snapshots
     const integrityProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.INTEGRITY.start,
@@ -210,7 +228,7 @@ export class ImportService {
       logger.error('[ImportService] Failed to rebuild balance snapshots post-import:', error);
     }
 
-    // 8. Restore preferences & activate workplace
+    // 9. Restore preferences & activate workplace
     if (parsedResult.preferences) {
       const sanitizedPrefs = { ...parsedResult.preferences };
       delete (sanitizedPrefs as any).defaultCurrencyCode;
@@ -223,7 +241,10 @@ export class ImportService {
     logger.info('[ImportService] Import completed successfully.');
     onProgress?.('Import completed successfully.', 1);
 
-    return parsedResult.stats;
+    return {
+      ...parsedResult.stats,
+      ...(preImportBackupPath ? { preImportBackupPath } : {}),
+    };
   }
 }
 

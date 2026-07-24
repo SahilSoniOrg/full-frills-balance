@@ -672,6 +672,7 @@ export const UI_STRINGS = {
       auditLogs: 'Audit Logs',
       plannedPayments: 'Planned Payments',
       skippedItems: 'Skipped',
+      preImportBackup: 'Safety backup',
     },
     restartNote: 'Restart the app to finish applying this change.',
     restartBtn: 'Restart',

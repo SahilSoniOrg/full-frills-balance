@@ -11,6 +11,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
@@ -105,11 +106,41 @@ export class CashFlowSimulationService {
     );
 
     const rateMap = new Map<string, number>();
-    for (const from of baseCurrencies) {
-      rateMap.set(from, exchangeRateService.getRateSafe(from, resultCurrency));
-    }
+    rateMap.set(resultCurrency, 1);
+    await Promise.all(
+      Array.from(baseCurrencies).map(async from => {
+        if (from === resultCurrency) {
+          rateMap.set(from, 1);
+          return;
+        }
+        const converted = await convertAmount({
+          amount: 1,
+          fromCurrency: from,
+          toCurrency: resultCurrency,
+          mode: 'spot',
+        });
+        if (converted.ok) {
+          rateMap.set(from, converted.amount);
+        } else {
+          logger.warn(
+            `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
+          );
+        }
+      }),
+    );
 
-    const convert = (amount: number, from: string) => amount * (rateMap.get(from) || 1);
+    const convert = (amount: number, from: string) => {
+      const fromCurrency = from || resultCurrency;
+      if (fromCurrency === resultCurrency) return amount;
+      const rate = rateMap.get(fromCurrency);
+      if (rate === undefined) {
+        logger.warn(
+          `[CashFlowSimulationService] Skipping amount in ${fromCurrency} (no FX rate to ${resultCurrency})`,
+        );
+        return 0;
+      }
+      return amount * rate;
+    };
 
     // Normalize and Fetch remaining dependent data in parallel
     const [{ statementBalances, settledSinceStatement }, budgetCategoryMap] = await Promise.all([
@@ -448,7 +479,18 @@ export class CashFlowSimulationService {
     const settledAmounts = new Map<string, number>();
 
     const convert = (amount: number, from: string) => {
-      const val = amount * (rateMap.get(from) || 1);
+      const fromCurrency = from || toCurrency;
+      if (fromCurrency === toCurrency) {
+        return Math.round((amount + Number.EPSILON) * 100) / 100;
+      }
+      const rate = rateMap.get(fromCurrency);
+      if (rate === undefined) {
+        logger.warn(
+          `[CashFlowSimulationService] Skipping statement value in ${fromCurrency} (no FX rate to ${toCurrency})`,
+        );
+        return 0;
+      }
+      const val = amount * rate;
       return Math.round((val + Number.EPSILON) * 100) / 100;
     };
 

@@ -9,9 +9,8 @@ import {
 } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { logger } from '@/src/utils/logger';
-import { roundToPrecision } from '@/src/utils/money';
 import dayjs, { Dayjs } from 'dayjs';
 
 export interface SafeToSpendDataPoint {
@@ -47,20 +46,29 @@ export interface SafeToSpendDashboard {
   safeToSpendDays: number;
 }
 
-export function buildNetCashFlowByDay(
+export async function buildNetCashFlowByDay(
   deltas: DailyDelta[],
   defaultCurrencyCode: string,
-): Map<number, number> {
+): Promise<Map<number, number>> {
   const netCashFlowByDay = new Map<number, number>();
   for (const delta of deltas) {
     let amount = delta.delta;
     if (delta.currencyCode !== defaultCurrencyCode) {
-      try {
-        const rate = exchangeRateService.getRateSafe(delta.currencyCode, defaultCurrencyCode);
-        amount = roundToPrecision(amount * rate, 2);
-      } catch (e) {
-        logger.error('Failed to convert delta for history projection', e);
+      const converted = await convertAmount({
+        amount: delta.delta,
+        fromCurrency: delta.currencyCode,
+        toCurrency: defaultCurrencyCode,
+        mode: 'historical',
+      });
+      if (!converted.ok) {
+        logger.warn('FX unavailable for Safe-to-Spend history delta', {
+          from: delta.currencyCode,
+          to: defaultCurrencyCode,
+          dayStart: delta.dayStart,
+        });
+        continue;
       }
+      amount = converted.amount;
     }
     const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
     netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + amount);
