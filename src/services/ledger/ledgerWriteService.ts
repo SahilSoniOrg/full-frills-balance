@@ -1,6 +1,7 @@
+import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
 import { AuditAction } from '@/src/data/models/AuditLog';
-import Journal from '@/src/data/models/Journal';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -9,11 +10,19 @@ import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/p
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId, mapTransactionToAudit } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { logger } from '@/src/utils/logger';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { Model } from '@nozbe/watermelondb';
 
 /**
  * Canonical journal write Module: prepare + audit + persist + rebuild enqueue.
  * Prefer this over calling JournalRepository create/update helpers directly.
+ *
+ * Rebuild enqueue policy:
+ * - create / createMany / post / revert / delete / recover: enqueue inside the
+ *   successful `database.write` callback (same pattern as create).
+ * - update: enqueue after `updateJournalWithTransactions` returns, because that
+ *   helper owns its own write transaction (nested writes are unsafe).
  */
 export class LedgerWriteService {
   async prepareCreateJournal(
@@ -85,6 +94,46 @@ export class LedgerWriteService {
     return journal;
   }
 
+  /**
+   * Batch-create journals in one write. Callers must pre-run `prepareJournalData`
+   * (or pass already-prepared pairs) so async work stays outside the write block.
+   */
+  async createMany(
+    items: { data: CreateJournalData; prepared: PreparedJournalData }[],
+    workplaceId: WorkplaceId,
+  ): Promise<Journal[]> {
+    if (items.length === 0) return [];
+
+    const journals: Journal[] = [];
+    const allAccountsToRebuild = new Set<AccountId>();
+    let minDate = Infinity;
+
+    await database.write(async () => {
+      const allOps: Model[] = [];
+      for (const item of items) {
+        const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
+          item.data,
+          item.prepared,
+          workplaceId,
+        );
+        journals.push(journal);
+        allOps.push(...ops);
+        for (const accountId of accountsToRebuild) {
+          allAccountsToRebuild.add(accountId);
+        }
+        minDate = Math.min(minDate, item.data.journalDate);
+      }
+
+      await database.batch(allOps);
+
+      if (allAccountsToRebuild.size > 0) {
+        rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
+      }
+    });
+
+    return journals;
+  }
+
   async updateJournal(
     journalId: JournalId,
     data: CreateJournalData,
@@ -138,6 +187,7 @@ export class LedgerWriteService {
       extraOpCreator,
     );
 
+    // Rebuild after write: updateJournalWithTransactions owns the DB write.
     const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
     const allAccountsToRebuild = new Set<AccountId>([
       ...prepared.accountsToRebuild,
@@ -187,10 +237,10 @@ export class LedgerWriteService {
       );
 
       await database.batch([journalOp, ...txOps, auditOp]);
-    });
 
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
+      const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+      rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
+    });
   }
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
@@ -227,11 +277,148 @@ export class LedgerWriteService {
       );
 
       await database.batch([journalOp, ...txOps, auditOp]);
+
+      const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+      rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
     });
 
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
+    return journal;
+  }
 
+  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+    const journal = await journalRepository.find(workplaceId, journalId);
+    if (!journal) throw new Error('Journal not found');
+    if (journal.status !== JournalStatus.PLANNED) {
+      throw new Error(
+        `Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`,
+      );
+    }
+
+    const postTime = Date.now();
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const originalDate = journal.journalDate;
+
+    await database.write(async () => {
+      const metadataOp = await journalRepository.prepareMetadataPatch(
+        workplaceId,
+        journalId,
+        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+        MetadataSources.MANUAL_POST,
+      );
+
+      const journalOp = journal.prepareUpdate((record: Journal) => {
+        record.status = JournalStatus.POSTED;
+        record.journalDate = postTime;
+        record.updatedAt = new Date();
+      });
+
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate((record: Transaction) => {
+          record.transactionDate = postTime;
+          record.updatedAt = new Date();
+        }),
+      );
+
+      const auditOp = auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journalId,
+          action: AuditAction.UPDATE,
+          changes: {
+            before: { status: JournalStatus.PLANNED, journalDate: originalDate },
+            after: { status: JournalStatus.POSTED, journalDate: postTime },
+          },
+        },
+        workplaceId,
+      );
+
+      await database.batch([metadataOp, journalOp, ...txOps, auditOp]);
+
+      const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+      rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);
+    });
+
+    logger.info(`Manually posted journal ${journalId} at ${new Date(postTime).toLocaleString()}`);
+    return journal;
+  }
+
+  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+    const journal = await journalRepository.find(workplaceId, journalId);
+    if (!journal) throw new Error('Journal not found');
+    if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
+      throw new Error(
+        `Cannot revert journal with status ${journal.status}. Only POSTED or SKIPPED journals can be reverted.`,
+      );
+    }
+
+    const currentJournalDate = journal.journalDate;
+    let revertTime: number;
+
+    const metadata = await journalRepository.findMetadataByJournalId(journalId, workplaceId);
+    if (metadata?.metadataJson) {
+      try {
+        const json = safeParseJSON<Record<string, any>>(metadata.metadataJson, {});
+        if (json[MetadataKeys.ORIGINAL_PLANNED_DATE]) {
+          revertTime = json[MetadataKeys.ORIGINAL_PLANNED_DATE];
+        } else {
+          const date = new Date(currentJournalDate);
+          date.setHours(0, 0, 0, 0);
+          revertTime = date.getTime();
+        }
+      } catch {
+        const date = new Date(currentJournalDate);
+        date.setHours(0, 0, 0, 0);
+        revertTime = date.getTime();
+      }
+    } else {
+      const date = new Date(currentJournalDate);
+      date.setHours(0, 0, 0, 0);
+      revertTime = date.getTime();
+    }
+
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+
+    await database.write(async () => {
+      const journalOp = journal.prepareUpdate((record: Journal) => {
+        record.status = JournalStatus.PLANNED;
+        record.journalDate = revertTime;
+        record.updatedAt = new Date();
+      });
+
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate((record: Transaction) => {
+          record.transactionDate = revertTime;
+          record.updatedAt = new Date();
+        }),
+      );
+
+      const auditOp = auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journalId,
+          action: AuditAction.UPDATE,
+          changes: {
+            // Historical shape: before.status always POSTED (even when reverting SKIPPED).
+            before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
+            after: { status: JournalStatus.PLANNED, journalDate: revertTime },
+          },
+        },
+        workplaceId,
+      );
+
+      await database.batch([journalOp, ...txOps, auditOp]);
+
+      const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+      rebuildQueueService.enqueueMany(
+        accountIds,
+        Math.min(currentJournalDate, revertTime),
+        workplaceId,
+      );
+    });
+
+    logger.info(
+      `Unposted journal ${journalId}, reverted to PLANNED at ${new Date(revertTime).toLocaleDateString()}`,
+    );
     return journal;
   }
 }

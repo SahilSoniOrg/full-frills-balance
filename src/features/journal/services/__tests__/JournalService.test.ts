@@ -15,7 +15,15 @@ jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/accounting/AccountingDomainService');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/services/ledger', () => ({
-  ledgerWriteService: { createJournal: jest.fn() },
+  ledgerWriteService: {
+    createJournal: jest.fn(),
+    createMany: jest.fn(),
+    updateJournal: jest.fn(),
+    deleteJournal: jest.fn(),
+    recoverJournal: jest.fn(),
+    postJournal: jest.fn(),
+    revertToPlanned: jest.fn(),
+  },
 }));
 jest.mock('@/src/utils/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },

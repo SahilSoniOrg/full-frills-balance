@@ -1,14 +1,17 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { ledgerWriteService } from '@/src/services/ledger';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
+/**
+ * App-facing journal mutations. All writes go through journalService, which
+ * delegates persistence/audit/rebuild to ledgerWriteService.
+ */
 export function useJournalActions(workplaceId: WorkplaceId) {
   const createJournal = useCallback(
     async (data: CreateJournalData) => {
-      return ledgerWriteService.createJournal(data, workplaceId);
+      return journalService.createJournal(data, workplaceId);
     },
     [workplaceId],
   );
@@ -30,6 +33,13 @@ export function useJournalActions(workplaceId: WorkplaceId) {
   const updateJournal = useCallback(
     async (journalId: JournalId, data: CreateJournalData) => {
       return journalService.updateJournal(journalId, data, workplaceId);
+    },
+    [workplaceId],
+  );
+
+  const recoverJournal = useCallback(
+    async (journalId: JournalId) => {
+      return journalService.recoverJournal(journalId, workplaceId);
     },
     [workplaceId],
   );
@@ -59,6 +69,7 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     createJournal,
     updateJournal,
     deleteJournal,
+    recoverJournal,
     findJournal,
     duplicateJournal,
     postJournal,

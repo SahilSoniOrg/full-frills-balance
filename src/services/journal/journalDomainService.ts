@@ -1,27 +1,21 @@
-import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
-import { database } from '@/src/data/database/Database';
-import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { TransactionType } from '@/src/data/models/Transaction';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { observeEnrichedJournals as observeEnrichedJournalsHelper } from './journalEnrichedObserver';
+import {
+  assembleCreateJournalData,
+  validateJournalEntryStructure,
+} from './journalSaveHelpers';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
-import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
+import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { safeParseJSON } from '@/src/utils/serialization';
-import { sanitizeAmount } from '@/src/utils/validation';
-import { Model } from '@nozbe/watermelondb';
 
 export interface SimpleEntryParams {
   type: 'expense' | 'income' | 'transfer';
@@ -42,6 +36,10 @@ export interface SubmitJournalResult {
 }
 
 export class JournalService {
+  async createJournal(data: CreateJournalData, workplaceId: WorkplaceId): Promise<Journal> {
+    return ledgerWriteService.createJournal(data, workplaceId);
+  }
+
   async updateJournal(
     journalId: JournalId,
     data: CreateJournalData,
@@ -56,6 +54,14 @@ export class JournalService {
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     return ledgerWriteService.recoverJournal(journalId, workplaceId);
+  }
+
+  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+    return ledgerWriteService.postJournal(journalId, workplaceId);
+  }
+
+  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+    return ledgerWriteService.revertToPlanned(journalId, workplaceId);
   }
 
   async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
@@ -120,142 +126,6 @@ export class JournalService {
     return reversalJournal;
   }
 
-  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalRepository.find(workplaceId, journalId);
-    if (!journal) throw new Error('Journal not found');
-    if (journal.status !== JournalStatus.PLANNED) {
-      throw new Error(
-        `Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`,
-      );
-    }
-
-    const postTime = Date.now();
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
-    const originalDate = journal.journalDate;
-
-    await database.write(async () => {
-      const metadataOp = await journalRepository.prepareMetadataPatch(
-        workplaceId,
-        journalId,
-        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-        MetadataSources.MANUAL_POST,
-      );
-
-      const journalOp = journal.prepareUpdate((record: Journal) => {
-        record.status = JournalStatus.POSTED;
-        record.journalDate = postTime;
-        record.updatedAt = new Date();
-      });
-
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate((record: Transaction) => {
-          record.transactionDate = postTime;
-          record.updatedAt = new Date();
-        }),
-      );
-
-      await database.batch([metadataOp, journalOp, ...txOps]);
-    });
-
-    await auditService.log(
-      {
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { status: JournalStatus.PLANNED, journalDate: originalDate },
-          after: { status: JournalStatus.POSTED, journalDate: postTime },
-        },
-      },
-      workplaceId,
-    );
-
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);
-
-    logger.info(`Manually posted journal ${journalId} at ${new Date(postTime).toLocaleString()}`);
-    return journal;
-  }
-
-  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalRepository.find(workplaceId, journalId);
-    if (!journal) throw new Error('Journal not found');
-    if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
-      throw new Error(
-        `Cannot revert journal with status ${journal.status}. Only POSTED or SKIPPED journals can be reverted.`,
-      );
-    }
-
-    const currentJournalDate = journal.journalDate;
-    let revertTime: number;
-
-    const metadata = await journalRepository.findMetadataByJournalId(journalId, workplaceId);
-    if (metadata?.metadataJson) {
-      try {
-        const json = safeParseJSON<Record<string, any>>(metadata.metadataJson, {});
-        if (json[MetadataKeys.ORIGINAL_PLANNED_DATE]) {
-          revertTime = json[MetadataKeys.ORIGINAL_PLANNED_DATE];
-        } else {
-          const date = new Date(currentJournalDate);
-          date.setHours(0, 0, 0, 0);
-          revertTime = date.getTime();
-        }
-      } catch {
-        const date = new Date(currentJournalDate);
-        date.setHours(0, 0, 0, 0);
-        revertTime = date.getTime();
-      }
-    } else {
-      const date = new Date(currentJournalDate);
-      date.setHours(0, 0, 0, 0);
-      revertTime = date.getTime();
-    }
-
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
-
-    await database.write(async () => {
-      const journalOp = journal.prepareUpdate((record: Journal) => {
-        record.status = JournalStatus.PLANNED;
-        record.journalDate = revertTime;
-        record.updatedAt = new Date();
-      });
-
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate((record: Transaction) => {
-          record.transactionDate = revertTime;
-          record.updatedAt = new Date();
-        }),
-      );
-
-      await database.batch([journalOp, ...txOps]);
-    });
-
-    await auditService.log(
-      {
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
-          after: { status: JournalStatus.PLANNED, journalDate: revertTime },
-        },
-      },
-      workplaceId,
-    );
-
-    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(
-      accountIds,
-      Math.min(currentJournalDate, revertTime),
-      workplaceId,
-    );
-
-    logger.info(
-      `Unposted journal ${journalId}, reverted to PLANNED at ${new Date(revertTime).toLocaleDateString()}`,
-    );
-    return journal;
-  }
-
   async saveJournalEntry(params: {
     lines: JournalEntryLine[];
     description: string;
@@ -270,118 +140,16 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
-    const {
-      lines,
-      description,
-      notes,
-      journalDate,
-      journalTime,
-      journalId,
-      smsId,
-      smsRecordId,
-      smsSender,
-      rawSmsBody,
-      mode = 'advanced',
-      workplaceId,
-    } = params;
-
-    const finalDescription = description.trim();
-    if (!finalDescription) {
-      return { success: false, error: 'Description is required' };
-    }
-
-    if (lines.length < 2) {
-      return { success: false, error: 'A journal entry must have at least 2 lines' };
-    }
-
-    if (lines.some(l => !l.accountId)) {
-      return { success: false, error: 'All lines must have an account' };
-    }
-
-    const distinctValidation = accountingService.validateDistinctAccounts(
-      lines.map(l => l.accountId),
-    );
-    if (!distinctValidation.isValid) {
-      return { success: false, error: 'A journal entry must involve at least 2 distinct accounts' };
-    }
-
-    let combinedTimestamp: number;
-    if (typeof journalDate === 'number') {
-      combinedTimestamp = journalDate;
-    } else {
-      const time = journalTime || '00:00';
-      const timeWithSeconds = time.split(':').length === 2 ? `${time}:00` : time;
-      combinedTimestamp = new Date(`${journalDate}T${timeWithSeconds}`).getTime();
-    }
-
-    if (Number.isNaN(combinedTimestamp)) {
-      return { success: false, error: 'Invalid date or time' };
-    }
-
-    const domainLines = lines.map(line => ({
-      amount: sanitizeAmount(line.amount) || 0,
-      type: line.transactionType,
-      exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1,
-      accountCurrency: line.accountCurrency,
-    }));
-
-    const balanceValidation = accountingService.validateJournal(domainLines);
-    if (!balanceValidation.isValid) {
-      return {
-        success: false,
-        error: `Journal is not balanced. Discrepancy: ${balanceValidation.imbalance}`,
-      };
-    }
+    const { journalId, mode = 'advanced', workplaceId, ...entryParams } = params;
 
     try {
-      let smsMetadataJson: string | undefined;
-      if (smsRecordId) {
-        try {
-          const inboxRecord = await database.collections
-            .get<TransactionInboxRecord>('transaction_inbox_records')
-            .find(smsRecordId);
-          smsMetadataJson = JSON.stringify({
-            smsFingerprint: inboxRecord.inputFingerprint,
-            parsedAmount: inboxRecord.parsedAmount ?? null,
-            parsedCurrencyCode: inboxRecord.parsedCurrencyCode ?? null,
-            parsedMerchant: inboxRecord.parsedMerchant ?? null,
-            referenceNumber: inboxRecord.referenceNumber ?? null,
-            accountSource: inboxRecord.parsedAccountSource ?? null,
-          });
-        } catch {
-          smsMetadataJson = undefined;
-        }
+      const assembled = await assembleCreateJournalData({ ...entryParams, workplaceId });
+      if (!assembled.success) {
+        return assembled;
       }
 
-      const metadata =
-        smsId || smsSender || rawSmsBody
-          ? {
-              importSource: smsId ? 'sms' : 'manual',
-              originalSmsId: smsId,
-              originalSmsSender: smsSender,
-              originalSmsBody: rawSmsBody,
-              metadataJson: smsMetadataJson,
-            }
-          : undefined;
-
-      const currencyCode = await workplaceService.getCurrency(workplaceId);
-
-      const journalData: CreateJournalData = {
-        journalDate: combinedTimestamp,
-        description: finalDescription,
-        notes: notes?.trim() || undefined,
-        currencyCode,
-        metadata,
-        transactions: lines.map(l => ({
-          accountId: l.accountId,
-          amount: sanitizeAmount(l.amount) || 0,
-          transactionType: l.transactionType,
-          notes:
-            l.notes && typeof l.notes === 'string' && l.notes.trim() ? l.notes.trim() : undefined,
-          exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
-          currencyCode: l.accountCurrency,
-        })),
-      };
+      const { journalData } = assembled;
+      const currencyCode = journalData.currencyCode;
 
       if (journalId) {
         const updatedJournal = await this.updateJournal(journalId, journalData, workplaceId);
@@ -392,21 +160,21 @@ export class JournalService {
           transaction_count: journalData.transactions?.length || 0,
         });
         return { success: true, action: 'updated', journalId: updatedJournal.id };
-      } else {
-        const createdJournal = await ledgerWriteService.createJournal(journalData, workplaceId);
-        analytics.logTransactionCreated(mode, 'create', currencyCode);
-        analytics.trackFeatureUsage('journal', 'create', {
-          mode,
-          currency: currencyCode,
-          transaction_count: journalData.transactions.length || 0,
-        });
-        analytics.trackConversion(
-          'transaction_created',
-          journalData.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0),
-          currencyCode,
-        );
-        return { success: true, action: 'created', journalId: createdJournal.id };
       }
+
+      const createdJournal = await this.createJournal(journalData, workplaceId);
+      analytics.logTransactionCreated(mode, 'create', currencyCode);
+      analytics.trackFeatureUsage('journal', 'create', {
+        mode,
+        currency: currencyCode,
+        transaction_count: journalData.transactions.length || 0,
+      });
+      analytics.trackConversion(
+        'transaction_created',
+        journalData.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0),
+        currencyCode,
+      );
+      return { success: true, action: 'created', journalId: createdJournal.id };
     } catch (error) {
       logger.error('Failed to save journal entry:', error);
       return { success: false, error: 'Failed to save transaction' };
@@ -432,33 +200,17 @@ export class JournalService {
     const workplaceId = entries[0].workplaceId;
 
     for (const entry of entries) {
-      if (!entry.description.trim()) {
-        return { success: false, error: 'Description is required', summaries: [] };
-      }
-      if (entry.lines.length < 2) {
-        return {
-          success: false,
-          error: 'A journal entry must have at least 2 lines',
-          summaries: [],
-        };
-      }
-      if (entry.lines.some(l => !l.accountId)) {
-        return { success: false, error: 'All lines must have an account', summaries: [] };
-      }
-      const distinctValidation = accountingService.validateDistinctAccounts(
-        entry.lines.map(l => l.accountId),
-      );
-      if (!distinctValidation.isValid) {
-        return {
-          success: false,
-          error: 'A journal entry must involve at least 2 distinct accounts',
-          summaries: [],
-        };
+      const structureError = validateJournalEntryStructure({
+        lines: entry.lines,
+        description: entry.description,
+      });
+      if (structureError) {
+        return { ...structureError, summaries: [] };
       }
     }
 
-    const preparedDataList: {
-      journalData: CreateJournalData;
+    const preparedItems: {
+      data: CreateJournalData;
       prepared: PreparedJournalData;
       description: string;
       amount: number;
@@ -469,41 +221,20 @@ export class JournalService {
       const currencyCode = await workplaceService.getCurrency(workplaceId);
 
       for (const entry of entries) {
-        const domainLines = entry.lines.map(line => ({
-          amount: sanitizeAmount(line.amount) || 0,
-          type: line.transactionType,
-          exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1,
-          accountCurrency: line.accountCurrency,
-        }));
-
-        const balanceValidation = accountingService.validateJournal(domainLines);
-        if (!balanceValidation.isValid) {
-          return {
-            success: false,
-            error: `Journal is not balanced. Discrepancy: ${balanceValidation.imbalance}`,
-            summaries: [],
-          };
+        const assembled = await assembleCreateJournalData({
+          lines: entry.lines,
+          description: entry.description,
+          journalDate: entry.journalDate,
+          workplaceId,
+          currencyCode,
+        });
+        if (!assembled.success) {
+          return { ...assembled, summaries: [] };
         }
 
-        const journalData: CreateJournalData = {
-          journalDate: entry.journalDate,
-          description: entry.description.trim(),
-          currencyCode,
-          transactions: entry.lines.map(l => ({
-            accountId: l.accountId,
-            amount: sanitizeAmount(l.amount) || 0,
-            transactionType: l.transactionType,
-            notes: l.notes?.trim() || undefined,
-            exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
-            currencyCode: l.accountCurrency,
-          })),
-        };
-
-        // Async data prep only (no DB mutations)
-        const prepared = await prepareJournalData(journalData, workplaceId);
-
-        preparedDataList.push({
-          journalData,
+        const prepared = await prepareJournalData(assembled.journalData, workplaceId);
+        preparedItems.push({
+          data: assembled.journalData,
           prepared,
           description: entry.description,
           amount: parseFloat(entry.lines[0].amount),
@@ -516,49 +247,28 @@ export class JournalService {
     }
 
     try {
-      const allAccountsToRebuild = new Set<AccountId>();
-      const minDate = Math.min(...preparedDataList.map(p => p.journalData.journalDate));
+      await ledgerWriteService.createMany(
+        preparedItems.map(p => ({ data: p.data, prepared: p.prepared })),
+        workplaceId,
+      );
 
-      // Synchronous phase: all prepareCreate + batch inside one write block
-      try {
-        await database.write(async () => {
-          const allOps: Model[] = [];
-          for (const p of preparedDataList) {
-            const { ops, accountsToRebuild } =
-              ledgerWriteService.prepareCreateJournalFromPreparedData(
-                p.journalData,
-                p.prepared,
-                workplaceId,
-              );
-            allOps.push(...ops);
-            for (const accountId of accountsToRebuild) {
-              allAccountsToRebuild.add(accountId);
-            }
-          }
-          await database.batch(allOps);
-        });
-      } finally {
-        if (allAccountsToRebuild.size > 0) {
-          rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
-        }
-      }
-
-      for (const p of preparedDataList) {
+      for (const p of preparedItems) {
         analytics.logTransactionCreated('simple', 'create', p.currency);
         analytics.trackConversion(
           'transaction_created',
-          p.journalData.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0,
+          p.data.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0,
           p.currency,
         );
       }
 
-      const summaries = preparedDataList.map(p => ({
-        description: p.description,
-        amount: p.amount,
-        currency: p.currency,
-      }));
-
-      return { success: true, summaries };
+      return {
+        success: true,
+        summaries: preparedItems.map(p => ({
+          description: p.description,
+          amount: p.amount,
+          currency: p.currency,
+        })),
+      };
     } catch (error) {
       logger.error('Failed to batch save bulk journals:', error);
       return { success: false, error: 'Failed to save journal entries atomically', summaries: [] };
