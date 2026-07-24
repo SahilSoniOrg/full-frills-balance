@@ -6,7 +6,7 @@
  * ========================================
  * - MAY contain: onboarding flags, theme preference, simple UI state
  * - MAY NOT contain: domain data, business logic, derived values, repository calls
- * - If it needs persistence → utils/preferences.ts
+ * - If it needs persistence → preferences Module (`src/utils/preferences`)
  * - If it needs logic → repository
  * - If it needs data → database
  * ========================================
@@ -306,7 +306,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setThemePreference = useCallback(
     async (theme: 'light' | 'dark' | 'system') => {
       try {
-        await preferences.setTheme(theme);
+        await preferences.themePrefs.setTheme(theme);
         setUIState(prev => ({ ...prev, themePreference: theme }));
         analytics.logThemeChanged(theme, uiState.themeId, uiState.fontId);
       } catch (error) {
@@ -320,7 +320,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setThemeId = useCallback(
     async (themeId: ThemeId) => {
       try {
-        await preferences.setThemeId(themeId);
+        await preferences.themePrefs.setThemeId(themeId);
         setUIState(prev => ({ ...prev, themeId }));
         analytics.logThemeChanged(uiState.themePreference, themeId, uiState.fontId);
       } catch (error) {
@@ -334,7 +334,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setFontId = useCallback(
     async (fontId: FontId) => {
       try {
-        await preferences.setFontId(fontId);
+        await preferences.themePrefs.setFontId(fontId);
         setUIState(prev => ({ ...prev, fontId }));
         analytics.logThemeChanged(uiState.themePreference, uiState.themeId, fontId);
       } catch (error) {
@@ -347,7 +347,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
     try {
-      await preferences.setIsPrivacyMode(isPrivacyMode);
+      await preferences.privacy.setIsPrivacyMode(isPrivacyMode);
       setUIState(prev => ({ ...prev, isPrivacyMode }));
       analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', { isPrivacyMode });
     } catch (error) {
@@ -358,7 +358,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setWidgetPrivacyEnabled = useCallback(async (isWidgetPrivacyEnabled: boolean) => {
     try {
-      await preferences.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled);
+      await preferences.privacy.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled);
       setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set widget privacy', { error });
@@ -368,7 +368,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setAppLockEnabled = useCallback(async (isAppLockEnabled: boolean) => {
     try {
-      await preferences.setAppLockEnabled(isAppLockEnabled);
+      await preferences.privacy.setAppLockEnabled(isAppLockEnabled);
       setUIState(prev => ({ ...prev, isAppLockEnabled }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set app lock', { error });
@@ -470,7 +470,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setSafeToSpendDays = useCallback(async (days: number) => {
     try {
-      await preferences.setSafeToSpendDays(days);
+      await preferences.sts.setSafeToSpendDays(days);
       setUIState(prev => ({ ...prev, safeToSpendDays: days }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set safe to spend days', { error });
@@ -480,7 +480,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setIsSmsImportEnabled = useCallback(async (enabled: boolean) => {
     try {
-      await preferences.setIsSmsImportEnabled(enabled);
+      await preferences.sms.setIsSmsImportEnabled(enabled);
       setUIState(prev => ({ ...prev, isSmsImportEnabled: enabled }));
       analytics.logSmsImportSettingsChanged(enabled);
     } catch (error) {
@@ -490,7 +490,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setIsNativeAiEnabled = useCallback(async (enabled: boolean) => {
     try {
-      await preferences.setIsNativeAiEnabled(enabled);
+      await preferences.ai.setIsNativeAiEnabled(enabled);
       setUIState(prev => ({ ...prev, isNativeAiEnabled: enabled }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set native AI preference', { error });
@@ -499,7 +499,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setPreferredAiModelId = useCallback(async (modelId: string) => {
     try {
-      await preferences.setPreferredAiModelId(modelId);
+      await preferences.ai.setPreferredAiModelId(modelId);
       setUIState(prev => ({ ...prev, preferredAiModelId: modelId }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set preferred AI model', { error });
@@ -508,7 +508,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const setAiInferenceMode = useCallback(async (mode: 'single' | 'multi') => {
     try {
-      await preferences.setAiInferenceMode(mode);
+      await preferences.ai.setAiInferenceMode(mode);
       setUIState(prev => ({ ...prev, aiInferenceMode: mode }));
     } catch (error) {
       logger.warn('[UIContext] Failed to set AI inference mode', { error });
