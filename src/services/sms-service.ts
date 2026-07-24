@@ -7,49 +7,17 @@ import TransactionInboxRecord, {
 } from '@/src/data/models/TransactionInboxRecord';
 import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
-import { smsInboxBridge, SmsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
+import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import {
   smsRuleEngine,
-  SmsRuleEngine,
   SmsRulePreviewInput,
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
-import { smsSyncPipeline, SmsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
+import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
-import {
-  ResolvedSmsRule,
-  RuleMatcher,
-  SmsMatchData,
-  SmsRuleActions,
-  SmsRuleAmountOperator,
-  SmsRuleCondition,
-  SmsRuleDisposition,
-  SmsRuleField,
-  SmsRuleMode,
-  SmsRuleStringOperator,
-} from './ledger/RuleMatcher';
-
-export {
-  ParsedTransaction,
-  ResolvedSmsRule,
-  RuleMatcher,
-  SmsInboxBridge,
-  SmsMatchData,
-  SmsRuleActions,
-  SmsRuleAmountOperator,
-  SmsRuleCondition,
-  SmsRuleDisposition,
-  SmsRuleEngine,
-  SmsRuleField,
-  SmsRuleMode,
-  SmsRulePreviewInput,
-  SmsRuleStringOperator,
-  SmsRuleSuggestion,
-  SmsSyncPipeline,
-};
 
 export interface SmsInboxFilterOptions {
   status?: 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
@@ -60,6 +28,10 @@ export interface SmsSyncResult {
   importedCount: number;
 }
 
+/**
+ * Inbox query / link Module. Scan, parse, and rules live on
+ * SmsSyncPipeline / SmsParser / SmsRuleEngine — import those directly.
+ */
 class SmsService {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
 
