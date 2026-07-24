@@ -26,8 +26,8 @@ This document is the durable review artifact for deep-module design across Full 
 | 3 | SMS façade retirement | **Done** |
 | 4 | preferences domain split | **Done** — store + domain Interfaces; `UIContext` + `journalNav` for last-used accounts |
 | 5 | JournalRepository intent carve | **Partial** — `SmsJournalQueries` + `JournalEnrichmentQueries`; write lifecycle on `LedgerWriteService` |
-| 6 | Account/Transaction repo carve | Deferred (P2) — touch when next editing those Modules |
-| 7 | STS mapper / dashboard VMs | Partial via handle API; fat result type still used internally |
+| 6 | Account/Transaction repo carve | **Partial** — `AccountListMetricsQueries` for list SQL metrics |
+| 7 | STS mapper / dashboard VMs | **Partial** — `SafeToSpendDashboard` + `safeToSpendDashboardProjection` Module |
 | 8 | ledgerRead pass-throughs | Deferred — still earns enriched observe hub |
 | 9 | Report / ReactiveData | Deferred (P2) |
 | 10 | SimulationInput | **Done** |
