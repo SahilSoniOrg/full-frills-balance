@@ -3,7 +3,6 @@ import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
