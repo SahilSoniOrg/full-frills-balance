@@ -153,11 +153,7 @@ export class JournalService {
         currency: currencyCode,
         transaction_count: journalData.transactions.length || 0,
       });
-      analytics.trackConversion(
-        'transaction_created',
-        journalData.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0),
-        currencyCode,
-      );
+      analytics.trackConversion('transaction_created');
       return { success: true, action: 'created', journalId: createdJournal.id };
     } catch (error) {
       logger.error('Failed to save journal entry:', error);
@@ -238,11 +234,7 @@ export class JournalService {
 
       for (const p of preparedItems) {
         analytics.logTransactionCreated('simple', 'create', p.currency);
-        analytics.trackConversion(
-          'transaction_created',
-          p.data.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0,
-          p.currency,
-        );
+        analytics.trackConversion('transaction_created');
       }
 
       return {

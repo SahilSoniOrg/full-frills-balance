@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the technical architecture of Full Frills Balance, a double-entry personal finance app built with React Native 0.83 and Expo SDK 55.
+This document describes the technical architecture of Full Frills Balance, a double-entry personal finance app built with React Native ~0.86 and Expo SDK 57.
 
 ## Core Principles
 
@@ -82,10 +82,10 @@ This document describes the technical architecture of Full Frills Balance, a dou
                              │
 ┌────────────────────────────┴──────────────────────────────────┐
 │                Data Layer (WatermelonDB / SQLite)              │
-│  Journal · Transaction · Account · AccountMetadata             │
-│  Budget · BudgetScope · PlannedPayment · Currency              │
-│  ExchangeRate · BalanceSnapshot · AuditLog                     │
-│  SmsInboxRecord · SmsAutoPostRule                              │
+│  Journal · JournalMetadata · Transaction · Account               │
+│  AccountMetadata · Budget · BudgetScope · PlannedPayment       │
+│  Currency · ExchangeRate · BalanceSnapshot · AuditLog          │
+│  TransactionInboxRecord · TransactionAutoPostRule · Workplace │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -99,7 +99,7 @@ This document describes the technical architecture of Full Frills Balance, a dou
 | `app/(tabs)/` | Bottom tab navigation: dashboard, accounts, activity, commitments, settings |
 | `src/features/` | Feature modules with components, hooks, screens, and local services |
 | `src/services/` | Domain services — all business logic lives here |
-| `src/data/models/` | WatermelonDB model definitions (14 models) |
+| `src/data/models/` | WatermelonDB model definitions (15 registered models) |
 | `src/data/repositories/` | Data access layer (WatermelonDB queries + raw SQL) |
 | `src/data/database/` | Schema definition, migrations, adapter setup |
 | `src/design-system/` | Layout primitives (Box, Stack, Text, Page, Skeleton, Separator, ...) |
@@ -117,6 +117,9 @@ This document describes the technical architecture of Full Frills Balance, a dou
 
 ## Data Models
 
+### Workplace
+Tenant boundary for all ledger data. Each workplace has its own accounts, journals, budgets, and ingestion rules. Services and repositories take `workplaceId`; the UI reads the active workplace from preferences (`activeWorkplaceId`) via `WorkplaceContext`. Safe to Spend and most read models are workplace-scoped (e.g. `SafeToSpendReadModel.forWorkplace(id)`).
+
 ### Journal
 The atomic unit of accounting. Groups 2+ transactions that must sum to zero.
 
@@ -126,6 +129,9 @@ The atomic unit of accounting. Groups 2+ transactions that must sum to zero.
 | `status` | POSTED/VOIDED | Only POSTED affects balances |
 | `totalAmount` | number | Denormalized sum of debits |
 | `displayType` | string | INCOME/EXPENSE/TRANSFER/MIXED |
+
+### JournalMetadata
+Per-journal extension data (e.g. link to an ingested SMS via `original_sms_id`). Workplace-scoped like the journal it belongs to.
 
 ### Transaction
 One leg of a journal entry.
@@ -159,8 +165,8 @@ Budget targets scoped to specific expense accounts via `BudgetScope` join record
 ### BalanceSnapshot
 Point-in-time balance snapshots for historical trend charts.
 
-### SmsInboxRecord & SmsAutoPostRule
-(Android) Raw SMS records and configurable rules for automatic transaction posting.
+### TransactionInboxRecord & TransactionAutoPostRule
+(Android) Raw ingested SMS records (`TransactionInboxRecord`, including `raw_body`) and user-configurable rules (`TransactionAutoPostRule`) for automatic transaction posting. Both are workplace-scoped.
 
 ### ExchangeRate & Currency
 Live exchange rate cache and currency metadata.

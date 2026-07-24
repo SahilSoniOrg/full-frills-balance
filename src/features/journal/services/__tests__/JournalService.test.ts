@@ -2,7 +2,6 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
-import * as BalanceEffects from '@/src/services/accounting/BalanceEffects';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
@@ -36,28 +35,16 @@ jest.mock('@/src/services/WorkplaceService', () => ({
 
 describe('JournalService - saveJournalEntry', () => {
   let service: JournalService;
-  let checkJournalSpy: jest.SpyInstance;
 
   beforeEach(() => {
     service = new JournalService();
     jest.clearAllMocks();
-
-    checkJournalSpy = jest.spyOn(BalanceEffects, 'checkJournal').mockReturnValue({
-      isValid: true,
-      imbalance: 0,
-      totalDebits: 0,
-      totalCredits: 0,
-    });
 
     (accountRepository.find as jest.Mock).mockResolvedValue({ id: 'acc1', currencyCode: 'USD' });
     (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
       { id: 'acc1', currencyCode: 'USD' },
       { id: 'acc2', currencyCode: 'USD' },
     ]);
-  });
-
-  afterEach(() => {
-    checkJournalSpy.mockRestore();
   });
 
   describe('saveJournalEntry', () => {
@@ -119,15 +106,13 @@ describe('JournalService - saveJournalEntry', () => {
     });
 
     it('should fail if journal is unbalanced', async () => {
-      checkJournalSpy.mockReturnValue({
-        isValid: false,
-        imbalance: 10,
-        totalDebits: 100,
-        totalCredits: 90,
-      });
+      const unbalancedLines = [
+        { accountId: 'acc1', amount: '100', transactionType: TransactionType.DEBIT, notes: '' },
+        { accountId: 'acc2', amount: '90', transactionType: TransactionType.CREDIT, notes: '' },
+      ];
 
       const result = await service.saveJournalEntry({
-        lines: validLines as any,
+        lines: unbalancedLines as any,
         description: 'Test',
         journalDate: '2024-01-01',
         journalTime: '12:00:00',

@@ -41,6 +41,13 @@ export const safeSubtract = (a: number, b: number, precision: number): number =>
 };
 
 /**
+ * Safe multiplication with immediate rounding.
+ */
+export const safeMultiply = (a: number, factor: number, precision: number): number => {
+  return roundToPrecision(a * factor, precision);
+};
+
+/**
  * Formats a number as a currency string.
  * @param amount The value to format
  * @param currencyCode The ISO currency code
@@ -107,7 +114,10 @@ export class Money {
    * Multiplies the amount by a factor (e.g., exchange rate).
    */
   public multiply(factor: number): Money {
-    return new Money(this.amount * factor, this.currencyCode);
+    return new Money(
+      safeMultiply(this.amount, factor, AppConfig.defaultCurrencyPrecision),
+      this.currencyCode,
+    );
   }
 
   /**

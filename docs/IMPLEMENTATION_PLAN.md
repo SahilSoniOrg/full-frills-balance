@@ -27,35 +27,33 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | 0.5 | Doc fixes (balance cache principle, money comment, README bun) | ✅ |
 | 0.6 | `.env.example` + gitignore exception | ✅ |
 
-**Follow-up (separate small PR):** demote Playwright to `schedule` + `workflow_dispatch` only ([ADR-0004](./adr/0004-ci-gates-and-test-strategy.md)).
+**Follow-up:** demote Playwright to `schedule` + `workflow_dispatch` only — ✅ ([ADR-0004](./adr/0004-ci-gates-and-test-strategy.md)).
 
 ---
 
-## Phase 1 — Quick wins (≈3–5 days)
+## Phase 1 — Quick wins ✅ (2026-07-25)
 
-*Low risk, high leverage. Do before large features.*
+| # | Task | Status |
+|---|------|--------|
+| 1.1 | Import `checkJournal` validation | ✅ |
+| 1.2 | Export FX tables + `schemaVersion` | ✅ |
+| 1.3 | Privacy / analytics | ✅ |
+| 1.4 | `.env.example` secret guidance | ✅ (rotate tokens manually; code: `HF_TOKEN` fallback) |
+| 1.5 | Remove `reset-project` | ✅ |
+| 1.6 | Remove root `postinstall` | ✅ |
+| 1.7 | Declare undeclared deps | ✅ |
+| 1.8 | Remove unused packages | ✅ |
+| 1.9 | Dead-code batch | ✅ |
+| 1.10 | Ledger lifecycle tests | ✅ |
+| 1.11 | Real `checkJournal` in journal tests | ✅ |
+| 1.12 | Coverage thresholds | ✅ |
+| 1.13 | Workplace docs | ✅ |
 
-| # | Task | ADR / ref | Est. |
-|---|------|-----------|------|
-| 1.1 | Validate every imported journal with `checkJournal`; reject file on failure | ADR-0006 | 0.5–1 d |
-| 1.2 | Export `currencies`, `exchange_rates`, `balance_snapshots`; add `schemaVersion` to backup JSON | ADR-0006 | 1 d |
-| 1.3 | Privacy: disable PostHog session replay; remove amount from analytics events (or update `PRIVACY.MD`) | — | 0.5 d |
-| 1.4 | Remove `EXPO_PUBLIC_` from true secrets; rotate tokens; document in `.env.example` | — | 0.5 d |
-| 1.5 | Delete `reset-project` script + `scripts/reset-project.js` | — | 15 min |
-| 1.6 | Remove root `postinstall` (litert-lm has its own guarded hook) | — | 15 min |
-| 1.7 | Declare undeclared deps (`rxjs`, metro polyfills, `@expo/config-plugins`, `source-map-explorer`) | — | 1 h |
-| 1.8 | Remove verified-unused npm packages (see PROJECT_BIBLE §11) | — | 1 h |
-| 1.9 | Safe dead-code batch: 9 orphan files, duplicate `money.test.ts`, tracked junk (`test-money.ts`, `screenshot.png`, `ivyWalletLink`) | — | 2 h |
-| 1.10 | Integration tests: `ledgerWriteService` post / revert / recover | ADR-0004 | 0.5 d |
-| 1.11 | Journal save tests: use real `checkJournal`, add unbalanced rejection case | ADR-0004 | 1 h |
-| 1.12 | `jest` `coverageThreshold` ratchet for `accounting/`, `ledgerWriteService`, `money.ts` | ADR-0004 | 1 h |
-| 1.13 | Add `Workplace` to `CONTEXT.md`; fix model count in `docs/ARCHITECTURE.md` | — | 1 h |
-
-**Exit criteria:** import cannot persist unbalanced journals; backup includes FX tables; privacy matches code or policy; CI stays green.
+**Exit criteria:** met — `bun run verify` green (2026-07-25).
 
 ---
 
-## Phase 2 — Money correctness (≈1–1.5 weeks)
+## Phase 2 — Money correctness (≈1–1.5 weeks) — **in progress**
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|
@@ -111,22 +109,19 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ---
 
-## Suggested order for the next three PRs
+## Next up
 
-1. **PR-A — Hygiene & CI follow-up:** Phase 0 Playwright schedule + Phase 1.5–1.9  
-2. **PR-B — Import/export & privacy:** Phase 1.1–1.4  
-3. **PR-C — Ledger test hardening:** Phase 1.10–1.12  
-
-Then start **Phase 2.1** (FX API) as its own branch.
+1. **Phase 2** — FX / money (ADR-0005)
+2. **Phase 3** — restore safety + migration tests
 
 ---
 
 ## Tracking
 
-| Phase | Target window | Status |
-|-------|---------------|--------|
-| 0 | 2026-07-25 | In commit |
-| 1 | Next ~1 week | Not started |
-| 2 | Following ~1.5 weeks | Not started |
-| 3 | After Phase 2 or parallel if restore is urgent | Not started |
-| 4 | Continuous | Not started |
+| Phase | Status |
+|-------|--------|
+| 0 | ✅ committed + Playwright demoted |
+| 1 | ✅ implemented (pending commit) |
+| 2 | In progress |
+| 3 | Not started |
+| 4 | Ongoing |

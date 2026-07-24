@@ -27,6 +27,19 @@ describe('JournalCalculator', () => {
     expect(JournalCalculator.isBalanced(lines, 'USD')).toBe(false);
   });
 
+  it('isBalanced agrees with BalanceEffects.checkJournal for FX lines', () => {
+    const lines = [
+      { amount: 150, type: TransactionType.DEBIT, accountCurrency: 'USD' },
+      {
+        amount: 100,
+        type: TransactionType.CREDIT,
+        exchangeRate: 1.5,
+        accountCurrency: 'EUR',
+      },
+    ];
+    expect(JournalCalculator.isBalanced(lines, 'USD')).toBe(true);
+  });
+
   it('calculates imbalance correctly', () => {
     // 100 Debit vs 50 Credit = 50 diff
     expect(JournalCalculator.calculateImbalance([debit100, credit50], 'USD')).toBe(50);

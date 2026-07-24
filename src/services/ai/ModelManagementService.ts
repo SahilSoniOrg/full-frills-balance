@@ -275,7 +275,7 @@ export class ModelManagementService {
     }
 
     const headers: Record<string, string> = {};
-    const hfToken = process.env.EXPO_PUBLIC_HF_TOKEN;
+    const hfToken = process.env.HF_TOKEN ?? process.env.EXPO_PUBLIC_HF_TOKEN;
     if (hfToken && model.url.includes('huggingface.co')) {
       headers['Authorization'] = `Bearer ${hfToken}`;
     }

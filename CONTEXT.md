@@ -6,6 +6,9 @@ This file captures the domain language for full-frills-balance. Use these terms 
 - **Account**: A ledger entity with type Asset, Liability, or Equity, representing physical or legal holding of value (e.g., Bank Account, Credit Card, Cash, Loan).
 - **Category**: A ledger entity with type Income or Expense, representing the classification of money flow (e.g., Salary, Food, Rent).
 
+## Multi-tenancy
+- **Workplace**: The tenant boundary for the app. Nearly every persisted table and query is scoped by `workplaceId`. A user can have multiple workplaces (e.g. personal vs. side business); the active one is stored in preferences as `activeWorkplaceId` and surfaced via `WorkplaceContext`.
+
 ## AI & Inference
 - **LLMEngine**: The interface representing a running instance of a local LLM that can generate completions. Hides the complexity of loading, managing, and unloading model weights.
 - **Inference Adapter**: The concrete implementation of `LLMEngine` (e.g. `SmallModelProvider`) that handles cross-seam dependencies like `ModelManagementService`.

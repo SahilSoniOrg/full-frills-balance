@@ -5,8 +5,10 @@
 import {
     amountsAreEqual,
     getEpsilon,
+    Money,
     roundToPrecision,
     safeAdd,
+    safeMultiply,
     safeSubtract
 } from '@/src/utils/money'
 
@@ -87,6 +89,24 @@ describe('money utilities', () => {
 
         it('should handle floating-point subtraction correctly', () => {
             expect(safeSubtract(0.3, 0.1, 2)).toBe(0.2)
+        })
+    })
+
+    describe('safeMultiply', () => {
+        it('should multiply and round correctly', () => {
+            expect(safeMultiply(10.1, 2, 2)).toBe(20.2)
+            expect(safeMultiply(0.1, 0.2, 2)).toBe(0.02)
+        })
+
+        it('should handle floating-point multiplication drift', () => {
+            expect(safeMultiply(100, 1.005, 2)).toBe(100.5)
+        })
+    })
+
+    describe('Money.multiply', () => {
+        it('should round product like add/subtract', () => {
+            const money = new Money(10.555, 'USD')
+            expect(money.multiply(2).amount).toBe(21.11)
         })
     })
 })

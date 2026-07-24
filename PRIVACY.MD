@@ -66,26 +66,26 @@ pages visited inside the app
 
 onboarding completion
 
-journal creation
+journal and budget creation (event counts only, not monetary values)
 
-import actions
+import and export actions (counts and formats, not row contents)
 
-export actions
-
-in-app account creation events
+in-app account creation events (account type and currency code only)
 
 selected currency preference
 
-app version
+app version, build, and variant
 
-device type
+device model, device name, OS name and version, and tablet flag
 
-operating system version
+pseudonymous analytics identifiers
 
 
 We do not intentionally send:
 
-transaction amounts
+transaction or budget amounts
+
+conversion or funnel monetary values
 
 merchant names
 
@@ -98,7 +98,7 @@ user-entered notes
 
 Analytics identifiers are pseudonymous and are used only to understand app usage and improve functionality.
 
-No screenshots or session replay are used.
+PostHog session replay is disabled. We do not record in-app screenshots or screen replays for product analytics.
 
 5. Internet Use
 

@@ -76,13 +76,7 @@ export class AnalyticsService {
             ...props,
             ...this.getGlobalProperties(),
           }),
-          enableSessionReplay: true,
-          sessionReplayConfig: {
-            sampleRate: 1.0,
-            maskAllTextInputs: true,
-            maskAllImages: true,
-            captureLog: true,
-          },
+          enableSessionReplay: false,
         });
 
         // Sync user with Sentry once PostHog is ready
@@ -278,8 +272,8 @@ export class AnalyticsService {
     this.track('workplace_deleted');
   }
 
-  logBudgetCreated(amount: number, currency: string) {
-    this.track('budget_created', { amount, currency });
+  logBudgetCreated(_amount: number, currency: string) {
+    this.track('budget_created', { currency });
   }
 
   logPlannedPaymentCreated(interval: string, type: string) {
@@ -440,11 +434,9 @@ export class AnalyticsService {
     });
   }
 
-  trackConversion(event: string, value?: number, currency?: string) {
+  trackConversion(event: string) {
     this.track('conversion', {
       conversion_event: event,
-      value: value || null,
-      currency: currency || null,
       timestamp: Date.now(),
     });
   }

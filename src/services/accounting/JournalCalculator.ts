@@ -1,4 +1,6 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { checkJournal, JournalLineForCheck } from '@/src/services/accounting/BalanceEffects';
 import { sanitizeAmount } from '@/src/utils/validation';
 
 export interface JournalLineWithRateCorrection {
@@ -68,14 +70,22 @@ export class JournalCalculator {
   }
 
   /**
-   * Checks if the journal is balanced.
+   * Checks if the journal is balanced (delegates to BalanceEffects.checkJournal).
    */
   static isBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
-    const debits = JournalCalculator.calculateTotalDebits(lines, baseCurrency);
-    const credits = JournalCalculator.calculateTotalCredits(lines, baseCurrency);
-    // Use a small epsilon to account for floating point summation noise
-    // Since all individual lines are rounded to 2 decimals, 0.001 is a safe threshold
-    return Math.abs(debits - credits) < 0.001;
+    const forCheck: JournalLineForCheck[] = lines.map(line => ({
+      amount: JournalCalculator.getLineBaseAmount(
+        {
+          amount: line.amount,
+          exchangeRate: line.exchangeRate,
+          accountCurrency: line.accountCurrency,
+        },
+        baseCurrency,
+      ),
+      type: line.type,
+      exchangeRate: 1,
+    }));
+    return checkJournal(forCheck, AppConfig.constants.precision).isValid;
   }
 
   /**
