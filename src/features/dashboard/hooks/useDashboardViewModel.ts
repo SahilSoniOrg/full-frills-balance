@@ -9,7 +9,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import {
   safeToSpendReadModel,
-  SafeToSpendResult,
+  SafeToSpendDashboard,
 } from '@/src/services/simulation/SafeToSpendReadModel';
 import { smsService } from '@/src/services/sms-service';
 import { logger as appLogger } from '@/src/utils/logger';
@@ -40,7 +40,7 @@ export interface DashboardViewModel {
     placement?: 'end' | 'center';
     accessibilityLabel?: string;
   };
-  safeToSpendData: SafeToSpendResult | null;
+  safeToSpendData: SafeToSpendDashboard | null;
   explanationModalState: {
     visible: boolean;
     setVisible: (v: boolean) => void;
@@ -80,7 +80,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode: onTogglePrivacy } =
     useScreenPrivacyMode(isPrivacyMode);
 
-  const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
+  const { data: safeToSpendData } = useObservable<SafeToSpendDashboard | null>(
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
     [workplaceId, isAppReady],
     () => snapshotService.getCustomSnapshot(workplaceId, `safe_to_spend`),

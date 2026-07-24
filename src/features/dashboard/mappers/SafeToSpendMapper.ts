@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
@@ -14,18 +14,18 @@ export interface MapperOptions {
 }
 
 export interface SafeToSpendMapperInput {
-  summary: SafeToSpendResult['summary'];
-  report: SafeToSpendResult['report'];
+  summary: SafeToSpendDashboard['summary'];
+  report: SafeToSpendDashboard['report'];
   totalLiquidAssets: number;
-  accountSummaries: SafeToSpendResult['accountSummaries'];
-  liquidAssetSubtypes: SafeToSpendResult['liquidAssetSubtypes'];
+  accountSummaries: SafeToSpendDashboard['accountSummaries'];
+  liquidAssetSubtypes: SafeToSpendDashboard['liquidAssetSubtypes'];
   accountMap: Map<string, Account>;
   safeToSpendDays: number;
 }
 
 export class SafeToSpendMapper {
   /**
-   * Maps a raw SafeToSpendResult into a UI-ready ViewModel.
+   * Maps a raw SafeToSpendDashboard into a UI-ready ViewModel.
    * This is a pure function that handles formatting and derived logic.
    */
   static mapToViewModel(

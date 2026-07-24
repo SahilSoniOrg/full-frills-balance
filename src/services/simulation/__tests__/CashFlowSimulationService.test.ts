@@ -79,19 +79,19 @@ describe('CashFlowSimulationService', () => {
   });
 
   it('runs a basic simulation with starting balance and no flows', async () => {
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([[liquidAccountId, 1000]]),
-      [],
-      [],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(1000);
     expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1000);
@@ -111,19 +111,19 @@ describe('CashFlowSimulationService', () => {
       currencyCode: 'USD',
     } as any;
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([[liquidAccountId, 1000]]),
-      [plannedPayment],
-      [],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([[liquidAccountId, 1000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Initial 1000.
     // Occurrence 1: Day 5 (offset 4) - 400 = 600
@@ -153,22 +153,22 @@ describe('CashFlowSimulationService', () => {
       currencyCode: 'USD',
     } as any;
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([
         [liquidAccountId, 1000],
         [otherAccountId, 0],
       ]),
-      [plannedTransfer],
-      [],
-      [liquidAccountId, otherAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount, otherAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+      plannedPayments: [plannedTransfer],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId, otherAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount, otherAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Global balance should remain 1000
     expect(result.simulationResult.summary.safeToSpend).toBe(1000);
@@ -201,19 +201,19 @@ describe('CashFlowSimulationService', () => {
       { budgetId, accountId: expenseAccount.id, account: expenseAccount },
     ]);
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [],
-      [],
-      [liquidAccountId],
-      [],
-      [budget],
-      [usage],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [budget],
+      usages: [usage],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Budget is 300/month.
     // April (30 days): 300.
@@ -243,19 +243,19 @@ describe('CashFlowSimulationService', () => {
       journalDate: dayjs('2026-04-03T12:00:00Z').valueOf(),
     } as any;
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [],
-      [plannedJournal],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount, expenseAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [plannedJournal],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount, expenseAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Initial 1000.
     // Journal on D3: -100 USD (from 100 EUR @ 1:2 rate).
@@ -296,19 +296,19 @@ describe('CashFlowSimulationService', () => {
       .fn()
       .mockResolvedValue(new Map([[ccId, 500]]));
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [plannedPayment],
-      [],
-      [liquidAccountId],
-      [{ account: ccAccount, balance: 500 }],
-      [],
-      [],
-      [liquidAccount, ccAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [{ account: ccAccount, balance: 500 }],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount, ccAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // CC starting balance 500.
     // PP: -200 on D10, -200 on D40 (if monthly).
@@ -355,19 +355,19 @@ describe('CashFlowSimulationService', () => {
       { budgetId: budget.id, accountId: expenseAccount.id, account: expenseAccount },
     ]);
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 2000]]),
-      [plannedPayment],
-      [],
-      [liquidAccountId],
-      [],
-      [budget],
-      [usage],
-      [liquidAccount, expenseAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 2000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [budget],
+      usages: [usage],
+      allAccounts: [liquidAccount, expenseAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Initial 2000.
     // Daily burn: 1000 / safeToSpendDays.
@@ -437,19 +437,19 @@ describe('CashFlowSimulationService', () => {
       .fn()
       .mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 });
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [plannedInflow],
-      [],
-      [liquidAccountId],
-      [{ account: ccAccount, balance: 500 }],
-      [],
-      [],
-      [liquidAccount, ccAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [plannedInflow],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [{ account: ccAccount, balance: 500 }],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount, ccAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // CC starting balance 500.
     // INFLOW of 100 on D5, and D35 (if monthly).
@@ -491,19 +491,20 @@ describe('CashFlowSimulationService', () => {
       .fn()
       .mockResolvedValue({ totalDecrease: 200, totalIncrease: 0 });
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [{ account: ccAccount, balance: 800 }],
+      budgets: // Current balance 800
       [],
-      [],
-      [liquidAccountId],
-      [{ account: ccAccount, balance: 800 }], // Current balance 800
-      [],
-      [],
-      [liquidAccount, ccAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+      usages: [],
+      allAccounts: [liquidAccount, ccAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Calculation:
     // Statement = 500. Settled = 200. Remaining = 300.
@@ -549,19 +550,19 @@ describe('CashFlowSimulationService', () => {
       .fn()
       .mockResolvedValue(journalTxs.map(tx => ({ ...tx, journalId: journal.id })));
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 5000]]),
-      [plannedPayment],
-      [journal],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 5000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [journal],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Initial 5000.
     // April 5 occurrence: Covered by Journal (-1000). Template SHOULD BE SKIPPED.
@@ -599,19 +600,19 @@ describe('CashFlowSimulationService', () => {
       status: 'ACTIVE',
     } as any;
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [plannedPayment],
-      [],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Should generate a flow for "today" (offset 0) even though it was due in the past
     const plannedFlows = result.allFlows!.filter((f: any) => f.referenceId === 'pp-overdue');
@@ -645,19 +646,19 @@ describe('CashFlowSimulationService', () => {
       status: 'ACTIVE',
     } as any;
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
-      [plannedPayment],
-      [],
-      [liquidAccountId],
-      [],
-      [],
-      [],
-      [liquidAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [plannedPayment],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     // Should project for 5th, 6th, 7th, 8th, 9th, 10th.
     // 5 occurrences (April 5, 6, 7, 8, 9, 10)

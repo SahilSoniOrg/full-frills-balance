@@ -3,7 +3,7 @@ import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
-import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import React from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
@@ -157,7 +157,7 @@ export function DashboardScreenView({
             <DashboardHeader {...headerProps} />
             <View style={{ zIndex: 10 }}>
               <SafeToSpendCard
-                {...(safeToSpendData || ({} as unknown as SafeToSpendResult))}
+                {...(safeToSpendData || ({} as unknown as SafeToSpendDashboard))}
                 viewModel={safeToSpendViewModel}
                 onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
                 onLegendPress={safeToSpendViewModel.setSelectedLegendItem}

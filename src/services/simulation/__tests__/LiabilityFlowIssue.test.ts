@@ -106,19 +106,19 @@ describe('liability flow issue', () => {
       },
     ]);
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([['cash' as AccountId, 1200]]),
-      plannedPayments,
-      [],
-      ['cash' as AccountId],
-      [{ account: creditCardAccount, balance: 0 }],
-      [],
-      [],
-      [cashAccount, creditCardAccount],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1200]]),
+      plannedPayments: plannedPayments,
+      plannedJournals: [],
+      liquidAssetIds: ['cash' as AccountId],
+      liabilityAccountBalances: [{ account: creditCardAccount, balance: 0 }],
+      budgets: [],
+      usages: [],
+      allAccounts: [cashAccount, creditCardAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     console.log(
       'liability flows',

@@ -251,23 +251,23 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     );
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 2500],
         ['savings' as AccountId, 1200],
         ['wallet' as AccountId, 300],
       ]),
-      plannedPayments,
-      [],
-      ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
-      liabilityAccountBalances,
-      budgets,
-      usages,
-      allAccounts,
-      'USD',
-      'test-wp' as WorkplaceId,
-      AppConfig.defaults.safeToSpendDays,
-    );
+      plannedPayments: plannedPayments,
+      plannedJournals: [],
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
+      liabilityAccountBalances: liabilityAccountBalances,
+      budgets: budgets,
+      usages: usages,
+      allAccounts: allAccounts,
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: AppConfig.defaults.safeToSpendDays,
+    });
 
     expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
     expect(result.allFlows!.length).toBeGreaterThan(250);
@@ -350,19 +350,19 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       ]),
     );
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([['cash' as AccountId, 2000]]),
-      plannedPayments,
-      plannedJournals,
-      ['cash' as AccountId],
-      [],
-      [],
-      [],
-      [cash, ...expenseAccounts],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 2000]]),
+      plannedPayments: plannedPayments,
+      plannedJournals: plannedJournals,
+      liquidAssetIds: ['cash' as AccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [cash, ...expenseAccounts],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     const plannedFlows = result.allFlows!.filter(
       flow =>
@@ -392,19 +392,19 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       currencyCode: 'USD',
     })) as any[];
 
-    const result = await cashFlowSimulationService.simulate(
-      new Map<AccountId, number>([['cash' as AccountId, 500]]),
-      plannedPayments,
-      [],
-      ['cash' as AccountId],
-      [],
-      [],
-      [],
-      [cash],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    );
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 500]]),
+      plannedPayments: plannedPayments,
+      plannedJournals: [],
+      liquidAssetIds: ['cash' as AccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [cash],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
     expect(result.simulationResult.summary.shortfall).toBe(2500);

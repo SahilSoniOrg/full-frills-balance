@@ -1,7 +1,7 @@
 import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
-import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';
@@ -10,7 +10,7 @@ import { SafeToSpendHeader } from './SafeToSpendHeader';
 /** Width threshold where the card switches to side-by-side layout. */
 const TABLET_BREAKPOINT = 600;
 
-export interface SafeToSpendCardProps extends SafeToSpendResult {
+export interface SafeToSpendCardProps extends SafeToSpendDashboard {
   isLoading?: boolean;
   onInfoPress: () => void;
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;

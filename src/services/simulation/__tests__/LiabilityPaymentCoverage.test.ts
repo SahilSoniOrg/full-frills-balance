@@ -1,5 +1,8 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import {
+  cashFlowSimulationService,
+  SimulationInput,
+} from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -58,28 +61,22 @@ const creditCardAccount = {
   },
 } as any;
 
-type SimulateArgs = Parameters<typeof cashFlowSimulationService.simulate>;
-type OverrideMap = Partial<{ [K in keyof SimulateArgs]: SimulateArgs[K] }>;
+const simulate = (overrides: Partial<SimulationInput> = {}) => {
+  const input: SimulationInput = {
+    startingBalances: new Map<AccountId, number>([['checking-1' as AccountId, 2000]]),
+    plannedPayments: [],
+    plannedJournals: [],
+    liquidAssetIds: ['checking-1' as AccountId],
+    liabilityAccountBalances: [{ account: creditCardAccount, balance: 1000 }],
+    budgets: [],
+    usages: [],
+    allAccounts: [checkingAccount, creditCardAccount],
+    resultCurrency: 'USD',
+    workplaceId: 'test-wp' as WorkplaceId,
+    ...overrides,
+  };
 
-const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] = []) => {
-  const defaultArgs: Parameters<typeof cashFlowSimulationService.simulate> = [
-    new Map<AccountId, number>([['checking-1' as AccountId, 2000]]),
-    planned,
-    [],
-    ['checking-1' as AccountId],
-    [{ account: creditCardAccount, balance: 1000 }],
-    [],
-    [],
-    [checkingAccount, creditCardAccount],
-    'USD',
-    'test-wp' as WorkplaceId,
-  ];
-
-  Object.entries(overrides).forEach(([index, value]) => {
-    (defaultArgs as any)[Number(index)] = value;
-  });
-
-  return cashFlowSimulationService.simulate(...defaultArgs);
+  return cashFlowSimulationService.simulate(input);
 };
 
 describe('Liability payment coverage', () => {
@@ -106,7 +103,7 @@ describe('Liability payment coverage', () => {
       currencyCode: 'USD',
     } as any;
 
-    const result = await simulate({ 1: [plannedPayment] }, [plannedPayment as any]);
+    const result = await simulate({ plannedPayments: [plannedPayment] });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(1000);
   });

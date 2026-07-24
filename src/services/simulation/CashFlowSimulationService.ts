@@ -42,69 +42,11 @@ export type SimulationInput = {
   trace?: Trace;
 };
 
-function isSimulationInput(value: unknown): value is SimulationInput {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    !(value instanceof Map) &&
-    'startingBalances' in value &&
-    'workplaceId' in value
-  );
-}
-
 export class CashFlowSimulationService {
   /**
    * Cash flow simulation following the "Generate truth -> simulate once" architecture.
-   * Prefer the SimulationInput object form.
-   * TODO: delete positional simulate(...) overload once CashFlowSimulationService tests
-   * migrate to SimulationInput (many call sites still use positional args).
    */
-  async simulate(input: SimulationInput): Promise<SimulationRunResult>;
-  async simulate(
-    startingBalances: Map<AccountId, number>,
-    plannedPayments: PlannedPayment[],
-    plannedJournals: Journal[],
-    liquidAssetIds: AccountId[],
-    liabilityAccountBalances: { account: Account; balance: number }[],
-    budgets: Budget[],
-    usages: BudgetUsage[],
-    allAccounts: Account[],
-    resultCurrency: string,
-    workplaceId: WorkplaceId,
-    simulationDays?: number,
-    trace?: Trace,
-  ): Promise<SimulationRunResult>;
-  async simulate(
-    startingBalancesOrInput: Map<AccountId, number> | SimulationInput,
-    plannedPaymentsArg?: PlannedPayment[],
-    plannedJournalsArg?: Journal[],
-    liquidAssetIdsArg?: AccountId[],
-    liabilityAccountBalancesArg?: { account: Account; balance: number }[],
-    budgetsArg?: Budget[],
-    usagesArg?: BudgetUsage[],
-    allAccountsArg?: Account[],
-    resultCurrencyArg?: string,
-    workplaceIdArg?: WorkplaceId,
-    simulationDaysArg: number = AppConfig.defaults.safeToSpendDays,
-    traceArg?: Trace,
-  ): Promise<SimulationRunResult> {
-    const input: SimulationInput = isSimulationInput(startingBalancesOrInput)
-      ? startingBalancesOrInput
-      : {
-          startingBalances: startingBalancesOrInput,
-          plannedPayments: plannedPaymentsArg!,
-          plannedJournals: plannedJournalsArg!,
-          liquidAssetIds: liquidAssetIdsArg!,
-          liabilityAccountBalances: liabilityAccountBalancesArg!,
-          budgets: budgetsArg!,
-          usages: usagesArg!,
-          allAccounts: allAccountsArg!,
-          resultCurrency: resultCurrencyArg!,
-          workplaceId: workplaceIdArg!,
-          simulationDays: simulationDaysArg,
-          trace: traceArg,
-        };
-
+  async simulate(input: SimulationInput): Promise<SimulationRunResult> {
     const {
       startingBalances,
       plannedPayments,

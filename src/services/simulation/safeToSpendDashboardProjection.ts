@@ -47,9 +47,6 @@ export interface SafeToSpendDashboard {
   safeToSpendDays: number;
 }
 
-/** @deprecated Use SafeToSpendDashboard — kept for existing imports. */
-export type SafeToSpendResult = SafeToSpendDashboard;
-
 export function buildNetCashFlowByDay(
   deltas: DailyDelta[],
   defaultCurrencyCode: string,

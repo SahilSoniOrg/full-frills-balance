@@ -4,7 +4,10 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import {
+  cashFlowSimulationService,
+  SimulationInput,
+} from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -114,33 +117,27 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       },
     }) as any;
 
-  const simulate = async (
-    overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>,
-  ) => {
+  const simulate = async (overrides?: Partial<SimulationInput>) => {
     const cash = makeAsset('cash', 'Checking');
-    const args: Parameters<typeof cashFlowSimulationService.simulate> = [
-      new Map<AccountId, number>([['cash' as AccountId, 1000]]),
-      [],
-      [],
-      ['cash' as AccountId],
-      [],
-      [],
-      [],
-      [cash],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    ];
+    const input: SimulationInput = {
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: ['cash' as AccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [cash],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+      ...overrides,
+    };
 
-    for (const [index, value] of Object.entries(overrides ?? {})) {
-      args[Number(index)] = value as never;
-    }
-
-    // Mock metadata based on liabilityAccountBalances (args[4])
-    const lbs = args[4] as { account: any; balance: number }[];
+    // Mock metadata based on liabilityAccountBalances
     const metadataList = await Promise.all(
-      lbs.map(async lb => {
-        const fetchRes = await lb.account.metadataRecords.fetch();
+      input.liabilityAccountBalances.map(async lb => {
+        const fetchRes = await (lb.account as any).metadataRecords.fetch();
         return {
           accountId: lb.account.id,
           ...fetchRes[0],
@@ -149,7 +146,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
-    return cashFlowSimulationService.simulate(...args);
+    return cashFlowSimulationService.simulate(input);
   };
 
   beforeEach(() => {
@@ -208,18 +205,18 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 1500],
         ['savings' as AccountId, 800],
       ]),
-      3: ['cash' as AccountId, 'savings' as AccountId],
-      4: [
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId],
+      liabilityAccountBalances: [
         { account: ccPrimary, balance: 800 },
         { account: ccBackup, balance: 300 },
         { account: loan, balance: 600 },
       ],
-      7: [cash, savings, ccPrimary, ccBackup, loan],
-    } as any);
+      allAccounts: [cash, savings, ccPrimary, ccBackup, loan],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(5);
@@ -258,17 +255,17 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 300],
         ['savings' as AccountId, 100],
       ]),
-      3: ['cash' as AccountId, 'savings' as AccountId],
-      4: [
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId],
+      liabilityAccountBalances: [
         { account: cc, balance: 250 },
         { account: loan, balance: 400 },
       ],
-      7: [cash, savings, cc, loan],
-    } as any);
+      allAccounts: [cash, savings, cc, loan],
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
     expect(result.simulationResult.summary.shortfall).toBe(250);
@@ -295,13 +292,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     });
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
-      4: [
+      startingBalances: new Map([['cash', 1000]]),
+      liabilityAccountBalances: [
         { account: externalCard, balance: 500 },
         { account: trackedLoan, balance: 200 },
       ],
-      7: [cash, externalCard, trackedLoan],
-    } as any);
+      allAccounts: [cash, externalCard, trackedLoan],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
@@ -343,14 +340,14 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 1000],
         ['eur-savings' as AccountId, 100],
       ]),
-      3: ['cash' as AccountId, 'eur-savings' as AccountId],
-      4: [{ account: euroLoan, balance: 50 }],
-      7: [cash, euroSavings, euroLoan],
-    } as any);
+      liquidAssetIds: ['cash' as AccountId, 'eur-savings' as AccountId],
+      liabilityAccountBalances: [{ account: euroLoan, balance: 50 }],
+      allAccounts: [cash, euroSavings, euroLoan],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
@@ -416,15 +413,15 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     ];
 
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 5000],
         ['savings' as AccountId, 3200],
         ['wallet' as AccountId, 150],
       ]),
-      3: ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
-      4: liabilityBalances,
-      7: allAccounts,
-    } as any);
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
+      liabilityAccountBalances: liabilityBalances,
+      allAccounts: allAccounts,
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(20);
@@ -461,8 +458,8 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-card-a',
           name: 'Card A payment',
@@ -475,12 +472,12 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      4: [
+      liabilityAccountBalances: [
         { account: cardA, balance: 400 },
         { account: cardB, balance: 400 },
       ],
-      7: [cash, cardA, cardB],
-    } as any);
+      allAccounts: [cash, cardA, cardB],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 

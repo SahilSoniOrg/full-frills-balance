@@ -37,12 +37,11 @@ import dayjs from 'dayjs';
 import { Platform } from 'react-native';
 import { combineLatest, firstValueFrom, from, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
-import type { SafeToSpendResult } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 export type {
   SafeToSpendDashboard,
   SafeToSpendDataPoint,
   SafeToSpendProjection,
-  SafeToSpendResult,
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
 
 /** Widget / headline path — intentionally tiny. */
@@ -56,14 +55,14 @@ export type SafeToSpendHeadline = {
 
 export interface SafeToSpendHandle {
   /** Dashboard default — currency and window resolved inside the Module. */
-  watch(): Observable<SafeToSpendResult>;
+  watch(): Observable<SafeToSpendDashboard>;
   /** Widget sync — same underlying projection, headline fields only. */
   watchHeadline(): Observable<SafeToSpendHeadline>;
   /** Splash pre-warm — fire-and-forget first emission. */
   preWarm(): Promise<void>;
 }
 
-function toHeadline(result: SafeToSpendResult): SafeToSpendHeadline {
+function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
   return {
     currencyCode: result.currencyCode,
     safeToSpend: result.summary.safeToSpend,
@@ -75,7 +74,7 @@ function toHeadline(result: SafeToSpendResult): SafeToSpendHeadline {
 
 export class SafeToSpendReadModel {
   /** Single workplace-keyed cache — currency switchMaps inside the pipeline. */
-  private workplaceWatchCache = new Map<WorkplaceId, Observable<SafeToSpendResult>>();
+  private workplaceWatchCache = new Map<WorkplaceId, Observable<SafeToSpendDashboard>>();
 
   clearCache(): void {
     this.workplaceWatchCache.clear();
@@ -100,7 +99,7 @@ export class SafeToSpendReadModel {
     };
   }
 
-  private watchWorkplace(workplaceId: WorkplaceId): Observable<SafeToSpendResult> {
+  private watchWorkplace(workplaceId: WorkplaceId): Observable<SafeToSpendDashboard> {
     const cached = this.workplaceWatchCache.get(workplaceId);
     if (cached) return cached;
 
@@ -124,14 +123,16 @@ export class SafeToSpendReadModel {
   observeSafeToSpend(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
-  ): Observable<SafeToSpendResult> {
+  ): Observable<SafeToSpendDashboard> {
     return this.buildSafeToSpendPipeline(workplaceId, defaultCurrencyCode);
   }
 
+  // Pipeline stays inline: extract to safeToSpendPipeline.ts only when the
+  // observe/assemble boundary is clearer; workplace cache already owns lifecycle.
   private buildSafeToSpendPipeline(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
-  ): Observable<SafeToSpendResult> {
+  ): Observable<SafeToSpendDashboard> {
     return combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([

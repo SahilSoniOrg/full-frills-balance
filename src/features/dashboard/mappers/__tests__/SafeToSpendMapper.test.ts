@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
-import { SafeToSpendResult } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
 
@@ -11,7 +11,7 @@ jest.mock('@/src/utils/currencyFormatter', () => ({
 }));
 
 describe('SafeToSpendMapper', () => {
-  const mockResult: SafeToSpendResult = {
+  const mockResult: SafeToSpendDashboard = {
     summary: {
       safeToSpend: 1000,
       shortfall: 0,

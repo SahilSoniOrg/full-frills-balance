@@ -5,7 +5,10 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import {
+  cashFlowSimulationService,
+  SimulationInput,
+} from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import dayjs from 'dayjs';
@@ -111,32 +114,26 @@ describe('CashFlowSimulationService scenario coverage', () => {
     },
   } as any;
 
-  const simulate = async (
-    overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>,
-  ) => {
-    const args: Parameters<typeof cashFlowSimulationService.simulate> = [
-      new Map<AccountId, number>([['cash' as AccountId, 1000]]),
-      [],
-      [],
-      ['cash' as AccountId],
-      [],
-      [],
-      [],
-      [cash],
-      'USD',
-      'test-wp' as WorkplaceId,
-      60,
-    ];
+  const simulate = async (overrides?: Partial<SimulationInput>) => {
+    const input: SimulationInput = {
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: ['cash' as AccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [cash],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+      ...overrides,
+    };
 
-    for (const [index, value] of Object.entries(overrides ?? {})) {
-      args[Number(index)] = value as never;
-    }
-
-    // Mock metadata based on liabilityAccountBalances (args[4])
-    const lbs = args[4] as { account: any; balance: number }[];
+    // Mock metadata based on liabilityAccountBalances
     const metadataList = await Promise.all(
-      lbs.map(async lb => {
-        const fetchRes = await lb.account.metadataRecords.fetch();
+      input.liabilityAccountBalances.map(async lb => {
+        const fetchRes = await (lb.account as any).metadataRecords.fetch();
         return {
           accountId: lb.account.id,
           ...fetchRes[0],
@@ -145,7 +142,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     );
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
-    return cashFlowSimulationService.simulate(...args);
+    return cashFlowSimulationService.simulate(input);
   };
 
   beforeEach(() => {
@@ -172,13 +169,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('keeps safe-to-spend flat when there are multiple liquid accounts and no future flows', async () => {
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 1000],
         ['savings' as AccountId, 2500],
       ]),
-      3: ['cash' as AccountId, 'savings' as AccountId],
-      7: [cash, savings],
-    } as any);
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId],
+      allAccounts: [cash, savings],
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(3500);
     expect(result.simulationResult.summary.shortfall).toBe(0);
@@ -193,8 +190,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('applies fixed planned outflows and reports shortfall when cash goes negative', async () => {
     const result = await simulate({
-      0: new Map<AccountId, number>([['cash' as AccountId, 100]]),
-      1: [
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 100]]),
+      plannedPayments: [
         {
           id: 'pp-rent' as PlannedPaymentId,
           name: 'Rent',
@@ -207,7 +204,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-    } as any);
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
     expect(result.simulationResult.summary.shortfall).toBe(500);
@@ -223,8 +220,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map<AccountId, number>([['cash' as AccountId, 500]]),
-      1: [
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 500]]),
+      plannedPayments: [
         {
           id: 'pp-salary' as PlannedPaymentId,
           name: 'Salary',
@@ -248,7 +245,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-groceries' as BudgetId,
           name: 'Groceries Budget',
@@ -257,9 +254,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, groceries],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, groceries],
+    });
 
     expect(result.simulationResult.summary.firstMajorInflowDay).toBe(2);
     expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(488.19, 1);
@@ -275,8 +272,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-dining' as PlannedPaymentId,
           name: 'Dinner reservation',
@@ -289,7 +286,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-dining',
           name: 'Dining Budget',
@@ -298,9 +295,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, dining],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, dining],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
     expect(resolved?.amount).toBe(80);
@@ -315,12 +312,12 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 400],
         ['savings' as AccountId, 600],
       ]),
-      3: ['cash' as AccountId, 'savings' as AccountId],
-      5: [
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId],
+      budgets: [
         {
           id: 'b-shared' as BudgetId,
           name: 'Shared Grocery Budget',
@@ -329,9 +326,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, savings, groceries],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, savings, groceries],
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(409.68, 1);
     expect(
@@ -346,11 +343,11 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('keeps internal liquid transfers net-zero globally while changing account-level balances', async () => {
     const result = await simulate({
-      0: new Map<AccountId, number>([
+      startingBalances: new Map<AccountId, number>([
         ['cash' as AccountId, 1000],
         ['savings' as AccountId, 0],
       ]),
-      1: [
+      plannedPayments: [
         {
           id: 'pp-sweep' as PlannedPaymentId,
           name: 'Savings sweep',
@@ -363,9 +360,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      3: ['cash' as AccountId, 'savings' as AccountId],
-      7: [cash, savings],
-    } as any);
+      liquidAssetIds: ['cash' as AccountId, 'savings' as AccountId],
+      allAccounts: [cash, savings],
+    });
 
     const lastProjection =
       result.simulationResult.projections[result.simulationResult.projections.length - 1];
@@ -380,8 +377,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-cc-overpay' as PlannedPaymentId,
           name: 'Aggressive card payment',
@@ -394,9 +391,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      4: [{ account: cc, balance: 400 }],
-      7: [cash, cc],
-    } as any);
+      liabilityAccountBalances: [{ account: cc, balance: 400 }],
+      allAccounts: [cash, cc],
+    });
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
     expect(result.simulationResult.summary.shortfall).toBe(1000);
@@ -418,10 +415,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
     });
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      4: [{ account: cc, balance: 800 }],
-      7: [cash, cc],
-    } as any);
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      liabilityAccountBalances: [{ account: cc, balance: 800 }],
+      allAccounts: [cash, cc],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(2);
@@ -434,10 +431,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
       { emiDay: 20, payFromAccountId: 'cash', emiAmount: 350 },
     ]);
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      4: [{ account: loan, balance: 350 }],
-      7: [cash, loan],
-    } as any);
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      liabilityAccountBalances: [{ account: loan, balance: 350 }],
+      allAccounts: [cash, loan],
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
@@ -455,8 +452,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-rent' as PlannedPaymentId,
           name: 'Rent template',
@@ -469,7 +466,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      2: [
+      plannedJournals: [
         {
           id: 'j-rent',
           description: 'Rent generated journal',
@@ -477,8 +474,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
           plannedPaymentId: 'pp-rent',
         } as any,
       ],
-      7: [cash, { id: 'exp-rent', name: 'Rent', accountType: AccountType.EXPENSE }],
-    } as any);
+      allAccounts: [cash, { id: 'exp-rent', name: 'Rent', accountType: AccountType.EXPENSE }],
+    });
 
     const plannedFlows = result.allFlows!.filter(
       flow =>
@@ -499,8 +496,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-dining-shared' as PlannedPaymentId,
           name: 'Shared dining spend',
@@ -513,7 +510,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-food-shared' as BudgetId,
           name: 'Food Budget',
@@ -522,9 +519,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, groceries, dining],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, groceries, dining],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
     expect(resolved?.amount).toBe(80);
@@ -538,8 +535,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-dining' as PlannedPaymentId,
           name: 'Dining spend',
@@ -563,7 +560,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-food' as BudgetId,
           name: 'Food Budget',
@@ -572,9 +569,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, groceries, dining],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, groceries, dining],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
@@ -596,8 +593,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     });
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-dining-eur' as PlannedPaymentId,
           name: 'European Dinner',
@@ -610,7 +607,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           intervalN: 1,
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-dining',
           name: 'Dining Budget',
@@ -619,9 +616,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, dining],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, dining],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
@@ -643,8 +640,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-snacks' as PlannedPaymentId,
           name: 'Snack run',
@@ -657,7 +654,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-food-parent' as BudgetId,
           name: 'Food Parent Budget',
@@ -666,9 +663,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, food, snacks],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, food, snacks],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
@@ -687,8 +684,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ]);
 
       const result = await simulate({
-        0: new Map([['cash' as AccountId, 1000]]),
-        5: [
+        startingBalances: new Map([['cash' as AccountId, 1000]]),
+        budgets: [
           {
             id: 'b-overspent' as BudgetId,
             name: 'Overspent Budget',
@@ -697,9 +694,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
             currencyCode: 'USD',
           },
         ],
-        6: [{ remaining: -50 }],
-        7: [cash, groceries],
-      } as any);
+        usages: [{ remaining: -50 }],
+        allAccounts: [cash, groceries],
+      });
 
       const budgetFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.BUDGET);
 
@@ -719,8 +716,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-dining-exact' as PlannedPaymentId,
           name: 'Exact Dinner',
@@ -733,7 +730,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      5: [
+      budgets: [
         {
           id: 'b-dining-exact' as BudgetId,
           name: 'Dining Budget',
@@ -742,9 +739,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      6: [{ remaining: 300 }],
-      7: [cash, dining],
-    } as any);
+      usages: [{ remaining: 300 }],
+      allAccounts: [cash, dining],
+    });
 
     const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
@@ -763,8 +760,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ]);
 
       const result = await simulate({
-        0: new Map([['cash' as AccountId, 1000]]),
-        1: [
+        startingBalances: new Map([['cash' as AccountId, 1000]]),
+        plannedPayments: [
           {
             id: 'pp-groceries' as PlannedPaymentId,
             name: 'Groceries',
@@ -777,7 +774,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
             currencyCode: 'USD',
           },
         ],
-        5: [
+        budgets: [
           {
             id: 'b-smoothed' as BudgetId,
             name: 'Smoothed Budget',
@@ -786,9 +783,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
             currencyCode: 'USD',
           },
         ],
-        6: [{ remaining: 150 }], // 150 left in April
-        7: [cash, groceries],
-      } as any);
+        usages: [{ remaining: 150 }], // 150 left in April
+        allAccounts: [cash, groceries],
+      });
 
       // Simulation window is 60 days.
       // Smoothed Daily = (Remaining + Next Month Budget) / 60
@@ -810,8 +807,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([['cash' as AccountId, 1000]]),
-      1: [
+      startingBalances: new Map([['cash' as AccountId, 1000]]),
+      plannedPayments: [
         {
           id: 'pp-cc-spending' as PlannedPaymentId,
           name: 'Credit card spending',
@@ -824,10 +821,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      4: [{ account: cc, balance: 0 }],
-      7: [cash, cc, dining],
-      10: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
-    } as any);
+      liabilityAccountBalances: [{ account: cc, balance: 0 }],
+      allAccounts: [cash, cc, dining],
+      simulationDays: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
+    });
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
