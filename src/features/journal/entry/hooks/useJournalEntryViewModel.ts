@@ -1,5 +1,5 @@
-import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { AppConfig } from '@/src/constants';
+import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
@@ -14,8 +14,17 @@ import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/us
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import {
+  createSmsJournalAfterSaveHandler,
+  isAdvancedJournalFormValid,
+  isJournalEntrySubmitDisabled,
+  parseJournalEntryRouteParams,
+  resolveJournalEntryHeaderTitle,
+  resolveJournalEntryScreenMode,
+  resolveJournalEntrySubmitLabel,
+} from '@/src/services/journal/journalEntryScreenHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, AccountRole, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -82,59 +91,30 @@ export interface JournalEntryViewModel {
 
 export function useJournalEntryViewModel(): JournalEntryViewModel {
   const params = useLocalSearchParams();
+  const route = parseJournalEntryRouteParams(params);
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-
-  const initialMode =
-    params.mode === 'simple' || params.mode === 'advanced' || params.mode === 'bulk'
-      ? params.mode
-      : undefined;
-  const initialType =
-    params.type === 'expense' || params.type === 'income' || params.type === 'transfer'
-      ? params.type
-      : undefined;
-  const initialSourceAccountId =
-    typeof params.sourceAccountId === 'string'
-      ? (params.sourceAccountId as AccountId)
-      : typeof params.sourceId === 'string'
-        ? (params.sourceId as AccountId)
-        : undefined;
-  const initialDestinationAccountId =
-    typeof params.destinationAccountId === 'string'
-      ? (params.destinationAccountId as AccountId)
-      : typeof params.destinationId === 'string'
-        ? (params.destinationId as AccountId)
-        : undefined;
 
   const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
 
-  const smsId = params.smsId as string | undefined;
-  const smsRecordId = params.smsRecordId as string | undefined;
-
   const editor = useJournalEditor(workplaceId, {
-    journalId: params.journalId as JournalId,
-    initialMode: initialMode === 'bulk' ? undefined : initialMode,
-    initialType,
-    initialAmount: params.amount as string,
-    initialDescription: params.notes as string,
-    smsId,
-    smsRecordId,
-    smsSender: params.smsSender as string,
-    rawSmsBody: params.rawSmsBody as string,
-    initialDate: params.initialDate as string,
-    initialSourceId: initialSourceAccountId,
-    initialDestinationId: initialDestinationAccountId,
-    onAfterSave: smsRecordId
-      ? async result => {
-          if (result.journalId) {
-            await smsService.finalizeManualImport(smsRecordId, result.journalId);
-          }
-          if (smsId) {
-            await smsService.markSmsAsProcessed(smsId);
-          }
-        }
-      : smsId
-        ? async () => smsService.markSmsAsProcessed(smsId)
-        : undefined,
+    journalId: route.journalId,
+    initialMode: route.mode === 'bulk' ? undefined : route.mode,
+    initialType: route.type,
+    initialAmount: route.amount,
+    initialDescription: route.notes,
+    smsId: route.smsId,
+    smsRecordId: route.smsRecordId,
+    smsSender: route.smsSender,
+    rawSmsBody: route.rawSmsBody,
+    initialDate: route.initialDate,
+    initialSourceId: route.sourceAccountId,
+    initialDestinationId: route.destinationAccountId,
+    onAfterSave: createSmsJournalAfterSaveHandler({
+      smsId: route.smsId,
+      smsRecordId: route.smsRecordId,
+      finalizeManualImport: smsService.finalizeManualImport.bind(smsService),
+      markSmsAsProcessed: (smsId: string) => Promise.resolve(smsService.markSmsAsProcessed(smsId)),
+    }),
     onSuccess: () => AppNavigation.back(),
   });
 
@@ -142,7 +122,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
-  // Sub-hook 1: Account Selection
   const {
     showAccountPicker,
     activeLineId,
@@ -153,7 +132,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     selectableAccounts,
   } = useJournalEntryAccountSelection({ accounts, editor });
 
-  // Editor for Simple Mode
   const simpleEditor = useSimpleJournalEditor({
     accounts,
     editor,
@@ -165,7 +143,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     },
   });
 
-  // Sub-hook 2: Voice Input Sync
   const { isVoiceModalVisible, setIsVoiceModalVisible, handleApplyVoiceInput } =
     useJournalEntryVoiceInput({
       accounts,
@@ -173,12 +150,9 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       simpleEditor,
     });
 
-  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk'>(() => {
-    if (initialMode === 'simple') return 'guided';
-    if (initialMode === 'advanced') return 'advanced';
-    if (initialMode === 'bulk') return 'bulk';
-    return 'guided';
-  });
+  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk'>(() =>
+    resolveJournalEntryScreenMode(route.mode),
+  );
 
   const [savedSummary, setSavedSummary] = useState<{
     count: number;
@@ -227,15 +201,16 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     [editor, isSimpleModeDisabled, setActiveMode],
   );
 
-  const headerTitle = useMemo(() => {
-    if (activeMode === 'bulk') return 'Bulk Entry';
-    if (editor.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
-    return editor.isGuidedMode
-      ? AppConfig.strings.transactionFlow.headers.new
-      : AppConfig.strings.transactionFlow.headers.default;
-  }, [activeMode, editor.isEdit, editor.isGuidedMode]);
+  const headerTitle = useMemo(
+    () =>
+      resolveJournalEntryHeaderTitle({
+        activeMode,
+        isEdit: editor.isEdit,
+        isGuidedMode: editor.isGuidedMode,
+      }),
+    [activeMode, editor.isEdit, editor.isGuidedMode],
+  );
 
-  // Calculate Validations
   const isSimpleValid =
     simpleEditor.isValidAmount &&
     !!simpleEditor.sourceId &&
@@ -272,10 +247,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     return JournalCalculator.roundAmount(totalDebits).toFixed(2);
   }, [editor.isGuidedMode, simpleEditor.amount, totalDebits]);
 
-  const hasDescription = editor.description.trim().length > 0;
-  const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
-  const isAdvancedValid =
-    isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
+  const isAdvancedValid = isAdvancedJournalFormValid({
+    isBalanced,
+    description: editor.description,
+    lines: editor.lines,
+    isSubmitting: editor.isSubmitting,
+  });
 
   const handleSubmit = useCallback(() => {
     if (activeMode === 'bulk') {
@@ -291,57 +268,55 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     }
   }, [activeMode, bulkEditor, editor, isAmountFocused, isSimpleValid, simpleEditor]);
 
-  const isSubmitDisabled = useMemo(() => {
-    if (activeMode === 'bulk') {
-      return bulkEditor.isSubmitting || !bulkEditor.isValid;
-    }
-    return editor.isGuidedMode ? (isAmountFocused ? false : !isSimpleValid) : !isAdvancedValid;
-  }, [
-    activeMode,
-    bulkEditor.isSubmitting,
-    bulkEditor.isValid,
-    editor.isGuidedMode,
-    isAmountFocused,
-    isSimpleValid,
-    isAdvancedValid,
-  ]);
+  const isSubmitDisabled = useMemo(
+    () =>
+      isJournalEntrySubmitDisabled({
+        activeMode,
+        bulkSubmitting: bulkEditor.isSubmitting,
+        bulkValid: bulkEditor.isValid,
+        isGuidedMode: editor.isGuidedMode,
+        isAmountFocused,
+        isSimpleValid,
+        isAdvancedValid,
+      }),
+    [
+      activeMode,
+      bulkEditor.isSubmitting,
+      bulkEditor.isValid,
+      editor.isGuidedMode,
+      isAmountFocused,
+      isSimpleValid,
+      isAdvancedValid,
+    ],
+  );
 
-  const submitLabel = useMemo(() => {
-    if (activeMode === 'bulk') {
-      return bulkEditor.isSubmitting
-        ? 'Saving All...'
-        : `Save ${bulkEditor.rows.length} Transactions`;
-    }
-    if (editor.isGuidedMode) {
-      if (isAmountFocused && !isSimpleValid) {
-        return AppConfig.strings.transactionFlow.continue;
-      }
-      return simpleEditor.isSubmitting
-        ? AppConfig.strings.transactionFlow.saving
-        : AppConfig.strings.transactionFlow.save(simpleEditor.type);
-    }
-
-    if (editor.isSubmitting) {
-      return editor.isEdit
-        ? AppConfig.strings.advancedEntry.updating
-        : AppConfig.strings.advancedEntry.creating;
-    }
-
-    return editor.isEdit
-      ? AppConfig.strings.advancedEntry.updateJournal
-      : AppConfig.strings.advancedEntry.createJournal;
-  }, [
-    activeMode,
-    bulkEditor.isSubmitting,
-    bulkEditor.rows.length,
-    editor.isGuidedMode,
-    editor.isSubmitting,
-    editor.isEdit,
-    isAmountFocused,
-    isSimpleValid,
-    simpleEditor.isSubmitting,
-    simpleEditor.type,
-  ]);
+  const submitLabel = useMemo(
+    () =>
+      resolveJournalEntrySubmitLabel({
+        activeMode,
+        bulkSubmitting: bulkEditor.isSubmitting,
+        bulkRowCount: bulkEditor.rows.length,
+        isGuidedMode: editor.isGuidedMode,
+        isAmountFocused,
+        isSimpleValid,
+        simpleSubmitting: simpleEditor.isSubmitting,
+        simpleType: simpleEditor.type,
+        isEdit: editor.isEdit,
+        isSubmitting: editor.isSubmitting,
+      }),
+    [
+      activeMode,
+      bulkEditor.isSubmitting,
+      bulkEditor.rows.length,
+      editor.isGuidedMode,
+      editor.isSubmitting,
+      editor.isEdit,
+      isAmountFocused,
+      isSimpleValid,
+      simpleEditor.isSubmitting,
+      simpleEditor.type,
+    ],
+  );
 
   return {
     editor,
@@ -379,7 +354,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onSelectCurrency: setSelectedCurrency,
     totalDebits,
     totalCredits,
-    launchSource: typeof params.source === 'string' ? params.source : undefined,
+    launchSource: route.launchSource,
     onCreateAccountRequest,
     submitLabel,
     isSubmitDisabled,
