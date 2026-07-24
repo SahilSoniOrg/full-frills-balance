@@ -5,7 +5,7 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
-import { accountingService } from '@/src/utils/accountingService';
+import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
 

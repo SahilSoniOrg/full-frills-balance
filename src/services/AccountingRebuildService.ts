@@ -7,7 +7,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
-import { accountingService } from '@/src/utils/accountingService';
+import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';

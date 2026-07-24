@@ -23,7 +23,7 @@ import {
   WorkplaceId,
   mapTransactionToAudit,
 } from '@/src/types/domain';
-import { accountingService } from '@/src/utils/accountingService';
+import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { sanitizeAmount } from '@/src/utils/validation';

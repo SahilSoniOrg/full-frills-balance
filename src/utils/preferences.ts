@@ -2,6 +2,7 @@ import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-token
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
+import { useSyncExternalStore } from 'react';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { AppConfig } from '../constants/app-config';
@@ -78,6 +79,19 @@ class PreferencesHelper {
 
   constructor() {
     this.reloadFromStorage();
+  }
+
+  /**
+   * Returns the current preferences snapshot.
+   * Treat as immutable — mutations must go through setters / updatePreferences.
+   * Stable reference until the next preferences write (required by useSyncExternalStore).
+   */
+  getPreferences(): UIPreferences {
+    return this.preferences;
+  }
+
+  observeAll(): Observable<UIPreferences> {
+    return this.preferencesSubject.asObservable().pipe(distinctUntilChanged());
   }
 
   observe<K extends keyof UIPreferences>(key: K): Observable<UIPreferences[K]> {
@@ -527,3 +541,17 @@ export const preferencesMigration = {
     }
   },
 };
+
+/**
+ * React hook to observe UI preferences reactively.
+ */
+export function usePreferences(): UIPreferences {
+  return useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.observeAll().subscribe(() => onStoreChange());
+      return () => sub.unsubscribe();
+    },
+    () => preferences.getPreferences(),
+    () => preferences.getPreferences(),
+  );
+}

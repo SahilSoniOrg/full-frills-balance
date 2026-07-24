@@ -5,7 +5,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, DisplayTransaction, JournalId, WorkplaceId } from '@/src/types/domain';
-import { isBalanceIncrease, isValueEntering } from '@/src/utils/accountingHelpers';
+import { isBalanceIncrease, isValueEntering } from '@/src/services/accounting/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {

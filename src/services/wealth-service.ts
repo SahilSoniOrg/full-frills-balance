@@ -7,7 +7,7 @@ import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
+import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
 import { Money } from '@/src/utils/money';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import dayjs from 'dayjs';

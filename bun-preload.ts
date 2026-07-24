@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mock } from 'bun:test';
 import * as ReactNativeWeb from 'react-native-web';
 

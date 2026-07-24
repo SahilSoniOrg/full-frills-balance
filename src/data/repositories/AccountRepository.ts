@@ -15,7 +15,7 @@ import { AccountId, WorkplaceId, SerializedAccountMetadataPayload } from '@/src/
 import {
   getPeriodDecreaseSQLSnippet,
   getPeriodIncreaseSQLSnippet,
-} from '@/src/utils/accountingHelpers';
+} from '@/src/services/accounting/accountingHelpers';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';

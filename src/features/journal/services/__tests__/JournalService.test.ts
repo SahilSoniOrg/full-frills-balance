@@ -2,7 +2,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { accountingService } from '@/src/utils/accountingService';
+import { accountingDomainService as accountingService } from '@/src/services/accounting/AccountingDomainService';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
@@ -12,7 +12,7 @@ jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/CurrencyRepository');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
-jest.mock('@/src/utils/accountingService');
+jest.mock('@/src/services/accounting/AccountingDomainService');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/services/ledger', () => ({
   ledgerWriteService: { createJournal: jest.fn() },

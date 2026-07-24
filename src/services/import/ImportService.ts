@@ -107,7 +107,7 @@ export class ImportService {
     await currencyInitService.initialize();
     initProgress('Initializing native currencies...', 1);
 
-    // 4. Insert data using ImportRepository primitives
+    // 4. Insert data using ImportRepository primitives (calculates balances & persists)
     const insertProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.INSERT.start,

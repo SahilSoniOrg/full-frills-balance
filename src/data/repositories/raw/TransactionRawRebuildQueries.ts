@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
+import { getAccountBalanceDelta } from '@/src/services/accounting/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { AccountType } from '../../models/Account';

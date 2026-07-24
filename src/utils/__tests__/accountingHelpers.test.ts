@@ -9,7 +9,7 @@ import {
   isValueEntering,
   isValueLeaving,
   validateBalance,
-} from '@/src/utils/accountingHelpers';
+} from '@/src/services/accounting/accountingHelpers';
 
 describe('accounting-utils', () => {
   describe('getBalanceImpactMultiplier', () => {

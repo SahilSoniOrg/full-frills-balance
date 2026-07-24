@@ -31,7 +31,7 @@ import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
   getAccountBalanceDelta,
-} from '@/src/utils/accountingHelpers';
+} from '@/src/services/accounting/accountingHelpers';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';

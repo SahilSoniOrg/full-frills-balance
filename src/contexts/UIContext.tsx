@@ -228,13 +228,34 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     loadPreferences();
   }, []);
 
-  // Synchronize onboarding state with preferences
+  // Synchronize all preference changes automatically from preferences store
   useEffect(() => {
-    const subscription = preferences.observe('onboardingCompleted').subscribe(completed => {
-      setUIState(prev => {
-        if (prev.hasCompletedOnboarding === completed) return prev;
-        return { ...prev, hasCompletedOnboarding: completed };
-      });
+    const subscription = preferences.observeAll().subscribe(loadedPreferences => {
+      setUIState(prev => ({
+        ...prev,
+        hasCompletedOnboarding: loadedPreferences.onboardingCompleted,
+        themePreference: loadedPreferences.theme || 'system',
+        themeId: loadedPreferences.themeId || ThemeIds.DEEP_SPACE,
+        fontId: loadedPreferences.fontId || FontIds.DEEP_SPACE,
+        userName: loadedPreferences.userName || '',
+        isPrivacyMode: loadedPreferences.isPrivacyMode || false,
+        isWidgetPrivacyEnabled: loadedPreferences.isWidgetPrivacyEnabled || false,
+        isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
+        showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
+        advancedMode: loadedPreferences.advancedMode || false,
+        archetype: loadedPreferences.archetype || 'balance-glancer',
+        notificationCadence: loadedPreferences.notificationCadence || 'none',
+        notificationHour: loadedPreferences.notificationHour ?? 10,
+        notificationMinute: loadedPreferences.notificationMinute ?? 0,
+        notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
+        defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
+        safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
+        isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
+        isNativeAiEnabled: loadedPreferences.isNativeAiEnabled || false,
+        preferredAiModelId:
+          loadedPreferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
+        aiInferenceMode: loadedPreferences.aiInferenceMode || 'multi',
+      }));
     });
     return () => subscription.unsubscribe();
   }, []);
