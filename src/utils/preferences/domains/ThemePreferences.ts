@@ -8,27 +8,27 @@ export class ThemePreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get theme(): ThemeAppearance | undefined {
-    return this.store.theme;
+    return this.store.getSnapshot().theme;
   }
 
   setTheme(theme: ThemeAppearance): void {
-    this.store.setTheme(theme);
+    this.store.update({ theme });
   }
 
   get themeId(): ThemeId | undefined {
-    return this.store.themeId;
+    return this.store.getSnapshot().themeId;
   }
 
   setThemeId(themeId: ThemeId): void {
-    this.store.setThemeId(themeId);
+    this.store.update({ themeId });
   }
 
   get fontId(): FontId | undefined {
-    return this.store.fontId;
+    return this.store.getSnapshot().fontId;
   }
 
   setFontId(fontId: FontId): void {
-    this.store.setFontId(fontId);
+    this.store.update({ fontId });
   }
 
   observeTheme(): Observable<ThemeAppearance | undefined> {

@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { Observable } from 'rxjs';
 import type { PreferencesStore } from '../PreferencesStore';
 
@@ -6,11 +7,11 @@ export class StsPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get safeToSpendDays(): number {
-    return this.store.safeToSpendDays;
+    return this.store.getSnapshot().safeToSpendDays ?? AppConfig.defaults.safeToSpendDays;
   }
 
   setSafeToSpendDays(days: number): void {
-    this.store.setSafeToSpendDays(days);
+    this.store.update({ safeToSpendDays: days });
   }
 
   observeSafeToSpendDays(): Observable<number> {

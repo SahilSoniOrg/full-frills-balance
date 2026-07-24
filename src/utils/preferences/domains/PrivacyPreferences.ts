@@ -6,27 +6,27 @@ export class PrivacyPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get isPrivacyMode(): boolean {
-    return this.store.isPrivacyMode;
+    return this.store.getSnapshot().isPrivacyMode;
   }
 
   setIsPrivacyMode(isPrivacyMode: boolean): void {
-    this.store.setIsPrivacyMode(isPrivacyMode);
+    this.store.update({ isPrivacyMode });
   }
 
   get isWidgetPrivacyEnabled(): boolean {
-    return this.store.isWidgetPrivacyEnabled;
+    return this.store.getSnapshot().isWidgetPrivacyEnabled;
   }
 
   setIsWidgetPrivacyEnabled(isEnabled: boolean): void {
-    this.store.setIsWidgetPrivacyEnabled(isEnabled);
+    this.store.update({ isWidgetPrivacyEnabled: isEnabled });
   }
 
   get isAppLockEnabled(): boolean {
-    return this.store.isAppLockEnabled;
+    return this.store.getSnapshot().isAppLockEnabled;
   }
 
   setAppLockEnabled(isAppLockEnabled: boolean): void {
-    this.store.setAppLockEnabled(isAppLockEnabled);
+    this.store.update({ isAppLockEnabled });
   }
 
   observePrivacyMode(): Observable<boolean> {

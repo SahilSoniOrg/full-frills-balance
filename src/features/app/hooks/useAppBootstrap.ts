@@ -124,9 +124,9 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
       analytics.identify(anonId);
 
       // 4. Stabilization
-      const notifCadence = preferences.notificationCadence;
-      const notifHour = preferences.notificationHour;
-      const notifMinute = preferences.notificationMinute;
+      const notifCadence = preferences.notifications.notificationCadence;
+      const notifHour = preferences.notifications.notificationHour;
+      const notifMinute = preferences.notifications.notificationMinute;
 
       await Promise.allSettled([
         integrityService.runStartupCheck(workplaceId),

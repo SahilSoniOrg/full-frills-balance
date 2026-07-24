@@ -6,11 +6,11 @@ export class SmsPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get isSmsImportEnabled(): boolean {
-    return this.store.isSmsImportEnabled;
+    return this.store.getSnapshot().isSmsImportEnabled ?? false;
   }
 
   setIsSmsImportEnabled(enabled: boolean): void {
-    this.store.setIsSmsImportEnabled(enabled);
+    this.store.update({ isSmsImportEnabled: enabled });
   }
 
   observeSmsImportEnabled(): Observable<boolean> {

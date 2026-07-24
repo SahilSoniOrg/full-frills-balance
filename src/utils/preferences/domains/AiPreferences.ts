@@ -6,27 +6,27 @@ export class AiPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get isNativeAiEnabled(): boolean {
-    return this.store.isNativeAiEnabled;
+    return this.store.getSnapshot().isNativeAiEnabled ?? false;
   }
 
   setIsNativeAiEnabled(enabled: boolean): void {
-    this.store.setIsNativeAiEnabled(enabled);
+    this.store.update({ isNativeAiEnabled: enabled });
   }
 
   get preferredAiModelId(): string | undefined {
-    return this.store.preferredAiModelId;
+    return this.store.getSnapshot().preferredAiModelId;
   }
 
   setPreferredAiModelId(modelId: string): void {
-    this.store.setPreferredAiModelId(modelId);
+    this.store.update({ preferredAiModelId: modelId });
   }
 
   get aiInferenceMode(): 'single' | 'multi' {
-    return this.store.aiInferenceMode;
+    return this.store.getSnapshot().aiInferenceMode || 'multi';
   }
 
   setAiInferenceMode(mode: 'single' | 'multi'): void {
-    this.store.setAiInferenceMode(mode);
+    this.store.update({ aiInferenceMode: mode });
   }
 
   observeNativeAiEnabled(): Observable<boolean> {

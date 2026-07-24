@@ -9,7 +9,6 @@ import { JournalNavigationPreferences } from './domains/JournalNavigationPrefere
 import { ThemePreferences } from './domains/ThemePreferences';
 
 export type PreferencesFacade = PreferencesStore & {
-  /** Theme / typography domain Interface (flat `theme` / `themeId` getters remain). */
   readonly themePrefs: ThemePreferences;
   readonly privacy: PrivacyPreferences;
   readonly ai: AiPreferences;
@@ -22,7 +21,7 @@ export type PreferencesFacade = PreferencesStore & {
 
 /**
  * Build preferences façade: one PreferencesStore Implementation plus domain Interfaces.
- * Flat getters/setters stay on the store for compatibility.
+ * Domain-covered keys are only on domain Modules; flat accessors remain for keys without domains.
  */
 export function createPreferencesFacade(): PreferencesFacade {
   const store = new PreferencesStore();

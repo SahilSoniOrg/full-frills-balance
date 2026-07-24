@@ -6,18 +6,18 @@ export class JournalNavigationPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get lastUsedSourceAccountId(): AccountId | undefined {
-    return this.store.lastUsedSourceAccountId;
+    return this.store.getSnapshot().lastUsedSourceAccountId;
   }
 
   setLastUsedSourceAccountId(accountId: AccountId | undefined): void {
-    this.store.setLastUsedSourceAccountId(accountId);
+    this.store.update({ lastUsedSourceAccountId: accountId });
   }
 
   get lastUsedDestinationAccountId(): AccountId | undefined {
-    return this.store.lastUsedDestinationAccountId;
+    return this.store.getSnapshot().lastUsedDestinationAccountId;
   }
 
   setLastUsedDestinationAccountId(accountId: AccountId | undefined): void {
-    this.store.setLastUsedDestinationAccountId(accountId);
+    this.store.update({ lastUsedDestinationAccountId: accountId });
   }
 }

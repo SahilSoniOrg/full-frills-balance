@@ -5,14 +5,24 @@ export class InsightPreferences {
   constructor(private readonly store: PreferencesStore) {}
 
   get dismissedPatternIds(): string[] {
-    return this.store.dismissedPatternIds;
+    return this.store.getSnapshot().dismissedPatternIds;
   }
 
   dismissPattern(id: string): void {
-    this.store.dismissPattern(id);
+    const current = this.store.getSnapshot().dismissedPatternIds;
+    if (!current.includes(id)) {
+      this.store.update({
+        dismissedPatternIds: [...current, id],
+      });
+    }
   }
 
   undismissPattern(id: string): void {
-    this.store.undismissPattern(id);
+    const current = this.store.getSnapshot().dismissedPatternIds;
+    if (current.includes(id)) {
+      this.store.update({
+        dismissedPatternIds: current.filter(pId => pId !== id),
+      });
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
+import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
@@ -10,13 +10,13 @@ import {
   DEFAULT_UI_PREFERENCES,
   LEGACY_PREFERENCE_KEYS,
   PREFERENCES_KEY,
-  ThemeAppearance,
   UIPreferences,
 } from './types';
 
 /**
  * Single MMKV-backed preferences Implementation.
- * Domain Modules (theme / AI / SMS / STS / privacy) write through this store.
+ * Domain Modules (theme / AI / SMS / STS / privacy / notifications / insights / journalNav)
+ * write through update() / getSnapshot(); keys without domains keep flat accessors here.
  */
 export class PreferencesStore {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
@@ -250,70 +250,6 @@ export class PreferencesStore {
     this.update({ lastDateRange: range });
   }
 
-  get theme(): ThemeAppearance | undefined {
-    return this.preferences.theme;
-  }
-
-  setTheme(theme: ThemeAppearance): void {
-    this.update({ theme });
-  }
-
-  get themeId(): ThemeId | undefined {
-    return this.preferences.themeId;
-  }
-
-  setThemeId(themeId: ThemeId): void {
-    this.update({ themeId });
-  }
-
-  get fontId(): FontId | undefined {
-    return this.preferences.fontId;
-  }
-
-  setFontId(fontId: FontId): void {
-    this.update({ fontId });
-  }
-
-  get lastUsedSourceAccountId(): AccountId | undefined {
-    return this.preferences.lastUsedSourceAccountId;
-  }
-
-  setLastUsedSourceAccountId(accountId: AccountId | undefined): void {
-    this.update({ lastUsedSourceAccountId: accountId });
-  }
-
-  get lastUsedDestinationAccountId(): AccountId | undefined {
-    return this.preferences.lastUsedDestinationAccountId;
-  }
-
-  setLastUsedDestinationAccountId(accountId: AccountId | undefined): void {
-    this.update({ lastUsedDestinationAccountId: accountId });
-  }
-
-  get isPrivacyMode(): boolean {
-    return this.preferences.isPrivacyMode;
-  }
-
-  setIsPrivacyMode(isPrivacyMode: boolean): void {
-    this.update({ isPrivacyMode });
-  }
-
-  get isWidgetPrivacyEnabled(): boolean {
-    return this.preferences.isWidgetPrivacyEnabled;
-  }
-
-  setIsWidgetPrivacyEnabled(isEnabled: boolean): void {
-    this.update({ isWidgetPrivacyEnabled: isEnabled });
-  }
-
-  get isAppLockEnabled(): boolean {
-    return this.preferences.isAppLockEnabled;
-  }
-
-  setAppLockEnabled(isAppLockEnabled: boolean): void {
-    this.update({ isAppLockEnabled });
-  }
-
   get showAccountMonthlyStats(): boolean {
     return this.preferences.showAccountMonthlyStats;
   }
@@ -338,84 +274,12 @@ export class PreferencesStore {
     this.update({ archetype });
   }
 
-  get notificationCadence(): 'none' | 'daily' | 'weekly' {
-    return this.preferences.notificationCadence || 'none';
-  }
-
-  setNotificationCadence(cadence: 'none' | 'daily' | 'weekly'): void {
-    this.update({ notificationCadence: cadence });
-  }
-
-  get notificationHour(): number {
-    return this.preferences.notificationHour ?? 10;
-  }
-
-  setNotificationHour(hour: number): void {
-    this.update({ notificationHour: hour });
-  }
-
-  get notificationMinute(): number {
-    return this.preferences.notificationMinute ?? 0;
-  }
-
-  setNotificationMinute(minute: number): void {
-    this.update({ notificationMinute: minute });
-  }
-
-  get notificationWeekday(): number {
-    return this.preferences.notificationWeekday ?? 1;
-  }
-
-  setNotificationWeekday(weekday: number): void {
-    this.update({ notificationWeekday: weekday });
-  }
-
-  get isSmsImportEnabled(): boolean {
-    return this.preferences.isSmsImportEnabled ?? false;
-  }
-
-  setIsSmsImportEnabled(enabled: boolean): void {
-    this.update({ isSmsImportEnabled: enabled });
-  }
-
-  get isNativeAiEnabled(): boolean {
-    return this.preferences.isNativeAiEnabled ?? false;
-  }
-
-  setIsNativeAiEnabled(enabled: boolean): void {
-    this.update({ isNativeAiEnabled: enabled });
-  }
-
-  get preferredAiModelId(): string | undefined {
-    return this.preferences.preferredAiModelId;
-  }
-
-  setPreferredAiModelId(modelId: string): void {
-    this.update({ preferredAiModelId: modelId });
-  }
-
-  get aiInferenceMode(): 'single' | 'multi' {
-    return this.preferences.aiInferenceMode || 'multi';
-  }
-
-  setAiInferenceMode(mode: 'single' | 'multi'): void {
-    this.update({ aiInferenceMode: mode });
-  }
-
   get defaultShareFormat(): ShareFormat {
     return this.preferences.defaultShareFormat || ShareFormat.TEXT;
   }
 
   setDefaultShareFormat(format: ShareFormat): void {
     this.update({ defaultShareFormat: format });
-  }
-
-  get safeToSpendDays(): number {
-    return this.preferences.safeToSpendDays ?? AppConfig.defaults.safeToSpendDays;
-  }
-
-  setSafeToSpendDays(days: number): void {
-    this.update({ safeToSpendDays: days });
   }
 
   get activeWorkplaceId(): WorkplaceId | undefined {
@@ -426,34 +290,12 @@ export class PreferencesStore {
     this.update({ activeWorkplaceId: workplaceId });
   }
 
-  get dismissedPatternIds(): string[] {
-    return this.preferences.dismissedPatternIds;
-  }
-
   get anonymizedId(): string | undefined {
     return this.preferences.anonymizedId;
   }
 
   setAnonymizedId(id: string): void {
     this.update({ anonymizedId: id });
-  }
-
-  dismissPattern(id: string): void {
-    const current = this.preferences.dismissedPatternIds;
-    if (!current.includes(id)) {
-      this.update({
-        dismissedPatternIds: [...current, id],
-      });
-    }
-  }
-
-  undismissPattern(id: string): void {
-    const current = this.preferences.dismissedPatternIds;
-    if (current.includes(id)) {
-      this.update({
-        dismissedPatternIds: current.filter(pId => pId !== id),
-      });
-    }
   }
 
   clearPreferences(): void {
