@@ -5,6 +5,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   AccountId,
@@ -100,6 +101,57 @@ export class JournalRepository {
 
   observePlannedInRange(workplaceId: WorkplaceId, startDate: number, endDate: number) {
     return journalObserveQueries.observePlannedInRange(workplaceId, startDate, endDate);
+  }
+
+  findEarliestPlannedByPayment(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
+    return journalPlannedQueries.findEarliestPlannedByPayment(workplaceId, plannedPaymentId);
+  }
+
+  findPlannedOnDay(
+    workplaceId: WorkplaceId,
+    plannedPaymentId: PlannedPaymentId,
+    dayStart: number,
+    dayEnd: number,
+  ) {
+    return journalPlannedQueries.findPlannedOnDay(
+      workplaceId,
+      plannedPaymentId,
+      dayStart,
+      dayEnd,
+    );
+  }
+
+  findByPlannedPaymentIds(workplaceId: WorkplaceId, plannedPaymentIds: PlannedPaymentId[]) {
+    return journalPlannedQueries.findByPlannedPaymentIds(workplaceId, plannedPaymentIds);
+  }
+
+  countOnDayByPlannedPayment(
+    workplaceId: WorkplaceId,
+    plannedPaymentId: PlannedPaymentId,
+    dayStart: number,
+    dayEnd: number,
+  ) {
+    return journalPlannedQueries.countOnDay(workplaceId, plannedPaymentId, dayStart, dayEnd);
+  }
+
+  findByPlannedPaymentAndStatus(
+    workplaceId: WorkplaceId,
+    plannedPaymentId: PlannedPaymentId,
+    status: JournalStatus,
+  ) {
+    return journalPlannedQueries.findByPlannedPaymentAndStatus(
+      workplaceId,
+      plannedPaymentId,
+      status,
+    );
+  }
+
+  preparePlannedStatusUpdates(journals: Journal[], status: JournalStatus) {
+    return journalPlannedQueries.prepareStatusUpdates(journals, status);
+  }
+
+  batchUpdatePlannedStatus(journals: Journal[], status: JournalStatus) {
+    return journalPlannedQueries.batchUpdateStatus(journals, status);
   }
 
   /**

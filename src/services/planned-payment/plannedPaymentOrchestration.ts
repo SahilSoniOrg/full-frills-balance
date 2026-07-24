@@ -17,7 +17,41 @@ import {
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { Q } from '@nozbe/watermelondb';
+
+export interface PlannedOccurrenceContext {
+  normalizedDate: number;
+  dayEnd: number;
+  existingPlanned: Journal[];
+}
+
+/**
+ * Resolves the occurrence day window and any existing PLANNED journals for that day.
+ * Always workplace-scopes journal queries.
+ */
+export async function resolvePlannedOccurrenceContext(
+  workplaceId: WorkplaceId,
+  pp: PlannedPayment,
+  occurrenceDate: number,
+): Promise<PlannedOccurrenceContext> {
+  const plannedPaymentId = pp.id as PlannedPaymentId;
+  const earliestPlanned = await journalRepository.findEarliestPlannedByPayment(
+    workplaceId,
+    plannedPaymentId,
+  );
+
+  const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
+  const normalizedDate = normalizeToStartOfDay(targetDate);
+  const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
+
+  const existingPlanned = await journalRepository.findPlannedOnDay(
+    workplaceId,
+    plannedPaymentId,
+    normalizedDate,
+    dayEnd,
+  );
+
+  return { normalizedDate, dayEnd, existingPlanned };
+}
 
 async function advancePlannedPaymentSchedule(
   workplaceId: WorkplaceId,
@@ -46,34 +80,13 @@ export async function postPlannedPaymentOccurrence(
   occurrenceDate: number,
 ): Promise<void> {
   try {
-    const earliestPlanned = await database.collections
-      .get<Journal>('journals')
-      .query(
-        Q.where('planned_payment_id', pp.id),
-        Q.where('workplace_id', workplaceId),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('journal_date', Q.asc),
-      )
-      .fetch()
-      .then(res => res[0]);
-
-    const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
-    const normalizedDate = normalizeToStartOfDay(targetDate);
-    const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
+    const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
+      workplaceId,
+      pp,
+      occurrenceDate,
+    );
 
     const postTime = Date.now();
-
-    const existingPlanned = await database.collections
-      .get<Journal>('journals')
-      .query(
-        Q.where('planned_payment_id', pp.id),
-        Q.where('workplace_id', workplaceId),
-        Q.where('journal_date', Q.between(normalizedDate, dayEnd)),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
 
     if (existingPlanned.length > 0) {
       const j = existingPlanned[0];
@@ -148,39 +161,13 @@ export async function skipPlannedPaymentOccurrence(
   occurrenceDate: number,
 ): Promise<void> {
   try {
-    const earliestPlanned = await database.collections
-      .get<Journal>('journals')
-      .query(
-        Q.where('planned_payment_id', pp.id),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('journal_date', Q.asc),
-      )
-      .fetch()
-      .then(res => res[0]);
+    const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
+      workplaceId,
+      pp,
+      occurrenceDate,
+    );
 
-    const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
-    const normalizedDate = normalizeToStartOfDay(targetDate);
-    const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
-
-    const existingPlanned = await database.collections
-      .get<Journal>('journals')
-      .query(
-        Q.where('planned_payment_id', pp.id),
-        Q.where('journal_date', Q.between(normalizedDate, dayEnd)),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-
-    await database.write(async () => {
-      for (const journal of existingPlanned) {
-        await journal.update((record: Journal) => {
-          record.status = JournalStatus.SKIPPED;
-          record.updatedAt = new Date();
-        });
-      }
-    });
+    await journalRepository.batchUpdatePlannedStatus(existingPlanned, JournalStatus.SKIPPED);
 
     if (existingPlanned.length === 0) {
       if (!pp.toAccountId) {
@@ -225,17 +212,11 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
   const nowTime = normalizeToStartOfDay(Date.now());
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
 
-  const allPlannedIds = activePayments.map(p => p.id);
-  const existingJournals =
-    allPlannedIds.length > 0
-      ? await database.collections
-          .get<Journal>('journals')
-          .query(
-            Q.where('planned_payment_id', Q.oneOf(allPlannedIds)),
-            Q.where('deleted_at', Q.eq(null)),
-          )
-          .fetch()
-      : [];
+  const allPlannedIds = activePayments.map(p => p.id as PlannedPaymentId);
+  const existingJournals = await journalRepository.findByPlannedPaymentIds(
+    workplaceId,
+    allPlannedIds,
+  );
 
   const journalledDays = new Map<string, Set<number>>();
   for (const j of existingJournals) {
@@ -261,14 +242,12 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
 
       if (!alreadyExists) {
         const dayEnd = nextOcc + (AppConfig.time.msPerDay - 1);
-        const dbExists = await database.collections
-          .get<Journal>('journals')
-          .query(
-            Q.where('planned_payment_id', pp.id),
-            Q.where('journal_date', Q.between(nextOcc, dayEnd)),
-            Q.where('deleted_at', Q.eq(null)),
-          )
-          .fetchCount();
+        const dbExists = await journalRepository.countOnDayByPlannedPayment(
+          workplaceId,
+          pp.id as PlannedPaymentId,
+          nextOcc,
+          dayEnd,
+        );
 
         if (dbExists === 0) {
           await generatePlannedJournalForPayment(pp, nextOcc);
