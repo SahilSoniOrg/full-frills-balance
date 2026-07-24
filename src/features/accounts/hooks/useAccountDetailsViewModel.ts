@@ -21,6 +21,11 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import {
+  injectReconciledMarkersIntoTransactionList,
+  mapAccountLedgerTransactionToListItem,
+} from '@/src/services/accounting/accountTransactionListPresentation';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import {
   AccountBalance,
   AccountId,
   DisplayTransaction,
@@ -32,7 +37,6 @@ import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -379,119 +383,18 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         });
         return { count: txnsForDay.length, netAmount, currencyCode: balanceCurrency };
       },
-      renderItem: (transaction: DisplayTransaction & { counterAccounts?: any[] }) => {
-        const displayAccounts = [] as any[];
-        if (transaction.counterAccounts && transaction.counterAccounts.length > 0) {
-          const visibleCount =
-            transaction.counterAccounts.length > 2 ? 1 : transaction.counterAccounts.length;
-          for (let i = 0; i < visibleCount; i++) {
-            const acc = transaction.counterAccounts[i];
-            displayAccounts.push({
-              id: acc.id,
-              name: acc.name,
-              accountType: acc.accountType,
-              icon: acc.icon,
-            });
-          }
-          if (transaction.counterAccounts.length > visibleCount) {
-            displayAccounts.push({
-              id: 'more',
-              name: `+${transaction.counterAccounts.length - visibleCount} more`,
-              accountType: 'NEUTRAL',
-              icon: 'list',
-            });
-          }
-        } else {
-          const fallbackAcc = transaction.counterAccountType
-            ? {
-                id: 'counter',
-                name: transaction.counterAccountName || transaction.counterAccountType,
-                accountType: transaction.counterAccountType,
-                icon: transaction.counterAccountIcon,
-              }
-            : {
-                id: transaction.accountId,
-                name: transaction.accountName || 'Unknown',
-                accountType: transaction.accountType || 'ASSET',
-                icon: transaction.icon,
-              };
-          displayAccounts.push(fallbackAcc);
-        }
-
-        const base = journalPresenter.getPresentation(
-          transaction.displayType as JournalDisplayType,
-          transaction.semanticLabel,
-        );
-        return {
-          id: transaction.id,
-          type: 'transaction' as const,
-          date: transaction.transactionDate,
-          onPress: () => onTransactionPress(transaction),
-          cardProps: {
-            title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
-            amount: transaction.amount,
-            currencyCode: transaction.currencyCode,
-            transactionDate: transaction.transactionDate,
-            presentation: {
-              label: base.label,
-              typeColor: base.colorKey,
-              typeIcon: (transaction.isIncrease ? 'arrowUp' : 'arrowDown') as IconName,
-              amountPrefix: transaction.isIncrease ? '+ ' : '− ',
-            },
-            badges: displayAccounts.map(acc => ({
-              text: acc.name,
-              variant: getAccountTypeVariant(acc.accountType),
-              icon: acc.icon,
-              fallbackIcon: getAccountFallbackIcon(acc.accountType),
-            })),
-            notes: transaction.notes,
-          },
-        };
-      },
+      renderItem: (transaction: DisplayTransaction) =>
+        mapAccountLedgerTransactionToListItem(transaction, () => onTransactionPress(transaction)),
     }),
     [transactions, balanceCurrency, onTransactionPress, precision],
   );
 
   const { groupedItems: rawGroupedItems } = useTransactionGrouping(transactionGroupingOptions);
 
-  const transactionItems = useMemo(() => {
-    if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
-    const result: TransactionListItem[] = [];
-    let markerAdded = false;
-    const reconTime = reconciledAt.getTime();
-    for (const item of rawGroupedItems) {
-      let itemToPush = item;
-      if (!markerAdded) {
-        if (item.type === 'transaction' && item.date && item.date <= reconTime) {
-          result.push({
-            id: 'reconciled-separator',
-            type: 'separator' as any,
-            date: reconTime,
-            isReconciledMarker: true,
-          } as any);
-          markerAdded = true;
-        } else if (item.type === 'separator') {
-          const startOfDay = item.date;
-          const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-          if (reconTime >= startOfDay) {
-            itemToPush = { ...item, reconciledAt: reconTime } as any;
-            if (reconTime <= endOfDay || item.isCollapsed) markerAdded = true;
-            if (!item.isCollapsed && reconTime > endOfDay) {
-              result.push({
-                id: 'reconciled-separator',
-                type: 'separator' as any,
-                date: reconTime,
-                isReconciledMarker: true,
-              } as any);
-              markerAdded = true;
-            }
-          }
-        }
-      }
-      result.push(itemToPush);
-    }
-    return result;
-  }, [rawGroupedItems, reconciledAt]);
+  const transactionItems = useMemo(
+    () => injectReconciledMarkersIntoTransactionList(rawGroupedItems, reconciledAt),
+    [rawGroupedItems, reconciledAt],
+  );
 
   const selectAll = useCallback(() => {
     const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);

@@ -4,6 +4,10 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import {
+  mapEnrichedLinesToEditorState,
+  normalizeJournalLinesForGuidedMode,
+} from '@/src/services/journal/journalEditorHelpers';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
@@ -135,17 +139,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
   const setGuidedModeInternal = useCallback((mode: boolean) => {
     if (mode) {
-      // Normalizing to 2-leg structure if we have more than 2 lines, or if roles are missing
-      setLines(current => {
-        const debit = current.find(l => l.transactionType === TransactionType.DEBIT) || current[0];
-        const credit =
-          current.find(l => l.transactionType === TransactionType.CREDIT) || current[1];
-        // Rule: Source (Credit) should be the first leg (index 0)
-        return [
-          { ...credit, id: '1' as TransactionId, transactionType: TransactionType.CREDIT },
-          { ...debit, id: '2' as TransactionId, transactionType: TransactionType.DEBIT },
-        ];
-      });
+      setLines(current => normalizeJournalLinesForGuidedMode(current));
     }
     setIsGuidedMode(mode);
   }, []);
@@ -176,49 +170,17 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
             const txs = await transactionService.getEnrichedByJournal(workplaceId, journalId);
             if (txs.length > 0) {
-              // 1. Force Advanced Mode for multi-leg transactions
-              if (txs.length > 2) {
+              const {
+                lines: loadedLines,
+                forceAdvancedMode,
+                simpleTabType,
+              } = mapEnrichedLinesToEditorState(txs);
+              if (forceAdvancedMode) {
                 setGuidedModeInternal(false);
+              } else if (simpleTabType) {
+                setTransactionType(simpleTabType);
               }
-              // 2. Refined Type Detection for 2-leg transactions
-              else if (txs.length === 2) {
-                const creditTx = txs.find(t => t.transactionType === TransactionType.CREDIT);
-                const debitTx = txs.find(t => t.transactionType === TransactionType.DEBIT);
-
-                if (creditTx && debitTx) {
-                  const sourceIsAssetLiab =
-                    creditTx.accountType === AccountType.ASSET ||
-                    creditTx.accountType === AccountType.LIABILITY;
-                  const destIsExpense = debitTx.accountType === AccountType.EXPENSE;
-
-                  const sourceIsIncome = creditTx.accountType === AccountType.INCOME;
-                  const destIsAssetLiab =
-                    debitTx.accountType === AccountType.ASSET ||
-                    debitTx.accountType === AccountType.LIABILITY;
-
-                  if (sourceIsAssetLiab && destIsExpense) {
-                    setTransactionType('expense');
-                  } else if (sourceIsIncome && destIsAssetLiab) {
-                    setTransactionType('income');
-                  } else {
-                    setTransactionType('transfer');
-                  }
-                }
-              }
-
-              setLines(
-                txs.map(tx => ({
-                  id: tx.id,
-                  accountId: tx.accountId,
-                  accountName: tx.accountName || '',
-                  accountType: tx.accountType as AccountType,
-                  amount: tx.amount.toString(),
-                  transactionType: tx.transactionType as TransactionType,
-                  notes: tx.notes || '',
-                  exchangeRate: tx.exchangeRate ? tx.exchangeRate.toString() : '',
-                  accountCurrency: tx.currencyCode,
-                })),
-              );
+              setLines(loadedLines);
             }
           }
         } catch {
@@ -328,48 +290,16 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
   const balanceLine = useCallback(
     (id: string) => {
-      const lineIndex = lines.findIndex(l => l.id === id);
-      const line = lines[lineIndex];
-      if (!line) return;
-
-      const imbalance = JournalCalculator.calculateImbalance(
-        lines.map(l => ({
-          amount: l.amount,
-          type: l.transactionType,
-          exchangeRate: l.exchangeRate,
-          accountCurrency: l.accountCurrency,
-        })),
-        workplaceCurrency,
-      );
-
-      if (Math.abs(imbalance) < 0.001) return;
-
-      const currentBase = JournalCalculator.getLineBaseAmount(line, workplaceCurrency);
-      const nominal = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
-
-      if (!nominal || nominal === 0) return;
-
-      const targetBase =
-        line.transactionType === TransactionType.DEBIT
-          ? currentBase - imbalance
-          : currentBase + imbalance;
-
-      const newRate = JournalCalculator.calculateImpliedRate(nominal, targetBase);
-      const roundedRate = Math.round(newRate * 1000000) / 1000000; // 6 decimal precision for rates
-
-      // Sync to all lines with same currency
-      const lineCurrency = line.accountCurrency || workplaceCurrency;
-      setLines(prev =>
-        prev.map(l => {
-          const lCurrency = l.accountCurrency || workplaceCurrency;
-          if (lCurrency === lineCurrency && lCurrency !== workplaceCurrency) {
-            return { ...l, exchangeRate: roundedRate.toString() };
-          }
-          return l.id === id ? { ...l, exchangeRate: roundedRate.toString() } : l;
-        }),
-      );
+      setLines(prev => {
+        const corrected = JournalCalculator.applyImbalanceRateCorrectionToLines(
+          prev,
+          id,
+          workplaceCurrency,
+        );
+        return corrected ?? prev;
+      });
     },
-    [lines, workplaceCurrency],
+    [workplaceCurrency],
   );
 
   const submit = useCallback(

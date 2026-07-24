@@ -1,9 +1,16 @@
-import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import {
+  buildSimpleCrossCurrencyLineUpdates,
+  buildSimpleDefaultDescription,
+  buildSimpleFormAccountSections,
+  deriveCrossCurrencyDisplayRate,
+  parseSimpleAmountInput,
+  shouldApplyLastUsedAccountDefault,
+} from '@/src/services/journal/simpleJournalHelpers';
 import {
   AccountId,
   AccountRole,
@@ -105,11 +112,7 @@ export function useSimpleJournalEditor({
 
         setSourceBaseRate(srcRate);
         setDestBaseRate(dstRate);
-
-        // Derive the cross-rate for UI display (1 Source = X Dest)
-        // Rate(src->dest) = Rate(src->base) / Rate(dest->base)
-        const crossRate = srcRate / dstRate;
-        setExchangeRate(crossRate);
+        setExchangeRate(deriveCrossCurrencyDisplayRate(srcRate, dstRate));
       } catch (error) {
         setRateError('Rate unavailable');
         logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
@@ -121,9 +124,7 @@ export function useSimpleJournalEditor({
     fetchCurrentRate();
   }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate, workplaceCurrency]);
 
-  const numAmount = useMemo(() => {
-    return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
-  }, [amount]);
+  const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
 
   const convertedAmount = useMemo(() => {
     if (!isCrossCurrency || !exchangeRate) return numAmount;
@@ -134,38 +135,19 @@ export function useSimpleJournalEditor({
   useEffect(() => {
     if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
 
-    const updates: Record<string, Partial<JournalEntryLine>> = {};
-    const baseCurrency = workplaceCurrency;
-
-    if (isCrossCurrency && exchangeRate) {
-      const formattedConverted = convertedAmount.toFixed(2);
-
-      // Set source line rate to Base Currency
-      if (sourceCurrency !== baseCurrency && sourceBaseRate) {
-        const srcRateStr = sourceBaseRate.toFixed(6);
-        if (sourceLine.exchangeRate !== srcRateStr)
-          updates[sourceLine.id] = { exchangeRate: srcRateStr };
-      } else if (sourceLine.exchangeRate) {
-        updates[sourceLine.id] = { exchangeRate: '' };
-      }
-
-      // Set destination line rate to Base Currency
-      if (destCurrency !== baseCurrency && destBaseRate) {
-        const dstRateStr = destBaseRate.toFixed(6);
-        if (destinationLine.exchangeRate !== dstRateStr)
-          updates[destinationLine.id] = { exchangeRate: dstRateStr };
-      } else if (destinationLine.exchangeRate) {
-        updates[destinationLine.id] = { exchangeRate: '' };
-      }
-
-      if (destinationLine.amount !== formattedConverted) {
-        updates[destinationLine.id] = { amount: formattedConverted };
-      }
-    } else if (!isCrossCurrency) {
-      if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
-      if (destinationLine.exchangeRate) updates[destinationLine.id] = { exchangeRate: '' };
-      if (destinationLine.amount !== amount) updates[destinationLine.id] = { amount };
-    }
+    const updates = buildSimpleCrossCurrencyLineUpdates({
+      isCrossCurrency,
+      exchangeRate,
+      sourceBaseRate,
+      destBaseRate,
+      sourceCurrency,
+      destCurrency,
+      baseCurrency: workplaceCurrency,
+      amount,
+      convertedAmount,
+      sourceLine,
+      destinationLine,
+    });
 
     if (Object.keys(updates).length > 0) {
       editor.updateLines(updates);
@@ -269,19 +251,22 @@ export function useSimpleJournalEditor({
     let newSourceId: AccountId | undefined;
     let newDestId: AccountId | undefined;
 
-    // Only default if empty
-    if (!sourceId && lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
-      if (type === 'transfer' || type === 'expense') {
-        newSourceId = lastSourceId;
-        shouldUpdate = true;
-      }
+    if (
+      shouldApplyLastUsedAccountDefault(type, 'source', sourceId) &&
+      lastSourceId &&
+      transactionAccounts.some(a => a.id === lastSourceId)
+    ) {
+      newSourceId = lastSourceId;
+      shouldUpdate = true;
     }
 
-    if (!destinationId && lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
-      if (type === 'transfer' || type === 'income') {
-        newDestId = lastDestId;
-        shouldUpdate = true;
-      }
+    if (
+      shouldApplyLastUsedAccountDefault(type, 'destination', destinationId) &&
+      lastDestId &&
+      transactionAccounts.some(a => a.id === lastDestId)
+    ) {
+      newDestId = lastDestId;
+      shouldUpdate = true;
     }
 
     if (shouldUpdate) {
@@ -347,18 +332,7 @@ export function useSimpleJournalEditor({
     let overrides;
     // Default description to type if empty
     if (!editor.description.trim()) {
-      let defaultDesc: string =
-        AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.transfer;
-      if (type === 'expense' && destAccount) {
-        defaultDesc = AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.expense(
-          destAccount.name,
-        );
-      } else if (type === 'income' && sourceAccount) {
-        defaultDesc = AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.income(
-          sourceAccount.name,
-        );
-      }
-
+      const defaultDesc = buildSimpleDefaultDescription(type, sourceAccount, destAccount);
       editor.setDescription(defaultDesc);
       overrides = { description: defaultDesc };
     }
@@ -374,58 +348,17 @@ export function useSimpleJournalEditor({
   }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
 
   const accountSections = useMemo((): SimpleFormSection[] => {
-    const sections =
-      type === 'expense'
-        ? [
-            {
-              title: AppConfig.strings.transactionFlow.simpleEntry.toCategory,
-              accounts: expenseAccounts,
-              selectedId: destinationId,
-              onSelect: setDestinationId,
-              role: 'destination' as const,
-            },
-            {
-              title: AppConfig.strings.transactionFlow.simpleEntry.fromAccount,
-              accounts: transactionAccounts,
-              selectedId: sourceId,
-              onSelect: setSourceId,
-              role: 'source' as const,
-            },
-          ]
-        : type === 'income'
-          ? [
-              {
-                title: AppConfig.strings.transactionFlow.simpleEntry.fromSource,
-                accounts: incomeAccounts,
-                selectedId: sourceId,
-                onSelect: setSourceId,
-                role: 'source' as const,
-              },
-              {
-                title: AppConfig.strings.transactionFlow.simpleEntry.toAccount,
-                accounts: transactionAccounts,
-                selectedId: destinationId,
-                onSelect: setDestinationId,
-                role: 'destination' as const,
-              },
-            ]
-          : [
-              {
-                title: AppConfig.strings.transactionFlow.simpleEntry.sourceAccount,
-                accounts: leafAccounts,
-                selectedId: sourceId,
-                onSelect: setSourceId,
-                role: 'source' as const,
-              },
-              {
-                title: AppConfig.strings.transactionFlow.simpleEntry.destinationAccount,
-                accounts: leafAccounts,
-                selectedId: destinationId,
-                onSelect: setDestinationId,
-                role: 'destination' as const,
-              },
-            ];
-    return sections;
+    return buildSimpleFormAccountSections(type, {
+      expenseAccounts,
+      incomeAccounts,
+      transactionAccounts,
+      leafAccounts,
+      sourceId,
+      destinationId,
+    }).map(section => ({
+      ...section,
+      onSelect: section.role === 'source' ? setSourceId : setDestinationId,
+    }));
   }, [
     type,
     expenseAccounts,

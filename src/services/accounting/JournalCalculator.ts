@@ -1,6 +1,14 @@
 import { TransactionType } from '@/src/data/models/Transaction';
 import { sanitizeAmount } from '@/src/utils/validation';
 
+export interface JournalLineWithRateCorrection {
+  id: string;
+  amount: string | number;
+  transactionType: TransactionType;
+  exchangeRate?: string | number;
+  accountCurrency?: string;
+}
+
 export interface JournalLineInput {
   amount: number | string;
   type: TransactionType;
@@ -169,5 +177,51 @@ export class JournalCalculator {
       groups[currency].push(index);
     });
     return groups;
+  }
+
+  /**
+   * Applies exchange-rate corrections on a line (and same-currency peers) to absorb journal imbalance.
+   */
+  static applyImbalanceRateCorrectionToLines<T extends JournalLineWithRateCorrection>(
+    lines: T[],
+    lineId: string,
+    baseCurrency: string,
+  ): T[] | null {
+    const line = lines.find(l => l.id === lineId);
+    if (!line) return null;
+
+    const imbalance = JournalCalculator.calculateImbalance(
+      lines.map(l => ({
+        amount: l.amount,
+        type: l.transactionType,
+        exchangeRate: l.exchangeRate,
+        accountCurrency: l.accountCurrency,
+      })),
+      baseCurrency,
+    );
+
+    if (Math.abs(imbalance) < 0.001) return null;
+
+    const currentBase = JournalCalculator.getLineBaseAmount(line, baseCurrency);
+    const nominal = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
+
+    if (!nominal || nominal === 0) return null;
+
+    const targetBase =
+      line.transactionType === TransactionType.DEBIT
+        ? currentBase - imbalance
+        : currentBase + imbalance;
+
+    const newRate = JournalCalculator.calculateImpliedRate(nominal, targetBase);
+    const roundedRate = Math.round(newRate * 1000000) / 1000000;
+
+    const lineCurrency = line.accountCurrency || baseCurrency;
+    return lines.map(l => {
+      const lCurrency = l.accountCurrency || baseCurrency;
+      if (lCurrency === lineCurrency && lCurrency !== baseCurrency) {
+        return { ...l, exchangeRate: roundedRate.toString() };
+      }
+      return l.id === lineId ? { ...l, exchangeRate: roundedRate.toString() } : l;
+    });
   }
 }
