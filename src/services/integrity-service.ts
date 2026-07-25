@@ -14,8 +14,10 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
+import { auditService } from '@/src/services/audit-service';
 import {
   cleanupDatabase as runDatabaseCleanup,
   resetDatabase as runFactoryReset,
@@ -256,12 +258,55 @@ export class IntegrityService {
   }
 
   /**
+   * Records a successful running-balance integrity repair in the audit trail.
+   */
+  private async logRunningBalanceRepair(
+    workplaceId: WorkplaceId,
+    discrepancy: BalanceVerificationResult,
+    trigger: 'startup' | 'manual' | 'repair',
+  ): Promise<void> {
+    await auditService.log(
+      {
+        entityType: 'account',
+        entityId: discrepancy.accountId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: {
+            cachedBalance: discrepancy.cachedBalance,
+            computedBalance: discrepancy.computedBalance,
+            discrepancy: discrepancy.discrepancy,
+            snapshotCorrupted: discrepancy.snapshotCorrupted ?? false,
+          },
+          after: {
+            repairType: 'running_balance',
+            trigger,
+            accountName: discrepancy.accountName,
+            balanceAfterRepair: discrepancy.computedBalance,
+          },
+        },
+      },
+      workplaceId,
+    );
+  }
+
+  /**
    * Repairs a single account's running balances.
    */
-  async repairAccountBalance(workplaceId: WorkplaceId, accountId: AccountId): Promise<boolean> {
+  async repairAccountBalance(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    verification?: BalanceVerificationResult,
+    auditTrigger: 'startup' | 'manual' | 'repair' = 'repair',
+  ): Promise<boolean> {
+    const discrepancy = verification ?? (await this.verifyAccountBalance(accountId, workplaceId));
+    const hadIssue = !discrepancy.matches || discrepancy.snapshotCorrupted;
+
     try {
       await accountingRebuildService.rebuildAccountBalances(workplaceId, accountId);
       logger.info(`[IntegrityService] Repaired running balances for account ${accountId}`);
+      if (hadIssue) {
+        await this.logRunningBalanceRepair(workplaceId, discrepancy, auditTrigger);
+      }
       return true;
     } catch (error) {
       logger.error(`[IntegrityService] Failed to repair account ${accountId}`, error);
@@ -356,6 +401,7 @@ export class IntegrityService {
 
         // Perform repair in its own transaction and yield to JS event loop
         // This prevents UI lockup and allows reactive system to breathe
+        let repairSucceeded = false;
         await database.write(async () => {
           await accountingRebuildService.rebuildAccountBalancesInternal(
             workplaceId,
@@ -363,9 +409,14 @@ export class IntegrityService {
             undefined,
             true,
           );
-          repairsSuccessful++;
+          repairSucceeded = true;
           repairedAccountIds.push(discrepancy.accountId);
         });
+
+        if (repairSucceeded) {
+          repairsSuccessful++;
+          await this.logRunningBalanceRepair(workplaceId, discrepancy, 'manual');
+        }
 
         // CRITICAL: Yield to allow bridge events (taps) to process
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -462,10 +513,15 @@ export class IntegrityService {
       );
 
       repairsAttempted++;
-      const success = await this.repairAccountBalance(workplaceId, discrepancy.accountId);
       analytics.logIntegrityIssue(
         'accounts',
         `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
+      );
+      const success = await this.repairAccountBalance(
+        workplaceId,
+        discrepancy.accountId,
+        discrepancy,
+        'startup',
       );
       if (success) {
         repairsSuccessful++;

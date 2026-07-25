@@ -1,12 +1,20 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
+import { AuditAction } from '@/src/data/models/AuditLog';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { IntegrityService } from '@/src/services/integrity-service';
+import { auditService } from '@/src/services/audit-service';
 import { Q } from '@nozbe/watermelondb';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
+
+jest.mock('@/src/services/audit-service', () => ({
+  auditService: {
+    log: jest.fn(),
+  },
+}));
 
 describe('IntegrityService', () => {
   let service: IntegrityService;
@@ -14,6 +22,7 @@ describe('IntegrityService', () => {
   let equityAccountId: string;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
@@ -173,6 +182,27 @@ describe('IntegrityService', () => {
       );
       expect(result.matches).toBe(true);
       expect(result.computedBalance).toBe(500);
+
+      expect(auditService.log).toHaveBeenCalledTimes(1);
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'account',
+          entityId: cashAccountId,
+          action: AuditAction.UPDATE,
+          changes: expect.objectContaining({
+            before: expect.objectContaining({
+              cachedBalance: 9999,
+              computedBalance: 500,
+            }),
+            after: expect.objectContaining({
+              repairType: 'running_balance',
+              trigger: 'repair',
+              balanceAfterRepair: 500,
+            }),
+          }),
+        }),
+        'wp-1',
+      );
     });
   });
 
