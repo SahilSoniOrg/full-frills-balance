@@ -1,6 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
 import { AccountId } from '@/src/types/domain';
 import {
+  aggregateLeafPeriodIncomeExpense,
   filterAccountsBySearch,
   filterAccountsForListTab,
   resolveAccountListPressAction,
@@ -30,6 +31,39 @@ describe('accountsListHelpers', () => {
       'navigate',
     );
     expect(resolveAccountListPressAction('2' as AccountId, accounts, new Set())).toBe('navigate');
+  });
+
+  it('aggregateLeafPeriodIncomeExpense sums leaf income and expense period flows', () => {
+    const accounts = [
+      { id: 'inc', parentAccountId: null, accountType: AccountType.INCOME },
+      { id: 'inc-child', parentAccountId: 'inc', accountType: AccountType.INCOME },
+      { id: 'exp', parentAccountId: null, accountType: AccountType.EXPENSE },
+    ] as any[];
+    const balances = [
+      {
+        accountId: 'inc',
+        accountType: AccountType.INCOME,
+        monthlyIncome: 100,
+        monthlyExpenses: 0,
+      },
+      {
+        accountId: 'inc-child',
+        accountType: AccountType.INCOME,
+        monthlyIncome: 50,
+        monthlyExpenses: 0,
+      },
+      {
+        accountId: 'exp',
+        accountType: AccountType.EXPENSE,
+        monthlyIncome: 0,
+        monthlyExpenses: 40,
+      },
+    ] as any[];
+
+    expect(aggregateLeafPeriodIncomeExpense(accounts, balances)).toEqual({
+      income: 50,
+      expense: 40,
+    });
   });
 
   it('resolveInflowTotals uses period totals when not overall', () => {

@@ -2,6 +2,7 @@ import { getPerfNow } from '@/src/utils/dateHelpers';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
+  aggregateLeafPeriodIncomeExpense,
   filterAccountSectionsForTab,
   filterAccountsBySearch,
   filterAccountsForListTab,
@@ -154,20 +155,26 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const [isSearching, setIsSearching] = useState(false);
 
   const [inflowPeriod, setInflowPeriodState] = useState<'overall' | 'month' | '30days'>('overall');
-  const [periodTotals, setPeriodTotals] = useState<{ income: number; expense: number } | null>(
-    null,
-  );
+  const [rollingPeriodTotals, setRollingPeriodTotals] = useState<{
+    income: number;
+    expense: number;
+  } | null>(null);
   const [isPeriodLoading, setIsPeriodLoading] = useState(false);
 
   const setInflowPeriod = useCallback((period: 'overall' | 'month' | '30days') => {
     setInflowPeriodState(period);
-    if (period === 'overall') {
-      setPeriodTotals(null);
+    if (period !== '30days') {
+      setRollingPeriodTotals(null);
     }
   }, []);
 
+  const monthPeriodTotals = useMemo(() => {
+    if (inflowPeriod !== 'month') return null;
+    return aggregateLeafPeriodIncomeExpense(accounts, dashboardData.balances);
+  }, [inflowPeriod, accounts, dashboardData.balances]);
+
   useEffect(() => {
-    if (!workplaceId || inflowPeriod === 'overall') {
+    if (!workplaceId || inflowPeriod !== '30days') {
       return;
     }
 
@@ -193,7 +200,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         );
 
         if (isMounted) {
-          setPeriodTotals(totals);
+          setRollingPeriodTotals(totals);
           setIsPeriodLoading(false);
         }
       } catch (err) {
@@ -210,6 +217,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       isMounted = false;
     };
   }, [inflowPeriod, workplaceId, workplaceCurrency, version]);
+
+  const periodTotals = inflowPeriod === 'month' ? monthPeriodTotals : rollingPeriodTotals;
 
   const onToggleSection = useCallback((title: string) => {
     setCollapsedSections(prev => {

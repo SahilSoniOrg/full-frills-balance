@@ -34,6 +34,7 @@ export function clearReactiveAggregatedBalancesCache(): void {
 
 /**
  * Shared SQL + hierarchy balance stream for account list and detail screens.
+ * Month-to-date accounts-list income/expense inflow is derived from periodIncrease/Decrease on this stream; other ranges use reportService.getIncomeVsExpense.
  */
 export function observeAggregatedAccountBalances(
   targetCurrency: string,

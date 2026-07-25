@@ -1,11 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountType } from '@/src/data/models/Account';
-import Transaction from '@/src/data/models/Transaction';
+import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { convertAmount } from '@/src/services/currencyConversion';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateCalendarHeatmapFromTransactions,
@@ -31,7 +29,6 @@ import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
-import { effect } from '@/src/services/accounting/BalanceEffects';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -267,6 +264,7 @@ export class ReportService {
 
   /**
    * Calculates Income vs Expense for the period.
+   * Canonical entry for period-scoped dashboard/reports income & expense totals (e.g. reports snapshot, accounts list last-30-days inflow).
    */
   async getIncomeVsExpense(
     workplaceId: WorkplaceId,
@@ -321,71 +319,6 @@ export class ReportService {
 
     const summary = calculateIncomeVsExpenseSummary(mapped);
     return { income: summary.income, expense: summary.expense };
-  }
-
-  /**
-   * Calculates Income vs Expense from an in-memory transaction list.
-   */
-  async getIncomeVsExpenseFromTransactions(
-    transactions: Transaction[],
-    accounts: Account[],
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-  ): Promise<{ income: number; expense: number }> {
-    let currency = targetCurrency;
-    if (!currency) {
-      currency = await workplaceService.getCurrency(accounts[0]?.workplaceId);
-    }
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-    let income = Money.from(0, currency);
-    let expense = Money.from(0, currency);
-
-    const conversions = await Promise.all(
-      transactions.map(async tx => {
-        if (tx.transactionDate < startDate || tx.transactionDate > endDate) return null;
-        const acc = accountMap.get(tx.accountId);
-        if (
-          !acc ||
-          (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE)
-        )
-          return null;
-
-        const fromCurrency = tx.currencyCode || acc.currencyCode || currency;
-        const conversion = await convertAmount({
-          amount: tx.amount,
-          fromCurrency,
-          toCurrency: currency,
-          mode: 'historical',
-          storedExchangeRate: tx.exchangeRate,
-        });
-        if (!conversion.ok) {
-          return null;
-        }
-
-        return {
-          amount: Money.from(conversion.amount, currency),
-          type: acc.accountType,
-          transactionType: tx.transactionType,
-        };
-      }),
-    );
-
-    for (const conv of conversions) {
-      if (!conv) continue;
-      const delta = Money.from(
-        effect(conv.type, conv.transactionType).delta(conv.amount.amount),
-        currency,
-      );
-      if (conv.type === AccountType.INCOME) {
-        income = income.add(delta);
-      } else {
-        expense = expense.add(delta);
-      }
-    }
-
-    return { income: income.amount, expense: expense.amount };
   }
 
   /**

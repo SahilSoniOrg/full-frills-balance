@@ -1,7 +1,9 @@
 import Account, { AccountType } from '@/src/data/models/Account';
 import { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountId } from '@/src/types/domain';
+import { AccountBalance, AccountId } from '@/src/types/domain';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
+import { roundToPrecision } from '@/src/utils/money';
+import { AppConfig } from '@/src/constants/app-config';
 
 export type AccountsListInflowPeriod = 'overall' | 'month' | '30days';
 export type AccountsListTab = 'accounts' | 'categories';
@@ -74,6 +76,36 @@ export function resolveAccountListPressAction(
   const isExpanded = expandedAccountIds.has(accountId);
   if (hasChildren && !isExpanded) return 'expand';
   return 'navigate';
+}
+
+/** Month-to-date income/expense from the shared account-list balance stream (see observeAggregatedAccountBalances). */
+export function aggregateLeafPeriodIncomeExpense(
+  accounts: Pick<Account, 'id' | 'parentAccountId'>[],
+  balances: AccountBalance[],
+): { income: number; expense: number } {
+  const parentIds = new Set(
+    accounts.map(a => a.parentAccountId).filter((id): id is AccountId => id != null && id !== ''),
+  );
+  const balanceById = new Map(balances.map(b => [b.accountId, b]));
+  let income = 0;
+  let expense = 0;
+  const precision = AppConfig.constants.precision;
+
+  for (const account of accounts) {
+    if (parentIds.has(account.id)) continue;
+    const balance = balanceById.get(account.id);
+    if (!balance?.accountType) continue;
+    if (balance.accountType === AccountType.INCOME) {
+      income += balance.monthlyIncome ?? 0;
+    } else if (balance.accountType === AccountType.EXPENSE) {
+      expense += balance.monthlyExpenses ?? 0;
+    }
+  }
+
+  return {
+    income: roundToPrecision(income, precision),
+    expense: roundToPrecision(expense, precision),
+  };
 }
 
 export function resolveInflowTotals(input: {
