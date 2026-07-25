@@ -272,6 +272,71 @@ describe('AccountRepository', () => {
     });
   });
 
+  describe('deleteAccount', () => {
+    it('should reject deleting an account that has transactions', async () => {
+      const asset = await accountRepository.create({
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+      const equity = await accountRepository.create({
+        name: 'Equity',
+        accountType: AccountType.EQUITY,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+
+      await journalRepository.createJournalWithTransactions(
+        {
+          description: 'Deposit',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          totalAmount: 100,
+          displayType: JournalDisplayType.INCOME,
+          transactions: [
+            {
+              accountId: asset.id as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equity.id as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+          calculatedBalances: new Map([
+            [asset.id, 100],
+            [equity.id, 100],
+          ]),
+        },
+        workplaceId,
+      );
+
+      await expect(accountService.deleteAccount(asset, workplaceId)).rejects.toThrow(
+        'has transactions and cannot be deleted',
+      );
+
+      const stillThere = await accountRepository.find(workplaceId, asset.id);
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('should soft-delete an account with no transactions', async () => {
+      const account = await accountRepository.create({
+        name: 'Unused',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+
+      await accountService.deleteAccount(account, workplaceId);
+
+      const found = await accountRepository.find(workplaceId, account.id);
+      expect(found).toBeNull();
+    });
+  });
+
   describe('findByType', () => {
     it('should filter accounts by type', async () => {
       await accountRepository.create({

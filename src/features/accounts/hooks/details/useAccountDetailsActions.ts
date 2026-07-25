@@ -55,10 +55,7 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     if (!account) return;
     confirm.show({
       title: 'Delete Account',
-      message:
-        transactionCount > 0
-          ? `This account has ${transactionCount} transaction(s). Deleting it will orphan these transactions. Are you sure?`
-          : 'Are you sure you want to delete this account? This action cannot be undone.',
+      message: 'Are you sure you want to delete this account? This action cannot be undone.',
       destructive: true,
       requiredConfirmationValue: account.name,
       onConfirm: async () => {
@@ -87,7 +84,7 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
         }
       },
     });
-  }, [account, deleteAccount, transactionCount, accountId, recoverAction]);
+  }, [account, deleteAccount, accountId, recoverAction]);
 
   const onRecover = useCallback(() => {
     showConfirmationAlert(

@@ -355,6 +355,13 @@ export class AccountService {
         : accountOrId;
     if (!account) return;
 
+    const hasTransactions = await transactionRepository.hasTransactions(workplaceId, account.id);
+    if (hasTransactions) {
+      throw new Error(
+        `Account "${account.name}" has transactions and cannot be deleted. Merge transactions into another account first.`,
+      );
+    }
+
     await accountRepository.delete(workplaceId, account);
 
     await auditService.log(
