@@ -89,8 +89,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | # | Task | Notes |
 |---|------|--------|
-| 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ query repo |
-| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | |
+| 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ list/write/metadata |
+| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | ✅ starter (form + editor helpers) |
 | 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” | ✅ accounts list MTD |
 | 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
 | 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
@@ -100,7 +100,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | Feature | When | Est. |
 |---------|------|------|
-| Guided split transactions (simple editor) | After 2.7 | S, 3–5 d |
+| Guided split transactions (simple editor) | After 2.7 | ✅ MVP (Split mode) |
 | New report types | Anytime after 2.3 | S–M |
 | Budget rollover | After 3.3 + simulation tests | M–L |
 | Reconciliation (cleared flags) | Wire or replace `ReconciliationRepository` | M–L |
@@ -111,8 +111,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ## Next up
 
-1. **Phase 4** — thin view-models (4.2), more journal repo splits, product shortcuts (split tx)
-2. **Ops** — push `main` (67+ commits ahead) to run GitHub CI
+1. **Phase 4** — deeper 4.2 (details VM, journal entry VM), account repo splits, reports/budget features
+2. **Ops** — push `main` (~71 commits ahead) to run GitHub CI
 
 ---
 
@@ -121,7 +121,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | Phase | Status |
 |-------|--------|
 | 0 | ✅ committed + Playwright demoted |
-| 1 | ✅ implemented (pending commit) |
-| 2 | In progress |
-| 3 | Not started |
-| 4 | Ongoing |
+| 1 | ✅ |
+| 2 | ✅ |
+| 3 | ✅ |
+| 4 | Ongoing (starters + split mode) |
