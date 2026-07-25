@@ -4,66 +4,27 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
-  AccountId,
-  JournalDisplayType,
-  JournalId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
-import { safeParseJSON } from '@/src/utils/serialization';
+  journalWriteRepository,
+  type PrepareCreateJournalData,
+} from '@/src/data/repositories/journal/journalWriteRepository';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { Model, Q } from '@nozbe/watermelondb';
-// Imported here so the flush runs synchronously outside the write block —
-// before any observer sees the new transaction rows.
 
-export interface CreateJournalData {
-  journalDate: number;
-  description?: string;
-  notes?: string;
-  currencyCode: string;
-  originalJournalId?: JournalId;
-  status?: JournalStatus;
-  plannedPaymentId?: PlannedPaymentId;
-  transactions: {
-    accountId: AccountId;
-    amount: number;
-    transactionType: TransactionType;
-    notes?: string;
-    exchangeRate?: number;
-    currencyCode?: string;
-  }[];
-  metadata?: {
-    importSource: string;
-    originalSmsId?: string;
-    originalSmsSender?: string;
-    originalSmsBody?: string;
-    metadataJson?: string;
-  };
-}
-
-export interface PrepareCreateJournalData extends CreateJournalData {
-  totalAmount?: number;
-  displayType?: JournalDisplayType;
-  calculatedBalances?: Map<string, number | null>;
-}
+export type {
+  CreateJournalData,
+  PrepareCreateJournalData,
+} from '@/src/data/repositories/journal/journalWriteRepository';
 
 export class JournalRepository {
   private get journals() {
     return database.collections.get<Journal>('journals');
-  }
-
-  private get transactions() {
-    return database.collections.get<Transaction>('transactions');
-  }
-
-  private get journalMetadata() {
-    return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
   journalsQuery(...clauses: Q.Clause[]) {
@@ -167,112 +128,40 @@ export class JournalRepository {
   }
 
   async findAll(workplaceId: WorkplaceId): Promise<Journal[]> {
-    const start = Date.now();
-    const results = await this.journals
-      .query(
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('workplace_id', workplaceId),
-      )
-      .extend(Q.sortBy('journal_date', 'desc'))
-      .fetch();
-
-    logger.info(`[Trace] JournalRepository.findAll: ${Date.now() - start}ms`, {
-      count: results.length,
-    });
-    return results;
+    return journalListQueryRepository.findAll(workplaceId);
   }
 
   async findAllPlanned(workplaceId: WorkplaceId): Promise<Journal[]> {
-    return this.journalsQuery(
-      Q.where('status', JournalStatus.PLANNED),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ).fetch();
+    return journalListQueryRepository.findAllPlanned(workplaceId);
   }
 
   async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Journal[]> {
-    return this.journals
-      .query(
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('journal_date', 'desc'),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
+    return journalListQueryRepository.findAllNonDeleted(workplaceId);
   }
 
   async findMetadataByJournalId(
     journalId: string,
     workplaceId: WorkplaceId,
   ): Promise<JournalMetadata | null> {
-    const records = await this.journalMetadata
-      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    return records[0] || null;
+    return journalMetadataRepository.findByJournalId(journalId, workplaceId);
   }
 
-  /**
-   * Updates or creates metadata for a journal, merging existing metadata JSON.
-   * Assumes it's being called inside a database.write() block.
-   */
   async patchMetadata(
     workplaceId: WorkplaceId,
     journalId: JournalId,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<void> {
-    const existingMeta = await this.findMetadataByJournalId(journalId, workplaceId);
-    if (existingMeta) {
-      await existingMeta.update((record: JournalMetadata) => {
-        const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
-        record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata });
-        if (source) record.importSource = source;
-        record.updatedAt = new Date();
-      });
-    } else {
-      await this.journalMetadata.create((record: JournalMetadata) => {
-        record.journalId = journalId;
-        record.workplaceId = workplaceId;
-        record.importSource = source || 'manual';
-        record.metadataJson = JSON.stringify(partialMetadata);
-        record.createdAt = new Date();
-        record.updatedAt = new Date();
-      });
-    }
+    return journalMetadataRepository.patch(workplaceId, journalId, partialMetadata, source);
   }
 
-  /**
-   * Prepare-only version of patchMetadata.
-   *
-   * Returns a prepareUpdate / prepareCreate model op that can be included in
-   * a parent database.batch() call WITHOUT opening its own write transaction.
-   * Use this whenever calling from inside an existing database.write() block
-   * to avoid the nested-write violation.
-   */
   async prepareMetadataPatch(
     workplaceId: WorkplaceId,
     journalId: JournalId,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<Model> {
-    const existingMeta = await this.findMetadataByJournalId(journalId, workplaceId);
-    if (existingMeta) {
-      return existingMeta.prepareUpdate((record: JournalMetadata) => {
-        const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
-        record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata });
-        if (source) record.importSource = source;
-        record.updatedAt = new Date();
-      });
-    }
-    return this.journalMetadata.prepareCreate((record: JournalMetadata) => {
-      record.journalId = journalId;
-      record.workplaceId = workplaceId;
-      record.importSource = source || 'manual';
-      record.metadataJson = JSON.stringify(partialMetadata);
-      record.createdAt = new Date();
-      record.updatedAt = new Date();
-    });
+    return journalMetadataRepository.preparePatch(workplaceId, journalId, partialMetadata, source);
   }
 
   async findJournalByOriginalSmsId(
@@ -318,15 +207,9 @@ export class JournalRepository {
   }
 
   async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
-    return this.journals
-      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
-      .fetchCount();
+    return journalListQueryRepository.countNonDeleted(workplaceId);
   }
 
-  /**
-   * Prepares creation of a journal and its transactions.
-   * Returns an array of prepared models that can be used in a database.batch() call.
-   */
   prepareCreateJournalWithTransactions(
     journalData: PrepareCreateJournalData,
     workplaceId: WorkplaceId,
@@ -335,273 +218,49 @@ export class JournalRepository {
     transactions: Transaction[];
     metadataRecord?: JournalMetadata;
   } {
-    const {
-      transactions: transactionData,
-      totalAmount,
-      displayType,
-      calculatedBalances,
-      metadata,
-      ...journalFields
-    } = journalData;
-
-    const journal = this.journals.prepareCreate(j => {
-      Object.assign(j, journalFields);
-      j.workplaceId = workplaceId;
-      j.status = journalFields.status ?? JournalStatus.POSTED;
-      j.plannedPaymentId = journalFields.plannedPaymentId;
-      j.totalAmount = totalAmount ?? 0;
-      j.transactionCount = transactionData.length;
-      j.displayType = displayType ?? JournalDisplayType.TRANSFER;
-      j.createdAt = new Date();
-      j.updatedAt = new Date();
-    });
-
-    const transactions = transactionData.map(txData => {
-      return this.transactions.prepareCreate(tx => {
-        tx.journalId = journal.id;
-        tx.accountId = txData.accountId;
-        tx.amount = txData.amount;
-        tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-        tx.transactionType = txData.transactionType;
-        tx.transactionDate = journalFields.journalDate;
-        tx.notes = txData.notes;
-        tx.exchangeRate = txData.exchangeRate;
-        tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-        tx.workplaceId = workplaceId;
-        tx.createdAt = new Date();
-        tx.updatedAt = new Date();
-      });
-    });
-
-    let metadataRecord: JournalMetadata | undefined;
-    if (metadata) {
-      metadataRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
-        m.journalId = journal.id;
-        m.workplaceId = workplaceId;
-        m.importSource = metadata.importSource;
-        m.originalSmsId = metadata.originalSmsId;
-        m.originalSmsSender = metadata.originalSmsSender;
-        m.originalSmsBody = metadata.originalSmsBody;
-        m.metadataJson = metadata.metadataJson;
-      });
-    }
-
-    return { journal, transactions, metadataRecord };
+    return journalWriteRepository.prepareCreateJournalWithTransactions(journalData, workplaceId);
   }
 
   async createJournalWithTransactions(
     journalData: PrepareCreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const start = Date.now();
-    return await database.write(async () => {
-      const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
-        journalData,
-        workplaceId,
-      );
-
-      const batchOps: Model[] = [journal, ...transactions];
-      if (metadataRecord) batchOps.push(metadataRecord);
-
-      await database.batch(batchOps);
-
-      logger.info(
-        `[Trace] JournalRepository.createJournalWithTransactions: ${Date.now() - start}ms`,
-        {
-          txCount: journalData.transactions.length,
-        },
-      );
-
-      return journal;
-    });
+    return journalWriteRepository.createJournalWithTransactions(journalData, workplaceId);
   }
 
   async updateJournalWithTransactions(
     workplaceId: WorkplaceId,
     journalId: JournalId,
     journalData: PrepareCreateJournalData,
-    extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
-    afterBatch?: () => void, // Runs inside the same write after batch (e.g. rebuild enqueue)
+    extraOpCreator?: () => Model,
+    afterBatch?: () => void,
   ): Promise<Journal> {
-    const {
-      transactions: transactionData,
-      totalAmount,
-      displayType,
-      calculatedBalances,
-      metadata,
-      ...journalFields
-    } = journalData;
-
-    const existingJournal = await this.find(workplaceId, journalId);
-    if (!existingJournal) throw new Error('Journal not found');
-
-    const oldTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
-      .fetch();
-    const existingMeta = metadata
-      ? await this.findMetadataByJournalId(journalId, workplaceId)
-      : null;
-
-    const start = Date.now();
-    // C-1 fix reverted: return database.write directly.
-    // Ensure the caller delegates flush triggering to the domain service layer.
-    return await database.write(async () => {
-      const now = new Date();
-
-      // 1. Prepare updates for soft-delete of old transactions
-      const deleteUpdates = oldTransactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = now;
-          t.updatedAt = now;
-        }),
-      );
-
-      // 2. Prepare creation of new transactions
-      const createUpdates = transactionData.map(txData => {
-        return this.transactions.prepareCreate(tx => {
-          tx.accountId = txData.accountId;
-          tx.amount = txData.amount;
-          tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-          tx.transactionType = txData.transactionType;
-          tx.journalId = journalId;
-          tx.workplaceId = workplaceId;
-          tx.transactionDate = journalFields.journalDate;
-          tx.notes = txData.notes;
-          tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-          tx.createdAt = new Date();
-          tx.updatedAt = new Date();
-        });
-      });
-
-      // 3. Prepare journal update
-      const journalUpdate = existingJournal.prepareUpdate((j: Journal) => {
-        j.journalDate = journalFields.journalDate;
-        j.description = journalFields.description;
-        j.notes = journalFields.notes;
-        j.currencyCode = journalFields.currencyCode;
-        j.status = journalFields.status ?? j.status;
-        j.plannedPaymentId = journalFields.plannedPaymentId ?? j.plannedPaymentId;
-        j.totalAmount = totalAmount ?? j.totalAmount;
-        j.transactionCount = transactionData.length;
-        j.displayType = displayType ?? j.displayType;
-        (j as any)._setRaw('updated_at', Date.now());
-      });
-
-      const batchOps: Model[] = [journalUpdate, ...deleteUpdates, ...createUpdates];
-
-      if (metadata) {
-        if (existingMeta) {
-          const metaUpdate = existingMeta.prepareUpdate((m: JournalMetadata) => {
-            m.importSource = metadata.importSource;
-            m.originalSmsId = metadata.originalSmsId;
-            m.originalSmsSender = metadata.originalSmsSender;
-            m.originalSmsBody = metadata.originalSmsBody;
-            m.metadataJson = metadata.metadataJson;
-            m.workplaceId = workplaceId;
-            m.updatedAt = now;
-          });
-          batchOps.push(metaUpdate);
-        } else {
-          const metaRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
-            m.journalId = journalId;
-            m.workplaceId = workplaceId;
-            m.importSource = metadata.importSource;
-            m.originalSmsId = metadata.originalSmsId;
-            m.originalSmsSender = metadata.originalSmsSender;
-            m.originalSmsBody = metadata.originalSmsBody;
-            m.metadataJson = metadata.metadataJson;
-            m.createdAt = now;
-            m.updatedAt = now;
-          });
-          batchOps.push(metaRecord);
-        }
-      }
-
-      // Include any extra op synchronously (e.g. audit log callback) in the same atomic batch.
-      if (extraOpCreator) batchOps.push(extraOpCreator());
-
-      await database.batch(batchOps);
-      afterBatch?.();
-
-      logger.info(
-        `[Trace] JournalRepository.updateJournalWithTransactions: ${Date.now() - start}ms`,
-        {
-          newTxCount: transactionData.length,
-          oldTxCount: oldTransactions.length,
-        },
-      );
-
-      return existingJournal;
-    });
+    return journalWriteRepository.updateJournalWithTransactions(
+      workplaceId,
+      journalId,
+      journalData,
+      extraOpCreator,
+      afterBatch,
+    );
   }
 
-  /**
-   * M-3 fix: Patches only the journal status field.
-   * Cheaper than updateJournalWithTransactions — no transaction soft-delete/re-create,
-   * no balance churn. Use this whenever only the status needs to change.
-   */
   async updateJournalStatus(
     journalId: JournalId,
     status: JournalStatus,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const journal = await this.find(workplaceId, journalId);
-    if (!journal) throw new Error(`Journal ${journalId} not found`);
-
-    await database.write(async () => {
-      await journal.update(record => {
-        record.status = status;
-        record.updatedAt = new Date();
-      });
-    });
-
-    return journal;
+    return journalWriteRepository.updateJournalStatus(journalId, status, workplaceId);
   }
 
   async softDeleteJournal(workplaceId: WorkplaceId, journalId: JournalId): Promise<void> {
-    const journal = await this.find(workplaceId, journalId);
-    if (!journal) return;
-
-    const associatedTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    await database.write(async () => {
-      const now = new Date();
-
-      const journalUpdate = journal.prepareUpdate(j => {
-        j.deletedAt = now;
-        j.updatedAt = now;
-      });
-
-      const transactionUpdates = associatedTransactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = now;
-          t.updatedAt = now;
-        }),
-      );
-
-      await database.batch([journalUpdate, ...transactionUpdates]);
-    });
+    return journalWriteRepository.softDeleteJournal(workplaceId, journalId);
   }
 
-  /**
-   * Fetches a journal and its transactions for soft-deletion/recovery.
-   * Does NOT call prepareUpdate synchronously, avoiding the yield/diagnostic error.
-   */
   async fetchJournalForDeletion(
     journalId: JournalId,
     workplaceId: WorkplaceId,
   ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
-    const journal = await this.findWithDeleted(workplaceId, journalId);
-    if (!journal) return null;
-
-    const associatedTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    return { journal, transactions: associatedTransactions };
+    return journalWriteRepository.fetchJournalForDeletion(journalId, workplaceId);
   }
 
   async markReversed(
@@ -609,141 +268,25 @@ export class JournalRepository {
     reversingJournalId: JournalId,
     workplaceId: WorkplaceId,
   ): Promise<void> {
-    const journal = await this.find(workplaceId, originalJournalId);
-    if (!journal) return;
-
-    await database.write(async () => {
-      const update = journal.prepareUpdate(record => {
-        record.reversingJournalId = reversingJournalId;
-        record.status = JournalStatus.REVERSED;
-        record.updatedAt = new Date();
-      });
-      await database.batch([update]);
-    });
+    return journalWriteRepository.markReversed(originalJournalId, reversingJournalId, workplaceId);
   }
 
-  /**
-   * Atomically replace a journal by creating a reversal + replacement in a single write.
-   */
   async replaceJournalWithReversal(params: {
     originalJournal: Journal;
     originalTransactions: Transaction[];
     replacementData: PrepareCreateJournalData;
     workplaceId: WorkplaceId;
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
-    const { originalJournal, originalTransactions, replacementData, workplaceId } = params;
-    const {
-      transactions: replacementTransactions,
-      totalAmount,
-      displayType,
-      calculatedBalances,
-      ...journalFields
-    } = replacementData;
-
-    const start = Date.now();
-    return await database.write(async () => {
-      const now = new Date();
-      const reversalDate = originalJournal.journalDate;
-
-      // 1) Prepare reversal journal
-      const reversalJournal = this.journals.prepareCreate(j => {
-        j.journalDate = reversalDate;
-        j.description = `Reversal of: ${originalJournal.description || originalJournal.id} (Edit)`;
-        j.currencyCode = originalJournal.currencyCode;
-        j.status = JournalStatus.POSTED;
-        j.originalJournalId = originalJournal.id;
-        j.totalAmount = originalJournal.totalAmount;
-        j.transactionCount = originalTransactions.length;
-        j.displayType = originalJournal.displayType;
-        j.workplaceId = workplaceId;
-        j.createdAt = now;
-        j.updatedAt = now;
-      });
-
-      const reversalTransactions = originalTransactions.map(tx => {
-        return this.transactions.prepareCreate(t => {
-          t.journalId = reversalJournal.id;
-          t.accountId = tx.accountId;
-          t.amount = tx.amount;
-          t.currencyCode = tx.currencyCode;
-          t.transactionType =
-            tx.transactionType === TransactionType.DEBIT
-              ? TransactionType.CREDIT
-              : TransactionType.DEBIT;
-          t.transactionDate = reversalDate;
-          t.notes = `Reversal: ${tx.notes || ''}`;
-          t.exchangeRate = tx.exchangeRate || 1;
-          t.runningBalance = null; // F-13 Fix: Let rebuild queue handle balance
-          t.workplaceId = workplaceId;
-          t.createdAt = now;
-          t.updatedAt = now;
-        });
-      });
-
-      // 2) Prepare original journal update
-      const originalJournalUpdate = originalJournal.prepareUpdate(record => {
-        record.reversingJournalId = reversalJournal.id;
-        record.status = JournalStatus.REVERSED;
-        record.updatedAt = now;
-      });
-
-      // 3) Prepare replacement journal
-      const replacementJournal = this.journals.prepareCreate(j => {
-        Object.assign(j, journalFields);
-        j.status = JournalStatus.POSTED;
-        j.totalAmount = totalAmount ?? 0;
-        j.transactionCount = replacementTransactions.length;
-        j.displayType = displayType ?? JournalDisplayType.TRANSFER;
-        j.workplaceId = workplaceId;
-        j.createdAt = now;
-        j.updatedAt = now;
-      });
-
-      const newTransactions = replacementTransactions.map(txData => {
-        return this.transactions.prepareCreate(tx => {
-          tx.journalId = replacementJournal.id;
-          tx.accountId = txData.accountId;
-          tx.amount = txData.amount;
-          tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-          tx.transactionType = txData.transactionType;
-          tx.transactionDate = journalFields.journalDate;
-          tx.notes = txData.notes;
-          tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-          tx.workplaceId = workplaceId;
-          tx.createdAt = now;
-          tx.updatedAt = new Date();
-        });
-      });
-
-      await database.batch([
-        reversalJournal,
-        ...reversalTransactions,
-        originalJournalUpdate,
-        replacementJournal,
-        ...newTransactions,
-      ]);
-
-      logger.info(`[Trace] JournalRepository.replaceJournalWithReversal: ${Date.now() - start}ms`, {
-        newTxCount: replacementTransactions.length,
-        oldTxCount: originalTransactions.length,
-      });
-
-      return { reversalJournal, replacementJournal };
-    });
+    return journalWriteRepository.replaceJournalWithReversal(params);
   }
 
   async getRecentUniqueDescriptions(
     workplaceId: WorkplaceId,
     limit: number = 500,
   ): Promise<{ description: string; count: number }[]> {
-    return journalEnrichmentQueries.getRecentUniqueDescriptions(workplaceId, limit);
+    return journalListQueryRepository.getRecentUniqueDescriptions(workplaceId, limit);
   }
 
-  /**
-   * Fetches transactions and account info for a batch of journals in a single raw query.
-   * Optimized for observeEnrichedJournals.
-   */
   async getEnrichmentDataRaw(journalIds: string[]): Promise<
     {
       journal_id: JournalId;
@@ -760,5 +303,7 @@ export class JournalRepository {
 }
 
 export { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+export { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
+export { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 
 export const journalRepository = new JournalRepository();
