@@ -192,6 +192,10 @@ export function DashboardScreenView({
         onClose={() => uiState.setSelectedLegendItem(null)}
         type={uiState.selectedLegendItem}
         viewModel={safeToSpendViewModel}
+        onRequestExplanation={() => {
+          uiState.setSelectedLegendItem(null);
+          uiState.setInfoVisible(true);
+        }}
       />
     </>
   );

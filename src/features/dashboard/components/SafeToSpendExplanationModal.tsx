@@ -338,14 +338,20 @@ export const SafeToSpendExplanationModal = ({
                             firstMajorInflowDay !== null &&
                             det.dayOffset !== undefined &&
                             det.dayOffset >= firstMajorInflowDay;
+                          const detailTypeLabel =
+                            det.type === 'BUDGET'
+                              ? 'Budget'
+                              : det.type === 'PLANNED_PAYMENT'
+                                ? 'Planned Payment'
+                                : 'Transfer';
                           return (
                             <TouchableOpacity
                               key={di}
                               style={{
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
-                                alignItems: 'center',
-                                minHeight: 18,
+                                alignItems: 'flex-start',
+                                gap: Spacing.sm,
                               }}
                               onPress={() => {
                                 if (det.type === 'PLANNED_PAYMENT') {
@@ -363,21 +369,16 @@ export const SafeToSpendExplanationModal = ({
                               disabled={det.type !== 'PLANNED_PAYMENT'}
                               activeOpacity={Opacity.heavy}
                             >
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: Spacing.sm,
-                                  flex: 1,
-                                  paddingRight: Spacing.xs,
-                                }}
-                              >
+                              <View style={{ flex: 1, gap: Spacing.xs }}>
+                                <AppText variant="caption" weight="bold">
+                                  {det.name}
+                                </AppText>
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
+                                    flexWrap: 'wrap',
                                     gap: Spacing.xs,
-                                    flex: 1,
                                   }}
                                 >
                                   <AppIcon
@@ -388,55 +389,22 @@ export const SafeToSpendExplanationModal = ({
                                           ? 'calendar'
                                           : 'refresh'
                                     }
-                                    size={10}
+                                    size={Size.xxs}
                                     color={theme.textSecondary}
                                   />
-                                  <AppText
-                                    variant="caption"
-                                    color="secondary"
-                                    style={{ fontSize: 10, lineHeight: 14 }}
-                                  >
-                                    {det.name}
-                                  </AppText>
-                                  <AppText
-                                    style={{
-                                      fontSize: 8,
-                                      opacity: Opacity.medium,
-                                      color: theme.textSecondary,
-                                    }}
-                                  >
-                                    {det.type === 'BUDGET'
-                                      ? 'Budget'
-                                      : det.type === 'PLANNED_PAYMENT'
-                                        ? 'Bill'
-                                        : 'Plan'}
+                                  <AppText variant="caption" color="secondary">
+                                    {det.dayOffset !== undefined
+                                      ? `Day ${det.dayOffset} • ${detailTypeLabel}`
+                                      : detailTypeLabel}
                                   </AppText>
                                   {isPostIncome && (
-                                    <View
-                                      style={{
-                                        backgroundColor: withOpacity(theme.success, Opacity.hover),
-                                        paddingHorizontal: 6,
-                                        paddingVertical: 2,
-                                        borderRadius: 4,
-                                        marginLeft: Spacing.xs,
-                                      }}
-                                    >
-                                      <AppText
-                                        weight="bold"
-                                        style={{ fontSize: 8, color: theme.success }}
-                                      >
-                                        {labels.waitingForIncome}
-                                      </AppText>
-                                    </View>
+                                    <AppText variant="caption" color="success">
+                                      • {labels.waitingForIncome}
+                                    </AppText>
                                   )}
                                 </View>
                               </View>
-                              <AppText
-                                variant="caption"
-                                color="secondary"
-                                tabular
-                                style={{ fontSize: 10, lineHeight: 14 }}
-                              >
+                              <AppText variant="caption" color="secondary" tabular>
                                 {formatValue(det.amount)}
                               </AppText>
                             </TouchableOpacity>

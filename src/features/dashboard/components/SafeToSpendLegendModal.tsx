@@ -1,6 +1,7 @@
 import { InfoSheet } from '@/src/components/common/InfoSheet';
-import { AppCard, AppText } from '@/src/components/core';
+import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { analytics } from '@/src/services/analytics-service';
 import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
@@ -10,15 +11,14 @@ interface SafeToSpendLegendModalProps {
   onClose: () => void;
   type: 'safe' | 'committed' | 'debts' | null;
   viewModel: SafeToSpendViewModel;
+  onRequestExplanation: () => void;
 }
 
 export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
-  const { visible, onClose, type, viewModel } = props;
+  const { visible, onClose, type, viewModel, onRequestExplanation } = props;
   const {
     labels,
     formatValue,
-    totalLiquidAssets,
-    totalFutureInflow,
     committedTotal,
     committedLiabilities,
     safeToSpend,
@@ -56,67 +56,16 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
           <AppText variant="body" style={{ marginBottom: Spacing.md, lineHeight: 22 }}>
             {legendStrings.safeDesc(safeToSpendDays)}
           </AppText>
-          <AppCard elevation="sm" padding="lg" style={{ marginTop: Spacing.sm }}>
-            <AppText variant="subheading" style={{ marginBottom: Spacing.md }}>
-              {labels.calculationTitle}
-            </AppText>
-            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.lg }}>
-              {labels.calculationFormula}
-            </AppText>
 
-            <View style={{ gap: Spacing.md }}>
-              <View style={styles.breakdownRow}>
-                <AppText variant="body" color="secondary">
-                  {labels.assetsBucket}
-                </AppText>
-                <AppText variant="body" weight="bold" color="success">
-                  +{formatValue(totalLiquidAssets)}
-                </AppText>
-              </View>
-              <View style={styles.breakdownRow}>
-                <AppText variant="body" color="secondary">
-                  {labels.upcomingIncome}
-                </AppText>
-                <AppText variant="body" weight="bold" color="success">
-                  +{formatValue(totalFutureInflow)}
-                </AppText>
-              </View>
-              <View style={styles.breakdownRow}>
-                <AppText variant="body" color="secondary">
-                  {labels.committedLine.split(' (')[0]}
-                </AppText>
-                <AppText variant="body" weight="bold" color="warning">
-                  -{formatValue(committedTotal)}
-                </AppText>
-              </View>
-              <View style={styles.breakdownRow}>
-                <AppText variant="body" color="secondary">
-                  {labels.debtsBucket}
-                </AppText>
-                <AppText variant="body" weight="bold" color="error">
-                  -{formatValue(committedLiabilities)}
-                </AppText>
-              </View>
-              <Separator marginVertical="md" opacity={Opacity.muted} />
-              <View style={styles.breakdownRow}>
-                <AppText variant="subheading">{legendStrings.safeTitle}</AppText>
-                <AppText variant="subheading" color="primary" tabular>
-                  {formatValue(safeToSpend)}
-                </AppText>
-              </View>
-            </View>
-
-            <AppText
-              variant="caption"
-              color="secondary"
-              style={{ marginTop: Spacing.lg, lineHeight: 18 }}
-            >
-              {strings.safeToSpendExplanation.logicNote}
+          <View style={[styles.breakdownRow, { marginBottom: Spacing.lg }]}>
+            <AppText variant="subheading">{legendStrings.safeTitle}</AppText>
+            <AppText variant="subheading" color="primary" tabular>
+              {formatValue(safeToSpend)}
             </AppText>
-          </AppCard>
+          </View>
 
           {incomeBreakdown.length > 0 && (
-            <View style={{ marginTop: Spacing.xl }}>
+            <View style={{ marginBottom: Spacing.lg }}>
               <AppText
                 variant="caption"
                 weight="bold"
@@ -134,12 +83,12 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                         <AppText variant="caption" weight="bold">
                           {inc.name}
                         </AppText>
-                        <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
+                        <AppText variant="caption" color="secondary">
                           Day {inc.dayOffset} •{' '}
-                          {inc.type === 'PLANNED_PAYMENT' ? 'Bill' : 'Transfer'}
+                          {inc.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Transfer'}
                         </AppText>
                       </View>
-                      <AppText variant="caption" weight="bold" color="success">
+                      <AppText variant="caption" weight="bold" color="success" tabular>
                         +{formatValue(inc.amount)}
                       </AppText>
                     </View>
@@ -147,6 +96,19 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </View>
             </View>
           )}
+
+          <AppButton
+            variant="ghost"
+            onPress={() => {
+              analytics.trackFeatureUsage('safe_to_spend', 'legend_to_explanation', {
+                slice: 'safe',
+              });
+              onRequestExplanation();
+            }}
+            accessibilityLabel={strings.safeToSpendExplanation.title}
+          >
+            {strings.safeToSpendExplanation.title}
+          </AppButton>
         </View>
       )}
 
