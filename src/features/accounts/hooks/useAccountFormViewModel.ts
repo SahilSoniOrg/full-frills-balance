@@ -21,18 +21,17 @@ import {
   filterPotentialParentAccounts,
   isCategoryAccountType,
   resolveAccountFormHeroCopy,
-  resolveInitialAccountType,
 } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { useAccountMetadataForm } from '@/src/features/accounts/hooks/useAccountMetadataForm';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import {
-  resolveAccountIcon,
-  serializeAccountMetadata,
-  validateAccountMetadata,
-} from '@/src/features/accounts/services/accountMetadataDomain';
+  buildAccountSavePayload,
+  resolveAccountFormDefaults,
+  resolveAccountInitialBalance,
+} from '@/src/features/accounts/services/accountFormService';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
@@ -160,24 +159,35 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const pathname = usePathname();
 
-  const initialType = resolveInitialAccountType({
-    pathname,
-    typeParam,
-    previewType: pType,
-  });
+  const routeContext = useMemo(
+    () => ({
+      pathname,
+      typeParam,
+      previewName: pName,
+      previewType: pType,
+      previewCurrency: pCurrency,
+      previewIcon: pIcon,
+    }),
+    [pathname, typeParam, pName, pType, pCurrency, pIcon],
+  );
+
+  const createFormDefaults = useMemo(
+    () => resolveAccountFormDefaults(routeContext, workplaceCurrency),
+    [routeContext, workplaceCurrency],
+  );
 
   // Form State
-  const [accountName, setAccountName] = useState(pName || '');
-  const [accountType, setAccountType] = useState<AccountType>(initialType);
+  const [accountName, setAccountName] = useState(createFormDefaults.accountName);
+  const [accountType, setAccountType] = useState<AccountType>(createFormDefaults.accountType);
   const [accountSubtype, setAccountSubtype] = useState<AccountSubtype>(
-    getDefaultSubtypeForType(initialType),
+    createFormDefaults.accountSubtype,
   );
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
-  const [selectedIcon, setSelectedIcon] = useState<IconName>(
-    resolveAccountIcon(initialType, (pIcon as IconName) || null),
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(
+    createFormDefaults.selectedCurrency,
   );
+  const [selectedIcon, setSelectedIcon] = useState<IconName>(createFormDefaults.selectedIcon);
   const [initialBalance, setInitialBalance] = useState('');
-  const [parentAccountId, setParentAccountId] = useState(EMPTY_ACCOUNT_ID);
+  const [parentAccountId, setParentAccountId] = useState(createFormDefaults.parentAccountId);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
@@ -194,22 +204,21 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   useEffect(() => {
     if (existingAccount && !hasInjectedAccountRef.current) {
       hasInjectedAccountRef.current = true;
-      setAccountName(existingAccount.name);
-      setAccountType(existingAccount.accountType);
-      setAccountSubtype(
-        existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
-      );
-      setSelectedCurrency(existingAccount.currencyCode);
-      setSelectedIcon(resolveAccountIcon(existingAccount.accountType, existingAccount.icon));
-      setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
+      const defaults = resolveAccountFormDefaults(routeContext, workplaceCurrency, existingAccount);
+      setAccountName(defaults.accountName);
+      setAccountType(defaults.accountType);
+      setAccountSubtype(defaults.accountSubtype);
+      setSelectedCurrency(defaults.selectedCurrency);
+      setSelectedIcon(defaults.selectedIcon);
+      setParentAccountId(defaults.parentAccountId);
     }
-  }, [existingAccount, accountVersion]);
+  }, [existingAccount, accountVersion, routeContext, workplaceCurrency]);
 
   // Load existing balance
   useEffect(() => {
     if (balanceData && !hasInjectedBalanceRef.current) {
       hasInjectedBalanceRef.current = true;
-      setInitialBalance(balanceData.balance.toString());
+      setInitialBalance(resolveAccountInitialBalance(balanceData));
     }
   }, [balanceData]);
 
@@ -240,36 +249,37 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const onSave = async () => {
     logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
 
-    const isCurrentCategory = isCategoryAccountType(accountType);
-
-    if (!isCurrentCategory && initialBalance && isNaN(Number(initialBalance))) {
-      setLocalFormError('Initial balance must be a number');
-      return;
-    }
-
-    const metadataError = validateAccountMetadata(metadataValues, accountType);
-    if (metadataError) {
-      setLocalFormError(metadataError);
-      return;
-    }
-
-    const metadataPayload = serializeAccountMetadata(
-      metadataValues,
+    const saveResult = buildAccountSavePayload({
+      accountName,
       accountType,
-      Boolean(existingMetadata),
-    );
+      accountSubtype,
+      selectedCurrency,
+      selectedIcon,
+      initialBalance,
+      parentAccountId,
+      metadataValues,
+      hasExistingMetadata: Boolean(existingMetadata),
+      balanceData,
+    });
+
+    if (!saveResult.ok) {
+      setLocalFormError(saveResult.error);
+      return;
+    }
+
+    const { payload } = saveResult;
 
     try {
       await persistence.handleSave(
-        accountName,
-        accountType,
-        accountSubtype,
-        selectedCurrency,
-        selectedIcon,
-        isCurrentCategory ? '' : initialBalance,
-        isCurrentCategory ? undefined : balanceData || undefined,
-        parentAccountId || undefined,
-        metadataPayload,
+        payload.accountName,
+        payload.accountType,
+        payload.accountSubtype,
+        payload.selectedCurrency,
+        payload.selectedIcon,
+        payload.initialBalance,
+        payload.balanceData,
+        payload.parentAccountId,
+        payload.metadata,
       );
 
       // Note: handleSave in persistence already calls router.back()
