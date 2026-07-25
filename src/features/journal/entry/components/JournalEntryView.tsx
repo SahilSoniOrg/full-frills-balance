@@ -1,27 +1,27 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
-import { Spacing, Shape, Size } from '@/src/constants';
 import { Page } from '@/src/design-system';
-import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
+import { BulkSaveSummaryModal } from '@/src/features/journal/entry/components/BulkSaveSummaryModal';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
+import {
+  JournalEntryModeBody,
+  JournalEntryModeBodyProps,
+} from '@/src/features/journal/entry/components/JournalEntryModeBody';
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
-import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
-import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
-import { SplitForm } from '@/src/features/journal/entry/components/SplitForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
+import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
+import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
-import { ActivityIndicator, StyleSheet, View, Modal, ScrollView } from 'react-native';
-import { VoiceInputModal } from './VoiceInputModal';
-import { BulkEntryGrid } from '@/src/features/journal';
-import { AppButton, AppText, AppIcon } from '@/src/components/core';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
   const { theme } = useTheme();
-  const [hideSuggestions, setHideSuggestions] = React.useState(false);
+  const [hideSuggestions, setHideSuggestions] = useState(false);
+
   const {
     isLoading,
     headerTitle,
@@ -42,16 +42,36 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     setSavedSummary,
   } = vm;
 
-  const isGuidedMode = activeMode === 'guided';
+  const isGuidedScreen = activeMode === 'guided';
 
-  // Reset hide suggestions when user focuses or types
-  const handleSetDescription = React.useCallback(
+  const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
+  const onDescriptionFocus = useCallback(() => setHideSuggestions(false), []);
+  const setDescription = useCallback(
     (desc: string) => {
       setHideSuggestions(false);
       vm.editor.setDescription(desc);
     },
     [vm.editor],
   );
+
+  const modeBodyProps: JournalEntryModeBodyProps = {
+    activeMode: vm.activeMode,
+    simpleEditor: vm.simpleEditor,
+    splitEditor: vm.splitEditor,
+    bulkEditor: vm.bulkEditor,
+    accounts: vm.accounts,
+    editor: vm.editor,
+    workplaceCurrency: vm.workplaceCurrency,
+    onSelectAccountRequest: vm.onSelectAccountRequest,
+    totalDebits: vm.totalDebits,
+    totalCredits: vm.totalCredits,
+    isBalanced: vm.isBalanced,
+    isBalancedDisplay: vm.isBalancedDisplay,
+    baseImbalance: vm.baseImbalance,
+    availableCurrencies: vm.availableCurrencies,
+    selectedCurrency: vm.selectedCurrency,
+    onSelectCurrency: vm.onSelectCurrency,
+  };
 
   if (isLoading) {
     return (
@@ -66,9 +86,9 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
   return (
     <Page
       keyboardAvoiding
-      scrollable={activeMode !== 'bulk'} // Grid has its own ScrollView
+      scrollable={activeMode !== 'bulk'}
       scrollViewProps={{
-        onScrollBeginDrag: () => setHideSuggestions(true),
+        onScrollBeginDrag,
         scrollEventThrottle: 16,
       }}
       header={
@@ -89,18 +109,12 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           label={submitLabel}
           loading={activeMode === 'bulk' && vm.bulkEditor.isSubmitting}
           topSlot={
-            isGuidedMode ? (
+            isGuidedScreen ? (
               <SimpleFormAmountInput
                 amount={vm.primaryDisplayAmount}
                 setAmount={simpleEditor.setAmount}
                 readOnly={false}
-                activeColor={
-                  simpleEditor.type === 'expense'
-                    ? theme.expense
-                    : simpleEditor.type === 'income'
-                      ? theme.income
-                      : theme.primary
-                }
+                activeColor={resolveSimpleTypeAccentColor(simpleEditor.type, theme)}
                 displayCurrency={vm.primaryDisplayCurrency}
                 onFocus={() => setIsAmountFocused(true)}
                 onBlur={() => setIsAmountFocused(false)}
@@ -112,7 +126,6 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
       }
     >
       <View style={styles.content}>
-        {/* Description, date, and notes — same minimal layout in simple, split, and advanced */}
         {activeMode !== 'bulk' && (
           <JournalMetaCard
             date={vm.editor.journalDate}
@@ -120,7 +133,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             time={vm.editor.journalTime}
             setTime={vm.editor.setJournalTime}
             description={vm.editor.description}
-            setDescription={handleSetDescription}
+            setDescription={setDescription}
             notes={vm.editor.notes}
             setNotes={vm.editor.setNotes}
             showBanner={showEditBanner}
@@ -129,46 +142,12 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             density="tight"
             suggestions={vm.suggestions}
             hideSuggestions={hideSuggestions}
-            onDescriptionFocus={() => setHideSuggestions(false)}
+            onDescriptionFocus={onDescriptionFocus}
             onVoiceInputPress={() => setIsVoiceModalVisible(true)}
           />
         )}
 
-        {activeMode === 'guided' ? (
-          <SimpleForm {...vm.simpleEditor} />
-        ) : activeMode === 'split' ? (
-          <SplitForm {...vm.splitEditor} />
-        ) : activeMode === 'advanced' ? (
-          <View style={{ paddingHorizontal: Spacing.lg }}>
-            <AdvancedForm
-              accounts={vm.accounts}
-              editor={vm.editor}
-              workplaceCurrency={vm.workplaceCurrency}
-              onSelectAccountRequest={vm.advancedFormConfig.onSelectAccountRequest}
-            />
-            <JournalSummary
-              totalDebits={vm.totalDebits}
-              totalCredits={vm.totalCredits}
-              isBalanced={vm.isBalanced}
-              isBalancedDisplay={vm.isBalancedDisplay}
-              baseImbalance={vm.baseImbalance}
-              availableCurrencies={vm.availableCurrencies}
-              selectedCurrency={vm.selectedCurrency}
-              onSelectCurrency={vm.onSelectCurrency}
-              workplaceCurrency={vm.workplaceCurrency}
-            />
-          </View>
-        ) : (
-          <BulkEntryGrid
-            rows={vm.bulkEditor.rows}
-            submitError={vm.bulkEditor.submitError}
-            accounts={vm.accounts}
-            addRow={vm.bulkEditor.addRow}
-            removeRow={vm.bulkEditor.removeRow}
-            clearRows={vm.bulkEditor.clearRows}
-            updateRowField={vm.bulkEditor.updateRowField}
-          />
-        )}
+        <JournalEntryModeBody {...modeBodyProps} />
       </View>
 
       <AccountPickerModal
@@ -188,140 +167,29 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         workplaceId={workplaceId}
       />
 
-      {/* Save Success Summary Popup Modal */}
-      <Modal
-        visible={!!savedSummary}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSavedSummary(null)}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-            <View style={styles.successHeader}>
-              <AppIcon name="checkCircle" size={Size.iconLg} color={theme.primary} />
-              <AppText variant="heading" weight="bold" style={styles.modalTitle}>
-                Saved Successfully
-              </AppText>
-              <AppText variant="body" color="secondary" style={styles.modalSubtitle}>
-                Recorded {savedSummary?.count} journals to the ledger.
-              </AppText>
-            </View>
-
-            <ScrollView
-              style={styles.summaryList}
-              contentContainerStyle={styles.summaryListContent}
-            >
-              {savedSummary?.items.map((item, idx) => (
-                <View
-                  key={`${item.description}-${item.amount}-${idx}`}
-                  style={[styles.summaryItem, { backgroundColor: theme.surfaceSecondary }]}
-                >
-                  <AppText
-                    variant="body"
-                    weight="semibold"
-                    style={styles.itemDesc}
-                    numberOfLines={1}
-                  >
-                    {item.description}
-                  </AppText>
-                  <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
-                    {item.amount.toFixed(2)} {item.currency}
-                  </AppText>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <AppButton
-                variant="outline"
-                onPress={() => {
-                  setSavedSummary(null);
-                  vm.bulkEditor.clearRows();
-                }}
-                style={styles.modalButton}
-              >
-                Continue Bulk
-              </AppButton>
-              <AppButton
-                variant="primary"
-                onPress={() => {
-                  setSavedSummary(null);
-                  AppNavigation.back();
-                }}
-                style={styles.modalButton}
-              >
-                Done
-              </AppButton>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <BulkSaveSummaryModal
+        summary={savedSummary}
+        onClose={() => setSavedSummary(null)}
+        onContinueBulk={() => {
+          setSavedSummary(null);
+          vm.bulkEditor.clearRows();
+        }}
+        onDone={() => {
+          setSavedSummary(null);
+          AppNavigation.back();
+        }}
+      />
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
-    flex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  modalContent: {
-    width: '100%',
-    maxHeight: '85%',
-    borderRadius: Shape.radius.r3,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    gap: Spacing.lg,
-    ...Shape.elevation.lg,
-  },
-  successHeader: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  modalTitle: {
-    marginTop: Spacing.sm,
-  },
-  modalSubtitle: {
-    textAlign: 'center',
-  },
-  summaryList: {
-    width: '100%',
-    maxHeight: 220,
-  },
-  summaryListContent: {
-    gap: Spacing.sm,
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: Shape.radius.r2,
-  },
-  itemDesc: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    width: '100%',
-    marginTop: Spacing.sm,
-  },
-  modalButton: {
     flex: 1,
   },
 });

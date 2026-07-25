@@ -9,12 +9,12 @@ import {
   useBulkJournalEditor,
 } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useJournalEntryAccountSelection } from '@/src/features/journal/entry/hooks/useJournalEntryAccountSelection';
+import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
+import { useJournalEntryMode } from '@/src/features/journal/entry/hooks/useJournalEntryMode';
 import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/useJournalEntryVoiceInput';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
-import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   createSmsJournalAfterSaveHandler,
@@ -22,17 +22,15 @@ import {
   isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
   resolveJournalEntryHeaderTitle,
-  resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
-import { showErrorAlert } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Keyboard } from 'react-native';
+import { AppNavigation } from '@/src/utils/navigation';
 
 export interface JournalEntryViewModel {
   editor: ReturnType<typeof useJournalEditor>;
@@ -48,18 +46,11 @@ export interface JournalEntryViewModel {
   headerTitle: string;
   showEditBanner: boolean;
   editBannerText: string;
-  isGuidedMode: boolean;
-  onToggleGuidedMode: (mode: boolean) => void;
   showAccountPicker: boolean;
   onCloseAccountPicker: () => void;
   onSelectAccountRequest: (lineId: string) => void;
   onAccountSelected: (accountId: AccountId) => void;
   selectedAccountId?: AccountId;
-  simpleFormIsValid: boolean;
-  advancedFormIsValid: boolean;
-  advancedFormConfig: {
-    onSelectAccountRequest: (lineId: string) => void;
-  };
   selectableAccounts: Account[];
   isSimpleModeDisabled: boolean;
   primaryDisplayAmount: string;
@@ -72,7 +63,6 @@ export interface JournalEntryViewModel {
   isBalanced: boolean;
   isBalancedDisplay: boolean;
   baseImbalance: number;
-  launchSource?: string;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   submitLabel: string;
   isSubmitDisabled: boolean;
@@ -127,19 +117,25 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
-  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk' | 'split'>(() =>
-    resolveJournalEntryScreenMode(route.mode),
-  );
+  const { activeMode, onToggleMode, isGuidedScreen } = useJournalEntryMode(editor, {
+    routeMode: route.mode,
+    isSimpleModeDisabled,
+  });
 
   const {
+    splitEditor,
     showAccountPicker,
-    activeLineId,
     onSelectAccountRequest,
     onCloseAccountPicker,
-    onAccountSelected: onAccountSelectedBase,
+    onAccountSelected,
     onCreateAccountRequest,
     selectableAccounts,
-  } = useJournalEntryAccountSelection({ accounts, editor, entryScreenMode: activeMode });
+    selectedAccountId,
+  } = useJournalEntryAccountPicker({
+    accounts,
+    editor,
+    activeMode,
+  });
 
   const simpleEditor = useSimpleJournalEditor({
     accounts,
@@ -176,70 +172,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     ),
   });
 
-  const splitEditor = useSplitJournalEditor({
-    accounts,
-    editor,
-    onSelectAccountRequest,
-    isActive: activeMode === 'split',
-  });
-
-  const onAccountSelected = useCallback(
-    (accountId: AccountId) => {
-      if (activeMode === 'split' && activeLineId) {
-        if (activeLineId === SPLIT_SOURCE_LINE_ID) {
-          splitEditor.setSourceAccountId(accountId);
-        } else {
-          splitEditor.updateSplitRow(activeLineId, { accountId });
-        }
-        onCloseAccountPicker();
-        return;
-      }
-      onAccountSelectedBase(accountId);
-    },
-    [activeMode, activeLineId, splitEditor, onCloseAccountPicker, onAccountSelectedBase],
-  );
-
-  const onToggleMode = useCallback(
-    (mode: 'guided' | 'advanced' | 'bulk' | 'split') => {
-      if (mode === 'guided' && isSimpleModeDisabled) {
-        showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
-        return;
-      }
-      setActiveMode(mode);
-      if (mode === 'guided') {
-        editor.setIsGuidedMode(true);
-      } else if (mode === 'advanced') {
-        editor.setIsGuidedMode(false);
-      } else if (mode === 'split') {
-        editor.setIsGuidedMode(false);
-        editor.setTransactionType('expense');
-      }
-    },
-    [editor, isSimpleModeDisabled, setActiveMode],
-  );
-
   const [isAmountFocused, setIsAmountFocused] = useState(false);
 
-  const onToggleGuidedMode = useCallback(
-    (mode: boolean) => {
-      if (mode && isSimpleModeDisabled) {
-        showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
-        return;
-      }
-      setActiveMode(mode ? 'guided' : 'advanced');
-      editor.setIsGuidedMode(mode);
-    },
-    [editor, isSimpleModeDisabled, setActiveMode],
-  );
-
   const headerTitle = useMemo(
-    () =>
-      resolveJournalEntryHeaderTitle({
-        activeMode,
-        isEdit: editor.isEdit,
-        isGuidedMode: editor.isGuidedMode,
-      }),
-    [activeMode, editor.isEdit, editor.isGuidedMode],
+    () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit }),
+    [editor.isEdit],
   );
 
   const isSimpleValid =
@@ -263,7 +200,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   } = useAdvancedJournalSummary(editor.lines);
 
   const primaryDisplayCurrency = useMemo(() => {
-    if (editor.isGuidedMode) return simpleEditor.displayCurrency;
+    if (isGuidedScreen) return simpleEditor.displayCurrency;
 
     const firstLineCurrency = editor.lines[0]?.accountCurrency;
     if (firstLineCurrency) return firstLineCurrency;
@@ -272,12 +209,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
 
     return workplaceCurrency;
-  }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency, workplaceCurrency]);
+  }, [isGuidedScreen, editor.lines, simpleEditor.displayCurrency, workplaceCurrency]);
 
   const primaryDisplayAmount = useMemo(() => {
-    if (editor.isGuidedMode) return simpleEditor.amount;
+    if (isGuidedScreen) return simpleEditor.amount;
     return JournalCalculator.roundAmount(totalDebits).toFixed(2);
-  }, [editor.isGuidedMode, simpleEditor.amount, totalDebits]);
+  }, [isGuidedScreen, simpleEditor.amount, totalDebits]);
 
   const isAdvancedValid = isAdvancedJournalFormValid({
     isBalanced,
@@ -293,7 +230,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       bulkEditor.saveAll();
     } else if (activeMode === 'split') {
       splitEditor.handleSave();
-    } else if (editor.isGuidedMode) {
+    } else if (activeMode === 'guided') {
       if (isAmountFocused && !isSimpleValid) {
         Keyboard.dismiss();
       } else {
@@ -310,7 +247,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         activeMode,
         bulkSubmitting: bulkEditor.isSubmitting,
         bulkValid: bulkEditor.isValid,
-        isGuidedMode: editor.isGuidedMode,
         isAmountFocused,
         isSimpleValid,
         isAdvancedValid,
@@ -320,7 +256,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       activeMode,
       bulkEditor.isSubmitting,
       bulkEditor.isValid,
-      editor.isGuidedMode,
       isAmountFocused,
       isSimpleValid,
       isAdvancedValid,
@@ -334,7 +269,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         activeMode,
         bulkSubmitting: bulkEditor.isSubmitting,
         bulkRowCount: bulkEditor.rows.length,
-        isGuidedMode: editor.isGuidedMode,
         isAmountFocused,
         isSimpleValid,
         simpleSubmitting: simpleEditor.isSubmitting,
@@ -347,7 +281,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       activeMode,
       bulkEditor.isSubmitting,
       bulkEditor.rows.length,
-      editor.isGuidedMode,
       editor.isSubmitting,
       editor.isEdit,
       isAmountFocused,
@@ -357,16 +290,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       splitEditor.isSubmitting,
     ],
   );
-
-  const selectedAccountId = useMemo(() => {
-    if (activeMode === 'split' && activeLineId) {
-      if (activeLineId === SPLIT_SOURCE_LINE_ID) {
-        return splitEditor.sourceAccountId;
-      }
-      return splitEditor.splits.find(s => s.id === activeLineId)?.accountId;
-    }
-    return editor.lines.find(l => l.id === activeLineId)?.accountId;
-  }, [activeMode, activeLineId, splitEditor.sourceAccountId, splitEditor.splits, editor.lines]);
 
   return {
     editor,
@@ -382,18 +305,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     headerTitle,
     showEditBanner: editor.isEdit,
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,
-    isGuidedMode: editor.isGuidedMode,
-    onToggleGuidedMode,
     showAccountPicker,
     onCloseAccountPicker,
     onSelectAccountRequest,
     onAccountSelected,
     selectedAccountId,
-    simpleFormIsValid: isSimpleValid,
-    advancedFormIsValid: isAdvancedValid,
-    advancedFormConfig: {
-      onSelectAccountRequest,
-    },
     selectableAccounts,
     isSimpleModeDisabled,
     isBalanced,
@@ -406,7 +322,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onSelectCurrency: setSelectedCurrency,
     totalDebits,
     totalCredits,
-    launchSource: route.launchSource,
     onCreateAccountRequest,
     submitLabel,
     isSubmitDisabled,

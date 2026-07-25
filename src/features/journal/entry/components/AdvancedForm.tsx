@@ -1,28 +1,25 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import { useAccounts } from '@/src/features/accounts';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import { JournalEntryLine } from '@/src/types/domain';
 import { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 interface AdvancedFormProps {
-  accounts: ReturnType<typeof useAccounts>['accounts'];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
 }
 
 export const AdvancedForm = ({
-  accounts: _accounts,
   editor,
   workplaceCurrency,
   onSelectAccountRequest,
 }: AdvancedFormProps) => {
-  // Handlers
   const handleUpdateLine = useCallback(
-    (id: string, field: string, value: any) => {
+    <K extends keyof JournalEntryLine>(id: string, field: K, value: JournalEntryLine[K]) => {
       editor.updateLine(id, { [field]: value });
     },
     [editor],

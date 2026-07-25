@@ -16,13 +16,13 @@ import {
   discardImportStagingWorkplace,
 } from '@/src/services/import/importStaging';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
+import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { integrityService } from '@/src/services/integrity-service';
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
-import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { Q } from '@nozbe/watermelondb';
 
 export class ImportService {
   private createProgressSegment(
@@ -236,7 +236,6 @@ export class ImportService {
     await integrityService.forceRunCheck(workplaceId, (msg, p) => integrityProgress(msg, p * 0.5));
 
     try {
-      const { Q } = await import('@nozbe/watermelondb');
       const accounts = await database.collections
         .get<Account>('accounts')
         .query(Q.where('workplace_id', workplaceId))
@@ -246,16 +245,18 @@ export class ImportService {
         logger.info(
           `[ImportService] Rebuilding balance snapshots for ${accounts.length} accounts...`,
         );
-        let completed = 0;
         const rebuildConcurrency = AppConfig.performance.import.postImportAccountRebuildConcurrency;
-        await runTasksWithBoundedConcurrency(accounts, rebuildConcurrency, async account => {
-          await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
-          completed += 1;
-          integrityProgress(
-            `Rebuilding checkpoints: ${account.name} (${completed}/${accounts.length})`,
-            0.5 + (completed / accounts.length) * 0.5,
-          );
-        });
+        await rebuildAllAccountBalancesAfterImport(
+          workplaceId,
+          accounts,
+          rebuildConcurrency,
+          (account, completed, total) => {
+            integrityProgress(
+              `Rebuilding checkpoints: ${account.name} (${completed}/${total})`,
+              0.5 + completed / total / 2,
+            );
+          },
+        );
       }
     } catch (error) {
       logger.error('[ImportService] Failed to rebuild balance snapshots post-import:', error);

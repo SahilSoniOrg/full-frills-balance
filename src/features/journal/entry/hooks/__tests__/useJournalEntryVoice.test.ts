@@ -75,6 +75,7 @@ describe('useJournalEntryViewModel - Voice Input', () => {
     // Default mock useJournalEditor (Guided Mode)
     mockEditor = {
       isGuidedMode: true,
+      setIsGuidedMode: jest.fn(),
       description: '',
       notes: '',
       setDescription: jest.fn(),

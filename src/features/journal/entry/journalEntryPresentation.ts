@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AccountId, JournalId } from '@/src/types/domain';
+import { AccountId, JournalId, TabType } from '@/src/types/domain';
 
 export type JournalEntryScreenMode = 'guided' | 'advanced' | 'bulk' | 'split';
 export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
@@ -75,13 +75,18 @@ export function resolveJournalEntryScreenMode(
   return 'guided';
 }
 
-export function resolveJournalEntryHeaderTitle(input: {
-  activeMode: JournalEntryScreenMode;
-  isEdit: boolean;
-  isGuidedMode: boolean;
-}): string {
+export function resolveJournalEntryHeaderTitle(input: { isEdit: boolean }): string {
   if (input.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
   return AppConfig.strings.transactionFlow.headers.new;
+}
+
+export function resolveSimpleTypeAccentColor(
+  type: TabType,
+  theme: { expense: string; income: string; primary: string },
+): string {
+  if (type === 'expense') return theme.expense;
+  if (type === 'income') return theme.income;
+  return theme.primary;
 }
 
 export function isAdvancedJournalFormValid(input: {
@@ -99,7 +104,6 @@ export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;
   bulkSubmitting: boolean;
   bulkRowCount: number;
-  isGuidedMode: boolean;
   isAmountFocused: boolean;
   isSimpleValid: boolean;
   simpleSubmitting: boolean;
@@ -118,7 +122,7 @@ export function resolveJournalEntrySubmitLabel(input: {
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
-  if (input.isGuidedMode) {
+  if (input.activeMode === 'guided') {
     if (input.isAmountFocused && !input.isSimpleValid) {
       return AppConfig.strings.transactionFlow.continue;
     }
@@ -142,7 +146,6 @@ export function isJournalEntrySubmitDisabled(input: {
   activeMode: JournalEntryScreenMode;
   bulkSubmitting: boolean;
   bulkValid: boolean;
-  isGuidedMode: boolean;
   isAmountFocused: boolean;
   isSimpleValid: boolean;
   isAdvancedValid: boolean;
@@ -154,11 +157,10 @@ export function isJournalEntrySubmitDisabled(input: {
   if (input.activeMode === 'split') {
     return !input.isSplitValid;
   }
-  return input.isGuidedMode
-    ? input.isAmountFocused
-      ? false
-      : !input.isSimpleValid
-    : !input.isAdvancedValid;
+  if (input.activeMode === 'guided') {
+    return input.isAmountFocused ? false : !input.isSimpleValid;
+  }
+  return !input.isAdvancedValid;
 }
 
 export function createSmsJournalAfterSaveHandler(input: {

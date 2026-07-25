@@ -1,6 +1,7 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, AccountRole, TabType } from '@/src/types/domain';
 import { StyleSheet, View } from 'react-native';
@@ -46,8 +47,7 @@ export const SimpleForm = ({
 }: SimpleFormProps) => {
   const { theme } = useTheme();
 
-  const activeColor =
-    type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary;
+  const activeColor = resolveSimpleTypeAccentColor(type, theme);
 
   return (
     <View style={styles.container}>

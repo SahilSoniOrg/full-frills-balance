@@ -30,14 +30,8 @@ describe('journalEntryPresentation', () => {
   });
 
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
-    const base = { isEdit: false, isGuidedMode: true };
-    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'bulk' })).toBe('New journal');
-    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'split' })).toBe('New journal');
-    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'advanced' })).toBe('New journal');
-    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'guided' })).toBe('New journal');
-    expect(
-      resolveJournalEntryHeaderTitle({ activeMode: 'guided', isEdit: true, isGuidedMode: true }),
-    ).toBe('Edit journal');
+    expect(resolveJournalEntryHeaderTitle({ isEdit: false })).toBe('New journal');
+    expect(resolveJournalEntryHeaderTitle({ isEdit: true })).toBe('Edit journal');
   });
 
   it('isAdvancedJournalFormValid requires balance, description, and complete lines', () => {
@@ -64,7 +58,6 @@ describe('journalEntryPresentation', () => {
       activeMode: 'guided',
       bulkSubmitting: false,
       bulkRowCount: 0,
-      isGuidedMode: true,
       isAmountFocused: true,
       isSimpleValid: false,
       simpleSubmitting: false,
@@ -79,7 +72,6 @@ describe('journalEntryPresentation', () => {
         activeMode: 'guided',
         bulkSubmitting: false,
         bulkValid: true,
-        isGuidedMode: true,
         isAmountFocused: true,
         isSimpleValid: false,
         isAdvancedValid: false,
