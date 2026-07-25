@@ -1,5 +1,3 @@
-import { TransactionBadge } from '@/src/components/common/TransactionCard';
-import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Budget from '@/src/data/models/Budget';
@@ -8,14 +6,13 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { mapAccountLedgerTransactionToListItem } from '@/src/services/accounting/accountTransactionListPresentation';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { BudgetId, DisplayTransaction, JournalDisplayType, PlainBudget } from '@/src/types/domain';
-import { getAccountTypeVariant } from '@/src/utils/accountCategory';
+import { BudgetId, DisplayTransaction, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -145,54 +142,8 @@ export function useBudgetDetailViewModel() {
           currencyCode: baseCurrency,
         };
       },
-      renderItem: (tx: DisplayTransaction) => {
-        const displayType = tx.displayType as JournalDisplayType;
-        const presentation = journalPresenter.getPresentation(
-          displayType,
-          tx.journalDescription || '',
-        );
-
-        let typeIcon: IconName = 'document';
-        let amountPrefix = '';
-
-        if (tx.transactionType === 'DEBIT') {
-          typeIcon = 'arrowUp';
-          amountPrefix = '+ ';
-        } else if (tx.transactionType === 'CREDIT') {
-          typeIcon = 'arrowDown';
-          amountPrefix = '− ';
-        }
-
-        const badges: TransactionBadge[] = [
-          {
-            text: tx.accountName || AppConfig.strings.journal.transaction,
-            variant: getAccountTypeVariant(tx.accountType || ''),
-            icon: (tx.icon as IconName) || 'tag',
-          },
-        ];
-
-        return {
-          id: tx.id,
-          type: 'transaction' as const,
-          date: tx.transactionDate,
-          onPress: () => handleJournalPress(tx.journalId),
-          cardProps: {
-            title:
-              tx.displayTitle || tx.journalDescription || AppConfig.strings.journal.transaction,
-            amount: tx.amount,
-            currencyCode: tx.currencyCode,
-            transactionDate: tx.transactionDate,
-            presentation: {
-              label: presentation.label,
-              typeColor: tx.transactionType === 'DEBIT' ? 'warning' : 'success',
-              typeIcon,
-              amountPrefix,
-            },
-            badges,
-            notes: tx.notes,
-          },
-        };
-      },
+      renderItem: (tx: DisplayTransaction) =>
+        mapAccountLedgerTransactionToListItem(tx, () => handleJournalPress(tx.journalId)),
     }),
     [transactions, baseCurrency, ratesMap, handleJournalPress, precision],
   );

@@ -113,6 +113,7 @@ const TransactionCardComponent = ({
       style={styles.wrapper}
     >
       <AppCard
+        testID="transaction-card"
         elevation="sm"
         padding="none"
         radius="r2"
@@ -134,6 +135,7 @@ const TransactionCardComponent = ({
               {/* Badges */}
               <Inline gap="sm" wrap>
                 <Badge
+                  testID="transaction-type-badge"
                   variant="default"
                   size="sm"
                   backgroundColor={withOpacity(
@@ -149,6 +151,7 @@ const TransactionCardComponent = ({
                 {badges.map((b, i) => (
                   <Badge
                     key={b.id ?? `${b.text}-${i}`}
+                    testID="transaction-account-badge"
                     variant={b.variant}
                     size="sm"
                     backgroundColor={
@@ -164,7 +167,12 @@ const TransactionCardComponent = ({
 
               {/* Title + Notes */}
               <Stack gap="xs">
-                <AppText variant="body" weight="bold" numberOfLines={1}>
+                <AppText
+                  variant="body"
+                  weight="bold"
+                  numberOfLines={1}
+                  testID="transaction-card-title"
+                >
                   {title}
                 </AppText>
 

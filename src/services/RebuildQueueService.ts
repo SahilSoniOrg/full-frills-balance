@@ -46,7 +46,9 @@ class RebuildQueueService {
 
   constructor(config: Partial<RebuildQueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.loadQueueFromDisk();
+    if (typeof window !== 'undefined') {
+      this.loadQueueFromDisk();
+    }
   }
 
   private loadQueueFromDisk(): void {
@@ -90,6 +92,9 @@ class RebuildQueueService {
   }
 
   private syncQueueToDisk(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       const entries = Array.from(this.queue.entries());
       storage.set(RebuildQueueService.STORAGE_KEY, JSON.stringify(entries));

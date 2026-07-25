@@ -42,6 +42,11 @@ export class BasePage {
   }
 
   async clickPlusButton() {
+    const entryButton = this.page
+      .getByTestId('fab-button')
+      .or(this.page.getByRole('button', { name: 'New Entry', exact: true }));
+    await entryButton.first().waitFor({ state: 'visible', timeout: 30000 });
+
     let fab = this.page.getByTestId('fab-button');
     if ((await fab.count()) > 0) {
       await fab.first().waitFor({ state: 'visible' });

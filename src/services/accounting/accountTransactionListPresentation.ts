@@ -1,95 +1,20 @@
-import { IconName } from '@/src/components/core';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
+import { mapLedgerTransactionToCardProps } from '@/src/services/accounting/transactionCardPresentation';
+import { DisplayTransaction } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
-import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 
-export interface CounterAccountChip {
-  id: string;
-  name: string;
-  accountType: string;
-  icon?: string;
-}
-
-type TransactionWithCounters = DisplayTransaction & { counterAccounts?: CounterAccountChip[] };
-
-export function buildCounterAccountChips(
-  transaction: TransactionWithCounters,
-): CounterAccountChip[] {
-  if (transaction.counterAccounts && transaction.counterAccounts.length > 0) {
-    const displayAccounts: CounterAccountChip[] = [];
-    const visibleCount =
-      transaction.counterAccounts.length > 2 ? 1 : transaction.counterAccounts.length;
-    for (let i = 0; i < visibleCount; i++) {
-      displayAccounts.push(transaction.counterAccounts[i]);
-    }
-    if (transaction.counterAccounts.length > visibleCount) {
-      displayAccounts.push({
-        id: 'more',
-        name: `+${transaction.counterAccounts.length - visibleCount} more`,
-        accountType: 'NEUTRAL',
-        icon: 'list',
-      });
-    }
-    return displayAccounts;
-  }
-
-  if (transaction.counterAccountType) {
-    return [
-      {
-        id: 'counter',
-        name: transaction.counterAccountName || transaction.counterAccountType,
-        accountType: transaction.counterAccountType,
-        icon: transaction.counterAccountIcon,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: transaction.accountId,
-      name: transaction.accountName || 'Unknown',
-      accountType: transaction.accountType || 'ASSET',
-      icon: transaction.icon,
-    },
-  ];
-}
+export type { DisplayCounterAccount as CounterAccountChip } from '@/src/types/domain';
+export { buildCounterAccountChips } from '@/src/services/accounting/displayTransactionCounterAccounts';
 
 export function mapAccountLedgerTransactionToListItem(
-  transaction: TransactionWithCounters,
+  transaction: DisplayTransaction,
   onPress: () => void,
 ): TransactionListItem {
-  const displayAccounts = buildCounterAccountChips(transaction);
-  const base = journalPresenter.getPresentation(
-    transaction.displayType as JournalDisplayType,
-    transaction.semanticLabel,
-  );
-
   return {
     id: transaction.id,
     type: 'transaction',
     date: transaction.transactionDate,
     onPress,
-    cardProps: {
-      title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
-      amount: transaction.amount,
-      currencyCode: transaction.currencyCode,
-      transactionDate: transaction.transactionDate,
-      presentation: {
-        label: base.label,
-        typeColor: base.colorKey,
-        typeIcon: (transaction.isIncrease ? 'arrowUp' : 'arrowDown') as IconName,
-        amountPrefix: transaction.isIncrease ? '+ ' : '− ',
-      },
-      badges: displayAccounts.map(acc => ({
-        text: acc.name,
-        variant: getAccountTypeVariant(acc.accountType),
-        icon: acc.icon,
-        fallbackIcon: getAccountFallbackIcon(acc.accountType),
-      })),
-      notes: transaction.notes,
-    },
+    cardProps: mapLedgerTransactionToCardProps(transaction),
   };
 }
 

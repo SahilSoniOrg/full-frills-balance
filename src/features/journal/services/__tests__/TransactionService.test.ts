@@ -87,7 +87,40 @@ describe('TransactionService', () => {
   });
 
   describe('getEnrichedByJournal', () => {
-    it('does not assign a single counter account for multi-line journals', async () => {
+    it('assigns a single counterparty in counterAccounts for two-leg journals', async () => {
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Simple Transfer',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const enriched = await transactionService.getEnrichedByJournal(
+        'wp-1' as WorkplaceId,
+        journal.id as JournalId,
+      );
+
+      const assetTx = enriched.find(t => t.accountId === (accountId as AccountId));
+      expect(assetTx?.counterAccounts).toHaveLength(1);
+      expect(assetTx?.counterAccounts?.[0].name).toBe('Equity');
+      expect(assetTx?.counterAccounts?.[0].id).toBe(equityAccountId);
+    });
+
+    it('assigns all counterparties for multi-line journals', async () => {
       const journal = await ledgerWriteService.createJournal(
         {
           description: 'Split Transaction',
@@ -120,10 +153,11 @@ describe('TransactionService', () => {
       );
 
       expect(enriched).toHaveLength(3);
-      enriched.forEach(tx => {
-        expect(tx.counterAccountName).toBeUndefined();
-        expect(tx.counterAccountType).toBeUndefined();
-      });
+      const assetTx = enriched.find(t => t.accountId === (accountId as AccountId));
+      expect(assetTx?.counterAccounts).toHaveLength(2);
+
+      const equityTx = enriched.find(t => t.accountId === (equityAccountId as AccountId));
+      expect(equityTx?.counterAccounts).toHaveLength(2);
     });
   });
 });

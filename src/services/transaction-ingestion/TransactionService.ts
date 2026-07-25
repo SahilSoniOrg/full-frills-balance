@@ -4,7 +4,13 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { AccountId, DisplayTransaction, JournalId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  DisplayCounterAccount,
+  DisplayTransaction,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { effect } from '@/src/services/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
@@ -175,11 +181,20 @@ export class TransactionService {
     journal: Journal | null,
   ): DisplayTransaction {
     const account = accountMap.get(tx.accountId);
-    const counterAccounts = transactions
-      .filter(t => t.id !== tx.id)
-      .map(t => accountMap.get(t.accountId))
-      .filter((a): a is Account => !!a);
-    const counterAccount = counterAccounts.length === 1 ? counterAccounts[0] : undefined;
+    const seenCounterIds = new Set<AccountId>();
+    const counterAccounts: DisplayCounterAccount[] = [];
+    for (const other of transactions) {
+      if (other.id === tx.id) continue;
+      const counter = accountMap.get(other.accountId);
+      if (!counter || seenCounterIds.has(counter.id)) continue;
+      seenCounterIds.add(counter.id);
+      counterAccounts.push({
+        id: counter.id,
+        name: counter.name,
+        accountType: counter.accountType,
+        icon: counter.icon,
+      });
+    }
 
     const accType = account?.accountType ?? AccountType.ASSET;
     const isIncrease = effect(accType, tx.transactionType).isIncrease;
@@ -197,9 +212,7 @@ export class TransactionService {
       accountName: account?.name,
       accountType: account?.accountType,
       icon: account?.icon,
-      counterAccountName: counterAccount?.name,
-      counterAccountType: counterAccount?.accountType,
-      counterAccountIcon: counterAccount?.icon,
+      counterAccounts: counterAccounts.length > 0 ? counterAccounts : undefined,
       runningBalance: tx.runningBalance,
       displayTitle: journal?.description || 'Transaction',
       displayType: journal?.displayType,

@@ -134,6 +134,16 @@ export interface AccountBalance {
 }
 
 /**
+ * Counterparty account summary for ledger transaction cards.
+ */
+export interface DisplayCounterAccount {
+  id: AccountId;
+  name: string;
+  accountType: AccountType;
+  icon?: string;
+}
+
+/**
  * DisplayTransaction - Unified read model for transactions in the UI.
  */
 export interface DisplayTransaction {
@@ -150,12 +160,10 @@ export interface DisplayTransaction {
   // Account information for display
   accountName?: string;
   accountType?: AccountType;
-  counterAccountName?: string;
-  counterAccountType?: AccountType;
+  counterAccounts?: DisplayCounterAccount[];
   displayTitle: string;
   displayType?: JournalDisplayType;
   icon?: string;
-  counterAccountIcon?: string;
 
   // Semantic and derived flags
   isIncrease: boolean;

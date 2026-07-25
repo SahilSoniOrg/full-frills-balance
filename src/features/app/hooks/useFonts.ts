@@ -44,7 +44,12 @@ const FONT_MAP: Record<string, Record<string, any>> = {
   },
 };
 
-const DEFAULT_FONT_PREWARM_PROMISE = Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]).catch(() => {});
+function loadDeepSpaceFonts(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return Promise.resolve();
+  }
+  return Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]).catch(() => {});
+}
 
 /**
  * useFonts - Dynamically loads fonts based on the selected theme.
@@ -75,7 +80,7 @@ export function useFonts() {
 
       try {
         if (fontId === FontIds.DEEP_SPACE) {
-          await DEFAULT_FONT_PREWARM_PROMISE;
+          await loadDeepSpaceFonts();
         } else {
           await Font.loadAsync(fontsToLoad);
         }

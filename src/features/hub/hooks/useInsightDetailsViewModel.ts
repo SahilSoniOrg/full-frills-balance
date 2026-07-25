@@ -1,19 +1,11 @@
 import { getNow } from '@/src/utils/dateHelpers';
-import { TransactionBadge } from '@/src/components/common/TransactionCard';
-import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { mapJournalToCardProps } from '@/src/services/accounting/transactionCardPresentation';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import {
-  EnrichedJournal,
-  JournalDisplayType,
-  TransactionId,
-  WorkplaceId,
-} from '@/src/types/domain';
-import { getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { EnrichedJournal, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
@@ -72,55 +64,7 @@ export function useInsightDetailsViewModel({
         };
       },
       renderItem: (journal: EnrichedJournal) => {
-        const displayType = journal.displayType as JournalDisplayType;
-        const presentation = journalPresenter.getPresentation(displayType, journal.semanticLabel);
-
-        let typeIcon: IconName = 'document';
-        let amountPrefix = '';
-        if (displayType === JournalDisplayType.INCOME) {
-          typeIcon = 'arrowUp';
-          amountPrefix = '+ ';
-        } else if (displayType === JournalDisplayType.EXPENSE) {
-          typeIcon = 'arrowDown';
-          amountPrefix = '− ';
-        } else if (displayType === JournalDisplayType.TRANSFER) {
-          typeIcon = 'swapHorizontal';
-        }
-
-        const badges: TransactionBadge[] = journal.accounts.slice(0, 2).map(acc => {
-          const isSource = acc.role === 'SOURCE';
-          const isDest = acc.role === 'DESTINATION';
-          const showPrefix = isSource
-            ? AppConfig.strings.journal.from
-            : isDest
-              ? AppConfig.strings.journal.to
-              : '';
-
-          return {
-            text: `${showPrefix}${acc.name}`,
-            variant: getAccountTypeVariant(acc.accountType),
-            icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
-          };
-        });
-
-        const defaultTitle =
-          displayType === JournalDisplayType.TRANSFER
-            ? AppConfig.strings.journal.transfer
-            : AppConfig.strings.journal.transaction;
-
-        const cardProps = {
-          title: journal.description || defaultTitle,
-          amount: journal.totalAmount,
-          currencyCode: journal.currencyCode,
-          transactionDate: journal.journalDate,
-          presentation: {
-            label: presentation.label,
-            typeColor: presentation.colorKey,
-            typeIcon,
-            amountPrefix,
-          },
-          badges,
-        };
+        const cardProps = mapJournalToCardProps(journal);
 
         return {
           id: journal.id as string as TransactionId,
@@ -131,7 +75,10 @@ export function useInsightDetailsViewModel({
               title: cardProps.title,
               amount: cardProps.amount,
               currencyCode: cardProps.currencyCode,
-              date: cardProps.transactionDate,
+              date:
+                typeof cardProps.transactionDate === 'number'
+                  ? cardProps.transactionDate
+                  : cardProps.transactionDate.getTime(),
               typeColor: cardProps.presentation.typeColor,
               typeIcon: cardProps.presentation.typeIcon,
               displayType: journal.displayType,
