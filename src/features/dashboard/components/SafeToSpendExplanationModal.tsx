@@ -11,6 +11,18 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
 
+function parseFormulaItem(
+  item: string | ((days: number) => string) | undefined,
+  days: number,
+): { title: string; detail: string } {
+  const text = typeof item === 'function' ? item(days) : item || '';
+  const colon = text.indexOf(': ');
+  if (colon === -1) {
+    return { title: text, detail: '' };
+  }
+  return { title: text.slice(0, colon), detail: text.slice(colon + 2) };
+}
+
 interface SafeToSpendExplanationModalProps {
   visible: boolean;
   onClose: () => void;
@@ -42,6 +54,8 @@ export const SafeToSpendExplanationModal = ({
     committed,
     debt,
   } = viewModel;
+
+  const formulaDays = viewModel.safeToSpendDays;
 
   const { theme } = useTheme();
   const styles = React.useMemo(
@@ -79,24 +93,18 @@ export const SafeToSpendExplanationModal = ({
           marginTop: 8,
         },
         resultLine: {
-          flex: 1,
-          padding: Spacing.xl,
+          padding: Spacing.lg,
           backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.medium),
-          borderTopWidth: 1,
-          borderTopColor: withOpacity(theme.border, Opacity.active),
-          borderStyle: 'solid',
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: Spacing.md,
         },
         liabilityCallout: {
           marginTop: Spacing.md,
-          paddingHorizontal: Spacing.md,
-          paddingVertical: Spacing.sm,
-          backgroundColor: withOpacity(theme.expense, Opacity.selection),
+          padding: Spacing.md,
+          backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.medium),
           borderRadius: Shape.radius.sm,
-          borderLeftWidth: 3,
-          borderLeftColor: theme.expense,
         },
       }),
     [theme],
@@ -109,35 +117,26 @@ export const SafeToSpendExplanationModal = ({
       onClose={onClose}
       accessibilityCloseLabel="Close safe-to-spend info"
       useNativeModal={false}
-      primaryAction={{
-        label: info.closeCta,
-        variant: 'primary',
-        onPress: onClose,
-      }}
     >
-      <AppText
-        variant="heading"
-        style={{
-          marginTop: Spacing.md,
-          marginBottom: Spacing.sm,
-          fontFamily: Typography.fonts.heading,
-          fontSize: Typography.sizes.xxxl,
-          lineHeight: Typography.sizes.xxxl * 1.1,
-          color: theme.primary,
-        }}
-      >
-        Spend with confidence.
-      </AppText>
       <AppText
         variant="body"
         color="secondary"
         style={{
-          marginBottom: Spacing.xl,
-          lineHeight: Typography.sizes.base * 1.5,
-          opacity: Opacity.high,
+          marginBottom: Spacing.sm,
+          lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
         }}
       >
         {info.intro}
+      </AppText>
+      <AppText
+        variant="caption"
+        color="secondary"
+        style={{
+          marginBottom: Spacing.xl,
+          lineHeight: Typography.sizes.sm * Typography.lineHeights.normal,
+        }}
+      >
+        {info.unlocks}
       </AppText>
 
       <AppCard
@@ -152,55 +151,33 @@ export const SafeToSpendExplanationModal = ({
         }}
       >
         <View style={styles.ledgerHeader}>
-          <AppIcon name="calculator" size={Size.xs} color={theme.textTertiary} />
-          <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>
-            {labels.calculationLedger}
-          </AppText>
+          <AppText variant="subheading">{info.bucketTitle}</AppText>
         </View>
 
         {/* Step 1: Assets */}
         <TouchableOpacity
-          style={{ flexDirection: 'row' }}
           onPress={() => setExpandedSection(expandedSection === 'assets' ? null : 'assets')}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: expandedSection === 'assets' }}
         >
-          <View style={{ width: 4, backgroundColor: theme.primary }} />
-          <View style={{ flex: 1, padding: Spacing.xl }}>
+          <View style={{ padding: Spacing.lg }}>
             <View style={styles.breakdownRow}>
-              <View
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
-              >
-                <View
-                  style={[
-                    styles.stepIcon,
-                    { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
-                  ]}
-                >
-                  <AppIcon name="wallet" size={Size.sm} color={theme.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    color="primary"
-                    style={{ letterSpacing: 0.5, marginBottom: 2 }}
-                  >
-                    {String(info.formulaItems[0] || '')
-                      .split(': ')[0]
-                      .toUpperCase()}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {String(info.formulaItems[0] || '').split(': ')[1]}
-                  </AppText>
-                </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="medium">
+                  {parseFormulaItem(info.formulaItems[0], formulaDays).title}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {parseFormulaItem(info.formulaItems[0], formulaDays).detail}
+                </AppText>
               </View>
-              <AppText
-                variant="subheading"
-                color="primary"
-                tabular
-                style={{ fontFamily: Typography.fonts.heading }}
-              >
+              <AppText variant="subheading" color="primary" tabular>
                 {formatValue(totalLiquidAssets)}
               </AppText>
+              <AppIcon
+                name={expandedSection === 'assets' ? 'chevronUp' : 'chevronDown'}
+                size={Size.sm}
+                color={theme.textSecondary}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -218,47 +195,28 @@ export const SafeToSpendExplanationModal = ({
 
         {/* Step 2: Future Income */}
         <TouchableOpacity
-          style={{ flexDirection: 'row' }}
           onPress={() => setExpandedSection(expandedSection === 'income' ? null : 'income')}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: expandedSection === 'income' }}
         >
-          <View style={{ width: 4, backgroundColor: theme.primary }} />
-          <View style={{ flex: 1, padding: Spacing.xl }}>
+          <View style={{ padding: Spacing.lg }}>
             <View style={styles.breakdownRow}>
-              <View
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
-              >
-                <View
-                  style={[
-                    styles.stepIcon,
-                    { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
-                  ]}
-                >
-                  <AppIcon name="trendingUp" size={Size.sm} color={theme.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    color="primary"
-                    style={{ letterSpacing: 0.5, marginBottom: 2 }}
-                  >
-                    {labels.upcomingIncome.toUpperCase()}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {info.formulaItems[1] && typeof info.formulaItems[1] === 'string'
-                      ? info.formulaItems[1].split(': ')[1]
-                      : 'Predicted inflows'}
-                  </AppText>
-                </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="medium">
+                  {parseFormulaItem(info.formulaItems[1], formulaDays).title}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {parseFormulaItem(info.formulaItems[1], formulaDays).detail}
+                </AppText>
               </View>
-              <AppText
-                variant="subheading"
-                color="primary"
-                tabular
-                style={{ fontFamily: Typography.fonts.heading }}
-              >
+              <AppText variant="subheading" color="primary" tabular>
                 {formatValue(totalFutureInflow)}
               </AppText>
+              <AppIcon
+                name={expandedSection === 'income' ? 'chevronUp' : 'chevronDown'}
+                size={Size.sm}
+                color={theme.textSecondary}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -297,10 +255,10 @@ export const SafeToSpendExplanationModal = ({
                         >
                           <AppIcon
                             name={inc.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
-                            size={10}
-                            color={withOpacity(theme.success, Opacity.heavy)}
+                            size={Size.xxs}
+                            color={theme.success}
                           />
-                          <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
+                          <AppText variant="caption" color="secondary">
                             Day {inc.dayOffset} •{' '}
                             {inc.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Transfer'}
                           </AppText>
@@ -324,47 +282,28 @@ export const SafeToSpendExplanationModal = ({
 
         {/* Step 3: Committed */}
         <TouchableOpacity
-          style={{ flexDirection: 'row' }}
           onPress={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: expandedSection === 'committed' }}
         >
-          <View style={{ width: 4, backgroundColor: theme.warning }} />
-          <View style={{ flex: 1, padding: Spacing.xl }}>
+          <View style={{ padding: Spacing.lg }}>
             <View style={styles.breakdownRow}>
-              <View
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
-              >
-                <View
-                  style={[
-                    styles.stepIcon,
-                    { backgroundColor: withOpacity(theme.warning, Opacity.hover) },
-                  ]}
-                >
-                  <AppIcon name="lock" size={Size.sm} color={theme.warning} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    color="warning"
-                    style={{ letterSpacing: 0.5, marginBottom: 2 }}
-                  >
-                    {labels.committedLine.split(' (')[0].toUpperCase()}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {info.formulaItems[2] && typeof info.formulaItems[2] === 'string'
-                      ? info.formulaItems[2].split(': ')[1]
-                      : 'Bills and Budgets'}
-                  </AppText>
-                </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="medium">
+                  {parseFormulaItem(info.formulaItems[2], formulaDays).title}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {parseFormulaItem(info.formulaItems[2], formulaDays).detail}
+                </AppText>
               </View>
-              <AppText
-                variant="subheading"
-                color="warning"
-                tabular
-                style={{ fontFamily: Typography.fonts.heading }}
-              >
+              <AppText variant="subheading" color="warning" tabular>
                 –{formatValue(committedTotal)}
               </AppText>
+              <AppIcon
+                name={expandedSection === 'committed' ? 'chevronUp' : 'chevronDown'}
+                size={Size.sm}
+                color={theme.textSecondary}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -514,47 +453,28 @@ export const SafeToSpendExplanationModal = ({
 
         {/* Step 4: Debts */}
         <TouchableOpacity
-          style={{ flexDirection: 'row' }}
           onPress={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: expandedSection === 'debts' }}
         >
-          <View style={{ width: 4, backgroundColor: theme.error }} />
-          <View style={{ flex: 1, padding: Spacing.xl }}>
+          <View style={{ padding: Spacing.lg }}>
             <View style={styles.breakdownRow}>
-              <View
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
-              >
-                <View
-                  style={[
-                    styles.stepIcon,
-                    { backgroundColor: withOpacity(theme.error, Opacity.hover) },
-                  ]}
-                >
-                  <AppIcon name="error" size={Size.sm} color={theme.error} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    color="error"
-                    style={{ letterSpacing: 0.5, marginBottom: 2 }}
-                  >
-                    {labels.debtsBucket.toUpperCase()}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {info.formulaItems[3] && typeof info.formulaItems[3] === 'string'
-                      ? info.formulaItems[3].split(': ')[1]
-                      : 'Short-term liabilities'}
-                  </AppText>
-                </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="medium">
+                  {parseFormulaItem(info.formulaItems[3], formulaDays).title}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {parseFormulaItem(info.formulaItems[3], formulaDays).detail}
+                </AppText>
               </View>
-              <AppText
-                variant="subheading"
-                color="error"
-                tabular
-                style={{ fontFamily: Typography.fonts.heading }}
-              >
+              <AppText variant="subheading" color="error" tabular>
                 –{formatValue(committedLiabilities)}
               </AppText>
+              <AppIcon
+                name={expandedSection === 'debts' ? 'chevronUp' : 'chevronDown'}
+                size={Size.sm}
+                color={theme.textSecondary}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -611,97 +531,34 @@ export const SafeToSpendExplanationModal = ({
         )}
 
         {/* Result Line */}
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ width: 4, backgroundColor: theme.primary }} />
-          <View style={styles.resultLine}>
-            <View style={{ flex: 1 }}>
-              <AppText
-                variant="caption"
-                weight="bold"
-                color="primary"
-                style={{ letterSpacing: 1.5, marginBottom: Spacing.xs }}
-              >
-                SAFE TO SPEND
-              </AppText>
-              <AppText
-                variant="caption"
-                color="secondary"
-                style={{ fontStyle: 'italic', opacity: Opacity.heavy }}
-              >
-                {labels.remainingCashBuffer}
-              </AppText>
-            </View>
-            <AppText
-              variant="hero"
-              color="primary"
-              tabular
-              style={{
-                fontFamily: Typography.fonts.heading,
-                fontSize: Typography.sizes.xxxl,
-                textAlign: 'right',
-              }}
-            >
-              {formatValue(safeToSpend)}
+        <View style={styles.resultLine}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="body" weight="medium">
+              {labels.safeToSpendLine.replace(':', '')}
+            </AppText>
+            <AppText variant="caption" color="secondary">
+              {labels.remainingCashBuffer}
             </AppText>
           </View>
+          <AppText variant="title" color="primary" tabular>
+            {formatValue(safeToSpend)}
+          </AppText>
         </View>
       </AppCard>
 
-      <View style={{ paddingHorizontal: Spacing.sm }}>
-        <AppText
-          variant="body"
-          weight="bold"
-          style={{ marginBottom: Spacing.lg, color: theme.primary, letterSpacing: 1 }}
-        >
-          {info.benefitsTitle.toUpperCase()}
-        </AppText>
-        <View style={{ gap: Spacing.lg }}>
-          {info.benefits.map((item: string, index: number) => {
-            const [title, content] = item.split(': ');
-            return (
-              <View key={index} style={{ flexDirection: 'row', gap: Spacing.md }}>
-                <View
-                  style={[styles.benefitDot, { backgroundColor: theme.primary, marginTop: 8 }]}
-                />
-                <View style={{ flex: 1 }}>
-                  <AppText variant="body" weight="bold">
-                    {title}
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    style={{ marginTop: Spacing.xs / 2, lineHeight: 18 }}
-                  >
-                    {content}
-                  </AppText>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ paddingVertical: Spacing.xxxxl, alignItems: 'center' }}>
-        <Separator
-          background="border"
-          space={1}
-          opacity={Opacity.muted}
-          style={{ width: 40, marginBottom: Spacing.lg }}
-        />
-        <AppText
-          variant="caption"
-          italic
-          color="secondary"
-          style={{
-            textAlign: 'center',
-            opacity: Opacity.strong,
-            paddingHorizontal: Spacing.xl,
-            lineHeight: 18,
-          }}
-        >
-          {info.footer}
-        </AppText>
-      </View>
+      <AppText
+        variant="caption"
+        italic
+        color="secondary"
+        style={{
+          textAlign: 'center',
+          paddingHorizontal: Spacing.md,
+          lineHeight: 18,
+          marginBottom: Spacing.xl,
+        }}
+      >
+        {info.footer}
+      </AppText>
     </InfoSheet>
   );
 };

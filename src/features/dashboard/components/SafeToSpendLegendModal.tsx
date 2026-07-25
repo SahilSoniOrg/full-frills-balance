@@ -1,8 +1,7 @@
 import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { Separator } from '@/src/design-system';
-import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
@@ -33,7 +32,6 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
 
   const { firstMajorInflowDay, committedLiabilitiesCC, committedLiabilitiesOther } = insights;
 
-  const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
   const legendStrings = strings.legendDetails;
 
@@ -51,48 +49,25 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
       visible={visible}
       title={title}
       onClose={onClose}
-      primaryAction={{
-        label: strings.safeToSpendExplanation.closeCta,
-        onPress: onClose,
-      }}
+      accessibilityCloseLabel="Close breakdown details"
     >
       {type === 'safe' && (
         <View style={styles.modalSection}>
           <AppText variant="body" style={{ marginBottom: Spacing.md, lineHeight: 22 }}>
             {legendStrings.safeDesc(safeToSpendDays)}
           </AppText>
-          <AppCard
-            elevation="none"
-            style={{
-              backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.muted),
-              borderColor: theme.primary,
-              borderWidth: 1,
-              borderStyle: 'dashed',
-            }}
-          >
-            <AppText
-              variant="heading"
-              style={{
-                color: theme.primary,
-                marginBottom: Spacing.sm,
-                fontSize: Typography.sizes.lg + 2,
-              }}
-            >
+          <AppCard elevation="sm" padding="lg" style={{ marginTop: Spacing.sm }}>
+            <AppText variant="subheading" style={{ marginBottom: Spacing.md }}>
               {labels.calculationTitle}
             </AppText>
-            <AppText
-              variant="caption"
-              color="secondary"
-              weight="bold"
-              style={{ marginBottom: Spacing.md, letterSpacing: 1 }}
-            >
-              {labels.calculationFormula.toUpperCase()}
+            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.lg }}>
+              {labels.calculationFormula}
             </AppText>
 
             <View style={{ gap: Spacing.md }}>
               <View style={styles.breakdownRow}>
                 <AppText variant="body" color="secondary">
-                  Liquid Assets
+                  {labels.assetsBucket}
                 </AppText>
                 <AppText variant="body" weight="bold" color="success">
                   +{formatValue(totalLiquidAssets)}
@@ -100,7 +75,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </View>
               <View style={styles.breakdownRow}>
                 <AppText variant="body" color="secondary">
-                  Upcoming Income
+                  {labels.upcomingIncome}
                 </AppText>
                 <AppText variant="body" weight="bold" color="success">
                   +{formatValue(totalFutureInflow)}
@@ -108,7 +83,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </View>
               <View style={styles.breakdownRow}>
                 <AppText variant="body" color="secondary">
-                  Committed Items
+                  {labels.committedLine.split(' (')[0]}
                 </AppText>
                 <AppText variant="body" weight="bold" color="warning">
                   -{formatValue(committedTotal)}
@@ -116,7 +91,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </View>
               <View style={styles.breakdownRow}>
                 <AppText variant="body" color="secondary">
-                  Unsettled Debts
+                  {labels.debtsBucket}
                 </AppText>
                 <AppText variant="body" weight="bold" color="error">
                   -{formatValue(committedLiabilities)}
@@ -124,32 +99,20 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </View>
               <Separator marginVertical="md" opacity={Opacity.muted} />
               <View style={styles.breakdownRow}>
-                <AppText variant="heading" style={{ fontSize: Typography.sizes.xl }}>
-                  Safe to Spend
-                </AppText>
-                <AppText
-                  variant="heading"
-                  style={{ color: theme.primary, fontSize: Typography.sizes.xl }}
-                >
+                <AppText variant="subheading">{legendStrings.safeTitle}</AppText>
+                <AppText variant="subheading" color="primary" tabular>
                   {formatValue(safeToSpend)}
                 </AppText>
               </View>
             </View>
 
-            <View
-              style={{
-                marginTop: Spacing.lg,
-                paddingTop: Spacing.lg,
-                borderTopWidth: 1,
-                borderTopColor: withOpacity(theme.border, Opacity.active),
-                borderStyle: 'dashed',
-              }}
+            <AppText
+              variant="caption"
+              color="secondary"
+              style={{ marginTop: Spacing.lg, lineHeight: 18 }}
             >
-              <AppText variant="caption" italic color="secondary" style={{ lineHeight: 18 }}>
-                Logic: Future income is used to &quot;buffer&quot; your bills. Today&apos;s cash is
-                only reserved if future income won&apos;t cover an obligation before its due date.
-              </AppText>
-            </View>
+              {strings.safeToSpendExplanation.logicNote}
+            </AppText>
           </AppCard>
 
           {incomeBreakdown.length > 0 && (

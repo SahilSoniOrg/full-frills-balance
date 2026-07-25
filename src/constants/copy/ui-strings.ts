@@ -76,6 +76,8 @@ export const UI_STRINGS = {
       ],
       footer: 'This calculation depends on account subtypes, planned payments, and budget scopes.',
       closeCta: 'Close',
+      logicNote:
+        'Future income can cover bills due after it arrives. Cash is only reserved when income will not cover an obligation before its due date.',
     },
     legendDetails: {
       safeTitle: 'Safe to Spend',
