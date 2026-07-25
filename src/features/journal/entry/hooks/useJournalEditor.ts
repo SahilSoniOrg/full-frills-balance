@@ -400,19 +400,26 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     [isGuidedMode, getLineIdByRole],
   );
 
-  const imbalance = useMemo(() => {
-    return JournalCalculator.calculateImbalance(
+  const journalLinesForBalance = useMemo(
+    () =>
       lines.map(l => ({
         amount: l.amount,
         type: l.transactionType,
         exchangeRate: l.exchangeRate,
         accountCurrency: l.accountCurrency,
       })),
-      workplaceCurrency,
-    );
-  }, [lines, workplaceCurrency]);
+    [lines],
+  );
 
-  const isUnbalanced = Math.abs(imbalance) > 0.001;
+  const imbalance = useMemo(
+    () => JournalCalculator.calculateImbalance(journalLinesForBalance, workplaceCurrency),
+    [journalLinesForBalance, workplaceCurrency],
+  );
+
+  const isUnbalanced = useMemo(
+    () => !JournalCalculator.isBalanced(journalLinesForBalance, workplaceCurrency),
+    [journalLinesForBalance, workplaceCurrency],
+  );
   const isEntryReadyToBalance = useMemo(
     () =>
       lines.every(

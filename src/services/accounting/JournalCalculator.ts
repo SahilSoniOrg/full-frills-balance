@@ -200,17 +200,16 @@ export class JournalCalculator {
     const line = lines.find(l => l.id === lineId);
     if (!line) return null;
 
-    const imbalance = JournalCalculator.calculateImbalance(
-      lines.map(l => ({
-        amount: l.amount,
-        type: l.transactionType,
-        exchangeRate: l.exchangeRate,
-        accountCurrency: l.accountCurrency,
-      })),
-      baseCurrency,
-    );
+    const journalLines = lines.map(l => ({
+      amount: l.amount,
+      type: l.transactionType,
+      exchangeRate: l.exchangeRate,
+      accountCurrency: l.accountCurrency,
+    }));
 
-    if (Math.abs(imbalance) < 0.001) return null;
+    if (JournalCalculator.isBalanced(journalLines, baseCurrency)) return null;
+
+    const imbalance = JournalCalculator.calculateImbalance(journalLines, baseCurrency);
 
     const currentBase = JournalCalculator.getLineBaseAmount(line, baseCurrency);
     const nominal = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;

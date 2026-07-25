@@ -40,6 +40,24 @@ describe('JournalCalculator', () => {
     expect(JournalCalculator.isBalanced(lines, 'USD')).toBe(true);
   });
 
+  it('applyImbalanceRateCorrectionToLines returns null when checkJournal considers balanced', () => {
+    const lines = [
+      {
+        id: '1',
+        amount: 100,
+        transactionType: TransactionType.DEBIT,
+        accountCurrency: 'USD',
+      },
+      {
+        id: '2',
+        amount: 100.0004,
+        transactionType: TransactionType.CREDIT,
+        accountCurrency: 'USD',
+      },
+    ];
+    expect(JournalCalculator.applyImbalanceRateCorrectionToLines(lines, '1', 'USD')).toBeNull();
+  });
+
   it('calculates imbalance correctly', () => {
     // 100 Debit vs 50 Credit = 50 diff
     expect(JournalCalculator.calculateImbalance([debit100, credit50], 'USD')).toBe(50);
