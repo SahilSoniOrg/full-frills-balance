@@ -8,7 +8,8 @@ import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 interface JournalModeToggleProps {
   mode: 'guided' | 'advanced' | 'bulk' | 'split';
   onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
-  variant?: 'default' | 'compact';
+  /** `bar`: slim full-width row under the header (journal entry). `compact`: inline chip group. */
+  variant?: 'default' | 'compact' | 'bar';
   isSimpleDisabled?: boolean;
 }
 
@@ -20,6 +21,7 @@ export const JournalModeToggle = ({
 }: JournalModeToggleProps) => {
   const { theme } = useTheme();
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const isBar = variant === 'bar';
   const isCompact = variant === 'compact';
 
   const modes: { id: 'guided' | 'advanced' | 'bulk' | 'split'; label: string }[] = [
@@ -29,12 +31,13 @@ export const JournalModeToggle = ({
     { id: 'bulk', label: 'Bulk' },
   ];
 
-  if (isCompact) {
+  if (isBar || isCompact) {
     return (
-      <View style={[styles.compactWrapper]}>
+      <View style={[styles.compactWrapper, isBar && styles.barWrapper]}>
         <View
           style={[
             styles.compactContainer,
+            isBar && styles.barContainer,
             { borderColor: theme.border, backgroundColor: theme.surfaceSecondary },
           ]}
         >
@@ -46,6 +49,7 @@ export const JournalModeToggle = ({
                 key={m.id}
                 style={[
                   styles.compactButton,
+                  isBar && styles.barButton,
                   { backgroundColor: isActive ? theme.surface : 'transparent' },
                   disabled && { opacity: Opacity.muted },
                 ]}
@@ -55,6 +59,7 @@ export const JournalModeToggle = ({
                   variant="caption"
                   weight={isActive ? 'bold' : 'medium'}
                   style={{ color: isActive ? theme.primary : theme.textSecondary }}
+                  numberOfLines={1}
                 >
                   {m.label}
                 </AppText>
@@ -64,7 +69,7 @@ export const JournalModeToggle = ({
         </View>
 
         <TouchableOpacity
-          style={styles.infoIconCompact}
+          style={isBar ? styles.infoIconBar : styles.infoIconCompact}
           onPress={() => setInfoModalVisible(true)}
           accessibilityLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
         >
@@ -137,6 +142,7 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   modeToggleContainerDefault: {
+    flex: 1,
     marginHorizontal: Spacing.lg,
     marginVertical: Spacing.md,
   },
@@ -153,12 +159,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
+  barWrapper: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
   compactContainer: {
     flexDirection: 'row',
     borderRadius: Shape.radius.full,
     borderWidth: 1,
     padding: Spacing.xs,
     gap: Spacing.xs,
+  },
+  barContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   compactButton: {
     paddingVertical: Spacing.sm,
@@ -167,8 +181,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  barButton: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+  },
   infoIconCompact: {
     padding: Spacing.xs,
+  },
+  infoIconBar: {
+    padding: Spacing.xs,
+    marginRight: -Spacing.xs,
   },
   defaultWrapper: {
     flexDirection: 'row',

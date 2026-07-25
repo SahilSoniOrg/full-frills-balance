@@ -43,7 +43,6 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
   } = vm;
 
   const isGuidedMode = activeMode === 'guided';
-  const isSplitMode = activeMode === 'split';
 
   // Reset hide suggestions when user focuses or types
   const handleSetDescription = React.useCallback(
@@ -73,17 +72,15 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         scrollEventThrottle: 16,
       }}
       header={
-        <JournalEntryHeader
-          title={headerTitle}
-          rightSlot={
-            <JournalModeToggle
-              mode={activeMode}
-              onToggleMode={onToggleMode}
-              variant="compact"
-              isSimpleDisabled={vm.isSimpleModeDisabled}
-            />
-          }
-        />
+        <>
+          <JournalEntryHeader title={headerTitle} />
+          <JournalModeToggle
+            mode={activeMode}
+            onToggleMode={onToggleMode}
+            variant="bar"
+            isSimpleDisabled={vm.isSimpleModeDisabled}
+          />
+        </>
       }
       footer={
         <SubmitFooter
@@ -115,7 +112,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
       }
     >
       <View style={styles.content}>
-        {/* Shared Metadata Card - only show in simple/advanced modes */}
+        {/* Description, date, and notes — same minimal layout in simple, split, and advanced */}
         {activeMode !== 'bulk' && (
           <JournalMetaCard
             date={vm.editor.journalDate}
@@ -128,7 +125,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             setNotes={vm.editor.setNotes}
             showBanner={showEditBanner}
             bannerText={editBannerText}
-            variant={isGuidedMode || isSplitMode ? 'minimal' : 'default'}
+            variant="minimal"
+            density="tight"
             suggestions={vm.suggestions}
             hideSuggestions={hideSuggestions}
             onDescriptionFocus={() => setHideSuggestions(false)}

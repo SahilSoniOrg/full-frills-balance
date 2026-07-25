@@ -21,6 +21,7 @@ interface JournalMetaCardProps {
   showBanner?: boolean;
   bannerText?: string;
   variant?: 'default' | 'minimal';
+  density?: 'default' | 'tight';
   suggestions?: string[];
   hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
@@ -40,6 +41,7 @@ export function JournalMetaCard({
   showBanner,
   bannerText,
   variant = 'default',
+  density = 'default',
   suggestions = [],
   hideSuggestions = false,
   onDescriptionFocus,
@@ -50,6 +52,8 @@ export function JournalMetaCard({
   const [showNotes, setShowNotes] = useState(!!notes);
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   const isMinimal = variant === 'minimal';
+  const isTight = density === 'tight';
+  const sectionGap = isTight ? Spacing.sm : Spacing.md;
 
   React.useEffect(() => {
     if (notes) {
@@ -58,7 +62,7 @@ export function JournalMetaCard({
   }, [notes]);
 
   const content = (
-    <View style={{ gap: Spacing.md }}>
+    <View style={{ gap: sectionGap }}>
       {showBanner && (
         <EntryEditBanner text={bannerText || ''} style={{ marginHorizontal: 0, marginTop: 0 }} />
       )}
@@ -84,7 +88,7 @@ export function JournalMetaCard({
             flex={1}
             width="auto"
             style={{
-              fontSize: isMinimal ? 16 : 18,
+              fontSize: isTight ? 15 : isMinimal ? 16 : 18,
               fontWeight: isMinimal ? '500' : '600',
             }}
           />
@@ -237,7 +241,15 @@ export function JournalMetaCard({
 
   if (isMinimal) {
     return (
-      <View style={[{ paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md }, style]}>
+      <View
+        style={[
+          {
+            paddingHorizontal: isTight ? Spacing.lg : Spacing.xl,
+            paddingBottom: isTight ? Spacing.sm : Spacing.md,
+          },
+          style,
+        ]}
+      >
         {content}
       </View>
     );

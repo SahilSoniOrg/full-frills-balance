@@ -25,6 +25,7 @@ import {
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
+import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
@@ -121,7 +122,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onSuccess: () => AppNavigation.back(),
   });
 
-  const isSimpleModeDisabled = editor.lines.length > 2;
+  const isSimpleModeDisabled = isSimpleModeDisabledByLines(editor.lines);
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 

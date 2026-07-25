@@ -145,3 +145,19 @@ export function isJournalEditorEntryReady(
       !isNaN(parseFloat(l.amount.toString())),
   );
 }
+
+/** Line counts toward the simple-mode two-leg limit only when the user has entered data. */
+export function isSubstantiveEditorLine(line: JournalEntryLine): boolean {
+  const hasAccount = line.accountId !== EMPTY_ACCOUNT_ID;
+  const amountStr = String(line.amount ?? '').trim();
+  const hasAmount = amountStr !== '' && !Number.isNaN(Number.parseFloat(amountStr));
+  return hasAccount || hasAmount;
+}
+
+export function countSubstantiveEditorLines(lines: JournalEntryLine[]): number {
+  return lines.filter(isSubstantiveEditorLine).length;
+}
+
+export function isSimpleModeDisabledByLines(lines: JournalEntryLine[]): boolean {
+  return countSubstantiveEditorLines(lines) > 2;
+}

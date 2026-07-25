@@ -23,10 +23,11 @@ export function useJournalEntryAccountSelection(options: UseJournalEntryAccountS
 
   const onSelectAccountRequest = useCallback(
     (idOrRole: string) => {
-      setActiveLineId(editor.resolveActiveLineId(idOrRole));
+      const lineId = entryScreenMode === 'split' ? idOrRole : editor.resolveActiveLineId(idOrRole);
+      setActiveLineId(lineId);
       setShowAccountPicker(true);
     },
-    [editor],
+    [editor, entryScreenMode],
   );
 
   const onCloseAccountPicker = useCallback(() => {
@@ -75,33 +76,19 @@ export function useJournalEntryAccountSelection(options: UseJournalEntryAccountS
   const selectableAccounts = useMemo(() => {
     if (!activeLineId) return accounts;
 
-    if (entryScreenMode === 'split') {
-      const line = editor.lines.find(l => l.id === activeLineId);
-      if (!line) return accounts;
+    const modeTab =
+      entryScreenMode === 'split' ? 'expense' : editor.isGuidedMode ? editor.transactionType : null;
+    if (!modeTab) return accounts;
 
-      if (line.id === SPLIT_SOURCE_LINE_ID || line.transactionType === TransactionType.CREDIT) {
-        const allowedTypes = getAllowedAccountTypes('expense', TransactionType.CREDIT);
-        const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
-        return filtered.length > 0 ? filtered : accounts;
-      }
+    const line = editor.lines.find(l => l.id === activeLineId);
+    const lineSide =
+      line?.transactionType ??
+      (activeLineId === SPLIT_SOURCE_LINE_ID ? TransactionType.CREDIT : TransactionType.DEBIT);
 
-      const allowedTypes = getAllowedAccountTypes('expense', TransactionType.DEBIT);
-      const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
-      return filtered.length > 0 ? filtered : accounts;
-    }
+    const allowedTypes = getAllowedAccountTypes(modeTab, lineSide);
+    const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
 
-    if (editor.isGuidedMode) {
-      const type = editor.transactionType;
-      const line = editor.lines.find(l => l.id === activeLineId);
-      if (!line) return accounts;
-
-      const allowedTypes = getAllowedAccountTypes(type, line.transactionType);
-      const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
-
-      return filtered.length > 0 ? filtered : accounts;
-    }
-
-    return accounts;
+    return filtered.length > 0 ? filtered : accounts;
   }, [
     accounts,
     activeLineId,

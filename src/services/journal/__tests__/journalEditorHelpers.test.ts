@@ -3,6 +3,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import {
   inferSimpleTabTypeFromTwoLegs,
   isJournalEditorEntryReady,
+  isSimpleModeDisabledByLines,
   mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
@@ -226,6 +227,37 @@ describe('journalEditorHelpers', () => {
       );
       expect(isJournalEditorEntryReady([baseLine({ amount: '' })], 'USD')).toBe(false);
       expect(isJournalEditorEntryReady([baseLine({ amount: 'abc' })], 'USD')).toBe(false);
+    });
+  });
+
+  describe('isSimpleModeDisabledByLines', () => {
+    const emptyLine = (id: string, type: TransactionType): JournalEntryLine => ({
+      id: id as TransactionId,
+      accountId: EMPTY_ACCOUNT_ID,
+      accountName: '',
+      accountType: AccountType.EXPENSE,
+      amount: '',
+      transactionType: type,
+      notes: '',
+      exchangeRate: '',
+    });
+
+    it('allows simple mode for empty split scaffolding (3+ blank legs)', () => {
+      const lines = [
+        emptyLine('source', TransactionType.CREDIT),
+        emptyLine('split-1', TransactionType.DEBIT),
+        emptyLine('split-2', TransactionType.DEBIT),
+      ];
+      expect(isSimpleModeDisabledByLines(lines)).toBe(false);
+    });
+
+    it('blocks simple mode when more than two legs have data', () => {
+      const lines = [
+        { ...emptyLine('source', TransactionType.CREDIT), accountId: 'cash' as any, amount: '15' },
+        { ...emptyLine('split-1', TransactionType.DEBIT), accountId: 'a1' as any, amount: '10' },
+        { ...emptyLine('split-2', TransactionType.DEBIT), accountId: 'a2' as any, amount: '5' },
+      ];
+      expect(isSimpleModeDisabledByLines(lines)).toBe(true);
     });
   });
 });
