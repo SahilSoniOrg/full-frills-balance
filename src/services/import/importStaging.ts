@@ -1,7 +1,7 @@
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { WORKPLACE_SCOPED_TABLES } from '@/src/services/integrity/integrityMaintenance';
+import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { integrityService } from '@/src/services/integrity-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -53,7 +53,7 @@ export async function commitStagedImport(
   await databaseRepository.swapStagedWorkplaceInto(
     targetWorkplaceId,
     stagingWorkplaceId,
-    WORKPLACE_SCOPED_TABLES,
+    WORKPLACE_SCOPED_TABLE_NAMES,
   );
   await discardImportStagingWorkplace(stagingWorkplaceId);
 }

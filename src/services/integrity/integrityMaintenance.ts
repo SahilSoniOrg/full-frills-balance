@@ -9,23 +9,8 @@ import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { preferences } from '@/src/utils/preferences';
-
-/** Tables keyed by workplace_id; used for purge and staged-import swap. */
-export const WORKPLACE_SCOPED_TABLES = [
-  'accounts',
-  'journals',
-  'transactions',
-  'audit_logs',
-  'budgets',
-  'budget_scopes',
-  'account_metadata',
-  'planned_payments',
-  'journal_metadata',
-  'transaction_auto_post_rules',
-  'transaction_inbox_records',
-  'balance_snapshots',
-] as const;
 
 export async function resetWorkplace(
   workplaceId: WorkplaceId,
@@ -33,7 +18,7 @@ export async function resetWorkplace(
 ): Promise<void> {
   logger.warn(`[IntegrityMaintenance] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
   try {
-    await databaseRepository.purgeWorkplaceData(workplaceId, [...WORKPLACE_SCOPED_TABLES]);
+    await databaseRepository.purgeWorkplaceData(workplaceId, [...WORKPLACE_SCOPED_TABLE_NAMES]);
 
     if (!keepWorkplaceRecord) {
       const { database } = await import('@/src/data/database/Database');

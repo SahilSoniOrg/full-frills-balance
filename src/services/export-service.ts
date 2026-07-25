@@ -21,6 +21,7 @@ import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { Model, TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
+import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { compression } from '../utils/compression';
 
 export interface AccountExport {
@@ -433,22 +434,7 @@ class ExportService {
     onProgress?.('Initializing export...', 0.05);
 
     try {
-      const tableTasks = [
-        { name: 'Accounts', table: 'accounts' },
-        { name: 'Journals', table: 'journals' },
-        { name: 'Entries', table: 'transactions' },
-        { name: 'Audit Logs', table: 'audit_logs' },
-        { name: 'Budgets', table: 'budgets' },
-        { name: 'Budget Scopes', table: 'budget_scopes' },
-        { name: 'Metadata', table: 'account_metadata' },
-        { name: 'Planned Payments', table: 'planned_payments' },
-        { name: 'Journal Metadata', table: 'journal_metadata' },
-        { name: 'Rules', table: 'transaction_auto_post_rules' },
-        { name: 'Inbox', table: 'transaction_inbox_records' },
-        { name: 'Currencies', table: 'currencies' },
-        { name: 'Exchange Rates', table: 'exchange_rates' },
-        { name: 'Balance Snapshots', table: 'balance_snapshots' },
-      ];
+      const tableTasks = [...WORKPLACE_DATA_TABLES];
 
       // Track sub-progress of each parallel task
       const tableProgress = new Map<string, number>();
