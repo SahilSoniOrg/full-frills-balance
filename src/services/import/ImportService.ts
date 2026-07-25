@@ -17,8 +17,10 @@ import {
 } from '@/src/services/import/importStaging';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { integrityService } from '@/src/services/integrity-service';
+import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
+import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
@@ -244,19 +246,16 @@ export class ImportService {
         logger.info(
           `[ImportService] Rebuilding balance snapshots for ${accounts.length} accounts...`,
         );
-        const { accountingRebuildService } =
-          await import('@/src/services/AccountingRebuildService');
         let completed = 0;
-        await Promise.all(
-          accounts.map(async account => {
-            await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
-            completed++;
-            integrityProgress(
-              `Rebuilding checkpoints: ${account.name} (${completed}/${accounts.length})`,
-              0.5 + (completed / accounts.length) * 0.5,
-            );
-          }),
-        );
+        const rebuildConcurrency = AppConfig.performance.import.postImportAccountRebuildConcurrency;
+        await runTasksWithBoundedConcurrency(accounts, rebuildConcurrency, async account => {
+          await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
+          completed += 1;
+          integrityProgress(
+            `Rebuilding checkpoints: ${account.name} (${completed}/${accounts.length})`,
+            0.5 + (completed / accounts.length) * 0.5,
+          );
+        });
       }
     } catch (error) {
       logger.error('[ImportService] Failed to rebuild balance snapshots post-import:', error);

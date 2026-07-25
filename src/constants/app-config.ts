@@ -107,6 +107,10 @@ export const AppConfig = {
         retryDelayMs: 2000,
       },
     },
+    import: {
+      /** Max parallel account balance rebuilds after a large import */
+      postImportAccountRebuildConcurrency: 3,
+    },
     ghostStepYieldMs: 20, // Small yield between major ghost hydration steps
   },
 
