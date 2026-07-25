@@ -63,22 +63,23 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | 2.2 | BalanceService aggregation | ADR-0005 | ✅ |
 | 2.3 | Reports / deltas | ADR-0005 | ✅ |
 | 2.4 | Budget + simulation + STS | ADR-0005 | ✅ |
-| 2.5 | Remove `getRateSafe` | ADR-0005 | ⬜ wealth-service |
+| 2.5 | Remove `getRateSafe` | ADR-0005 | ✅ |
 
-**Exit criteria:** multi-currency user sees no silent parity; historical reports use leg `exchange_rate` where appropriate.
+**Phase 2 exit criteria:** met (2026-07-25).
 
 ---
 
-## Phase 3 — Data safety (≈1–2 weeks)
+## Phase 3 — Data safety — **in progress**
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|
 | 3.1 | Auto pre-import backup | ADR-0006 | ✅ |
 | 3.3 | Migration smoke test | ADR-0004 | ✅ |
-| 3.4 | Add migration test to CI | ADR-0004 | 1 h |
-| 3.5 | Log integrity repairs to audit log (or settings “last repair” summary) | ADR-0002 | 0.5 d |
+| 3.2 | Staged restore (swap, no wipe-first) | ADR-0006 | ✅ |
+| 3.4 | Migration smoke in CI (explicit step) | ADR-0004 | ✅ |
+| 3.5 | Log integrity repairs to audit log | ADR-0002 | ✅ |
 
-**Exit criteria:** failed restore never leaves an empty workplace; at least one migration is regression-tested in CI.
+**Phase 3 exit criteria:** met (2026-07-25) — staged import + pre-backup + migration smoke in CI.
 
 ---
 
@@ -91,8 +92,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | 4.1 | Continue journal/account repository intent splits | Partial in §0 |
 | 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT |
 | 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” |
-| 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 |
-| 4.5 | Sign rules: generate SQL from `BalanceEffects` or parity test TS vs SQL | P2 |
+| 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
+| 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
 | 4.6 | Spike: schema-driven import (mirror export `tableTasks`) | Cuts 8–12 touchpoint tax |
 
 **Feature shortcuts (after Phase 1–2):**
@@ -110,8 +111,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ## Next up
 
-1. **Phase 2** — FX / money (ADR-0005)
-2. **Phase 3** — restore safety + migration tests
+1. **Phase 4** — AUDIT backlog (4.1–4.3, 4.6 spike), feature shortcuts (split tx, reports)
+2. **Docs** — refresh `PROJECT_BIBLE.md` §9 (FX P0 closed), push `main` to run CI
 
 ---
 

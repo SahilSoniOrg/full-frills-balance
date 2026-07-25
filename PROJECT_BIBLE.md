@@ -193,15 +193,15 @@ bun run verify           # all three
 
 ## 9. Technical debt register
 
-Ordered by expected return, not severity alone. P0 = do now.
+Ordered by expected return, not severity alone. P0 = do now. **Resolved items** (2026-07-25): FX (`convertAmount`, `getRateSafe` removed), import validation + staged restore + pre-backup, privacy/analytics, export completeness, migration smoke test, account-delete guard, integrity repair audit log.
 
 | P | Item | Evidence | Effort |
 |---|---|---|---|
-| **P0** | Silent FX parity: `getRateSafe` returns `1.0` on cache miss; read paths ignore stored `exchange_rate` | `exchange-rate-service.ts:63-76` + 4 call sites | M (5–8d) |
-| **P0** | Restore wipes before insert → failed import leaves an empty workplace | `ImportService.ts:90-125` | M–L |
-| **P0** | Import bypasses `checkJournal` → can persist unbalanced books | `ImportRepository.batchInsert` | S |
-| **P0** | Analytics ships transaction amounts + session replay at 100%, contradicting `PRIVACY.MD` | `analytics-service.ts:79-85`, `:443`; `PRIVACY.MD:101` | S |
-| **P1** | Zero migration tests across 27 migrations / schema v28 | no test references `migrations.ts` | M |
+| ~~**P0**~~ | ~~Silent FX parity~~ — **fixed** | `currencyConversion.ts`, ADR-0005 | — |
+| ~~**P0**~~ | ~~Restore wipes before insert~~ — **fixed** (staging + swap, ADR-0006) | `importStaging.ts`, `ImportService.ts` | — |
+| ~~**P0**~~ | ~~Import bypasses `checkJournal`~~ — **fixed** | `validateImportedData` | — |
+| ~~**P0**~~ | ~~Analytics amounts + session replay~~ — **fixed** | `analytics-service.ts`, `PRIVACY.MD` | — |
+| ~~**P1**~~ | ~~Zero migration tests~~ — **smoke test** | `migrations.test.ts` + CI step | — |
 | **P1** | Journal post/revert/recover is 0% covered | `ledgerWriteService.ts:244-420` | M |
 | **P1** | `checkJournal` is mocked to always-valid in journal save tests | `JournalService.test.ts:44-49` | S |
 | **P1** | Export omits 3 tables and all but one workplace | `export-service.ts:432-444` | S |
@@ -209,9 +209,9 @@ Ordered by expected return, not severity alone. P0 = do now.
 | **P1** | `metro.config.js` resolves 5 **undeclared** packages by absolute path; `rxjs` used in 56 files is a transitive | `metro.config.js:21-50` | S |
 | **P1** | `reset-project` script can delete `app/` and `scripts/` | `package.json:7` | S — delete |
 | **P1** | `eas.json` submit points at `google-services.json` (a Firebase config, not a Play service-account key) | `eas.json` | S |
-| **P2** | Sign rules duplicated between TS and raw SQL `CASE` strings | `BalanceEffects.ts:137-157` vs `TransactionRawRebuildQueries.ts:20-22` | M |
+| **P2** | Sign rules duplicated between TS and raw SQL `CASE` strings | `balanceSignParity.test.ts` guards drift; full codegen optional | M |
 | **P2** | Two "is this journal balanced?" rules with different epsilons | `JournalCalculator.ts:73-78` vs `checkJournal` | S |
-| **P2** | Deleting an account orphans its transactions | `AccountRepository.delete` | S |
+| ~~**P2**~~ | ~~Deleting an account orphans its transactions~~ — **blocked at service** | `accountDomainService.deleteAccount` | — |
 | **P2** | Integrity repairs are invisible to the audit log | `integrity-service.ts:457-472` | S |
 | **P2** | Swallowed errors on balance/report/FX read paths | `reactiveAggregatedBalances.ts:116-122` + list in the audit | M |
 | **P2** | Beta React Compiler in production; stable 1.0.0 available | `package.json` | S |

@@ -32,6 +32,11 @@ jobs:
       - name: Unit tests
         run: bunx jest --ci --coverage --maxWorkers=2
 
+      # Schema/migration smoke (Phase 3.4) — included in full suite; explicit for visibility
+      - name: Migration smoke
+        if: ${{ !cancelled() }}
+        run: bunx jest --ci src/data/database/__tests__/migrations.test.ts
+
       # Runs even if tests fail so a lint warning never masks a test failure.
       - name: Lint
         if: ${{ !cancelled() }}
