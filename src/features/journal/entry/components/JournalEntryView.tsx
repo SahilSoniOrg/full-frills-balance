@@ -8,6 +8,7 @@ import { JournalMetaCard } from '@/src/features/journal/entry/components/Journal
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
+import { SplitForm } from '@/src/features/journal/entry/components/SplitForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -42,6 +43,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
   } = vm;
 
   const isGuidedMode = activeMode === 'guided';
+  const isSplitMode = activeMode === 'split';
 
   // Reset hide suggestions when user focuses or types
   const handleSetDescription = React.useCallback(
@@ -126,7 +128,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             setNotes={vm.editor.setNotes}
             showBanner={showEditBanner}
             bannerText={editBannerText}
-            variant={isGuidedMode ? 'minimal' : 'default'}
+            variant={isGuidedMode || isSplitMode ? 'minimal' : 'default'}
             suggestions={vm.suggestions}
             hideSuggestions={hideSuggestions}
             onDescriptionFocus={() => setHideSuggestions(false)}
@@ -136,6 +138,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
 
         {activeMode === 'guided' ? (
           <SimpleForm {...vm.simpleEditor} />
+        ) : activeMode === 'split' ? (
+          <SplitForm {...vm.splitEditor} />
         ) : activeMode === 'advanced' ? (
           <View style={{ paddingHorizontal: Spacing.lg }}>
             <AdvancedForm

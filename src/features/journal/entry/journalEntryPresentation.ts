@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/domain';
 
-export type JournalEntryScreenMode = 'guided' | 'advanced' | 'bulk';
-export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk';
+export type JournalEntryScreenMode = 'guided' | 'advanced' | 'bulk' | 'split';
+export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
 export type JournalEntrySimpleType = 'expense' | 'income' | 'transfer';
 
 export type JournalEntryRouteParams = {
@@ -32,7 +32,9 @@ function firstString(value: string | string[] | undefined): string | undefined {
 export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalEntryRouteParams {
   const modeRaw = firstString(params.mode);
   const mode =
-    modeRaw === 'simple' || modeRaw === 'advanced' || modeRaw === 'bulk' ? modeRaw : undefined;
+    modeRaw === 'simple' || modeRaw === 'advanced' || modeRaw === 'bulk' || modeRaw === 'split'
+      ? modeRaw
+      : undefined;
 
   const typeRaw = firstString(params.type);
   const type =
@@ -69,6 +71,7 @@ export function resolveJournalEntryScreenMode(
   if (routeMode === 'simple') return 'guided';
   if (routeMode === 'advanced') return 'advanced';
   if (routeMode === 'bulk') return 'bulk';
+  if (routeMode === 'split') return 'split';
   return 'guided';
 }
 
@@ -78,6 +81,7 @@ export function resolveJournalEntryHeaderTitle(input: {
   isGuidedMode: boolean;
 }): string {
   if (input.activeMode === 'bulk') return 'Bulk Entry';
+  if (input.activeMode === 'split') return AppConfig.strings.transactionFlow.splitEntry.title;
   if (input.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
   return input.isGuidedMode
     ? AppConfig.strings.transactionFlow.headers.new
@@ -106,9 +110,15 @@ export function resolveJournalEntrySubmitLabel(input: {
   simpleType: string;
   isEdit: boolean;
   isSubmitting: boolean;
+  splitSubmitting?: boolean;
 }): string {
   if (input.activeMode === 'bulk') {
     return input.bulkSubmitting ? 'Saving All...' : `Save ${input.bulkRowCount} Transactions`;
+  }
+  if (input.activeMode === 'split') {
+    return input.splitSubmitting
+      ? AppConfig.strings.transactionFlow.saving
+      : AppConfig.strings.transactionFlow.splitEntry.save;
   }
   if (input.isGuidedMode) {
     if (input.isAmountFocused && !input.isSimpleValid) {
@@ -138,9 +148,13 @@ export function isJournalEntrySubmitDisabled(input: {
   isAmountFocused: boolean;
   isSimpleValid: boolean;
   isAdvancedValid: boolean;
+  isSplitValid?: boolean;
 }): boolean {
   if (input.activeMode === 'bulk') {
     return input.bulkSubmitting || !input.bulkValid;
+  }
+  if (input.activeMode === 'split') {
+    return !input.isSplitValid;
   }
   return input.isGuidedMode
     ? input.isAmountFocused

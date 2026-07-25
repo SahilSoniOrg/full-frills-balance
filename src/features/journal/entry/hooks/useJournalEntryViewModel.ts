@@ -13,6 +13,8 @@ import { useJournalEntryAccountSelection } from '@/src/features/journal/entry/ho
 import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/useJournalEntryVoiceInput';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   createSmsJournalAfterSaveHandler,
@@ -35,8 +37,9 @@ export interface JournalEntryViewModel {
   editor: ReturnType<typeof useJournalEditor>;
   simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
   accounts: ReturnType<typeof useAccounts>['accounts'];
-  activeMode: 'guided' | 'advanced' | 'bulk';
-  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk') => void;
+  activeMode: 'guided' | 'advanced' | 'bulk' | 'split';
+  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
+  splitEditor: ReturnType<typeof useSplitJournalEditor>;
   bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   savedSummary: { count: number; items: SavedJournalSummary[] } | null;
   setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;
@@ -98,7 +101,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const editor = useJournalEditor(workplaceId, {
     journalId: route.journalId,
-    initialMode: route.mode === 'bulk' ? undefined : route.mode,
+    initialMode: route.mode === 'bulk' || route.mode === 'split' ? undefined : route.mode,
     initialType: route.type,
     initialAmount: route.amount,
     initialDescription: route.notes,
@@ -122,15 +125,19 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
+  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk' | 'split'>(() =>
+    resolveJournalEntryScreenMode(route.mode),
+  );
+
   const {
     showAccountPicker,
     activeLineId,
     onSelectAccountRequest,
     onCloseAccountPicker,
-    onAccountSelected,
+    onAccountSelected: onAccountSelectedBase,
     onCreateAccountRequest,
     selectableAccounts,
-  } = useJournalEntryAccountSelection({ accounts, editor });
+  } = useJournalEntryAccountSelection({ accounts, editor, entryScreenMode: activeMode });
 
   const simpleEditor = useSimpleJournalEditor({
     accounts,
@@ -150,10 +157,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       simpleEditor,
     });
 
-  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk'>(() =>
-    resolveJournalEntryScreenMode(route.mode),
-  );
-
   const [savedSummary, setSavedSummary] = useState<{
     count: number;
     items: SavedJournalSummary[];
@@ -171,8 +174,31 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     ),
   });
 
+  const splitEditor = useSplitJournalEditor({
+    accounts,
+    editor,
+    onSelectAccountRequest,
+    isActive: activeMode === 'split',
+  });
+
+  const onAccountSelected = useCallback(
+    (accountId: AccountId) => {
+      if (activeMode === 'split' && activeLineId) {
+        if (activeLineId === SPLIT_SOURCE_LINE_ID) {
+          splitEditor.setSourceAccountId(accountId);
+        } else {
+          splitEditor.updateSplitRow(activeLineId, { accountId });
+        }
+        onCloseAccountPicker();
+        return;
+      }
+      onAccountSelectedBase(accountId);
+    },
+    [activeMode, activeLineId, splitEditor, onCloseAccountPicker, onAccountSelectedBase],
+  );
+
   const onToggleMode = useCallback(
-    (mode: 'guided' | 'advanced' | 'bulk') => {
+    (mode: 'guided' | 'advanced' | 'bulk' | 'split') => {
       if (mode === 'guided' && isSimpleModeDisabled) {
         showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
         return;
@@ -182,6 +208,9 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         editor.setIsGuidedMode(true);
       } else if (mode === 'advanced') {
         editor.setIsGuidedMode(false);
+      } else if (mode === 'split') {
+        editor.setIsGuidedMode(false);
+        editor.setTransactionType('expense');
       }
     },
     [editor, isSimpleModeDisabled, setActiveMode],
@@ -254,9 +283,13 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     isSubmitting: editor.isSubmitting,
   });
 
+  const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
+
   const handleSubmit = useCallback(() => {
     if (activeMode === 'bulk') {
       bulkEditor.saveAll();
+    } else if (activeMode === 'split') {
+      splitEditor.handleSave();
     } else if (editor.isGuidedMode) {
       if (isAmountFocused && !isSimpleValid) {
         Keyboard.dismiss();
@@ -266,7 +299,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     } else {
       editor.submit();
     }
-  }, [activeMode, bulkEditor, editor, isAmountFocused, isSimpleValid, simpleEditor]);
+  }, [activeMode, bulkEditor, editor, isAmountFocused, isSimpleValid, simpleEditor, splitEditor]);
 
   const isSubmitDisabled = useMemo(
     () =>
@@ -278,6 +311,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         isAmountFocused,
         isSimpleValid,
         isAdvancedValid,
+        isSplitValid,
       }),
     [
       activeMode,
@@ -287,6 +321,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       isAmountFocused,
       isSimpleValid,
       isAdvancedValid,
+      isSplitValid,
     ],
   );
 
@@ -303,6 +338,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         simpleType: simpleEditor.type,
         isEdit: editor.isEdit,
         isSubmitting: editor.isSubmitting,
+        splitSubmitting: splitEditor.isSubmitting,
       }),
     [
       activeMode,
@@ -315,12 +351,24 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       isSimpleValid,
       simpleEditor.isSubmitting,
       simpleEditor.type,
+      splitEditor.isSubmitting,
     ],
   );
+
+  const selectedAccountId = useMemo(() => {
+    if (activeMode === 'split' && activeLineId) {
+      if (activeLineId === SPLIT_SOURCE_LINE_ID) {
+        return splitEditor.sourceAccountId;
+      }
+      return splitEditor.splits.find(s => s.id === activeLineId)?.accountId;
+    }
+    return editor.lines.find(l => l.id === activeLineId)?.accountId;
+  }, [activeMode, activeLineId, splitEditor.sourceAccountId, splitEditor.splits, editor.lines]);
 
   return {
     editor,
     simpleEditor,
+    splitEditor,
     accounts,
     activeMode,
     onToggleMode,
@@ -337,7 +385,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onCloseAccountPicker,
     onSelectAccountRequest,
     onAccountSelected,
-    selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
+    selectedAccountId,
     simpleFormIsValid: isSimpleValid,
     advancedFormIsValid: isAdvancedValid,
     advancedFormConfig: {

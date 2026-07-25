@@ -6,8 +6,8 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
 interface JournalModeToggleProps {
-  mode: 'guided' | 'advanced' | 'bulk';
-  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk') => void;
+  mode: 'guided' | 'advanced' | 'bulk' | 'split';
+  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
   variant?: 'default' | 'compact';
   isSimpleDisabled?: boolean;
 }
@@ -22,8 +22,9 @@ export const JournalModeToggle = ({
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const isCompact = variant === 'compact';
 
-  const modes: { id: 'guided' | 'advanced' | 'bulk'; label: string }[] = [
+  const modes: { id: 'guided' | 'advanced' | 'bulk' | 'split'; label: string }[] = [
     { id: 'guided', label: 'Simple' },
+    { id: 'split', label: 'Split' },
     { id: 'advanced', label: 'Advanced' },
     { id: 'bulk', label: 'Bulk' },
   ];
