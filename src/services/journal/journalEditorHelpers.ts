@@ -1,6 +1,13 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId, JournalEntryLine, TabType, TransactionId } from '@/src/types/domain';
+import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import {
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TabType,
+  TransactionId,
+} from '@/src/types/domain';
 
 /** Enriched journal leg as returned for edit-mode load (transaction service / repository). */
 export interface JournalEditorEnrichedLine {
@@ -111,4 +118,30 @@ export function mapEnrichedLinesToEditorState(
   }
 
   return { lines, forceAdvancedMode, simpleTabType };
+}
+
+/** Maps editor lines into the shape used by JournalCalculator balance checks. */
+export function mapEditorLinesForBalanceCheck(
+  lines: JournalEntryLine[],
+  _workplaceCurrency: string,
+): JournalLineInput[] {
+  return lines.map(l => ({
+    amount: l.amount,
+    type: l.transactionType,
+    exchangeRate: l.exchangeRate,
+    accountCurrency: l.accountCurrency,
+  }));
+}
+
+/** True when every line has an account and a parseable amount (ready to balance). */
+export function isJournalEditorEntryReady(
+  lines: JournalEntryLine[],
+  _workplaceCurrency: string,
+): boolean {
+  return lines.every(
+    l =>
+      l.accountId !== EMPTY_ACCOUNT_ID &&
+      l.amount !== '' &&
+      !isNaN(parseFloat(l.amount.toString())),
+  );
 }

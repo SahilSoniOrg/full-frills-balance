@@ -7,8 +7,9 @@ import {
   buildSimpleCrossCurrencyLineUpdates,
   buildSimpleDefaultDescription,
   buildSimpleFormAccountSections,
-  deriveCrossCurrencyDisplayRate,
+  computeSimpleConvertedAmount,
   parseSimpleAmountInput,
+  resolveSimpleCrossCurrencyRates,
   shouldApplyLastUsedAccountDefault,
 } from '@/src/services/journal/simpleJournalHelpers';
 import {
@@ -105,14 +106,21 @@ export function useSimpleJournalEditor({
       setRateError(null);
       try {
         // To ensure balance in base currency, we fetch both rates relative to workplace currency
-        const [srcRate, dstRate] = await Promise.all([
+        const [fetchedSourceToWorkplace, fetchedDestToWorkplace] = await Promise.all([
           sourceCurrency !== workplaceCurrency ? fetchRate(sourceCurrency, workplaceCurrency) : 1.0,
           destCurrency !== workplaceCurrency ? fetchRate(destCurrency, workplaceCurrency) : 1.0,
         ]);
 
-        setSourceBaseRate(srcRate);
-        setDestBaseRate(dstRate);
-        setExchangeRate(deriveCrossCurrencyDisplayRate(srcRate, dstRate));
+        const resolved = resolveSimpleCrossCurrencyRates({
+          sourceCurrency,
+          destCurrency,
+          workplaceCurrency,
+          fetchedSourceToWorkplace,
+          fetchedDestToWorkplace,
+        });
+        setSourceBaseRate(resolved.sourceBaseRate);
+        setDestBaseRate(resolved.destBaseRate);
+        setExchangeRate(resolved.exchangeRate);
       } catch (error) {
         setRateError('Rate unavailable');
         logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
@@ -126,10 +134,10 @@ export function useSimpleJournalEditor({
 
   const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
 
-  const convertedAmount = useMemo(() => {
-    if (!isCrossCurrency || !exchangeRate) return numAmount;
-    return numAmount * exchangeRate;
-  }, [numAmount, isCrossCurrency, exchangeRate]);
+  const convertedAmount = useMemo(
+    () => computeSimpleConvertedAmount(numAmount, isCrossCurrency, exchangeRate),
+    [numAmount, isCrossCurrency, exchangeRate],
+  );
 
   // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
   useEffect(() => {
@@ -242,7 +250,7 @@ export function useSimpleJournalEditor({
 
   // Account defaulting logic (re-implemented to work with editor state)
   useEffect(() => {
-    if (editor.isEdit) return; // Never apply defaults in Edit mode - use the journal's data
+    if (!editor.isGuidedMode || editor.isEdit) return;
 
     const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
     const lastDestId = preferences.journalNav.lastUsedDestinationAccountId;

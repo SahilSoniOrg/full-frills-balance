@@ -5,6 +5,8 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import {
+  isJournalEditorEntryReady,
+  mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
@@ -401,14 +403,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   );
 
   const journalLinesForBalance = useMemo(
-    () =>
-      lines.map(l => ({
-        amount: l.amount,
-        type: l.transactionType,
-        exchangeRate: l.exchangeRate,
-        accountCurrency: l.accountCurrency,
-      })),
-    [lines],
+    () => mapEditorLinesForBalanceCheck(lines, workplaceCurrency),
+    [lines, workplaceCurrency],
   );
 
   const imbalance = useMemo(
@@ -421,14 +417,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     [journalLinesForBalance, workplaceCurrency],
   );
   const isEntryReadyToBalance = useMemo(
-    () =>
-      lines.every(
-        l =>
-          l.accountId !== EMPTY_ACCOUNT_ID &&
-          l.amount !== '' &&
-          !isNaN(parseFloat(l.amount.toString())),
-      ),
-    [lines],
+    () => isJournalEditorEntryReady(lines, workplaceCurrency),
+    [lines, workplaceCurrency],
   );
 
   return useMemo(

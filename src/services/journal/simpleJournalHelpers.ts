@@ -15,6 +15,47 @@ export function deriveCrossCurrencyDisplayRate(
   return sourceToBaseRate / destToBaseRate;
 }
 
+export interface ResolveSimpleCrossCurrencyRatesInput {
+  sourceCurrency: string;
+  destCurrency: string;
+  workplaceCurrency: string;
+  fetchedSourceToWorkplace: number;
+  fetchedDestToWorkplace: number;
+}
+
+/** Derives simple-form cross-currency base and display rates after workplace-relative fetches. */
+export function resolveSimpleCrossCurrencyRates(input: ResolveSimpleCrossCurrencyRatesInput): {
+  sourceBaseRate: number;
+  destBaseRate: number;
+  exchangeRate: number;
+} {
+  const {
+    sourceCurrency,
+    destCurrency,
+    workplaceCurrency,
+    fetchedSourceToWorkplace,
+    fetchedDestToWorkplace,
+  } = input;
+
+  const sourceBaseRate = sourceCurrency !== workplaceCurrency ? fetchedSourceToWorkplace : 1.0;
+  const destBaseRate = destCurrency !== workplaceCurrency ? fetchedDestToWorkplace : 1.0;
+
+  return {
+    sourceBaseRate,
+    destBaseRate,
+    exchangeRate: deriveCrossCurrencyDisplayRate(sourceBaseRate, destBaseRate),
+  };
+}
+
+export function computeSimpleConvertedAmount(
+  numAmount: number,
+  isCrossCurrency: boolean,
+  exchangeRate: number | null,
+): number {
+  if (!isCrossCurrency || !exchangeRate) return numAmount;
+  return numAmount * exchangeRate;
+}
+
 export function parseSimpleAmountInput(amount: string): number {
   return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
 }

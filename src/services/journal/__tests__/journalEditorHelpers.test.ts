@@ -2,10 +2,12 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import {
   inferSimpleTabTypeFromTwoLegs,
+  isJournalEditorEntryReady,
+  mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
-import { JournalEntryLine, TransactionId } from '@/src/types/domain';
+import { EMPTY_ACCOUNT_ID, JournalEntryLine, TransactionId } from '@/src/types/domain';
 
 describe('journalEditorHelpers', () => {
   describe('inferSimpleTabTypeFromTwoLegs', () => {
@@ -163,6 +165,67 @@ describe('journalEditorHelpers', () => {
         },
       ]);
       expect(result.forceAdvancedMode).toBe(true);
+    });
+  });
+
+  describe('mapEditorLinesForBalanceCheck', () => {
+    it('maps editor lines to journal calculator input', () => {
+      const lines: JournalEntryLine[] = [
+        {
+          id: '1' as TransactionId,
+          accountId: 'a1' as any,
+          accountName: 'Cash',
+          accountType: AccountType.ASSET,
+          amount: '100',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '1.2',
+          accountCurrency: 'EUR',
+        },
+      ];
+
+      expect(mapEditorLinesForBalanceCheck(lines, 'USD')).toEqual([
+        {
+          amount: '100',
+          type: TransactionType.DEBIT,
+          exchangeRate: '1.2',
+          accountCurrency: 'EUR',
+        },
+      ]);
+    });
+  });
+
+  describe('isJournalEditorEntryReady', () => {
+    const baseLine = (overrides: Partial<JournalEntryLine>): JournalEntryLine => ({
+      id: '1' as TransactionId,
+      accountId: 'a1' as any,
+      accountName: '',
+      accountType: AccountType.ASSET,
+      amount: '10',
+      transactionType: TransactionType.DEBIT,
+      notes: '',
+      exchangeRate: '',
+      ...overrides,
+    });
+
+    it('returns true when all lines have account and valid amount', () => {
+      expect(
+        isJournalEditorEntryReady(
+          [
+            baseLine({}),
+            baseLine({ id: '2' as TransactionId, transactionType: TransactionType.CREDIT }),
+          ],
+          'USD',
+        ),
+      ).toBe(true);
+    });
+
+    it('returns false when account or amount is missing', () => {
+      expect(isJournalEditorEntryReady([baseLine({ accountId: EMPTY_ACCOUNT_ID })], 'USD')).toBe(
+        false,
+      );
+      expect(isJournalEditorEntryReady([baseLine({ amount: '' })], 'USD')).toBe(false);
+      expect(isJournalEditorEntryReady([baseLine({ amount: 'abc' })], 'USD')).toBe(false);
     });
   });
 });
