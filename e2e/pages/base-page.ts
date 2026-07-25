@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 
 export class BasePage {
   constructor(public readonly page: Page) {
@@ -41,27 +41,34 @@ export class BasePage {
     await this.page.waitForTimeout(100);
   }
 
+  async ensureAppShell() {
+    const dashboardTab = this.page.getByRole('tab', { name: 'Dashboard', exact: true });
+    if (!(await dashboardTab.isVisible().catch(() => false))) {
+      await this.page.goto('/activity', { waitUntil: 'domcontentloaded' });
+    }
+    await expect(dashboardTab).toBeVisible({ timeout: 30000 });
+  }
+
+  async switchToActivity() {
+    await this.ensureAppShell();
+    await this.page.getByRole('tab', { name: 'Activity', exact: true }).click();
+    const journalFab = this.page.getByRole('button', { name: /Open new entry options/i });
+    await expect(journalFab).toBeVisible({ timeout: 45000 });
+  }
+
+  async switchToDashboard() {
+    await this.ensureAppShell();
+    await this.page.getByRole('tab', { name: 'Dashboard', exact: true }).click();
+  }
+
   async clickPlusButton() {
-    const entryButton = this.page
-      .getByTestId('fab-button')
-      .or(this.page.getByRole('button', { name: 'New Entry', exact: true }));
-    await entryButton.first().waitFor({ state: 'visible', timeout: 30000 });
-
-    let fab = this.page.getByTestId('fab-button');
-    if ((await fab.count()) > 0) {
-      await fab.first().waitFor({ state: 'visible' });
-      await fab.first().click();
-      return;
-    }
-
-    fab = this.page.getByRole('button', { name: 'New Entry', exact: true }).first();
-    if ((await fab.count()) > 0) {
-      await fab.waitFor({ state: 'visible' });
-      await fab.click({ force: true });
-      return;
-    }
-
-    throw new Error('Could not find primary journal entry button');
+    await this.switchToActivity();
+    const journalFab = this.page.getByRole('button', { name: /Open new entry options/i });
+    await expect(journalFab).toBeVisible({ timeout: 45000 });
+    await journalFab.click({ force: true });
+    await expect(this.page.getByPlaceholder('What is this journal entry for?')).toBeVisible({
+      timeout: 30000,
+    });
   }
 
   async selectAccount(accountName: string) {
@@ -72,10 +79,6 @@ export class BasePage {
 
   async waitForNavigation(urlPattern: RegExp | string) {
     await this.page.waitForURL(urlPattern, { timeout: 1000 });
-  }
-
-  async switchToDashboard() {
-    await this.page.goto('/');
   }
 
   async switchToAccounts() {

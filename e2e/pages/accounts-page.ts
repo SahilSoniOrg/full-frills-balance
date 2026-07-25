@@ -2,27 +2,69 @@ import { expect } from '@playwright/test';
 import { BasePage } from './base-page';
 
 export class AccountsPage extends BasePage {
-  async navigateToCreation() {
+  private async waitForAccountsHydrated() {
+    await expect
+      .poll(
+        async () => {
+          const equitySection = await this.page
+            .getByRole('button', { name: /Equity section/i })
+            .isVisible()
+            .catch(() => false);
+          const assetsSection = await this.page
+            .getByRole('button', { name: /Assets section/i })
+            .isVisible()
+            .catch(() => false);
+          const fabVisible = await this.page
+            .getByTestId('fab-button')
+            .isVisible()
+            .catch(() => false);
+          const netWorthVisible = await this.page
+            .getByText('Net Worth', { exact: true })
+            .isVisible()
+            .catch(() => false);
+          return equitySection || assetsSection || fabVisible || netWorthVisible;
+        },
+        { timeout: 45000 },
+      )
+      .toBeTruthy();
+  }
+
+  private async openAccountsHub() {
     if (!this.page.url().includes('/accounts')) {
-      await this.switchToAccounts();
+      await this.page.goto('/accounts', { waitUntil: 'domcontentloaded' });
     }
+    await expect(this.page.getByTestId('onboarding-name-input')).not.toBeVisible({ timeout: 5000 });
+    await this.waitForAccountsHydrated();
+  }
+
+  async navigateToCreation() {
+    await this.openAccountsHub();
+    await this.page.getByTestId('tab-item-accounts').click();
     const fab = this.page.getByTestId('fab-button');
-    if ((await fab.count()) > 0) {
-      await fab.first().waitFor({ state: 'visible' });
-      await fab.first().click();
-      return;
-    }
-    await this.page.goto('/account-creation');
+    await fab.first().waitFor({ state: 'visible', timeout: 20000 });
+    await fab.first().click();
   }
 
   async navigateToCategoryCreation(type: 'Income' | 'Expense') {
-    await this.page.goto(`/category-creation?type=${type.toLowerCase()}`);
+    await this.openAccountsHub();
+    await this.page.getByTestId('tab-item-categories').click();
+    await this.page.getByRole('button', { name: /Create a new category/i }).click();
+    await expect(this.page).toHaveURL(/category-creation/);
+
+    const typeId = type.toUpperCase();
+    if (typeId !== 'EXPENSE') {
+      await this.page.getByTestId(`account-type-option-${typeId}`).click();
+    }
   }
 
   async createAccount(name: string, type: 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity') {
-    if (type === 'Income' || type === 'Expense') {
-      await this.navigateToCategoryCreation(type);
-    } else {
+    const isCategory = type === 'Income' || type === 'Expense';
+
+    if (isCategory) {
+      if (!this.page.url().includes('category-creation')) {
+        await this.navigateToCategoryCreation(type);
+      }
+    } else if (!this.page.url().includes('account-creation')) {
       await this.navigateToCreation();
     }
 
@@ -30,7 +72,6 @@ export class AccountsPage extends BasePage {
     await this.page.getByPlaceholder(/Account Name|e\.g\./i).fill(name);
 
     const typeId = type.toUpperCase();
-    const isCategory = type === 'Income' || type === 'Expense';
     const defaultTypeId = isCategory ? (type === 'Income' ? 'INCOME' : 'EXPENSE') : 'ASSET';
     if (typeId !== defaultTypeId) {
       await this.page.getByTestId(`account-type-option-${typeId}`).click();
@@ -39,24 +80,62 @@ export class AccountsPage extends BasePage {
     const saveButton = this.page.getByTestId('submit-footer-button');
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
-    await this.switchToAccounts();
 
-    if (isCategory) {
-      await this.page.getByTestId('tab-item-categories').click();
-    } else {
-      await this.page.getByTestId('tab-item-accounts').click();
-      const assetsSection = this.page.getByRole('button', { name: /Assets section/i });
-      if (await assetsSection.isVisible()) {
-        await assetsSection.click();
-      }
-    }
+    await expect(this.page.getByText(`"${name}" has been created successfully!`)).toBeVisible({
+      timeout: 20000,
+    });
+
+    await expect(this.page).not.toHaveURL(/account-creation|category-creation/, { timeout: 20000 });
+
+    await this.ensureOnAccountsList(isCategory);
     await this.assertAccountVisible(name);
   }
 
+  private async ensureOnAccountsList(isCategory: boolean) {
+    await expect(this.page).not.toHaveURL(/account-creation|category-creation/, { timeout: 20000 });
+
+    if (!this.page.url().includes('/accounts')) {
+      await this.page.getByRole('tab', { name: 'Accounts', exact: true }).last().click();
+      await this.openAccountsHub();
+    } else {
+      await expect(this.page.getByTestId('onboarding-name-input')).not.toBeVisible({
+        timeout: 5000,
+      });
+    }
+
+    const hubTab = isCategory
+      ? this.page.getByTestId('tab-item-categories')
+      : this.page.getByTestId('tab-item-accounts');
+    await hubTab.waitFor({ state: 'visible', timeout: 20000 });
+    await hubTab.click();
+  }
+
   async assertAccountVisible(name: string) {
-    const locator = this.page.getByText(name, { exact: true });
+    await expect
+      .poll(
+        async () => {
+          let count = await this.page.getByText(name, { exact: true }).count();
+          if (count === 0) {
+            const assetsSection = this.page.getByRole('button', { name: /Assets section/i });
+            if ((await assetsSection.count()) > 0) {
+              await assetsSection.first().click();
+              count = await this.page.getByText(name, { exact: true }).count();
+            }
+            const expenseSection = this.page.getByRole('button', { name: /Expense section/i });
+            if (count === 0 && (await expenseSection.count()) > 0) {
+              await expenseSection.first().click();
+              count = await this.page.getByText(name, { exact: true }).count();
+            }
+          }
+          return count;
+        },
+        { timeout: 45000 },
+      )
+      .toBeGreaterThan(0);
+
+    const locator = this.page.getByText(name, { exact: true }).first();
     await locator.scrollIntoViewIfNeeded();
-    await expect(locator).toBeVisible({ timeout: 30000 });
+    await expect(locator).toBeVisible();
   }
 
   async clickAccount(name: string) {
@@ -68,22 +147,28 @@ export class AccountsPage extends BasePage {
     await this.page.getByTestId('edit-button').click();
 
     await this.page.getByPlaceholder(/Account Name|e\.g\./i).fill(newName);
-    await this.save();
+    const saveButton = this.page.getByTestId('submit-footer-button');
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    await expect(this.page.getByText(`"${newName}" has been updated successfully!`)).toBeVisible({
+      timeout: 20000,
+    });
   }
 
-  async deleteAccount() {
+  async deleteAccount(confirmationName: string) {
     await expect(this.page.getByTestId('delete-button')).toBeVisible();
 
-    this.page.once('dialog', dialog => dialog.accept());
-
     await this.page.getByTestId('delete-button').click();
+    await this.page.getByPlaceholder(confirmationName).fill(confirmationName);
+    await this.page.getByRole('button', { name: 'Confirm', exact: true }).click();
 
-    await expect(this.page).toHaveURL(/\/accounts$/);
+    await expect(this.page).toHaveURL(/\/accounts/, { timeout: 20000 });
   }
 
   async save() {
     await this.assertSaveEnabled();
-    await this.page.getByTestId('save-button').click();
+    await this.page.getByTestId('submit-footer-button').click();
   }
 
   async delete() {
@@ -91,11 +176,11 @@ export class AccountsPage extends BasePage {
   }
 
   async assertSaveDisabled() {
-    await expect(this.page.getByTestId('save-button')).toBeDisabled();
+    await expect(this.page.getByTestId('submit-footer-button')).toBeDisabled();
   }
 
   async assertSaveEnabled() {
-    await expect(this.page.getByTestId('save-button')).toBeEnabled();
+    await expect(this.page.getByTestId('submit-footer-button')).toBeEnabled();
   }
 
   async assertTransactionVisible(description: string, amount: string) {
@@ -110,7 +195,8 @@ export class AccountsPage extends BasePage {
 
   async assertTransactionAccountBadges(description: string, expectedBadgeTexts: string[]) {
     const card = this.getTransactionCard(description);
-    await expect(card).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => await card.count(), { timeout: 30000 }).toBeGreaterThan(0);
+    await expect(card).toBeVisible();
     for (const text of expectedBadgeTexts) {
       await expect(
         card.getByTestId('transaction-account-badge').filter({ hasText: text }),
