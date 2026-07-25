@@ -89,12 +89,12 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | # | Task | Notes |
 |---|------|--------|
-| 4.1 | Continue journal/account repository intent splits | Partial in §0 |
-| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT |
-| 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” |
+| 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ query repo |
+| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | |
+| 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” | ✅ accounts list MTD |
 | 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
 | 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
-| 4.6 | Spike: schema-driven import (mirror export `tableTasks`) | Cuts 8–12 touchpoint tax |
+| 4.6 | Spike: schema-driven import (mirror export `tableTasks`) | Cuts 8–12 touchpoint tax | ✅ table registry |
 
 **Feature shortcuts (after Phase 1–2):**
 
@@ -111,8 +111,8 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ## Next up
 
-1. **Phase 4** — AUDIT backlog (4.1–4.3, 4.6 spike), feature shortcuts (split tx, reports)
-2. **Docs** — refresh `PROJECT_BIBLE.md` §9 (FX P0 closed), push `main` to run CI
+1. **Phase 4** — thin view-models (4.2), more journal repo splits, product shortcuts (split tx)
+2. **Ops** — push `main` (67+ commits ahead) to run GitHub CI
 
 ---
 
