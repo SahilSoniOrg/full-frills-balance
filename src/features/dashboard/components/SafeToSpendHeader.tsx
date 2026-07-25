@@ -1,9 +1,8 @@
-import { AppIcon } from '@/src/components/core';
+import { IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
@@ -35,18 +34,14 @@ export const SafeToSpendHeader = ({
         >
           {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
         </Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Open safe-to-spend calculation info"
+        <IconButton
+          name="helpCircle"
+          variant="clear"
+          size={Size.sm}
+          iconColor={isOverCommitted ? theme.error : theme.textSecondary}
           onPress={onInfoPress}
-        >
-          <AppIcon
-            name="helpCircle"
-            fallbackIcon="helpCircle"
-            size={Size.xs}
-            color={isOverCommitted ? theme.error : theme.textSecondary}
-          />
-        </TouchableOpacity>
+          accessibilityLabel="Open safe-to-spend calculation info"
+        />
       </Row>
 
       <Text
