@@ -630,7 +630,7 @@ export const UI_STRINGS = {
     },
     finalize: {
       title: 'Setup Complete',
-      subtitle: "Setup complete. You're now ready to see what is actually available.",
+      subtitle: "You're ready to see what is actually available.",
       btnFinish: 'Open App',
     },
   },
