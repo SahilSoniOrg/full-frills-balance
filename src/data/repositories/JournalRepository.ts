@@ -6,6 +6,7 @@ import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   AccountId,
@@ -154,35 +155,15 @@ export class JournalRepository {
    */
 
   async find(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    try {
-      const journal = await this.journals.find(id);
-      if (journal.deletedAt) return null;
-      if (journal.workplaceId !== workplaceId) return null;
-      return journal;
-    } catch {
-      return null;
-    }
+    return journalQueryRepository.find(workplaceId, id);
   }
 
   async findWithDeleted(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    try {
-      const journal = await this.journals.find(id);
-      if (journal.workplaceId !== workplaceId) return null;
-      return journal;
-    } catch {
-      return null;
-    }
+    return journalQueryRepository.findWithDeleted(workplaceId, id);
   }
 
   async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
-    if (ids.length === 0) return [];
-    return this.journals
-      .query(
-        Q.where('id', Q.oneOf(ids)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
+    return journalQueryRepository.findByIds(workplaceId, ids);
   }
 
   async findAll(workplaceId: WorkplaceId): Promise<Journal[]> {
@@ -777,5 +758,7 @@ export class JournalRepository {
     return journalEnrichmentQueries.getEnrichmentDataRaw(journalIds);
   }
 }
+
+export { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 
 export const journalRepository = new JournalRepository();
