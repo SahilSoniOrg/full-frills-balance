@@ -4,46 +4,43 @@ description: Repository-specific quirks, performance pitfalls, and lessons learn
 ---
 
 # Repository Quirks & Pitfalls
-Lessons learned from past issues, organized by principles.
 
-## 1. WatermelonDB & Persistence
+## WatermelonDB & Persistence
 - **Bridge Overload [KISS]**: Batch updates > 500 records freeze the RN bridge; keep sizes bounded.
 - **Atomic Batches [KISS]**: Save related Journal/Transactions in a single transaction batch.
 - **Caching Boundary [KISS]**: `prepareCreate` records are not queryable until fully committed.
-- **Singleton DB [DRY]**: Always import the shared database from `@/src/data/database/Database`.
-- **Workplace Cache Isolation [KISS]**: Always prefix or wrap MMKV/Snapshot cache keys with `workplaceId` to prevent cross-workspace data leakage when switching workplaces.
-- **Cache TTL Validation [KISS]**: Implement strict maximum age validations (e.g., 2-day TTL) when loading snapshots from MMKV to prevent displaying stale cached states on boot.
+- **Singleton DB [DRY]**: Import shared DB from `@/src/data/database/Database`.
+- **Workplace Cache Isolation [KISS]**: Prefix MMKV/Snapshot keys with `workplaceId` to prevent cross-workspace leakage on switch.
+- **Cache TTL Validation [KISS]**: Enforce max age (e.g. 2-day TTL) when loading MMKV snapshots on boot.
 
-## 2. Performance & UI
-- **Observable Overkill [KISS]**: Selective and debounced observers only; high-frequency triggers lag.
-- **Footers & Keyboard [KISS]**: Always use `KeyboardAvoidingView` to prevent bottom footer breaks.
-- **Currency Precision [DRY]**: Avoid in-loop lookups; utilize `BalanceService` cache.
-- **Custom Pickers [DRY]**: Never install pickers; use `@/src/components/common/CustomDateTimePicker`.
+## Performance & UI
+- **Observable Overkill [KISS]**: Selective, debounced observers only; high-frequency triggers lag.
+- **Footers & Keyboard [KISS]**: Use `KeyboardAvoidingView` so bottom footers survive keyboard open.
+- **Currency Precision [DRY]**: No in-loop precision lookups; use `BalanceService` cache.
 - **Instant Boot Cache [KISS]**: Cache simulation JSON via `SnapshotService` to MMKV; do not block boot.
-- **Android Text Clipping [Clean Code]**: Set parent `flexShrink: 1`/`flex: 1` and text `numberOfLines={1}`/`adjustsFontSizeToFit`.
-- **Rounded Line Heights [Clean Code]**: Use integer line heights to prevent Android font clipping.
-- **Unique List Keys [KISS]**: Always assign explicit unique React keys (like `id`) to mapped list item props/badges to avoid duplicate re-render loops during scroll updates.
+- **Android Text Clipping [Clean Code]**: Parent `flexShrink: 1`/`flex: 1`; text `numberOfLines={1}`/`adjustsFontSizeToFit`.
+- **Rounded Line Heights [Clean Code]**: Integer line heights on Android to avoid font clipping.
+- **Unique List Keys [KISS]**: Explicit stable keys (`id`) on list badges/props to avoid scroll re-render loops.
 
-## 3. State & Logic
-- **Rerender Loops [KISS]**: Avoid components combining React state mutations with observable hooks.
-- **Net Worth Projection [KISS]**: Net worth must remain a pure projection; never cache in DB tables.
-- **Running Balance [DRY/SRP]**: `running_balance` is a cache written only by `AccountingRebuildService`.
-- **Search Recall [Clean Code]**: Overlays must search secondary fields (like notes) in addition to names.
-- **Telemetry Permission Warnings [Clean Code]**: Handle expected permission rejections (e.g., `PermissionError`) by logging them as warnings instead of errors to avoid alert telemetry pollution.
-- **Onboarding Transition [KISS]**: Force explicit routing using `AppNavigation.toDashboard()` upon onboarding wizard completion to guarantee screen boundary transitions.
+## State & Logic
+- **Rerender Loops [KISS]**: Do not mix React state mutations with observable hooks in one component.
+- **Running Balance [DRY/SRP]**: `running_balance` written only by `AccountingRebuildService`.
+- **Search Recall [Clean Code]**: Overlays search secondary fields (e.g. notes) as well as names.
+- **Telemetry Permission Warnings [Clean Code]**: Log expected `PermissionError` as warn, not error (telemetry).
+- **Onboarding Transition [KISS]**: On wizard completion, route via `AppNavigation.toDashboard()` for clean boundary.
 
-## 4. Design System
-- **Color Cascade [Clean Code]**: Verifying downstream consumers is mandatory when updating color tokens.
+## Design System
+- **Color Cascade [Clean Code]**: When changing color tokens, verify downstream consumers.
 
-## 5. Simulation & Accounting
-- **Sign Invariance [SRP/Clean Code]**: Debit/credit positive signs must be uniform across wealth, reports, and sims.
-- **Sim Normalization [DRY]**: Normalize amounts to base currency before processing in simulation engines.
-- **Off-by-Ones [Clean Code]**: Carefully test inclusive/exclusive boundaries for date range algorithms.
-- **Budget Invariant [SRP]**: Budgets require ≥ 1 source account; prevent empty account configurations.
+## Simulation & Accounting
+- **Sign Invariance [SRP/Clean Code]**: Debit/credit sign conventions uniform across wealth, reports, sims.
+- **Sim Normalization [DRY]**: Normalize to base currency before simulation engine processing.
+- **Off-by-Ones [Clean Code]**: Test inclusive/exclusive boundaries on date-range logic.
+- **Budget Invariant [SRP]**: Budgets need ≥ 1 source account; block empty configurations.
 
-## 6. Charts & Gestures
-- **Gestures [DRY]**: All chart gesture logic must consume the unified `useChartInteraction` hook.
+## Charts & Gestures
+- **Gestures [DRY]**: Chart gestures via unified `useChartInteraction` only.
 
-## 7. Tooling & Expo
-- **Bun Runner [KISS]**: Always run `bun install`, `bun run`, and `bunx` instead of npm.
-- **Expo Upgrades [KISS]**: Upgrades are high-risk; verify WatermelonDB plugin compatibility first.
+## Tooling & Expo
+- **Bun Runner [KISS]**: `bun install`, `bun run`, `bunx` — not npm.
+- **Expo Upgrades [KISS]**: High risk; verify WatermelonDB plugin compatibility first.

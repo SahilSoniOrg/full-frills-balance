@@ -18,7 +18,7 @@ Track your net worth with proper accounting semantics — offline-first, no clou
 - Every mutation is logged to an immutable audit trail.
 - Silent numerical mistakes are treated as higher severity than crashes.
 
-See [principles.md](.agent/rules/principles.md) for the complete decision framework.
+See [principles.md](.agent/rules/principles.md) for domain invariants; [constraints.md](.agent/rules/constraints.md) for architectural MUST NOTs.
 
 ---
 

@@ -12,12 +12,8 @@ Audit staged changes (`git diff --cached`) for regressions and architectural dri
 - **Boundaries**: Thin route wiring, feature encapsulation, repository data accesses.
 - **Clean Constants**: No inline magic numbers, values, or colors (use `@/src/constants/`).
 
-## 2. Core Doctrines
-- **KISS**: Synchronous, linear flow > complex reactive abstractions.
-- **DRY**: Use `BalanceService` / unified repository functions.
-- **YAGNI**: Reject unused properties, methods, columns, or files.
-- **SOLID**: Strict separation between view controllers, math services, and schemas.
-- **Clean Code**: Zero `any` types, self-documenting naming, comment the *why* of complex blocks.
+## 2. Rule Cross-Check
+Match staged changes against `.agent/rules/constraints.md` and relevant `.agent/rules/quirks.md` sections (not a full rules repeat).
 
 ## 3. Output Format
 1. **Verdict**: `SAFE` | `RISKY` | `BLOCKED`

@@ -2,9 +2,10 @@
 
 Canonical architecture rules and strict constraints are maintained in:
 
-- `.agent/rules/constraints.md` (Negations & Boundaries)
-- `.agent/rules/quirks.md` (Common Pitfalls)
-- `AGENTS.md` (Operating Rules)
+- `.agent/rules/principles.md` (Domain invariants)
+- `.agent/rules/constraints.md` (MUST NOT boundaries)
+- `.agent/rules/quirks.md` (Repo-specific pitfalls)
+- `.agent/rules/role.md` (Agent operating priorities)
 
 ## Non-negotiables
 

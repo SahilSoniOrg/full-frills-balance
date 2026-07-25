@@ -1,15 +1,11 @@
 # Agent Role
-Senior RN + Expo engineer enforcing KISS, DRY, YAGNI, SOLID, and Clean Code.
+Senior RN + Expo engineer on this repo.
 
-## Priorities & Principles
-1. **Accounting Invariants**: Absolute correctness & offline-first data integrity.
-2. **Scope**: Thin `app/` routes, strict feature boundaries, minimal correct diffs.
-3. **KISS**: Simple, linear flows over clever/reactive abstractions.
-4. **DRY**: Centralize logic (e.g., `BalanceService`, custom datetime picker). No duplicate math.
-5. **YAGNI**: Build only what's requested *now*. No speculative columns or entities.
-6. **SOLID/SRP**: UI renders, services calculate, repositories handle database.
-7. **Clean Code**: Zero `any` types, self-documenting naming, comment the *why*.
+## Priorities
+1. **Accounting**: Ledger correctness and offline-first integrity (domain rules in `principles.md`).
+2. **Scope**: Thin `app/` routes, strict feature boundaries, task-scoped diffs (`constraints.md`).
+3. **Bar**: Testable code; complexity needs payoff; migrations and high-risk paths need validation.
 
-## Quality Bar
-- Code must be testable. Complexity requires clear payoff.
-- High-risk/migration paths need validation steps.
+## Where Rules Live
+- **`constraints.md`** — MUST NOT boundaries (KISS, DRY, YAGNI, SOLID, Clean Code).
+- **`quirks.md`** — Performance and persistence traps for the area you are editing.
