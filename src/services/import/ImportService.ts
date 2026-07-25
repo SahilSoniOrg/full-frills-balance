@@ -10,6 +10,11 @@ import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
+import {
+  commitStagedImport,
+  createImportStagingWorkplace,
+  discardImportStagingWorkplace,
+} from '@/src/services/import/importStaging';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -60,11 +65,13 @@ export class ImportService {
     const SEGMENTS = {
       PARSE: { start: 0, end: 0.15 },
       BACKUP: { start: 0.15, end: 0.22 },
-      WIPE: { start: 0.22, end: 0.3 },
-      INIT: { start: 0.3, end: 0.34 },
-      INSERT: { start: 0.34, end: 0.82 },
-      RATES: { start: 0.82, end: 0.9 },
-      INTEGRITY: { start: 0.9, end: 1.0 },
+      STAGE: { start: 0.22, end: 0.28 },
+      INIT: { start: 0.28, end: 0.32 },
+      INSERT: { start: 0.32, end: 0.72 },
+      STAGING_CHECK: { start: 0.72, end: 0.8 },
+      SWAP: { start: 0.8, end: 0.86 },
+      RATES: { start: 0.86, end: 0.93 },
+      INTEGRITY: { start: 0.93, end: 1.0 },
     };
 
     // 1. Parse file via plugin
@@ -108,15 +115,15 @@ export class ImportService {
       backupProgress('No existing ledger data to back up', 1);
     }
 
-    // 3. Reset target workplace storage
-    const wipeProgress = this.createProgressSegment(
+    // 3. Stage import into a temporary workplace (ADR-0006 phase 3.2)
+    const stageProgress = this.createProgressSegment(
       onProgress,
-      SEGMENTS.WIPE.start,
-      SEGMENTS.WIPE.end,
+      SEGMENTS.STAGE.start,
+      SEGMENTS.STAGE.end,
     );
-    wipeProgress('Resetting workplace storage...', 0);
-    await integrityService.resetWorkplace(workplaceId, true);
-    wipeProgress('Resetting workplace storage...', 1);
+    stageProgress('Preparing staged import...', 0);
+    const stagingWorkplaceId = await createImportStagingWorkplace(workplaceId, defaultCurrency);
+    stageProgress('Preparing staged import...', 1);
 
     // 4. Initialize native currencies
     const initProgress = this.createProgressSegment(
@@ -141,9 +148,36 @@ export class ImportService {
       delete dataToInsert.currencies;
     }
 
-    await importRepository.batchInsert(workplaceId, dataToInsert, (msg, p) =>
-      insertProgress(msg, p ?? 0),
-    );
+    try {
+      await importRepository.batchInsert(stagingWorkplaceId, dataToInsert, (msg, p) =>
+        insertProgress(msg, p ?? 0),
+      );
+
+      const stagingCheckProgress = this.createProgressSegment(
+        onProgress,
+        SEGMENTS.STAGING_CHECK.start,
+        SEGMENTS.STAGING_CHECK.end,
+      );
+      stagingCheckProgress('Verifying staged import...', 0);
+      await integrityService.forceRunCheck(stagingWorkplaceId, (msg, p) =>
+        stagingCheckProgress(msg, p),
+      );
+      stagingCheckProgress('Verifying staged import...', 1);
+
+      const swapProgress = this.createProgressSegment(
+        onProgress,
+        SEGMENTS.SWAP.start,
+        SEGMENTS.SWAP.end,
+      );
+      swapProgress('Applying import to workplace...', 0);
+      await commitStagedImport(workplaceId, stagingWorkplaceId);
+      swapProgress('Applying import to workplace...', 1);
+    } catch (error) {
+      await discardImportStagingWorkplace(stagingWorkplaceId).catch(cleanupError => {
+        logger.error('[ImportService] Staging cleanup after failed import:', cleanupError);
+      });
+      throw error;
+    }
 
     // 6. Update workplace metadata if provided
     if (

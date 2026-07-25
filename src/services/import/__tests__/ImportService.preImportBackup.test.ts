@@ -55,8 +55,19 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   },
 }));
 
+jest.mock('@/src/services/import/importStaging', () => ({
+  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
+  commitStagedImport: jest.fn().mockResolvedValue(undefined),
+  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { importService } from '@/src/services/import/ImportService';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
+import {
+  commitStagedImport,
+  discardImportStagingWorkplace,
+} from '@/src/services/import/importStaging';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { WorkplaceId } from '@/src/types/domain';
@@ -104,7 +115,8 @@ describe('ImportService pre-import backup', () => {
       workplaceId,
       expect.any(Function),
     );
-    expect(integrityService.resetWorkplace).toHaveBeenCalledWith(workplaceId, true);
+    expect(commitStagedImport).toHaveBeenCalledWith(workplaceId, 'staging-wp');
+    expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
     expect(stats.preImportBackupPath).toBe(backupPath);
   });
 
@@ -115,6 +127,20 @@ describe('ImportService pre-import backup', () => {
       'Disk full',
     );
 
+    expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
+    expect(commitStagedImport).not.toHaveBeenCalled();
+  });
+
+  it('discards staging and does not swap when insert fails', async () => {
+    (preImportBackupService.createBackup as jest.Mock).mockResolvedValue({ skipped: true });
+    (importRepository.batchInsert as jest.Mock).mockRejectedValueOnce(new Error('Insert failed'));
+
+    await expect(importService.executeImport(mockPlugin, context, workplaceId)).rejects.toThrow(
+      'Insert failed',
+    );
+
+    expect(discardImportStagingWorkplace).toHaveBeenCalledWith('staging-wp');
+    expect(commitStagedImport).not.toHaveBeenCalled();
     expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
   });
 

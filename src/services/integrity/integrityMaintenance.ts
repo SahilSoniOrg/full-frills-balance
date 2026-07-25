@@ -11,28 +11,29 @@ import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
+/** Tables keyed by workplace_id; used for purge and staged-import swap. */
+export const WORKPLACE_SCOPED_TABLES = [
+  'accounts',
+  'journals',
+  'transactions',
+  'audit_logs',
+  'budgets',
+  'budget_scopes',
+  'account_metadata',
+  'planned_payments',
+  'journal_metadata',
+  'transaction_auto_post_rules',
+  'transaction_inbox_records',
+  'balance_snapshots',
+] as const;
+
 export async function resetWorkplace(
   workplaceId: WorkplaceId,
   keepWorkplaceRecord: boolean = false,
 ): Promise<void> {
   logger.warn(`[IntegrityMaintenance] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
   try {
-    const scopedTables = [
-      'accounts',
-      'journals',
-      'transactions',
-      'audit_logs',
-      'budgets',
-      'budget_scopes',
-      'account_metadata',
-      'planned_payments',
-      'journal_metadata',
-      'transaction_auto_post_rules',
-      'transaction_inbox_records',
-      'balance_snapshots',
-    ];
-
-    await databaseRepository.purgeWorkplaceData(workplaceId, scopedTables);
+    await databaseRepository.purgeWorkplaceData(workplaceId, [...WORKPLACE_SCOPED_TABLES]);
 
     if (!keepWorkplaceRecord) {
       const { database } = await import('@/src/data/database/Database');

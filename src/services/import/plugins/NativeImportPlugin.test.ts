@@ -1,6 +1,7 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importRunner } from '@/src/services/import/runner';
+import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
@@ -39,6 +40,12 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
     updateWorkplace: jest.fn().mockResolvedValue(true),
   },
+}));
+
+jest.mock('@/src/services/import/importStaging', () => ({
+  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
+  commitStagedImport: jest.fn().mockResolvedValue(undefined),
+  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/data/database/Database', () => ({
@@ -212,12 +219,12 @@ describe('NativeImportPlugin', () => {
       const context = { json: validNativeData } as ImportFileContext;
       const stats = await importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1', true);
+      expect(commitStagedImport).toHaveBeenCalledWith('w1', 'staging-wp');
       expect(preferences.restorePreferences).toHaveBeenCalledWith(
         expect.objectContaining({ userName: 'Test User' }),
       );
       expect(importRepository.batchInsert).toHaveBeenCalledWith(
-        'w1',
+        'staging-wp',
         expect.objectContaining({
           budgets: expect.any(Array),
           budgetScopes: expect.any(Array),

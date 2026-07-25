@@ -102,6 +102,84 @@ export class DatabaseRepository {
       }
     });
   }
+
+  /**
+   * Atomically replaces target workplace ledger data with rows currently stored under staging.
+   * Purges the target first, then reassigns all staging rows to the target workplace_id.
+   */
+  async swapStagedWorkplaceInto(
+    targetWorkplaceId: WorkplaceId,
+    stagingWorkplaceId: WorkplaceId,
+    tables: readonly string[],
+  ): Promise<void> {
+    await database.write(async () => {
+      const adapter = getRawAdapter(database);
+      if (adapter && typeof adapter.queryRaw === 'function') {
+        for (const table of tables) {
+          try {
+            await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [
+              targetWorkplaceId,
+            ]);
+          } catch (err) {
+            const errorMsg = String(err);
+            if (!errorMsg.includes('no such table')) {
+              logger.error(`[DatabaseRepository] Failed to purge ${table} before import swap`, err);
+              throw err;
+            }
+          }
+        }
+        for (const table of tables) {
+          try {
+            await adapter.queryRaw(`UPDATE ${table} SET workplace_id = ? WHERE workplace_id = ?`, [
+              targetWorkplaceId,
+              stagingWorkplaceId,
+            ]);
+          } catch (err) {
+            const errorMsg = String(err);
+            if (!errorMsg.includes('no such table')) {
+              logger.error(
+                `[DatabaseRepository] Failed to reassign ${table} during import swap`,
+                err,
+              );
+              throw err;
+            }
+          }
+        }
+        logger.info(
+          `[DatabaseRepository] Swapped staged import ${stagingWorkplaceId} → ${targetWorkplaceId}.`,
+        );
+        return;
+      }
+
+      logger.warn(
+        '[DatabaseRepository] swapStagedWorkplaceInto falling back to ORM (purge + update).',
+      );
+      const batchOps: any[] = [];
+      for (const table of tables) {
+        const targetRecords = await database.collections
+          .get(table)
+          .query(Q.where('workplace_id', targetWorkplaceId))
+          .fetch();
+        batchOps.push(...targetRecords.map((record: any) => record.prepareDestroyPermanently()));
+      }
+      for (const table of tables) {
+        const stagingRecords = await database.collections
+          .get(table)
+          .query(Q.where('workplace_id', stagingWorkplaceId))
+          .fetch();
+        batchOps.push(
+          ...stagingRecords.map((record: any) =>
+            record.prepareUpdate((r: any) => {
+              r.workplaceId = targetWorkplaceId;
+            }),
+          ),
+        );
+      }
+      if (batchOps.length > 0) {
+        await database.batch(batchOps);
+      }
+    });
+  }
 }
 
 export const databaseRepository = new DatabaseRepository();

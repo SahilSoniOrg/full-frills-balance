@@ -1,8 +1,8 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { importRunner } from '@/src/services/import/runner';
+import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -40,6 +40,12 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
     updateWorkplace: jest.fn().mockResolvedValue(true),
   },
+}));
+
+jest.mock('@/src/services/import/importStaging', () => ({
+  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
+  commitStagedImport: jest.fn().mockResolvedValue(undefined),
+  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/data/database/Database', () => ({
@@ -128,9 +134,9 @@ describe('IvyImportPlugin', () => {
       const context = { json: validIvyData } as ImportFileContext;
       const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
-      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1', true);
+      expect(commitStagedImport).toHaveBeenCalledWith('w1', 'staging-wp');
       expect(importRepository.batchInsert).toHaveBeenCalledWith(
-        'w1',
+        'staging-wp',
         expect.any(Object),
         expect.anything(),
       );
