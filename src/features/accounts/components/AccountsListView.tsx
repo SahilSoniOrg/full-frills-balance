@@ -1,6 +1,7 @@
 import { CashFlowCard } from '@/src/components/common/CashFlowCard';
 import { NetWorthCard } from '@/src/components/common/NetWorthCard';
 import {
+  AppIcon,
   AppTabs,
   AppText,
   ExpandableSearchButton,
@@ -120,6 +121,7 @@ export function AccountsListView({
                 style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
                 accessibilityLabel={`${section.title} section, ${section.count} accounts`}
                 accessibilityRole="button"
+                accessibilityState={{ expanded: !section.isCollapsed }}
               >
                 <View style={[styles.summaryRow, { flex: 1 }]}>
                   <View style={styles.flexRowGapSm}>
@@ -136,12 +138,10 @@ export function AccountsListView({
                     <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
                       {section.totalDisplay}
                     </AppText>
-                    <IconButton
+                    <AppIcon
                       name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
                       size={Size.iconSm}
-                      variant="clear"
-                      iconColor={theme.textSecondary}
-                      onPress={() => onToggleSection(section.title)}
+                      color={theme.textSecondary}
                     />
                   </View>
                 </View>
