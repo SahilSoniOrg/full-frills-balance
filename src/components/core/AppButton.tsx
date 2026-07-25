@@ -45,9 +45,9 @@ export function AppButton({
     switch (variant) {
       case 'primary':
         variantStyle = {
-          backgroundColor: disabled ? theme.surfaceSecondary : variantColors.main,
+          backgroundColor: disabled ? theme.primaryLight : variantColors.main,
         };
-        textColor = disabled ? theme.textTertiary : variantColors.contrast;
+        textColor = disabled ? theme.textSecondary : variantColors.contrast;
         break;
       case 'destructive':
         variantStyle = {

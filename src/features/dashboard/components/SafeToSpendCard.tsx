@@ -1,3 +1,4 @@
+import React from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
@@ -58,17 +59,21 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     />
   );
 
+  const header = (
+    <SafeToSpendHeader
+      isOverCommitted={isOverCommitted}
+      isPositiveSafeToSpend={isPositiveSafeToSpend}
+      displayValue={formatValue(isOverCommitted ? shortfall : safeToSpend)}
+      onInfoPress={onInfoPress}
+      isLoading={isLoading}
+    />
+  );
+
   return (
     <AppSurface elevation="none" paddingHorizontal="none" paddingVertical="sm">
       {isWide ? (
         <Column gap="lg">
-          <SafeToSpendHeader
-            isOverCommitted={isOverCommitted}
-            isPositiveSafeToSpend={isPositiveSafeToSpend}
-            displayValue={formatValue(isOverCommitted ? shortfall : safeToSpend)}
-            onInfoPress={onInfoPress}
-            isLoading={isLoading}
-          />
+          {header}
           <Row gap="lg" align="stretch" style={{ minHeight: 0 }}>
             <View style={{ flex: 2, minWidth: 0 }}>{breakdown}</View>
             <View style={{ flex: 3, minWidth: 0 }}>{chart}</View>
@@ -76,13 +81,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         </Column>
       ) : (
         <Column gap="lg">
-          <SafeToSpendHeader
-            isOverCommitted={isOverCommitted}
-            isPositiveSafeToSpend={isPositiveSafeToSpend}
-            displayValue={formatValue(isOverCommitted ? shortfall : safeToSpend)}
-            onInfoPress={onInfoPress}
-            isLoading={isLoading}
-          />
+          {header}
           {breakdown}
           <Separator />
           {chart}

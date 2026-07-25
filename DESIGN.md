@@ -26,6 +26,16 @@
 - **Mood:** Authority without hype. Safe to Spend is the emotional center; charts and density live in Reports, not noise on home.
 - **Strategy (2026-07):** Ship and refine the four existing themes. **Ledger & Lamplight stays documented only** until a concrete UI pass justifies a fifth theme in code.
 
+## Home Screen (Dashboard)
+
+**Decision (2026-07-26):** Safe to Spend header, breakdown bar, and **30-day projection chart stay visible** on the dashboard. No collapse control. Deeper report charts remain under Reports; the home projection is the forward-looking companion to the headline number.
+
+| Always on home |
+|----------------|
+| Safe to Spend hero amount |
+| Breakdown bar (available / reserved / outstanding) |
+| Projection line chart |
+
 ## Typography
 
 ### Default font scheme (`FontIds.DEEP_SPACE`)
@@ -154,3 +164,4 @@ Explored in design consultation; **not in `ThemeSchemes` yet**. Intended as a op
 | 2026-07-26 | Design preview remains dev visual truth | Existing project invariant in `design-tokens.ts` |
 | 2026-07-26 | Path A: no fifth theme in code yet | Deep Space remains default; Lamplight is preview/doc only |
 | 2026-07-26 | Path C: token file header aligned to Deep Space default | Removed misleading Ivy-first framing in `design-tokens.ts` |
+| 2026-07-26 | Home: projection always visible on dashboard | User preference; no forecast hide toggle |
