@@ -14,6 +14,7 @@
  */
 import { DependencyList, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
+import { useDependencyRevision } from '@/src/hooks/useDependencyRevision';
 
 export interface UseObservableResult<T> {
   data: T;
@@ -87,20 +88,7 @@ export function useObservable<T>(
     optionsRef.current = options;
   });
 
-  // Use a ref and useMemo to track dependency changes without triggering render-time setState
-
-  const [prevDeps, setPrevDeps] = useState(deps);
-  const [depsRevision, setDepsRevision] = useState(0);
-
-  const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
-    if (oldDeps.length !== newDeps.length) return false;
-    return oldDeps.every((dep, i) => dep === newDeps[i]);
-  };
-  if (!areDepsEqual(prevDeps, deps)) {
-    setPrevDeps(deps);
-    setDepsRevision(r => r + 1);
-    setError(null);
-  }
+  const depsRevision = useDependencyRevision(deps, () => setError(null));
 
   useEffect(() => {
     let isActive = true;
@@ -191,17 +179,7 @@ export function useObservableWithEnrichment<T, E>(
   // We capture the initial seed only once to use as a baseline for resets
   const initialSeedRef = useRef(initialValue);
 
-  const [prevDeps, setPrevDeps] = useState(deps);
-  const [depsRevision, setDepsRevision] = useState(0);
-
-  const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
-    if (oldDeps.length !== newDeps.length) return false;
-    return oldDeps.every((dep, i) => dep === newDeps[i]);
-  };
-  if (!areDepsEqual(prevDeps, deps)) {
-    setPrevDeps(deps);
-    setDepsRevision(r => r + 1);
-  }
+  const depsRevision = useDependencyRevision(deps);
 
   useEffect(() => {
     let isActive = true;

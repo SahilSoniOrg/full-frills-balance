@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { Animation } from '@/src/constants';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
@@ -12,6 +13,7 @@ import { wealthService } from '@/src/services/wealth-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
 
@@ -33,7 +35,10 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     return combineLatest([
       observeWorkplaceAccounts(workplaceId),
       observeWorkplaceJournalMeta(workplaceId),
-    ]).pipe(map(() => 0));
+    ]).pipe(
+      firstFastDebounce(Animation.dataRefreshDebounce),
+      map(() => 0),
+    );
   }, [workplaceId]);
 
   // Load net worth history (faster, independent)

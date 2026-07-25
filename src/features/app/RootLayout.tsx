@@ -9,7 +9,7 @@ import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as Sentry from '@sentry/react-native';
 import { useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -21,6 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
+import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { useWidgetSync } from './hooks/useWidgetSync';
@@ -92,6 +93,7 @@ function EarlyBootstrap() {
 function WorkplaceBootstrap() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   useAppBootstrap(workplaceId, defaultCurrencyCode);
+  useAppForegroundMaintenance();
   useWidgetSync(workplaceId, defaultCurrencyCode);
   return null;
 }
