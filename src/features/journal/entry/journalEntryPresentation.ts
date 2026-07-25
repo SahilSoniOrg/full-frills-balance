@@ -80,12 +80,8 @@ export function resolveJournalEntryHeaderTitle(input: {
   isEdit: boolean;
   isGuidedMode: boolean;
 }): string {
-  if (input.activeMode === 'bulk') return 'Bulk Entry';
-  if (input.activeMode === 'split') return AppConfig.strings.transactionFlow.splitEntry.title;
   if (input.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
-  return input.isGuidedMode
-    ? AppConfig.strings.transactionFlow.headers.new
-    : AppConfig.strings.transactionFlow.headers.default;
+  return AppConfig.strings.transactionFlow.headers.new;
 }
 
 export function isAdvancedJournalFormValid(input: {
@@ -113,7 +109,9 @@ export function resolveJournalEntrySubmitLabel(input: {
   splitSubmitting?: boolean;
 }): string {
   if (input.activeMode === 'bulk') {
-    return input.bulkSubmitting ? 'Saving All...' : `Save ${input.bulkRowCount} Transactions`;
+    return input.bulkSubmitting
+      ? AppConfig.strings.transactionFlow.bulkSaving
+      : AppConfig.strings.transactionFlow.postBulk(input.bulkRowCount);
   }
   if (input.activeMode === 'split') {
     return input.splitSubmitting

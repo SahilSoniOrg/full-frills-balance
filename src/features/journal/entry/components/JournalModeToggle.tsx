@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppText, IconButton } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
@@ -68,17 +68,19 @@ export const JournalModeToggle = ({
           })}
         </View>
 
-        <TouchableOpacity
-          style={isBar ? styles.infoIconBar : styles.infoIconCompact}
+        <IconButton
+          name="helpCircle"
+          variant="clear"
+          size={Size.iconSm}
           onPress={() => setInfoModalVisible(true)}
-          accessibilityLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
-        >
-          <AppIcon name="helpCircle" size={Size.iconXs} color={theme.textSecondary} />
-        </TouchableOpacity>
+          accessibilityLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
+          style={isBar ? styles.infoIconBar : styles.infoIconCompact}
+        />
 
         <AdvancedModeInfoModal
           visible={infoModalVisible}
           onClose={() => setInfoModalVisible(false)}
+          mode={mode}
         />
       </View>
     );
@@ -119,13 +121,14 @@ export const JournalModeToggle = ({
         })}
       </View>
 
-      <TouchableOpacity
-        style={styles.infoIconDefault}
+      <IconButton
+        name="helpCircle"
+        variant="clear"
+        size={Size.iconSm}
         onPress={() => setInfoModalVisible(true)}
-        accessibilityLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
-      >
-        <AppIcon name="helpCircle" size={Size.iconSm} color={theme.textSecondary} />
-      </TouchableOpacity>
+        accessibilityLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
+        style={styles.infoIconDefault}
+      />
 
       <AdvancedModeInfoModal
         visible={infoModalVisible}
@@ -185,13 +188,15 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: 2,
   },
   infoIconCompact: {
-    padding: Spacing.xs,
+    width: Size.buttonMd,
+    height: Size.buttonMd,
   },
   infoIconBar: {
-    padding: Spacing.xs,
+    width: Size.buttonMd,
+    height: Size.buttonMd,
     marginRight: -Spacing.xs,
   },
   defaultWrapper: {
@@ -200,6 +205,7 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.lg,
   },
   infoIconDefault: {
-    padding: Spacing.sm,
+    width: Size.buttonMd,
+    height: Size.buttonMd,
   },
 });

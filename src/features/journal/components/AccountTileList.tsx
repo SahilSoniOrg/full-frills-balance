@@ -1,7 +1,7 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
-import { Opacity, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
@@ -15,6 +15,7 @@ export interface AccountTileListProps {
   selectedId: AccountId;
   onSelect: (id: AccountId) => void;
   onSearchRequest?: () => void;
+  emptyPrompt?: string;
 }
 
 export const AccountTileList = ({
@@ -23,6 +24,7 @@ export const AccountTileList = ({
   selectedId,
   onSelect,
   onSearchRequest,
+  emptyPrompt,
 }: AccountTileListProps) => {
   const { theme } = useTheme();
 
@@ -79,12 +81,33 @@ export const AccountTileList = ({
         </View>
       )}
       <View>
-        <SelectionTileList
-          items={items}
-          selectedId={selectedId}
-          onSelect={id => onSelect(id as AccountId)}
-          testIDPrefix="account-option"
-        />
+        {items.length === 0 && onSearchRequest ? (
+          <TouchableOpacity
+            onPress={onSearchRequest}
+            activeOpacity={Opacity.medium}
+            style={{
+              paddingVertical: Spacing.lg,
+              paddingHorizontal: Spacing.md,
+              borderRadius: Shape.radius.md,
+              borderWidth: 1,
+              borderColor: theme.border,
+              backgroundColor: theme.surfaceSecondary,
+              alignItems: 'center',
+            }}
+            accessibilityRole="button"
+          >
+            <AppText variant="body" color="secondary">
+              {emptyPrompt ?? AppConfig.strings.transactionFlow.simpleEntry.chooseAccount}
+            </AppText>
+          </TouchableOpacity>
+        ) : (
+          <SelectionTileList
+            items={items}
+            selectedId={selectedId}
+            onSelect={id => onSelect(id as AccountId)}
+            testIDPrefix="account-option"
+          />
+        )}
       </View>
     </View>
   );

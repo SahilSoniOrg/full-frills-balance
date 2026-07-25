@@ -29,6 +29,7 @@ export function JournalSummary({
   const currency = selectedCurrency || workplaceCurrency;
   const difference = Math.abs(totalDebits - totalCredits);
   const showSelector = availableCurrencies.length > 1;
+  const isEmptyLedger = totalDebits === 0 && totalCredits === 0;
 
   // Determining the status message
   let statusColor: 'success' | 'error' = isBalanced ? 'success' : 'error';
@@ -137,20 +138,24 @@ export function JournalSummary({
           </View>
 
           <View style={styles.statusIndicator}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: statusColor === 'success' ? theme.success : theme.error },
-              ]}
-            />
-            <AppText
-              variant="caption"
-              color={statusColor}
-              weight="bold"
-              style={{ letterSpacing: 0.5 }}
-            >
-              {statusText.toUpperCase()}
-            </AppText>
+            {!(isEmptyLedger && isBalanced) && (
+              <>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: statusColor === 'success' ? theme.success : theme.error },
+                  ]}
+                />
+                <AppText
+                  variant="caption"
+                  color={statusColor}
+                  weight="bold"
+                  style={{ letterSpacing: 0.5 }}
+                >
+                  {statusText.toUpperCase()}
+                </AppText>
+              </>
+            )}
           </View>
         </View>
       </View>

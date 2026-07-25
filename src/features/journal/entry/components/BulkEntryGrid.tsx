@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { AppButton, AppText, AppIcon } from '@/src/components/core';
-import { Spacing, Shape, Size, Typography } from '@/src/constants';
+import { AppConfig, Spacing, Shape, Size, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
 import { BulkEntryRow } from './BulkEntryRow';
@@ -133,12 +133,18 @@ export const BulkEntryGrid = React.memo(
         >
           {/* Empty state hint */}
           {allEmpty && (
-            <View style={[styles.emptyHint, { backgroundColor: theme.surfaceSecondary }]}>
+            <View
+              style={[
+                styles.emptyHint,
+                {
+                  backgroundColor: theme.surfaceSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
               <AppIcon name="info" size={Size.iconSm} color={theme.textTertiary} />
               <AppText variant="caption" color="tertiary" style={styles.emptyHintText}>
-                {
-                  "Add multiple entries at once. Each new row copies the previous one's values for fast data entry."
-                }
+                {AppConfig.strings.transactionFlow.bulkEntryHint}
               </AppText>
             </View>
           )}
@@ -237,7 +243,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.md,
+    borderWidth: 1,
     marginBottom: Spacing.md,
   },
   emptyHintText: {

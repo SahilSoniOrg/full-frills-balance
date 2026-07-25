@@ -29,13 +29,15 @@ describe('journalEntryPresentation', () => {
     expect(resolveJournalEntryScreenMode(undefined)).toBe('guided');
   });
 
-  it('resolveJournalEntryHeaderTitle prefers bulk and edit', () => {
-    expect(
-      resolveJournalEntryHeaderTitle({ activeMode: 'bulk', isEdit: false, isGuidedMode: true }),
-    ).toBe('Bulk Entry');
+  it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
+    const base = { isEdit: false, isGuidedMode: true };
+    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'bulk' })).toBe('New journal');
+    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'split' })).toBe('New journal');
+    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'advanced' })).toBe('New journal');
+    expect(resolveJournalEntryHeaderTitle({ ...base, activeMode: 'guided' })).toBe('New journal');
     expect(
       resolveJournalEntryHeaderTitle({ activeMode: 'guided', isEdit: true, isGuidedMode: true }),
-    ).not.toBe('Bulk Entry');
+    ).toBe('Edit journal');
   });
 
   it('isAdvancedJournalFormValid requires balance, description, and complete lines', () => {

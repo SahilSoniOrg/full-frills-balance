@@ -1,4 +1,4 @@
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
 import { AccountId, AccountRole as DomainAccountRole } from '@/src/types/domain';
@@ -29,6 +29,11 @@ export function SimpleFormAccountSections({
             selectedId={section.selectedId}
             onSelect={section.onSelect}
             onSearchRequest={() => onSearchRequest(section.role)}
+            emptyPrompt={
+              section.role === 'destination'
+                ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
+                : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount
+            }
           />
         </View>
       ))}

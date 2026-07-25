@@ -414,23 +414,29 @@ export const UI_STRINGS = {
     amount: 'Amount',
     descriptionOptional: 'Description',
     saving: 'Saving…',
-    save: (type: string) => `Save ${type.toUpperCase()}`,
+    save: (type: string) => `Post ${type}`,
+    postJournal: 'Post journal',
+    postSplit: 'Post split',
+    postBulk: (count: number) => (count === 1 ? 'Post 1 journal' : `Post ${count} journals`),
+    bulkSaving: 'Posting journals…',
     continue: 'Continue',
     chooseDifferentAccounts: 'Change accounts',
     fetchingRate: 'Getting exchange rate…',
     simple: 'Simple',
     advanced: 'Advanced',
-    explanationIconAccessibility: 'What is Advanced Mode?',
+    modesHelpAccessibility: 'About journal entry modes',
     headers: {
-      edit: 'Edit Entry',
-      new: 'New Entry',
-      default: 'Journal Entry',
+      edit: 'Edit journal',
+      new: 'New journal',
+      default: 'New journal',
     },
     banners: {
       editing: 'Editing this entry',
     },
+    bulkEntryHint:
+      "Add multiple entries at once. Each new row copies the previous one's values for fast data entry.",
     splitEntry: {
-      title: 'Split expense',
+      title: 'Split entry',
       fromAccount: 'From Account',
       totalAmount: 'Total amount',
       categoriesTitle: 'Categories',
@@ -444,7 +450,7 @@ export const UI_STRINGS = {
       remainingPositive: (amount: string) => `${amount} left to allocate`,
       remainingNegative: (amount: string) => `${amount} over allocated`,
       defaultDescription: 'Split expense',
-      save: 'Save split',
+      save: 'Post split',
       validation: {
         missing_source: 'Choose the account money is paid from.',
         invalid_total: 'Enter a total amount greater than zero.',
@@ -461,6 +467,8 @@ export const UI_STRINGS = {
       toAccount: 'To Account',
       sourceAccount: 'Source Account',
       destinationAccount: 'Destination Account',
+      chooseAccount: 'Choose account',
+      chooseCategory: 'Choose category',
       defaultDescriptions: {
         transfer: 'Transfer',
         expense: (name: string) => `Paid for ${name}`,
@@ -468,25 +476,23 @@ export const UI_STRINGS = {
       },
     },
   },
-  advancedModeExplanation: {
-    title: 'Advanced Mode',
-    intro:
-      'Simple mode records one account in and one account out. Advanced mode supports journal entries with multiple lines.',
-    unlocks: 'The entry saves only when total debits equal total credits.',
-    exampleTitle: 'Example',
-    exampleScenario: '$50 meal paid with $40 from Bank and $10 from Cash.',
-    exampleItems: [
-      'Bank - Credit $40 (money leaving the account)',
-      'Cash - Credit $10 (money leaving the account)',
-      'Food - Debit $50 (the expense recorded in the ledger)',
-    ],
-    whyBetterTitle: 'Why It Exists',
-    benefits: [
-      'One entry can affect multiple accounts.',
-      'The ledger stays balanced because total debits and credits must match.',
-      'Useful for split payments, transfers with fees, and payroll entries.',
-    ],
-    footer: 'Simple mode covers standard entries. Advanced mode is for multi-line journals.',
+  journalEntryModesHelp: {
+    guided: {
+      title: 'Simple',
+      body: 'One amount, one source, and one destination—expense, income, or transfer. Best for everyday entries.',
+    },
+    split: {
+      title: 'Split',
+      body: 'One payment from an account, split across multiple categories. Amounts must add up to the total.',
+    },
+    advanced: {
+      title: 'Advanced',
+      body: 'Full double-entry with multiple debit and credit lines. The journal posts only when debits equal credits.',
+    },
+    bulk: {
+      title: 'Bulk',
+      body: 'Several simple entries in one pass. New rows copy the previous row so you can enter a run of similar transactions quickly.',
+    },
   },
   accounts: {
     types: {
@@ -591,7 +597,7 @@ export const UI_STRINGS = {
     updating: 'Updating…',
     creating: 'Creating…',
     updateJournal: 'Save Changes',
-    createJournal: 'Post Journal',
+    createJournal: 'Post journal',
     editing: 'Editing',
   },
   onboarding: {
