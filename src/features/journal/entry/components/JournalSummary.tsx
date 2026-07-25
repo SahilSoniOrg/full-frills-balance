@@ -9,6 +9,8 @@ interface JournalSummaryProps {
   totalCredits: number;
   isBalanced: boolean;
   isBalancedDisplay?: boolean;
+  /** Imbalance in workplace base currency — used for the pill when save would fail. */
+  baseImbalance?: number;
   availableCurrencies?: string[];
   selectedCurrency?: string;
   onSelectCurrency?: (currency: string) => void;
@@ -20,6 +22,7 @@ export function JournalSummary({
   totalCredits,
   isBalanced,
   isBalancedDisplay = true,
+  baseImbalance,
   availableCurrencies = [],
   selectedCurrency,
   onSelectCurrency,
@@ -27,7 +30,9 @@ export function JournalSummary({
 }: JournalSummaryProps) {
   const { theme } = useTheme();
   const currency = selectedCurrency || workplaceCurrency;
-  const difference = Math.abs(totalDebits - totalCredits);
+  const displayDifference = Math.abs(totalDebits - totalCredits);
+  const pillAmount = !isBalanced && baseImbalance !== undefined ? baseImbalance : displayDifference;
+  const pillCurrency = !isBalanced ? workplaceCurrency : currency;
   const showSelector = availableCurrencies.length > 1;
   const isEmptyLedger = totalDebits === 0 && totalCredits === 0;
 
@@ -132,7 +137,7 @@ export function JournalSummary({
               ]}
             >
               <AppText variant="body" weight="bold" color={isBalanced ? 'success' : 'error'}>
-                {CurrencyFormatter.format(difference, currency)}
+                {CurrencyFormatter.format(pillAmount, pillCurrency)}
               </AppText>
             </View>
           </View>

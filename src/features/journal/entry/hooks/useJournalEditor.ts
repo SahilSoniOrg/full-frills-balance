@@ -168,41 +168,55 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
   // Load initial data for edit mode
   useEffect(() => {
-    if (journalId) {
-      const loadData = async () => {
-        setIsLoading(true);
-        try {
-          const journal = await journalRepository.find(workplaceId, journalId);
-          if (journal) {
-            const dateObj = new Date(journal.journalDate);
-            setDescription(journal.description || '');
-            setNotes(journal.notes || '');
-            setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
-            setJournalTime(dayjs(dateObj).format('HH:mm'));
+    if (!journalId) return;
 
-            const txs = await transactionService.getEnrichedByJournal(workplaceId, journalId);
-            if (txs.length > 0) {
-              const {
-                lines: loadedLines,
-                forceAdvancedMode,
-                simpleTabType,
-              } = mapEnrichedLinesToEditorState(txs);
-              if (forceAdvancedMode) {
-                setGuidedModeInternal(false);
-              } else if (simpleTabType) {
-                setTransactionType(simpleTabType);
-              }
-              setLines(loadedLines);
+    let isActive = true;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const journal = await journalRepository.find(workplaceId, journalId);
+        if (!isActive) return;
+
+        if (journal) {
+          const dateObj = new Date(journal.journalDate);
+          setDescription(journal.description || '');
+          setNotes(journal.notes || '');
+          setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
+          setJournalTime(dayjs(dateObj).format('HH:mm'));
+
+          const txs = await transactionService.getEnrichedByJournal(workplaceId, journalId);
+          if (!isActive) return;
+
+          if (txs.length > 0) {
+            const {
+              lines: loadedLines,
+              forceAdvancedMode,
+              simpleTabType,
+            } = mapEnrichedLinesToEditorState(txs);
+            if (forceAdvancedMode) {
+              setGuidedModeInternal(false);
+            } else if (simpleTabType) {
+              setTransactionType(simpleTabType);
             }
+            setLines(loadedLines);
           }
-        } catch {
-          showErrorAlert('Failed to load transaction');
-        } finally {
+        }
+      } catch {
+        if (!isActive) return;
+        showErrorAlert('Failed to load transaction');
+      } finally {
+        if (isActive) {
           setIsLoading(false);
         }
-      };
-      loadData();
-    }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isActive = false;
+    };
   }, [journalId, setGuidedModeInternal, workplaceId]);
 
   const addLine = useCallback(() => {

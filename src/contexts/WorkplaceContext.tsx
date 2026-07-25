@@ -1,8 +1,9 @@
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { analytics } from '@/src/services/analytics-service';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 import { from, map, of, switchMap } from 'rxjs';
 
@@ -21,6 +22,16 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const prevWorkplaceIdRef = useRef<WorkplaceId | null>(null);
+
+  useEffect(() => {
+    if (!state) return;
+    const prev = prevWorkplaceIdRef.current;
+    if (prev !== null && prev !== state.workplaceId) {
+      evictWorkplaceReactiveCaches({ from: prev, to: state.workplaceId });
+    }
+    prevWorkplaceIdRef.current = state.workplaceId;
+  }, [state?.workplaceId]);
 
   useEffect(() => {
     let isMounted = true;

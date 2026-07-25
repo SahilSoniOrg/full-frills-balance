@@ -71,6 +71,7 @@ export interface JournalEntryViewModel {
   totalCredits: number;
   isBalanced: boolean;
   isBalancedDisplay: boolean;
+  baseImbalance: number;
   launchSource?: string;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   submitLabel: string;
@@ -255,6 +256,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     totalCredits,
     isBalanced,
     isBalancedDisplay,
+    imbalance,
     availableCurrencies,
     selectedCurrency,
     setSelectedCurrency,
@@ -396,6 +398,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     isSimpleModeDisabled,
     isBalanced,
     isBalancedDisplay,
+    baseImbalance: imbalance,
     primaryDisplayAmount,
     primaryDisplayCurrency,
     availableCurrencies,

@@ -151,6 +151,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
               totalCredits={vm.totalCredits}
               isBalanced={vm.isBalanced}
               isBalancedDisplay={vm.isBalancedDisplay}
+              baseImbalance={vm.baseImbalance}
               availableCurrencies={vm.availableCurrencies}
               selectedCurrency={vm.selectedCurrency}
               onSelectCurrency={vm.onSelectCurrency}

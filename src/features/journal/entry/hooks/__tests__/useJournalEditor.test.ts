@@ -163,4 +163,68 @@ describe('useJournalEditor', () => {
     expect(result.current.notes).toBe('Test Notes Loaded');
     expect(result.current.lines).toHaveLength(2);
   });
+
+  it('ignores stale edit loads when journalId changes before fetch completes', async () => {
+    const mockJournalJ1 = {
+      journalDate: '2024-01-01T12:00:00.000Z',
+      description: 'Journal One',
+      notes: '',
+    };
+    const mockJournalJ2 = {
+      journalDate: '2024-01-02T12:00:00.000Z',
+      description: 'Journal Two',
+      notes: '',
+    };
+
+    let resolveJ1Find: (value: typeof mockJournalJ1) => void;
+    const j1FindPromise = new Promise<typeof mockJournalJ1>(resolve => {
+      resolveJ1Find = resolve;
+    });
+
+    (journalRepository.find as jest.Mock).mockImplementation((_wp: string, id: string) => {
+      if (id === 'j1') return j1FindPromise;
+      return Promise.resolve(mockJournalJ2);
+    });
+    (transactionService.getEnrichedByJournal as jest.Mock).mockImplementation(
+      (_wp: string, id: string) => {
+        if (id === 'j2') {
+          return Promise.resolve([
+            {
+              id: '1',
+              accountId: 'a1',
+              amount: 20,
+              currencyCode: 'USD',
+              transactionType: 'DEBIT',
+            },
+            {
+              id: '2',
+              accountId: 'a2',
+              amount: 20,
+              currencyCode: 'USD',
+              transactionType: 'CREDIT',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      },
+    );
+
+    const { result, rerender } = renderHook(
+      ({ journalId }: { journalId: JournalId }) =>
+        useJournalEditor('test-workplace' as WorkplaceId, { journalId }),
+      { initialProps: { journalId: 'j1' as JournalId } },
+    );
+
+    rerender({ journalId: 'j2' as JournalId });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.description).toBe('Journal Two');
+
+    resolveJ1Find!(mockJournalJ1);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.description).toBe('Journal Two');
+  });
 });
