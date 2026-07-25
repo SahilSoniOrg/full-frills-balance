@@ -1,6 +1,7 @@
 /**
- * Design Tokens - Ivy Wallet inspired aesthetic
- * Clean, minimal, and opinionated design system
+ * Design Tokens — Full Frills Balance design system
+ * Default theme: Deep Space (mint on obsidian). Ivy, Editorial, and Gold Obsidian are alternates.
+ * Clean, minimal, and opinionated. See DESIGN.md and UIContext defaults (themeId / fontId).
  *
  * ========================================
  * DESIGN SYSTEM PRINCIPLES (BINDING)
@@ -53,7 +54,7 @@
  *
  * Purpose:
  * - Visual regression detection
- * - Taste alignment ("does this feel Ivy-ish?")
+ * - Taste alignment (does this match the active theme and DESIGN.md?)
  * - Sanity check for future changes
  *
  * It is NOT:
@@ -212,7 +213,7 @@ export const FontIds = {
 export type FontId = (typeof FontIds)[keyof typeof FontIds];
 
 // === TYPOGRAPHY SCALE ===
-// Clean, readable hierarchy inspired by Ivy Wallet
+// Default pairing: Instrument Sans + DM Serif Display (Deep Space font scheme)
 export const Typography = {
   // Font families
   fonts: {

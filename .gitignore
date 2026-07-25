@@ -67,3 +67,7 @@ guides
 
 dist-analysis*
 .env.local
+
+# Local agent / design consultation artifacts (not product source)
+.gstack/
+.context/

@@ -1,6 +1,6 @@
 /**
  * Design Preview - Living visual reference for the design system
- * Your visual truth, regression detector, and Ivy-ish check
+ * Your visual truth, regression detector, and theme alignment check
  *
  * ========================================
  * RULES FOR THIS FILE:
