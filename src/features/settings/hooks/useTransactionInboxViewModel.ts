@@ -3,7 +3,7 @@ import TransactionInboxRecord, {
   InboxParseStatus,
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useAccounts } from '@/src/features/accounts';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
@@ -71,7 +71,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
       const duplicateIds = Array.from(
         new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as JournalId[]),
       );
-      const journals = await journalRepository.findByIds(
+      const journals = await journalQueryRepository.findByIds(
         workplaceId,
         Array.from(new Set([...linkedIds, ...duplicateIds])),
       );

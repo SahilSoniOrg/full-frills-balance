@@ -3,7 +3,7 @@ import { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
@@ -73,7 +73,7 @@ describe('ledgerWriteService lifecycle', () => {
       await ledgerWriteService.postJournal(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
-      const updated = await journalRepository.find(workplaceId, journal.id as JournalId);
+      const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
       expect(updated).not.toBeNull();
       expect(updated!.status).toBe(JournalStatus.POSTED);
       expect(updated!.journalDate).toBeGreaterThanOrEqual(beforePost);
@@ -117,7 +117,7 @@ describe('ledgerWriteService lifecycle', () => {
       await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
-      const updated = await journalRepository.find(workplaceId, journal.id as JournalId);
+      const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
       expect(updated).not.toBeNull();
       expect(updated!.status).toBe(JournalStatus.PLANNED);
       expect(updated!.journalDate).toBe(plannedDate);
@@ -139,15 +139,15 @@ describe('ledgerWriteService lifecycle', () => {
       const journalId = journal.id as JournalId;
 
       await ledgerWriteService.deleteJournal(journalId, workplaceId);
-      expect(await journalRepository.find(workplaceId, journalId)).toBeNull();
+      expect(await journalQueryRepository.find(workplaceId, journalId)).toBeNull();
 
-      const deleted = await journalRepository.findWithDeleted(workplaceId, journalId);
+      const deleted = await journalQueryRepository.findWithDeleted(workplaceId, journalId);
       expect(deleted?.deletedAt).toBeDefined();
 
       await ledgerWriteService.recoverJournal(journalId, workplaceId);
       await rebuildQueueService.flush();
 
-      const restored = await journalRepository.find(workplaceId, journalId);
+      const restored = await journalQueryRepository.find(workplaceId, journalId);
       expect(restored).not.toBeNull();
       expect(restored!.deletedAt).toBeFalsy();
       expect(restored!.status).toBe(JournalStatus.PLANNED);

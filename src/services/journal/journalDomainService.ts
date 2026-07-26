@@ -1,12 +1,17 @@
 import Journal from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import {
+  journalEnrichmentQueries,
+  journalQueryRepository,
+} from '@/src/data/repositories/journal/journalTimelineModule';
+import {
+  CreateJournalData,
+  journalWriteRepository,
+} from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-
-import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
@@ -49,7 +54,7 @@ export class JournalService {
   }
 
   async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalRepository.find(workplaceId, journalId);
+    const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
 
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
@@ -76,7 +81,7 @@ export class JournalService {
     reason: string = 'Reversal',
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(workplaceId, originalJournalId);
+    const originalJournal = await journalQueryRepository.find(workplaceId, originalJournalId);
     if (!originalJournal) throw new Error('Original journal not found');
 
     const originalTransactions = await transactionRepository.findByJournal(
@@ -105,7 +110,7 @@ export class JournalService {
       originalJournal.workplaceId,
     );
 
-    await journalRepository.markReversed(originalJournalId, reversalJournal.id, workplaceId);
+    await journalWriteRepository.markReversed(originalJournalId, reversalJournal.id, workplaceId);
 
     return reversalJournal;
   }

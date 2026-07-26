@@ -20,10 +20,8 @@ import { useLedgerTransactionsForAccount } from '@/src/hooks/useLedgerTransactio
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import {
-  injectReconciledMarkersIntoTransactionList,
-  mapAccountLedgerTransactionToListItem,
-} from '@/src/services/accounting/accountTransactionListPresentation';
+import { injectReconciledMarkersIntoTransactionList } from '@/src/services/accounting/accountTransactionListPresentation';
+import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import {
   AccountBalance,

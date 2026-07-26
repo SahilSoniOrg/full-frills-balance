@@ -1,4 +1,4 @@
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { transactionService } from '@/src/services/transaction-ingestion';
@@ -9,7 +9,7 @@ import { JournalId, WorkplaceId } from '@/src/types/domain';
 // Mock dependencies
 jest.mock('@/src/services/journal/journalDomainService');
 jest.mock('@/src/services/transaction-ingestion');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
@@ -148,7 +148,7 @@ describe('useJournalEditor', () => {
       { id: '2', accountId: 'a2', amount: 10, currencyCode: 'USD', transactionType: 'CREDIT' },
     ];
 
-    (journalRepository.find as jest.Mock).mockResolvedValue(mockJournal);
+    (journalQueryRepository.find as jest.Mock).mockResolvedValue(mockJournal);
     (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
 
     const { result } = renderHook(() =>
@@ -181,7 +181,7 @@ describe('useJournalEditor', () => {
       resolveJ1Find = resolve;
     });
 
-    (journalRepository.find as jest.Mock).mockImplementation((_wp: string, id: string) => {
+    (journalQueryRepository.find as jest.Mock).mockImplementation((_wp: string, id: string) => {
       if (id === 'j1') return j1FindPromise;
       return Promise.resolve(mockJournalJ2);
     });

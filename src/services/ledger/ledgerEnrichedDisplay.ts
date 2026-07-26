@@ -1,4 +1,4 @@
-import { DateRange } from '@/src/hooks/usePaginatedObservable';
+import { ObservableDateRange } from '@/src/types/journalTimeline';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { buildDisplayTransactionsForScopedAccounts } from '@/src/services/ledger/ledgerDisplayTransactionMapping';
 import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
@@ -10,7 +10,7 @@ export function observeDisplayTransactionsForAccounts(
   accountIds: AccountId[],
   workplaceId: WorkplaceId,
   limit: number,
-  dateRange?: DateRange,
+  dateRange?: ObservableDateRange,
 ): Observable<DisplayTransaction[]> {
   const rangeParam = dateRange
     ? {
@@ -29,7 +29,7 @@ export function observeDisplayTransactionsForAccount(
   accountId: AccountId,
   workplaceId: WorkplaceId,
   limit: number,
-  dateRange?: DateRange,
+  dateRange?: ObservableDateRange,
 ): Observable<DisplayTransaction[]> {
   return observeDisplayTransactionsForAccounts([accountId], workplaceId, limit, dateRange);
 }

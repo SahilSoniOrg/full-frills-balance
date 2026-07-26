@@ -1,5 +1,5 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { database } from '@/src/data/database/Database';
 import { checkJournal } from '@/src/services/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';

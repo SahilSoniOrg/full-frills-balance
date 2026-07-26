@@ -2,11 +2,10 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import {
-  isJournalEditorEntryReady,
-  mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
@@ -175,7 +174,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const journal = await journalRepository.find(workplaceId, journalId);
+        const journal = await journalQueryRepository.find(workplaceId, journalId);
         if (!isActive) return;
 
         if (journal) {
@@ -416,22 +415,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     [isGuidedMode, getLineIdByRole],
   );
 
-  const journalLinesForBalance = useMemo(
-    () => mapEditorLinesForBalanceCheck(lines, workplaceCurrency),
-    [lines, workplaceCurrency],
-  );
-
-  const imbalance = useMemo(
-    () => JournalCalculator.calculateImbalance(journalLinesForBalance, workplaceCurrency),
-    [journalLinesForBalance, workplaceCurrency],
-  );
-
-  const isUnbalanced = useMemo(
-    () => !JournalCalculator.isBalanced(journalLinesForBalance, workplaceCurrency),
-    [journalLinesForBalance, workplaceCurrency],
-  );
-  const isEntryReadyToBalance = useMemo(
-    () => isJournalEditorEntryReady(lines, workplaceCurrency),
+  const { imbalance, isUnbalanced, isEntryReadyToBalance } = useMemo(
+    () => deriveJournalEditorBalanceState(lines, workplaceCurrency),
     [lines, workplaceCurrency],
   );
 

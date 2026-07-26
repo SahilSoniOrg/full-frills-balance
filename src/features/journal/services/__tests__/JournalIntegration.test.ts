@@ -8,7 +8,7 @@ import { AccountType } from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
@@ -223,7 +223,7 @@ describe('JournalRepository', () => {
       );
 
       // Re-fetch from database to get updated values
-      const updatedJournal = await journalRepository.find(
+      const updatedJournal = await journalQueryRepository.find(
         'wp-1' as WorkplaceId,
         journal.id as JournalId,
       );

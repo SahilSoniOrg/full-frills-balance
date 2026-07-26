@@ -133,6 +133,7 @@ export const JournalModeToggle = ({
       <AdvancedModeInfoModal
         visible={infoModalVisible}
         onClose={() => setInfoModalVisible(false)}
+        mode={mode}
       />
     </View>
   );

@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { WorkplaceId } from '@/src/types/domain';
 import { Observable, shareReplay } from 'rxjs';
@@ -36,7 +36,7 @@ export function observeWorkplaceJournalMeta(workplaceId: WorkplaceId): Observabl
   if (journalMetaObsCache.has(workplaceId)) {
     return journalMetaObsCache.get(workplaceId)!;
   }
-  const obs$ = journalRepository
+  const obs$ = journalObserveQueries
     .observeStatusMeta(workplaceId)
     .pipe(shareReplay({ bufferSize: 1, refCount: true }));
   journalMetaObsCache.set(workplaceId, obs$);

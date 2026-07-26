@@ -2,6 +2,7 @@ import {
   resolveJournalEntrySelectableAccounts,
   resolveJournalEntrySelectedAccountId,
 } from '../journalEntryAccountPickerPolicy';
+import Account from '@/src/data/models/Account';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 
@@ -9,7 +10,7 @@ describe('journalEntryAccountPickerPolicy', () => {
   const accounts = [
     { id: 'a1' as AccountId, accountType: 'asset', name: 'Cash' },
     { id: 'a2' as AccountId, accountType: 'expense', name: 'Food' },
-  ];
+  ] as unknown as Account[];
 
   it('resolveJournalEntrySelectedAccountId reads split source and row ids', () => {
     expect(

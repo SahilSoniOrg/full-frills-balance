@@ -1,9 +1,11 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
+import {
+  journalEnrichmentQueries,
+  journalsQuery,
+} from '@/src/data/repositories/journal/journalTimelineModule';
+import { JournalObserveFilter } from '@/src/types/journalTimeline';
 import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -18,7 +20,7 @@ import { Observable, distinctUntilChanged, switchMap } from 'rxjs';
 export function observeEnrichedJournals(
   workplaceId: WorkplaceId,
   limit: number,
-  dateRange?: AccountDateRange & { accountIds?: string[] },
+  dateRange?: JournalObserveFilter,
   searchQuery?: string,
   status?: JournalStatus[],
   options?: { minAmount?: number; maxAmount?: number; displayType?: string },
@@ -78,19 +80,17 @@ export function observeEnrichedJournals(
     clauses.push(Q.where('display_type', Q.eq(options.displayType)));
   }
 
-  const journalsObservable = journalRepository
-    .journalsQuery(...clauses)
-    .observeWithColumns([
-      'journal_date',
-      'description',
-      'notes',
-      'currency_code',
-      'status',
-      'total_amount',
-      'transaction_count',
-      'display_type',
-      'updated_at',
-    ]);
+  const journalsObservable = journalsQuery(...clauses).observeWithColumns([
+    'journal_date',
+    'description',
+    'notes',
+    'currency_code',
+    'status',
+    'total_amount',
+    'transaction_count',
+    'display_type',
+    'updated_at',
+  ]);
 
   return journalsObservable.pipe(
     switchMap(async journals => {

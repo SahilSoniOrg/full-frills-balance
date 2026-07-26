@@ -68,13 +68,7 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getCurrency: jest.fn().mockResolvedValue('INR'),
   },
 }));
-jest.mock('@/src/data/repositories/JournalRepository', () => ({
-  journalRepository: {
-    getRuleDefinition: jest.fn(),
-    findMatchingDuplicateInJournals: jest.fn().mockReturnValue(null),
-  },
-}));
-// SmsSyncPipeline reads journal lookups from SmsJournalQueries directly, not via
+// SmsSyncPipeline reads journal lookups from the SMS-dedup intent module, not via
 // the JournalRepository facade.
 jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
   smsJournalQueries: {

@@ -6,7 +6,7 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { mapAccountLedgerTransactionToListItem } from '@/src/services/accounting/accountTransactionListPresentation';
+import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';

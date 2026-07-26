@@ -2,7 +2,7 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
@@ -127,7 +127,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     () => {
       if (!journalId) return of(undefined);
 
-      return from(journalRepository.findMetadataByJournalId(journalId, workplaceId)).pipe(
+      return from(journalMetadataRepository.findByJournalId(journalId, workplaceId)).pipe(
         switchMap(metadata => {
           if (!metadata) return of(undefined);
 

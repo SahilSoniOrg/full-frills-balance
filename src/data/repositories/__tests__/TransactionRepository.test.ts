@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
@@ -41,7 +41,7 @@ describe('TransactionRepository', () => {
 
   describe('findByJournal', () => {
     it('should return transactions for a specific journal', async () => {
-      const journal = await journalRepository.createJournalWithTransactions(
+      const journal = await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Test Journal',
           journalDate: Date.now(),
@@ -74,7 +74,7 @@ describe('TransactionRepository', () => {
   describe('rebuildRunningBalances', () => {
     it('should correctly calculate running balances', async () => {
       // Create a sequence of journals
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'T1',
           journalDate: 1000,
@@ -95,7 +95,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       ); // +100
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'T2',
           journalDate: 2000,
@@ -134,7 +134,7 @@ describe('TransactionRepository', () => {
 
     it('should handle inserted historic transactions', async () => {
       // T1
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'T1',
           journalDate: 1000,
@@ -156,7 +156,7 @@ describe('TransactionRepository', () => {
       );
 
       // T3
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'T3',
           journalDate: 3000,
@@ -178,7 +178,7 @@ describe('TransactionRepository', () => {
       );
 
       // T2 (Inserted)
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'T2',
           journalDate: 2000,
@@ -222,7 +222,7 @@ describe('TransactionRepository', () => {
 
   describe('findByAccountsAndDateRange', () => {
     it('should filter by date range', async () => {
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'In Range',
           journalDate: 2000,
@@ -243,7 +243,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Out of Range',
           journalDate: 5000,

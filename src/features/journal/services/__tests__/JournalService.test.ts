@@ -6,7 +6,8 @@ import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalWriteModule');
+jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/CurrencyRepository');
 jest.mock('@/src/services/audit-service');

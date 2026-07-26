@@ -9,8 +9,8 @@ import TransactionInboxRecord, {
   InboxProcessingStatus,
   TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
-import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
-import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
+import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';

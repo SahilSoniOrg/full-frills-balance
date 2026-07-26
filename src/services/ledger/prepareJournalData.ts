@@ -2,7 +2,7 @@ import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';

@@ -4,7 +4,12 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import {
+  CreateJournalData,
+  journalWriteRepository,
+} from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -50,7 +55,7 @@ export class LedgerWriteService {
     accountsToRebuild: Set<AccountId>;
   } {
     const { journal, transactions, metadataRecord } =
-      journalRepository.prepareCreateJournalWithTransactions(
+      journalWriteRepository.prepareCreateJournalWithTransactions(
         {
           ...data,
           transactions: prepared.transactions,
@@ -138,7 +143,7 @@ export class LedgerWriteService {
     data: CreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(workplaceId, journalId);
+    const originalJournal = await journalQueryRepository.find(workplaceId, journalId);
     if (!originalJournal) throw new Error('Journal not found');
 
     const originalTransactions = await transactionRepository.findByJournal(workplaceId, journalId);
@@ -179,7 +184,7 @@ export class LedgerWriteService {
     ]);
     const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
 
-    return journalRepository.updateJournalWithTransactions(
+    return journalWriteRepository.updateJournalWithTransactions(
       workplaceId,
       journalId,
       {
@@ -198,7 +203,7 @@ export class LedgerWriteService {
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
+    const prepared = await journalWriteRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) return;
 
     const { journal, transactions } = prepared;
@@ -242,7 +247,7 @@ export class LedgerWriteService {
   }
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
+    const prepared = await journalWriteRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) throw new Error('Journal not found');
 
     const { journal, transactions } = prepared;
@@ -284,7 +289,7 @@ export class LedgerWriteService {
   }
 
   async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalRepository.find(workplaceId, journalId);
+    const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.PLANNED) {
       throw new Error(
@@ -297,7 +302,7 @@ export class LedgerWriteService {
     const originalDate = journal.journalDate;
 
     await database.write(async () => {
-      const metadataOp = await journalRepository.prepareMetadataPatch(
+      const metadataOp = await journalMetadataRepository.preparePatch(
         workplaceId,
         journalId,
         { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
@@ -341,7 +346,7 @@ export class LedgerWriteService {
   }
 
   async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalRepository.find(workplaceId, journalId);
+    const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
       throw new Error(
@@ -352,7 +357,7 @@ export class LedgerWriteService {
     const currentJournalDate = journal.journalDate;
     let revertTime: number;
 
-    const metadata = await journalRepository.findMetadataByJournalId(journalId, workplaceId);
+    const metadata = await journalMetadataRepository.findByJournalId(journalId, workplaceId);
     if (metadata?.metadataJson) {
       try {
         const json = safeParseJSON<Record<string, any>>(metadata.metadataJson, {});

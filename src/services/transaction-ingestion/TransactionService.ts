@@ -2,7 +2,10 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import {
+  journalObserveQueries,
+  journalQueryRepository,
+} from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import {
   AccountId,
@@ -22,7 +25,7 @@ export class TransactionService {
     workplaceId: WorkplaceId,
     journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
-    const journal = await journalRepository.find(workplaceId, journalId);
+    const journal = await journalQueryRepository.find(workplaceId, journalId);
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
@@ -62,7 +65,7 @@ export class TransactionService {
     workplaceId: WorkplaceId,
     journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
-    const journal = await journalRepository.find(workplaceId, journalId);
+    const journal = await journalQueryRepository.find(workplaceId, journalId);
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
@@ -82,7 +85,7 @@ export class TransactionService {
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(workplaceId, journalId, includeDeleted);
+    const journal$ = journalObserveQueries.observeById(workplaceId, journalId, includeDeleted);
     const transactions$ = transactionRepository.observeByJournal(
       workplaceId,
       journalId,
@@ -142,7 +145,7 @@ export class TransactionService {
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(workplaceId, journalId, includeDeleted);
+    const journal$ = journalObserveQueries.observeById(workplaceId, journalId, includeDeleted);
     const transactions$ = transactionRepository.observeByJournal(
       workplaceId,
       journalId,

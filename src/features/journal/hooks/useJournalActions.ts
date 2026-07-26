@@ -1,5 +1,6 @@
 import Journal from '@/src/data/models/Journal';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
@@ -25,7 +26,7 @@ export function useJournalActions(workplaceId: WorkplaceId) {
 
   const findJournal = useCallback(
     async (journalId: JournalId) => {
-      return journalRepository.find(workplaceId, journalId);
+      return journalQueryRepository.find(workplaceId, journalId);
     },
     [workplaceId],
   );

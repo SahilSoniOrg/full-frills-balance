@@ -1,5 +1,5 @@
 import { AccountType } from '@/src/data/models/Account';
-import { mapAccountLedgerTransactionToListItem } from '@/src/services/accounting/accountTransactionListPresentation';
+import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import {
   buildDisplayTransactionsForJournalAccounts,
   mapEnrichedJournalAccountToDisplayTransaction,

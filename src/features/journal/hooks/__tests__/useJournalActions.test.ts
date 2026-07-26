@@ -1,11 +1,11 @@
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/services/journal/journalDomainService');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/database/Database', () => ({
   database: {
     write: jest.fn(),
@@ -97,14 +97,14 @@ describe('useJournalActions', () => {
     );
   });
 
-  it('should delegate findJournal to journalRepository', async () => {
+  it('should delegate findJournal to journalQueryRepository', async () => {
     const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
 
     await act(async () => {
       await result.current.findJournal('id1' as JournalId);
     });
 
-    expect(journalRepository.find).toHaveBeenCalledWith(
+    expect(journalQueryRepository.find).toHaveBeenCalledWith(
       'test-wp' as WorkplaceId,
       'id1' as JournalId,
     );
