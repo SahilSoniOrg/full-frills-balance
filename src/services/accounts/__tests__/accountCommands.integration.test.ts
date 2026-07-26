@@ -12,8 +12,8 @@ import { journalWriteRepository } from '@/src/data/repositories/journal/journalW
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
-import { accountService } from '@/src/services/accounts/accountDomainService';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
+import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 
@@ -137,11 +137,7 @@ describe('account commands (integration)', () => {
     });
 
     const reconcileDate = new Date(2026, 0, 31);
-    const updated = await accountService.reconcileAccount(
-      account.id as AccountId,
-      reconcileDate,
-      WP,
-    );
+    const updated = await reconcileAccount(account.id as AccountId, reconcileDate, WP);
 
     expect(updated.reconciledAt?.getTime()).toBe(reconcileDate.getTime());
 

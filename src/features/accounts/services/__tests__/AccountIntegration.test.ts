@@ -10,7 +10,8 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { createAccount } from '@/src/services/accounts/accountCommands';
+import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 
 describe('AccountRepository', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;
@@ -47,16 +48,13 @@ describe('AccountRepository', () => {
     });
 
     it('should create account with initial balance', async () => {
-      const account = await accountService.createAccount(
-        {
-          name: 'Savings',
-          accountType: AccountType.ASSET,
-          currencyCode: 'USD',
-          initialBalance: 1000,
-          workplaceId,
-        },
+      const account = await createAccount(workplaceId, {
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        initialBalance: 1000,
         workplaceId,
-      );
+      });
 
       const balance = await balanceService.getAccountBalance(account.id, workplaceId);
       expect(balance.balance).toBe(1000);
@@ -314,7 +312,7 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      await expect(accountService.deleteAccount(asset, workplaceId)).rejects.toThrow(
+      await expect(deleteAccount(asset, workplaceId)).rejects.toThrow(
         'has transactions and cannot be deleted',
       );
 
@@ -330,7 +328,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      await accountService.deleteAccount(account, workplaceId);
+      await deleteAccount(account, workplaceId);
 
       const found = await accountRepository.find(workplaceId, account.id);
       expect(found).toBeNull();

@@ -103,7 +103,7 @@ describe('SafeToSpendReadModel', () => {
     (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue(emptySimResult);
   });
 
-  describe('observeSafeToSpend', () => {
+  describe('forWorkplace().watch()', () => {
     it('should calculate safe to spend using only liquid assets and liquid liabilities', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
@@ -159,20 +159,14 @@ describe('SafeToSpendReadModel', () => {
         accountMap: new Map(),
       });
 
-      safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD').subscribe(result => {
-        expect(result.totalLiquidAssets).toBe(5000);
-        expect(result.summary.safeToSpend).toBe(4000);
-        done();
-      });
-    });
-
-    it('does not cache by currency — each call builds a fresh uncached pipeline', () => {
-      const usdObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
-      const eurObs = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
-      const usdAgain = safeToSpendReadModel.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
-
-      expect(usdObs).not.toBe(eurObs);
-      expect(usdObs).not.toBe(usdAgain);
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(result.totalLiquidAssets).toBe(5000);
+          expect(result.summary.safeToSpend).toBe(4000);
+          done();
+        });
     });
   });
 

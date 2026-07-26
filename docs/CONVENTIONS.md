@@ -224,9 +224,18 @@ features / app  →  services & read models  →  repositories / adapters
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **242** hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded). Intentional decreases: `node scripts/check-unsafe-type-ratchet.mjs --update`. |
+| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **237** hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
 | Journal façade | `bun run check:journal-facade` | `JournalRepository` public method set is frozen in `scripts/journal-repository-facade-methods.json` (**39** methods). New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
 
 Run both via `bun run check:architecture`.
+
+**Pull requests:** Before merge, run `bun run check:architecture` locally (or confirm CI green on `check:architecture`). New work must not increase the unsafe-type baseline or reintroduce deleted repository façades.
+
+**Transaction / journal card props:** Two import paths are intentional (commit 48, grill 2026-07-27):
+
+- **Within the journal feature:** `src/features/journal/utils/journalCardAdapter.ts` (and `journalUiUtils` re-exports) for list/editor screens.
+- **Cross-feature or service tests:** `src/adapters/transactionCardAdapter.ts` — use this from hub, budget, ledger tests, and any code outside `features/journal` so ESLint dependency rules stay satisfied.
+
+Do not add a third shim; extend the adapter that matches the caller’s layer.
 
 See also `docs/ARCHITECTURE_ENTROPY_AUDIT_2026-07-27.md` and `docs/ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md` for the active structural audit and remediation sequence. Older recommendations in `docs/codebase-design/AUDIT.md` are historical where marked **Done**.

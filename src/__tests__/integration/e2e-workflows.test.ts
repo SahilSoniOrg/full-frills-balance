@@ -9,7 +9,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { createAccount } from '@/src/services/accounts/accountCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceService } from '@/src/services/BalanceService';
 import { IntegrityService } from '@/src/services/integrity-service';
@@ -34,16 +34,13 @@ describe('E2E Workflows', () => {
   describe('Daily expense tracking workflow', () => {
     it('should track a full day of expenses with correct balances', async () => {
       // Setup: Create accounts
-      const wallet = await accountService.createAccount(
-        {
-          name: 'Wallet',
-          accountType: AccountType.ASSET,
-          currencyCode: 'USD',
-          initialBalance: 200,
-          workplaceId: 'test-workplace' as WorkplaceId,
-        },
-        'test-workplace' as WorkplaceId,
-      );
+      const wallet = await createAccount('test-workplace' as WorkplaceId, {
+        name: 'Wallet',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        initialBalance: 200,
+        workplaceId: 'test-workplace' as WorkplaceId,
+      });
       // Flush the initial balance journal creation
       await rebuildQueueService.flush();
 
@@ -165,16 +162,13 @@ describe('E2E Workflows', () => {
     // TODO: Fix rebuild queue singleton timing issue in test environment
     it('should correctly reverse a journal and restore balances', async () => {
       const FIXED_DATE = 1706700000000; // Fixed date for test
-      const cash = await accountService.createAccount(
-        {
-          name: 'Cash',
-          accountType: AccountType.ASSET,
-          currencyCode: 'USD',
-          initialBalance: 500,
-          workplaceId: 'test-workplace' as WorkplaceId,
-        },
-        'test-workplace' as WorkplaceId,
-      );
+      const cash = await createAccount('test-workplace' as WorkplaceId, {
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        initialBalance: 500,
+        workplaceId: 'test-workplace' as WorkplaceId,
+      });
       // Reset the date of the initial balance to be in the past
       const [initialJournal] = await journalListQueryRepository.findAll(
         'test-workplace' as WorkplaceId,

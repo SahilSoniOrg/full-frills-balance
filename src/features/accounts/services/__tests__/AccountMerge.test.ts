@@ -7,7 +7,7 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/services/PlannedPaymentService');
@@ -18,7 +18,7 @@ jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/analytics-service');
 jest.mock('@/src/services/audit-service');
 
-describe('AccountService.mergeAccounts', () => {
+describe('mergeAccounts command', () => {
   const workplaceId = 'test-wp' as WorkplaceId;
 
   beforeEach(() => {
@@ -55,7 +55,7 @@ describe('AccountService.mergeAccounts', () => {
     jest.spyOn(database, 'write').mockImplementation(async (fn: any) => fn());
     jest.spyOn(database, 'batch').mockResolvedValue(undefined);
 
-    await accountService.mergeAccounts(workplaceId, targetId, sourceIds);
+    await mergeAccounts(workplaceId, targetId, sourceIds);
 
     // Verify transactionRepository.findAllByAccountIds was called with deduplicated source1 and source2, but not target
     const expectedSources = ['source1', 'source2'];

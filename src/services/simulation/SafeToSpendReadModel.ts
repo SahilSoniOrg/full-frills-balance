@@ -87,17 +87,6 @@ export class SafeToSpendReadModel {
     return obs;
   }
 
-  /**
-   * @internal Uncached pipeline — prefer `forWorkplace(id).watch()`.
-   * Kept for direct currency override in tests.
-   */
-  observeSafeToSpend(
-    workplaceId: WorkplaceId,
-    defaultCurrencyCode: string,
-  ): Observable<SafeToSpendDashboard> {
-    return this.buildSafeToSpendPipeline(workplaceId, defaultCurrencyCode);
-  }
-
   private buildSafeToSpendPipeline(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,

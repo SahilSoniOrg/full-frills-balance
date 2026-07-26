@@ -2,7 +2,7 @@
   "description": "Maximum allowed unsafe-type occurrences in production src/app (excludes tests). Decrease only via --update after cleanup.",
   "scannedAt": "2026-07-26",
   "fileCount": 686,
-  "total": 242,
+  "total": 237,
   "byPattern": {
     "annotation_any": 119,
     "as_any": 114,

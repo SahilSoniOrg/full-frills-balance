@@ -4,7 +4,8 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { createAccount } from '@/src/services/accounts/accountCommands';
+import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('Account Hierarchy Integration', () => {
@@ -23,28 +24,22 @@ describe('Account Hierarchy Integration', () => {
   });
 
   it('should create a parent and child account correctly', async () => {
-    const parent = await accountService.createAccount(
-      {
-        name: 'Parent Asset',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        icon: 'bank',
-        workplaceId,
-      },
+    const parent = await createAccount(workplaceId, {
+      name: 'Parent Asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      icon: 'bank',
       workplaceId,
-    );
+    });
 
-    const child = await accountService.createAccount(
-      {
-        name: 'Child Asset',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        icon: 'wallet',
-        parentAccountId: parent.id,
-        workplaceId,
-      },
+    const child = await createAccount(workplaceId, {
+      name: 'Child Asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      icon: 'wallet',
+      parentAccountId: parent.id,
       workplaceId,
-    );
+    });
 
     expect(child.parentAccountId).toBe(parent.id);
 
@@ -54,37 +49,28 @@ describe('Account Hierarchy Integration', () => {
   });
 
   it('should aggregate balances from child to parent', async () => {
-    const parent = await accountService.createAccount(
-      {
-        name: 'Parent',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    const parent = await createAccount(workplaceId, {
+      name: 'Parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
-    const child = await accountService.createAccount(
-      {
-        name: 'Child',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        parentAccountId: parent.id,
-        initialBalance: 100,
-        workplaceId,
-      },
+    const child = await createAccount(workplaceId, {
+      name: 'Child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      parentAccountId: parent.id,
+      initialBalance: 100,
       workplaceId,
-    );
+    });
 
-    const other = await accountService.createAccount(
-      {
-        name: 'Other',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    const other = await createAccount(workplaceId, {
+      name: 'Other',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
     await ledgerWriteService.createJournal(
       {
@@ -116,40 +102,33 @@ describe('Account Hierarchy Integration', () => {
   });
 
   it('should handle multi-level aggregation (A -> B -> C)', async () => {
-    const a = await accountService.createAccount(
-      { name: 'A', accountType: AccountType.ASSET, currencyCode: 'USD', workplaceId },
+    const a = await createAccount(workplaceId, {
+      name: 'A',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
-    const b = await accountService.createAccount(
-      {
-        name: 'B',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        parentAccountId: a.id,
-        workplaceId,
-      },
+    });
+    const b = await createAccount(workplaceId, {
+      name: 'B',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      parentAccountId: a.id,
       workplaceId,
-    );
-    const c = await accountService.createAccount(
-      {
-        name: 'C',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        parentAccountId: b.id,
-        workplaceId,
-      },
+    });
+    const c = await createAccount(workplaceId, {
+      name: 'C',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      parentAccountId: b.id,
       workplaceId,
-    );
+    });
 
-    const other = await accountService.createAccount(
-      {
-        name: 'Other',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    const other = await createAccount(workplaceId, {
+      name: 'Other',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
     await ledgerWriteService.createJournal(
       {
@@ -183,93 +162,86 @@ describe('Account Hierarchy Integration', () => {
   });
 
   it('should prevent circular dependencies (A -> B -> A)', async () => {
-    const a = await accountService.createAccount(
-      { name: 'A', accountType: AccountType.ASSET, currencyCode: 'USD', workplaceId },
+    const a = await createAccount(workplaceId, {
+      name: 'A',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
-    const b = await accountService.createAccount(
-      {
-        name: 'B',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        parentAccountId: a.id,
-        workplaceId,
-      },
+    });
+    const b = await createAccount(workplaceId, {
+      name: 'B',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      parentAccountId: a.id,
       workplaceId,
-    );
+    });
 
     // Attempting to set A's parent to B should fail
-    await expect(
-      accountService.updateAccount(a.id, { parentAccountId: b.id }, workplaceId),
-    ).rejects.toThrow('Circular parent relationship detected');
+    await expect(updateAccount(workplaceId, a.id, { parentAccountId: b.id })).rejects.toThrow(
+      'Circular parent relationship detected',
+    );
   });
 
   it('should prevent parenting between different account types', async () => {
-    await accountService.createAccount(
-      { name: 'Asset', accountType: AccountType.ASSET, currencyCode: 'USD', workplaceId },
+    await createAccount(workplaceId, {
+      name: 'Asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
-    const liability = await accountService.createAccount(
-      { name: 'Liability', accountType: AccountType.LIABILITY, currencyCode: 'USD', workplaceId },
+    });
+    const liability = await createAccount(workplaceId, {
+      name: 'Liability',
+      accountType: AccountType.LIABILITY,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
     await expect(
-      accountService.createAccount(
-        {
-          name: 'Child',
-          accountType: AccountType.ASSET,
-          currencyCode: 'USD',
-          parentAccountId: liability.id,
-          workplaceId,
-        },
+      createAccount(workplaceId, {
+        name: 'Child',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        parentAccountId: liability.id,
         workplaceId,
-      ),
+      }),
     ).rejects.toThrow('Parent account must be of the same type');
   });
 
   it('should prevent an account with transactions from becoming a parent', async () => {
-    const parent = await accountService.createAccount(
-      {
-        name: 'Parent with Tx',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        initialBalance: 100, // This creates a transaction
-        workplaceId,
-      },
+    const parent = await createAccount(workplaceId, {
+      name: 'Parent with Tx',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      initialBalance: 100, // This creates a transaction
       workplaceId,
-    );
+    });
 
-    const child = await accountService.createAccount(
-      {
-        name: 'Child',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    const child = await createAccount(workplaceId, {
+      name: 'Child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
     // Attempting to set 'parent' as child's parent should fail because it has an initial balance transaction
     await expect(
-      accountService.updateAccount(child.id, { parentAccountId: parent.id }, workplaceId),
+      updateAccount(workplaceId, child.id, { parentAccountId: parent.id }),
     ).rejects.toThrow(/has transactions and cannot be used as a parent/);
   });
 
   it('should prevent creating an account with a parent that has transactions', async () => {
-    const other = await accountService.createAccount(
-      { name: 'Other', accountType: AccountType.ASSET, currencyCode: 'USD', workplaceId },
+    const other = await createAccount(workplaceId, {
+      name: 'Other',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
-    const nonEmptyAccount = await accountService.createAccount(
-      {
-        name: 'Non Empty',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    });
+    const nonEmptyAccount = await createAccount(workplaceId, {
+      name: 'Non Empty',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
     // Add a transaction
     await ledgerWriteService.createJournal(
@@ -290,47 +262,34 @@ describe('Account Hierarchy Integration', () => {
     );
 
     await expect(
-      accountService.createAccount(
-        {
-          name: 'New Child',
-          accountType: AccountType.ASSET,
-          currencyCode: 'USD',
-          parentAccountId: nonEmptyAccount.id,
-          workplaceId,
-        },
+      createAccount(workplaceId, {
+        name: 'New Child',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        parentAccountId: nonEmptyAccount.id,
         workplaceId,
-      ),
+      }),
     ).rejects.toThrow(/has transactions and cannot be used as a parent/);
   });
 
   it('should not clear account name when updating only parentAccountId', async () => {
-    const parent = await accountService.createAccount(
-      {
-        name: 'Parent',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId,
-      },
+    const parent = await createAccount(workplaceId, {
+      name: 'Parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
       workplaceId,
-    );
+    });
 
-    const child = await accountService.createAccount(
-      {
-        name: 'Original Child Name',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        description: 'Original Description',
-        workplaceId,
-      },
+    const child = await createAccount(workplaceId, {
+      name: 'Original Child Name',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      description: 'Original Description',
       workplaceId,
-    );
+    });
 
     // Update ONLY parentAccountId
-    const updated = await accountService.updateAccount(
-      child.id,
-      { parentAccountId: parent.id },
-      workplaceId,
-    );
+    const updated = await updateAccount(workplaceId, child.id, { parentAccountId: parent.id });
 
     // Verify name and description are preserved
     expect(updated.name).toBe('Original Child Name');
@@ -338,11 +297,7 @@ describe('Account Hierarchy Integration', () => {
     expect(updated.parentAccountId).toBe(parent.id);
 
     // Move back to top level (clear parent)
-    const cleared = await accountService.updateAccount(
-      child.id,
-      { parentAccountId: null },
-      workplaceId,
-    );
+    const cleared = await updateAccount(workplaceId, child.id, { parentAccountId: null });
     expect(cleared.name).toBe('Original Child Name');
     expect(cleared.parentAccountId).toBeFalsy();
   });
