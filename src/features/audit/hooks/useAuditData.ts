@@ -1,5 +1,5 @@
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
@@ -11,7 +11,7 @@ export interface EntityStatus {
 
 export function useAuditAccounts(wokrplaceId: string) {
   const { data: accounts, isLoading } = useObservable(
-    () => accountRepository.observeAll(wokrplaceId as WorkplaceId),
+    () => accountQueries.observeAll(wokrplaceId as WorkplaceId),
     [wokrplaceId],
     [],
   );
@@ -41,13 +41,13 @@ export function useAuditEntityStatus(
   );
 
   const { data: accounts } = useObservable(
-    () => accountRepository.observeByIdsWithDeleted(workplaceId, accountIds),
+    () => accountQueries.observeByIdsWithDeleted(workplaceId, accountIds),
     [accountIds, workplaceId],
     [],
   );
 
   const { data: journals } = useObservable(
-    () => journalRepository.observeByIdsWithDeleted(workplaceId, journalIds),
+    () => journalObserveQueries.observeByIdsWithDeleted(workplaceId, journalIds),
     [workplaceId, journalIds],
     [],
   );

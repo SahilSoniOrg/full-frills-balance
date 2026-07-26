@@ -1,4 +1,5 @@
 import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { UIPreferences } from '@/src/utils/preferences';
 
 /**
@@ -24,7 +25,10 @@ export interface ImportStats {
 }
 
 export interface ParsedImportResult {
-  data: BatchImportData;
+  /** Canonical plugin output — preferred for all plugins (commit 25+). */
+  canonical?: CanonicalImport;
+  /** Legacy batch payload; derived from `canonical` when omitted at the import seam. */
+  data?: BatchImportData;
   stats: ImportStats;
   preferences?: Partial<UIPreferences>;
   workplace?: { name?: string; defaultCurrencyCode?: string; icon?: string };

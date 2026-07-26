@@ -1,8 +1,9 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
-import { importRunner } from '@/src/services/import/runner';
+import { importService } from '@/src/services/import/ImportService';
 import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
+import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/services/import/canonicalImport';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -125,6 +126,17 @@ describe('IvyImportPlugin', () => {
     });
   });
 
+  describe('parse', () => {
+    it('returns canonical v1 plugin output', async () => {
+      const context = { json: validIvyData } as ImportFileContext;
+      const result = await ivyPlugin.parse(context, { defaultCurrency: 'USD' });
+
+      expect(result.canonical?.version).toBe(CANONICAL_IMPORT_VERSION_V1);
+      expect(result.canonical?.importMetadata?.pluginId).toBe('ivy');
+      expect(result.canonical?.accounts).toHaveLength(3);
+    });
+  });
+
   describe('import', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -132,7 +144,7 @@ describe('IvyImportPlugin', () => {
 
     it('transforms and imports Ivy data correctly', async () => {
       const context = { json: validIvyData } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       expect(commitStagedImport).toHaveBeenCalledWith('w1', 'staging-wp');
       expect(importRepository.batchInsert).toHaveBeenCalledWith(
@@ -204,7 +216,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithTransfer } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2);
 
@@ -235,7 +247,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithPlanned } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       expect(stats.skippedTransactions).toBe(2); // ivy-t-deleted AND ivy-t-planned
       expect(stats.plannedPayments).toBe(0);
@@ -262,7 +274,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithOneTimeRule } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       expect(stats.plannedPayments).toBe(1);
 
@@ -292,7 +304,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithBudgetedCategoryOnly } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       // Should create 3 accounts: 1 Wallet + 1 Category Food (unused but in data, though we only create for usage)
       // Wait, IvyPlugin creates accounts for categories in categoryUsageMap.
@@ -330,7 +342,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithRawId } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const rawAcc = lastBatch.accounts.find((a: any) => a.name === 'Raw Category (INR)');
@@ -359,7 +371,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithOpeningBalance } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const obAcc = lastBatch.accounts.find(
@@ -395,7 +407,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithAdjustBalance } as ImportFileContext;
-      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const abAcc = lastBatch.accounts.find(

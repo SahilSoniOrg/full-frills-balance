@@ -1,4 +1,3 @@
-import React from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';

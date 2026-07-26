@@ -4,11 +4,20 @@
 import { IconName } from '@/src/components/core';
 import { Animation } from '@/src/constants';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { deleteAccount as deleteAccountCommand, recoverAccount as recoverAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
+import { reconcileAccount as reconcileAccountCommand } from '@/src/services/accounts/accountReconcileCommands';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
+import { createAccount as createAccountCommand } from '@/src/services/accounts/accountCommands';
+import {
+  updateAccount as updateAccountCommand,
+  updateAccountOrder as updateAccountOrderCommand,
+} from '@/src/services/accounts/accountHierarchyCommands';
+import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
+import { findAccountByName as findAccountByNameQuery } from '@/src/services/accounts/accountSystemAccounts';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { accountService } from '@/src/services/accounts/accountDomainService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -28,7 +37,7 @@ export function useAccounts(workplaceId: WorkplaceId, loadData: boolean = true) 
     version,
     error,
   } = useObservable(
-    () => (loadData && workplaceId ? accountRepository.observeAll(workplaceId) : of([])),
+    () => (loadData && workplaceId ? accountQueries.observeAll(workplaceId) : of([])),
     [loadData, workplaceId],
     [] as Account[],
   );
@@ -45,7 +54,7 @@ export function useAccount(accountId: AccountId | null, workplaceId: WorkplaceId
     version,
     error,
   } = useObservable(
-    () => (accountId ? accountRepository.observeById(workplaceId, accountId) : of(null)),
+    () => (accountId ? accountQueries.observeById(workplaceId, accountId) : of(null)),
     [accountId, workplaceId],
     null as Account | null,
   );
@@ -72,7 +81,7 @@ export function useAccountBalance(
       if (!accountId || !workplaceId) return of(null);
 
       return combineLatest([
-        accountRepository.observeById(workplaceId, accountId),
+        accountQueries.observeById(workplaceId, accountId),
         transactionRepository.observeActiveWithColumns(workplaceId, [
           'amount',
           'transaction_type',
@@ -121,7 +130,7 @@ export function useAccountHasChildren(accountId: AccountId | null, workplaceId: 
   } = useObservable(
     () =>
       accountId
-        ? accountRepository.observeHasChildren(workplaceId, accountId as AccountId)
+        ? accountQueries.observeHasChildren(workplaceId, accountId as AccountId)
         : of(false),
     [accountId, workplaceId],
     false,
@@ -141,7 +150,7 @@ export function useAccountSubAccountCount(accountId: AccountId | null, workplace
   } = useObservable(
     () =>
       accountId
-        ? accountRepository.observeSubAccountCount(workplaceId, accountId as AccountId)
+        ? accountQueries.observeSubAccountCount(workplaceId, accountId as AccountId)
         : of(0),
     [accountId, workplaceId],
     0,
@@ -180,7 +189,7 @@ export function useAccountBalances(
           'updated_at',
         ]),
         currencyRepository.observeAll(),
-        journalRepository.observeStatusMeta(workplaceId),
+        journalObserveQueries.observeStatusMeta(workplaceId),
       ]).pipe(
         firstFastDebounce(Animation.dataRefreshDebounce),
         switchMap(async () => {
@@ -217,7 +226,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
       parentAccountId?: AccountId | null;
       metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
     }) => {
-      return accountService.createAccount({ ...data, workplaceId }, workplaceId);
+      return createAccountCommand(workplaceId, { ...data, workplaceId });
     },
     [workplaceId],
   );
@@ -236,56 +245,56 @@ export function useAccountActions(workplaceId: WorkplaceId) {
         metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
       },
     ) => {
-      return accountService.updateAccount(account.id as AccountId, data, workplaceId);
+      return updateAccountCommand(workplaceId, account.id as AccountId, data);
     },
     [workplaceId],
   );
 
   const deleteAccount = useCallback(
     async (account: Account) => {
-      return accountService.deleteAccount(account, workplaceId);
+      return deleteAccountCommand(account, workplaceId);
     },
     [workplaceId],
   );
 
   const recoverAccount = useCallback(
     async (accountId: AccountId) => {
-      return accountService.recoverAccount(accountId, workplaceId);
+      return recoverAccountCommand(accountId, workplaceId);
     },
     [workplaceId],
   );
 
   const updateAccountOrder = useCallback(
     async (account: Account, newOrder: number) => {
-      return accountService.updateAccountOrder(account, newOrder, workplaceId);
+      return updateAccountOrderCommand(workplaceId, account, newOrder);
     },
     [workplaceId],
   );
 
   const findAccountByName = useCallback(
     async (name: string) => {
-      return accountService.findAccountByName(workplaceId, name);
+      return findAccountByNameQuery(workplaceId, name);
     },
     [workplaceId],
   );
 
   const adjustBalance = useCallback(
     async (account: Account, targetBalance: number) => {
-      return accountService.adjustBalance(account, targetBalance, workplaceId);
+      return adjustAccountBalance(workplaceId, account, targetBalance);
     },
     [workplaceId],
   );
 
   const reconcileAccount = useCallback(
     async (accountId: AccountId, date: Date) => {
-      return accountService.reconcileAccount(accountId, date, workplaceId);
+      return reconcileAccountCommand(accountId, date, workplaceId);
     },
     [workplaceId],
   );
 
   const mergeAccounts = useCallback(
     async (targetAccountId: AccountId, sourceAccountIds: AccountId[]) => {
-      return accountService.mergeAccounts(workplaceId, targetAccountId, sourceAccountIds);
+      return mergeAccountsCommand(workplaceId, targetAccountId, sourceAccountIds);
     },
     [workplaceId],
   );

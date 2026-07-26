@@ -2,6 +2,7 @@ import { IconName } from '@/src/types/domainIcons';
 import { generator } from '@/src/data/database/idGenerator';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountId,
@@ -712,9 +713,17 @@ export const cashewPlugin: ImportPlugin = {
       await files.deleteFile(tempDbPath);
 
       onProgress?.('Finalizing...', 1.0);
+      const workplace = { defaultCurrencyCode: workplaceCurrency };
+      const canonical = canonicalImportFromBatchImportData(data, {
+        importMetadata: {
+          pluginId: 'cashew',
+          workplace,
+        },
+      });
+
       return {
-        data,
-        workplace: { defaultCurrencyCode: workplaceCurrency },
+        canonical,
+        workplace,
         stats: {
           accounts: data.accounts.length,
           transactions: data.transactions.length,

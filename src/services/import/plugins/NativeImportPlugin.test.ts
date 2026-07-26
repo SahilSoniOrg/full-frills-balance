@@ -1,6 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
-import { importRunner } from '@/src/services/import/runner';
+import { importService } from '@/src/services/import/ImportService';
 import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
@@ -217,7 +217,7 @@ describe('NativeImportPlugin', () => {
 
     it('performs full import process', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      const stats = await importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId);
+      const stats = await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
       expect(commitStagedImport).toHaveBeenCalledWith('w1', 'staging-wp');
       expect(preferences.restorePreferences).toHaveBeenCalledWith(
@@ -246,7 +246,7 @@ describe('NativeImportPlugin', () => {
     it('throws error for missing parsed JSON', async () => {
       const context = { json: null } as unknown as ImportFileContext;
       await expect(
-        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+        importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId),
       ).rejects.toThrow(/Invalid JSON/);
     });
 
@@ -254,7 +254,7 @@ describe('NativeImportPlugin', () => {
       const incompleteData = { version: '1.0' };
       const context = { json: incompleteData } as ImportFileContext;
       await expect(
-        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+        importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId),
       ).rejects.toThrow(/missing required data/);
     });
 
@@ -266,7 +266,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: unbalanced } as ImportFileContext;
 
       await expect(
-        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+        importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId),
       ).rejects.toThrow(/Import validation failed/);
 
       expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe('NativeImportPlugin', () => {
 
     it('remaps IDs correctly and maintains references', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      await importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId);
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
       const batchInsertCall = (importRepository.batchInsert as jest.Mock).mock.calls[0];
       const data = batchInsertCall[1];

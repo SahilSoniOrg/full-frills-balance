@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
+import Workplace from '@/src/data/models/Workplace';
 import {
   BatchImportData,
   ImportedTransactionInboxRecord,
@@ -15,7 +16,12 @@ import {
   createImportStagingWorkplace,
   discardImportStagingWorkplace,
 } from '@/src/services/import/importStaging';
-import { validateImportedData } from '@/src/services/import/validateImportedData';
+import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { beginImportRun } from '@/src/services/import/importRun';
+import {
+  validateCanonicalImport,
+  validateImportedData,
+} from '@/src/services/import/validateImportedData';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -25,17 +31,6 @@ import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';
 
 export class ImportService {
-  private createProgressSegment(
-    onProgress: ((message: string, progress: number) => void) | undefined,
-    start: number,
-    end: number,
-  ) {
-    const range = end - start;
-    return (message: string, progress: number) => {
-      onProgress?.(message, start + progress * range);
-    };
-  }
-
   private getUsedCurrencyCodes(data: BatchImportData, defaultCurrency: string): string[] {
     const codes = new Set<string>();
     codes.add(defaultCurrency);
@@ -64,29 +59,13 @@ export class ImportService {
   ): Promise<ImportStats> {
     logger.info(`[ImportService] Executing import for plugin: ${plugin.id}`);
 
-    const SEGMENTS = {
-      PARSE: { start: 0, end: 0.15 },
-      BACKUP: { start: 0.15, end: 0.22 },
-      STAGE: { start: 0.22, end: 0.28 },
-      INIT: { start: 0.28, end: 0.32 },
-      INSERT: { start: 0.32, end: 0.72 },
-      STAGING_CHECK: { start: 0.72, end: 0.8 },
-      SWAP: { start: 0.8, end: 0.86 },
-      RATES: { start: 0.86, end: 0.93 },
-      INTEGRITY: { start: 0.93, end: 1.0 },
-    };
-
-    // 1. Parse file via plugin
-    const parseProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.PARSE.start,
-      SEGMENTS.PARSE.end,
-    );
+    const run = beginImportRun(onProgress);
+    const parseProgress = run.phaseReporter('parse');
     parseProgress(`Parsing ${plugin.name} data...`, 0);
 
     let defaultCurrency = AppConfig.defaultCurrency as string;
     try {
-      const workplace = await database.collections.get<any>('workplaces').find(workplaceId);
+      const workplace = await database.collections.get<Workplace>('workplaces').find(workplaceId);
       if (workplace?.defaultCurrencyCode) {
         defaultCurrency = workplace.defaultCurrencyCode;
       }
@@ -99,14 +78,15 @@ export class ImportService {
       onProgress: (msg, p) => parseProgress(msg, p),
     });
 
-    validateImportedData(parsedResult.data);
+    if (parsedResult.canonical) {
+      validateCanonicalImport(parsedResult.canonical);
+    }
+    const importBatchData = resolveParsedImportBatchData(parsedResult);
+    if (!parsedResult.canonical) {
+      validateImportedData(importBatchData);
+    }
 
-    // 2. Safety backup before destructive wipe (ADR-0006 phase 3.1)
-    const backupProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.BACKUP.start,
-      SEGMENTS.BACKUP.end,
-    );
+    const backupProgress = run.phaseReporter('backup');
     const backupResult = await preImportBackupService.createBackup(workplaceId, (message, p) =>
       backupProgress(message, p),
     );
@@ -117,35 +97,20 @@ export class ImportService {
       backupProgress('No existing ledger data to back up', 1);
     }
 
-    // 3. Stage import into a temporary workplace (ADR-0006 phase 3.2)
-    const stageProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.STAGE.start,
-      SEGMENTS.STAGE.end,
-    );
+    const stageProgress = run.phaseReporter('stage');
     stageProgress('Preparing staged import...', 0);
     const stagingWorkplaceId = await createImportStagingWorkplace(workplaceId, defaultCurrency);
     stageProgress('Preparing staged import...', 1);
 
-    // 4. Initialize native currencies
-    const initProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.INIT.start,
-      SEGMENTS.INIT.end,
-    );
+    const initProgress = run.phaseReporter('init');
     initProgress('Initializing native currencies...', 0);
     await currencyInitService.initialize();
     initProgress('Initializing native currencies...', 1);
 
-    // 5. Insert data using ImportRepository primitives (calculates balances & persists)
-    const insertProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.INSERT.start,
-      SEGMENTS.INSERT.end,
-    );
+    const insertProgress = run.phaseReporter('insert');
     insertProgress('Saving records to database...', 0);
 
-    const dataToInsert = { ...parsedResult.data };
+    const dataToInsert = { ...importBatchData };
     if (dataToInsert.currencies) {
       delete dataToInsert.currencies;
     }
@@ -155,22 +120,14 @@ export class ImportService {
         insertProgress(msg, p ?? 0),
       );
 
-      const stagingCheckProgress = this.createProgressSegment(
-        onProgress,
-        SEGMENTS.STAGING_CHECK.start,
-        SEGMENTS.STAGING_CHECK.end,
-      );
+      const stagingCheckProgress = run.phaseReporter('staging_check');
       stagingCheckProgress('Verifying staged import...', 0);
       await integrityService.forceRunCheck(stagingWorkplaceId, (msg, p) =>
         stagingCheckProgress(msg, p),
       );
       stagingCheckProgress('Verifying staged import...', 1);
 
-      const swapProgress = this.createProgressSegment(
-        onProgress,
-        SEGMENTS.SWAP.start,
-        SEGMENTS.SWAP.end,
-      );
+      const swapProgress = run.phaseReporter('swap');
       swapProgress('Applying import to workplace...', 0);
       await commitStagedImport(workplaceId, stagingWorkplaceId);
       swapProgress('Applying import to workplace...', 1);
@@ -181,7 +138,6 @@ export class ImportService {
       throw error;
     }
 
-    // 6. Update workplace metadata if provided
     if (
       parsedResult.workplace?.name ||
       parsedResult.workplace?.defaultCurrencyCode ||
@@ -197,14 +153,9 @@ export class ImportService {
       }
     }
 
-    // 7. Synchronize exchange rates for used currencies
-    const ratesProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.RATES.start,
-      SEGMENTS.RATES.end,
-    );
+    const ratesProgress = run.phaseReporter('rates');
 
-    const currencyCodes = this.getUsedCurrencyCodes(parsedResult.data, defaultCurrency);
+    const currencyCodes = this.getUsedCurrencyCodes(importBatchData, defaultCurrency);
     if (currencyCodes.length > 0) {
       ratesProgress(`Updating exchange rates for ${currencyCodes.length} currencies...`, 0);
 
@@ -214,7 +165,9 @@ export class ImportService {
           try {
             await exchangeRateService.syncTodayRates(code);
           } catch (e) {
-            logger.warn(`[ImportService] Rate sync failed for ${code}:`, { error: e });
+            const message = `Exchange rate sync failed for ${code}`;
+            logger.warn(`[ImportService] ${message}:`, { error: e });
+            run.recordWarning(message);
           } finally {
             syncedCount++;
             ratesProgress(
@@ -226,12 +179,7 @@ export class ImportService {
       );
     }
 
-    // 8. Verify data integrity & rebuild balance snapshots
-    const integrityProgress = this.createProgressSegment(
-      onProgress,
-      SEGMENTS.INTEGRITY.start,
-      SEGMENTS.INTEGRITY.end,
-    );
+    const integrityProgress = run.phaseReporter('integrity');
     integrityProgress('Verifying database integrity...', 0);
     await integrityService.forceRunCheck(workplaceId, (msg, p) => integrityProgress(msg, p * 0.5));
 
@@ -260,12 +208,14 @@ export class ImportService {
       }
     } catch (error) {
       logger.error('[ImportService] Failed to rebuild balance snapshots post-import:', error);
+      run.recordWarning('Post-import balance rebuild failed');
     }
 
-    // 9. Restore preferences & activate workplace
     if (parsedResult.preferences) {
       const sanitizedPrefs = { ...parsedResult.preferences };
-      delete (sanitizedPrefs as any).defaultCurrencyCode;
+      if ('defaultCurrencyCode' in sanitizedPrefs) {
+        delete (sanitizedPrefs as { defaultCurrencyCode?: string }).defaultCurrencyCode;
+      }
       await preferences.restorePreferences(sanitizedPrefs);
     }
 
@@ -273,7 +223,7 @@ export class ImportService {
     preferences.setOnboardingCompleted(true);
 
     logger.info('[ImportService] Import completed successfully.');
-    onProgress?.('Import completed successfully.', 1);
+    run.complete('Import completed successfully.');
 
     return {
       ...parsedResult.stats,

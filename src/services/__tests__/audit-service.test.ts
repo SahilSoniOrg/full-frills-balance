@@ -1,7 +1,8 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
+import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { auditService } from '@/src/services/audit-service';
 
@@ -17,12 +18,13 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/services/accounts/accountDomainService', () => ({
-  accountService: {
-    deleteAccount: jest.fn(),
-    recoverAccount: jest.fn(),
-    updateAccount: jest.fn(),
-  },
+jest.mock('@/src/services/accounts/accountDeleteCommands', () => ({
+  deleteAccount: jest.fn(),
+  recoverAccount: jest.fn(),
+}));
+
+jest.mock('@/src/services/accounts/accountAuditCommands', () => ({
+  revertAccountFromAuditState: jest.fn(),
 }));
 
 jest.mock('@/src/services/journal/journalDomainService', () => ({
@@ -40,17 +42,17 @@ describe('AuditService', () => {
     // Manually register handlers since mocks don't run constructors
     revertRegistry.register('account', async (id, changes, action) => {
       if (action === AuditAction.CREATE)
-        await (accountService as any).deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
+        await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.DELETE)
-        await (accountService as any).recoverAccount(id as AccountId, 'wp-1' as WorkplaceId);
+        await recoverAccount(id as AccountId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
         if (changes.before.deletedAt)
-          await (accountService as any).deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
+          await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
         else
-          await (accountService as any).updateAccount(
+          await revertAccountFromAuditState(
+            'wp-1' as WorkplaceId,
             id as AccountId,
             changes.before,
-            'wp-1' as WorkplaceId,
           );
       }
     });
@@ -224,7 +226,7 @@ describe('AuditService', () => {
         );
         const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         console.log('Result:', res);
-        expect(accountService.deleteAccount).toHaveBeenCalledWith(
+        expect(deleteAccount).toHaveBeenCalledWith(
           'ent1' as AccountId,
           'wp-1' as WorkplaceId,
         );
@@ -235,7 +237,7 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.DELETE }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.recoverAccount).toHaveBeenCalledWith(
+        expect(recoverAccount).toHaveBeenCalledWith(
           'ent1' as AccountId,
           'wp-1' as WorkplaceId,
         );
@@ -247,10 +249,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.updateAccount).toHaveBeenCalledWith(
+        expect(revertAccountFromAuditState).toHaveBeenCalledWith(
+          'wp-1' as WorkplaceId,
           'ent1' as AccountId,
           changes.before,
-          'wp-1' as WorkplaceId,
         );
       });
 
@@ -260,7 +262,7 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.deleteAccount).toHaveBeenCalledWith(
+        expect(deleteAccount).toHaveBeenCalledWith(
           'ent1' as AccountId,
           'wp-1' as WorkplaceId,
         );

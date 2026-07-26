@@ -1,6 +1,7 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
+import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { revertRegistry } from '@/src/services/revert-registry';
 import {
@@ -73,16 +74,15 @@ revertRegistry.register(
   ) => {
     let entityIdCasted = entityId as AccountId;
     if (action === AuditAction.CREATE) {
-      await accountService.deleteAccount(entityIdCasted, workplaceId);
+      await deleteAccount(entityIdCasted, workplaceId);
     } else if (action === AuditAction.DELETE) {
-      await accountService.recoverAccount(entityIdCasted, workplaceId);
+      await recoverAccount(entityIdCasted, workplaceId);
     } else if (action === AuditAction.UPDATE) {
       if (changes.before) {
         if ('deletedAt' in changes.before) {
-          await accountService.deleteAccount(entityIdCasted, workplaceId);
+          await deleteAccount(entityIdCasted, workplaceId);
         } else {
-          // Partial<CreateAccountData> is already accepted by updateAccount
-          await accountService.updateAccount(entityIdCasted, changes.before, workplaceId);
+          await revertAccountFromAuditState(workplaceId, entityIdCasted, changes.before);
         }
       }
     }

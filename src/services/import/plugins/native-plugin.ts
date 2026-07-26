@@ -23,6 +23,7 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
   AccountId,
   BudgetId,
@@ -387,8 +388,20 @@ export const nativePlugin: ImportPlugin = {
       };
 
       logger.info('[NativePlugin] Parsing successful.');
+      const canonical = canonicalImportFromBatchImportData(resultData, {
+        sourceFormatVersion: data.version,
+        importMetadata: {
+          pluginId: 'native',
+          preferences: data.preferences,
+          workplace: {
+            name: data.workplace?.name,
+            icon: data.workplace?.icon,
+            defaultCurrencyCode: currencyCode,
+          },
+        },
+      });
       return {
-        data: resultData,
+        canonical,
         preferences: data.preferences,
         workplace: {
           name: data.workplace?.name,

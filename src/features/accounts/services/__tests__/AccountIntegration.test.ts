@@ -7,7 +7,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { accountService } from '@/src/services/accounts/accountDomainService';
@@ -127,7 +127,7 @@ describe('AccountRepository', () => {
       });
 
       // Deposit 1000
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Initial',
           journalDate: Date.now() - 2000,
@@ -155,7 +155,7 @@ describe('AccountRepository', () => {
       );
 
       // Withdraw 300
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Withdrawal',
           journalDate: Date.now() - 1000,
@@ -204,7 +204,7 @@ describe('AccountRepository', () => {
       const earlierTime = Date.now() - 5000;
       const laterTime = Date.now();
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Earlier',
           journalDate: earlierTime,
@@ -231,7 +231,7 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Later',
           journalDate: laterTime,
@@ -287,7 +287,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Deposit',
           journalDate: Date.now(),

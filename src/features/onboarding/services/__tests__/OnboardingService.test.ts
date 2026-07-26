@@ -1,8 +1,18 @@
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { createAccount } from '@/src/services/accounts/accountCommands';
+import {
+  findOrCreateBalanceCorrectionAccount,
+  getOpeningBalancesAccountId,
+} from '@/src/services/accounts/accountSystemAccounts';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { onboardingService } from '../OnboardingService';
 
-jest.mock('@/src/services/accounts/accountDomainService');
+jest.mock('@/src/services/accounts/accountSystemAccounts', () => ({
+  getOpeningBalancesAccountId: jest.fn().mockResolvedValue('opening-id'),
+  findOrCreateBalanceCorrectionAccount: jest.fn().mockResolvedValue('correction-id'),
+}));
+jest.mock('@/src/services/accounts/accountCommands', () => ({
+  createAccount: jest.fn().mockResolvedValue({ id: 'new-account' }),
+}));
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
@@ -48,31 +58,28 @@ describe('OnboardingService', () => {
     // Verify preferences were set
 
     // Verify system accounts were ensured
-    expect(accountService.getOpeningBalancesAccountId).toHaveBeenCalledWith(
-      'USD',
-      'mock-workplace-id',
-    );
-    expect(accountService.findOrCreateBalanceCorrectionAccount).toHaveBeenCalledWith(
+    expect(getOpeningBalancesAccountId).toHaveBeenCalledWith('USD', 'mock-workplace-id');
+    expect(findOrCreateBalanceCorrectionAccount).toHaveBeenCalledWith(
       'USD',
       'mock-workplace-id',
     );
 
     // Verify account creation
-    expect(accountService.createAccount).toHaveBeenCalledWith(
+    expect(createAccount).toHaveBeenCalledWith(
+      'mock-workplace-id',
       expect.objectContaining({
         name: 'Cash',
         currencyCode: 'USD',
       }),
-      'mock-workplace-id',
     );
 
     // Verify category creation
-    expect(accountService.createAccount).toHaveBeenCalledWith(
+    expect(createAccount).toHaveBeenCalledWith(
+      'mock-workplace-id',
       expect.objectContaining({
         name: 'Food & Drink',
         currencyCode: 'USD',
       }),
-      'mock-workplace-id',
     );
   });
 });

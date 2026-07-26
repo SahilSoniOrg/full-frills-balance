@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -13,6 +13,7 @@ import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSim
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { BehaviorSubject, of } from 'rxjs';
 
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -20,7 +21,7 @@ jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/currencyConversion', () => ({
@@ -29,6 +30,11 @@ jest.mock('@/src/services/currencyConversion', () => ({
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
+jest.mock('@/src/utils/SnapshotService', () => ({
+  snapshotService: {
+    saveCustomSnapshot: jest.fn(),
+  },
+}));
 jest.mock('@/src/utils/preferences', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { of } = require('rxjs');
@@ -77,8 +83,8 @@ describe('SafeToSpendReadModel', () => {
     (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeAll as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
-    (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
-    (journalRepository.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
+    (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
+    (journalObserveQueries.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
     (transactionRepository.observeActiveCount as jest.Mock).mockReturnValue(of(0));
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
@@ -302,6 +308,123 @@ describe('SafeToSpendReadModel', () => {
           expect(headline.safeToSpend).toBe(4200);
           expect(headline.trajectoryMinBalance).toBe(4100);
           done();
+        });
+    });
+  });
+
+  describe('forWorkplace characterization', () => {
+    it('returns empty dashboard when no liquid assets exist', done => {
+      const nonLiquidAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
+      ];
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(nonLiquidAssets));
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(result.summary.safeToSpend).toBe(0);
+          expect(cashFlowSimulationService.simulate).not.toHaveBeenCalled();
+          done();
+        });
+    });
+
+    it('falls back to empty dashboard when simulation throws', done => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 100 },
+      ]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(new Error('sim fail'));
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(result.summary.safeToSpend).toBe(0);
+          done();
+        });
+    });
+
+    it('still emits dashboard when snapshot persistence fails', done => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 5000 },
+      ]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
+        ...emptySimResult,
+        simulationResult: {
+          summary: { safeToSpend: 1234, shortfall: 0, trajectoryMinBalance: 1234 },
+          projections: [],
+        },
+      });
+      (snapshotService.saveCustomSnapshot as jest.Mock).mockImplementation(() => {
+        throw new Error('disk full');
+      });
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(result.summary.safeToSpend).toBe(1234);
+          expect(snapshotService.saveCustomSnapshot).toHaveBeenCalled();
+          done();
+        });
+    });
+
+    it('re-runs pipeline when safe-to-spend window preference changes', done => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 5000 },
+      ]);
+
+      const days$ = new BehaviorSubject(60);
+      const preferencesModule = jest.requireMock('@/src/utils/preferences');
+      preferencesModule.preferences.sts.observeSafeToSpendDays = jest.fn(() =>
+        days$.asObservable(),
+      );
+
+      let simulateCalls = 0;
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async (input: { simulationDays: number }) => {
+          simulateCalls += 1;
+          return {
+            ...emptySimResult,
+            simulationResult: {
+              summary: {
+                safeToSpend: input.simulationDays,
+                shortfall: 0,
+                trajectoryMinBalance: input.simulationDays,
+              },
+              projections: [],
+            },
+          };
+        },
+      );
+
+      const seen: number[] = [];
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          seen.push(result.summary.safeToSpend);
+          if (seen.length === 1) {
+            expect(result.summary.safeToSpend).toBe(60);
+            days$.next(90);
+          } else if (seen.length === 2) {
+            expect(result.summary.safeToSpend).toBe(90);
+            expect(simulateCalls).toBeGreaterThanOrEqual(2);
+            sub.unsubscribe();
+            done();
+          }
         });
     });
   });

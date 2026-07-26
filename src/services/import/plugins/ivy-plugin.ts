@@ -19,6 +19,7 @@ import {
   ImportedPlannedPayment,
   ImportedTransaction,
 } from '@/src/data/repositories/ImportRepository';
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountId,
@@ -882,15 +883,29 @@ export const ivyPlugin: ImportPlugin = {
       });
     }
 
-    return {
-      data: {
-        accounts: accountImports,
-        journals: journalImports,
-        transactions: transactionImports,
-        budgets: budgetImports,
-        budgetScopes: budgetScopeImports,
-        plannedPayments: plannedPaymentImports,
+    const workplace = {
+      name: ivyUserName || undefined,
+      defaultCurrencyCode: ivyBaseCurrency || accountCurrencyMap.values().next().value || undefined,
+    };
+    const preferences = ivyUserName ? { userName: ivyUserName } : undefined;
+    const batchData = {
+      accounts: accountImports,
+      journals: journalImports,
+      transactions: transactionImports,
+      budgets: budgetImports,
+      budgetScopes: budgetScopeImports,
+      plannedPayments: plannedPaymentImports,
+    };
+    const canonical = canonicalImportFromBatchImportData(batchData, {
+      importMetadata: {
+        pluginId: 'ivy',
+        preferences,
+        workplace,
       },
+    });
+
+    return {
+      canonical,
       stats: {
         accounts: accountImports.length,
         journals: journalImports.length,
@@ -901,12 +916,8 @@ export const ivyPlugin: ImportPlugin = {
         skippedTransactions: skippedItems.length,
         skippedItems,
       },
-      workplace: {
-        name: ivyUserName || undefined,
-        defaultCurrencyCode:
-          ivyBaseCurrency || accountCurrencyMap.values().next().value || undefined,
-      },
-      preferences: ivyUserName ? { userName: ivyUserName } : undefined,
+      workplace,
+      preferences,
     };
   },
 };

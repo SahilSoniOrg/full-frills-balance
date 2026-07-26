@@ -1,7 +1,11 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AccountType } from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { accountService } from '@/src/services/accounts/accountDomainService';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { createAccount } from '@/src/services/accounts/accountCommands';
+import {
+  findOrCreateBalanceCorrectionAccount,
+  getOpeningBalancesAccountId,
+} from '@/src/services/accounts/accountSystemAccounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
 import { WorkplaceId } from '@/src/types/domain';
@@ -82,15 +86,15 @@ export class OnboardingService {
 
     // Track names we've already created or seen in this session to avoid DB collisions
     const seenNames = new Set<string>();
-    const allAccounts = await accountRepository.findAll(targetWorkplaceId);
+    const allAccounts = await accountQueries.findAll(targetWorkplaceId);
     allAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
 
     // 2. Ensure system accounts exist for the selected currency
-    await accountService.getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId);
-    await accountService.findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId);
+    await getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId);
+    await findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId);
 
     // Refresh seen names after system accounts are created
-    const updatedAccounts = await accountRepository.findAll(targetWorkplaceId);
+    const updatedAccounts = await accountQueries.findAll(targetWorkplaceId);
     updatedAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
 
     // 3. Create selected default and custom accounts
@@ -170,7 +174,7 @@ export class OnboardingService {
     }
 
     await Promise.all(
-      accountCreationInputs.map(input => accountService.createAccount(input, targetWorkplaceId)),
+      accountCreationInputs.map(input => createAccount(targetWorkplaceId, input)),
     );
 
     // 5. Complete basic onboarding (sets name and default currency)

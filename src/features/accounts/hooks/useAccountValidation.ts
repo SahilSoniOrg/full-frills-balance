@@ -1,5 +1,6 @@
 import Account from '@/src/data/models/Account';
-import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
+import { findDuplicateAccountNameError } from '@/src/features/accounts/services/accountFormValidationPolicy';
+import { validateAccountName } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';
 
 export interface UseAccountValidationResult {
@@ -21,11 +22,9 @@ export function useAccountValidation(
       return;
     }
 
-    const sanitizedName = sanitizeInput(accountName);
-    const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
-
-    if (existing && existing.id !== currentAccountId) {
-      setTimeout(() => setFormError(`Account with name "${sanitizedName}" already exists`), 0);
+    const duplicateError = findDuplicateAccountNameError(accountName, accounts, currentAccountId);
+    if (duplicateError) {
+      setTimeout(() => setFormError(duplicateError), 0);
     } else {
       setTimeout(() => setFormError(null), 0);
     }
@@ -36,9 +35,7 @@ export function useAccountValidation(
   };
 
   const checkForDuplicates = (name: string): boolean => {
-    const sanitizedName = sanitizeInput(name);
-    const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
-    return !!existing && existing.id !== currentAccountId;
+    return findDuplicateAccountNameError(name, accounts, currentAccountId) !== null;
   };
 
   return {

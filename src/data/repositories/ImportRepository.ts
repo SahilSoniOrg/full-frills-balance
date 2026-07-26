@@ -40,6 +40,12 @@ import {
   calculateImportRunningBalances,
   applyImportBalancePatches,
 } from '@/src/services/import/ImportBalanceCalculator';
+import {
+  assignImportWorkplaceId,
+  setImportPersistenceRawField,
+  setImportSoftDeleted,
+  setRecordTimestamps,
+} from '@/src/data/repositories/importPersistenceAdapter';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -284,16 +290,6 @@ export interface BatchImportData {
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET;
 
-function setRecordTimestamps(
-  record: Model,
-  timestamps: { createdAt?: number; updatedAt?: number; deletedAt?: number | null },
-): void {
-  const raw = record._raw as Record<string, unknown>;
-  if (timestamps.createdAt !== undefined) raw.created_at = timestamps.createdAt;
-  if (timestamps.updatedAt !== undefined) raw.updated_at = timestamps.updatedAt;
-  if (timestamps.deletedAt !== undefined) raw.deleted_at = timestamps.deletedAt;
-}
-
 function toAccountType(value: AccountType | string): AccountType {
   return isAccountType(value) ? value : DEFAULT_ACCOUNT_TYPE;
 }
@@ -455,7 +451,7 @@ export class ImportRepository {
           record.changes = log.changes;
           record.timestamp = log.timestamp;
           record._raw._status = 'synced';
-          if (log.createdAt) (record as any)._raw.created_at = log.createdAt;
+          setRecordTimestamps(record, { createdAt: log.createdAt });
         }),
       );
 
@@ -475,8 +471,7 @@ export class ImportRepository {
           if (b.assetAccountIds) record.assetAccountIds = b.assetAccountIds;
           record.active = b.active;
           record._raw._status = 'synced';
-          if (b.createdAt) (record as any)._raw.created_at = b.createdAt;
-          if (b.updatedAt) (record as any)._raw.updated_at = b.updatedAt;
+          setRecordTimestamps(record, { createdAt: b.createdAt, updatedAt: b.updatedAt });
         }),
       );
 
@@ -484,11 +479,10 @@ export class ImportRepository {
         database.collections.get<BudgetScope>('budget_scopes').prepareCreate(record => {
           record._raw.id = bs.id;
           record.workplaceId = workplaceId;
-          (record as any)._raw.budget_id = bs.budgetId;
-          (record as any)._raw.account_id = bs.accountId;
+          setImportPersistenceRawField(record, 'budget_id', bs.budgetId);
+          setImportPersistenceRawField(record, 'account_id', bs.accountId);
           record._raw._status = 'synced';
-          if (bs.createdAt) (record as any)._raw.created_at = bs.createdAt;
-          if (bs.updatedAt) (record as any)._raw.updated_at = bs.updatedAt;
+          setRecordTimestamps(record, { createdAt: bs.createdAt, updatedAt: bs.updatedAt });
         }),
       );
 
@@ -496,7 +490,7 @@ export class ImportRepository {
         accountMetadataCollection.prepareCreate(record => {
           record._raw.id = metadata.id;
           record.workplaceId = workplaceId;
-          (record as any)._raw.account_id = metadata.accountId;
+          setImportPersistenceRawField(record, 'account_id', metadata.accountId);
           record.statementDay = metadata.statementDay;
           record.dueDay = metadata.dueDay;
           record.minimumPaymentAmount = metadata.minimumPaymentAmount;
@@ -518,8 +512,10 @@ export class ImportRepository {
           }
           record.notes = metadata.notes;
           record._raw._status = 'synced';
-          if (metadata.createdAt) (record as any)._raw.created_at = metadata.createdAt;
-          if (metadata.updatedAt) (record as any)._raw.updated_at = metadata.updatedAt;
+          setRecordTimestamps(record, {
+            createdAt: metadata.createdAt,
+            updatedAt: metadata.updatedAt,
+          });
         }),
       );
 
@@ -543,9 +539,11 @@ export class ImportRepository {
           record.recurrenceDay = pp.recurrenceDay;
           record.recurrenceMonth = pp.recurrenceMonth;
           record._raw._status = 'synced';
-          if (pp.createdAt) (record as any)._raw.created_at = pp.createdAt;
-          if (pp.updatedAt) (record as any)._raw.updated_at = pp.updatedAt;
-          if (pp.deletedAt) (record as any)._raw.deleted_at = pp.deletedAt;
+          setRecordTimestamps(record, {
+            createdAt: pp.createdAt,
+            updatedAt: pp.updatedAt,
+            deletedAt: pp.deletedAt,
+          });
         }),
       );
 
@@ -553,15 +551,14 @@ export class ImportRepository {
         journalMetadataCollection.prepareCreate(record => {
           record._raw.id = meta.id;
           record.workplaceId = workplaceId;
-          (record as any)._raw.journal_id = meta.journalId;
+          setImportPersistenceRawField(record, 'journal_id', meta.journalId);
           record.importSource = meta.importSource;
           record.originalSmsId = meta.originalSmsId;
           record.originalSmsSender = meta.originalSmsSender;
           record.originalSmsBody = meta.originalSmsBody;
           record.metadataJson = meta.metadataJson;
           record._raw._status = 'synced';
-          if (meta.createdAt) (record as any)._raw.created_at = meta.createdAt;
-          if (meta.updatedAt) (record as any)._raw.updated_at = meta.updatedAt;
+          setRecordTimestamps(record, { createdAt: meta.createdAt, updatedAt: meta.updatedAt });
         }),
       );
 
@@ -579,8 +576,7 @@ export class ImportRepository {
           record.categoryAccountId = rule.categoryAccountId;
           record.isActive = rule.isActive;
           record._raw._status = 'synced';
-          if (rule.createdAt) (record as any)._raw.created_at = rule.createdAt;
-          if (rule.updatedAt) (record as any)._raw.updated_at = rule.updatedAt;
+          setRecordTimestamps(record, { createdAt: rule.createdAt, updatedAt: rule.updatedAt });
         }),
       );
 
@@ -612,8 +608,7 @@ export class ImportRepository {
           record.lastScannedAt = inbox.lastScannedAt;
           record.processedAt = inbox.processedAt;
           record._raw._status = 'synced';
-          if (inbox.createdAt) (record as any)._raw.created_at = inbox.createdAt;
-          if (inbox.updatedAt) (record as any)._raw.updated_at = inbox.updatedAt;
+          setRecordTimestamps(record, { createdAt: inbox.createdAt, updatedAt: inbox.updatedAt });
         }),
       );
 
@@ -621,14 +616,13 @@ export class ImportRepository {
         balanceSnapshotsCollection.prepareCreate(record => {
           record._raw.id = bs.id;
           record.workplaceId = workplaceId;
-          (record as any)._raw.account_id = bs.accountId;
-          (record as any)._raw.transaction_id = bs.transactionId;
+          setImportPersistenceRawField(record, 'account_id', bs.accountId);
+          setImportPersistenceRawField(record, 'transaction_id', bs.transactionId);
           record.transactionDate = bs.transactionDate;
           record.absoluteBalance = bs.absoluteBalance;
           record.transactionCount = bs.transactionCount;
           record._raw._status = 'synced';
-          if (bs.createdAt) (record as any)._raw.created_at = bs.createdAt;
-          if (bs.updatedAt) (record as any)._raw.updated_at = bs.updatedAt;
+          setRecordTimestamps(record, { createdAt: bs.createdAt, updatedAt: bs.updatedAt });
         }),
       );
 
@@ -717,7 +711,7 @@ export class ImportRepository {
             ops.push(
               collection.prepareCreate((record: T) => {
                 record._raw.id = rec.id;
-                (record as any).workplaceId = workplaceId;
+                assignImportWorkplaceId(record, workplaceId);
                 prepare(record, rec);
                 record._raw._status = 'synced';
               }) as T,
@@ -735,10 +729,7 @@ export class ImportRepository {
         for (const record of existing) {
           ops.push(
             record.prepareUpdate((r: T) => {
-              const raw = r._raw as any;
-              raw.deleted_at = now;
-              raw.updated_at = now;
-              raw._status = 'synced';
+              setImportSoftDeleted(r, now, now);
             }),
           );
         }
@@ -769,13 +760,11 @@ export class ImportRepository {
           if (acc.reconciledAt !== undefined && acc.reconciledAt !== null) {
             record.reconciledAt = new Date(acc.reconciledAt);
           }
-          if (acc.createdAt) (record as Model & { _raw: any })._raw.created_at = acc.createdAt;
-          if (acc.updatedAt) (record as Model & { _raw: any })._raw.updated_at = acc.updatedAt;
-          if (acc.deletedAt) {
-            (record as Model & { _raw: any })._raw.deleted_at = acc.deletedAt;
-          } else {
-            (record as Model & { _raw: any })._raw.deleted_at = null;
-          }
+          setRecordTimestamps(record, {
+            createdAt: acc.createdAt,
+            updatedAt: acc.updatedAt,
+            deletedAt: acc.deletedAt ?? null,
+          });
         },
       );
 
@@ -796,13 +785,11 @@ export class ImportRepository {
           if (j.plannedPaymentId) {
             record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
           }
-          if (j.createdAt) (record as any)._raw.created_at = j.createdAt;
-          if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt;
-          if (j.deletedAt) {
-            (record as any)._raw.deleted_at = j.deletedAt;
-          } else {
-            (record as any)._raw.deleted_at = null;
-          }
+          setRecordTimestamps(record, {
+            createdAt: j.createdAt,
+            updatedAt: j.updatedAt,
+            deletedAt: j.deletedAt ?? null,
+          });
         },
       );
 
@@ -819,13 +806,11 @@ export class ImportRepository {
           record.notes = t.notes;
           record.exchangeRate = t.exchangeRate;
           record.runningBalance = t.runningBalance;
-          if (t.createdAt) (record as any)._raw.created_at = t.createdAt;
-          if (t.updatedAt) (record as any)._raw.updated_at = t.updatedAt;
-          if (t.deletedAt) {
-            (record as any)._raw.deleted_at = t.deletedAt;
-          } else {
-            (record as any)._raw.deleted_at = null;
-          }
+          setRecordTimestamps(record, {
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+            deletedAt: t.deletedAt ?? null,
+          });
         },
       );
 
@@ -839,7 +824,7 @@ export class ImportRepository {
             record.action = toAuditAction(log.action);
             record.changes = log.changes;
             record.timestamp = log.timestamp;
-            if (log.createdAt) (record as any)._raw.created_at = log.createdAt;
+            setRecordTimestamps(record, { createdAt: log.createdAt });
           },
         );
       }

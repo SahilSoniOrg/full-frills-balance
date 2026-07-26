@@ -1,7 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -23,12 +23,12 @@ export function useBudgetEditViewModel() {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const budgetId = params.id;
   const { data: expenseAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
+    () => accountQueries.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
     [],
   );
   const { data: assetAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(workplaceId, AccountType.ASSET),
+    () => accountQueries.observeByType(workplaceId, AccountType.ASSET),
     [workplaceId],
     [],
   );

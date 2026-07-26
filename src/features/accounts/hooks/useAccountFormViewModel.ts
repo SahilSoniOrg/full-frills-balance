@@ -9,7 +9,7 @@ import Account, {
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Currency from '@/src/data/models/Currency';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import {
   useAccount,
@@ -138,7 +138,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const { accounts } = useAccounts(workplaceId);
 
   const { data: isParent } = useObservable(
-    () => (accountId ? accountRepository.observeHasChildren(workplaceId, accountId) : of(false)),
+    () => (accountId ? accountQueries.observeHasChildren(workplaceId, accountId) : of(false)),
     [accountId, workplaceId],
     false,
   );

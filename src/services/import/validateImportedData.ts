@@ -6,6 +6,8 @@ import {
   ImportedTransaction,
 } from '@/src/data/repositories/ImportRepository';
 import { checkJournal, JournalLineForCheck } from '@/src/services/accounting/BalanceEffects';
+import { CanonicalImport } from '@/src/services/import/canonicalImport';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 
 function toTransactionType(value: string): TransactionType {
   return value === TransactionType.CREDIT ? TransactionType.CREDIT : TransactionType.DEBIT;
@@ -26,6 +28,11 @@ function activeTransactionsForJournal(
   transactions: ImportedTransaction[],
 ): ImportedTransaction[] {
   return transactions.filter(t => t.journalId === journalId && t.deletedAt == null);
+}
+
+/** Validates accounting invariants on canonical plugin output before persistence. */
+export function validateCanonicalImport(canonical: CanonicalImport): void {
+  validateImportedData(batchImportDataFromCanonical(canonical));
 }
 
 /**
