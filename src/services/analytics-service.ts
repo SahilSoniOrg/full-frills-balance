@@ -13,7 +13,7 @@ import { Platform } from 'react-native';
  * Analytics Service
  *
  * Provides a privacy-first, lightweight wrapper for tracking usage patterns.
- * Powered by PostHog.
+ * PostHog for product analytics; Sentry for errors (no session replay on either).
  */
 
 export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
@@ -121,14 +121,7 @@ export class AnalyticsService {
         enabled: true,
         debug: false,
         tracesSampleRate: 1.0,
-        replaysSessionSampleRate: 0.1,
-        replaysOnErrorSampleRate: 1.0,
-        integrations: [
-          navigationIntegration,
-          Sentry.reactNativeTracingIntegration(),
-          Sentry.mobileReplayIntegration(),
-        ],
-        enableUserInteractionTracing: true,
+        integrations: [navigationIntegration, Sentry.reactNativeTracingIntegration()],
       });
 
       if (this._posthog) {

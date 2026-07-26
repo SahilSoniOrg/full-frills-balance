@@ -238,4 +238,4 @@ Run both via `bun run check:architecture`.
 
 Do not add a third shim; extend the adapter that matches the caller’s layer.
 
-See also `docs/ARCHITECTURE_ENTROPY_AUDIT_2026-07-27.md` and `docs/ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md` for the active structural audit and remediation sequence. Older recommendations in `docs/codebase-design/AUDIT.md` are historical where marked **Done**.
+See also `docs/archive/2026-07-entropy/` for the completed 2026-07-27 structural audit (historical). Older recommendations in `docs/codebase-design/AUDIT.md` are historical where marked **Done**.

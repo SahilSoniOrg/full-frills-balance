@@ -1,6 +1,6 @@
 # ADR-0005: One currency conversion rule; never silently assume parity
 
-- **Status:** Proposed
+- **Status:** Accepted (implemented 2026-07-25)
 - **Date:** 2026-07-25
 
 ## Context
@@ -82,3 +82,9 @@ while the behaviour changes.
    reports → budgets → simulation.
 4. Delete `getRateSafe` once it has no callers; add a lint rule banning
    reintroduction of a parity fallback.
+
+## Implementation (2026-07-25)
+
+- `src/services/currencyConversion.ts` — `convertAmount`; no `getRateSafe` remains in `src/`.
+- Read paths migrated (reports, budgets, simulation, balance aggregation).
+- Tests mock `convertAmount` at service boundaries.

@@ -1,6 +1,6 @@
 # ADR-0006: Restore must never destroy data it cannot replace
 
-- **Status:** Proposed
+- **Status:** Accepted (implemented 2026-07-25)
 - **Date:** 2026-07-25
 
 ## Context
@@ -78,3 +78,10 @@ would fix both the drift and the field-add tax.
 3. Add an automatic pre-import backup written to a user-visible location.
 4. Restructure to stage-then-swap.
 5. Only then consider making import schema-driven to mirror export.
+
+## Implementation (2026-07-25)
+
+- Import validates journals (`validateImportedData` / `checkJournal` on parse).
+- Export includes `currencies`, `exchange_rates`, `balance_snapshots` via `WORKPLACE_DATA_TABLES`.
+- Staged restore + pre-import backup (see `importStaging.ts`, `ImportService.ts`).
+- Export remains **single-workplace**; multi-workplace backup is still a gap.

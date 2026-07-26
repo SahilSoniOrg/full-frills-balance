@@ -100,6 +100,8 @@ Analytics identifiers are pseudonymous and are used only to understand app usage
 
 PostHog session replay is disabled. We do not record in-app screenshots or screen replays for product analytics.
 
+**Sentry (crash reporting)** is separate from PostHog. When enabled, Sentry receives error reports and performance traces (for example stack traces and navigation timing). We do not enable Sentry session replay or screen recording.
+
 5. Internet Use
 
 Although Full Frills Balance is primarily offline, internet access is used for limited features:

@@ -72,8 +72,8 @@ The codebase already has several **genuinely deep Modules** (balance aggregation
 
 Remaining systemic issues:
 
-1. **Wrong or leftover seams** — Safe-to-Spend still entered via `NotificationService`; SMS types re-exported through a façade; ARCHITECTURE.md still wrong about STS ownership.
-2. **Dual import paths** — `accountingHelpers` vs `AccountingDomainService` (BalanceEffects supersedes both for sign rules); journal presentation now lives under `services/accounting/journalPresenter`.
+1. **Wrong or leftover seams** — Safe-to-Spend enters via `SafeToSpendReadModel.forWorkplace()`; SMS types live on ingestion modules (façade retired). Keep ARCHITECTURE.md aligned when ownership moves.
+2. **Dual import paths** — `accountingHelpers` vs `AccountingDomainService` (BalanceEffects supersedes both for sign rules); journal presentation lives under `services/accounting/journalPresenter`.
 3. **Fat Interfaces** — `SafeToSpendResult`, `JournalRepository` (~30 methods), `preferences` (~40 surface points), `sms-service` re-export barrel.
 4. **God view-models** — several 400–600 LOC feature hooks that mix orchestration, formatting, and domain rules (especially accounts + journal editors).
 5. **Real seams that are healthy** — `ImportPlugin`, `ShareProvider`, `PipelineStep`, `LLMEngine` (+ mock), simulation engines behind `CashFlowSimulationService`.

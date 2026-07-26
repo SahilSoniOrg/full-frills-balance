@@ -158,47 +158,9 @@ Set via `APP_VARIANT` environment variable or EAS build profile.
 
 ## Architecture
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                    App Layer (Expo Router)                     │
-│  Dashboard · Accounts · Activity · Commitments · Settings     │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                    Feature Layer                               │
-│  accounts · journal · reports · budget · planned-payments      │
-│  dashboard · hub · wealth · settings · onboarding · audit      │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                    Service Layer                               │
-│  BalanceService · PlannedPaymentService · ReportService        │
-│  CashFlowSimulationService · NotificationService · InsightService│
-│  SmsService · ExchangeRateService · IntegrityService           │
-│  SharingService · ExportService · WealthService                │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                    Hooks Layer                                 │
-│  useObservable · usePaginatedObservable · useJournals          │
-│  useAccounts · useNetWorth · useExchangeRates · useSelection   │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                Repository Layer + Raw SQL                      │
-│  JournalRepository · AccountRepository · TransactionRawRepo    │
-│  BalanceSnapshotRepository · ExchangeRateRepository            │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                Data Layer (WatermelonDB / SQLite)              │
-│  Journal · Transaction · Account · Budget · BudgetScope        │
-│  PlannedPayment · Currency · ExchangeRate · BalanceSnapshot    │
-│  SmsInboxRecord · SmsAutoPostRule · AuditLog                   │
-└───────────────────────────────────────────────────────────────┘
-```
+Layered layout: Expo Router (`app/`) → features (`src/features/`) → services → repositories → WatermelonDB/SQLite. Five bottom tabs: dashboard, accounts, activity, commitments, settings.
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical deep-dive.
+Full layer diagram, service inventory, data models, and performance notes: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. Canonical measured facts and invariants: **[PROJECT_BIBLE.md](PROJECT_BIBLE.md)**.
 
 ---
 
@@ -211,7 +173,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical deep-dive.
 │   ├── features/           # Feature modules (accounts, journal, reports, budget, planned-payments, ...)
 │   ├── services/           # Domain services (balance, simulation, integrity, SMS, ...)
 │   ├── data/
-│   │   ├── models/         # WatermelonDB model definitions (14 models)
+│   │   ├── models/         # WatermelonDB models (16 files, 15 registered in Database.ts)
 │   │   ├── repositories/   # Data access layer
 │   │   └── database/       # Schema, migrations, adapter
 │   ├── design-system/      # Layout primitives (Box, Stack, Text, Page, Skeleton, ...)
@@ -236,7 +198,8 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical deep-dive.
 ### Unit & Integration Tests (Jest)
 
 ```bash
-npm test               # Run all Jest tests with coverage
+bun run test           # Jest (per-file coverage thresholds; same as CI)
+bun run verify         # typecheck + test:ci + lint
 ```
 
 Tests cover: repositories, services, accounting invariants, money math, and currency formatting.
@@ -244,10 +207,10 @@ Tests cover: repositories, services, accounting invariants, money math, and curr
 ### End-to-End Tests (Playwright)
 
 ```bash
-npm run test:e2e:build           # Export web build for E2E
-npm run serve:e2e                # Serve the export locally
-npm run test:e2e                 # Run Playwright suite
-npm run test:e2e:ui              # Interactive Playwright UI
+bun run test:e2e:build           # Export web build for E2E
+bun run serve:e2e                # Serve the export locally
+bun run test:e2e                 # Run Playwright suite
+bun run test:e2e:ui              # Interactive Playwright UI
 ```
 
 ### Visual Testing
@@ -262,6 +225,8 @@ npx expo start --dev-client      # Open /_design-preview for component gallery
 
 | Document | Description |
 |----------|-------------|
+| [PROJECT_BIBLE.md](PROJECT_BIBLE.md) | Canonical measured facts, invariants, and debt register |
+| [docs/README.md](docs/README.md) | Doc hierarchy and index |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System layers, data models, services, performance patterns |
 | [CONVENTIONS.md](docs/CONVENTIONS.md) | Coding standards, naming, state management rules |
 | [FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) | Feature completeness tracker |

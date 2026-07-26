@@ -21,7 +21,7 @@ All notable changes to this project are documented here. Versions correspond to 
 ### Changed
 - Upgraded to TypeScript 6.x with strict mode.
 - Updated Expo SDK and all dependency versions.
-- React Native 0.83.4.
+- React Native 0.86.0.
 
 ---
 

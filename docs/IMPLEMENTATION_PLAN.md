@@ -53,7 +53,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ---
 
-## Phase 2 — Money correctness (≈1–1.5 weeks) — **in progress**
+## Phase 2 — Money correctness — ✅ (2026-07-25)
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|
@@ -69,7 +69,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ---
 
-## Phase 3 — Data safety — **in progress**
+## Phase 3 — Data safety — ✅ (2026-07-25)
 
 | # | Task | ADR / ref | Est. |
 |---|------|-----------|------|

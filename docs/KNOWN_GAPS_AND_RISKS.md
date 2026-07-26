@@ -28,5 +28,6 @@
     *   Some `as any` casts remain in sharing and older UI components. Being cleaned up incrementally.
 2.  **Test Coverage Gaps**:
     *   Simulation engine has strong coverage (unit + heavy scenario tests). Some newer UI features (hub, commitments view) lack dedicated tests.
-3.  **Import Plugin Error Handling**:
-    *   Edge cases in Ivy Wallet and Cashew import plugins could produce partial imports on malformed files. Validation coverage is being expanded.
+3.  **Import plugin edge cases**:
+    *   Ivy Wallet and Cashew plugins may still struggle on malformed files; core
+    import path now validates journals and uses staged restore (ADR-0006).

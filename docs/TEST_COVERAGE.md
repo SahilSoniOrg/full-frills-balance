@@ -4,14 +4,15 @@
 
 ```bash
 # Unit & integration tests (Jest)
-npm test                     # All tests with coverage report
+bun run test                 # All tests with coverage report (per-file thresholds)
+bun run verify               # typecheck + test:ci + lint
 
 # End-to-end tests (Playwright, web export)
-npm run test:e2e:build       # Build web export for E2E
-npm run serve:e2e            # Serve locally on port 8081
-npm run test:e2e             # Run Playwright suite
-npm run test:e2e:ui          # Interactive Playwright UI
-npm run test:e2e:debug       # Debug mode with inspector
+bun run test:e2e:build       # Build web export for E2E
+bun run serve:e2e            # Serve locally on port 8081
+bun run test:e2e             # Run Playwright suite
+bun run test:e2e:ui          # Interactive Playwright UI
+bun run test:e2e:debug       # Debug mode with inspector
 
 # Visual component testing
 npx expo start --dev-client  # Open /_design-preview for component gallery
@@ -85,6 +86,6 @@ npx expo start --dev-client  # Open /_design-preview for component gallery
 - **SharingService**: Multi-format output tested manually, no automated assertions.
 
 ## Notes
-- Coverage report is generated automatically on `npm test` (Jest `--collectCoverage`).
+- Coverage report is generated automatically on `bun run test` / `bun run test:ci` (Jest `--collectCoverage`).
 - Simulation engine tests are the most critical — they validate the Safe to Spend core invariant.
 - Keep this file updated when adding new test suites.

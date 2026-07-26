@@ -1,5 +1,7 @@
 # Architecture Entropy Remediation Plan — 2026-07-27
 
+> **Historical plan.** Remediation completed on `main`; see [ARCHITECTURE_ENTROPY_REMEDIATION_PROGRESS.md](ARCHITECTURE_ENTROPY_REMEDIATION_PROGRESS.md).
+
 ## Problem statement
 
 The accounting core is strong, but complexity is expanding at application seams. Command ownership is split between feature hooks and domain modules; broad repository façades invite unrelated behaviour; services expose UI-shaped contracts; and a few orchestration modules are absorbing cache, I/O, calculation, and persistence policies together.

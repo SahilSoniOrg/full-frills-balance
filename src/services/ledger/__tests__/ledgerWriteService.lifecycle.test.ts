@@ -1,8 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -79,6 +81,12 @@ describe('ledgerWriteService lifecycle', () => {
       expect(updated!.journalDate).toBeGreaterThanOrEqual(beforePost);
     });
 
+    it('throws when journal does not exist', async () => {
+      await expect(
+        ledgerWriteService.postJournal('missing-id' as JournalId, workplaceId),
+      ).rejects.toThrow(/Journal not found/);
+    });
+
     it('rejects posting a journal that is not PLANNED', async () => {
       const journal = await ledgerWriteService.createJournal(
         {
@@ -130,6 +138,122 @@ describe('ledgerWriteService lifecycle', () => {
       await expect(
         ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId),
       ).rejects.toThrow(/Only POSTED or SKIPPED journals can be reverted/);
+    });
+
+    it('reverts a SKIPPED journal back to PLANNED', async () => {
+      const skippedDate = Date.UTC(2024, 7, 10, 15, 30, 0);
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Skipped bill',
+          journalDate: skippedDate,
+          currencyCode: 'USD',
+          status: JournalStatus.SKIPPED,
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 40,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 40,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        workplaceId,
+      );
+
+      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await rebuildQueueService.flush();
+
+      const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
+      expect(updated?.status).toBe(JournalStatus.PLANNED);
+    });
+
+    it('reverts using midnight when metadata has no original planned date', async () => {
+      const postedAt = Date.UTC(2024, 8, 20, 18, 0, 0);
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Posted direct',
+          journalDate: postedAt,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 15,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 15,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        workplaceId,
+      );
+
+      await database.write(async () => {
+        await journalMetadataRepository.patch(
+          workplaceId,
+          journal.id as JournalId,
+          { note: 'no planned date here' },
+          'test',
+        );
+      });
+
+      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await rebuildQueueService.flush();
+
+      const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
+      expect(updated?.status).toBe(JournalStatus.PLANNED);
+      const midnight = new Date(postedAt);
+      midnight.setHours(0, 0, 0, 0);
+      expect(updated?.journalDate).toBe(midnight.getTime());
+    });
+
+    it('reverts using midnight when metadata JSON is invalid', async () => {
+      const postedAt = Date.UTC(2024, 9, 5, 9, 0, 0);
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Bad meta',
+          journalDate: postedAt,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 12,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 12,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        workplaceId,
+      );
+
+      await database.write(async () => {
+        const meta = await journalMetadataRepository.findByJournalId(
+          journal.id as JournalId,
+          workplaceId,
+        );
+        if (meta) {
+          await meta.update((record: JournalMetadata) => {
+            record.metadataJson = '{not-json';
+            record.updatedAt = new Date();
+          });
+        }
+      });
+
+      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await rebuildQueueService.flush();
+
+      const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
+      expect(updated?.status).toBe(JournalStatus.PLANNED);
     });
   });
 

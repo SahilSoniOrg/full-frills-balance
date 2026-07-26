@@ -1,5 +1,7 @@
 # Architecture Entropy Audit — 2026-07-27
 
+> **Point-in-time audit.** See [docs/README.md](README.md) for current doc hierarchy.
+
 ## Remediation status (updated 2026-07-27, grill round 2)
 
 Tracked in `ARCHITECTURE_ENTROPY_REMEDIATION_PROGRESS.md`. Finding-level status:
@@ -24,7 +26,7 @@ The codebase has a strong accounting core and several genuinely deep modules: th
 
 The architecture was **accumulating entropy at application boundaries**. The remediation plan (52 commits) addressed the highest-risk expansion patterns. **Residual risk** is mostly large view-models and historical docs—not unowned repository gateways.
 
-For the full original findings table and narrative, see git history of this file before the status table above, or `docs/ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md`.
+For the full original findings table and narrative, see git history of this file before the status table above, or [ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md](ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md).
 
 ## Completion checklist (grill round 2)
 

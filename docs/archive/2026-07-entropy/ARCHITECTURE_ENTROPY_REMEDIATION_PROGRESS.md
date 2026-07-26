@@ -1,5 +1,9 @@
 # Architecture entropy remediation — progress (2026-07-27)
 
+> **Snapshot.** Remediation for this audit is complete on `main`. For current doc
+> hierarchy, see [README.md](README.md). For ongoing eng queue, see
+> [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+
 Tracking against `ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md`. Status: **complete** for planned commits; optional historical doc cleanup only.
 
 ## Grill round 2 decisions (locked)

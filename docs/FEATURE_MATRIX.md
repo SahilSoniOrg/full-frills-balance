@@ -1,5 +1,7 @@
 # Feature Completeness Matrix
 
+**Last reviewed:** 2026-07-27 (UI inventory; not re-tested end-to-end). For engineering truth on money, export, and invariants, use [PROJECT_BIBLE.md](../PROJECT_BIBLE.md).
+
 | Feature | State | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Onboarding** | | | |

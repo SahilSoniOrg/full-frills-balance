@@ -5,7 +5,7 @@ Living design-review artifacts for Full Frills Balance, using the **deep Module*
 ## Start here
 
 1. **[AUDIT.md](./AUDIT.md)** — executive summary, cluster verdicts, ranked deepening backlog, Design-It-Twice decisions, pass-through hit list.
-2. **[surveys/](./surveys/)** — full Module-by-Module inventories from the 2026-07-24 whole-repo sweep (evidence for the AUDIT).
+2. **[surveys/](./surveys/)** — full Module-by-Module inventories from the 2026-07-24 sweep (see [surveys/README.md](./surveys/README.md) for staleness rules).
 3. Cursor canvas **`codebase-design-audit`** — interactive overview (open beside chat in Cursor).
 
 ## Survey index

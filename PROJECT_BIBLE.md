@@ -3,7 +3,7 @@
 The canonical knowledge base for this repository. When this file and any other
 document disagree, **this file wins** — then fix the other document.
 
-- **Last verified:** 2026-07-25 (against commit `facece9e`)
+- **Last verified:** 2026-07-27 (against commit `4bf1f905`)
 - **How to verify:** every count and claim below was measured by running the
   toolchain, not read from prose. Re-measure before trusting a stale date.
 
@@ -13,6 +13,7 @@ document disagree, **this file wins** — then fix the other document.
 |---|---|
 | `docs/ARCHITECTURE.md` | Layer map and subsystem detail |
 | `docs/adr/` | Architecture decision records (why things are the way they are) |
+| `docs/README.md` | Doc hierarchy and index |
 | `docs/IMPLEMENTATION_PLAN.md` | Active phased work queue |
 | `docs/codebase-design/AUDIT.md` | Module-depth / Interface design review |
 | `CONTEXT.md` | Domain glossary |
@@ -24,18 +25,18 @@ document disagree, **this file wins** — then fix the other document.
 A double-entry personal finance app. Offline-first: there is no backend and no
 account. The on-device SQLite database is the user's only copy of their data.
 
-| Property | Value (measured 2026-07-25) |
+| Property | Value (measured 2026-07-27) |
 |---|---|
 | Stack | Expo SDK 57, React Native 0.86, React 19.2, TypeScript 6 |
 | Data | WatermelonDB 0.28 → SQLite (native) / LokiJS (web + tests) |
 | Key-value | `react-native-mmkv` v4 (`src/utils/storage.ts`) |
-| Source size | 779 TS/TSX files, ~107k LOC under `src/` |
+| Source size | 790 TS/TSX files, ~113k LOC under `src/` |
 | Schema version | **28**, with **27** migrations (`src/data/database/migrations.ts`, 875 lines) |
 | Models | **16** files in `src/data/models/`, **15** registered in `Database.ts` (`BaseScopedModel` is abstract) |
-| Routes | 37 in `app/` + 6 in `app/(tabs)/` (Expo Router, file-based) |
+| Routes | 43 route files in `app/` (includes 6 tab screens under `app/(tabs)/`) |
 | Features | 14 under `src/features/` |
-| Tests | 101 suites, 668 tests, **all green**, 1 skipped |
-| Coverage | **35.4%** statements / **26.9%** branches |
+| Tests | 133 suites, 826 tests (825 passed, 1 skipped) — re-run `bun run test` to refresh |
+| Coverage | Jest global + per-file thresholds in `jest.config.js`; `bun run verify` must pass |
 | Typecheck | clean, ~6s |
 
 > Anything that states "14 models", "RN 0.83" or "Expo SDK 55" is stale.
@@ -104,14 +105,14 @@ workplace-scoped until proven otherwise.
 
 | Store | Contents | Source of truth? | In the export? |
 |---|---|---|---|
-| SQLite (WatermelonDB) | All 15 registered models | **Yes** | 12 of 15 tables |
+| SQLite (WatermelonDB) | All 15 registered models | **Yes** | 14 workplace tables + global `currencies` / `exchange_rates` via `workplaceDataTables.ts` |
 | MMKV | UI preferences, processed-SMS ids, dashboard/wealth snapshot caches, rebuild queue + locks, integrity schema marker, onboarding draft | No (caches/prefs) | Preferences only |
 | AsyncStorage | Legacy keys, read once by the MMKV migration | Deprecated | n/a |
 | Filesystem | Export ZIP (`backup.json`) | Backup artifact | user-managed |
 
-**Not in the export:** `currencies`, `exchange_rates`, `balance_snapshots`, other
-workplaces, and most MMKV keys. See ADR-0006 — the export is **not** currently a
-complete backup.
+**Still not in the export:** other workplaces (export is scoped to the active
+workplace), and most MMKV keys. Multi-workplace users need a backup strategy per
+workplace or a future “export all” feature. See ADR-0006.
 
 ---
 
@@ -130,7 +131,7 @@ holds in production today.
 | 6 | Normal-balance sign rules (ASSET/EXPENSE debit-positive, etc.) | `BalanceEffects.signFor/effect` | High, but **duplicated in raw SQL** `CASE` strings and a binary multiplier | TS and SQL can drift silently |
 | 7 | Soft-deleted rows are excluded everywhere | `deleted_at IS NULL` across queries | High | — |
 | 8 | Money arithmetic is rounded at every boundary | `src/utils/money.ts` | Medium — **discipline-based, not enforced** | `Money.multiply` doesn't round; ADR-0003 |
-| 9 | Cross-currency aggregates use a consistent rate | **Violated.** Write path uses stored `exchange_rate`; read paths use spot and fall back to `1.0` | **Low** | Wrong numbers today for multi-currency users (ADR-0005) |
+| 9 | Cross-currency aggregates use a consistent rate | `convertAmount` (`currencyConversion.ts`) on read paths; write path still uses stored `exchange_rate` in `checkJournal` | **Medium** — parity improved; historical vs spot policy still matters | Mis-revaluation if spot used where historical rate is required (ADR-0005) |
 | 10 | Every mutation is audit-logged | `ledgerWriteService`, `accountDomainService` | Medium | Import and integrity repairs are not logged |
 | 11 | Referential integrity (no FKs in SQLite) | Null-`account_id` scan in integrity service | Medium | Deleting an account **orphans its transactions** |
 | 12 | SMS ingestion is idempotent | fingerprint + `original_sms_id` + processed-id set | Medium | Sub-threshold duplicates can auto-post |
@@ -204,7 +205,7 @@ Ordered by expected return, not severity alone. P0 = do now. **Resolved items** 
 | ~~**P1**~~ | ~~Zero migration tests~~ — **smoke test** | `migrations.test.ts` + CI step | — |
 | **P1** | Journal post/revert/recover is 0% covered | `ledgerWriteService.ts:244-420` | M |
 | **P1** | `checkJournal` is mocked to always-valid in journal save tests | `JournalService.test.ts:44-49` | S |
-| **P1** | Export omits 3 tables and all but one workplace | `export-service.ts:432-444` | S |
+| **P1** | Export is single-workplace only | `export-service.ts` + `workplaceDataTables.ts` | M — “export all workplaces” or documented workaround |
 | **P1** | Secrets behind `EXPO_PUBLIC_` (bundled): `SENTRY_AUTH_TOKEN`, `HF_TOKEN` | `.env*` | S — rotate |
 | **P1** | `metro.config.js` resolves 5 **undeclared** packages by absolute path; `rxjs` used in 56 files is a transitive | `metro.config.js:21-50` | S |
 | **P1** | `reset-project` script can delete `app/` and `scripts/` | `package.json:7` | S — delete |
@@ -297,16 +298,15 @@ feature.
 
 ## 13. Known risks
 
-1. **Silently wrong multi-currency figures today** (ADR-0005) — worst active bug.
-2. **Restore can destroy data** (ADR-0006).
-3. **27 untested migrations** — a bad migration is unrecoverable and un-hotfixable.
-4. **Privacy policy is stronger than the implementation** — amounts and session
-   replay go to PostHog while `PRIVACY.MD` denies both. Trust/legal exposure for
-   an open-source finance app.
-5. **WatermelonDB is "untested on New Architecture"** per `expo-doctor`, on a
-   pre-release version, behind a personal-fork config plugin.
-6. **Bus factor of one**, with onboarding that until now could not produce a
-   running app without maintainer contact.
+1. **Multi-workplace backup gap** — export/import targets one workplace; disaster
+   recovery for multiple workplaces is manual.
+2. **Migration harness is smoke-only** — `migrations.test.ts` guards version 28 on
+   Loki; there is no v1→v28 fixture suite yet. A bad migration is still hard to
+   hotfix.
+3. **WatermelonDB on New Architecture** — `expo-doctor` warns; pre-release WM
+   version behind a personal-fork config plugin (SDK 52-named fork on SDK 57).
+4. **Bus factor of one** on the database plugin fork and deep simulation domain.
+5. **`bun run verify`** — typecheck, Jest with coverage thresholds, lint (must be green before merge).
 
 ---
 
@@ -318,16 +318,13 @@ feature.
 - Remove the `reset-project` footgun and the redundant `postinstall`
 
 **Next (weeks)**
-- Migration test harness (v1 → v28 fixtures) — unblocks every schema change after
-- Integration tests for journal post/revert/recover against the real in-memory DB
-- One `convertAmount` API; delete `getRateSafe`
-- Un-mock `checkJournal` in save tests
+- Migration fixture harness (v1 → v28) beyond the current smoke test
+- Multi-workplace export strategy (product + engineering)
 
 **Then (a quarter)**
-- Stage-then-swap restore
-- Generate the SQL sign rules from the TS sign table (or parity-test them)
+- Generate the SQL sign rules from the TS sign table (parity test exists; codegen optional)
 - Collapse `AppText` onto the design-system `Text`
-- Make import schema-driven to mirror export
+- Deepen import schema-driven path (registry started in Phase 4)
 
 **Deliberately not doing**
 - Rewriting the simulation engine (well-tested, genuinely deep — protect it)
