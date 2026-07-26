@@ -1,7 +1,7 @@
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SankeyLink, SankeyNode } from '@/src/services/report-service';
+import { SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useMemo } from 'react';
 import { Dimensions, View } from 'react-native';

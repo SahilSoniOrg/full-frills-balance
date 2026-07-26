@@ -1,17 +1,24 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import Account from '@/src/data/models/Account';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import {
-  SmsRuleActions,
-  SmsRuleCondition,
   SmsRuleDisposition,
   SmsRuleMode,
 } from '@/src/services/ledger/RuleMatcher';
-import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
+import {
+  buildSmsRulePreviewInput,
+  buildStructuredSmsRuleConditions,
+  getSmsRuleConditionValue,
+  isSmsRuleFormValid,
+  parseSmsRuleActions,
+  parseSmsRuleConditions,
+  shouldShowSmsRuleAccountMapping,
+  smsRulePreviewHasConditions,
+  validateSmsRuleRegexPatterns,
+} from '@/src/services/sms/smsRuleFormPolicy';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
@@ -74,51 +81,6 @@ type SeedInput = {
   categoryAccountId?: AccountId;
 };
 
-function parseConditions(rule: TransactionAutoPostRule): SmsRuleCondition[] {
-  if (!rule.conditionsJson) return [];
-  try {
-    const parsed = JSON.parse(rule.conditionsJson);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function parseActions(rule: TransactionAutoPostRule): SmsRuleActions {
-  if (rule.actionsJson) {
-    try {
-      const parsed = JSON.parse(rule.actionsJson);
-      if (parsed && typeof parsed === 'object') {
-        return {
-          disposition:
-            parsed.disposition === 'ignore' || parsed.disposition === 'review'
-              ? parsed.disposition
-              : 'auto_post',
-          sourceAccountId: parsed.sourceAccountId || rule.sourceAccountId || undefined,
-          categoryAccountId: parsed.categoryAccountId || rule.categoryAccountId || undefined,
-          journalDescription: parsed.journalDescription || undefined,
-        };
-      }
-    } catch {
-      // fallback below
-    }
-  }
-
-  return {
-    disposition: 'auto_post',
-    sourceAccountId: rule.sourceAccountId || undefined,
-    categoryAccountId: rule.categoryAccountId || undefined,
-  };
-}
-
-type ConditionField = SmsRuleCondition['field'];
-function getConditionValue(
-  conditions: SmsRuleCondition[],
-  field: ConditionField,
-): SmsRuleCondition | undefined {
-  return conditions.find(condition => condition.field === field);
-}
-
 export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleFormViewModel {
   const { workplaceId } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
@@ -154,8 +116,8 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
       try {
         const rule = await transactionAutoPostRuleRepository.find(id);
         if (!rule) return;
-        const conditions = parseConditions(rule);
-        const actions = parseActions(rule);
+        const conditions = parseSmsRuleConditions(rule);
+        const actions = parseSmsRuleActions(rule);
         const structured = conditions.length > 0;
 
         setMode(structured ? 'builder' : 'regex');
@@ -169,16 +131,16 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
         setIsActive(rule.isActive);
 
         if (structured) {
-          setSenderContains(getConditionValue(conditions, 'sender')?.value || '');
-          setBodyContains(getConditionValue(conditions, 'body')?.value || '');
-          setMerchantContains(getConditionValue(conditions, 'merchant')?.value || '');
-          setAccountSourceContains(getConditionValue(conditions, 'account_source')?.value || '');
+          setSenderContains(getSmsRuleConditionValue(conditions, 'sender')?.value || '');
+          setBodyContains(getSmsRuleConditionValue(conditions, 'body')?.value || '');
+          setMerchantContains(getSmsRuleConditionValue(conditions, 'merchant')?.value || '');
+          setAccountSourceContains(getSmsRuleConditionValue(conditions, 'account_source')?.value || '');
           setDirection(
-            (getConditionValue(conditions, 'direction')?.value as
+            (getSmsRuleConditionValue(conditions, 'direction')?.value as
               '' | 'debit' | 'credit' | undefined) || '',
           );
-          setCurrencyCode(getConditionValue(conditions, 'currency')?.value || '');
-          const amountCondition = getConditionValue(conditions, 'amount');
+          setCurrencyCode(getSmsRuleConditionValue(conditions, 'currency')?.value || '');
+          const amountCondition = getSmsRuleConditionValue(conditions, 'amount');
           setAmountOperator(
             (amountCondition?.operator as '' | 'eq' | 'gt' | 'lt' | 'between' | undefined) || '',
           );
@@ -198,81 +160,48 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     loadRule();
   }, [id]);
 
-  const structuredConditions = useMemo<SmsRuleCondition[]>(() => {
-    const amountNumber = amountValue.trim() ? Number(amountValue.trim()) : undefined;
-    const amountSecondNumber = amountSecondaryValue.trim()
-      ? Number(amountSecondaryValue.trim())
-      : undefined;
-
-    const conditions: SmsRuleCondition[] = [];
-    if (senderContains.trim()) {
-      conditions.push({ field: 'sender', operator: 'contains', value: senderContains.trim() });
-    }
-    if (bodyContains.trim()) {
-      conditions.push({ field: 'body', operator: 'contains', value: bodyContains.trim() });
-    }
-    if (merchantContains.trim()) {
-      conditions.push({ field: 'merchant', operator: 'contains', value: merchantContains.trim() });
-    }
-    if (accountSourceContains.trim()) {
-      conditions.push({
-        field: 'account_source',
-        operator: 'contains',
-        value: accountSourceContains.trim(),
-      });
-    }
-    if (direction) {
-      conditions.push({ field: 'direction', operator: 'is', value: direction });
-    }
-    if (currencyCode.trim()) {
-      conditions.push({
-        field: 'currency',
-        operator: 'is',
-        value: currencyCode.trim().toUpperCase(),
-      });
-    }
-    if (amountOperator && amountNumber !== undefined && !Number.isNaN(amountNumber)) {
-      conditions.push({
-        field: 'amount',
-        operator: amountOperator,
-        minValue: amountNumber,
-        maxValue:
-          amountOperator === 'between' &&
-          amountSecondNumber !== undefined &&
-          !Number.isNaN(amountSecondNumber)
-            ? amountSecondNumber
-            : undefined,
-      });
-    }
-
-    return conditions;
-  }, [
-    accountSourceContains,
-    amountOperator,
-    amountSecondaryValue,
-    amountValue,
-    bodyContains,
-    currencyCode,
-    direction,
-    merchantContains,
-    senderContains,
-  ]);
+  const structuredConditions = useMemo(
+    () =>
+      buildStructuredSmsRuleConditions({
+        senderContains,
+        bodyContains,
+        merchantContains,
+        accountSourceContains,
+        direction,
+        currencyCode,
+        amountOperator,
+        amountValue,
+        amountSecondaryValue,
+      }),
+    [
+      accountSourceContains,
+      amountOperator,
+      amountSecondaryValue,
+      amountValue,
+      bodyContains,
+      currencyCode,
+      direction,
+      merchantContains,
+      senderContains,
+    ],
+  );
 
   useEffect(() => {
     let active = true;
 
     const loadPreview = async () => {
-      const input: SmsRulePreviewInput =
-        mode === 'builder'
-          ? { mode, conditions: structuredConditions }
-          : {
-              mode,
-              senderMatch: legacySenderMatch.trim(),
-              bodyMatch: legacyBodyMatch.trim() || undefined,
-            };
+      const input = buildSmsRulePreviewInput(
+        mode,
+        structuredConditions,
+        legacySenderMatch,
+        legacyBodyMatch,
+      );
 
-      const hasConditions =
-        mode === 'builder' ? structuredConditions.length > 0 : legacySenderMatch.trim().length > 0;
+      const hasConditions = smsRulePreviewHasConditions(
+        mode,
+        structuredConditions,
+        legacySenderMatch,
+      );
 
       if (!hasConditions) {
         setPreviewMatches([]);
@@ -297,38 +226,30 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     };
   }, [legacyBodyMatch, legacySenderMatch, mode, structuredConditions]);
 
-  const showAccountMapping = disposition === 'auto_post' || disposition === 'review';
-  const hasBuilderConditions = structuredConditions.length > 0;
-  const hasRegexConditions = legacySenderMatch.trim().length > 0;
+  const showAccountMapping = shouldShowSmsRuleAccountMapping(disposition);
   const priorityNumber = priority.trim() ? Number(priority.trim()) : 100;
-  const priorityIsValid = Number.isFinite(priorityNumber) && priorityNumber >= 0;
-  const amountIsValid = amountOperator
-    ? amountValue.trim().length > 0 &&
-      (amountOperator !== 'between' || amountSecondaryValue.trim().length > 0)
-    : true;
 
-  const accountsAreValid =
-    disposition === 'auto_post'
-      ? sourceAccountId !== EMPTY_ACCOUNT_ID && categoryAccountId !== EMPTY_ACCOUNT_ID
-      : true;
-
-  const isValid =
-    (mode === 'builder' ? hasBuilderConditions : hasRegexConditions) &&
-    amountIsValid &&
-    priorityIsValid &&
-    accountsAreValid;
+  const isValid = isSmsRuleFormValid({
+    mode,
+    legacySenderMatch,
+    legacyBodyMatch,
+    structuredConditions,
+    amountOperator,
+    amountValue,
+    amountSecondaryValue,
+    priority,
+    disposition,
+    sourceAccountId,
+    categoryAccountId,
+    emptyAccountId: EMPTY_ACCOUNT_ID,
+  });
 
   const handleSave = async () => {
     if (!isValid) return;
 
-    if (mode === 'regex') {
-      try {
-        new RegExp(legacySenderMatch.trim(), 'i');
-        if (legacyBodyMatch.trim()) new RegExp(legacyBodyMatch.trim(), 'i');
-      } catch {
-        toast.error('Invalid regex syntax in advanced match fields');
-        return;
-      }
+    if (mode === 'regex' && !validateSmsRuleRegexPatterns(legacySenderMatch, legacyBodyMatch)) {
+      toast.error('Invalid regex syntax in advanced match fields');
+      return;
     }
 
     setIsSubmitting(true);

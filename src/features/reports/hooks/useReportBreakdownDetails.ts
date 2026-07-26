@@ -2,15 +2,15 @@ import { Theme } from '@/src/constants/design-tokens';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
 import { useObservable } from '@/src/hooks/useObservable';
+import { reportService } from '@/src/services/report-service';
 import {
   CategoryBreakdown,
   ExpenseCategory,
   IncomeVsExpense,
-  reportService,
-} from '@/src/services/report-service';
+} from '@/src/services/reports/reportSnapshot';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { useMemo, useState } from 'react';
-import { combineLatest, of } from 'rxjs';
+import { of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 interface UseReportBreakdownDetailsProps {
@@ -72,31 +72,25 @@ export function useReportBreakdownDetails({
       if (!selectedPeriod)
         return of({ expenses: [] as ExpenseCategory[], income: [] as ExpenseCategory[] });
 
-      return combineLatest([
-        reportService.observeExpenseBreakdown(
+      return reportService
+        .observeReportSnapshot(
           workplaceId,
           selectedPeriod.start,
           selectedPeriod.end,
           targetCurrency,
-        ),
-        reportService.observeIncomeBreakdown(
-          workplaceId,
-          selectedPeriod.start,
-          selectedPeriod.end,
-          targetCurrency,
-        ),
-      ]).pipe(
-        map(([expenses, income]) => ({
-          expenses: expenses.map((e, index) => ({
-            ...e,
-            color: expensePalette[index % expensePalette.length],
+        )
+        .pipe(
+          map(snapshot => ({
+            expenses: snapshot.expenseBreakdown.map((e, index) => ({
+              ...e,
+              color: expensePalette[index % expensePalette.length],
+            })),
+            income: snapshot.incomeBreakdown.map((i, index) => ({
+              ...i,
+              color: incomePalette[index % incomePalette.length],
+            })),
           })),
-          income: income.map((i, index) => ({
-            ...i,
-            color: incomePalette[index % incomePalette.length],
-          })),
-        })),
-      );
+        );
     },
     [selectedPeriod, targetCurrency, expensePalette, incomePalette, workplaceId],
     { expenses: [] as ExpenseCategory[], income: [] as ExpenseCategory[] },

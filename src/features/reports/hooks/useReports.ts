@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { Animation } from '@/src/constants';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceJournalMeta,
@@ -150,8 +150,8 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   );
 
   const { data: accounts = [] } = useObservableWithEnrichment(
-    () => accountRepository.observeAll(workplaceId),
-    async () => await accountRepository.findAll(workplaceId),
+    () => accountQueries.observeAll(workplaceId),
+    async () => await accountQueries.findAll(workplaceId),
     [workplaceId],
     [],
   );

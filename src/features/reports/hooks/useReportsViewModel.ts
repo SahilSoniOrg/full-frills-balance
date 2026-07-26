@@ -3,7 +3,7 @@ import Account from '@/src/data/models/Account';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
-import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
+import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
 import { AccountId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';

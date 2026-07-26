@@ -1,4 +1,7 @@
-import { AccountPersistenceInput, accountRepository } from '@/src/data/repositories/AccountRepository';
+import {
+  AccountPersistenceInput,
+  accountRepository,
+} from '@/src/data/repositories/AccountRepository';
 import { database } from '@/src/data/database/Database';
 import { AccountAuditState, AccountId, WorkplaceId } from '@/src/types/domain';
 

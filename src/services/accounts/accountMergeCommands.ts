@@ -98,11 +98,7 @@ export async function mergeAccounts(
           filteredSourceIds,
           targetAccountId,
         ),
-        budgetWriteService.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ),
+        budgetWriteService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
         accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
         balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
           ...filteredSourceIds,

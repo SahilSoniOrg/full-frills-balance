@@ -50,7 +50,10 @@ export async function deleteAccount(
   });
 }
 
-export async function recoverAccount(accountId: AccountId, workplaceId: WorkplaceId): Promise<void> {
+export async function recoverAccount(
+  accountId: AccountId,
+  workplaceId: WorkplaceId,
+): Promise<void> {
   const account = await accountRepository.findWithDeleted(workplaceId, accountId);
   if (!account) return;
 

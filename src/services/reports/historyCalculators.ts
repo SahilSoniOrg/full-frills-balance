@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
-import { IncomeVsExpense } from '@/src/services/report-service';
+import { IncomeVsExpense } from '@/src/services/reports/reportSnapshot';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';

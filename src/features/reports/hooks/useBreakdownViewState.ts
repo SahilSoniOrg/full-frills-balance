@@ -1,5 +1,5 @@
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { ExpenseCategory } from '@/src/services/report-service';
+import { ExpenseCategory } from '@/src/services/reports/reportSnapshot';
 import { AccountId } from '@/src/types/domain';
 import { useMemo } from 'react';
 

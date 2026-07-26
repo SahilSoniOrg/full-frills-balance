@@ -3,7 +3,7 @@ import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { HeatmapPoint } from '@/src/services/report-service';
+import { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';

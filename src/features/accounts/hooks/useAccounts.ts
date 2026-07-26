@@ -4,7 +4,10 @@
 import { IconName } from '@/src/components/core';
 import { Animation } from '@/src/constants';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { deleteAccount as deleteAccountCommand, recoverAccount as recoverAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
+import {
+  deleteAccount as deleteAccountCommand,
+  recoverAccount as recoverAccountCommand,
+} from '@/src/services/accounts/accountDeleteCommands';
 import { reconcileAccount as reconcileAccountCommand } from '@/src/services/accounts/accountReconcileCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';

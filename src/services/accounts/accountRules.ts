@@ -44,7 +44,10 @@ export function assertParentHasNoTransactions(parentName: string): void {
   throw new Error(`Account "${parentName}" has transactions and cannot be used as a parent.`);
 }
 
-export function shouldPostInitialBalance(initialBalance: number | undefined, precision: number): boolean {
+export function shouldPostInitialBalance(
+  initialBalance: number | undefined,
+  precision: number,
+): boolean {
   return !!initialBalance && Math.abs(initialBalance) > getEpsilon(precision);
 }
 

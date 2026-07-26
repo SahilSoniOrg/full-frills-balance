@@ -4,11 +4,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
-export async function reconcileAccount(
-  accountId: AccountId,
-  date: Date,
-  workplaceId: WorkplaceId,
-) {
+export async function reconcileAccount(accountId: AccountId, date: Date, workplaceId: WorkplaceId) {
   const account = await accountRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
 

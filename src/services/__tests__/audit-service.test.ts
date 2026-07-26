@@ -46,14 +46,9 @@ describe('AuditService', () => {
       else if (action === AuditAction.DELETE)
         await recoverAccount(id as AccountId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt)
-          await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
+        if (changes.before.deletedAt) await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
         else
-          await revertAccountFromAuditState(
-            'wp-1' as WorkplaceId,
-            id as AccountId,
-            changes.before,
-          );
+          await revertAccountFromAuditState('wp-1' as WorkplaceId, id as AccountId, changes.before);
       }
     });
 
@@ -226,10 +221,7 @@ describe('AuditService', () => {
         );
         const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         console.log('Result:', res);
-        expect(deleteAccount).toHaveBeenCalledWith(
-          'ent1' as AccountId,
-          'wp-1' as WorkplaceId,
-        );
+        expect(deleteAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
       });
 
       it('should revert DELETE by recovering account', async () => {
@@ -237,10 +229,7 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.DELETE }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(recoverAccount).toHaveBeenCalledWith(
-          'ent1' as AccountId,
-          'wp-1' as WorkplaceId,
-        );
+        expect(recoverAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
       });
 
       it('should revert UPDATE by restoring previous state', async () => {
@@ -262,10 +251,7 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(deleteAccount).toHaveBeenCalledWith(
-          'ent1' as AccountId,
-          'wp-1' as WorkplaceId,
-        );
+        expect(deleteAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
       });
     });
 

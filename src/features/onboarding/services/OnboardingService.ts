@@ -173,9 +173,7 @@ export class OnboardingService {
       seenNames.add((def?.name || categoryName).toLowerCase());
     }
 
-    await Promise.all(
-      accountCreationInputs.map(input => createAccount(targetWorkplaceId, input)),
-    );
+    await Promise.all(accountCreationInputs.map(input => createAccount(targetWorkplaceId, input)));
 
     // 5. Complete basic onboarding (sets name and default currency)
     // This is moved to the end to ensure it only persists if DB operations succeed

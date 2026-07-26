@@ -6,9 +6,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import {
   calculateCalendarHeatmapFromHistory,
-  calculateCalendarHeatmapFromTransactions,
   calculateSpendingHeatmapFromTransactions,
-  HeatmapPoint,
 } from '@/src/services/reports/heatmapCalculators';
 import { calculateHistoryFromDeltas } from '@/src/services/reports/historyCalculators';
 import {
@@ -16,13 +14,18 @@ import {
   getScopedReportingDeltas,
   mapTransactionsToReportingDeltas,
 } from '@/src/services/reports/reportingDeltaEngine';
-import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
-import {
-  calculateSankeyDataFromSummaries,
+import type {
+  CategoryBreakdown,
+  ExpenseCategory,
+  HeatmapPoint,
+  IncomeVsExpense,
+  ReportSnapshot,
   SankeyData,
   SankeyLink,
   SankeyNode,
-} from '@/src/services/reports/sankeyCalculator';
+} from '@/src/services/reports/reportSnapshot';
+import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
+import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
@@ -39,43 +42,21 @@ import { switchMap } from 'rxjs/operators';
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 
-export interface ExpenseCategory {
-  accountId: AccountId;
-  accountName: string;
-  amount: number;
-  percentage: number;
-  color?: string; // For chart
-}
-
-export interface IncomeVsExpense {
-  period: string; // Label (e.g., "Jan", "Week 1")
-  startDate: number;
-  endDate: number;
-  income: number;
-  expense: number;
-}
-
-export interface CategoryBreakdown {
-  category: string; // AccountSubtype
-  amount: number;
-  percentage: number;
-  color?: string;
-}
-
-export type { HeatmapPoint, SankeyData, SankeyLink, SankeyNode };
-
-export interface ReportSnapshot {
-  expenseBreakdown: ExpenseCategory[];
-  incomeBreakdown: ExpenseCategory[];
-  expenseCategoryBreakdown: CategoryBreakdown[];
-  incomeCategoryBreakdown: CategoryBreakdown[];
-  incomeVsExpenseHistory: IncomeVsExpense[];
-  incomeVsExpense: { income: number; expense: number };
-  dailyIncomeVsExpense: { date: number; income: number; expense: number }[];
-  sankeyData: SankeyData;
-  spendingHeatmap: HeatmapPoint[];
-  calendarHeatmap: HeatmapPoint[]; // reuse HeatmapPoint: x=dayOfWeek, y=weekOfMonth
-}
+/**
+ * Report presentation types now live in the chart-neutral snapshot contract
+ * (`@/src/services/reports/reportSnapshot`). Re-exported here for callers that
+ * still reference the service; new consumers should import from the contract.
+ */
+export type {
+  CategoryBreakdown,
+  ExpenseCategory,
+  HeatmapPoint,
+  IncomeVsExpense,
+  ReportSnapshot,
+  SankeyData,
+  SankeyLink,
+  SankeyNode,
+};
 
 export class ReportService {
   /**
@@ -505,19 +486,14 @@ export class ReportService {
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<SankeyData> {
-    const [incomeSummary, expenseCategorySummary] = await Promise.all([
-      this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
-      this.getCategoryBreakdown(
-        AccountType.EXPENSE,
-        workplaceId,
-        startDate,
-        endDate,
-        targetCurrency,
-        filterAccountIds,
-      ),
-    ]);
-
-    return calculateSankeyDataFromSummaries(incomeSummary, expenseCategorySummary);
+    const snapshot = await this.getReportSnapshot(
+      workplaceId,
+      startDate,
+      endDate,
+      targetCurrency,
+      filterAccountIds,
+    );
+    return snapshot.sankeyData;
   }
 
   /**
@@ -530,22 +506,14 @@ export class ReportService {
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<HeatmapPoint[]> {
-    const { currency, expenseAccounts } = await this.getReportAccounts(workplaceId, targetCurrency);
-    let accounts = expenseAccounts;
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      accounts = accounts.filter(a => filterAccountIds.includes(a.id));
-    }
-
-    const accountIds = accounts.map(a => a.id);
-    const transactions = await transactionRepository.findByAccountsAndDateRange(
+    const snapshot = await this.getReportSnapshot(
       workplaceId,
-      accountIds,
       startDate,
       endDate,
+      targetCurrency,
+      filterAccountIds,
     );
-    const converted = await convertReportTransactions(transactions, currency, accounts);
-
-    return calculateSpendingHeatmapFromTransactions(converted);
+    return snapshot.spendingHeatmap;
   }
 
   /**
@@ -637,23 +605,14 @@ export class ReportService {
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<HeatmapPoint[]> {
-    const { currency, expenseAccounts } = await this.getReportAccounts(workplaceId, targetCurrency);
-    let accounts = expenseAccounts;
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      accounts = accounts.filter(a => filterAccountIds.includes(a.id));
-    }
-    const accountIds = accounts.map(a => a.id);
-    if (accountIds.length === 0) return [];
-
-    const transactions = await transactionRepository.findByAccountsAndDateRange(
+    const snapshot = await this.getReportSnapshot(
       workplaceId,
-      accountIds,
       startDate,
       endDate,
+      targetCurrency,
+      filterAccountIds,
     );
-    const converted = await convertReportTransactions(transactions, currency, accounts);
-
-    return calculateCalendarHeatmapFromTransactions(converted, startDate, endDate);
+    return snapshot.calendarHeatmap;
   }
 }
 

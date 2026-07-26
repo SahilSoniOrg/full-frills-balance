@@ -6,7 +6,7 @@ import TransactionInboxRecord, {
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import {
   SmsRuleDraftInput,
   transactionAutoPostRuleRepository,
@@ -254,7 +254,10 @@ export class SmsRuleEngine {
     },
     workplaceId: WorkplaceId,
   ): Promise<SmsRuleSuggestion | null> {
-    const journals = await journalRepository.findByIds(workplaceId, group.journalIds.slice(0, 10));
+    const journals = await journalQueryRepository.findByIds(
+      workplaceId,
+      group.journalIds.slice(0, 10),
+    );
     const accountIds = new Set<AccountId>();
     const journalTransactions = new Map<JournalId, Transaction[]>();
 

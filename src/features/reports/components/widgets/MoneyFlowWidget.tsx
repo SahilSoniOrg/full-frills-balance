@@ -1,7 +1,7 @@
 import { SankeyChart } from '@/src/components/charts/SankeyChart';
 import { AppConfig } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
-import { SankeyData } from '@/src/services/report-service';
+import { SankeyData } from '@/src/services/reports/reportSnapshot';
 
 export interface MoneyFlowWidgetProps {
   sankeyData: SankeyData;
