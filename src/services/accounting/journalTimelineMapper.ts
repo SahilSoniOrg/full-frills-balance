@@ -1,21 +1,24 @@
-import { TransactionCardProps } from '@/src/components/common/TransactionCard';
-import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
-import { buildTransactionAccountBadges } from '@/src/services/accounting/transactionAccountBadges';
 import { buildCounterAccountChips } from '@/src/services/accounting/displayTransactionCounterAccounts';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { buildTimelineAccountBadges } from '@/src/services/accounting/timelineAccountBadges';
 import {
   DisplayTransaction,
   EnrichedJournal,
   JournalDisplayType,
   SemanticType,
 } from '@/src/types/domain';
+import {
+  JournalTimelineIconKey,
+  JournalTimelineItem,
+  JournalTimelinePresentation,
+} from '@/src/types/journalTimeline';
 
 export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
-  typeIcon: IconName;
+  typeIcon: JournalTimelineIconKey;
   amountPrefix: string;
 } {
-  let typeIcon: IconName = 'document';
+  let typeIcon: JournalTimelineIconKey = 'document';
   let amountPrefix = '';
 
   if (displayType === JournalDisplayType.INCOME) {
@@ -32,7 +35,7 @@ export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
 }
 
 export function ledgerLineChrome(isIncrease: boolean): {
-  typeIcon: IconName;
+  typeIcon: JournalTimelineIconKey;
   amountPrefix: string;
 } {
   return {
@@ -41,20 +44,31 @@ export function ledgerLineChrome(isIncrease: boolean): {
   };
 }
 
-/**
- * Maps an EnrichedJournal model to props compatible with TransactionCard
- */
-export function mapJournalToCardProps(
-  journal: EnrichedJournal,
-): Omit<TransactionCardProps, 'onPress'> {
+function toTimelinePresentation(
+  displayType: JournalDisplayType,
+  semanticLabel: string | undefined,
+  semanticType: SemanticType | undefined,
+  chrome: ReturnType<typeof journalDisplayTypeChrome>,
+): JournalTimelinePresentation {
+  const presentation = journalPresenter.getPresentation(displayType, semanticLabel, semanticType);
+  return {
+    label: presentation.label,
+    typeColorKey: presentation.colorKey,
+    typeIcon: chrome.typeIcon,
+    amountPrefix: chrome.amountPrefix,
+  };
+}
+
+export function mapJournalToTimelineItem(journal: EnrichedJournal): JournalTimelineItem {
   const displayType = journal.displayType as JournalDisplayType;
-  const presentation = journalPresenter.getPresentation(
+  const chrome = journalDisplayTypeChrome(displayType);
+  const presentation = toTimelinePresentation(
     displayType,
     journal.semanticLabel,
     journal.semanticType,
+    chrome,
   );
-  const { typeIcon, amountPrefix } = journalDisplayTypeChrome(displayType);
-  const badges = buildTransactionAccountBadges(journal.accounts, { withFromToPrefixes: true });
+  const badges = buildTimelineAccountBadges(journal.accounts, { withFromToPrefixes: true });
 
   const defaultTitle =
     displayType === JournalDisplayType.TRANSFER
@@ -66,26 +80,23 @@ export function mapJournalToCardProps(
     amount: journal.totalAmount,
     currencyCode: journal.currencyCode,
     transactionDate: journal.journalDate,
-    presentation: {
-      label: presentation.label,
-      typeColor: presentation.colorKey,
-      typeIcon,
-      amountPrefix,
-    },
+    presentation,
     badges,
     notes: journal.notes,
   };
 }
 
-export function mapLedgerTransactionToCardProps(
+export function mapLedgerTransactionToTimelineItem(
   transaction: DisplayTransaction,
-): Omit<TransactionCardProps, 'onPress'> {
-  const base = journalPresenter.getPresentation(
-    transaction.displayType as JournalDisplayType,
+): JournalTimelineItem {
+  const displayType = transaction.displayType as JournalDisplayType;
+  const chrome = ledgerLineChrome(transaction.isIncrease);
+  const presentation = toTimelinePresentation(
+    displayType,
     transaction.semanticLabel,
     transaction.semanticType as SemanticType | undefined,
+    chrome,
   );
-  const { typeIcon, amountPrefix } = ledgerLineChrome(transaction.isIncrease);
   const counterChips = buildCounterAccountChips(transaction);
 
   return {
@@ -93,13 +104,8 @@ export function mapLedgerTransactionToCardProps(
     amount: transaction.amount,
     currencyCode: transaction.currencyCode,
     transactionDate: transaction.transactionDate,
-    presentation: {
-      label: base.label,
-      typeColor: base.colorKey,
-      typeIcon,
-      amountPrefix,
-    },
-    badges: buildTransactionAccountBadges(counterChips),
+    presentation,
+    badges: buildTimelineAccountBadges(counterChips),
     notes: transaction.notes,
   };
 }

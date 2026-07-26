@@ -66,7 +66,9 @@ describe('planned payment commands (integration)', () => {
     const reloaded = await plannedPaymentRepository.find(WP, created.id as PlannedPaymentId);
     expect(reloaded?.name).toBe('Monthly rent');
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id as PlannedPaymentId]);
+    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
+      created.id as PlannedPaymentId,
+    ]);
     expect(journals.length).toBeGreaterThan(0);
     expect(journals.some(j => j.status === JournalStatus.PLANNED)).toBe(true);
   });

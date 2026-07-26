@@ -1,22 +1,7 @@
-import { mapLedgerTransactionToCardProps } from '@/src/services/accounting/transactionCardPresentation';
-import { DisplayTransaction } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 
 export type { DisplayCounterAccount as CounterAccountChip } from '@/src/types/domain';
 export { buildCounterAccountChips } from '@/src/services/accounting/displayTransactionCounterAccounts';
-
-export function mapAccountLedgerTransactionToListItem(
-  transaction: DisplayTransaction,
-  onPress: () => void,
-): TransactionListItem {
-  return {
-    id: transaction.id,
-    type: 'transaction',
-    date: transaction.transactionDate,
-    onPress,
-    cardProps: mapLedgerTransactionToCardProps(transaction),
-  };
-}
 
 /** Inserts reconciled markers into grouped transaction list items. */
 export function injectReconciledMarkersIntoTransactionList(

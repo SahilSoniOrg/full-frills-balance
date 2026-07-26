@@ -1,27 +1,15 @@
-import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
+import { TimelineAccountBadge, TransactionAccountBadgeSource } from '@/src/types/journalTimeline';
 
-export interface TransactionAccountBadgeSource {
-  id?: string;
-  name: string;
-  accountType: AccountType | string;
-  icon?: string | null;
-  role?: 'SOURCE' | 'DESTINATION' | string;
-}
-
-/**
- * Builds account chips for TransactionCard from a list of accounts (journal or ledger context).
- */
-export function buildTransactionAccountBadges(
+export function buildTimelineAccountBadges(
   accounts: TransactionAccountBadgeSource[],
   options?: { withFromToPrefixes?: boolean },
-): TransactionBadge[] {
+): TimelineAccountBadge[] {
   const withFromToPrefixes = options?.withFromToPrefixes ?? false;
 
-  const badges: TransactionBadge[] = accounts.slice(0, 2).map(acc => {
+  const badges: TimelineAccountBadge[] = accounts.slice(0, 2).map(acc => {
     let text = acc.name;
     if (withFromToPrefixes) {
       const isSource = acc.role === 'SOURCE';

@@ -270,7 +270,9 @@ describe('PlannedPaymentService', () => {
         journalDate: new Date(2024, 0, 1).getTime(),
       };
 
-      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
+        mockJournal,
+      );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
       (ledgerWriteService.postJournal as jest.Mock).mockResolvedValue({} as any);
 
@@ -284,7 +286,10 @@ describe('PlannedPaymentService', () => {
         mockPP.nextOccurrence,
       );
 
-      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith(
+        'wp-1',
+        'pp-1',
+      );
       expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
@@ -298,7 +303,9 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Creates new POSTED journal if no PLANNED journal exists', async () => {
-      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
+        undefined,
+      );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
 
       const createJournalSpy = jest
@@ -338,7 +345,9 @@ describe('PlannedPaymentService', () => {
         journalDate: mockPP.nextOccurrence,
         update: jest.fn().mockImplementation(async (fn: any) => fn(mockJournal)),
       };
-      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
+        mockJournal,
+      );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
       (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockImplementation(
         async (journals: any[], status: JournalStatus) => {
@@ -354,7 +363,10 @@ describe('PlannedPaymentService', () => {
         mockPP.nextOccurrence,
       );
 
-      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith(
+        'wp-1',
+        'pp-1',
+      );
       expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',

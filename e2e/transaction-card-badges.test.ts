@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 test.describe('Transaction card account badges', () => {
   test.setTimeout(120000);
 
-  test.beforeEach(async ({ onboardingPage, accountsPage, dashboardPage }) => {
+  test.beforeEach(async ({ onboardingPage, accountsPage }) => {
     await onboardingPage.clearAppState();
     await onboardingPage.goto('/');
     await onboardingPage.completeOnboarding('Badge User');
