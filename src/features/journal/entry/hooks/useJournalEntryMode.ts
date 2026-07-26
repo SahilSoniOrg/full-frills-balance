@@ -21,13 +21,17 @@ export function useJournalEntryMode(
 
   const isGuidedScreen = activeMode === 'guided';
 
+  const { setIsGuidedMode, setTransactionType, isGuidedMode, transactionType } = editor;
+
   useEffect(() => {
-    const { setIsGuidedMode, setTransactionType } = editor;
-    setIsGuidedMode(activeMode === 'guided');
-    if (activeMode === 'split') {
+    const shouldBeGuided = activeMode === 'guided';
+    if (isGuidedMode !== shouldBeGuided) {
+      setIsGuidedMode(shouldBeGuided);
+    }
+    if (activeMode === 'split' && transactionType !== 'expense') {
       setTransactionType('expense');
     }
-  }, [activeMode, editor]);
+  }, [activeMode, isGuidedMode, transactionType, setIsGuidedMode, setTransactionType]);
 
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {

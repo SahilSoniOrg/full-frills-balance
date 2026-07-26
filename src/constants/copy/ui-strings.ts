@@ -425,7 +425,7 @@ export const UI_STRINGS = {
     fetchingRate: 'Getting exchange rate…',
     simple: 'Simple',
     advanced: 'Advanced',
-    modesHelpAccessibility: 'About journal entry modes',
+    modesHelpAccessibility: 'What is Advanced Mode?',
     headers: {
       edit: 'Edit journal',
       new: 'New journal',
@@ -494,6 +494,26 @@ export const UI_STRINGS = {
       title: 'Bulk',
       body: 'Several simple entries in one pass. New rows copy the previous row so you can enter a run of similar transactions quickly.',
     },
+  },
+  advancedModeExplanation: {
+    title: 'Advanced Mode',
+    intro:
+      'Simple mode records one account in and one account out. Advanced mode supports journal entries with multiple lines.',
+    unlocks: 'The entry saves only when total debits equal total credits.',
+    exampleTitle: 'Example',
+    exampleScenario: '$50 meal paid with $40 from Bank and $10 from Cash.',
+    exampleItems: [
+      'Bank - Credit $40 (money leaving the account)',
+      'Cash - Credit $10 (money leaving the account)',
+      'Food - Debit $50 (the expense recorded in the ledger)',
+    ],
+    whyBetterTitle: 'Why It Exists',
+    benefits: [
+      'One entry can affect multiple accounts.',
+      'The ledger stays balanced because total debits and credits must match.',
+      'Useful for split payments, transfers with fees, and payroll entries.',
+    ],
+    footer: 'Simple mode covers standard entries. Advanced mode is for multi-line journals.',
   },
   accounts: {
     types: {

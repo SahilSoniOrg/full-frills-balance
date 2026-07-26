@@ -91,6 +91,20 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
 
+  const onAfterSave = useMemo(
+    () =>
+      createSmsJournalAfterSaveHandler({
+        smsId: route.smsId,
+        smsRecordId: route.smsRecordId,
+        finalizeManualImport: smsService.finalizeManualImport.bind(smsService),
+        markSmsAsProcessed: (smsId: string) =>
+          Promise.resolve(smsService.markSmsAsProcessed(smsId)),
+      }),
+    [route.smsId, route.smsRecordId],
+  );
+
+  const onSuccess = useCallback(() => AppNavigation.back(), []);
+
   const editor = useJournalEditor(workplaceId, {
     journalId: route.journalId,
     initialMode: route.mode === 'bulk' || route.mode === 'split' ? undefined : route.mode,
@@ -104,13 +118,8 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     initialDate: route.initialDate,
     initialSourceId: route.sourceAccountId,
     initialDestinationId: route.destinationAccountId,
-    onAfterSave: createSmsJournalAfterSaveHandler({
-      smsId: route.smsId,
-      smsRecordId: route.smsRecordId,
-      finalizeManualImport: smsService.finalizeManualImport.bind(smsService),
-      markSmsAsProcessed: (smsId: string) => Promise.resolve(smsService.markSmsAsProcessed(smsId)),
-    }),
-    onSuccess: () => AppNavigation.back(),
+    onAfterSave,
+    onSuccess,
   });
 
   const isSimpleModeDisabled = isSimpleModeDisabledByLines(editor.lines);
