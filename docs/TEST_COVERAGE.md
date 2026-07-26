@@ -35,7 +35,8 @@ npx expo start --dev-client  # Open /_design-preview for component gallery
 | Service | Test Location | Coverage Notes |
 | :--- | :--- | :--- |
 | CashFlowSimulationService | `src/services/simulation/__tests__/` | **Heavy coverage** — unit, scenario, heavy load, liability-specific, and NaN-safety tests |
-| NotificationService | `src/services/notification/__tests__/` | Safe to Spend calculation, liquid asset filtering |
+| SafeToSpendReadModel | `src/services/simulation/__tests__/` | Safe to Spend projection, cache, headline; simulation engine scenarios |
+| NotificationService | `src/services/notification/__tests__/` | OS notification scheduling and reminder permissions (not Safe to Spend) |
 | ExchangeRateService | `src/services/__tests__/exchange-rate-service.test.ts` | Rate fetching, caching, fallback behavior |
 | InsightService | `src/services/insight/__tests__/` | Financial insight generation |
 | BudgetReadService | `src/services/budget/` | Budget usage computation |

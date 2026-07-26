@@ -11,10 +11,16 @@ import {
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
+  createPlannedPayment,
+  deletePlannedPayment,
+  updatePlannedPayment,
+} from '@/src/services/planned-payment/plannedPaymentCommands';
+import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
+import {
   calculateNextOccurrence as advancePlannedOccurrence,
   computeFirstOccurrence as computeFirstPlannedOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 /** Thin façade over planned-payment modules for hooks and existing call sites. */
 export class PlannedPaymentService {
@@ -76,6 +82,18 @@ export class PlannedPaymentService {
 
   async toggleStatus(workplaceId: WorkplaceId, pp: PlannedPayment): Promise<PlannedPaymentStatus> {
     return togglePlannedPaymentStatus(workplaceId, pp);
+  }
+
+  async create(workplaceId: WorkplaceId, input: PlannedPaymentCommandInput) {
+    return createPlannedPayment(workplaceId, input);
+  }
+
+  async update(workplaceId: WorkplaceId, id: PlannedPaymentId, input: PlannedPaymentCommandInput) {
+    return updatePlannedPayment(workplaceId, id, input);
+  }
+
+  async delete(workplaceId: WorkplaceId, payment: PlannedPayment): Promise<void> {
+    return deletePlannedPayment(workplaceId, payment);
   }
 }
 

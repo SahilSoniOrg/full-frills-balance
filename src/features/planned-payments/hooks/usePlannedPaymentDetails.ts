@@ -58,7 +58,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleDelete = useCallback(async () => {
     if (!item) return;
-    await plannedPaymentRepository.delete(workplaceId, item);
+    await plannedPaymentService.delete(workplaceId, item);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'delete', {

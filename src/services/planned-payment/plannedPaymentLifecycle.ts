@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
   calculateNextOccurrence,
@@ -25,7 +25,7 @@ export async function togglePlannedPaymentStatus(
   const isPausing = newStatus === PlannedPaymentStatus.PAUSED;
   const targetStatus = isPausing ? JournalStatus.PLANNED : JournalStatus.PAUSED;
 
-  const targetJournals = await journalRepository.findByPlannedPaymentAndStatus(
+  const targetJournals = await journalPlannedQueries.findByPlannedPaymentAndStatus(
     workplaceId,
     pp.id as PlannedPaymentId,
     targetStatus,

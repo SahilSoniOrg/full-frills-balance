@@ -26,3 +26,23 @@ This file captures the domain language for full-frills-balance. Use these terms 
 - **Breakdown-to-explanation link**: A deliberate bridge from breakdown detail to Safe to Spend explanation when the user wants the full calculation rules—not a second copy of the formula inside breakdown detail.
 - **Safe slice breakdown detail**: Audit-focused detail for the spendable headroom segment; it does not repeat the full Safe to Spend formula (that lives in Safe to Spend explanation only).
 - **Reserved / outstanding breakdown detail**: Audit-only views for their slices; they do not link to Safe to Spend explanation.
+
+## Application architecture (entropy remediation)
+
+- **Command**: The only supported way for application code to change persisted domain state for an aggregate (e.g. create planned payment, merge accounts). Owns validation, persistence, and required side effects (journals, rebuild, audit).
+_Avoid_: Façade, service method that mixes unrelated lifecycles
+
+- **Intent module**: A narrow persistence or read API grouped by caller purpose (e.g. journal write, journal timeline, SMS journal lookup), not by database table alone.
+_Avoid_: Repository, god-repository
+
+- **System account**: A workplace-scoped ledger account created by the product for mechanics (opening balances, balance correction), not chosen by the user in the account picker.
+_Avoid_: Default account, meta account
+
+- **Account read module**: Curated reactive observe/find API (`accountQueries`) exposing only methods required by feature hooks today; add new methods only when a hook needs them.
+_Avoid_: AccountService, second repository façade
+
+- **Canonical import**: The versioned, validated shape (`canonical-import.v1`) that every import plugin must produce before persistence; the only type the import write path should accept after validation.
+_Avoid_: Raw plugin JSON, `BatchImportData` in persistence without conversion
+
+- **Audit revert**: Restoring persisted state from a recorded `before` snapshot when undoing an audited change. Uses dedicated commands when semantics differ from a normal user edit (e.g. `revertAccountFromAuditState`, not hierarchy `updateAccount`).
+_Avoid_: Treating undo as “call the same update API with old fields”

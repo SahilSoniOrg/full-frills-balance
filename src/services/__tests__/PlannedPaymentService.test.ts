@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -11,7 +11,7 @@ import { AccountId, WorkplaceId } from '@/src/types/domain';
 jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalPlannedModule');
 jest.mock('@/src/data/repositories/TransactionRepository', () => ({
   transactionRepository: {
     findByJournal: jest.fn().mockResolvedValue([]),
@@ -33,13 +33,12 @@ jest.mock('@/src/data/database/Database', () => ({
 describe('PlannedPaymentService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (journalRepository.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
-    (journalRepository.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
-    (journalRepository.batchUpdatePlannedStatus as jest.Mock).mockResolvedValue(undefined);
-    (journalRepository.prepareMetadataPatch as jest.Mock).mockResolvedValue({});
-    (journalRepository.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
-    (journalRepository.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
-    (journalRepository.countOnDayByPlannedPayment as jest.Mock).mockResolvedValue(0);
+    (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
+    (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
+    (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockResolvedValue(undefined);
+    (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
+    (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
+    (journalPlannedQueries.countOnDay as jest.Mock).mockResolvedValue(0);
   });
 
   describe('calculateNextOccurrence', () => {
@@ -271,8 +270,8 @@ describe('PlannedPaymentService', () => {
         journalDate: new Date(2024, 0, 1).getTime(),
       };
 
-      (journalRepository.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
-      (journalRepository.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
+      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
       (ledgerWriteService.postJournal as jest.Mock).mockResolvedValue({} as any);
 
       const updatePpSpy = jest
@@ -285,8 +284,8 @@ describe('PlannedPaymentService', () => {
         mockPP.nextOccurrence,
       );
 
-      expect(journalRepository.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
-      expect(journalRepository.findPlannedOnDay).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
+      expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         expect.any(Number),
@@ -299,8 +298,8 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Creates new POSTED journal if no PLANNED journal exists', async () => {
-      (journalRepository.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
-      (journalRepository.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
+      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
 
       const createJournalSpy = jest
         .spyOn(ledgerWriteService, 'createJournal')
@@ -339,9 +338,9 @@ describe('PlannedPaymentService', () => {
         journalDate: mockPP.nextOccurrence,
         update: jest.fn().mockImplementation(async (fn: any) => fn(mockJournal)),
       };
-      (journalRepository.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
-      (journalRepository.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
-      (journalRepository.batchUpdatePlannedStatus as jest.Mock).mockImplementation(
+      (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(mockJournal);
+      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
+      (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockImplementation(
         async (journals: any[], status: JournalStatus) => {
           for (const journal of journals) {
             journal.status = status;
@@ -355,14 +354,14 @@ describe('PlannedPaymentService', () => {
         mockPP.nextOccurrence,
       );
 
-      expect(journalRepository.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
-      expect(journalRepository.findPlannedOnDay).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith('wp-1', 'pp-1');
+      expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         expect.any(Number),
         expect.any(Number),
       );
-      expect(journalRepository.batchUpdatePlannedStatus).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.batchUpdateStatus).toHaveBeenCalledWith(
         [mockJournal],
         JournalStatus.SKIPPED,
       );
@@ -431,7 +430,7 @@ describe('PlannedPaymentService', () => {
         }),
       };
 
-      (journalRepository.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([
+      (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([
         mockJournal,
       ]);
 
@@ -440,7 +439,7 @@ describe('PlannedPaymentService', () => {
         mockPP as any,
       );
 
-      expect(journalRepository.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         JournalStatus.PLANNED,
@@ -488,7 +487,7 @@ describe('PlannedPaymentService', () => {
         }),
       };
 
-      (journalRepository.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([
+      (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([
         mockFutureJournal,
         mockPastJournal,
       ]);
@@ -504,7 +503,7 @@ describe('PlannedPaymentService', () => {
         mockPP as any,
       );
 
-      expect(journalRepository.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         JournalStatus.PAUSED,

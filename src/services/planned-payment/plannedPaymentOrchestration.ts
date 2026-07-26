@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
@@ -29,7 +29,7 @@ export async function resolvePlannedOccurrenceContext(
   occurrenceDate: number,
 ): Promise<PlannedOccurrenceContext> {
   const plannedPaymentId = pp.id as PlannedPaymentId;
-  const earliestPlanned = await journalRepository.findEarliestPlannedByPayment(
+  const earliestPlanned = await journalPlannedQueries.findEarliestPlannedByPayment(
     workplaceId,
     plannedPaymentId,
   );
@@ -38,7 +38,7 @@ export async function resolvePlannedOccurrenceContext(
   const normalizedDate = normalizeToStartOfDay(targetDate);
   const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
 
-  const existingPlanned = await journalRepository.findPlannedOnDay(
+  const existingPlanned = await journalPlannedQueries.findPlannedOnDay(
     workplaceId,
     plannedPaymentId,
     normalizedDate,
@@ -130,7 +130,7 @@ export async function skipPlannedPaymentOccurrence(
       occurrenceDate,
     );
 
-    await journalRepository.batchUpdatePlannedStatus(existingPlanned, JournalStatus.SKIPPED);
+    await journalPlannedQueries.batchUpdateStatus(existingPlanned, JournalStatus.SKIPPED);
 
     if (existingPlanned.length === 0) {
       if (!pp.toAccountId) {
@@ -176,7 +176,7 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
 
   const allPlannedIds = activePayments.map(p => p.id as PlannedPaymentId);
-  const existingJournals = await journalRepository.findByPlannedPaymentIds(
+  const existingJournals = await journalPlannedQueries.findByPlannedPaymentIds(
     workplaceId,
     allPlannedIds,
   );
@@ -205,7 +205,7 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
 
       if (!alreadyExists) {
         const dayEnd = nextOcc + (AppConfig.time.msPerDay - 1);
-        const dbExists = await journalRepository.countOnDayByPlannedPayment(
+        const dbExists = await journalPlannedQueries.countOnDay(
           workplaceId,
           pp.id as PlannedPaymentId,
           nextOcc,

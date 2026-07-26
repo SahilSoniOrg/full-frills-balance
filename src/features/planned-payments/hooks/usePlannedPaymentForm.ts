@@ -1,8 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { computeFirstOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, EMPTY_ACCOUNT_ID, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -105,12 +104,8 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
             pp.intervalType !== data.intervalType ||
             pp.intervalN !== data.intervalN;
 
-          await plannedPaymentRepository.update(workplaceId, pp, {
-            ...data,
-            nextOccurrence: schedulingChanged ? data.startDate : pp.nextOccurrence,
-          });
+          await plannedPaymentService.update(workplaceId, id as PlannedPaymentId, data);
 
-          // Track Analytics
           analytics.trackFeatureUsage('planned_payment', 'update', {
             payment_id: id,
             scheduling_changed: schedulingChanged,
@@ -119,22 +114,8 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
           });
         }
       } else {
-        const firstOccurrence = computeFirstOccurrence(form.startDate, {
-          intervalN: form.intervalN,
-          intervalType: form.intervalType,
-          recurrenceDay: form.recurrenceDay,
-          recurrenceMonth: form.recurrenceMonth,
-        });
-        const newPayment = await plannedPaymentRepository.create(workplaceId, {
-          ...data,
-          status: PlannedPaymentStatus.ACTIVE,
-          nextOccurrence: firstOccurrence,
-        });
-        // Bug 1 fix: immediately generate journals for the new planned payment
-        // without requiring an app restart.
-        await plannedPaymentService.processDuePayments(workplaceId);
+        const newPayment = await plannedPaymentService.create(workplaceId, data);
 
-        // Track Analytics
         analytics.trackFeatureUsage('planned_payment', 'create', {
           payment_id: newPayment.id,
           amount: data.amount,

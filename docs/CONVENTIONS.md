@@ -197,3 +197,36 @@ docs: add architecture documentation
 refactor: extract form logic to useJournalForm hook
 perf: optimize safe-to-spend pipeline and batch queries
 ```
+
+---
+
+## Architecture guardrails
+
+Dependency direction (enforced in CI as the remediation plan completes):
+
+```
+features / app  →  services & read models  →  repositories / adapters
+                         ↓
+                    domain types (src/types/domain)
+```
+
+**Commands:** Domain modules own state transitions and required side effects (journal generation, rebuild invalidation, audit). Feature hooks build caller input DTOs, invoke one command, and keep screen-local state (validation UI, loading, navigation, analytics presentation).
+
+**Reads:** Reactive read modules and services return domain-owned DTOs. Features adapt them to component props. Services and data modules must not import from `src/features/`, `src/components/`, or feature hooks.
+
+**Repositories:** Persistence adapters with narrow, intent-scoped surfaces. Production feature code must not call repository `create`, `update`, or `delete` for domain entities; use the command API for that entity. Reactive `observe*` / `find` reads from features are allowed until a dedicated read module exists. ESLint enforces this for `src/features/**/hooks/**` (excluding hook tests) via `no-restricted-syntax` on `*Repository.create|update|delete|batchInsert|createJournalWithTransactions`; add documented exceptions in `eslint.config.js` only for true local adapters.
+
+**Safe to Spend:** `SafeToSpendReadModel.forWorkplace(id).watch()`, `watchHeadline()`, and `preWarm()` are the only public entry points. `NotificationService` handles OS notifications and reminders only—not Safe-to-Spend calculation or types.
+
+**Imports:** External file formats are normalized to a single canonical import shape at the plugin boundary before validation and persistence.
+
+**CI ratchets (commits 50–51):**
+
+| Script | Command | Purpose |
+| --- | --- | --- |
+| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **242** hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded). Intentional decreases: `node scripts/check-unsafe-type-ratchet.mjs --update`. |
+| Journal façade | `bun run check:journal-facade` | `JournalRepository` public method set is frozen in `scripts/journal-repository-facade-methods.json` (**39** methods). New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
+
+Run both via `bun run check:architecture`.
+
+See also `docs/ARCHITECTURE_ENTROPY_AUDIT_2026-07-27.md` and `docs/ARCHITECTURE_ENTROPY_REMEDIATION_PLAN_2026-07-27.md` for the active structural audit and remediation sequence. Older recommendations in `docs/codebase-design/AUDIT.md` are historical where marked **Done**.
