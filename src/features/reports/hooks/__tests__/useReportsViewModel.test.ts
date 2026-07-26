@@ -1,4 +1,3 @@
-import { reportService } from '@/src/services/report-service';
 import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
@@ -34,14 +33,6 @@ jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
     format: (val: number) => `$${val}`,
     formatWithPreference: (val: number) => `$${val}`,
-  },
-}));
-
-// Mock reportService
-jest.mock('@/src/services/report-service', () => ({
-  reportService: {
-    getExpenseBreakdown: jest.fn().mockResolvedValue([]),
-    getIncomeBreakdown: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -101,8 +92,6 @@ describe('useReportsViewModel', () => {
   };
 
   beforeEach(() => {
-    (reportService.getExpenseBreakdown as jest.Mock).mockClear();
-    (reportService.getIncomeBreakdown as jest.Mock).mockClear();
     mockUseReports.mockReturnValue(mockReportsData);
   });
 

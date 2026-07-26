@@ -14,7 +14,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId, mapTransactionToAudit } from '@/src/types/domain';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model } from '@nozbe/watermelondb';
@@ -89,7 +89,7 @@ export class LedgerWriteService {
     await database.write(async () => {
       await database.batch(ops);
 
-      const activeStatus = !data.status || ACTIVE_JOURNAL_STATUSES.includes(data.status as any);
+      const activeStatus = isRebuildEligibleJournalStatus(data.status);
       if (activeStatus && accountsToRebuild.size > 0) {
         rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate, workplaceId);
       }

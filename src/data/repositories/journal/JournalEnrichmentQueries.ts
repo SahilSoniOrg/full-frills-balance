@@ -100,7 +100,17 @@ export class JournalEnrichmentQueries {
       WHERE t.journal_id IN (${placeholders}) AND t.deleted_at IS NULL
     `;
 
-    const results = await transactionRawRepository.queryRaw<any>(sql, journalIds);
+    type EnrichmentRow = {
+      journal_id: JournalId;
+      account_id: AccountId;
+      amount: number;
+      transaction_type: TransactionType;
+      account_name: string;
+      account_type: AccountType;
+      account_icon?: string;
+    };
+
+    const results = await transactionRawRepository.queryRaw<EnrichmentRow>(sql, journalIds);
     if (results !== null) {
       return results;
     }

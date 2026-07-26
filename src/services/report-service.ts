@@ -2,18 +2,15 @@ import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,
 } from '@/src/services/reports/heatmapCalculators';
 import { calculateHistoryFromDeltas } from '@/src/services/reports/historyCalculators';
 import {
-  convertReportTransactions,
-  getScopedReportingDeltas,
-  mapTransactionsToReportingDeltas,
-} from '@/src/services/reports/reportingDeltaEngine';
+  loadAccountPeriodReportingDeltas,
+  loadReportingPeriodData,
+} from '@/src/services/reports/reportingPeriodLoader';
 import type {
   CategoryBreakdown,
   ExpenseCategory,
@@ -24,10 +21,10 @@ import type {
   SankeyLink,
   SankeyNode,
 } from '@/src/services/reports/reportSnapshot';
-import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
+import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/domain';
 import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
@@ -60,113 +57,136 @@ export type {
 
 export class ReportService {
   /**
-   * Aggregates expenses by account for a period.
+   * Period income vs expense totals for dashboard surfaces (e.g. accounts list rolling inflow).
+   * Uses the same account-period delta loader as {@link getReportSnapshot} so totals stay aligned.
    */
-  async getExpenseBreakdown(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    accountIds?: AccountId[],
-  ): Promise<ExpenseCategory[]> {
-    return this.getBreakdownInternal(
-      AccountType.EXPENSE,
-      workplaceId,
-      startDate,
-      endDate,
-      targetCurrency,
-      accountIds,
-    );
-  }
-
-  /**
-   * Aggregates income by account for a period.
-   */
-  async getIncomeBreakdown(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    accountIds?: string[],
-  ): Promise<ExpenseCategory[]> {
-    return this.getBreakdownInternal(
-      AccountType.INCOME,
-      workplaceId,
-      startDate,
-      endDate,
-      targetCurrency,
-      accountIds,
-    );
-  }
-
-  /**
-   * Reactive version of getExpenseBreakdown.
-   */
-  observeExpenseBreakdown(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    accountIds?: AccountId[],
-  ): Observable<ExpenseCategory[]> {
-    return observeWorkplaceJournalMeta(workplaceId).pipe(
-      switchMap(() =>
-        from(this.getExpenseBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds)),
-      ),
-    );
-  }
-
-  /**
-   * Reactive version of getIncomeBreakdown.
-   */
-  observeIncomeBreakdown(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    accountIds?: string[],
-  ): Observable<ExpenseCategory[]> {
-    return observeWorkplaceJournalMeta(workplaceId).pipe(
-      switchMap(() =>
-        from(this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds)),
-      ),
-    );
-  }
-
-  private async getBreakdownInternal(
-    type: AccountType,
+  async getIncomeVsExpense(
     workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
-  ): Promise<ExpenseCategory[]> {
+  ): Promise<{ income: number; expense: number }> {
     const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
       workplaceId,
       targetCurrency,
     );
-    let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
+    const allAccounts = this.scopeAccounts(incomeAccounts, expenseAccounts, filterAccountIds);
+    const allIds = allAccounts.map(a => a.id);
+    if (allIds.length === 0) return { income: 0, expense: 0 };
 
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      accounts = accounts.filter(a => filterSet.has(a.id));
-    }
-
-    const accountIds = accounts.map(a => a.id);
-    if (accountIds.length === 0) return [];
-
-    const normalizedDeltas = await getScopedReportingDeltas(
+    const normalizedDeltas = await loadAccountPeriodReportingDeltas(
       workplaceId,
-      accountIds,
+      allIds,
       startDate,
       endDate,
       currency,
-      accounts,
-      (ids, start, end) =>
-        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
+      allAccounts,
     );
 
-    return this.calculateBreakdownFromDeltas(accounts, normalizedDeltas, currency);
+    return this.calculateIncomeVsExpenseFromDeltas(normalizedDeltas, allAccounts, currency);
+  }
+
+  async getReportSnapshot(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    endDate: number,
+    targetCurrency?: string,
+    filterAccountIds?: string[],
+  ): Promise<ReportSnapshot> {
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
+    const allAccounts = this.scopeAccounts(incomeAccounts, expenseAccounts, filterAccountIds);
+    const scopedIncome = incomeAccounts.filter(a => allAccounts.some(x => x.id === a.id));
+    const scopedExpense = expenseAccounts.filter(a => allAccounts.some(x => x.id === a.id));
+
+    const { accountPeriodDeltas, dailyDeltas, convertedTransactions } =
+      await loadReportingPeriodData(workplaceId, allAccounts, startDate, endDate, currency);
+
+    const incomeVsExpense = this.calculateIncomeVsExpenseFromDeltas(
+      accountPeriodDeltas,
+      allAccounts,
+      currency,
+    );
+    const expenseBreakdown = this.calculateBreakdownFromDeltas(
+      scopedExpense,
+      accountPeriodDeltas,
+      currency,
+    );
+    const incomeBreakdown = this.calculateBreakdownFromDeltas(
+      scopedIncome,
+      accountPeriodDeltas,
+      currency,
+    );
+    const expenseCategoryBreakdown = this.calculateCategoryBreakdownFromDeltas(
+      scopedExpense,
+      accountPeriodDeltas,
+      currency,
+    );
+    const incomeCategoryBreakdown = this.calculateCategoryBreakdownFromDeltas(
+      scopedIncome,
+      accountPeriodDeltas,
+      currency,
+    );
+
+    const history = calculateHistoryFromDeltas(dailyDeltas, startDate, endDate, currency);
+    const dailyIncomeVsExpense = this.calculateDailyVsDeltas(
+      dailyDeltas,
+      startDate,
+      endDate,
+      currency,
+    );
+
+    const sankeyData = calculateSankeyDataFromSummaries(incomeBreakdown, expenseCategoryBreakdown);
+    const spendingHeatmap = calculateSpendingHeatmapFromTransactions(convertedTransactions);
+    const calendarHeatmap = calculateCalendarHeatmapFromHistory(history);
+
+    return {
+      expenseBreakdown,
+      incomeBreakdown,
+      expenseCategoryBreakdown,
+      incomeCategoryBreakdown,
+      incomeVsExpenseHistory: history,
+      incomeVsExpense,
+      dailyIncomeVsExpense,
+      sankeyData,
+      spendingHeatmap,
+      calendarHeatmap,
+    };
+  }
+
+  /**
+   * Reactive version of getReportSnapshot.
+   */
+  observeReportSnapshot(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    endDate: number,
+    targetCurrency?: string,
+    filterAccountIds?: string[],
+  ): Observable<ReportSnapshot> {
+    return observeWorkplaceJournalMeta(workplaceId).pipe(
+      switchMap(() =>
+        from(
+          this.getReportSnapshot(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
+        ),
+      ),
+    );
+  }
+
+  private scopeAccounts(
+    incomeAccounts: ReportAccount[],
+    expenseAccounts: ReportAccount[],
+    filterAccountIds?: string[],
+  ): ReportAccount[] {
+    let allAccounts = [...incomeAccounts, ...expenseAccounts];
+    if (filterAccountIds && filterAccountIds.length > 0) {
+      const filterSet = new Set(filterAccountIds);
+      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
+    }
+    return allAccounts;
   }
 
   private calculateBreakdownFromDeltas(
@@ -183,45 +203,6 @@ export class ReportService {
     }
 
     return this.buildBreakdownFromSums(accounts, sums);
-  }
-
-  /**
-   * Aggregates by category (AccountSubtype).
-   */
-  async getCategoryBreakdown(
-    type: AccountType,
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<CategoryBreakdown[]> {
-    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
-      workplaceId,
-      targetCurrency,
-    );
-    let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
-
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      accounts = accounts.filter(a => filterSet.has(a.id));
-    }
-
-    const accountIds = accounts.map(a => a.id);
-    if (accountIds.length === 0) return [];
-
-    const normalizedDeltas = await getScopedReportingDeltas(
-      workplaceId,
-      accountIds,
-      startDate,
-      endDate,
-      currency,
-      accounts,
-      (ids, start, end) =>
-        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
-    );
-
-    return this.calculateCategoryBreakdownFromDeltas(accounts, normalizedDeltas, currency);
   }
 
   private calculateCategoryBreakdownFromDeltas(
@@ -243,45 +224,6 @@ export class ReportService {
     return calculateCategoryBreakdownItems(items);
   }
 
-  /**
-   * Calculates Income vs Expense for the period.
-   * Canonical entry for period-scoped dashboard/reports income & expense totals (e.g. reports snapshot, accounts list last-30-days inflow).
-   */
-  async getIncomeVsExpense(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<{ income: number; expense: number }> {
-    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
-      workplaceId,
-      targetCurrency,
-    );
-    let allAccounts = [...incomeAccounts, ...expenseAccounts];
-
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
-    }
-
-    const allIds = allAccounts.map(a => a.id);
-    if (allIds.length === 0) return { income: 0, expense: 0 };
-
-    const normalizedDeltas = await getScopedReportingDeltas(
-      workplaceId,
-      allIds,
-      startDate,
-      endDate,
-      currency,
-      allAccounts,
-      (ids, start, end) =>
-        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
-    );
-
-    return this.calculateIncomeVsExpenseFromDeltas(normalizedDeltas, allAccounts, currency);
-  }
-
   private calculateIncomeVsExpenseFromDeltas(
     deltas: ReportingDeltaInput[],
     accounts: ReportAccount[],
@@ -300,82 +242,6 @@ export class ReportService {
 
     const summary = calculateIncomeVsExpenseSummary(mapped);
     return { income: summary.income, expense: summary.expense };
-  }
-
-  /**
-   * Calculates Income vs Expense history bucketed by month or day.
-   */
-  async getIncomeVsExpenseHistory(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: AccountId[],
-  ): Promise<IncomeVsExpense[]> {
-    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
-      workplaceId,
-      targetCurrency,
-    );
-    let allAccounts = [...incomeAccounts, ...expenseAccounts];
-
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
-    }
-
-    const allIds = allAccounts.map(a => a.id);
-    if (allIds.length === 0) return [];
-
-    const normalizedDeltas = await getScopedReportingDeltas(
-      workplaceId,
-      allIds,
-      startDate,
-      endDate,
-      currency,
-      allAccounts,
-      (ids, start, end) =>
-        transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, ids, start, end),
-    );
-
-    return calculateHistoryFromDeltas(normalizedDeltas, startDate, endDate, currency);
-  }
-
-  /**
-   * Calculates Daily Income vs Expense for the period.
-   */
-  async getDailyIncomeVsExpense(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: AccountId[],
-  ): Promise<{ date: number; income: number; expense: number }[]> {
-    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
-      workplaceId,
-      targetCurrency,
-    );
-    let allAccounts = [...incomeAccounts, ...expenseAccounts];
-
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
-    }
-
-    const allIds = allAccounts.map(a => a.id);
-    if (allIds.length === 0) return [];
-
-    const normalizedDeltas = await getScopedReportingDeltas(
-      workplaceId,
-      allIds,
-      startDate,
-      endDate,
-      currency,
-      allAccounts,
-      (ids, start, end) =>
-        transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, ids, start, end),
-    );
-
-    return this.calculateDailyVsDeltas(normalizedDeltas, startDate, endDate, currency);
   }
 
   private calculateDailyVsDeltas(
@@ -409,130 +275,6 @@ export class ReportService {
     return Array.from(dailyMap.entries())
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date - b.date);
-  }
-
-  async getReportSnapshot(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<ReportSnapshot> {
-    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
-      workplaceId,
-      targetCurrency,
-    );
-    let allAccounts = [...incomeAccounts, ...expenseAccounts];
-    if (filterAccountIds && filterAccountIds.length > 0) {
-      const filterSet = new Set(filterAccountIds);
-      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
-    }
-
-    const allIds = allAccounts.map(a => a.id);
-    const transactions = await transactionRepository.findByAccountsAndDateRange(
-      workplaceId,
-      allIds,
-      startDate,
-      endDate,
-    );
-
-    // Convert and map once
-    const converted = await convertReportTransactions(transactions, currency, allAccounts);
-    const deltas = mapTransactionsToReportingDeltas(converted, allAccounts, currency);
-
-    const incomeVsExpense = this.calculateIncomeVsExpenseFromDeltas(deltas, allAccounts, currency);
-    const expenseBreakdown = this.calculateBreakdownFromDeltas(expenseAccounts, deltas, currency);
-    const incomeBreakdown = this.calculateBreakdownFromDeltas(incomeAccounts, deltas, currency);
-    const expenseCategoryBreakdown = this.calculateCategoryBreakdownFromDeltas(
-      expenseAccounts,
-      deltas,
-      currency,
-    );
-    const incomeCategoryBreakdown = this.calculateCategoryBreakdownFromDeltas(
-      incomeAccounts,
-      deltas,
-      currency,
-    );
-
-    const history = calculateHistoryFromDeltas(deltas, startDate, endDate, currency);
-    const dailyIncomeVsExpense = this.calculateDailyVsDeltas(deltas, startDate, endDate, currency);
-
-    const sankeyData = calculateSankeyDataFromSummaries(incomeBreakdown, expenseCategoryBreakdown);
-    const spendingHeatmap = calculateSpendingHeatmapFromTransactions(converted);
-    const calendarHeatmap = calculateCalendarHeatmapFromHistory(history);
-
-    return {
-      expenseBreakdown,
-      incomeBreakdown,
-      expenseCategoryBreakdown,
-      incomeCategoryBreakdown,
-      incomeVsExpenseHistory: history,
-      incomeVsExpense,
-      dailyIncomeVsExpense,
-      sankeyData,
-      spendingHeatmap,
-      calendarHeatmap,
-    };
-  }
-
-  /**
-   * Aggregates money flow for a Sankey diagram.
-   * Income Sources -> Total Income -> Expense Categories -> Surplus.
-   */
-  async getSankeyData(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<SankeyData> {
-    const snapshot = await this.getReportSnapshot(
-      workplaceId,
-      startDate,
-      endDate,
-      targetCurrency,
-      filterAccountIds,
-    );
-    return snapshot.sankeyData;
-  }
-
-  /**
-   * Aggregates spending density by day and hour.
-   */
-  async getSpendingHeatmapData(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<HeatmapPoint[]> {
-    const snapshot = await this.getReportSnapshot(
-      workplaceId,
-      startDate,
-      endDate,
-      targetCurrency,
-      filterAccountIds,
-    );
-    return snapshot.spendingHeatmap;
-  }
-
-  /**
-   * Reactive version of getReportSnapshot.
-   */
-  observeReportSnapshot(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Observable<ReportSnapshot> {
-    return observeWorkplaceJournalMeta(workplaceId).pipe(
-      switchMap(() =>
-        from(
-          this.getReportSnapshot(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
-        ),
-      ),
-    );
   }
 
   private async getReportAccounts(
@@ -593,26 +335,6 @@ export class ReportService {
       item.percentage = totalPositiveAmount > 0 ? (item.amount / totalPositiveAmount) * 100 : 0;
     });
     return result.sort((a, b) => b.amount - a.amount);
-  }
-
-  /**
-   * Aggregates spending by day of week and week of month (Calendar view).
-   */
-  async getCalendarHeatmapData(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Promise<HeatmapPoint[]> {
-    const snapshot = await this.getReportSnapshot(
-      workplaceId,
-      startDate,
-      endDate,
-      targetCurrency,
-      filterAccountIds,
-    );
-    return snapshot.calendarHeatmap;
   }
 }
 

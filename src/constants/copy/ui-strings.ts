@@ -1,3 +1,4 @@
+/** UI copy catalog. Prefer adding new domains as `copy/domains/<name>Strings.ts` re-exported here when a section grows past ~200 lines. */
 export const UI_STRINGS = {
   common: {
     loading: 'Loading…',

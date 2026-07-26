@@ -1,6 +1,6 @@
 /**
- * Integration tests for JournalRepository
- * Tests double-entry accounting, precision handling, and balance integrity
+ * Integration tests for journal write/read modules (ledger + journal query repositories).
+ * Tests double-entry accounting, precision handling, and balance integrity.
  */
 
 import { database } from '@/src/data/database/Database';
@@ -17,7 +17,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
-describe('JournalRepository', () => {
+describe('Journal ledger integration', () => {
   let cashAccountId: string;
   let expenseAccountId: string;
   let incomeAccountId: string;

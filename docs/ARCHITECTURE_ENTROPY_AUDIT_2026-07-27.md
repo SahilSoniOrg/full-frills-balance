@@ -14,7 +14,7 @@ Tracked in `ARCHITECTURE_ENTROPY_REMEDIATION_PROGRESS.md`. Finding-level status:
 | P1 — treat imported data as untrusted boundary | **Substantially resolved** | `CanonicalImport`, `importRun`, persistence adapter quarantine; plugin seams may still use pragmatic typing per ADR-0009. |
 | P2 — collapse trivial import facades | **Resolved** | `ImportRunner` deleted; named-phase `ImportRun`. |
 | P2 — split account lifecycle by use case | **Resolved** | Command modules + `accountQueries`; `AccountService` delegator **deleted** (grill Q1-A). |
-| P2 — report/read contracts | **Resolved** | `ReportSnapshot` contract; redundant `ReportService` helpers delegate to `getReportSnapshot`. |
+| P2 — report/read contracts | **Substantially resolved** | `ReportSnapshot` is the reports UI contract; account-period deltas shared via `reportingPeriodLoader` with `getIncomeVsExpense`. Legacy per-chart service methods removed. |
 | P2 — view-model policy extraction | **Substantially resolved** | SMS rule policy, journal editor balance policy, account form validation policy; large VMs remain but policy is testable. |
 | P2 — documentation drift | **In progress** | This audit updated; `docs/codebase-design/AUDIT.md` remains historical—prefer this file + CONVENTIONS for active guardrails. |
 
@@ -32,7 +32,7 @@ For the full original findings table and narrative, see git history of this file
 - [x] Journal façade deleted with CI guard
 - [x] Import canonical seam + persistence adapter
 - [x] STS module split + public handle only
-- [x] Report snapshot contract
+- [x] Report snapshot + shared `reportingPeriodLoader` (account-period parity with accounts list)
 - [x] `bun run check:architecture` in PR checklist (`docs/CONVENTIONS.md`)
 - [x] Unsafe-type baseline ratchet policy (−5 / month)
 - [ ] Optional: refresh `docs/codebase-design/AUDIT.md` strikethroughs (out of scope unless requested)
