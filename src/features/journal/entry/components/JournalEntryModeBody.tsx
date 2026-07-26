@@ -8,7 +8,7 @@ import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalE
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
-import { BulkEntryGrid } from '@/src/features/journal';
+import { BulkEntryGrid } from '@/src/features/journal/entry/components/BulkEntryGrid';
 import Account from '@/src/data/models/Account';
 import { View } from 'react-native';
 
