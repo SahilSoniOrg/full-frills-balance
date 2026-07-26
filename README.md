@@ -1,252 +1,226 @@
 # Full Frills Balance
 
-A double-entry personal finance app built with React Native and Expo.  
-Track your net worth with proper accounting semantics — offline-first, no cloud account required.
+**Double-entry personal finance on your device — offline-first, no cloud account, accounting that actually balances.**
+
+[![CI](https://github.com/SahilSoniOrg/full-frills-balance/actions/workflows/ci.yml/badge.svg)](https://github.com/SahilSoniOrg/full-frills-balance/actions/workflows/ci.yml)
+[![Expo SDK 57](https://img.shields.io/badge/Expo-SDK%2057-000020?style=flat&logo=expo&logoColor=white)](https://expo.dev/)
+[![React Native 0.86](https://img.shields.io/badge/React%20Native-0.86-61DAFB?style=flat&logo=react&logoColor=white)](https://reactnative.dev/)
+[![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![WatermelonDB](https://img.shields.io/badge/WatermelonDB-SQLite-6C5CE7?style=flat)](https://watermelondb.dev/)
 
 ---
 
-## Philosophy
+## Table of contents
 
-> **"Balances are derived, and the cache is reconciled — never trusted blindly"**
+- [Why this app](#why-this-app)
+- [Safe to Spend](#safe-to-spend)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Quick start](#quick-start)
+- [Development](#development)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Privacy](#privacy)
+- [License](#license)
 
-- A balance is *defined* as the sum of its transactions and is never an editable
-  total. For speed it is *served* from a rebuildable `running_balance` cache that
-  `IntegrityService` reconciles against the derived sum. See
-  [ADR-0002](docs/adr/0002-derived-balances-with-reconciled-cache.md).
-- Every journal must balance (`debits == credits`) before it can be persisted.
-- Offline-first — the full accounting engine runs locally on-device.
-- Every mutation is logged to an immutable audit trail.
-- Silent numerical mistakes are treated as higher severity than crashes.
+---
 
-See [principles.md](.agent/rules/principles.md) for domain invariants; [constraints.md](.agent/rules/constraints.md) for architectural MUST NOTs.
+## Why this app
+
+Most finance apps optimize for speed of entry. **Full Frills Balance** optimizes for **correct books**: every journal balances, balances are derived from transactions, and the ledger is yours on-device.
+
+| Principle | What it means in practice |
+|-----------|---------------------------|
+| **Derived balances** | Totals come from transaction sums; `running_balance` is a reconciled cache ([ADR-0002](docs/adr/0002-derived-balances-with-reconciled-cache.md)). |
+| **Double-entry** | Debits equal credits before anything is saved. |
+| **Offline-first** | SQLite via WatermelonDB; no backend required for core flows. |
+| **Audit trail** | Mutations logged with before/after state. |
+| **Numerical honesty** | Silent money mistakes are treated as higher severity than crashes. |
+
+Domain rules for agents and contributors: [principles.md](.agent/rules/principles.md) · [constraints.md](.agent/rules/constraints.md).
+
+---
+
+## Safe to Spend
+
+> **How much can you spend today without going broke before payday?**
+
+Not your bank balance — what's left after bills, budgets, and liabilities in the next 30 days.
+
+```text
+  Liquid assets now
++ Upcoming income (planned)
+− Committed spending (budgets, bills, planned payments)
+− Near-term debt / liability payments
+────────────────────────────────────────
+= Safe to Spend
+```
+
+The projection runs a **day-by-day cash-flow simulation** (planned payments, budget burn, liability cycles), merges overlapping obligations, normalizes currencies, and clamps to the **lowest projected liquid balance** in the window.
+
+```mermaid
+flowchart LR
+  subgraph inputs [Inputs]
+    A[Liquid accounts]
+    B[Planned payments]
+    C[Budgets]
+    D[Liabilities]
+  end
+  subgraph engine [Simulation]
+    E[Flow generators]
+    F[FlowResolver]
+    G[30-day Simulator]
+  end
+  subgraph ui [Dashboard]
+    H[Safe to Spend card]
+    I[Projection chart]
+  end
+  A --> E
+  B --> E
+  C --> E
+  D --> E
+  E --> F --> G --> H
+  G --> I
+```
+
+<details>
+<summary><strong>More detail</strong> (generators, shortfall mode, dashboard surfaces)</summary>
+
+| Generator | Models |
+|-----------|--------|
+| **PlannedFlowGenerator** | Recurring / one-off payments, scheduled journals |
+| **BudgetFlowGenerator** | Remaining budget spread across the month |
+| **LiabilityFlowGenerator** | Statement cycles, due dates, minimum payments |
+
+If the projected minimum goes negative, the UI enters **shortfall mode** (how much you're short and what's driving it).
+
+On the dashboard: headline amount, stacked breakdown bar, 30-day projection chart (tap/scrub), explanation and legend modals, optional daily notification with today's number.
+
+Deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (simulation & STS sections).
+
+</details>
 
 ---
 
 ## Features
 
-| Area | Highlights |
-|------|------------|
-| **Double-Entry Ledger** | Create journals with multi-line transactions. Supports Income, Expense, Transfer, and Mixed entry types. |
-| **Accounts** | Five account types (Asset, Liability, Equity, Income, Expense) with hierarchical grouping and reordering. |
-| **Dashboard** | Net worth card, privacy toggle, "Safe to Spend" projection, and a paginated transaction feed. |
-| **Budgets** | Budget creation with scoped tracking per account/category. |
-| **Planned Payments** | Recurring and one-off scheduled payments with history tracking. |
-| **Reports** | Net worth trends, income vs. expense charts, category breakdowns with interactive tap-and-scrub gestures. |
-| **Cash Flow Simulation** | Forward-looking projection engine that models future balances from planned payments and past patterns. |
-| **Multi-Currency** | Per-account currencies with live exchange rates via ExchangeRate-API. |
-| **SMS Auto-Import** | (Android) Read bank SMS, extract transaction data, and auto-post via configurable rules. |
-| **Insights & Notifications** | Proactive financial insights and daily "Safe to Spend" notifications. |
-| **Data Portability** | Full JSON export/import, shareable transaction summaries in multiple formats. |
-| **Widgets** | Android home-screen widget for quick journal entry. |
-| **Audit Log** | Every data mutation is recorded with before/after state for full auditability. |
-| **Biometric Lock** | Optional device authentication via `expo-local-authentication`. |
-| **Theming** | System / Light / Dark theme with a custom design token system. |
+| | |
+|---|---|
+| **Ledger** | Simple and advanced journal entry; income, expense, transfer, multi-line; search, void, share |
+| **Accounts** | Asset, liability, equity, income, expense; hierarchy, reorder, per-account currency |
+| **Dashboard** | Net worth, privacy mask, transaction feed, Safe to Spend |
+| **Budgets & plans** | Scoped budgets; recurring and one-off planned payments |
+| **Reports** | Net worth, income vs expense, categories; interactive charts |
+| **Multi-currency** | ExchangeRate-API with local cache |
+| **Android SMS** | Optional inbox import and rule-based auto-post (`expo-sms-inbox`) |
+| **Data** | JSON export/import (native + Ivy Wallet + Cashew plugins), audit log + restore |
+| **Trust & UX** | Biometric lock, themes, insights, widgets, workplaces |
+
+Full UI checklist: [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
 
 ---
 
-## 💡 Safe to Spend
+## Tech stack
 
-The headline feature. Safe to Spend answers the question every finance app should but rarely does:
-
-> **"How much can I actually spend right now without going broke before payday?"**
-
-It isn't your bank balance. It's what's left after the engine accounts for every upcoming bill, budget commitment, and liability payment over the next 30 days.
-
-### How it works
-
-```
-  Liquid Assets          (cash, checking, savings — right now)
-+ Upcoming Income        (planned salary, transfers into liquid accounts)
-− Committed Spending     (bills, budgets, planned payments due within 30 days)
-− Outstanding Debt       (credit card balances and near-term liability payments)
-──────────────────────
-= Safe to Spend          (what you can actually spend today)
-```
-
-### The Simulation Engine
-
-Under the hood, a full **cash-flow simulation** runs forward day-by-day through a 30-day window. Three specialized flow generators feed into a single simulation pass:
-
-| Generator | What it models |
-|-----------|---------------|
-| **PlannedFlowGenerator** | Recurring and one-off planned payments, scheduled journal entries (income, bills, transfers) |
-| **BudgetFlowGenerator** | Remaining budget burn spread across the month, spilling into next month if needed |
-| **LiabilityFlowGenerator** | Credit card statement cycles, due dates, minimum payments, and settlement tracking |
-
-The `FlowResolver` then merges overlapping obligations (e.g. a budget and a planned payment covering the same expense) to avoid double-counting. All amounts are **currency-normalized** to a single display currency using cached exchange rates.
-
-The `Simulator` walks each day, applies every flow, and tracks the **global minimum balance** across the projection. Safe to Spend is clamped to `min(starting balance, lowest projected balance)` — if your balance dips to ₹700 before your salary arrives on day 15, you can safely spend ₹700, not your full ₹5,000 balance.
-
-### Shortfall Detection
-
-If the projected minimum goes **negative**, the engine flips to **Shortfall mode** — showing exactly how much you're short and which obligations are pushing you under. The UI highlights this prominently so you can act before it happens.
-
-### What you see on the Dashboard
-
-- **Safe to Spend Card** — The primary number, front and center, with a stacked breakdown bar (safe / committed / debts)
-- **Projection Chart** — A 30-day line chart showing your projected liquid balance, with tap-and-scrub interaction for daily details
-- **Explanation Modal** — An interactive ledger breakdown with expandable sections for each component (assets, income, committed, debts), drilling down to individual planned payments and budget allocations
-- **Legend Modal** — Per-account safe-to-spend breakdown showing each liquid account's contribution
-- **Daily Notification** — A scheduled notification with today's Safe to Spend number and a nudge to record recent activity
-
-### Why it matters
-
-Most apps tell you what you *have*. Safe to Spend tells you what you can *use*. The difference prevents overdrafts, credit card surprises, and the false confidence of seeing a big balance when half of it is already spoken for.
+| Layer | Choice |
+|-------|--------|
+| App | **Expo SDK 57**, **React Native 0.86**, **React 19**, **TypeScript 6** (strict) |
+| Navigation | Expo Router (file-based) |
+| Data | **WatermelonDB 0.28** → SQLite (native) / LokiJS (web & tests) |
+| UI | FlashList, Reanimated, Gesture Handler, design tokens ([DESIGN.md](DESIGN.md)) |
+| Quality | Jest, Playwright (web export), ESLint, Prettier, Husky |
+| Ship | EAS Build (dev / preview / production) |
+| Telemetry | PostHog (no session replay), Sentry (errors/traces, no session replay) |
 
 ---
 
-## Tech Stack
+## Quick start
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| **Runtime** | React Native (New Architecture) | 0.83 |
-| **Framework** | Expo SDK | 55 |
-| **Language** | TypeScript (strict mode) | 6.x |
-| **Navigation** | Expo Router (file-based routing) | 55.x |
-| **Database** | WatermelonDB → SQLite | 0.28 |
-| **Lists** | `@shopify/flash-list` | 2.0 |
-| **Animations** | React Native Reanimated 4 + Moti | |
-| **Gestures** | React Native Gesture Handler | 2.30 |
-| **Compiler** | React Compiler (beta) | 19.x |
-| **JS Engine** | Hermes | |
-| **State** | React Context + WatermelonDB observable hooks | |
-| **Analytics** | PostHog + Expo Insights | |
-| **CI** | Playwright (E2E on web export), Jest (unit/integration) | |
-| **Builds** | EAS Build (development / preview / production) | |
-| **Code Quality** | ESLint, Prettier, Husky + lint-staged | |
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 22+ (see `.nvmrc`)
-- [bun](https://bun.sh) — the project's package manager (`bun.lock` is committed,
-  and CI plus the git hooks all use bun)
-- [EAS CLI](https://docs.expo.dev/eas/) for native builds
-
-### Install & Run
+**Prerequisites:** Node 22+ ([`.nvmrc`](.nvmrc)), [Bun](https://bun.sh), optional [EAS CLI](https://docs.expo.dev/eas/) for native builds.
 
 ```bash
-# Install dependencies (use bun — npm produces a different tree than CI)
 bun install
-
-# Optional: create a local env file. The app runs without any of these values;
-# only analytics, crash reporting and on-device AI downloads need them.
-cp .env.example .env.local
-
-# Start Expo dev server
+cp .env.example .env.local   # optional — app runs without secrets
 npx expo start
-
-# Run on device/simulator
-npx expo run:ios
-npx expo run:android
 ```
 
-### Environment Variants
+| Command | Purpose |
+|---------|---------|
+| `npx expo run:ios` | Native iOS dev client |
+| `npx expo run:android` | Native Android dev client |
+| `npx expo start --web` | Web (limited; primary target is mobile) |
 
-| Variant | Bundle ID suffix | Usage |
-|---------|-----------------|-------|
-| `development` | `.dev` | Dev client with hot reload |
-| `preview` | `.preview` | Internal testing builds |
-| `production` | *(none)* | Store release |
+**Build variants** (`APP_VARIANT` or EAS profile): `development` (`.dev`), `preview` (`.preview`), `production`.
 
-Set via `APP_VARIANT` environment variable or EAS build profile.
+**Try it with data:** Settings → Data Management → **Setup Demo Workspace** (isolated sample workplace, leaves your data untouched).
+
+---
+
+## Development
+
+```bash
+bun run typecheck    # tsc --noEmit
+bun run test         # Jest + coverage thresholds
+bun run lint         # expo lint
+bun run verify       # typecheck + test:ci + lint (CI gate)
+```
+
+| Task | Where |
+|------|--------|
+| Component gallery | Dev client → [`/_design-preview`](app/_design-preview.tsx) |
+| Engineering truth | [PROJECT_BIBLE.md](PROJECT_BIBLE.md) |
+| Layer map | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Conventions & ratchets | [docs/CONVENTIONS.md](docs/CONVENTIONS.md) |
+| Deep guides | [`guides/`](guides/) (components, data, testing, performance, …) |
 
 ---
 
 ## Architecture
 
-Layered layout: Expo Router (`app/`) → features (`src/features/`) → services → repositories → WatermelonDB/SQLite. Five bottom tabs: dashboard, accounts, activity, commitments, settings.
-
-Full layer diagram, service inventory, data models, and performance notes: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. Canonical measured facts and invariants: **[PROJECT_BIBLE.md](PROJECT_BIBLE.md)**.
-
----
-
-## Project Structure
-
+```text
+app/ (Expo Router)  →  src/features/*  →  src/services/*  →  repositories  →  WatermelonDB / SQLite
 ```
-├── app/                    # Expo Router routes & tab navigation
-│   └── (tabs)/             # Bottom tab screens (dashboard, accounts, activity, commitments, settings)
-├── src/
-│   ├── features/           # Feature modules (accounts, journal, reports, budget, planned-payments, ...)
-│   ├── services/           # Domain services (balance, simulation, integrity, SMS, ...)
-│   ├── data/
-│   │   ├── models/         # WatermelonDB models (16 files, 15 registered in Database.ts)
-│   │   ├── repositories/   # Data access layer
-│   │   └── database/       # Schema, migrations, adapter
-│   ├── design-system/      # Layout primitives (Box, Stack, Text, Page, Skeleton, ...)
-│   ├── components/         # Shared UI (core, charts, layout, common)
-│   ├── hooks/              # Global hooks and observable helpers
-│   ├── contexts/           # React contexts (UIContext)
-│   ├── types/              # Shared TypeScript types
-│   ├── constants/          # App-wide constants
-│   └── utils/              # Pure utilities (logger, formatting, money, preferences, ...)
-├── modules/                # Custom native modules (expo-sms-inbox, expo-widgets)
-├── plugins/                # Expo config plugins (Gradle, telephony, widgets, permissions)
-├── e2e/                    # Playwright end-to-end tests
-├── docs/                   # Architecture, conventions, feature matrix, roadmaps
-├── guides/                 # Developer guides (components, data, testing, performance, ...)
-└── scripts/                # Build & maintenance scripts
-```
+
+Five tabs: **Dashboard · Accounts · Activity · Commitments · Settings**.
+
+Feature boundaries are enforced in `eslint.config.js` (per-feature import restrictions). Business logic lives in `src/services/`, not in route files.
 
 ---
 
 ## Testing
 
-### Unit & Integration Tests (Jest)
-
 ```bash
-bun run test           # Jest (per-file coverage thresholds; same as CI)
-bun run verify         # typecheck + test:ci + lint
+bun run verify                    # same as CI on PRs
+
+# E2E (Playwright, web export)
+bun run test:e2e:build
+bun run serve:e2e
+bun run test:e2e
 ```
 
-Tests cover: repositories, services, accounting invariants, money math, and currency formatting.
-
-### End-to-End Tests (Playwright)
-
-```bash
-bun run test:e2e:build           # Export web build for E2E
-bun run serve:e2e                # Serve the export locally
-bun run test:e2e                 # Run Playwright suite
-bun run test:e2e:ui              # Interactive Playwright UI
-```
-
-### Visual Testing
-
-```bash
-npx expo start --dev-client      # Open /_design-preview for component gallery
-```
+Simulation and ledger paths have the strongest test coverage; see [docs/TEST_COVERAGE.md](docs/TEST_COVERAGE.md).
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [PROJECT_BIBLE.md](PROJECT_BIBLE.md) | Canonical measured facts, invariants, and debt register |
-| [docs/README.md](docs/README.md) | Doc hierarchy and index |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System layers, data models, services, performance patterns |
-| [CONVENTIONS.md](docs/CONVENTIONS.md) | Coding standards, naming, state management rules |
-| [FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) | Feature completeness tracker |
-| [CHANGELOG.md](docs/CHANGELOG.md) | Version history |
-| [KNOWN_GAPS_AND_RISKS.md](docs/KNOWN_GAPS_AND_RISKS.md) | Known issues and technical debt |
-| [FUTURE_ROADMAP.md](docs/FUTURE_ROADMAP.md) | Planned features |
+| Doc | Use when |
+|-----|----------|
+| [PROJECT_BIBLE.md](PROJECT_BIBLE.md) | Counts, invariants, debt register |
+| [docs/README.md](docs/README.md) | Doc index and hierarchy |
+| [docs/adr/](docs/adr/) | Architecture decisions |
+| [CONTEXT.md](CONTEXT.md) | Domain glossary |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Release notes |
 | [PRIVACY.MD](PRIVACY.MD) | Privacy policy |
-
-### Developer Guides (`guides/`)
-
-In-depth guides covering components, data & state, design tokens, performance optimization, testing strategy, error handling, security & audit, accessibility, and environment setup.
 
 ---
 
 ## Privacy
 
-Full Frills Balance is primarily offline. Financial data stays on your device. Optional SMS access (Android) is processed locally and not uploaded.  
-Analytics (PostHog, Expo Insights) collect only pseudonymous usage events — never transaction amounts, merchant names, or balances.
+Financial data stays on your device. SMS processing (Android) is local. Analytics are pseudonymous event counts — not amounts, merchants, or balances. PostHog and Sentry session replay are **disabled**.
 
-See [PRIVACY.MD](PRIVACY.MD) for the full policy.
+Details: [PRIVACY.MD](PRIVACY.MD).
 
 ---
 
