@@ -4,10 +4,7 @@ import Account from '@/src/data/models/Account';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
-import {
-  SmsRuleDisposition,
-  SmsRuleMode,
-} from '@/src/services/ledger/RuleMatcher';
+import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
 import {
   buildSmsRulePreviewInput,
   buildStructuredSmsRuleConditions,
@@ -134,7 +131,9 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
           setSenderContains(getSmsRuleConditionValue(conditions, 'sender')?.value || '');
           setBodyContains(getSmsRuleConditionValue(conditions, 'body')?.value || '');
           setMerchantContains(getSmsRuleConditionValue(conditions, 'merchant')?.value || '');
-          setAccountSourceContains(getSmsRuleConditionValue(conditions, 'account_source')?.value || '');
+          setAccountSourceContains(
+            getSmsRuleConditionValue(conditions, 'account_source')?.value || '',
+          );
           setDirection(
             (getSmsRuleConditionValue(conditions, 'direction')?.value as
               '' | 'debit' | 'credit' | undefined) || '',

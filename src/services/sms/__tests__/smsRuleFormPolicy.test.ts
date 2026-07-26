@@ -35,7 +35,9 @@ describe('smsRuleFormPolicy', () => {
       mode: 'builder' as const,
       legacySenderMatch: '',
       legacyBodyMatch: '',
-      structuredConditions: [{ field: 'sender' as const, operator: 'contains' as const, value: 'x' }],
+      structuredConditions: [
+        { field: 'sender' as const, operator: 'contains' as const, value: 'x' },
+      ],
       amountOperator: '' as const,
       amountValue: '',
       amountSecondaryValue: '',

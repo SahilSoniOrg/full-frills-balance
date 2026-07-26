@@ -131,7 +131,11 @@ export function buildStructuredSmsRuleConditions(
       value: fields.currencyCode.trim().toUpperCase(),
     });
   }
-  if (amountOperatorIsSet(fields.amountOperator) && amountNumber !== undefined && !Number.isNaN(amountNumber)) {
+  if (
+    amountOperatorIsSet(fields.amountOperator) &&
+    amountNumber !== undefined &&
+    !Number.isNaN(amountNumber)
+  ) {
     conditions.push({
       field: 'amount',
       operator: fields.amountOperator,
@@ -148,9 +152,7 @@ export function buildStructuredSmsRuleConditions(
   return conditions;
 }
 
-function amountOperatorIsSet(
-  op: SmsRuleAmountOperator,
-): op is Exclude<SmsRuleAmountOperator, ''> {
+function amountOperatorIsSet(op: SmsRuleAmountOperator): op is Exclude<SmsRuleAmountOperator, ''> {
   return op !== '';
 }
 
@@ -207,9 +209,7 @@ export function smsRulePreviewHasConditions(
   structuredConditions: SmsRuleCondition[],
   legacySenderMatch: string,
 ): boolean {
-  return mode === 'builder'
-    ? structuredConditions.length > 0
-    : legacySenderMatch.trim().length > 0;
+  return mode === 'builder' ? structuredConditions.length > 0 : legacySenderMatch.trim().length > 0;
 }
 
 export function shouldShowSmsRuleAccountMapping(disposition: SmsRuleDisposition): boolean {
