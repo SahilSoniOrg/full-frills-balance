@@ -1,6 +1,9 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import {
+  journalObserveQueries,
+  journalQueryRepository,
+} from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -12,7 +15,7 @@ import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
-jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
@@ -37,12 +40,12 @@ describe('PatternService', () => {
 
     // Default simple mocks
     (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
-    (journalRepository.findByIds as jest.Mock).mockResolvedValue([]);
+    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
     (transactionRepository.observeByDateRange as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
-    (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(
+    (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(
       of({ count: 1, lastUpdatedAt: new Date() }),
     );
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
@@ -223,7 +226,9 @@ describe('PatternService', () => {
         },
       ]);
       (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);
-      (journalRepository.findByIds as jest.Mock).mockResolvedValue(Object.values(mockJournals));
+      (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue(
+        Object.values(mockJournals),
+      );
       (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
 
       patternService

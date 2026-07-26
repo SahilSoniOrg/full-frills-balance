@@ -3,7 +3,7 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -59,7 +59,7 @@ describe('budgetReadService', () => {
     );
 
     // 1. Add an expense to the child account. It should roll up.
-    await journalRepository.createJournalWithTransactions(
+    await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Grocery Trip',
         journalDate: middleOfMonth,
@@ -77,7 +77,7 @@ describe('budgetReadService', () => {
     );
 
     // 2. Refund on child account
-    await journalRepository.createJournalWithTransactions(
+    await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Grocery Refund',
         journalDate: middleOfMonth,
@@ -95,7 +95,7 @@ describe('budgetReadService', () => {
     );
 
     // 3. Out of bounds expense
-    await journalRepository.createJournalWithTransactions(
+    await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Old Grocery',
         journalDate: dayjs('2023-09-15').valueOf(),
@@ -152,7 +152,7 @@ describe('budgetReadService', () => {
     );
 
     // Add expense in the previous month
-    await journalRepository.createJournalWithTransactions(
+    await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Old Grocery',
         journalDate: dayjs('2023-09-15').valueOf(),

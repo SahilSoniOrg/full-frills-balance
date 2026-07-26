@@ -42,42 +42,38 @@ export class WorkplaceService {
   ): Promise<void> {
     const { initialAccounts = [], initialCategories = [], currencyCode } = options;
 
-    const { accountService } = await import('@/src/services/accounts/accountDomainService');
+    const { createAccount } = await import('@/src/services/accounts/accountCommands');
+    const { findAccountByName, getOpeningBalancesAccountId, findOrCreateBalanceCorrectionAccount } =
+      await import('@/src/services/accounts/accountSystemAccounts');
     // 1. Ensure system accounts exist
-    await accountService.getOpeningBalancesAccountId(currencyCode, workplaceId);
-    await accountService.findOrCreateBalanceCorrectionAccount(currencyCode, workplaceId);
+    await getOpeningBalancesAccountId(currencyCode, workplaceId);
+    await findOrCreateBalanceCorrectionAccount(currencyCode, workplaceId);
 
     // 2. Create initial accounts
     for (const acc of initialAccounts) {
-      await accountService.createAccount(
-        {
-          name: acc.name,
-          accountType: acc.type,
-          currencyCode: currencyCode,
-          initialBalance: 0,
-          icon: acc.icon,
-          workplaceId,
-        },
+      await createAccount(workplaceId, {
+        name: acc.name,
+        accountType: acc.type,
+        currencyCode: currencyCode,
+        initialBalance: 0,
+        icon: acc.icon,
         workplaceId,
-      );
+      });
     }
     // 3. Create initial categories
     for (const cat of initialCategories) {
       // Avoid duplicates if already created as account
-      const existing = await accountService.findAccountByName(workplaceId, cat.name);
+      const existing = await findAccountByName(workplaceId, cat.name);
       if (existing) continue;
 
-      await accountService.createAccount(
-        {
-          name: cat.name,
-          accountType: cat.type,
-          currencyCode: currencyCode,
-          initialBalance: 0,
-          icon: cat.icon,
-          workplaceId,
-        },
+      await createAccount(workplaceId, {
+        name: cat.name,
+        accountType: cat.type,
+        currencyCode: currencyCode,
+        initialBalance: 0,
+        icon: cat.icon,
         workplaceId,
-      );
+      });
     }
   }
 

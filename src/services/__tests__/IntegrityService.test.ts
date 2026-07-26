@@ -4,7 +4,7 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { auditService } from '@/src/services/audit-service';
 import { Q } from '@nozbe/watermelondb';
@@ -47,7 +47,7 @@ describe('IntegrityService', () => {
 
   describe('computeBalanceFromTransactions', () => {
     it('should compute correct debit/credit balanced sum', async () => {
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'In',
           journalDate: Date.now(),
@@ -68,7 +68,7 @@ describe('IntegrityService', () => {
         'wp-1' as WorkplaceId,
       );
 
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Out',
           journalDate: Date.now(),
@@ -99,7 +99,7 @@ describe('IntegrityService', () => {
 
   describe('verifyAccountBalance', () => {
     it('should detect when cached running balance is corrupted', async () => {
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Deposit',
           journalDate: Date.now(),
@@ -142,7 +142,7 @@ describe('IntegrityService', () => {
 
   describe('repairAccountBalance', () => {
     it('should fix running balance discrepancies', async () => {
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Deposit',
           journalDate: Date.now(),
@@ -212,7 +212,7 @@ describe('IntegrityService', () => {
 
       // Create two transactions at the exact same timestamp
       // Note: We use manual created_at via update to ensure they match exactly
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'First',
           journalDate: now,
@@ -227,7 +227,7 @@ describe('IntegrityService', () => {
         },
         'wp-1' as WorkplaceId,
       );
-      await journalRepository.createJournalWithTransactions(
+      await journalWriteRepository.createJournalWithTransactions(
         {
           description: 'Second',
           journalDate: now,

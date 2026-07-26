@@ -1,6 +1,6 @@
 import { getNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { mapJournalToCardProps } from '@/src/services/accounting/transactionCardPresentation';
+import { mapJournalToCardProps } from '@/src/adapters/transactionCardAdapter';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';

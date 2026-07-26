@@ -24,6 +24,8 @@ export interface AccountDateRange extends DateRange {
   plannedPaymentId?: string;
 }
 
+export type { ObservableDateRange, JournalObserveFilter } from '@/src/types/journalTimeline';
+
 export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
   /** Number of items per page */
   pageSize: number;

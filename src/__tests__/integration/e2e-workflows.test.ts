@@ -7,7 +7,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { accountService } from '@/src/services/accounts/accountDomainService';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -176,7 +176,9 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
       // Reset the date of the initial balance to be in the past
-      const [initialJournal] = await journalRepository.findAll('test-workplace' as WorkplaceId);
+      const [initialJournal] = await journalListQueryRepository.findAll(
+        'test-workplace' as WorkplaceId,
+      );
       await database.write(async () => {
         await initialJournal.update(j => {
           j.journalDate = FIXED_DATE;
