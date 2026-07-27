@@ -525,14 +525,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to SMS inbox.
-   * @deprecated Use toTransactionInbox instead.
-   */
-  toSmsInbox: () => {
-    AppNavigation.toTransactionInbox();
-  },
-
-  /**
    * Navigate to SMS rule form (new or edit).
    */
   toSmsRuleForm: (
@@ -561,14 +553,6 @@ export const AppNavigation = {
    * Navigate to the Hub (Notifications & Insights).
    */
   toHub: () => {
-    router.push('/hub' as Href);
-  },
-
-  /**
-   * Navigate to notifications list.
-   * @deprecated Use toHub instead
-   */
-  toNotifications: () => {
     router.push('/hub' as Href);
   },
 
@@ -627,14 +611,6 @@ export const AppNavigation = {
         currencyCode: params.currencyCode,
       },
     } as Href);
-  },
-
-  /**
-   * Navigate to notification details with route params.
-   * @deprecated Use toInsightDetails instead
-   */
-  toNotificationDetails: (params: any) => {
-    AppNavigation.toInsightDetails(params);
   },
 
   /**

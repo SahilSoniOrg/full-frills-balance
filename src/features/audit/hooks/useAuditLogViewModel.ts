@@ -16,6 +16,7 @@ export interface AuditLogViewModel {
   logs: ReturnType<typeof useAuditLogs>['logs'];
   accountMap: ReturnType<typeof useAuditAccounts>['accountMap'];
   entityStatusMap: ReturnType<typeof useAuditEntityStatus>;
+  workplaceCurrency: string;
   isLoading: boolean;
   isFiltered: boolean;
   expandedIds: Set<string>;
@@ -29,7 +30,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     entityType?: AuditEntityType;
     entityId?: string;
   }>();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -111,6 +112,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     logs,
     accountMap,
     entityStatusMap,
+    workplaceCurrency,
     isLoading: isLoading || accountsLoading,
     isFiltered,
     expandedIds,

@@ -83,7 +83,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
               leftIcon="messageSquare"
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
-              onPress={AppNavigation.toSmsInbox}
+              onPress={AppNavigation.toTransactionInbox}
             />
             {vm.isSmsImportEnabled && (
               <>

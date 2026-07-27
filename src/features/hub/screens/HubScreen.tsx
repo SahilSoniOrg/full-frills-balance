@@ -44,7 +44,7 @@ export default function HubScreen() {
 
     return (
       <ListRow
-        onPress={AppNavigation.toSmsInbox}
+        onPress={AppNavigation.toTransactionInbox}
         leading={<AppIcon name="notifications" size={Size.md} color={theme.primary} />}
         title={strings.dashboard.hub.unreadSmsTitle(unreadSmsCount)}
         subtitle={strings.dashboard.hub.unreadSmsSubtitle}

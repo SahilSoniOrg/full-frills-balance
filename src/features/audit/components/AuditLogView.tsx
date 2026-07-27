@@ -13,6 +13,7 @@ export function AuditLogView(vm: AuditLogViewModel) {
     logs,
     accountMap,
     entityStatusMap,
+    workplaceCurrency,
     isLoading,
     isFiltered,
     expandedIds,
@@ -48,6 +49,7 @@ export function AuditLogView(vm: AuditLogViewModel) {
                 onRevert={onRevert}
                 accountMap={accountMap}
                 entityStatusMap={entityStatusMap}
+                workplaceCurrency={workplaceCurrency}
               />
             )}
             keyExtractor={item => item.id}

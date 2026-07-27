@@ -357,7 +357,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     journalIdShort: journalId?.substring(0, 8) || '...',
     onHistoryPress,
     smsInfo,
-    onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toSmsInbox : undefined,
+    onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toTransactionInbox : undefined,
     onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
     onRevertToScheduled:
       (journalInfo?.status === 'POSTED' || journalInfo?.status === 'SKIPPED') &&

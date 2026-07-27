@@ -21,6 +21,7 @@ describe('E2E Workflows', () => {
   let integrityService: IntegrityService;
 
   beforeEach(async () => {
+    rebuildQueueService.stop();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
@@ -159,7 +160,6 @@ describe('E2E Workflows', () => {
   });
 
   describe('Journal reversal workflow', () => {
-    // TODO: Fix rebuild queue singleton timing issue in test environment
     it('should correctly reverse a journal and restore balances', async () => {
       const FIXED_DATE = 1706700000000; // Fixed date for test
       const cash = await createAccount('test-workplace' as WorkplaceId, {
@@ -248,7 +248,6 @@ describe('E2E Workflows', () => {
   });
 
   describe('Multi-currency workflow', () => {
-    // TODO: Fix rebuild queue singleton timing issue in test environment
     it('should handle transactions with exchange rates', async () => {
       const usdCash = await accountRepository.create({
         name: 'USD Cash',

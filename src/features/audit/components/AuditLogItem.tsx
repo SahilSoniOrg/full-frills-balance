@@ -1,11 +1,9 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
-import {
-  AuditLogEntry,
-  EntityStatus,
-  useAuditLogDiffViewModel,
-} from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
+import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
+import { AuditLogEntry, EntityStatus } from '@/src/features/audit/auditLogTypes';
+import { useAuditLogItemMeta } from '@/src/features/audit/hooks/useAuditLogItemMeta';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -17,6 +15,7 @@ interface AuditLogItemProps {
   onRevert?: (logId: string) => void;
   accountMap: Record<string, { name: string; currency: string }>;
   entityStatusMap: Record<string, EntityStatus>;
+  workplaceCurrency: string;
 }
 
 export const AuditLogItem = ({
@@ -27,6 +26,7 @@ export const AuditLogItem = ({
   onRevert,
   accountMap,
   entityStatusMap,
+  workplaceCurrency,
 }: AuditLogItemProps) => {
   const { theme } = useTheme();
   const {
@@ -37,9 +37,8 @@ export const AuditLogItem = ({
     entityDisplayName,
     timestampLabel,
     entityIdLabel,
-    renderChanges,
     canRevert,
-  } = useAuditLogDiffViewModel({ item, accountMap, entityStatusMap });
+  } = useAuditLogItemMeta({ item, entityStatusMap });
 
   return (
     <AppCard padding="md" elevation="sm" radius="r2" style={styles.card}>
@@ -88,7 +87,11 @@ export const AuditLogItem = ({
 
       {isExpanded && parsedChanges && (
         <Stack gap="md" style={styles.expandedContent}>
-          {renderChanges(parsedChanges)}
+          <AuditLogChangesView
+            changes={parsedChanges}
+            accountMap={accountMap}
+            workplaceCurrency={workplaceCurrency}
+          />
 
           <Inline justify="flex-end" gap="sm">
             {onView && (

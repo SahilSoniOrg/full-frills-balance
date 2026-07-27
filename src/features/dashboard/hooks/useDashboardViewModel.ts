@@ -189,7 +189,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       unreadSmsCount: unreadSmsCount || 0,
       onSmsPress:
         Platform.OS === 'android' && (isSmsImportEnabled || (unreadSmsCount || 0) > 0)
-          ? AppNavigation.toSmsInbox
+          ? AppNavigation.toTransactionInbox
           : undefined,
       onSearchPress: AppNavigation.toJournalSearch,
     }),

@@ -1,13 +1,11 @@
-import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { EntityStatus } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
 
-export interface EntityStatus {
-  exists: boolean;
-  isDeleted: boolean;
-}
+export type { EntityStatus } from '@/src/features/audit/auditLogTypes';
 
 export function useAuditAccounts(wokrplaceId: string) {
   const { data: accounts, isLoading } = useObservable(

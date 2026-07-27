@@ -23,6 +23,7 @@ describe('Journal ledger integration', () => {
   let incomeAccountId: string;
 
   beforeEach(async () => {
+    rebuildQueueService.stop();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
@@ -287,7 +288,6 @@ describe('Journal ledger integration', () => {
   });
 
   describe('deleteJournal', () => {
-    // TODO: Fix rebuild queue singleton timing issue in test environment
     it('should soft-delete journal and its transactions', async () => {
       const journal = await ledgerWriteService.createJournal(
         {

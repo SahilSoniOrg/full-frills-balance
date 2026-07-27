@@ -1,15 +1,9 @@
 /**
- * UI Context - Simple UI state management
+ * App shell context: persisted user preferences (via `preferences`), session/boot
+ * state (lock, fonts, import restart), and derived UI flags.
  *
- * ========================================
- * HARD RULES FOR THIS CONTEXT:
- * ========================================
- * - MAY contain: onboarding flags, theme preference, simple UI state
- * - MAY NOT contain: domain data, business logic, derived values, repository calls
- * - If it needs persistence → preferences Module (`src/utils/preferences`)
- * - If it needs logic → repository
- * - If it needs data → database
- * ========================================
+ * Prefer `usePreferences` for new persisted fields; this context mirrors prefs for
+ * ergonomic React updates and adds non-persisted session state.
  */
 
 import { AppConfig } from '@/src/constants/app-config';

@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
-import { AuditLogEntry } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
+import { AuditLogEntry } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
 import { WorkplaceId } from '@/src/types/domain';

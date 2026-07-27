@@ -51,6 +51,8 @@ src/design-system/
 | Components | PascalCase | `JournalCard.tsx` |
 | Hooks | camelCase with `use` prefix | `useJournals.ts` |
 | View Models | camelCase with `use` prefix + `ViewModel` | `useDashboardViewModel.ts` |
+| Screen controllers | camelCase with `use` prefix (no `ViewModel` suffix) | `useJournalEditor.ts`, `usePlannedPaymentDetails.ts` |
+| View model pairing | Optional `useX` data hook + `useXViewModel` presentation | `usePlannedPaymentDetails` + `usePlannedPaymentDetailsViewModel` |
 | Services | PascalCase + `Service` suffix | `BalanceService.ts` |
 | Repositories | PascalCase + `Repository` suffix | `JournalRepository.ts` |
 | Utilities | camelCase | `formatCurrency.ts` |
