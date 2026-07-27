@@ -14,6 +14,7 @@ jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
     transactionAccounts: accounts,
     expenseAccounts: accounts,
     incomeAccounts: accounts,
+    leafAccounts: accounts,
   })),
 }));
 

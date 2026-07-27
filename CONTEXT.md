@@ -6,6 +6,22 @@ This file captures the domain language for full-frills-balance. Use these terms 
 - **Account**: A ledger entity with type Asset, Liability, or Equity, representing physical or legal holding of value (e.g., Bank Account, Credit Card, Cash, Loan).
 - **Category**: A ledger entity with type Income or Expense, representing the classification of money flow (e.g., Salary, Food, Rent).
 
+## Journal entry
+- **Guided journal entry**: Recording a journal through the expense, income, or transfer flow with exactly two legs (one source credit, one destination debit) and plain-language labels.
+_Avoid_: Simple mode, simple entry (legacy UI labels)
+
+- **Advanced journal entry**: Recording a journal by editing an arbitrary set of lines with explicit debits and credits.
+_Avoid_: Power mode, manual journal
+
+- **Guided inline account row**: On a guided leg, every account or category that is eligible for that leg and transaction kind, shown inline (filtered full list—not the whole workplace chart on every leg).
+_Avoid_: Shortcuts row, capped tiles
+
+- **Guided transfer**: Moving value between two chosen accounts with no expense/income tab semantics; either leg may be any account type (asset, liability, equity, income, or expense category).
+_Avoid_: Balance-sheet-only transfer, “payment account” transfer (too narrow)
+
+- **Full account browse**: Choosing an account or category from the searchable picker when the inline row is hard to scan (search, hierarchy, or very long charts).
+_Avoid_: Account search modal (implementation name)
+
 ## Multi-tenancy
 - **Workplace**: The tenant boundary for the app. Nearly every persisted table and query is scoped by `workplaceId`. A user can have multiple workplaces (e.g. personal vs. side business); the active one is stored in preferences as `activeWorkplaceId` and surfaced via `WorkplaceContext`.
 
