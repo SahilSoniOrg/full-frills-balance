@@ -1,5 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import {
   AccountId,
   AccountRole,
@@ -145,34 +147,27 @@ export interface SimpleFormSectionConfig {
 export function buildSimpleFormAccountSections(
   type: TabType,
   options: {
-    expenseAccounts: Account[];
-    incomeAccounts: Account[];
-    transactionAccounts: Account[];
     leafAccounts: Account[];
     sourceId: AccountId;
     destinationId: AccountId;
   },
 ): SimpleFormSectionConfig[] {
-  const {
-    expenseAccounts,
-    incomeAccounts,
-    transactionAccounts,
-    leafAccounts,
-    sourceId,
-    destinationId,
-  } = options;
+  const { leafAccounts, sourceId, destinationId } = options;
+
+  const sourceAccounts = filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT);
+  const destinationAccounts = filterGuidedLegAccounts(leafAccounts, type, TransactionType.DEBIT);
 
   if (type === 'expense') {
     return [
       {
         title: AppConfig.strings.transactionFlow.simpleEntry.toCategory,
-        accounts: expenseAccounts,
+        accounts: destinationAccounts,
         selectedId: destinationId,
         role: 'destination',
       },
       {
         title: AppConfig.strings.transactionFlow.simpleEntry.fromAccount,
-        accounts: transactionAccounts,
+        accounts: sourceAccounts,
         selectedId: sourceId,
         role: 'source',
       },
@@ -183,13 +178,13 @@ export function buildSimpleFormAccountSections(
     return [
       {
         title: AppConfig.strings.transactionFlow.simpleEntry.fromSource,
-        accounts: incomeAccounts,
+        accounts: sourceAccounts,
         selectedId: sourceId,
         role: 'source',
       },
       {
         title: AppConfig.strings.transactionFlow.simpleEntry.toAccount,
-        accounts: transactionAccounts,
+        accounts: destinationAccounts,
         selectedId: destinationId,
         role: 'destination',
       },
@@ -199,13 +194,13 @@ export function buildSimpleFormAccountSections(
   return [
     {
       title: AppConfig.strings.transactionFlow.simpleEntry.sourceAccount,
-      accounts: leafAccounts,
+      accounts: sourceAccounts,
       selectedId: sourceId,
       role: 'source',
     },
     {
       title: AppConfig.strings.transactionFlow.simpleEntry.destinationAccount,
-      accounts: leafAccounts,
+      accounts: destinationAccounts,
       selectedId: destinationId,
       role: 'destination',
     },

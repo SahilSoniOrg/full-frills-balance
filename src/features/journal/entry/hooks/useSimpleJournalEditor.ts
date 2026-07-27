@@ -1,6 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import {
@@ -181,31 +182,40 @@ export function useSimpleJournalEditor({
     (newType: TabType) => {
       editor.setTransactionType(newType);
 
-      // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
-      // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
-      // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
-      // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
+      const accountsById = new Map(accounts.map(a => [a.id, a]));
+      const { sourceAccountId: nextSourceId, destinationAccountId: nextDestId } =
+        resolveGuidedAccountsAfterTabChange(newType, accountsById, sourceId, destinationId);
 
-      if (sourceLine) {
-        editor.updateLine(sourceLine.id, {
-          transactionType: TransactionType.CREDIT,
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: getInferredAccountType(newType, TransactionType.CREDIT),
-          accountCurrency: undefined,
+      const applyAccountToLine = (
+        line: JournalEntryLine | undefined,
+        accountId: AccountId,
+        side: typeof TransactionType.CREDIT | typeof TransactionType.DEBIT,
+      ) => {
+        if (!line) return;
+        if (!accountId || accountId === EMPTY_ACCOUNT_ID) {
+          editor.updateLine(line.id, {
+            transactionType: side,
+            accountId: EMPTY_ACCOUNT_ID,
+            accountName: '',
+            accountType: getInferredAccountType(newType, side),
+            accountCurrency: undefined,
+          });
+          return;
+        }
+        const account = accountsById.get(accountId);
+        editor.updateLine(line.id, {
+          transactionType: side,
+          accountId,
+          accountName: account?.name || '',
+          accountType: account?.accountType || getInferredAccountType(newType, side),
+          accountCurrency: account?.currencyCode,
         });
-      }
-      if (destinationLine) {
-        editor.updateLine(destinationLine.id, {
-          transactionType: TransactionType.DEBIT,
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: getInferredAccountType(newType, TransactionType.DEBIT),
-          accountCurrency: undefined,
-        });
-      }
+      };
+
+      applyAccountToLine(sourceLine, nextSourceId, TransactionType.CREDIT);
+      applyAccountToLine(destinationLine, nextDestId, TransactionType.DEBIT);
     },
-    [editor, sourceLine, destinationLine],
+    [editor, sourceLine, destinationLine, accounts, sourceId, destinationId],
   );
 
   const setAmount = useCallback(
@@ -357,9 +367,6 @@ export function useSimpleJournalEditor({
 
   const accountSections = useMemo((): SimpleFormSection[] => {
     return buildSimpleFormAccountSections(type, {
-      expenseAccounts,
-      incomeAccounts,
-      transactionAccounts,
       leafAccounts,
       sourceId,
       destinationId,
@@ -367,17 +374,7 @@ export function useSimpleJournalEditor({
       ...section,
       onSelect: section.role === 'source' ? setSourceId : setDestinationId,
     }));
-  }, [
-    type,
-    expenseAccounts,
-    incomeAccounts,
-    transactionAccounts,
-    leafAccounts,
-    sourceId,
-    destinationId,
-    setSourceId,
-    setDestinationId,
-  ]);
+  }, [type, leafAccounts, sourceId, destinationId, setSourceId, setDestinationId]);
 
   const openAccountPicker = useCallback(
     (role: AccountRole) => {

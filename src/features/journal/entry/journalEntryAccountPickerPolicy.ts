@@ -1,8 +1,11 @@
 import Account from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  filterGuidedLegAccounts,
+  filterToLeafAccounts,
+} from '@/src/services/journal/guidedJournalAccountEligibility';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
-import { getAllowedAccountTypes } from '@/src/utils/accountCategory';
 import { AccountId, JournalEntryLine, TabType } from '@/src/types/domain';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
@@ -26,10 +29,8 @@ export function resolveJournalEntrySelectableAccounts(input: {
     line?.transactionType ??
     (activeLineId === SPLIT_SOURCE_LINE_ID ? TransactionType.CREDIT : TransactionType.DEBIT);
 
-  const allowedTypes = getAllowedAccountTypes(modeTab, lineSide);
-  const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
-
-  return filtered.length > 0 ? filtered : accounts;
+  const leafAccounts = filterToLeafAccounts(accounts);
+  return filterGuidedLegAccounts(leafAccounts, modeTab, lineSide);
 }
 
 export function resolveJournalEntrySelectedAccountId(input: {

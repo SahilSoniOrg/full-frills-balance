@@ -6,7 +6,7 @@ import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 export interface AccountTileListProps {
@@ -18,14 +18,14 @@ export interface AccountTileListProps {
   emptyPrompt?: string;
 }
 
-export const AccountTileList = ({
+export const AccountTileList = React.memo(function AccountTileList({
   title,
   accounts,
   selectedId,
   onSelect,
   onSearchRequest,
   emptyPrompt,
-}: AccountTileListProps) => {
+}: AccountTileListProps) {
   const { theme } = useTheme();
 
   const items = useMemo(() => {
@@ -111,4 +111,4 @@ export const AccountTileList = ({
       </View>
     </View>
   );
-};
+});
