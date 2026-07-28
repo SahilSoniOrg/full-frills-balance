@@ -1,0 +1,46 @@
+appId: in.sahilsoni.fullfrillsbalance
+---
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-name-input'
+    timeout: 180000
+- tapOn:
+    id: 'onboarding-name-input'
+- inputText: 'Alex'
+- hideKeyboard
+- tapOn:
+    id: 'onboarding-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-theme-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'onboarding-theme-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-finish-button'
+    timeout: 30000
+- tapOn:
+    id: 'onboarding-finish-button'
+- extendedWaitUntil:
+    visible:
+      text: 'Hi, Alex'
+    timeout: 120000

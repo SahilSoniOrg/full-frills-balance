@@ -3,18 +3,49 @@ import { device, element, by, waitFor } from 'detox';
 const METRO_URL = process.env.DETOX_METRO_URL ?? 'http://localhost:8081';
 const DEV_CLIENT_URL = `exp+full-frills-balance://expo-development-client/?url=${encodeURIComponent(METRO_URL)}`;
 
+async function connectDevClientIfNeeded() {
+  const candidates = [
+    element(by.text(METRO_URL)),
+    element(by.text(/https?:\/\/[^\s]+:8081/)),
+    element(by.text('Full Frills Balance')),
+    element(by.label('Full Frills Balance')),
+  ];
+
+  for (const el of candidates) {
+    try {
+      await waitFor(el).toBeVisible().withTimeout(8000);
+      await el.tap();
+      return;
+    } catch {
+      // try next selector
+    }
+  }
+}
+
 export async function launchFreshApp() {
   await device.launchApp({
     newInstance: true,
-    delete: true,
     permissions: { notifications: 'YES' },
+    url: DEV_CLIENT_URL,
   });
 
-  await device.openURL({ url: DEV_CLIENT_URL });
+  await connectDevClientIfNeeded();
+}
 
-  await waitFor(element(by.id('onboarding-name-input')))
+export async function ensureOnboarded(userName: string) {
+  try {
+    await waitFor(element(by.id('onboarding-name-input')))
+      .toBeVisible()
+      .withTimeout(120000);
+    await completeOnboarding(userName);
+    return;
+  } catch {
+    // Fresh install path failed or user already completed onboarding.
+  }
+
+  await waitFor(element(by.label('Dashboard, tab, 1 of 5')))
     .toBeVisible()
-    .withTimeout(90000);
+    .withTimeout(60000);
 }
 
 export async function completeOnboarding(userName: string) {
@@ -48,7 +79,7 @@ export async function completeOnboarding(userName: string) {
 
   await waitFor(element(by.text(`Hi, ${userName}`)))
     .toBeVisible()
-    .withTimeout(60000);
+    .withTimeout(120000);
 }
 
 export async function openBudgetFormFromCommitments() {

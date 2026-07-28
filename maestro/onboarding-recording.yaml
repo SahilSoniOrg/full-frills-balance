@@ -1,0 +1,65 @@
+appId: in.sahilsoni.fullfrillsbalance
+---
+- launchApp:
+    stopApp: false
+- openLink: ${DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: 'Full Frills Balance'
+    commands:
+      - tapOn: 'Full Frills Balance'
+- runFlow:
+    when:
+      visible: '${METRO_URL}'
+    commands:
+      - tapOn: '${METRO_URL}'
+- tapOn:
+    text: '.*8081.*'
+    optional: true
+- tapOn:
+    text: 'Connect'
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-name-input'
+    timeout: 180000
+- tapOn:
+    id: 'onboarding-name-input'
+- inputText: 'Alex'
+- hideKeyboard
+- tapOn:
+    id: 'onboarding-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'selectable-grid-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'selectable-grid-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-theme-continue-button'
+    timeout: 30000
+- tapOn:
+    id: 'onboarding-theme-continue-button'
+- extendedWaitUntil:
+    visible:
+      id: 'onboarding-finish-button'
+    timeout: 30000
+- tapOn:
+    id: 'onboarding-finish-button'
+- extendedWaitUntil:
+    visible:
+      text: 'Hi, Alex'
+    timeout: 120000

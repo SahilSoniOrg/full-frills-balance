@@ -20,6 +20,16 @@
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F1E2D3C4B5A6978877665544 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A7AD1668E4184F28A24A3095;
+			remoteInfo = FullFrillsBalanceWidget;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		BDA3DD1D1DCB42C78030933D /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -193,6 +203,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				E2D3C4B5A697887766554433 /* PBXTargetDependency */,
 			);
 			name = FullFrillsBalance;
 			productName = FullFrillsBalance;
@@ -464,7 +475,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				CFEAC1F43EBF485D9A94EAE3 /* FullFrillsBalanceWidget.swift in Sources */,
 				E30C938BD14A91713061A8B9 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -473,10 +483,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CFEAC1F43EBF485D9A94EAE3 /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E2D3C4B5A697887766554433 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A7AD1668E4184F28A24A3095 /* FullFrillsBalanceWidget */;
+			targetProxy = F1E2D3C4B5A6978877665544 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0BEB8E3A890C4A02A853B608 /* Release */ = {

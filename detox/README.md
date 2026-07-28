@@ -5,7 +5,7 @@ End-to-end tests on the **iOS Simulator** using a **development client** build. 
 ## Prerequisites
 
 - Xcode + iOS Simulator
-- [applesimutils](https://github.com/wix/AppleSimulatorUtils) (Detox uses it to control the simulator):
+- [applesimutils](https://github.com/wix/AppleSimulatorUtils) — CLI from Wix that Detox uses to drive the simulator (install/launch the app, set permissions, biometrics, home button, etc.). Xcode does not expose those hooks; Detox delegates to `applesimutils` on iOS.
 
   ```bash
   brew tap wix/brew
@@ -19,7 +19,7 @@ End-to-end tests on the **iOS Simulator** using a **development client** build. 
   npx detox clean-framework-cache && npx detox build-framework-cache
   ```
 
-- Metro running for the dev client: `bun start` (port **8081**)
+- Metro running for the dev client: `bun start` (port **8081**). If tests stall on the Expo dev launcher, set `DETOX_METRO_URL` to your machine’s LAN URL (e.g. `http://192.168.1.x:8081`) so the simulator can reach Metro.
 
 ## One-time setup
 
@@ -48,10 +48,10 @@ Terminal 2:
 bun run test:detox
 ```
 
-Optional simulator device (default `iPhone 17`):
+Optional simulator device (Detox uses the **device type**, not a custom simulator name):
 
 ```bash
-DETOX_IOS_DEVICE="iPhone 17 Daily" bun run test:detox
+DETOX_IOS_DEVICE="iPhone 17" bun run test:detox
 ```
 
 ## Record a demo video
@@ -62,6 +62,19 @@ DETOX_RECORD_VIDEO=1 bun run test:detox:video
 ```
 
 Videos land under `artifacts/detox/`.
+
+## Record onboarding (Maestro + Simulator)
+
+For a full onboarding walkthrough video (dev client → dashboard welcome), use Maestro and `simctl recordVideo`:
+
+```bash
+bun start   # separate terminal
+./scripts/record-onboarding-ios.sh
+```
+
+Output: `artifacts/onboarding-ios.mp4`. Optional: `IOS_SIMULATOR_DEVICE="iPhone 17 Daily"` or `DETOX_METRO_URL=http://YOUR_LAN_IP:8081`.
+
+Requires a Debug simulator build (`bun run test:detox:build` if `ios/build/.../FullFrillsBalance.app` is missing) and [Maestro](https://maestro.mobile.dev/) on your `PATH`.
 
 ## Troubleshooting
 

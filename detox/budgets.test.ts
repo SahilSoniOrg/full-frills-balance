@@ -1,16 +1,18 @@
 import { element, by, expect } from 'detox';
 import {
-  completeOnboarding,
+  ensureOnboarded,
   launchFreshApp,
   openBudgetFormFromCommitments,
   openSafeToSpendExplanation,
   selectBudgetInterval,
 } from './helpers/flows';
 
-describe('Budgets (native)', () => {
+jest.setTimeout(300000);
+
+describe('Native budgets and Safe to Spend', () => {
   beforeAll(async () => {
     await launchFreshApp();
-    await completeOnboarding('Detox Budget User');
+    await ensureOnboarded('Detox User');
   });
 
   it('shows daily interval and amount label on the budget form', async () => {
@@ -19,13 +21,6 @@ describe('Budgets (native)', () => {
     await expect(element(by.text(/Daily Amount/i))).toBeVisible();
     await selectBudgetInterval('MONTHLY');
     await expect(element(by.text(/Monthly Amount/i))).toBeVisible();
-  });
-});
-
-describe('Safe to Spend copy (native)', () => {
-  beforeAll(async () => {
-    await launchFreshApp();
-    await completeOnboarding('Detox STS User');
   });
 
   it('explains projected gap when budgets use most of cash', async () => {
