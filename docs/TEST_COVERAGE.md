@@ -7,7 +7,11 @@
 bun run test                 # All tests with coverage report (per-file thresholds)
 bun run verify               # typecheck + test:ci + lint
 
-# End-to-end tests (Playwright, web export)
+# Native iOS (Detox) — requires Metro + simulator build
+bun run e2e:build:ios
+bun run e2e:test:ios
+
+# Web export (Playwright)
 bun run test:e2e:build       # Build web export for E2E
 bun run serve:e2e            # Serve locally on port 8081
 bun run test:e2e             # Run Playwright suite
@@ -18,7 +22,9 @@ bun run test:e2e:debug       # Debug mode with inspector
 npx expo start --dev-client  # Open /_design-preview for component gallery
 ```
 
-## E2E Journey Coverage (Playwright)
+See [docs/testing/e2e-decisions.md](./testing/e2e-decisions.md).
+
+## E2E Journey Coverage (Playwright — web)
 
 | User Journey | Test File | Status |
 | :--- | :--- | :--- |
@@ -28,6 +34,17 @@ npx expo start --dev-client  # Open /_design-preview for component gallery
 | Settings flow | `e2e/settings.test.ts` | ✅ Active |
 | Reports flow | `e2e/reports.test.ts` | ✅ Active |
 | Multi-currency flow | `e2e/multi-currency.test.ts` | ✅ Active |
+
+## Native Detox (iOS)
+
+| Journey | Spec | Notes |
+| :--- | :--- | :--- |
+| Smoke | `e2e/specs/smoke/appLaunch.e2e.ts` | Seeded launch |
+| Onboarding UI | `e2e/specs/onboarding/onboarding.e2e.ts` | Full UI path |
+| Journal expense | `e2e/specs/journal/journal-expense.e2e.ts` | Seeded accounts |
+| Accounts | `e2e/specs/accounts/accounts.e2e.ts` | Create asset |
+| Budgets / STS | `e2e/specs/budgets/budgets.e2e.ts` | Commitments tab |
+| Planned payments | `e2e/specs/planned-payments/planned-payments.e2e.ts` | Seeded accounts |
 
 ## Unit & Integration Test Coverage
 

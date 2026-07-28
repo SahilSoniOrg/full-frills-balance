@@ -95,6 +95,9 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
 | 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
 | 4.6 | Spike: schema-driven import (mirror export `tableTasks`) | Cuts 8–12 touchpoint tax | ✅ table registry |
+| 4.7 | E2E greenfield completion (Detox PR CI, harness, critical specs) | [e2e-decisions.md](./testing/e2e-decisions.md) | ✅ |
+
+**Remaining (E2E):** Android Detox CI; 5 consecutive green CI runs as proof.
 
 **Feature shortcuts (after Phase 1–2):**
 

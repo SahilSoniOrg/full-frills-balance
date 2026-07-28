@@ -162,7 +162,7 @@ Debug logs are disabled in production. Critical paths should use `TraceService` 
 | Services | Jest unit tests (especially simulation engine — heavy scenario coverage) |
 | Hooks | Jest unit tests for critical hooks (`useDateRangeFilter`, `useObservable`) |
 | UI | Visual validation via `/_design-preview` (dev-only) |
-| Integration | E2E flows in `e2e/` via Playwright (web export) |
+| Integration | **Native (authoritative):** Detox specs in `e2e/specs/**` with selectors from `e2e/screens/index.ts` (see `docs/testing/testid-inventory.md`). **Web:** Playwright on the static export in `e2e/`. UI covered by Detox must keep stable `testID`s; rename only with inventory + screen registry updates in the same PR. |
 | Money Math | Dedicated tests for currency formatting and money arithmetic |
 
 ---
