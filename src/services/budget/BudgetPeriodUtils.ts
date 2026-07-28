@@ -120,6 +120,10 @@ export class BudgetPeriodUtils {
       return d.format('MMM D');
     };
 
+    if ((budget.intervalType || 'MONTHLY') === 'DAILY' && start.isSame(end, 'day')) {
+      return format(start);
+    }
+
     return `${format(start)} - ${format(end)}`;
   }
 }

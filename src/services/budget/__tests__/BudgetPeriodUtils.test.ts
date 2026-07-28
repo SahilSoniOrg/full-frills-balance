@@ -55,6 +55,32 @@ describe('BudgetPeriodUtils', () => {
     });
   });
 
+  describe('DAILY', () => {
+    it('calculates a single-day cycle', () => {
+      const budget = mockBudget({
+        intervalType: 'DAILY',
+        startDate: dayjs('2024-04-15').startOf('day').valueOf(),
+      });
+
+      const ref = dayjs('2024-04-15').hour(14).valueOf();
+      const period = BudgetPeriodUtils.getCurrentPeriod(budget, ref);
+
+      expect(dayjs(period.startDate).format('YYYY-MM-DD')).toBe('2024-04-15');
+      expect(dayjs(period.endDate).format('YYYY-MM-DD')).toBe('2024-04-15');
+    });
+
+    it('uses a compact period label for daily budgets', () => {
+      const today = dayjs().startOf('day');
+      const budget = mockBudget({
+        intervalType: 'DAILY',
+        startDate: today.valueOf(),
+      });
+
+      const label = BudgetPeriodUtils.getPeriodLabel(budget, today.valueOf());
+      expect(label).toBe(today.format('MMM D'));
+    });
+  });
+
   describe('YEARLY', () => {
     it('calculates yearly cycle', () => {
       const budget = mockBudget({

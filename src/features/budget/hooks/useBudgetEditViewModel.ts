@@ -11,6 +11,7 @@ import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
+import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useBudgetEditViewModel() {
@@ -100,6 +101,9 @@ export function useBudgetEditViewModel() {
       const parsedAmount = parseFloat(amount);
       const monthStr = `${startMonth.getFullYear()}-${String(startMonth.getMonth() + 1).padStart(2, '0')}`;
 
+      const resolvedStartDate =
+        intervalType === 'DAILY' ? (startDate ?? dayjs().startOf('day').valueOf()) : startDate;
+
       const input = {
         name: name.trim(),
         amount: parsedAmount,
@@ -107,7 +111,7 @@ export function useBudgetEditViewModel() {
         startMonth: monthStr,
         intervalType,
         intervalN: intervalN || 1,
-        startDate,
+        startDate: resolvedStartDate,
         recurrenceDay: recurrenceDay || 1,
         recurrenceMonth: recurrenceMonth || 1,
         active: true,

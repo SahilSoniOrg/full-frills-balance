@@ -94,11 +94,13 @@ export default function BudgetEditScreen() {
           nameValue={name}
           onNameChange={setName}
           amountLabel={
-            intervalType === 'WEEKLY'
-              ? 'Weekly Amount'
-              : intervalType === 'YEARLY'
-                ? 'Yearly Amount'
-                : 'Monthly Amount'
+            intervalType === 'DAILY'
+              ? 'Daily Amount'
+              : intervalType === 'WEEKLY'
+                ? 'Weekly Amount'
+                : intervalType === 'YEARLY'
+                  ? 'Yearly Amount'
+                  : 'Monthly Amount'
           }
           amountValue={amount}
           onAmountChange={setAmount}
@@ -117,9 +119,11 @@ export default function BudgetEditScreen() {
             <Stack space="lg" paddingHorizontal="md">
               <FormField label="Interval">
                 <AppSegmentedControl
-                  flex
+                  scrollable
                   variant="minimal"
+                  testID="budget-interval-type"
                   options={[
+                    { label: 'Daily', id: 'DAILY' },
                     { label: 'Weekly', id: 'WEEKLY' },
                     { label: 'Monthly', id: 'MONTHLY' },
                     { label: 'Yearly', id: 'YEARLY' },
