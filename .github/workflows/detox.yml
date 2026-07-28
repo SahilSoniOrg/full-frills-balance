@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install CocoaPods
+        run: cd ios && pod install
+
       - name: Prepare E2E env
         run: cp .env.e2e.example .env.local
 
