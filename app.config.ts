@@ -143,6 +143,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         speechRecognitionPermission: 'Allow Full Frills to recognize your speech.',
       },
     ],
+    [
+      '@config-plugins/detox',
+      {
+        subdomains: '*',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

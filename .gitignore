@@ -67,6 +67,7 @@ guides
 
 dist-analysis*
 .env.local
+artifacts/detox/
 
 # Local agent / design consultation artifacts (not product source)
 .gstack/
