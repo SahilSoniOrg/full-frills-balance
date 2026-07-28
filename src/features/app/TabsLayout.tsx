@@ -21,6 +21,7 @@ export function TabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
+          tabBarButtonTestID: 'tab-dashboard',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
               name="home"
@@ -35,6 +36,7 @@ export function TabsLayout() {
         name="accounts"
         options={{
           title: 'Accounts',
+          tabBarButtonTestID: 'tab-accounts',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
               name="wallet"
@@ -49,6 +51,7 @@ export function TabsLayout() {
         name="commitments"
         options={{
           title: 'Commitments',
+          tabBarButtonTestID: 'tab-commitments',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
               name="handshake"
@@ -63,6 +66,7 @@ export function TabsLayout() {
         name="activity"
         options={{
           title: 'Activity',
+          tabBarButtonTestID: 'tab-activity',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
               name="activity"
@@ -77,6 +81,7 @@ export function TabsLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          tabBarButtonTestID: 'tab-settings',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
               name="settings"

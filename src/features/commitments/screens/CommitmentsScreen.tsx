@@ -38,7 +38,12 @@ export default function CommitmentsScreen() {
     <Screen title="Commitments" showBack={false} scrollable={false}>
       <Stack gap="lg">
         <Box marginTop="md">
-          <AppTabs options={tabOptions} value={activeTab} onChange={setActiveTab} />
+          <AppTabs
+            testID="commitments-tabs"
+            options={tabOptions}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
         </Box>
         <Box paddingHorizontal="lg">
           <ScreenSectionHeader

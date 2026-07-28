@@ -84,6 +84,7 @@ export function JournalMetaCard({
               setTimeout(() => setIsDescriptionFocused(false), 200);
             }}
             placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+            testID="journal-description-input"
             variant="minimal"
             flex={1}
             width="auto"

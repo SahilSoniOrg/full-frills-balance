@@ -146,7 +146,7 @@ export function DashboardScreenView({
   }
 
   return (
-    <>
+    <View testID="dashboard-screen" style={{ flex: 1 }}>
       <JournalListView
         {...listViewProps}
         ref={listRef}
@@ -197,6 +197,6 @@ export function DashboardScreenView({
           uiState.setInfoVisible(true);
         }}
       />
-    </>
+    </View>
   );
 }
