@@ -1,0 +1,3 @@
+export const DEFAULT_TIMEOUT_MS = 20000;
+export const LONG_TIMEOUT_MS = 120000;
+export const ONBOARDING_TIMEOUT_MS = 120000;

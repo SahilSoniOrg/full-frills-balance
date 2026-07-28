@@ -1,13 +1,14 @@
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   rootDir: '.',
-  testMatch: ['<rootDir>/detox/**/*.test.ts'],
-  testTimeout: 180000,
+  testMatch: ['<rootDir>/e2e/specs/**/*.e2e.ts'],
+  testTimeout: 300000,
   maxWorkers: 1,
   globalSetup: 'detox/runners/jest/globalSetup',
   globalTeardown: 'detox/runners/jest/globalTeardown',
   reporters: ['detox/runners/jest/reporter'],
   testEnvironment: 'detox/runners/jest/testEnvironment',
+  setupFilesAfterEnv: ['<rootDir>/e2e/config.js'],
   verbose: true,
   transform: {
     '^.+\\.[jt]sx?$': 'babel-jest',
