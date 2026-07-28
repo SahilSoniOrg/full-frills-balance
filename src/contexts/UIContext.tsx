@@ -10,6 +10,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
 import { analytics } from '@/src/services/analytics-service';
 import { ShareFormat } from '@/src/types/sharing';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { logger } from '@/src/utils/logger';
 import { preferences, usePreferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -162,6 +163,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       try {
         setSession(prev => ({ ...prev, isLoading: true }));
         await preferences.loadPreferences();
+        if (readE2eLaunchConfig()) {
+          const { ensureE2eBootstrap } = await import('@/src/testing/e2eBootstrap');
+          await ensureE2eBootstrap();
+        }
         setSession(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       } catch (error) {
         logger.warn('[UIProvider] Failed to load preferences', { error });
