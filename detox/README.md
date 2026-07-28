@@ -12,6 +12,7 @@ End-to-end tests on the **iOS Simulator** or **Android emulator** using a **deve
 
 ```bash
 npx expo prebuild --platform ios
+cd ios && pod install && cd ..
 npx detox clean-framework-cache && npx detox build-framework-cache
 cp .env.e2e.example .env.local   # optional: EXPO_PUBLIC_E2E=1
 bun run e2e:build:ios
