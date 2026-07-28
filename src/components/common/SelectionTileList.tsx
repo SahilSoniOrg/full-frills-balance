@@ -3,7 +3,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Bleed, Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -95,7 +95,7 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
   testIDPrefix = 'selection-tile',
   allowDeselect = false,
 }) => {
-  const listRef = useRef<FlashList<SelectionTileProps>>(null);
+  const listRef = useRef<FlashListRef<SelectionTileProps>>(null);
   const lastScrolledId = useRef<string | null>(null);
 
   const scrollToSelected = useCallback(

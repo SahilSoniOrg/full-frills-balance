@@ -21,6 +21,15 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "e2e/pages/**/*.ts",
+    "e2e/fixtures.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "e2e/specs/**",
+    "e2e/actions/**",
+    "e2e/constants/**",
+    "e2e/utils/**"
   ]
 }
