@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base } from '@playwright/test';
 import { AccountsPage } from './pages/accounts-page';
+import { BudgetsPage } from './pages/budgets-page';
 import { DashboardPage } from './pages/dashboard-page';
 import { JournalEntryPage } from './pages/journal-entry-page';
 import { OnboardingPage } from './pages/onboarding-page';
@@ -14,6 +15,7 @@ type MyFixtures = {
   journalEntryPage: JournalEntryPage;
   settingsPage: SettingsPage;
   plannedPaymentsPage: PlannedPaymentsPage;
+  budgetsPage: BudgetsPage;
 };
 
 export const test = base.extend<MyFixtures>({
@@ -34,6 +36,9 @@ export const test = base.extend<MyFixtures>({
   },
   plannedPaymentsPage: async ({ page }, use) => {
     await use(new PlannedPaymentsPage(page));
+  },
+  budgetsPage: async ({ page }, use) => {
+    await use(new BudgetsPage(page));
   },
 });
 

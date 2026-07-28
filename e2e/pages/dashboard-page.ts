@@ -3,10 +3,24 @@ import { BasePage } from './base-page';
 
 export class DashboardPage extends BasePage {
   async assertWelcomeVisible(userName: string) {
-    await expect(this.page.getByText('Safe to Spend', { exact: true })).toBeVisible({
+    await expect(this.page.getByText(/Safe to Spend|Projected Gap/i).first()).toBeVisible({
       timeout: 30000,
     });
     await expect(this.page.getByText(`Hi, ${userName}`)).toBeVisible({ timeout: 15000 });
+  }
+
+  async openSafeToSpendExplanation() {
+    await this.switchToDashboard();
+    await this.page.getByLabel('Open safe-to-spend calculation info').click();
+    await expect(this.page.getByText('How Safe to Spend Is Calculated')).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async assertFullyBudgetedProjectedGapCopy() {
+    await expect(
+      this.page.getByText(/projected gap even when your accounts are not overdrawn/i),
+    ).toBeVisible();
   }
 
   async assertNetWorth(amount: string) {
