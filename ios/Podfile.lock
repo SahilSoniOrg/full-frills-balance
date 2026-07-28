@@ -1810,6 +1810,8 @@ PODS:
     - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
+  - react-native-launch-arguments (4.1.1):
+    - React
   - react-native-litert-lm (0.5.1):
     - hermes-engine
     - NitroModules
@@ -2778,6 +2780,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
+  - react-native-launch-arguments (from `../node_modules/react-native-launch-arguments`)
   - react-native-litert-lm (from `../node_modules/react-native-litert-lm`)
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -3013,6 +3016,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
+  react-native-launch-arguments:
+    :path: "../node_modules/react-native-launch-arguments"
   react-native-litert-lm:
     :path: "../node_modules/react-native-litert-lm"
   react-native-quick-base64:
@@ -3205,6 +3210,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 2eb3f49d0d8e77b5343455eccd057010b8d38b6b
   React-mutationobservernativemodule: f0a0d5ae9b51caf7becbeabf836d716cfedb6bf2
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
+  react-native-launch-arguments: eab68037b01ea7c78a0b3b55da3a5e967e9aaf92
   react-native-litert-lm: 9a2ad6a4507e14a84c92112d31ccb21acf1249f3
   react-native-quick-base64: 53393ee5ea472a7486e6652ad3d7a640ebf6ebda
   react-native-safe-area-context: 6b4966397ada0f7dd481e4486a2ef936834861a1

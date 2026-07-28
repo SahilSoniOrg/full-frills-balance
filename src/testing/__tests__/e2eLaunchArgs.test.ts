@@ -8,6 +8,11 @@ jest.mock('react-native-launch-arguments', () => ({
   },
 }));
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: {} } },
+}));
+
 describe('readE2eLaunchConfig', () => {
   const valueMock = LaunchArguments.value as jest.Mock;
 

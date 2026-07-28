@@ -157,6 +157,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: {},
     e2eHarnessEnabled: process.env.EXPO_PUBLIC_E2E === '1',
+    e2eSeedProfile: process.env.EXPO_PUBLIC_E2E_SEED_PROFILE,
     eas: {
       projectId: 'a9311be4-71b9-448c-b147-cb38ef622218',
     },

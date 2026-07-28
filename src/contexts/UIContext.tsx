@@ -166,6 +166,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         if (readE2eLaunchConfig()) {
           const { ensureE2eBootstrap } = await import('@/src/testing/e2eBootstrap');
           await ensureE2eBootstrap();
+          await preferences.loadPreferences();
         }
         setSession(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       } catch (error) {

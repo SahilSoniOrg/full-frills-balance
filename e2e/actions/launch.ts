@@ -1,4 +1,4 @@
-import { device } from 'detox';
+import { device, element, by, waitFor } from 'detox';
 import type { E2eSeedProfile } from '../utils/launchArgs';
 import { E2E_AUTH_TOKEN } from '../utils/launchArgs';
 
@@ -22,7 +22,6 @@ function e2eLaunchArgs(seedProfile?: E2eSeedProfile): Record<string, string> {
 }
 
 async function connectDevClientIfNeeded(): Promise<void> {
-  const { element, by, waitFor } = await import('detox');
   const candidates = [
     element(by.text(METRO_URL)),
     element(by.text(/https?:\/\/[^\s]+:8081/)),

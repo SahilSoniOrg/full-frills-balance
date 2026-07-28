@@ -522,7 +522,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
+				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -567,7 +567,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = "FullFrillsBalance";
+				PRODUCT_NAME = FullFrillsBalance;
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -599,7 +599,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = "FullFrillsBalance";
+				PRODUCT_NAME = FullFrillsBalance;
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -755,7 +755,7 @@
 					"$(inherited)",
 				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
+				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
