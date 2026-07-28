@@ -48,6 +48,7 @@ export default function PlannedPaymentFormScreen() {
           <FormSectionGroup title="Accounts">
             <Stack space="md" paddingHorizontal="md">
               <AccountSelectionRow
+                testID="planned-payment-from-account"
                 title={AppConfig.strings.plannedPayments.fromAccountLabel}
                 accounts={vm.accounts}
                 selectedAccountId={vm.form.fromAccountId}
@@ -61,6 +62,7 @@ export default function PlannedPaymentFormScreen() {
               />
 
               <AccountSelectionRow
+                testID="planned-payment-to-account"
                 title={AppConfig.strings.plannedPayments.toAccountLabel}
                 accounts={vm.accounts}
                 selectedAccountId={vm.form.toAccountId}

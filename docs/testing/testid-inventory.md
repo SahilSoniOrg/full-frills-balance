@@ -89,6 +89,8 @@ Grid tiles use `grid-item-{id}` (`SelectableGrid.tsx`); not centralized in `e2e/
 | ------ | --------------- | ------ |
 | `hero-name-input` | `plannedPayments.heroName` | `FormHeroSection.tsx` |
 | `hero-amount-input` | `plannedPayments.heroAmount` | `FormHeroSection.tsx` |
+| `planned-payment-from-account` | `plannedPayments.fromAccount` | `PlannedPaymentFormScreen.tsx` → `AccountSelectionRow` |
+| `planned-payment-to-account` | `plannedPayments.toAccount` | `PlannedPaymentFormScreen.tsx` → `AccountSelectionRow` |
 | `submit-footer-button` | `plannedPayments.submitFooter` | `SubmitFooter.tsx` |
 
 ---

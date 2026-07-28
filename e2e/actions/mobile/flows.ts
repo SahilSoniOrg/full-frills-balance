@@ -72,8 +72,10 @@ export async function createPlannedPayment(name: string, amount: string): Promis
   await tapByLabel('Create a new planned payment');
   await typeById(plannedPayments.heroName, name);
   await typeById(plannedPayments.heroAmount, amount);
-  await tapByText('Checking Account');
-  await tapByText('Landlord');
+  await tapById(plannedPayments.fromAccount);
+  await tapByLabel(/^Checking Account/);
+  await tapById(plannedPayments.toAccount);
+  await tapByLabel(/^Landlord/);
   await tapById(plannedPayments.submitFooter);
   await assertTextVisible(name);
 }

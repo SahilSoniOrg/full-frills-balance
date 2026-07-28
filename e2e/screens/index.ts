@@ -42,5 +42,7 @@ export const budgets = {
 export const plannedPayments = {
   heroName: 'hero-name-input',
   heroAmount: 'hero-amount-input',
+  fromAccount: 'planned-payment-from-account',
+  toAccount: 'planned-payment-to-account',
   submitFooter: 'submit-footer-button',
 } as const;

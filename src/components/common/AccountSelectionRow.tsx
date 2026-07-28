@@ -15,6 +15,7 @@ type AccountSelectionRowProps = {
   placeholder: string;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 export function AccountSelectionRow({
@@ -25,6 +26,7 @@ export function AccountSelectionRow({
   placeholder,
   onPress,
   style,
+  testID,
 }: AccountSelectionRowProps) {
   const { theme } = useTheme();
 
@@ -97,5 +99,7 @@ export function AccountSelectionRow({
     return placeholder;
   }, [accountMap, placeholder, selectedAccountId, selectedAccountIds, theme]);
 
-  return <ListRow title={title} subtitle={subtitle} onPress={onPress} style={style} />;
+  return (
+    <ListRow title={title} subtitle={subtitle} onPress={onPress} style={style} testID={testID} />
+  );
 }
