@@ -56,8 +56,13 @@ export const SafeToSpendHeader = ({
         {displayValue}
       </Text>
 
-      <Text variant="xs" color={isOverCommitted ? 'error' : 'secondary'} opacity={0.8}>
-        {isOverCommitted ? strings.neededForObligations : strings.afterObligations}
+      <Text
+        variant="xs"
+        color={isOverCommitted ? 'error' : 'secondary'}
+        opacity={0.8}
+        numberOfLines={3}
+      >
+        {isOverCommitted ? strings.shortfallSubtitle : strings.afterObligations}
       </Text>
     </Column>
   );

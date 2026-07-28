@@ -142,7 +142,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
                 ? AppConfig.strings.dashboard.shortfall
                 : AppConfig.strings.dashboard.safeToSpendTitle,
               subtitle: isShortfall
-                ? AppConfig.strings.dashboard.neededForObligations
+                ? AppConfig.strings.dashboard.shortfallSubtitle
                 : AppConfig.strings.dashboard.afterObligations,
               updatedAt: Date.now(),
             }

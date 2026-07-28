@@ -1,5 +1,5 @@
 import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -155,7 +155,9 @@ export const SafeToSpendLedger = ({
                         color="secondary"
                         style={{ fontSize: 8, textTransform: 'uppercase' }}
                       >
-                        {isShortfall ? 'Shortfall' : 'Safe to Spend'}
+                        {isShortfall
+                          ? AppConfig.strings.dashboard.shortfall
+                          : AppConfig.strings.dashboard.safeToSpendTitle}
                       </AppText>
                     </View>
                   </View>

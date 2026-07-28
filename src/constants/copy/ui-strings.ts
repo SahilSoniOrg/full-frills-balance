@@ -32,7 +32,9 @@ export const UI_STRINGS = {
     debts: 'Outstanding',
     budgets: 'Reserved',
     bills: 'Bills',
-    shortfall: 'Shortfall',
+    shortfall: 'Projected Gap',
+    shortfallSubtitle:
+      'Planned budgets and scheduled items may exceed projected cash in this window. Your account balances can still be fine.',
     neededForObligations: 'Reserved',
     afterObligations: 'Remaining',
     insightDetails: {
@@ -50,13 +52,13 @@ export const UI_STRINGS = {
       },
     },
     noDataForBreakdown:
-      'Safe to Spend is below zero, so there is no available balance to break down.',
+      'The forecast shows a projected gap, so there is no unreserved balance to break down. Open the info button to see how budgets are counted.',
     safeToSpendExplanation: {
       title: 'How Safe to Spend Is Calculated',
       intro:
         'Safe to Spend is the money left after pending charges, upcoming bills, and other committed amounts are counted.',
       unlocks:
-        'The number is conservative. If money may be needed soon, it is not treated as free to spend.',
+        'The number is conservative. If money may be needed soon, it is not treated as free to spend. If you assign most of your cash to budgets, the forecast can show a projected gap even when your accounts are not overdrawn.',
       formulaTitle: 'Calculation',
       formulaItems: [
         'Available now: cash and cash-like account balances you can use soon.',
