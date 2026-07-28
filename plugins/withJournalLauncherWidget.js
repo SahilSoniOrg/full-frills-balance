@@ -1,4 +1,5 @@
-const fs = require('fs/promises');
+const fs = require('fs');
+const fsPromises = require('fs/promises');
 const path = require('path');
 const {
   withAndroidManifest,
@@ -13,11 +14,13 @@ const {
   addBuildSourceFileToGroup,
   addFileToGroupAndLink,
   ensureGroupRecursively,
+  getApplicationNativeTarget,
   getBuildConfigurationsForListId,
+  getHackyProjectName,
 } = require('@expo/config-plugins/build/ios/utils/Xcodeproj');
 
 const PLUGIN_NAME = 'withJournalLauncherWidget';
-const PLUGIN_VERSION = '1.0.0';
+const PLUGIN_VERSION = '1.1.0';
 const IOS_WIDGET_TARGET_NAME = 'FullFrillsBalanceWidget';
 const IOS_WIDGET_SOURCE_FILE = `${IOS_WIDGET_TARGET_NAME}.swift`;
 const IOS_WIDGET_INFO_FILE = `${IOS_WIDGET_TARGET_NAME}-Info.plist`;
@@ -98,7 +101,7 @@ function escapeKotlinPackage(packageName) {
 
   return packageName
     .split('.')
-    .map((segment) => (kotlinKeywords.has(segment) ? `\`${segment}\`` : segment))
+    .map(segment => (kotlinKeywords.has(segment) ? `\`${segment}\`` : segment))
     .join('.');
 }
 
@@ -115,15 +118,15 @@ function getIosAppGroupIdentifier(config) {
 }
 
 async function writeFileIfChanged(filePath, contents) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const existing = await fs.readFile(filePath, 'utf8').catch(() => null);
+  await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
+  const existing = await fsPromises.readFile(filePath, 'utf8').catch(() => null);
   if (existing !== contents) {
-    await fs.writeFile(filePath, contents, 'utf8');
+    await fsPromises.writeFile(filePath, contents, 'utf8');
   }
 }
 
 async function renderTemplate(templatePath, replacements = {}) {
-  let contents = await fs.readFile(templatePath, 'utf8');
+  let contents = await fsPromises.readFile(templatePath, 'utf8');
 
   Object.entries(replacements).forEach(([key, value]) => {
     // 1. Traditional __PLACEHOLDER__ replacement
@@ -133,38 +136,41 @@ async function renderTemplate(templatePath, replacements = {}) {
     const markerName = key.replaceAll('_', '').toLowerCase();
     const markerComment = `// expo-inject-${markerName}`;
 
-    contents = contents.split('\n').map(line => {
-      if (!line.includes(markerComment)) return line;
+    contents = contents
+      .split('\n')
+      .map(line => {
+        if (!line.includes(markerComment)) return line;
 
-      // Case A: Package declaration (Android)
-      if (markerName === 'androidpackage' && line.trim().startsWith('package ')) {
-        return line.replace(/package\s+[^\s\n/]+/, `package ${value}`);
-      }
+        // Case A: Package declaration (Android)
+        if (markerName === 'androidpackage' && line.trim().startsWith('package ')) {
+          return line.replace(/package\s+[^\s\n/]+/, `package ${value}`);
+        }
 
-      // Case B: Quoted string assignment: val = "value" // expo-inject-key
-      if (line.includes('"')) {
-        const parts = line.split(markerComment);
-        const beforeMarker = parts[0];
-        const afterMarker = parts.slice(1).join(markerComment);
+        // Case B: Quoted string assignment: val = "value" // expo-inject-key
+        if (line.includes('"')) {
+          const parts = line.split(markerComment);
+          const beforeMarker = parts[0];
+          const afterMarker = parts.slice(1).join(markerComment);
 
-        // Find the LAST quoted string before the marker
-        const updatedBefore = beforeMarker.replace(/"[^"]*"(?=[^"]*$)/, `"${value}"`);
-        return updatedBefore + markerComment + afterMarker;
-      }
+          // Find the LAST quoted string before the marker
+          const updatedBefore = beforeMarker.replace(/"[^"]*"(?=[^"]*$)/, `"${value}"`);
+          return updatedBefore + markerComment + afterMarker;
+        }
 
-      // Case C: Raw assignment: val = value // expo-inject-key
-      if (line.includes('=')) {
-        const parts = line.split(markerComment);
-        const beforeMarker = parts[0];
-        const afterMarker = parts.slice(1).join(markerComment);
+        // Case C: Raw assignment: val = value // expo-inject-key
+        if (line.includes('=')) {
+          const parts = line.split(markerComment);
+          const beforeMarker = parts[0];
+          const afterMarker = parts.slice(1).join(markerComment);
 
-        // Replace everything after the last = before the marker
-        const updatedBefore = beforeMarker.replace(/=\s*[^=\s/]+(?=\s*$)/, `= ${value}`);
-        return updatedBefore + markerComment + afterMarker;
-      }
+          // Replace everything after the last = before the marker
+          const updatedBefore = beforeMarker.replace(/=\s*[^=\s/]+(?=\s*$)/, `= ${value}`);
+          return updatedBefore + markerComment + afterMarker;
+        }
 
-      return line;
-    }).join('\n');
+        return line;
+      })
+      .join('\n');
   });
 
   return contents;
@@ -173,16 +179,16 @@ async function renderTemplate(templatePath, replacements = {}) {
 function ensureAndroidWidgetReceivers(manifest) {
   const application = manifest.application?.[0];
   if (!application) {
-    throw new Error(`${PLUGIN_NAME} could not locate Android application node in AndroidManifest.xml.`);
+    throw new Error(
+      `${PLUGIN_NAME} could not locate Android application node in AndroidManifest.xml.`,
+    );
   }
 
   application.receiver = application.receiver || [];
 
   ANDROID_WIDGETS.forEach(({ className, infoResource }) => {
     const providerClass = `.${className}`;
-    const receiver = application.receiver.find(
-      (item) => item.$?.['android:name'] === providerClass
-    );
+    const receiver = application.receiver.find(item => item.$?.['android:name'] === providerClass);
 
     const receiverConfig = {
       $: {
@@ -224,92 +230,146 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
   const packagePath = getAndroidPackage(config).split('.').join(path.sep);
   const basePath = path.join(projectRoot, 'android', 'app', 'src', 'main');
   const replacements = {
-    '__ANDROID_PACKAGE__': escapeKotlinPackage(getAndroidPackage(config)),
-    '__APP_SCHEME__': getScheme(config),
+    __ANDROID_PACKAGE__: escapeKotlinPackage(getAndroidPackage(config)),
+    __APP_SCHEME__: getScheme(config),
   };
 
   await writeFileIfChanged(
     path.join(basePath, 'java', packagePath, 'FullFrillsBalanceWidgetSupport.kt'),
-    await renderTemplate(path.join(TEMPLATE_ROOT, 'android', 'FullFrillsBalanceWidgetSupport.kt'), replacements)
+    await renderTemplate(
+      path.join(TEMPLATE_ROOT, 'android', 'FullFrillsBalanceWidgetSupport.kt'),
+      replacements,
+    ),
   );
   for (const widget of ANDROID_WIDGETS) {
     await writeFileIfChanged(
       path.join(basePath, 'java', packagePath, `${widget.className}.kt`),
-      await renderTemplate(path.join(TEMPLATE_ROOT, 'android', widget.template), replacements)
+      await renderTemplate(path.join(TEMPLATE_ROOT, 'android', widget.template), replacements),
     );
   }
   await writeFileIfChanged(
     path.join(basePath, 'res', 'layout', 'widget_journal_launcher.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'layout', 'widget_safe_to_spend.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'layout', 'widget_safe_to_spend_actions.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'layout', 'widget_safe_to_spend_actions_square.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_square.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_square.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_ivy.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_light.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_light.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_light.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_ivy_light.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy_light.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy_light.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_divider.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_divider.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_divider.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_income.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_income.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_income.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_action_income_circle.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_action_income_circle.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_action_income_circle.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_expense.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_expense.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_expense.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_action_expense_circle.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_action_expense_circle.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_action_expense_circle.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_transfer.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_transfer.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_transfer.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_action_transfer_circle.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_action_transfer_circle.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_action_transfer_circle.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_safe_to_spend_actions_bar.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_bar.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_bar.xml'),
+      'utf8',
+    ),
   );
   await writeFileIfChanged(
     path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_button.xml'),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_button.xml'), 'utf8')
+    await fsPromises.readFile(
+      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_button.xml'),
+      'utf8',
+    ),
   );
   for (const widget of ANDROID_WIDGETS) {
     await writeFileIfChanged(
       path.join(basePath, 'res', 'xml', widget.infoFile),
-      await fs.readFile(path.join(TEMPLATE_ROOT, 'android', widget.infoFile), 'utf8')
+      await fsPromises.readFile(path.join(TEMPLATE_ROOT, 'android', widget.infoFile), 'utf8'),
     );
   }
 }
@@ -317,20 +377,26 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
 async function writeIosWidgetFiles(projectRoot, config) {
   const iosWidgetPath = path.join(projectRoot, 'ios', IOS_WIDGET_TARGET_NAME);
   const replacements = {
-    '__APP_SCHEME__': getScheme(config),
-    '__IOS_APP_GROUP__': getIosAppGroupIdentifier(config),
+    __APP_SCHEME__: getScheme(config),
+    __IOS_APP_GROUP__: getIosAppGroupIdentifier(config),
   };
   await writeFileIfChanged(
     path.join(iosWidgetPath, IOS_WIDGET_SOURCE_FILE),
-    await renderTemplate(path.join(TEMPLATE_ROOT, 'ios', `${IOS_WIDGET_TARGET_NAME}.swift`), replacements)
+    await renderTemplate(
+      path.join(TEMPLATE_ROOT, 'ios', `${IOS_WIDGET_TARGET_NAME}.swift`),
+      replacements,
+    ),
   );
   await writeFileIfChanged(
     path.join(iosWidgetPath, IOS_WIDGET_INFO_FILE),
-    await fs.readFile(path.join(TEMPLATE_ROOT, 'ios', IOS_WIDGET_INFO_FILE), 'utf8')
+    await fsPromises.readFile(path.join(TEMPLATE_ROOT, 'ios', IOS_WIDGET_INFO_FILE), 'utf8'),
   );
   await writeFileIfChanged(
     path.join(iosWidgetPath, IOS_WIDGET_ENTITLEMENTS_FILE),
-    await renderTemplate(path.join(TEMPLATE_ROOT, 'ios', IOS_WIDGET_ENTITLEMENTS_FILE), replacements)
+    await renderTemplate(
+      path.join(TEMPLATE_ROOT, 'ios', IOS_WIDGET_ENTITLEMENTS_FILE),
+      replacements,
+    ),
   );
 }
 
@@ -394,7 +460,7 @@ function removeSourceFileFromTarget(project, targetUuid, filepath) {
   const comment = `${path.basename(filepath)} in Sources`;
   const remainingFiles = [];
 
-  sources.files.forEach((entry) => {
+  sources.files.forEach(entry => {
     if (entry.comment !== comment) {
       remainingFiles.push(entry);
       return;
@@ -415,7 +481,7 @@ function ensureSourceFileInTarget(project, targetUuid, filepath) {
 
   const basename = path.basename(filepath);
   const comment = `${basename} in Sources`;
-  if (sources.files.some((entry) => entry.comment === comment)) {
+  if (sources.files.some(entry => entry.comment === comment)) {
     return;
   }
 
@@ -443,7 +509,10 @@ function ensureWidgetBuildSettings(project, target, config) {
     throw new Error(`${PLUGIN_NAME} could not resolve iOS widget build configuration list.`);
   }
 
-  const buildConfigurations = getBuildConfigurationsForListId(project, nativeTarget.buildConfigurationList);
+  const buildConfigurations = getBuildConfigurationsForListId(
+    project,
+    nativeTarget.buildConfigurationList,
+  );
   const marketingVersion = config.version || '1.0.0';
   const bundleId = `${getIosBundleIdentifier(config)}.widget`;
 
@@ -470,18 +539,113 @@ function ensureWidgetBuildSettings(project, target, config) {
   });
 }
 
-function ensureIosWidgetTarget(project, config) {
+function ensureExtensionBuildPhases(project, targetUuid) {
+  const nativeTarget = project.pbxNativeTargetSection()[targetUuid];
+  if (!nativeTarget?.buildPhases) {
+    return;
+  }
+
+  const phaseComments = nativeTarget.buildPhases.map(phase => phase.comment);
+  if (!phaseComments.includes('Sources')) {
+    project.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', targetUuid);
+  }
+  if (!phaseComments.includes('Frameworks')) {
+    project.addBuildPhase([], 'PBXFrameworksBuildPhase', 'Frameworks', targetUuid);
+  }
+  if (!phaseComments.includes('Resources')) {
+    project.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', targetUuid);
+  }
+}
+
+function ensureProjectHasDependencySections(project) {
+  const objects = project.hash.project.objects;
+  if (!objects.PBXContainerItemProxy) {
+    objects.PBXContainerItemProxy = {};
+  }
+  if (!objects.PBXTargetDependency) {
+    objects.PBXTargetDependency = {};
+  }
+}
+
+function ensureAppTargetDependsOnWidget(project, appTargetUuid, widgetTargetUuid) {
+  const appTarget = project.pbxNativeTargetSection()[appTargetUuid];
+  if (!appTarget) {
+    return;
+  }
+
+  appTarget.dependencies = appTarget.dependencies || [];
+  ensureProjectHasDependencySections(project);
+  const dependencySection = project.hash.project.objects.PBXTargetDependency;
+  const alreadyLinked = appTarget.dependencies.some(entry => {
+    const dependency = dependencySection[entry.value];
+    return dependency?.target === widgetTargetUuid;
+  });
+
+  if (!alreadyLinked) {
+    project.addTargetDependency(appTargetUuid, [widgetTargetUuid]);
+  }
+}
+
+function buildWidgetSchemeEntry(widgetTargetUuid, projectName) {
+  return `         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "${widgetTargetUuid}"
+               BuildableName = "${IOS_WIDGET_TARGET_NAME}.appex"
+               BlueprintName = "${IOS_WIDGET_TARGET_NAME}"
+               ReferencedContainer = "container:${projectName}.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+`;
+}
+
+function ensureWidgetInSharedScheme(projectRoot, config, widgetTargetUuid) {
+  const projectName = getHackyProjectName(projectRoot, config);
+  const schemePath = path.join(
+    projectRoot,
+    'ios',
+    `${projectName}.xcodeproj`,
+    'xcshareddata',
+    'xcschemes',
+    `${projectName}.xcscheme`,
+  );
+
+  if (!fs.existsSync(schemePath)) {
+    return;
+  }
+
+  let xml = fs.readFileSync(schemePath, 'utf8');
+  if (xml.includes(`${IOS_WIDGET_TARGET_NAME}.appex`)) {
+    return;
+  }
+
+  const marker = '<BuildActionEntries>';
+  if (!xml.includes(marker)) {
+    return;
+  }
+
+  xml = xml.replace(marker, `${marker}\n${buildWidgetSchemeEntry(widgetTargetUuid, projectName)}`);
+  fs.writeFileSync(schemePath, xml);
+}
+
+function ensureIosWidgetTarget(project, config, projectRoot) {
   let target = findTargetByName(project, IOS_WIDGET_TARGET_NAME);
   if (!target) {
     const createdTarget = project.addTarget(
       IOS_WIDGET_TARGET_NAME,
       'app_extension',
       IOS_WIDGET_TARGET_NAME,
-      `${getIosBundleIdentifier(config)}.widget`
+      `${getIosBundleIdentifier(config)}.widget`,
     );
     target = findTargetByName(project, IOS_WIDGET_TARGET_NAME) || createdTarget;
   }
 
+  ensureExtensionBuildPhases(project, target.uuid);
   ensureGroupRecursively(project, IOS_WIDGET_TARGET_NAME);
 
   const sourcePath = `${IOS_WIDGET_TARGET_NAME}/${IOS_WIDGET_SOURCE_FILE}`;
@@ -494,11 +658,11 @@ function ensureIosWidgetTarget(project, config) {
     });
   }
 
-  const appTargetUuid = project.getFirstTarget()?.uuid;
-  if (appTargetUuid) {
-    removeSourceFileFromTarget(project, appTargetUuid, sourcePath);
-  }
+  const projectName = getHackyProjectName(projectRoot, config);
+  const appTarget = getApplicationNativeTarget({ project, projectName });
+  removeSourceFileFromTarget(project, appTarget.uuid, sourcePath);
   ensureSourceFileInTarget(project, target.uuid, sourcePath);
+  ensureAppTargetDependsOnWidget(project, appTarget.uuid, target.uuid);
 
   ensureInfoPlistReference(project, target.uuid);
   ensureWidgetBuildSettings(project, target, config);
@@ -509,32 +673,79 @@ function ensureIosWidgetTarget(project, config) {
   if (!project.hasFile('WidgetKit.framework')) {
     project.addFramework('WidgetKit.framework', { target: target.uuid });
   }
+
+  ensureWidgetInSharedScheme(projectRoot, config, target.uuid);
 }
 
 function withAndroidWidget(config) {
-  config = withAndroidManifest(config, (modConfig) => {
+  config = withAndroidManifest(config, modConfig => {
     ensureAndroidWidgetReceivers(modConfig.modResults.manifest);
     return modConfig;
   });
 
-  config = withStringsXml(config, (modConfig) => {
+  config = withStringsXml(config, modConfig => {
     const items = [
-      AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_name', value: 'New Journal' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_add_transaction', value: 'Add transaction' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_subtitle', value: 'Create a transaction from your home screen.' }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_name',
+        value: 'New Journal',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_add_transaction',
+        value: 'Add transaction',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_subtitle',
+        value: 'Create a transaction from your home screen.',
+      }),
       AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_income', value: 'Income' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_expense', value: 'Expense' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'journal_widget_transfer', value: 'Transfer' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_name', value: 'Safe to Spend' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_description', value: 'View your current safe-to-spend amount.' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_actions_name', value: 'Safe to Spend + Actions' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_actions_widget_description', value: 'View safe to spend and add a transaction.' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_square_widget_name', value: 'Safe to Spend + Quick Add' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_square_widget_description', value: 'View safe to spend with quick transaction actions.' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_title', value: 'Safe to spend' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_subtitle', value: 'After obligations' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_loading', value: 'Open app to load data' }),
-      AndroidConfig.Resources.buildResourceItem({ name: 'safe_to_spend_widget_amount_placeholder', value: '--' }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_expense',
+        value: 'Expense',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_transfer',
+        value: 'Transfer',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_name',
+        value: 'Safe to Spend',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_description',
+        value: 'View your current safe-to-spend amount.',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_actions_name',
+        value: 'Safe to Spend + Actions',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_actions_widget_description',
+        value: 'View safe to spend and add a transaction.',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_square_widget_name',
+        value: 'Safe to Spend + Quick Add',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_square_widget_description',
+        value: 'View safe to spend with quick transaction actions.',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_title',
+        value: 'Safe to spend',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_subtitle',
+        value: 'After obligations',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_loading',
+        value: 'Open app to load data',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_amount_placeholder',
+        value: '--',
+      }),
     ];
     modConfig.modResults = AndroidConfig.Strings.setStringItem(items, modConfig.modResults);
     return modConfig;
@@ -542,7 +753,7 @@ function withAndroidWidget(config) {
 
   config = withDangerousMod(config, [
     'android',
-    async (modConfig) => {
+    async modConfig => {
       await writeAndroidWidgetFiles(modConfig.modRequest.projectRoot, config);
       return modConfig;
     },
@@ -552,25 +763,28 @@ function withAndroidWidget(config) {
 }
 
 function withIosWidget(config) {
-  config = withEntitlementsPlist(config, (modConfig) => {
+  config = withEntitlementsPlist(config, modConfig => {
     const appGroupId = getIosAppGroupIdentifier(config);
     const existingGroups = modConfig.modResults['com.apple.security.application-groups'] || [];
     if (!existingGroups.includes(appGroupId)) {
-      modConfig.modResults['com.apple.security.application-groups'] = [...existingGroups, appGroupId];
+      modConfig.modResults['com.apple.security.application-groups'] = [
+        ...existingGroups,
+        appGroupId,
+      ];
     }
     return modConfig;
   });
 
   config = withDangerousMod(config, [
     'ios',
-    async (modConfig) => {
+    async modConfig => {
       await writeIosWidgetFiles(modConfig.modRequest.projectRoot, config);
       return modConfig;
     },
   ]);
 
-  config = withXcodeProject(config, (modConfig) => {
-    ensureIosWidgetTarget(modConfig.modResults, config);
+  config = withXcodeProject(config, modConfig => {
+    ensureIosWidgetTarget(modConfig.modResults, config, modConfig.modRequest.projectRoot);
     return modConfig;
   });
 
