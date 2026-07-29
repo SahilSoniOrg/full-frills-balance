@@ -1,12 +1,17 @@
 # Detox (native iOS & Android)
 
-End-to-end tests on the **iOS Simulator** or **Android emulator** using a **development client** build. Playwright tests in `e2e/*.test.ts` cover the web export.
+End-to-end tests on the **iOS Simulator** or **Android emulator**. Playwright tests in `e2e/*.test.ts` cover the web export.
+
+## iOS (default): Release + embedded bundle
+
+Detox uses a **Release** simulator build with `export:embed` — **no Expo dev client, no Metro**. Debug builds set `SKIP_BUNDLING=1` and require the dev launcher; we avoid that for E2E.
+
+Configuration: `ios.sim.release` in `.detoxrc.js`.
 
 ## Prerequisites
 
 - Xcode + iOS Simulator (**iPhone 17** by default)
 - [applesimutils](https://github.com/wix/AppleSimulatorUtils)
-- Metro on port **8081**: `bun start`
 
 ## One-time / after native changes
 
@@ -14,14 +19,13 @@ End-to-end tests on the **iOS Simulator** or **Android emulator** using a **deve
 npx expo prebuild --platform ios
 cd ios && pod install && cd ..
 npx detox clean-framework-cache && npx detox build-framework-cache
-cp .env.e2e.example .env.local   # optional: EXPO_PUBLIC_E2E=1
-bun run e2e:build:ios
+cp .env.e2e.example .env.local
+EXPO_PUBLIC_E2E=1 bun run e2e:build:ios
 ```
 
 ## Run tests locally
 
 ```bash
-bun start   # separate terminal
 bun run e2e:test:ios
 ```
 
@@ -31,7 +35,15 @@ Override simulator type:
 DETOX_IOS_DEVICE="iPhone 17" bun run e2e:test:ios
 ```
 
-If the dev launcher stalls, set `DETOX_METRO_URL` to your LAN IP (e.g. `http://192.168.1.x:8081`).
+Full clean build + run:
+
+```bash
+bun run e2e:clean:ios
+```
+
+## Dev client (optional, not used in CI)
+
+`ios.sim.debug` still exists for manual dev-client debugging; it requires Metro on **8081** and the dev launcher flow.
 
 ## Android (local)
 
@@ -78,4 +90,4 @@ DETOX_RECORD_VIDEO=1 bun run test:detox:video
 
 ## Maestro (recording only)
 
-See `scripts/record-onboarding-ios.sh` and `maestro/`.
+Maestro still uses the **dev client** + Metro. See `scripts/record-onboarding-ios.sh` and `maestro/`.

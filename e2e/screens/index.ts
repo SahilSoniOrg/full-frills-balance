@@ -20,9 +20,14 @@ export const tabs = {
 } as const;
 
 export const journal = {
+  screen: 'journal-entry-screen',
   amountInput: 'amount-input',
   descriptionInput: 'journal-description-input',
   submitFooter: 'submit-footer-button',
+  browseDestination: 'journal-browse-destination',
+  browseSource: 'journal-browse-source',
+  accountPickerSearch: 'account-picker-search-input',
+  browseForRole: (role: 'destination' | 'source') => `journal-browse-${role}`,
 } as const;
 
 export const accounts = {

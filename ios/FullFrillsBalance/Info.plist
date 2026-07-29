@@ -95,5 +95,11 @@
     <string>Automatic</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>EXDevMenuIsOnboardingFinished</key>
+    <true/>
+    <key>EXDevMenuShowsAtLaunch</key>
+    <false/>
+    <key>EXDevMenuShowFloatingActionButton</key>
+    <false/>
   </dict>
 </plist>

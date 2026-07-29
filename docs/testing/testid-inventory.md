@@ -50,8 +50,12 @@ Grid tiles use `grid-item-{id}` (`SelectableGrid.tsx`); not centralized in `e2e/
 
 | testID | Screen constant | Source |
 | ------ | --------------- | ------ |
+| `journal-entry-screen` | `journal.screen` | `JournalEntryView.tsx` |
+| `journal-browse-destination` | `journal.browseDestination` | `AccountTileList.tsx` (simple expense category) |
+| `journal-browse-source` | `journal.browseSource` | `AccountTileList.tsx` (simple expense source) |
+| `account-picker-search-input` | `journal.accountPickerSearch` | `AccountPickerList.tsx` |
 | `amount-input` | `journal.amountInput` | `SimpleFormAmountInput.tsx` |
-| `journal-description-input` | — (flows only today) | `JournalMetaCard.tsx` |
+| `journal-description-input` | `journal.descriptionInput` | `JournalMetaCard.tsx` |
 | `submit-footer-button` | `journal.submitFooter` | `SubmitFooter.tsx` |
 
 ---

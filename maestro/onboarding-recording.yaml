@@ -5,6 +5,11 @@ appId: in.sahilsoni.fullfrillsbalance
 - openLink: ${DEV_CLIENT_URL}
 - runFlow:
     when:
+      visible: 'Open'
+    commands:
+      - tapOn: 'Open'
+- runFlow:
+    when:
       visible: 'Full Frills Balance'
     commands:
       - tapOn: 'Full Frills Balance'

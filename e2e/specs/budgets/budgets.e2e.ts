@@ -27,9 +27,7 @@ describe('Budgets and Safe to Spend', () => {
   });
 
   it('explains projected gap in Safe to Spend info', async () => {
-    await openSafeToSpendExplanation();
-    await expect(
-      element(by.text(/projected gap even when your accounts are not overdrawn/i)),
-    ).toBeVisible();
+    await launchOnboardedApp({ seedProfile: 'journal-ready', newInstance: true });
+    await openSafeToSpendExplanation({ fromDashboard: true });
   });
 });

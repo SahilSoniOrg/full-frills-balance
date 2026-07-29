@@ -85,6 +85,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
 
   return (
     <Page
+      testID="journal-entry-screen"
       keyboardAvoiding
       scrollable={activeMode !== 'bulk'}
       scrollViewProps={{

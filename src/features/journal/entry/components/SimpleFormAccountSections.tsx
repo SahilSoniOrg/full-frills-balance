@@ -29,6 +29,7 @@ export function SimpleFormAccountSections({
             selectedId={section.selectedId}
             onSelect={section.onSelect}
             onSearchRequest={() => onSearchRequest(section.role)}
+            browseAllTestID={`journal-browse-${section.role}`}
             emptyPrompt={
               section.role === 'destination'
                 ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory

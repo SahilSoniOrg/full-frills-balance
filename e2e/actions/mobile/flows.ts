@@ -1,9 +1,45 @@
-import { budgets, dashboard, journal, plannedPayments, tabs } from '../../screens';
+import { element, by, waitFor } from 'detox';
+import { budgets, accounts, dashboard, plannedPayments, tabs } from '../../screens';
+import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { assertVisibleById, assertTextVisible } from '../assertions';
-import { tapById, tapByLabel, tapByText, typeById } from './elementActions';
+import { tapById, tapByLabel, typeById } from './elementActions';
+
+async function waitForAccountsHub(timeoutMs = LONG_TIMEOUT_MS): Promise<void> {
+  await waitFor(element(by.id(accounts.fab)))
+    .toBeVisible()
+    .withTimeout(timeoutMs);
+}
+
+async function assertAccountNameOnList(name: string): Promise<void> {
+  try {
+    await assertTextVisible(name, 15000);
+    return;
+  } catch {
+    await tapByLabel(/Assets section/);
+    await assertTextVisible(name, LONG_TIMEOUT_MS);
+  }
+}
+
+async function returnToMainTabs(): Promise<void> {
+  const tab = element(by.id(dashboard.tab));
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await waitFor(tab).toBeVisible().withTimeout(3000);
+      return;
+    } catch {
+      try {
+        await element(by.id('nav-back-button')).tap();
+      } catch {
+        break;
+      }
+    }
+  }
+  await waitFor(tab).toBeVisible().withTimeout(LONG_TIMEOUT_MS);
+}
 
 export async function openDashboardTab(): Promise<void> {
-  await tapById(dashboard.tab);
+  await returnToMainTabs();
+  await tapById(dashboard.tab, LONG_TIMEOUT_MS);
   await assertVisibleById(dashboard.screen);
 }
 
@@ -19,33 +55,17 @@ export async function openCommitmentsTab(): Promise<void> {
   await tapById(tabs.commitments);
 }
 
-export async function openNewJournalEntry(): Promise<void> {
-  await openActivityTab();
-  await tapByLabel('Open new entry options');
-}
-
-export async function createExpenseJournal(params: {
-  amount: string;
-  description: string;
-  fromAccount: string;
-  toCategory: string;
-}): Promise<void> {
-  await openNewJournalEntry();
-  await tapByText(/^Expense$/);
-  await typeById(journal.amountInput, params.amount);
-  await typeById(journal.descriptionInput, params.description);
-  await tapByText(params.fromAccount);
-  await tapByText(params.toCategory);
-  await tapById(journal.submitFooter);
-  await assertTextVisible(params.description);
-}
-
 export async function createAssetAccount(name: string): Promise<void> {
   await openAccountsTab();
-  await tapById('fab-button');
+  await waitForAccountsHub();
+  await tapById(accounts.fab);
   await typeById('hero-name-input', name);
-  await tapById('submit-footer-button');
-  await assertTextVisible(name);
+  await element(by.id('hero-name-input')).tapReturnKey();
+  await tapById(accounts.submitFooter, LONG_TIMEOUT_MS);
+  await waitFor(element(by.id('hero-name-input')))
+    .not.toBeVisible()
+    .withTimeout(LONG_TIMEOUT_MS);
+  await assertAccountNameOnList(name);
 }
 
 export async function openBudgetFormFromCommitments(): Promise<void> {
@@ -60,11 +80,20 @@ export async function selectBudgetInterval(
   await tapById(budgets.intervalItem(interval));
 }
 
-export async function openSafeToSpendExplanation(): Promise<void> {
-  await openDashboardTab();
+const SAFE_TO_SPEND_PROJECTED_GAP_COPY = 'safe-to-spend-unlocks-copy';
+
+export async function openSafeToSpendExplanation(options?: {
+  fromDashboard?: boolean;
+}): Promise<void> {
+  if (!options?.fromDashboard) {
+    await openDashboardTab();
+  }
   await tapByLabel('Open safe-to-spend calculation info');
   await assertTextVisible('How Safe to Spend Is Calculated');
+  await assertVisibleById(SAFE_TO_SPEND_PROJECTED_GAP_COPY, LONG_TIMEOUT_MS);
 }
+
+export { SAFE_TO_SPEND_PROJECTED_GAP_COPY };
 
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();

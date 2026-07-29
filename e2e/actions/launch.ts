@@ -2,9 +2,6 @@ import { device, element, by, waitFor } from 'detox';
 import type { E2eSeedProfile } from '../utils/launchArgs';
 import { E2E_AUTH_TOKEN } from '../utils/launchArgs';
 
-const METRO_URL = process.env.DETOX_METRO_URL ?? 'http://localhost:8081';
-const DEV_CLIENT_URL = `exp+full-frills-balance://expo-development-client/?url=${encodeURIComponent(METRO_URL)}`;
-
 export type LaunchOnboardedOptions = {
   seedProfile?: E2eSeedProfile;
   newInstance?: boolean;
@@ -21,34 +18,38 @@ function e2eLaunchArgs(seedProfile?: E2eSeedProfile): Record<string, string> {
   return args;
 }
 
-async function connectDevClientIfNeeded(): Promise<void> {
-  const candidates = [
-    element(by.text(METRO_URL)),
-    element(by.text(/https?:\/\/[^\s]+:8081/)),
-    element(by.text('Full Frills Balance')),
-    element(by.label('Full Frills Balance')),
-  ];
-
-  for (const el of candidates) {
-    try {
-      await waitFor(el).toBeVisible().withTimeout(8000);
-      await el.tap();
-      return;
-    } catch {
-      // try next selector
-    }
-  }
-}
-
 export async function launchFreshApp(): Promise<void> {
+  try {
+    await device.terminateApp();
+  } catch {
+    // app may not be running
+  }
   await device.launchApp({
     newInstance: true,
     delete: true,
     permissions: { notifications: 'YES' },
-    launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
-    url: DEV_CLIENT_URL,
+    launchArgs: {
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eReset: '1',
+    },
   });
-  await connectDevClientIfNeeded();
+  await waitFor(element(by.id('onboarding-name-input')))
+    .toBeVisible()
+    .withTimeout(120000);
+}
+
+export async function waitForDashboard(timeoutMs = 120000): Promise<void> {
+  const screen = element(by.id('dashboard-screen'));
+  try {
+    await waitFor(screen).toBeVisible().withTimeout(15000);
+    return;
+  } catch {
+    // RN New Arch: root testID can report visible in hierarchy but fail Detox visibility (overlays/animations).
+    await waitFor(screen).toExist().withTimeout(timeoutMs);
+    await waitFor(element(by.id('tab-dashboard')))
+      .toBeVisible()
+      .withTimeout(30000);
+  }
 }
 
 export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): Promise<void> {
@@ -58,7 +59,6 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
     delete: true,
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile),
-    url: DEV_CLIENT_URL,
   });
-  await connectDevClientIfNeeded();
+  await waitForDashboard();
 }

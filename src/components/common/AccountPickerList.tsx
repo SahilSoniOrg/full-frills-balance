@@ -117,6 +117,8 @@ const AccountPickerRow = React.memo(
     return (
       <ListRow
         title={item.name}
+        accessibilityLabel={item.name}
+        testID={`account-picker-option-${item.id}`}
         titleColor={getAccountVariant(item.accountType) as any}
         subtitle={subtitle}
         onPress={onPress}
@@ -337,6 +339,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={AppConfig.strings.accounts.picker.searchPlaceholder}
+          testID="account-picker-search-input"
           leftIcon="search"
           variant="default"
           background="surfaceSecondary"

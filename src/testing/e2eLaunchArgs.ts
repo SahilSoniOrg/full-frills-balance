@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { NativeModules } from 'react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { E2E_AUTH_TOKEN, E2E_SEED_PROFILES, E2eSeedProfile } from './e2eConstants';
 
@@ -23,6 +24,27 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
   };
 }
 
+function configFromQueryRecord(query: Record<string, string>): E2eLaunchConfig | null {
+  return configFromArgs(query);
+}
+
+function configFromScriptUrl(): E2eLaunchConfig | null {
+  const scriptURL: string | undefined = NativeModules?.SourceCode?.scriptURL;
+  if (!scriptURL) {
+    return null;
+  }
+  try {
+    const params = new URL(scriptURL).searchParams;
+    const query: Record<string, string> = {};
+    params.forEach((value, key) => {
+      query[key] = value;
+    });
+    return configFromQueryRecord(query);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Reads Detox / instrumentation launch arguments.
  * Honored in debug and release simulator builds when `e2eAuth` matches.
@@ -31,6 +53,11 @@ export function readE2eLaunchConfig(): E2eLaunchConfig | null {
   const fromLaunch = configFromArgs(LaunchArguments.value() ?? {});
   if (fromLaunch) {
     return fromLaunch;
+  }
+
+  const fromScript = configFromScriptUrl();
+  if (fromScript) {
+    return fromScript;
   }
 
   // Fallback when native launch args are unavailable but the binary was built with E2E env.

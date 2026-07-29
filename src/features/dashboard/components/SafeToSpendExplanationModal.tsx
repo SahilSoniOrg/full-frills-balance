@@ -131,6 +131,7 @@ export const SafeToSpendExplanationModal = ({
       <AppText
         variant="caption"
         color="secondary"
+        testID="safe-to-spend-unlocks-copy"
         style={{
           marginBottom: Spacing.xl,
           lineHeight: Typography.sizes.sm * Typography.lineHeights.normal,

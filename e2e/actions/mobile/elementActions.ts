@@ -14,7 +14,9 @@ export async function typeById(
 ): Promise<void> {
   const target = element(by.id(testId));
   await waitFor(target).toBeVisible().withTimeout(timeoutMs);
-  await target.replaceText(text);
+  await target.tap();
+  await target.clearText();
+  await target.typeText(text);
 }
 
 export async function tapByLabel(
@@ -26,12 +28,37 @@ export async function tapByLabel(
   await target.tap();
 }
 
+const SCROLL_VIEW_MATCHERS = [
+  by.type('UIScrollView'),
+  by.type('RCTScrollView'),
+  by.type('RCTScrollViewComponentView'),
+];
+
+async function scrollUntilTextVisible(
+  target: ReturnType<typeof element>,
+  direction: 'up' | 'down' = 'down',
+): Promise<void> {
+  for (const scrollMatcher of SCROLL_VIEW_MATCHERS) {
+    try {
+      await waitFor(target).toBeVisible().whileElement(scrollMatcher).scroll(250, direction);
+      return;
+    } catch {
+      // try next scroll container type (RN old/new arch)
+    }
+  }
+}
+
 export async function tapByText(
   text: string | RegExp,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<void> {
   const target = element(by.text(text));
-  await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+  try {
+    await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+  } catch {
+    await scrollUntilTextVisible(target);
+    await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+  }
   await target.tap();
 }
 

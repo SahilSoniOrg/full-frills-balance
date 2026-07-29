@@ -149,6 +149,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         subdomains: '*',
       },
     ],
+    [
+      'expo-dev-launcher',
+      {
+        skipOnboarding: true,
+        showMenuAtLaunch: false,
+        ios: {
+          toolsButton: false,
+        },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

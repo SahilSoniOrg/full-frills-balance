@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 45
     env:
       EXPO_PUBLIC_E2E: '1'
-      DETOX_METRO_URL: http://127.0.0.1:8081
       DETOX_IOS_DEVICE: iPhone 17
     steps:
       - uses: actions/checkout@v4
@@ -50,23 +49,11 @@ jobs:
           xcrun simctl boot "${udid}" 2>/dev/null || true
           xcrun simctl bootstatus "${udid}" -b
 
-      - name: Start Metro
-        run: |
-          mkdir -p artifacts/detox
-          bun start --port 8081 > artifacts/detox/metro.log 2>&1 &
-          echo $! > metro.pid
-          bash scripts/wait-for-metro.sh
-
-      - name: Build iOS app for Detox
+      - name: Build iOS Release app for Detox
         run: bun run e2e:build:ios
 
       - name: Run Detox critical specs
         run: bun run e2e:ci
-
-      - name: Stop Metro
-        if: ${{ always() }}
-        run: |
-          if [ -f metro.pid ]; then kill "$(cat metro.pid)" || true; fi
 
       - name: Upload Detox failure artifacts
         if: ${{ failure() }}

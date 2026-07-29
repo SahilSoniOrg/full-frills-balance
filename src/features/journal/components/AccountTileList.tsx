@@ -15,6 +15,7 @@ export interface AccountTileListProps {
   selectedId: AccountId;
   onSelect: (id: AccountId) => void;
   onSearchRequest?: () => void;
+  browseAllTestID?: string;
   emptyPrompt?: string;
 }
 
@@ -24,6 +25,7 @@ export const AccountTileList = React.memo(function AccountTileList({
   selectedId,
   onSelect,
   onSearchRequest,
+  browseAllTestID,
   emptyPrompt,
 }: AccountTileListProps) {
   const { theme } = useTheme();
@@ -61,6 +63,7 @@ export const AccountTileList = React.memo(function AccountTileList({
 
           {onSearchRequest && (
             <TouchableOpacity
+              testID={browseAllTestID}
               onPress={onSearchRequest}
               activeOpacity={Opacity.medium}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
