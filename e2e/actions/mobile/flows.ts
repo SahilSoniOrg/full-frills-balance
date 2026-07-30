@@ -4,6 +4,8 @@ import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { assertVisibleById, assertTextVisible } from '../assertions';
 import { tapById, tapByLabel, typeById } from './elementActions';
 
+export { createGuidedExpenseJournal, type GuidedExpenseJournalInput } from './journal';
+
 async function waitForAccountsHub(timeoutMs = LONG_TIMEOUT_MS): Promise<void> {
   await waitFor(element(by.id(accounts.fab)))
     .toBeVisible()
