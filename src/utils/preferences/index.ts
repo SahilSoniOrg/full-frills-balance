@@ -4,6 +4,7 @@ import type { UIPreferences } from './types';
 
 export type {
   AiPrefs,
+  DashboardPrefs,
   NotificationPrefs,
   PrivacyPrefs,
   SmsPrefs,
@@ -17,6 +18,7 @@ export { PreferencesStore } from './PreferencesStore';
 export { createPreferencesFacade } from './PreferencesFacade';
 export type { PreferencesFacade } from './PreferencesFacade';
 export { AiPreferences } from './domains/AiPreferences';
+export { DashboardPreferences } from './domains/DashboardPreferences';
 export { InsightPreferences } from './domains/InsightPreferences';
 export { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
 export { NotificationPreferences } from './domains/NotificationPreferences';

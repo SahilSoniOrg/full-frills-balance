@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { Observable } from 'rxjs';
 import type { PreferencesStore } from '../PreferencesStore';
 
-/** Safe-to-Spend horizon preferences Interface. */
+/** Safe-to-Spend forecast horizon preferences. */
 export class StsPreferences {
   constructor(private readonly store: PreferencesStore) {}
 

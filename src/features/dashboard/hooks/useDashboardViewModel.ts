@@ -2,6 +2,7 @@ import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -22,6 +23,7 @@ import { EMPTY, of } from 'rxjs';
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
   isPrivacyMode: boolean;
+  showSafeToSpendChart: boolean;
   listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
   headerProps: {
     greeting: string;
@@ -63,6 +65,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     isPrivacyMode,
     isSmsImportEnabled,
   } = useUI();
+  const { showSafeToSpendChart } = useDashboardPreferences();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -240,6 +243,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       isInitialized,
       hasCompletedOnboarding,
       isPrivacyMode: isLocalPrivacyMode,
+      showSafeToSpendChart,
       listViewProps,
       headerProps,
       transactionSectionTitle: sectionTitle,
@@ -252,6 +256,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       isInitialized,
       hasCompletedOnboarding,
       isLocalPrivacyMode,
+      showSafeToSpendChart,
       listViewProps,
       headerProps,
       sectionTitle,

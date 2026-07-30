@@ -16,10 +16,20 @@ export interface SafeToSpendCardProps extends SafeToSpendDashboard {
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;
   viewModel: SafeToSpendViewModel;
   isPrivacyMode?: boolean;
+  /** When false, hides the projection chart; amount and breakdown stay. Default true. */
+  showChart?: boolean;
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
-  const { viewModel, projection, isLoading, isPrivacyMode, onInfoPress, onLegendPress } = props;
+  const {
+    viewModel,
+    projection,
+    isLoading,
+    isPrivacyMode,
+    onInfoPress,
+    onLegendPress,
+    showChart = true,
+  } = props;
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= TABLET_BREAKPOINT;
 
@@ -47,7 +57,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     />
   );
 
-  const chart = (
+  const chart = showChart ? (
     <SafeToSpendChart
       projection={projection}
       safeToSpend={safeToSpend}
@@ -56,7 +66,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       currencyCode={viewModel.currencyCode}
       formatValue={formatValue}
     />
-  );
+  ) : null;
 
   const header = (
     <SafeToSpendHeader
@@ -68,25 +78,31 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     />
   );
 
+  const body =
+    isWide && chart ? (
+      <Row gap="lg" align="stretch" style={{ minHeight: 0 }}>
+        <View style={{ flex: 2, minWidth: 0 }}>{breakdown}</View>
+        <View style={{ flex: 3, minWidth: 0 }}>{chart}</View>
+      </Row>
+    ) : (
+      <>
+        {breakdown}
+        {chart ? (
+          <>
+            <Separator />
+            {chart}
+            <Separator />
+          </>
+        ) : null}
+      </>
+    );
+
   return (
     <AppSurface elevation="none" paddingHorizontal="none" paddingVertical="sm">
-      {isWide ? (
-        <Column gap="lg">
-          {header}
-          <Row gap="lg" align="stretch" style={{ minHeight: 0 }}>
-            <View style={{ flex: 2, minWidth: 0 }}>{breakdown}</View>
-            <View style={{ flex: 3, minWidth: 0 }}>{chart}</View>
-          </Row>
-        </Column>
-      ) : (
-        <Column gap="lg">
-          {header}
-          {breakdown}
-          <Separator />
-          {chart}
-          <Separator />
-        </Column>
-      )}
+      <Column gap="lg">
+        {header}
+        {body}
+      </Column>
     </AppSurface>
   );
 };

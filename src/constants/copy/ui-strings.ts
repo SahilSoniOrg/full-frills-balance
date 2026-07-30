@@ -252,6 +252,7 @@ export const UI_STRINGS = {
       forecasting: 'Forecasting',
       moneyDefaults: 'Money Defaults',
       moneySetup: 'Money Setup',
+      dashboard: 'Dashboard',
       experience: 'Experience',
       protection: 'Protection',
       ledgerData: 'Ledger Data',
@@ -324,6 +325,10 @@ export const UI_STRINGS = {
     stats: {
       title: 'Account Stats',
       description: 'Show monthly income and expense on account cards',
+    },
+    stsChart: {
+      title: 'Safe to Spend Chart',
+      description: 'Show the projection line chart on the dashboard',
     },
     data: {
       backupRestoreHeader: 'Backup & Restore',

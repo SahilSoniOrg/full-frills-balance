@@ -22,6 +22,7 @@ export function DashboardScreenView({
   explanationModalState,
   legendModalState,
   isPrivacyMode,
+  showSafeToSpendChart,
 }: DashboardViewModel & { listRef?: React.RefObject<FlatList | null> }) {
   const uiState = React.useMemo(
     () => ({
@@ -163,6 +164,7 @@ export function DashboardScreenView({
                 onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
                 isLoading={!safeToSpendData}
                 isPrivacyMode={isPrivacyMode}
+                showChart={showSafeToSpendChart}
               />
             </View>
             <View style={{ zIndex: 1 }}>
