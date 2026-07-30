@@ -1,4 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { journalPresenter, SEMANTIC_TYPE_LABELS } from '@/src/services/accounting/journalPresenter';
+import { journalLegTypesForSignedAmount } from '@/src/services/accounts/accountRules';
 import { AccountId } from '@/src/types/domain';
 
 export type BalanceChangeCounterparty =
@@ -113,4 +116,36 @@ export function filterSuggestedCounterparties(
   return filterEligibleCounterparties(accounts, input).filter(a =>
     suggestedTypes.has(a.accountType),
   );
+}
+
+/**
+ * Label for the journal the classify flow will post.
+ * Adjustment always reads as Balance Adjustment (matches journal description);
+ * account counterparties use the same semantic labels as the journal list.
+ */
+export function getBalanceChangeJournalLabel(input: {
+  editedAccountType: AccountType;
+  discrepancy: number;
+  counterparty: BalanceChangeCounterparty;
+  counterpartyAccountType?: AccountType;
+}): string {
+  if (input.counterparty.kind === 'adjustment') {
+    return 'Balance Adjustment';
+  }
+
+  const balancingType = input.counterpartyAccountType;
+  if (!balancingType) return 'Transaction';
+
+  const { accountTxType } = journalLegTypesForSignedAmount(
+    input.editedAccountType,
+    input.discrepancy,
+  );
+
+  // Semantic matrix is Credit (source) → Debit (destination).
+  const sourceType =
+    accountTxType === TransactionType.CREDIT ? input.editedAccountType : balancingType;
+  const destinationType =
+    accountTxType === TransactionType.DEBIT ? input.editedAccountType : balancingType;
+
+  return SEMANTIC_TYPE_LABELS[journalPresenter.getSemanticType(sourceType, destinationType)];
 }

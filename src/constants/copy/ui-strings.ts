@@ -252,7 +252,6 @@ export const UI_STRINGS = {
       forecasting: 'Forecasting',
       moneyDefaults: 'Money Defaults',
       moneySetup: 'Money Setup',
-      dashboard: 'Dashboard',
       experience: 'Experience',
       protection: 'Protection',
       ledgerData: 'Ledger Data',
@@ -551,10 +550,24 @@ export const UI_STRINGS = {
       subtitle: (amountLabel: string) => `How should ${amountLabel} be recorded?`,
       suggested: 'Suggested',
       allAccounts: 'All accounts',
-      adjustment: 'Adjustment',
-      adjustmentSubtitle: 'Post to Balance Corrections (equity)',
-      emptySuggested: 'No suggested accounts. Try All accounts or Adjustment.',
+      adjustment: 'Balance Correction',
+      adjustmentSubtitle:
+        'Use when this is not income, expense, or a transfer — just fixing the books via equity.',
+      emptySuggested: 'No suggested accounts. Try All accounts or Balance Correction.',
       emptyAll: 'No other accounts in this currency.',
+      confirmTitle: 'Confirm balance update',
+      confirmMessage: (
+        transactionLabel: string,
+        amountLabel: string,
+        editedName: string,
+        otherName: string,
+      ) =>
+        `This will create a ${transactionLabel} of ${amountLabel} between ${editedName} and ${otherName}.`,
+      confirmAdjustmentMessage: (amountLabel: string, editedName: string) =>
+        `This will create a Balance Adjustment of ${amountLabel} for ${editedName}, posted against Balance Corrections.`,
+      confirmPrimary: 'Create transaction',
+      confirmBack: 'Back',
+      balanceCorrections: 'Balance Corrections',
     },
     categoryForm: {
       categoryName: 'Category Name',

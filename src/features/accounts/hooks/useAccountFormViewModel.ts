@@ -118,6 +118,7 @@ export interface AccountFormViewModel {
     visible: boolean;
     accounts: Account[];
     editedAccountId: AccountId;
+    editedAccountName: string;
     editedAccountType: AccountType;
     currencyCode: string;
     discrepancy: number;
@@ -442,6 +443,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       visible: true,
       accounts,
       editedAccountId: accountId,
+      editedAccountName: accountName.trim() || 'This account',
       editedAccountType: accountType,
       currencyCode: selectedCurrency,
       discrepancy: pendingBalanceDiscrepancy,
@@ -451,6 +453,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     };
   }, [
     accountId,
+    accountName,
     isBalanceClassifyVisible,
     pendingBalanceDiscrepancy,
     selectedCurrency,

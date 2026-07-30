@@ -1,4 +1,4 @@
-import { AppInput } from '@/src/components/core';
+import { AppInput, AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { ArchetypePreferenceView } from '@/src/features/settings/components/ArchetypePreferenceView';
@@ -62,6 +62,19 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
         </SettingsMenu>
 
         <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
+          <SettingsMenuItem
+            leftIcon="trendingUp"
+            title={AppConfig.strings.settings.stsChart.title}
+            description={AppConfig.strings.settings.stsChart.description}
+            hasArrow={false}
+            rightContent={
+              <AppToggle
+                value={vm.showSafeToSpendChart}
+                onValueChange={vm.setShowSafeToSpendChart}
+              />
+            }
+            testID="settings-sts-chart-toggle"
+          />
           <SafeToSpendPreferenceView days={vm.safeToSpendDays} onChange={vm.setSafeToSpendDays} />
         </SettingsMenu>
       </Stack>

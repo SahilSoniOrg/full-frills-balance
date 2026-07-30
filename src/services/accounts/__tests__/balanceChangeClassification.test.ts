@@ -2,6 +2,7 @@ import { AccountType } from '@/src/data/models/Account';
 import {
   filterEligibleCounterparties,
   filterSuggestedCounterparties,
+  getBalanceChangeJournalLabel,
   getSuggestedCounterpartyTypes,
   isBalanceChangedBeyondEpsilon,
   needsBalanceChangeClassification,
@@ -178,6 +179,51 @@ describe('balanceChangeClassification', () => {
           balanceChange,
         }),
       ).toEqual({ shouldAdjust: true, balanceChange });
+    });
+  });
+
+  describe('getBalanceChangeJournalLabel', () => {
+    it('labels adjustment as Balance Adjustment', () => {
+      expect(
+        getBalanceChangeJournalLabel({
+          editedAccountType: AccountType.ASSET,
+          discrepancy: 100,
+          counterparty: { kind: 'adjustment' },
+        }),
+      ).toBe('Balance Adjustment');
+    });
+
+    it('labels asset increase vs income as Income', () => {
+      expect(
+        getBalanceChangeJournalLabel({
+          editedAccountType: AccountType.ASSET,
+          discrepancy: 100,
+          counterparty: { kind: 'account', accountId: 'inc' as any },
+          counterpartyAccountType: AccountType.INCOME,
+        }),
+      ).toBe('Income');
+    });
+
+    it('labels asset decrease vs expense as Expense', () => {
+      expect(
+        getBalanceChangeJournalLabel({
+          editedAccountType: AccountType.ASSET,
+          discrepancy: -40,
+          counterparty: { kind: 'account', accountId: 'exp' as any },
+          counterpartyAccountType: AccountType.EXPENSE,
+        }),
+      ).toBe('Expense');
+    });
+
+    it('labels asset-to-asset as Transfer', () => {
+      expect(
+        getBalanceChangeJournalLabel({
+          editedAccountType: AccountType.ASSET,
+          discrepancy: 25,
+          counterparty: { kind: 'account', accountId: 'other' as any },
+          counterpartyAccountType: AccountType.ASSET,
+        }),
+      ).toBe('Transfer');
     });
   });
 });

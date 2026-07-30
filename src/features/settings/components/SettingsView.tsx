@@ -1,43 +1,14 @@
-import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
-import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback } from 'react';
 
 export function SettingsView() {
-  const { showSafeToSpendChart, setShowSafeToSpendChart } = useDashboardPreferences();
-
-  const onToggleSafeToSpendChart = useCallback(
-    (show: boolean) => {
-      setShowSafeToSpendChart(show);
-      analytics.trackFeatureUsage('settings', 'toggle_safe_to_spend_chart', {
-        new_state: show,
-      });
-    },
-    [setShowSafeToSpendChart],
-  );
-
   return (
     <SettingsLayout title="Settings" showBack={false}>
       <Stack space="xl">
-        <SettingsMenu header={AppConfig.strings.settings.sections.dashboard}>
-          <SettingsMenuItem
-            leftIcon="trendingUp"
-            title={AppConfig.strings.settings.stsChart.title}
-            description={AppConfig.strings.settings.stsChart.description}
-            hasArrow={false}
-            rightContent={
-              <AppToggle value={showSafeToSpendChart} onValueChange={onToggleSafeToSpendChart} />
-            }
-            testID="settings-sts-chart-toggle"
-          />
-        </SettingsMenu>
-
         <SettingsMenu header={AppConfig.strings.settings.sections.moneySetup}>
           <SettingsMenuItem
             leftIcon="user"

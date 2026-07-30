@@ -1,10 +1,11 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useCurrencies } from '@/src/hooks/use-currencies';
+import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import Currency from '@/src/data/models/Currency';
 import { analytics } from '@/src/services/analytics-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useCallback, useEffect, useState } from 'react';
-import Currency from '@/src/data/models/Currency';
 
 export interface PersonalizationViewModel {
   userName: string;
@@ -17,11 +18,15 @@ export interface PersonalizationViewModel {
   onUpdateCurrency: (code: string) => Promise<void>;
   safeToSpendDays: number;
   setSafeToSpendDays: (days: number) => void;
+  showSafeToSpendChart: boolean;
+  setShowSafeToSpendChart: (show: boolean) => void;
 }
 
 export function usePersonalizationViewModel(): PersonalizationViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const ui = useUI();
+  const { showSafeToSpendChart, setShowSafeToSpendChart: setDashboardShowChart } =
+    useDashboardPreferences();
   const {
     userName,
     updateUserDetails,
@@ -79,6 +84,16 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
     [setUiSafeToSpendDays],
   );
 
+  const setShowSafeToSpendChart = useCallback(
+    (show: boolean) => {
+      setDashboardShowChart(show);
+      analytics.trackFeatureUsage('settings', 'toggle_safe_to_spend_chart', {
+        new_state: show,
+      });
+    },
+    [setDashboardShowChart],
+  );
+
   return {
     userName,
     setUserName,
@@ -90,5 +105,7 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
     onUpdateCurrency,
     safeToSpendDays,
     setSafeToSpendDays,
+    showSafeToSpendChart,
+    setShowSafeToSpendChart,
   };
 }

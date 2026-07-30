@@ -299,6 +299,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
           visible={balanceClassify.visible}
           accounts={balanceClassify.accounts}
           editedAccountId={balanceClassify.editedAccountId}
+          editedAccountName={balanceClassify.editedAccountName}
           editedAccountType={balanceClassify.editedAccountType}
           currencyCode={balanceClassify.currencyCode}
           discrepancy={balanceClassify.discrepancy}
