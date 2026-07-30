@@ -29,10 +29,16 @@ import {
   resolveAccountFormDefaults,
   resolveAccountInitialBalance,
 } from '@/src/features/accounts/services/accountFormService';
+import {
+  BalanceChangeCounterparty,
+  isBalanceChangedBeyondEpsilon,
+  needsBalanceChangeClassification,
+} from '@/src/services/accounts/balanceChangeClassification';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { AccountId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -108,6 +114,17 @@ export interface AccountFormViewModel {
   showCurrency: boolean;
   metadata: AccountMetadataFormModel;
   isLoading: boolean;
+  balanceClassify: {
+    visible: boolean;
+    accounts: Account[];
+    editedAccountId: AccountId;
+    editedAccountType: AccountType;
+    currencyCode: string;
+    discrepancy: number;
+    discrepancyLabel: string;
+    onClose: () => void;
+    onSelect: (counterparty: BalanceChangeCounterparty) => void;
+  } | null;
 }
 
 export function useAccountFormViewModel(): AccountFormViewModel {
@@ -191,6 +208,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
+  const [isBalanceClassifyVisible, setIsBalanceClassifyVisible] = useState(false);
+  const [pendingBalanceDiscrepancy, setPendingBalanceDiscrepancy] = useState(0);
   const hasInjectedAccountRef = useRef(false);
   const hasInjectedBalanceRef = useRef(false);
 
@@ -242,15 +261,69 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   };
 
   const onInitialBalanceChange = (value: string) => {
+    // Income/Expense category amounts are not editable.
+    if (isCategoryAccountType(accountType)) return;
     setInitialBalance(value);
     if (localFormError) setLocalFormError(null);
   };
 
-  const onSave = async () => {
-    logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
+  const commitSave = useCallback(
+    async (balanceChange?: BalanceChangeCounterparty) => {
+      logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
 
-    const saveResult = buildAccountSavePayload({
+      const saveResult = buildAccountSavePayload({
+        accountName,
+        accountType,
+        accountSubtype,
+        selectedCurrency,
+        selectedIcon,
+        initialBalance,
+        parentAccountId,
+        metadataValues,
+        hasExistingMetadata: Boolean(existingMetadata),
+        balanceData,
+      });
+
+      if (!saveResult.ok) {
+        setLocalFormError(saveResult.error);
+        setIsBalanceClassifyVisible(false);
+        setPendingBalanceDiscrepancy(0);
+        return;
+      }
+
+      const { payload } = saveResult;
+      const targetBalance = payload.initialBalance ? parseFloat(payload.initialBalance) : NaN;
+      const currentBalance = payload.balanceData?.balance;
+      const balanceChanged =
+        isEditMode &&
+        currentBalance !== undefined &&
+        isBalanceChangedBeyondEpsilon(targetBalance, currentBalance);
+
+      // Edit + balance change on Asset/Liability/Equity → classify before save.
+      if (
+        !balanceChange &&
+        balanceChanged &&
+        needsBalanceChangeClassification(payload.accountType)
+      ) {
+        setPendingBalanceDiscrepancy(targetBalance - currentBalance);
+        setIsBalanceClassifyVisible(true);
+        return;
+      }
+
+      setIsBalanceClassifyVisible(false);
+      try {
+        await persistence.handleSave({ payload, balanceChange });
+      } catch (error) {
+        showErrorAlert(
+          error instanceof ValidationError ? error : new ValidationError('Failed to save account'),
+        );
+      } finally {
+        setPendingBalanceDiscrepancy(0);
+      }
+    },
+    [
       accountName,
+      accountId,
       accountType,
       accountSubtype,
       selectedCurrency,
@@ -258,37 +331,28 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       initialBalance,
       parentAccountId,
       metadataValues,
-      hasExistingMetadata: Boolean(existingMetadata),
+      existingMetadata,
       balanceData,
-    });
+      isEditMode,
+      persistence,
+    ],
+  );
 
-    if (!saveResult.ok) {
-      setLocalFormError(saveResult.error);
-      return;
-    }
+  const onSave = useCallback(() => {
+    void commitSave();
+  }, [commitSave]);
 
-    const { payload } = saveResult;
+  const onBalanceClassifyClose = useCallback(() => {
+    setIsBalanceClassifyVisible(false);
+    setPendingBalanceDiscrepancy(0);
+  }, []);
 
-    try {
-      await persistence.handleSave(
-        payload.accountName,
-        payload.accountType,
-        payload.accountSubtype,
-        payload.selectedCurrency,
-        payload.selectedIcon,
-        payload.initialBalance,
-        payload.balanceData,
-        payload.parentAccountId,
-        payload.metadata,
-      );
-
-      // Note: handleSave in persistence already calls router.back()
-    } catch (error) {
-      showErrorAlert(
-        error instanceof ValidationError ? error : new ValidationError('Failed to save account'),
-      );
-    }
-  };
+  const onBalanceClassifySelect = useCallback(
+    (counterparty: BalanceChangeCounterparty) => {
+      void commitSave(counterparty);
+    },
+    [commitSave],
+  );
 
   const hasExistingAccounts = accounts.length > 0;
   const { heroTitle, heroSubtitle, saveLabel } = resolveAccountFormHeroCopy({
@@ -368,6 +432,34 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     [metadataValues, metadataForm.updateField, payFromAccountName, isPayFromPickerVisible],
   );
 
+  const balanceClassify = useMemo(() => {
+    if (!accountId || !isBalanceClassifyVisible) return null;
+    const absDelta = Math.abs(pendingBalanceDiscrepancy);
+    const signedLabel = CurrencyFormatter.formatAmount(absDelta, selectedCurrency);
+    const discrepancyLabel = pendingBalanceDiscrepancy >= 0 ? `+${signedLabel}` : `−${signedLabel}`;
+
+    return {
+      visible: true,
+      accounts,
+      editedAccountId: accountId,
+      editedAccountType: accountType,
+      currencyCode: selectedCurrency,
+      discrepancy: pendingBalanceDiscrepancy,
+      discrepancyLabel,
+      onClose: onBalanceClassifyClose,
+      onSelect: onBalanceClassifySelect,
+    };
+  }, [
+    accountId,
+    isBalanceClassifyVisible,
+    pendingBalanceDiscrepancy,
+    selectedCurrency,
+    accounts,
+    accountType,
+    onBalanceClassifyClose,
+    onBalanceClassifySelect,
+  ]);
+
   return {
     heroTitle,
     heroSubtitle,
@@ -409,5 +501,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     showCurrency,
     metadata,
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
+    balanceClassify,
   };
 }

@@ -541,6 +541,16 @@ export const UI_STRINGS = {
       currencyLockedTooltip:
         'Currency cannot be changed once an account is created to maintain data integrity.',
     },
+    balanceClassify: {
+      title: 'Classify balance change',
+      subtitle: (amountLabel: string) => `How should ${amountLabel} be recorded?`,
+      suggested: 'Suggested',
+      allAccounts: 'All accounts',
+      adjustment: 'Adjustment',
+      adjustmentSubtitle: 'Post to Balance Corrections (equity)',
+      emptySuggested: 'No suggested accounts. Try All accounts or Adjustment.',
+      emptyAll: 'No other accounts in this currency.',
+    },
     categoryForm: {
       categoryName: 'Category Name',
       categoryNamePlaceholder: 'e.g., Food',

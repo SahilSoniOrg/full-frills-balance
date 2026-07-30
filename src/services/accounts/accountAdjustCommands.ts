@@ -1,6 +1,7 @@
 import Account from '@/src/data/models/Account';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { balanceService } from '@/src/services/BalanceService';
+import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import {
   isBalanceAdjustmentNeeded,
   journalLegTypesForSignedAmount,
@@ -12,13 +13,15 @@ import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
 /**
- * Balance-adjustment command: posts a correction journal so the account reaches
- * the target balance. Owns discrepancy calculation and correction-account policy.
+ * Balance-adjustment command: posts a two-leg journal so the account reaches
+ * the target balance. Default counterparty is the equity Balance Corrections
+ * account; callers may pass an explicit income/expense/asset/liability leg.
  */
 export async function adjustAccountBalance(
   workplaceId: WorkplaceId,
   account: Account,
   targetBalance: number,
+  counterparty: BalanceChangeCounterparty = { kind: 'adjustment' },
 ): Promise<void> {
   const precision = await currencyRepository.getPrecision(account.currencyCode);
   const currentBalanceData = await balanceService.getAccountBalance(account.id, workplaceId);
@@ -33,13 +36,17 @@ export async function adjustAccountBalance(
   }
 
   logger.info(
-    `[AccountAdjustCommand] Adjusting balance for ${account.name}: ${currentBalance} -> ${targetBalance} (diff: ${discrepancy})`,
+    `[AccountAdjustCommand] Adjusting balance for ${account.name}: ${currentBalance} -> ${targetBalance} (diff: ${discrepancy}, counterparty: ${counterparty.kind})`,
   );
 
-  const correctionAccountId = await findOrCreateBalanceCorrectionAccount(
-    account.currencyCode,
-    workplaceId,
-  );
+  const balancingAccountId =
+    counterparty.kind === 'account'
+      ? counterparty.accountId
+      : await findOrCreateBalanceCorrectionAccount(account.currencyCode, workplaceId);
+
+  if (balancingAccountId === (account.id as AccountId)) {
+    throw new Error('Balance change counterparty cannot be the same account');
+  }
 
   const amount = Math.abs(discrepancy);
   const { accountTxType, balancingTxType } = journalLegTypesForSignedAmount(
@@ -47,10 +54,15 @@ export async function adjustAccountBalance(
     discrepancy,
   );
 
+  const description =
+    counterparty.kind === 'adjustment'
+      ? `Balance Adjustment: ${account.name}`
+      : `Balance update: ${account.name}`;
+
   await ledgerWriteService.createJournal(
     {
       journalDate: Date.now(),
-      description: `Balance Adjustment: ${account.name}`,
+      description,
       currencyCode: account.currencyCode,
       transactions: [
         {
@@ -59,7 +71,7 @@ export async function adjustAccountBalance(
           transactionType: accountTxType as any,
         },
         {
-          accountId: correctionAccountId,
+          accountId: balancingAccountId,
           amount: amount,
           transactionType: balancingTxType as any,
         },

@@ -11,6 +11,7 @@ import {
 import { reconcileAccount as reconcileAccountCommand } from '@/src/services/accounts/accountReconcileCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
+import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import { createAccount as createAccountCommand } from '@/src/services/accounts/accountCommands';
 import {
   updateAccount as updateAccountCommand,
@@ -282,8 +283,8 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   );
 
   const adjustBalance = useCallback(
-    async (account: Account, targetBalance: number) => {
-      return adjustAccountBalance(workplaceId, account, targetBalance);
+    async (account: Account, targetBalance: number, counterparty?: BalanceChangeCounterparty) => {
+      return adjustAccountBalance(workplaceId, account, targetBalance, counterparty);
     },
     [workplaceId],
   );

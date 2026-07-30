@@ -128,6 +128,29 @@ describe('account commands (integration)', () => {
     expect(balance.balance).toBe(250);
   });
 
+  it('adjustBalance can pair with an income category counterparty', async () => {
+    const asset = await createAccount(WP, {
+      name: 'Wallet',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const income = await createAccount(WP, {
+      name: 'Salary',
+      accountType: AccountType.INCOME,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+
+    await adjustAccountBalance(WP, asset, 75, {
+      kind: 'account',
+      accountId: income.id as AccountId,
+    });
+
+    const balance = await balanceService.getAccountBalance(asset.id, WP);
+    expect(balance.balance).toBe(75);
+  });
+
   it('reconcileAccount sets reconciledAt and audits update', async () => {
     const account = await createAccount(WP, {
       name: 'Reconcilable',

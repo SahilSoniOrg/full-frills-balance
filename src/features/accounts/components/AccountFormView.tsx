@@ -13,6 +13,7 @@ import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
 import { AccountType } from '@/src/data/models/Account';
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
+import { BalanceChangeClassifySheet } from '@/src/features/accounts/components/BalanceChangeClassifySheet';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
@@ -56,6 +57,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
     setIsParentPickerVisible,
     payFromAccountOptions,
     metadata,
+    balanceClassify,
   } = vm;
 
   const {
@@ -116,7 +118,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
         }
         amountValue={initialBalance}
         onAmountChange={onInitialBalanceChange}
-        showAmount={!isCategory}
+        showAmount={vm.showInitialBalance}
         footer={
           !isCategory ? (
             <Inline align="center" space="xs">
@@ -292,6 +294,19 @@ export function AccountFormView(vm: AccountFormViewModel) {
           </AppText>
         </Stack>
       </InfoSheet>
+      {balanceClassify ? (
+        <BalanceChangeClassifySheet
+          visible={balanceClassify.visible}
+          accounts={balanceClassify.accounts}
+          editedAccountId={balanceClassify.editedAccountId}
+          editedAccountType={balanceClassify.editedAccountType}
+          currencyCode={balanceClassify.currencyCode}
+          discrepancy={balanceClassify.discrepancy}
+          discrepancyLabel={balanceClassify.discrepancyLabel}
+          onClose={balanceClassify.onClose}
+          onSelect={balanceClassify.onSelect}
+        />
+      ) : null}
     </EntityFormScreen>
   );
 }
