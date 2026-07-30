@@ -134,25 +134,30 @@ jest.mock('expo-localization', () => ({
   getLocales: () => [{ languageTag: 'en-US', currencyCode: 'USD' }],
   getCalendars: () => [{ timeZone: 'UTC' }],
 }));
-jest.mock('@react-navigation/native', () => ({
-  ThemeProvider: children => children,
-  useTheme: () => ({
-    colors: {
-      primary: '#007AFF',
-      background: '#FFFFFF',
-      card: '#FFFFFF',
-      text: '#000000',
-      border: '#E5E5E5',
-      notification: '#FF3B30',
-    },
-    fonts: {
-      regular: { fontFamily: 'System', fontWeight: '400' },
-      medium: { fontFamily: 'System', fontWeight: '500' },
-      bold: { fontFamily: 'System', fontWeight: '700' },
-      heavy: { fontFamily: 'System', fontWeight: '900' },
-    },
+jest.mock(
+  '@react-navigation/native',
+  () => ({
+    ThemeProvider: children => children,
+    useTheme: () => ({
+      colors: {
+        primary: '#007AFF',
+        background: '#FFFFFF',
+        card: '#FFFFFF',
+        text: '#000000',
+        border: '#E5E5E5',
+        notification: '#FF3B30',
+      },
+      fonts: {
+        regular: { fontFamily: 'System', fontWeight: '400' },
+        medium: { fontFamily: 'System', fontWeight: '500' },
+        bold: { fontFamily: 'System', fontWeight: '700' },
+        heavy: { fontFamily: 'System', fontWeight: '900' },
+      },
+    }),
   }),
-}));
+  // Not a project dependency / not in the lockfile; CI installs omit it.
+  { virtual: true },
+);
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: jest.fn(),
