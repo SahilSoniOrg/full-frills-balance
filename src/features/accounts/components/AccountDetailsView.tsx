@@ -224,6 +224,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
               rollingAverageData={rollingAverageData}
               xTicks={xTicks}
               periodMetricsFormatted={periodMetricsFormatted}
+              isPrivacyMode={isPrivacyMode}
             />
           }
           ListFooterComponent={

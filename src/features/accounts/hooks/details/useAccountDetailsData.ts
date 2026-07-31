@@ -226,6 +226,8 @@ export function useAccountDetailsData(
     navigateNext,
     onDateSelect,
     unreconciledCount: unreconciledMetrics.count,
-    unreconciledAmountText: CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
+    unreconciledAmountText: isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
   };
 }

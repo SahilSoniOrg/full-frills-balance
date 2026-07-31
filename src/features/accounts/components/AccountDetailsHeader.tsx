@@ -2,7 +2,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -40,6 +40,17 @@ interface AccountDetailsHeaderProps {
     dailyAverageText: string | null;
     isLoading: boolean;
   };
+  /** Screen/VM privacy flag — mask chart tooltip amounts. */
+  isPrivacyMode: boolean;
+}
+
+function formatSensitiveAmount(
+  amount: number,
+  currencyCode: string,
+  isPrivacyMode: boolean,
+): string {
+  if (isPrivacyMode) return AppConfig.privacyMask;
+  return CurrencyFormatter.format(amount, currencyCode);
 }
 
 export function AccountDetailsHeader({
@@ -66,6 +77,7 @@ export function AccountDetailsHeader({
   xTicks,
   periodMetricsFormatted,
   currencyCode,
+  isPrivacyMode,
 }: AccountDetailsHeaderProps) {
   const { theme } = useTheme();
 
@@ -156,6 +168,7 @@ export function AccountDetailsHeader({
           xTicks={xTicks}
           formatXTick={formatShortDate}
           avoidPointVertical={true}
+          hideLabels={isPrivacyMode}
           renderTooltipContent={index => {
             const point = chartData[index];
             const rollingPoint = rollingAverageData[index];
@@ -180,7 +193,7 @@ export function AccountDetailsHeader({
                     Balance
                   </AppText>
                   <AppText variant="body" weight="bold">
-                    {CurrencyFormatter.format(point.y, currencyCode)}
+                    {formatSensitiveAmount(point.y, currencyCode, isPrivacyMode)}
                   </AppText>
                 </View>
                 <View style={[styles.tooltipRow, { marginTop: 2 }]}>
@@ -192,8 +205,9 @@ export function AccountDetailsHeader({
                     weight="bold"
                     style={{ color: isPositive ? theme.income : theme.expense }}
                   >
-                    {isPositive ? '+' : ''}
-                    {CurrencyFormatter.format(changeFromStart, currencyCode)}
+                    {isPrivacyMode
+                      ? AppConfig.privacyMask
+                      : `${isPositive ? '+' : ''}${CurrencyFormatter.format(changeFromStart, currencyCode)}`}
                   </AppText>
                 </View>
                 {rollingPoint && (
@@ -202,7 +216,7 @@ export function AccountDetailsHeader({
                       7d Avg
                     </AppText>
                     <AppText variant="body" weight="bold" style={{ color: theme.warning }}>
-                      {CurrencyFormatter.format(rollingPoint.y, currencyCode)}
+                      {formatSensitiveAmount(rollingPoint.y, currencyCode, isPrivacyMode)}
                     </AppText>
                   </View>
                 )}
@@ -244,7 +258,11 @@ export function AccountDetailsHeader({
             </AppText>
             <AppText
               variant="heading"
-              color={periodMetricsFormatted.dailyAverageText.startsWith('-') ? 'expense' : 'income'}
+              color={
+                !isPrivacyMode && periodMetricsFormatted.dailyAverageText.startsWith('-')
+                  ? 'expense'
+                  : 'income'
+              }
             >
               {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.dailyAverageText}
             </AppText>

@@ -28,6 +28,16 @@ export interface UseAccountDetailsMetricsOptions {
   balanceCurrency: string;
   dateRange: DateRange | null;
   balanceData: AccountBalance | null;
+  isPrivacyMode: boolean;
+}
+
+function formatSensitiveAmount(
+  amount: number,
+  currencyCode: string,
+  isPrivacyMode: boolean,
+): string {
+  if (isPrivacyMode) return AppConfig.privacyMask;
+  return CurrencyFormatter.format(amount, currencyCode);
 }
 
 export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOptions) {
@@ -39,6 +49,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     balanceCurrency,
     dateRange,
     balanceData,
+    isPrivacyMode,
   } = options;
 
   const { precision } = useCurrencyPrecision(balanceCurrency);
@@ -47,9 +58,9 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     if (!balanceData?.childBalances) return [];
     return balanceData.childBalances.map((cb: { currencyCode: string; balance: number }) => ({
       currencyCode: cb.currencyCode,
-      amountText: CurrencyFormatter.format(cb.balance, cb.currencyCode),
+      amountText: formatSensitiveAmount(cb.balance, cb.currencyCode, isPrivacyMode),
     }));
-  }, [balanceData]);
+  }, [balanceData, isPrivacyMode]);
 
   const { data: periodMetricsResult, isLoading: metricsLoading } = useObservable<PeriodMetrics>(
     () => {
@@ -102,16 +113,24 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
 
   const periodMetricsFormatted = useMemo(
     () => ({
-      totalIncreaseText: CurrencyFormatter.format(periodMetrics.totalIncrease, balanceCurrency),
-      totalDecreaseText: CurrencyFormatter.format(periodMetrics.totalDecrease, balanceCurrency),
-      netChangeText: CurrencyFormatter.format(periodMetrics.netChange, balanceCurrency),
+      totalIncreaseText: formatSensitiveAmount(
+        periodMetrics.totalIncrease,
+        balanceCurrency,
+        isPrivacyMode,
+      ),
+      totalDecreaseText: formatSensitiveAmount(
+        periodMetrics.totalDecrease,
+        balanceCurrency,
+        isPrivacyMode,
+      ),
+      netChangeText: formatSensitiveAmount(periodMetrics.netChange, balanceCurrency, isPrivacyMode),
       dailyAverageText:
         periodMetrics.dailyAverage !== null
-          ? CurrencyFormatter.format(periodMetrics.dailyAverage, balanceCurrency)
+          ? formatSensitiveAmount(periodMetrics.dailyAverage, balanceCurrency, isPrivacyMode)
           : null,
       isLoading: periodMetrics.isLoading,
     }),
-    [periodMetrics, balanceCurrency],
+    [periodMetrics, balanceCurrency, isPrivacyMode],
   );
 
   const { data: chartTransactions } = useObservable<Transaction[]>(
