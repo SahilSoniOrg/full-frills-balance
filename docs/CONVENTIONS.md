@@ -54,7 +54,7 @@ src/design-system/
 | Screen controllers | camelCase with `use` prefix (no `ViewModel` suffix) | `useJournalEditor.ts`, `usePlannedPaymentDetails.ts` |
 | View model pairing | Optional `useX` data hook + `useXViewModel` presentation | `usePlannedPaymentDetails` + `usePlannedPaymentDetailsViewModel` |
 | Services | PascalCase + `Service` suffix | `BalanceService.ts` |
-| Repositories | PascalCase + `Repository` suffix | `JournalRepository.ts` |
+| Repositories | PascalCase + `Repository` suffix | `AccountRepository.ts` |
 | Utilities | camelCase | `formatCurrency.ts` |
 | Constants | SCREAMING_SNAKE_CASE | `BALANCE_EPSILON` |
 | Types/Interfaces | PascalCase | `AccountType` |
@@ -226,8 +226,8 @@ features / app  →  services & read models  →  repositories / adapters
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **183** allowed hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded; the current scan is **156**). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
-| Journal façade | `bun run check:journal-facade` | `JournalRepository` public method set is frozen in `scripts/journal-repository-facade-methods.json` (**39** methods). New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
+| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **183** allowed hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded; the current scan is **115**). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
+| Journal façade | `bun run check:journal-facade` | The deleted `JournalRepository` façade must remain absent. New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
 
 Run both via `bun run check:architecture`.
 
