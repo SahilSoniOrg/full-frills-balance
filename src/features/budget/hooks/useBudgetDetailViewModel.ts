@@ -12,10 +12,10 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { buildBudgetCumulativeSeries } from '@/src/services/projections';
 import { BudgetId, DisplayTransaction, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { safeAdd } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
@@ -157,68 +157,15 @@ export function useBudgetDetailViewModel() {
   const chartData = useMemo(() => {
     if (!budget) return null;
 
-    const sortedTxs = [...transactions].sort((a, b) => a.transactionDate - b.transactionDate);
-    const data: { x: number; y: number }[] = [];
-    let cumulativeSpent = 0;
-
     const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
-    const startOfCycle = dayjs(startDate);
-    const endOfCycle = dayjs(endDate);
-    const daysInCycle = endOfCycle.diff(startOfCycle, 'day') + 1;
-
-    let txIndex = 0;
-
-    for (let d = 0; d < daysInCycle; d++) {
-      const currentDay = startOfCycle.add(d, 'day');
-      const dayStart = currentDay.startOf('day').valueOf();
-      const dayEnd = currentDay.endOf('day').valueOf();
-
-      // Add anchor point at start of day
-      data.push({ x: dayStart, y: cumulativeSpent });
-
-      // Process all transactions that occurred on this day
-      while (
-        txIndex < sortedTxs.length &&
-        dayjs(sortedTxs[txIndex].transactionDate).isSame(currentDay, 'day')
-      ) {
-        const tx = sortedTxs[txIndex];
-        let amount = 0;
-        if (tx.currencyCode === baseCurrency) {
-          amount = tx.amount;
-        } else {
-          const rate = ratesMap[tx.currencyCode];
-          if (rate && rate > 0) {
-            amount = tx.amount / rate;
-          }
-        }
-
-        // Step function: point before transaction
-        data.push({ x: tx.transactionDate, y: cumulativeSpent });
-
-        if (tx.transactionType === 'DEBIT') {
-          cumulativeSpent = safeAdd(cumulativeSpent, amount, precision);
-        } else if (tx.transactionType === 'CREDIT') {
-          cumulativeSpent = safeSubtract(cumulativeSpent, amount, precision);
-        }
-
-        // Step function: point after transaction
-        data.push({ x: tx.transactionDate, y: cumulativeSpent });
-        txIndex++;
-      }
-
-      // Add anchor point at end of day
-      data.push({ x: dayEnd, y: cumulativeSpent });
-    }
-
-    // If no data points were added (e.g. start of month with no transactions yet), add start point
-    if (data.length === 0) {
-      data.push({ x: startDate, y: 0 });
-    }
-
-    return {
-      data,
-      domainX: [startDate, endDate] as [number, number],
-    };
+    return buildBudgetCumulativeSeries({
+      transactions,
+      periodStart: startDate,
+      periodEnd: endDate,
+      baseCurrency,
+      rateMap: ratesMap,
+      precision,
+    });
   }, [transactions, refTimestamp, budget, baseCurrency, ratesMap, precision]);
 
   const nextMonth = useCallback(() => {
