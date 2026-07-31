@@ -9,15 +9,8 @@ import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { analytics } from '@/src/services/analytics-service';
-import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import {
-  AccountId,
-  EnrichedJournal,
-  JournalDisplayType,
-  JournalId,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountId, EnrichedJournal, JournalId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
@@ -26,6 +19,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournals } from '../../hooks/useJournals';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
+import { buildJournalGroupingOptions } from './journalDayNetGrouping';
 
 export interface JournalSearchViewModel {
   items: TransactionListItem[];
@@ -257,39 +251,14 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   );
 
   const transactionGroupingOptions = useMemo(
-    () => ({
-      items: journals,
-      getDate: (j: EnrichedJournal) => j.journalDate,
-      sortByDate: 'desc' as const,
-      getStats: (journalsForDay: EnrichedJournal[]) =>
-        buildDayNetStats(journalsForDay, baseCurrency, precision, j => {
-          const amount = amountInBaseCurrency(
-            j.totalAmount,
-            j.currencyCode,
-            baseCurrency,
-            exchangeRateMap,
-          );
-          if (
-            amount === 0 &&
-            j.currencyCode !== baseCurrency &&
-            !(exchangeRateMap[j.currencyCode] > 0)
-          ) {
-            logger.warn(
-              AppConfig.strings.journal.errors.missingExchangeRate(j.currencyCode, baseCurrency),
-            );
-          }
-          if (j.displayType === JournalDisplayType.INCOME) return amount;
-          if (j.displayType === JournalDisplayType.EXPENSE) return -amount;
-          return 0;
-        }),
-      renderItem: (journal: EnrichedJournal) => ({
-        id: journal.id as string as TransactionId,
-        type: 'transaction' as const,
-        date: journal.journalDate,
-        onPress: () => handleJournalPress(journal),
-        cardProps: mapJournalToCardProps(journal),
-      }),
-    }),
+    () =>
+      buildJournalGroupingOptions(
+        journals,
+        baseCurrency,
+        precision,
+        exchangeRateMap,
+        handleJournalPress,
+      ),
     [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision],
   );
 
