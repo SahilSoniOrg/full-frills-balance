@@ -2,14 +2,12 @@ import { getPerfNow } from '@/src/utils/dateHelpers';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
-  aggregateLeafPeriodIncomeExpense,
   filterAccountSectionsForTab,
   filterAccountsBySearch,
   filterAccountsForListTab,
   resolveAccountListPressAction,
-  resolveInflowReportDateRange,
-  resolveInflowTotals,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
+import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import {
   AccountCardViewModel,
@@ -19,7 +17,6 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -154,71 +151,16 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  const [inflowPeriod, setInflowPeriodState] = useState<'overall' | 'month' | '30days'>('overall');
-  const [rollingPeriodTotals, setRollingPeriodTotals] = useState<{
-    income: number;
-    expense: number;
-  } | null>(null);
-  const [isPeriodLoading, setIsPeriodLoading] = useState(false);
-
-  const setInflowPeriod = useCallback((period: 'overall' | 'month' | '30days') => {
-    setInflowPeriodState(period);
-    if (period !== '30days') {
-      setRollingPeriodTotals(null);
-    }
-  }, []);
-
-  const monthPeriodTotals = useMemo(() => {
-    if (inflowPeriod !== 'month') return null;
-    return aggregateLeafPeriodIncomeExpense(accounts, dashboardData.balances);
-  }, [inflowPeriod, accounts, dashboardData.balances]);
-
-  useEffect(() => {
-    if (!workplaceId || inflowPeriod !== '30days') {
-      return;
-    }
-
-    let isMounted = true;
-    // Defer loading state update to avoid synchronous cascading render warning
-    Promise.resolve().then(() => {
-      if (isMounted) {
-        setIsPeriodLoading(true);
-      }
+  const { inflowPeriod, setInflowPeriod, inflowIncome, inflowExpense, isPeriodLoading } =
+    useAccountsInflowSummary({
+      workplaceId,
+      workplaceCurrency,
+      accounts,
+      balances: dashboardData.balances,
+      totalIncome,
+      totalExpense,
+      dataVersion: version,
     });
-
-    const fetchTotals = async () => {
-      try {
-        const range = resolveInflowReportDateRange(inflowPeriod);
-        if (!range) return;
-
-        const { startDate, endDate } = range;
-        const totals = await reportService.getIncomeVsExpense(
-          workplaceId,
-          startDate,
-          endDate,
-          workplaceCurrency,
-        );
-
-        if (isMounted) {
-          setRollingPeriodTotals(totals);
-          setIsPeriodLoading(false);
-        }
-      } catch (err) {
-        logger.error('Failed to fetch period totals:', err);
-        if (isMounted) {
-          setIsPeriodLoading(false);
-        }
-      }
-    };
-
-    fetchTotals();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [inflowPeriod, workplaceId, workplaceCurrency, version]);
-
-  const periodTotals = inflowPeriod === 'month' ? monthPeriodTotals : rollingPeriodTotals;
 
   const onToggleSection = useCallback((title: string) => {
     setCollapsedSections(prev => {
@@ -337,17 +279,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     const rawSections = transformAccountsToSections(accountsForTab, transformOptions);
     return filterAccountSectionsForTab(rawSections, activeTab);
   }, [filteredAccounts, transformOptions, activeTab]);
-
-  const { inflowIncome, inflowExpense } = useMemo(
-    () =>
-      resolveInflowTotals({
-        inflowPeriod,
-        totalIncome,
-        totalExpense,
-        periodTotals,
-      }),
-    [inflowPeriod, totalIncome, totalExpense, periodTotals],
-  );
 
   return {
     sections,

@@ -3,18 +3,12 @@ import TransactionInboxRecord, {
   InboxParseStatus,
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useAccounts } from '@/src/features/accounts';
+import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { smsService } from '@/src/services/sms-service';
-import {
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  JournalId,
-  TransactionDuplicateCandidate,
-  TransactionInboxItem,
-} from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, TransactionInboxItem } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -64,63 +58,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   );
 
   const enrich = useCallback(
-    async (records: TransactionInboxRecord[]) => {
-      const linkedIds = Array.from(
-        new Set(records.map(record => record.linkedJournalId).filter(Boolean) as JournalId[]),
-      );
-      const duplicateIds = Array.from(
-        new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as JournalId[]),
-      );
-      const journals = await journalQueryRepository.findByIds(
-        workplaceId,
-        Array.from(new Set([...linkedIds, ...duplicateIds])),
-      );
-      const journalMap = new Map(journals.map(journal => [journal.id, journal]));
-
-      return records.map((record): TransactionInboxItem => {
-        const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
-        const duplicateCandidate: TransactionDuplicateCandidate | undefined =
-          record.duplicateJournalId
-            ? {
-                journalId: record.duplicateJournalId,
-                journalDate:
-                  journalMap.get(record.duplicateJournalId)?.journalDate || record.inputDate,
-                description: journalMap.get(record.duplicateJournalId)?.description,
-                score: record.duplicateConfidence || 0,
-                reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
-              }
-            : undefined;
-
-        return {
-          id: record.id,
-          channel: record.channel,
-          deviceSourceId: record.deviceSourceId,
-          senderAddress: record.senderAddress || '',
-          rawBody: record.rawBody || '',
-          inputDate: record.inputDate,
-          parseStatus: record.parseStatus,
-          processingStatus: record.processingStatus,
-          parsedAmount: record.parsedAmount,
-          parsedCurrencyCode: record.parsedCurrencyCode,
-          parsedMerchant: record.parsedMerchant,
-          parsedAccountSource: record.parsedAccountSource,
-          referenceNumber: record.referenceNumber,
-          direction: record.direction,
-          parseConfidence: record.parseConfidence,
-          parseReason: record.parseReason,
-          linkedJournal: record.linkedJournalId
-            ? {
-                journalId: record.linkedJournalId,
-                description: journalMap.get(record.linkedJournalId)?.description,
-                journalDate:
-                  journalMap.get(record.linkedJournalId)?.journalDate || record.inputDate,
-                status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
-              }
-            : undefined,
-          duplicateCandidate,
-        };
-      });
-    },
+    (records: TransactionInboxRecord[]) => enrichTransactionInboxRecords(workplaceId, records),
     [workplaceId],
   );
 
