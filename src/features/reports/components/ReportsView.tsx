@@ -17,7 +17,7 @@ interface ReportsViewProps {
 
 export function ReportsView({ vm }: ReportsViewProps) {
   const { theme } = useTheme();
-  const { activeTab, setActiveTab, loading, onRefresh } = vm;
+  const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
 
   const { width } = useWindowDimensions();
   // Screen has Spacing.md (12) inset on each side when using Inset space="md".
@@ -30,7 +30,7 @@ export function ReportsView({ vm }: ReportsViewProps) {
       <Inset space="md" vertical="md" flex={1}>
         <Stack space="xl" flex={1}>
           <View style={{ marginTop: Spacing.sm }}>
-            <ReportFilterBar {...vm} />
+            <ReportFilterBar {...filters} />
           </View>
           <ReportTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -39,14 +39,18 @@ export function ReportsView({ vm }: ReportsViewProps) {
             refreshControl={
               <RefreshControl
                 refreshing={loading}
-                onRefresh={onRefresh}
+                onRefresh={filters.onRefresh}
                 tintColor={theme.primary}
               />
             }
           >
-            {activeTab === 'OVERVIEW' && <ReportOverviewSection vm={vm} chartWidth={CHART_WIDTH} />}
-            {activeTab === 'SPENDING' && <ReportSpendingSection vm={vm} chartWidth={CHART_WIDTH} />}
-            {activeTab === 'WEALTH' && <ReportWealthSection vm={vm} chartWidth={CHART_WIDTH} />}
+            {activeTab === 'OVERVIEW' && (
+              <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
+            )}
+            {activeTab === 'SPENDING' && (
+              <ReportSpendingSection vm={spending} chartWidth={CHART_WIDTH} />
+            )}
+            {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
           </ScrollView>
         </Stack>
       </Inset>

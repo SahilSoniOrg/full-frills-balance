@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
-import { ReportTab } from '@/src/features/reports/hooks/useReportsViewModel';
+import { ReportTab } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 

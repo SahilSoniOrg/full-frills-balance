@@ -4,7 +4,7 @@ import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
-import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { ReportWealthTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -12,13 +12,13 @@ import { StyleSheet, View } from 'react-native';
 const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 
 interface ReportWealthSectionProps {
-  vm: ReportsViewModel;
+  vm: ReportWealthTabVm;
   chartWidth: number;
 }
 
 export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps) {
   const { theme } = useTheme();
-  const { wealthAreaSeries, barChartData, dailyData } = vm;
+  const { wealthAreaSeries, barChartData, dailyData, targetCurrency, onViewTransactions } = vm;
 
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | undefined>(undefined);
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>(undefined);
@@ -37,17 +37,17 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
           })}
           income={data.assets}
           expense={data.liabilities}
-          currencyCode={vm.targetCurrency}
+          currencyCode={targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
-          onViewTransactions={() => vm.onViewTransactions(data.date)}
+          onViewTransactions={() => onViewTransactions(data.date)}
           incomeLabel={AppConfig.strings.reports.assets}
           expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
         />
       );
     },
-    [dailyData, theme, vm],
+    [dailyData, theme, targetCurrency, onViewTransactions],
   );
 
   return (
@@ -87,7 +87,7 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
         <View style={styles.chartContainer}>
           <BarChart
             data={barChartData}
-            currencyCode={vm.targetCurrency}
+            currencyCode={targetCurrency}
             height={WEALTH_CHART_HEIGHT}
             width={chartWidth}
             onPress={setSelectedBarIndex}

@@ -9,12 +9,13 @@ jest.mock('../useReports');
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({
+    workplaceId: 'wp-1',
+    defaultCurrencyCode: 'EUR',
     activeWorkplaceId: 'wp-1',
     activeWorkplace: { id: 'wp-1', name: 'Personal' },
   }),
 }));
 
-// Mock dependencies
 // Mock dependencies
 jest.mock('@/src/hooks/use-theme', () => {
   const theme = {
@@ -47,9 +48,10 @@ describe('useReportsViewModel', () => {
   const mockUseReports = useReports as jest.Mock;
 
   const mockReportsData = {
+    accounts: [],
     netWorthHistory: [
-      { date: 1, netWorth: 1000 },
-      { date: 2, netWorth: 2000 },
+      { date: 1, netWorth: 1000, totalAssets: 1200, totalLiabilities: 200 },
+      { date: 2, netWorth: 2000, totalAssets: 2200, totalLiabilities: 200 },
     ],
     expenses: [],
     expenseCategories: [],
@@ -82,83 +84,77 @@ describe('useReportsViewModel', () => {
     incomeVsExpense: { income: 1300, expense: 500 },
     loading: false,
     dateRange: { startDate: 1704067200000, endDate: 1706745599999 },
-    periodFilter: 'all',
+    periodFilter: { type: 'ALL' },
+    accountIds: [],
     updateFilter: jest.fn(),
     targetCurrency: 'EUR',
     dailyIncomeVsExpense: [
       { date: 1, income: 100, expense: 50 },
       { date: 2, income: 200, expense: 100 },
     ],
+    sankeyData: { nodes: [], links: [] },
+    spendingHeatmap: [],
+    calendarHeatmap: [],
   };
 
   beforeEach(() => {
     mockUseReports.mockReturnValue(mockReportsData);
   });
 
-  it('should toggle net worth selection but keep header static', () => {
+  it('should expose focused tab view-models instead of a flat facade', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
-    // Verify basic properties
     expect(result.current.activeTab).toBe('OVERVIEW');
-    expect(result.current.netWorthSeries).toBeDefined();
-    expect(result.current.barChartData).toBeDefined();
+    expect(result.current.filters).toBeDefined();
+    expect(result.current.overview.netWorthSeries).toBeDefined();
+    expect(result.current.overview.barChartData).toBeDefined();
+    expect(result.current.spending).toBeDefined();
+    expect(result.current.wealth).toBeDefined();
   });
 
-  it('should populate dailyData correctly', () => {
+  it('should populate dailyData correctly on the wealth tab', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
-    expect(result.current.dailyData).toHaveLength(2);
-    expect(result.current.dailyData[0]).toEqual({
+    expect(result.current.wealth.dailyData).toHaveLength(2);
+    expect(result.current.wealth.dailyData[0]).toEqual({
       date: 1,
       netWorth: 1000,
       income: 100,
       expense: 50,
+      assets: 1200,
+      liabilities: 200,
     });
-    expect(result.current.dailyData[1]).toEqual({
+    expect(result.current.wealth.dailyData[1]).toEqual({
       date: 2,
       netWorth: 2000,
       income: 200,
       expense: 100,
+      assets: 2200,
+      liabilities: 200,
     });
   });
 
-  it('should toggle expansion state', () => {
+  it('should toggle spending expansion state', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
-    expect(result.current.hasIncomeData).toBe(true);
-
-    // Initial state
-    expect(result.current.expandedExpenses).toBe(false);
-    expect(result.current.expandedIncome).toBe(false);
-
-    // Toggle Expenses
-    act(() => {
-      result.current.toggleExpenseExpansion();
-    });
-    expect(result.current.expandedExpenses).toBe(true);
+    expect(result.current.spending.expandedExpenses).toBe(false);
 
     act(() => {
-      result.current.toggleExpenseExpansion();
+      result.current.spending.toggleExpenseExpansion();
     });
-    expect(result.current.expandedExpenses).toBe(false);
-
-    // Toggle Income
-    act(() => {
-      result.current.toggleIncomeExpansion();
-    });
-    expect(result.current.expandedIncome).toBe(true);
+    expect(result.current.spending.expandedExpenses).toBe(true);
 
     act(() => {
-      result.current.toggleIncomeExpansion();
+      result.current.spending.toggleExpenseExpansion();
     });
-    expect(result.current.expandedIncome).toBe(false);
+    expect(result.current.spending.expandedExpenses).toBe(false);
   });
 
   it('should navigate to account details with selected reports date range on legend row press', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
     act(() => {
-      result.current.onLegendRowPress('account-123' as AccountId);
+      result.current.spending.onLegendRowPress('account-123' as AccountId);
     });
 
     expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({

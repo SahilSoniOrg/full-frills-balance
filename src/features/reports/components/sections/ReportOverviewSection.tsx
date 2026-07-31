@@ -1,11 +1,11 @@
-import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { ReportOverviewTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { NetWorthTrendWidget } from '@/src/features/reports/components/widgets/NetWorthTrendWidget';
 import { IncomeExpenseTrendWidget } from '@/src/features/reports/components/widgets/IncomeExpenseTrendWidget';
 import { IncomeExpenseBalanceWidget } from '@/src/features/reports/components/widgets/IncomeExpenseBalanceWidget';
 import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/MoneyFlowWidget';
 
 interface ReportOverviewSectionProps {
-  vm: ReportsViewModel;
+  vm: ReportOverviewTabVm;
   chartWidth: number;
 }
 

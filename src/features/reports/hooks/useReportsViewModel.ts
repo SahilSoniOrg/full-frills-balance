@@ -2,124 +2,31 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
-import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
-import { AccountId } from '@/src/types/domain';
 import { useCallback, useState } from 'react';
+import {
+  ReportOverviewTabVm,
+  ReportSpendingTabVm,
+  ReportTab,
+  ReportWealthTabVm,
+} from './reportTabTypes';
+import { ReportFilters, useReportFilters } from './useReportFilters';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
-import { ReportFilters, useReportFilters } from './useReportFilters';
+import { useReportOverviewTab } from './useReportOverviewTab';
+import { useReportSpendingTab } from './useReportSpendingTab';
+import { useReportWealthTab } from './useReportWealthTab';
 
-export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
+export type { ReportTab } from './reportTabTypes';
 
-export interface ReportsViewModel extends ReportFilters {
+export interface ReportsViewModel {
+  filters: ReportFilters;
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
-  netWorthSeries: {
-    x: number;
-    y: number;
-    date: number;
-    netWorth: number;
-    income: number;
-    expense: number;
-    assets: number;
-    liabilities: number;
-  }[];
-  currentNetWorthText: string;
-  incomeTotalText: string;
-  expenseTotalText: string;
-  incomeBarFlex: number;
-  expenseBarFlex: number;
-  expenseDonutData: { value: number; color: string; label: string }[];
-  incomeDonutData: { value: number; color: string; label: string }[];
-  legendRows: {
-    id: AccountId;
-    color: string;
-    accountName: string;
-    percentage: number;
-    amount: number;
-  }[];
-  incomeLegendRows: {
-    id: AccountId;
-    color: string;
-    accountName: string;
-    percentage: number;
-    amount: number;
-  }[];
-  hasExpenseData: boolean;
-  hasIncomeData: boolean;
-  barChartData: {
-    label: string;
-    values: number[];
-    colors: string[];
-    startDate: number;
-    endDate: number;
-  }[];
-  displayedNetWorthText: string;
-  displayedIncomeText: string;
-  displayedExpenseText: string;
-  dailyData: {
-    date: number;
-    netWorth: number;
-    income: number;
-    expense: number;
-    assets: number;
-    liabilities: number;
-  }[];
-  onViewTransactions: (start: number, end?: number) => void;
-  onViewSelectedTransactions: () => void;
-  onLegendRowPress: (accountId: AccountId) => void;
-
-  // Advanced Charts
-  wealthAreaSeries: { x: number; y: number }[][];
-  sankeyData: SankeyData;
-  spendingHeatmap: HeatmapPoint[];
-  calendarHeatmap: HeatmapPoint[];
-
-  // Expansion State
-  expandedExpenses: boolean;
-  toggleExpenseExpansion: () => void;
-  expandedIncome: boolean;
-  toggleIncomeExpansion: () => void;
-  totalExpenseCount: number;
-  totalIncomeCount: number;
-  showExpenseExpansionButton: boolean;
-  showIncomeExpansionButton: boolean;
-
-  // Category Breakdown
-  expenseCategoryViewState: {
-    donutData: { value: number; color: string; label: string }[];
-    legendRows: {
-      id: AccountId;
-      color: string;
-      accountName: string;
-      percentage: number;
-      amount: number;
-    }[];
-    totalCount: number;
-    showExpansionButton: boolean;
-    hasData: boolean;
-  };
-  incomeCategoryViewState: {
-    donutData: { value: number; color: string; label: string }[];
-    legendRows: {
-      id: AccountId;
-      color: string;
-      accountName: string;
-      percentage: number;
-      amount: number;
-    }[];
-    totalCount: number;
-    showExpansionButton: boolean;
-    hasData: boolean;
-  };
-  expandedExpenseCategories: boolean;
-  expandedIncomeCategories: boolean;
-  toggleExpenseCategoryExpansion: () => void;
-  toggleIncomeCategoryExpansion: () => void;
-  onCategoryPress: (category: string) => void;
-  targetCurrency: string;
+  overview: ReportOverviewTabVm;
+  spending: ReportSpendingTabVm;
+  wealth: ReportWealthTabVm;
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -192,67 +99,58 @@ export function useReportsViewModel(): ReportsViewModel {
     dateRange,
   });
 
-  return {
-    ...filters,
+  const overview = useReportOverviewTab({
+    netWorthSeries: chartData.netWorthSeries,
+    barChartData: chartData.barChartData,
+    displayedNetWorthText: chartData.displayedNetWorthText,
+    displayedIncomeText: chartData.displayedIncomeText,
+    displayedExpenseText: chartData.displayedExpenseText,
+    incomeBarFlex: incomeVsExpense.income || 1,
+    expenseBarFlex: incomeVsExpense.expense || 1,
+    sankeyData: chartData.sankeyData,
+    targetCurrency,
+    onViewTransactions: actions.onViewTransactions,
+    onViewSelectedTransactions: actions.onViewSelectedTransactions,
+  });
 
-    // Tab State
+  const spending = useReportSpendingTab({
+    expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
+    incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
+    expenseDonutData: breakdownDetails.expenseViewState.donutData,
+    legendRows: breakdownDetails.expenseViewState.legendRows,
+    totalExpenseCount: breakdownDetails.expenseViewState.totalCount,
+    showExpenseExpansionButton: breakdownDetails.expenseViewState.showExpansionButton,
+    expandedExpenses: breakdownDetails.expandedExpenses,
+    toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
+    expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
+    toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
+    expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
+    toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
+    spendingHeatmap: chartData.spendingHeatmap,
+    calendarHeatmap: chartData.calendarHeatmap,
+    onLegendRowPress: actions.onLegendRowPress,
+    onCategoryPress: actions.onCategoryPress,
+    targetCurrency,
+  });
+
+  const wealth = useReportWealthTab({
+    wealthAreaSeries: chartData.wealthAreaSeries,
+    barChartData: chartData.barChartData,
+    dailyData: chartData.dailyData,
+    targetCurrency,
+    onViewTransactions: actions.onViewTransactions,
+  });
+
+  return {
+    filters,
     activeTab,
     setActiveTab: (tab: ReportTab) => {
       setActiveTab(tab);
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
-
-    // Reports state
     loading,
-
-    // Chart Data
-    netWorthSeries: chartData.netWorthSeries,
-    currentNetWorthText: chartData.displayedNetWorthText,
-    incomeTotalText: chartData.displayedIncomeText,
-    expenseTotalText: chartData.displayedExpenseText,
-    incomeBarFlex: incomeVsExpense.income || 1,
-    expenseBarFlex: incomeVsExpense.expense || 1,
-    barChartData: chartData.barChartData,
-    displayedNetWorthText: chartData.displayedNetWorthText,
-    displayedIncomeText: chartData.displayedIncomeText,
-    displayedExpenseText: chartData.displayedExpenseText,
-    dailyData: chartData.dailyData,
-
-    // Breakdown Details
-    expenseDonutData: breakdownDetails.expenseViewState.donutData,
-    incomeDonutData: breakdownDetails.incomeViewState.donutData,
-    legendRows: breakdownDetails.expenseViewState.legendRows,
-    incomeLegendRows: breakdownDetails.incomeViewState.legendRows,
-    hasExpenseData: breakdownDetails.expenseViewState.hasData,
-    hasIncomeData: breakdownDetails.incomeViewState.hasData,
-    expandedExpenses: breakdownDetails.expandedExpenses,
-    toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
-    expandedIncome: breakdownDetails.expandedIncome,
-    toggleIncomeExpansion: breakdownDetails.toggleIncomeExpansion,
-    totalExpenseCount: breakdownDetails.expenseViewState.totalCount,
-    totalIncomeCount: breakdownDetails.incomeViewState.totalCount,
-    showExpenseExpansionButton: breakdownDetails.expenseViewState.showExpansionButton,
-    showIncomeExpansionButton: breakdownDetails.incomeViewState.showExpansionButton,
-
-    // Advanced charts
-    wealthAreaSeries: chartData.wealthAreaSeries,
-    sankeyData: chartData.sankeyData,
-    spendingHeatmap: chartData.spendingHeatmap,
-    calendarHeatmap: chartData.calendarHeatmap,
-
-    // Category Breakdown
-    expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
-    incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
-    expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
-    expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
-    toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
-    toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
-
-    // Actions
-    onViewTransactions: actions.onViewTransactions,
-    onViewSelectedTransactions: actions.onViewSelectedTransactions,
-    onLegendRowPress: actions.onLegendRowPress,
-    onCategoryPress: actions.onCategoryPress,
-    targetCurrency,
+    overview,
+    spending,
+    wealth,
   };
 }
