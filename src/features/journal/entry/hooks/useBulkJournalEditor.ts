@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import Account from '@/src/data/models/Account';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, WorkplaceId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { sanitizeAmount } from '@/src/utils/validation';
@@ -164,12 +165,14 @@ export function useBulkJournalEditor({
       setRows(loadingRows);
 
       try {
-        const [srcRate, dstRate] = await Promise.all([
-          sourceCurrency !== workplaceCurrency ? fetchRate(sourceCurrency, workplaceCurrency) : 1.0,
-          destCurrency !== workplaceCurrency ? fetchRate(destCurrency, workplaceCurrency) : 1.0,
-        ]);
-
-        const crossRate = srcRate / dstRate;
+        const rates = await fetchCrossCurrencyRates(
+          sourceCurrency,
+          destCurrency,
+          workplaceCurrency,
+          fetchRate,
+        );
+        if (!rates) return;
+        const { sourceBaseRate: srcRate, destBaseRate: dstRate, exchangeRate: crossRate } = rates;
         const numAmount = parseFloat(amountStr) || 0;
         const convertedAmount = sanitizeAmount(numAmount * crossRate) || 0;
 

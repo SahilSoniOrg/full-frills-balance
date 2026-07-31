@@ -1,5 +1,5 @@
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { resolveSimpleCrossCurrencyRates } from '@/src/services/journal/simpleJournalHelpers';
+import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useRef, useState } from 'react';
 
@@ -70,20 +70,13 @@ export function useCrossCurrencyRates({
       setRateError(null);
 
       try {
-        const [fetchedSourceToWorkplace, fetchedDestToWorkplace] = await Promise.all([
-          sourceCurrency !== workplaceCurrency ? fetchRate(sourceCurrency, workplaceCurrency) : 1.0,
-          destCurrency !== workplaceCurrency ? fetchRate(destCurrency, workplaceCurrency) : 1.0,
-        ]);
-
-        if (!isLatest()) return;
-
-        const resolved = resolveSimpleCrossCurrencyRates({
+        const resolved = await fetchCrossCurrencyRates(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
-          fetchedSourceToWorkplace,
-          fetchedDestToWorkplace,
-        });
+          fetchRate,
+        );
+        if (!isLatest() || !resolved) return;
         setSourceBaseRate(resolved.sourceBaseRate);
         setDestBaseRate(resolved.destBaseRate);
         setExchangeRate(resolved.exchangeRate);
