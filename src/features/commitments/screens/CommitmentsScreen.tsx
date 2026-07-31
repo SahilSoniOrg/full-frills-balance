@@ -4,7 +4,7 @@ import { Screen } from '@/src/components/layout';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
-import { PlannedPaymentListView } from '@/src/features/planned-payments';
+import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo, useState } from 'react';
@@ -15,6 +15,7 @@ export default function CommitmentsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
   const { workplaceId } = useWorkplace();
   const { items: budgetItems } = useBudgetListViewModel(workplaceId);
+  const { items: plannedItems, isLoading: plannedLoading } = usePlannedPayments(workplaceId);
 
   // Log UI Mount
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function CommitmentsScreen() {
         {activeTab === 'budgets' ? (
           <BudgetListView items={budgetItems} />
         ) : (
-          <PlannedPaymentListView />
+          <PlannedPaymentListView items={plannedItems} isLoading={plannedLoading} />
         )}
       </Box>
 

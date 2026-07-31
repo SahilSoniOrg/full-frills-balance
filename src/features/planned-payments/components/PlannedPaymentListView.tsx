@@ -1,16 +1,17 @@
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
-import { usePlannedPayments } from '@/src/features/planned-payments/hooks/usePlannedPayments';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 
-export function PlannedPaymentListView() {
-  const { workplaceId } = useWorkplace();
-  const { items, isLoading } = usePlannedPayments(workplaceId);
+export type PlannedPaymentListViewProps = {
+  items: PlannedPayment[];
+  isLoading: boolean;
+};
 
+export function PlannedPaymentListView({ items, isLoading }: PlannedPaymentListViewProps) {
   if (isLoading && items.length === 0) {
     return (
       <View style={styles.loadingContainer}>
