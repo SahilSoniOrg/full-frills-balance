@@ -4,6 +4,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
+import { buildAccountRollingBalanceSeries } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange } from '@/src/utils/dateUtils';
@@ -137,69 +138,16 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     [],
   );
 
-  const { chartData, rollingAverageData, xTicks } = useMemo(() => {
-    if (!chartTransactions || !chartTransactions.length)
-      return { chartData: [], rollingAverageData: [], xTicks: [] };
-
-    const firstWithBalance = chartTransactions.find(
-      t => t.runningBalance !== undefined && t.runningBalance !== null,
-    );
-    const pts = chartTransactions.reduce(
-      (acc, t: Transaction) => {
-        const lastBal =
-          acc.length > 0 ? acc[acc.length - 1].y : firstWithBalance?.runningBalance || 0;
-        const y =
-          t.runningBalance !== undefined && t.runningBalance !== null ? t.runningBalance : lastBal;
-        acc.push({ x: t.transactionDate, y });
-        return acc;
-      },
-      [] as { x: number; y: number }[],
-    );
-
-    const MS_PER_DAY = AppConfig.time.msPerDay;
-    const visibleStart = dateRange ? dateRange.startDate : pts[0].x;
-    const visibleEnd = dateRange ? dateRange.endDate : pts[pts.length - 1].x;
-    const effectiveMaxX = visibleEnd + 7 * MS_PER_DAY;
-
-    const ticks: number[] = [];
-    const numTicks = 4;
-    const range = effectiveMaxX - visibleStart;
-    const step = range / (numTicks - 1);
-    for (let i = 0; i < numTicks; i++) ticks.push(visibleStart + step * i);
-
-    const dailyBalances: { x: number; y: number }[] = [];
-    let currentDayStart = new Date(pts[0].x).setHours(0, 0, 0, 0);
-    const lastDayEnd = new Date(effectiveMaxX).setHours(23, 59, 59, 999);
-    let lb = pts[0].y;
-    let pi = 0;
-    while (currentDayStart <= lastDayEnd) {
-      const nds = currentDayStart + MS_PER_DAY;
-      while (pi < pts.length && pts[pi].x < nds) {
-        lb = pts[pi].y;
-        pi++;
-      }
-      dailyBalances.push({ x: currentDayStart, y: lb });
-      currentDayStart = nds;
-    }
-
-    const fullRolling = dailyBalances.map((db, i) => {
-      let sum = 0;
-      let count = 0;
-      for (let j = 0; j < 7; j++) {
-        if (i - j >= 0) {
-          sum += dailyBalances[i - j].y;
-          count++;
-        }
-      }
-      return { x: db.x, y: count > 0 ? sum / count : 0 };
-    });
-
-    return {
-      chartData: dailyBalances.filter(p => p.x >= visibleStart && p.x <= effectiveMaxX),
-      rollingAverageData: fullRolling.filter(p => p.x >= visibleStart && p.x <= effectiveMaxX),
-      xTicks: ticks,
-    };
-  }, [chartTransactions, dateRange]);
+  const { chartData, rollingAverageData, xTicks } = useMemo(
+    () =>
+      buildAccountRollingBalanceSeries({
+        transactions: chartTransactions ?? [],
+        visibleStart: dateRange?.startDate,
+        visibleEnd: dateRange?.endDate,
+        msPerDay: AppConfig.time.msPerDay,
+      }),
+    [chartTransactions, dateRange],
+  );
 
   return {
     precision,
