@@ -7,6 +7,10 @@ import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadM
 import React from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
+import {
+  mapLiabilityFlowsToPlannedOccurrences,
+  mergePlannedOccurrences,
+} from '../mappers/plannedOccurrenceMapper';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
@@ -94,52 +98,19 @@ export function DashboardScreenView({
     isLoading: !safeToSpendData,
   });
 
-  const enrichedPlannedJournals = React.useMemo(() => {
+  const plannedOccurrences = React.useMemo(() => {
     const planned = listViewProps.plannedJournals || [];
-    if (!safeToSpendData?.report?.allFlows) return planned;
+    if (!safeToSpendData?.report?.allFlows) {
+      return mergePlannedOccurrences(planned, []);
+    }
 
-    const liabilityOutflows = safeToSpendData.report.allFlows.filter(
-      f => f.kind === 'OUTFLOW' && f.origin === 'LIABILITY',
-    );
-
-    const syntheticJournals = liabilityOutflows.map((f: any, index) => {
-      const todayMs = new Date().setHours(0, 0, 0, 0);
-      const dateMs = todayMs + f.dayOffset * 24 * 60 * 60 * 1000;
-      const payFromAccount = safeToSpendData.accountMap?.get(f.accountId);
-      const creditCardAccount = safeToSpendData.accountMap?.get(f.referenceId);
-      const payFromAccountName = payFromAccount?.name || 'Checking';
-
-      return {
-        id: `synthetic_cc_${f.referenceId}_${f.dayOffset}_${index}`,
-        journalDate: dateMs,
-        description: f.label,
-        totalAmount: f.amount,
-        currencyCode: safeToSpendData.currencyCode || 'INR',
-        displayType: 'EXPENSE',
-        status: 'PLANNED',
-        accounts: [
-          {
-            id: f.accountId,
-            name: payFromAccountName,
-            accountType: 'ASSET',
-            role: 'SOURCE',
-            icon: payFromAccount?.icon || 'wallet',
-          },
-          {
-            id: f.referenceId,
-            name: creditCardAccount?.name || f.label,
-            accountType: 'LIABILITY',
-            role: 'DESTINATION',
-            icon: creditCardAccount?.icon || 'creditCard',
-          },
-        ],
-        createdAt: dateMs,
-        updatedAt: dateMs,
-        version: 1,
-      } as any;
+    const simulated = mapLiabilityFlowsToPlannedOccurrences({
+      allFlows: safeToSpendData.report.allFlows,
+      accountMap: safeToSpendData.accountMap ?? new Map(),
+      currencyCode: safeToSpendData.currencyCode || 'INR',
     });
 
-    return [...planned, ...syntheticJournals];
+    return mergePlannedOccurrences(planned, simulated);
   }, [listViewProps.plannedJournals, safeToSpendData]);
 
   if (!hasCompletedOnboarding) {
@@ -169,7 +140,7 @@ export function DashboardScreenView({
             </View>
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
-                items={enrichedPlannedJournals}
+                items={plannedOccurrences}
                 onItemPress={listViewProps.onPlannedJournalPress}
               />
             </View>

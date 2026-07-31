@@ -1,18 +1,32 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
-import { EnrichedJournal } from '@/src/types/domain';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { journalDisplayTypeChrome } from '@/src/services/accounting/journalTimelineMapper';
+import { JournalDisplayType } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
 export interface PlannedPaymentsSectionProps {
-  items: EnrichedJournal[];
-  onItemPress?: (item: EnrichedJournal) => void;
+  items: PlannedOccurrenceViewModel[];
+  onItemPress?: (item: PlannedOccurrenceViewModel) => void;
   isPrivacyMode?: boolean;
+}
+
+function resolveDisplayType(displayType: string): JournalDisplayType {
+  if (
+    displayType === JournalDisplayType.INCOME ||
+    displayType === JournalDisplayType.EXPENSE ||
+    displayType === JournalDisplayType.TRANSFER ||
+    displayType === JournalDisplayType.MIXED
+  ) {
+    return displayType;
+  }
+  return JournalDisplayType.EXPENSE;
 }
 
 export function PlannedPaymentsSection({
@@ -26,12 +40,12 @@ export function PlannedPaymentsSection({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const sortedItems = useMemo(() => {
-    return [...items].sort((a, b) => a.journalDate - b.journalDate);
+    return [...items].sort((a, b) => a.occurrenceDate - b.occurrenceDate);
   }, [items]);
 
   const hasOverdue = useMemo(() => {
     const today = new Date().setHours(0, 0, 0, 0);
-    return sortedItems.some(item => new Date(item.journalDate).setHours(0, 0, 0, 0) < today);
+    return sortedItems.some(item => new Date(item.occurrenceDate).setHours(0, 0, 0, 0) < today);
   }, [sortedItems]);
 
   if (items.length === 0) return null;
@@ -73,24 +87,25 @@ export function PlannedPaymentsSection({
       {isExpanded && (
         <View style={styles.list}>
           {sortedItems.map(item => {
-            const mapped = mapJournalToCardProps(item);
+            const displayType = resolveDisplayType(String(item.displayType));
+            const presentation = journalPresenter.getPresentation(displayType);
+            const chrome = journalDisplayTypeChrome(displayType);
 
-            const dateObj = new Date(mapped.transactionDate);
+            const dateObj = new Date(item.occurrenceDate);
             const dateStr = dateObj.toLocaleDateString(undefined, {
               month: 'short',
               day: 'numeric',
             });
             const isToday =
-              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) ===
+              new Date(item.occurrenceDate).setHours(0, 0, 0, 0) ===
               new Date().setHours(0, 0, 0, 0);
 
             const isTomorrow =
-              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) ===
+              new Date(item.occurrenceDate).setHours(0, 0, 0, 0) ===
               new Date(getNow() + 86400000).setHours(0, 0, 0, 0);
 
             const isOverdue =
-              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) <
-              new Date().setHours(0, 0, 0, 0);
+              new Date(item.occurrenceDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
 
             let displayDate = dateStr;
             if (isToday) displayDate = 'Today';
@@ -103,38 +118,39 @@ export function PlannedPaymentsSection({
 
             const amountStr = isPrivacyMode
               ? '••••'
-              : CurrencyFormatter.format(mapped.amount, mapped.currencyCode, {
+              : CurrencyFormatter.format(item.amount, item.currencyCode, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 });
-            const typeColor = theme[mapped.presentation.typeColor as keyof typeof theme] as
-              | string
-              | undefined;
+            const typeColor = theme[presentation.colorKey as keyof typeof theme] as
+              string | undefined;
 
-            const isSynthetic = item.id.startsWith('synthetic_');
+            const isSimulated = item.origin === 'SIMULATED_LIABILITY';
+            const canPress =
+              !isSimulated || !!item.accounts.find(a => a.role === 'DESTINATION')?.id;
 
             return (
               <TouchableOpacity
                 key={item.id}
                 style={styles.row}
                 onPress={() => onItemPress?.(item)}
-                disabled={isSynthetic && !item.accounts.find(a => a.role === 'DESTINATION')?.id}
+                disabled={!canPress}
                 activeOpacity={Opacity.heavy}
               >
                 <View style={styles.left}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
                     <AppIcon
-                      name={isSynthetic ? 'creditCard' : 'calendar'}
+                      name={isSimulated ? 'creditCard' : 'calendar'}
                       size={14}
                       color={typeColor || theme.textSecondary}
                     />
                     <AppText variant="body" style={{ color: dateColor, flex: 1 }} numberOfLines={1}>
-                      {displayDate} — {mapped.title}
+                      {displayDate} — {item.title}
                     </AppText>
                   </View>
                 </View>
                 <AppText variant="body" weight="medium" style={{ color: typeColor || theme.text }}>
-                  {mapped.presentation.amountPrefix || ''}
+                  {chrome.amountPrefix || ''}
                   {amountStr}
                 </AppText>
               </TouchableOpacity>

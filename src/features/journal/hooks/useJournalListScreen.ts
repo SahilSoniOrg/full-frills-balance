@@ -1,12 +1,12 @@
-import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
-import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useMemo } from 'react';
-import { mapJournalToCardProps } from '../utils/journalUiUtils';
-import { useJournalListViewModel } from './useJournalListViewModel';
-import { confirm, toast, showErrorAlert } from '@/src/utils/alerts';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useCallback, useMemo } from 'react';
+import { useJournalListViewModel } from './useJournalListViewModel';
 
 /**
  * Helper hook that encapsulates the common pattern of using JournalListViewModel
@@ -21,7 +21,7 @@ export function useJournalListScreen(
   const vm = useJournalListViewModel(config, workplaceId);
 
   const onPlannedJournalPress = useCallback(
-    async (item: EnrichedJournal) => {
+    async (item: PlannedOccurrenceViewModel) => {
       const sourceAcc = item.accounts.find(a => a.role === 'SOURCE');
       const destAcc = item.accounts.find(a => a.role === 'DESTINATION');
 
@@ -33,13 +33,13 @@ export function useJournalListScreen(
       } else if (destAcc?.accountType === 'EXPENSE') {
         type = 'expense';
       } else {
-        type = (item.displayType?.toLowerCase() || 'expense') as 'expense' | 'income' | 'transfer';
+        type = (String(item.displayType).toLowerCase() || 'expense') as
+          'expense' | 'income' | 'transfer';
       }
 
-      const mapped = mapJournalToCardProps(item);
-      const displayAmount = CurrencyFormatter.format(mapped.amount, mapped.currencyCode);
-      const displayTitle = mapped.title;
-      const isSynthetic = item.id.startsWith('synthetic_');
+      const displayAmount = CurrencyFormatter.format(item.amount, item.currencyCode);
+      const displayTitle = item.title;
+      const isSimulated = item.origin === 'SIMULATED_LIABILITY';
 
       const primaryLabel = type === 'income' ? 'Receive' : type === 'transfer' ? 'Transfer' : 'Pay';
       const dialogTitle =
@@ -49,7 +49,8 @@ export function useJournalListScreen(
             ? 'Record Transfer'
             : 'Record Payment';
 
-      if (!isSynthetic && item.plannedPaymentId) {
+      if (!isSimulated && item.origin === 'PLANNED_JOURNAL' && item.plannedPaymentId) {
+        const plannedPaymentId = item.plannedPaymentId as PlannedPaymentId;
         confirm.show({
           title: dialogTitle,
           message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
@@ -58,9 +59,9 @@ export function useJournalListScreen(
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              const pp = await plannedPaymentRepository.find(workplaceId, item.plannedPaymentId!);
+              const pp = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
               if (pp) {
-                await plannedPaymentService.postOccurrence(workplaceId, pp, item.journalDate);
+                await plannedPaymentService.postOccurrence(workplaceId, pp, item.occurrenceDate);
                 toast.success('Payment recorded successfully');
               } else {
                 toast.error('Planned payment details not found');
@@ -78,12 +79,13 @@ export function useJournalListScreen(
               destructive: true,
               onConfirm: async () => {
                 try {
-                  const pp = await plannedPaymentRepository.find(
-                    workplaceId,
-                    item.plannedPaymentId!,
-                  );
+                  const pp = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
                   if (pp) {
-                    await plannedPaymentService.skipOccurrence(workplaceId, pp, item.journalDate);
+                    await plannedPaymentService.skipOccurrence(
+                      workplaceId,
+                      pp,
+                      item.occurrenceDate,
+                    );
                     toast.success('Payment skipped successfully');
                   } else {
                     toast.error('Planned payment details not found');
@@ -108,8 +110,8 @@ export function useJournalListScreen(
             AppNavigation.toSimpleJournalEntry(type, {
               sourceAccountId: sourceAcc?.id,
               destinationAccountId: destAcc?.id,
-              amount: String(mapped.amount),
-              journalId: isSynthetic ? undefined : item.id,
+              amount: String(item.amount),
+              journalId: item.origin === 'PLANNED_JOURNAL' ? item.journalId : undefined,
             });
           },
           onCancel: () => {},
