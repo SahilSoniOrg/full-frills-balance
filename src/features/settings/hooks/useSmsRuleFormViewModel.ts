@@ -3,19 +3,21 @@ import Account from '@/src/data/models/Account';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
-import { useSmsRuleFormActions } from '@/src/features/settings/hooks/useSmsRuleFormActions';
+import { analytics } from '@/src/services/analytics-service';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
 import {
   buildStructuredSmsRuleConditions,
   hydrateSmsRuleForm,
   isSmsRuleFormValid,
   shouldShowSmsRuleAccountMapping,
+  validateSmsRuleRegexPatterns,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
+import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface SmsRuleFormViewModel {
   id?: string;
@@ -187,22 +189,85 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     emptyAccountId: EMPTY_ACCOUNT_ID,
   });
 
-  const { isSubmitting, handleSave, handleDelete } = useSmsRuleFormActions({
-    id,
-    workplaceId,
-    isValid,
-    mode,
-    legacySenderMatch,
-    legacyBodyMatch,
-    structuredConditions,
-    disposition,
-    sourceAccountId,
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    if (!isValid) return;
+    if (mode === 'regex' && !validateSmsRuleRegexPatterns(legacySenderMatch, legacyBodyMatch)) {
+      toast.error('Invalid regex syntax in advanced match fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await smsService.saveAutoPostRule(
+        {
+          id,
+          mode,
+          senderMatch: legacySenderMatch.trim() || undefined,
+          bodyMatch: legacyBodyMatch.trim() || undefined,
+          conditions: mode === 'builder' ? structuredConditions : [],
+          actions: {
+            disposition,
+            sourceAccountId: showAccountMapping ? sourceAccountId : undefined,
+            categoryAccountId: showAccountMapping ? categoryAccountId : undefined,
+            journalDescription: journalDescription.trim() || undefined,
+          },
+          isActive,
+          priority: priorityNumber,
+        },
+        workplaceId,
+      );
+
+      analytics.trackFeatureUsage('sms_rule', id ? 'update' : 'create', {
+        rule_id: id,
+        mode,
+        disposition,
+        is_active: isActive,
+        priority: priorityNumber,
+        condition_count: structuredConditions.length,
+        has_source_mapping: !!sourceAccountId,
+        has_category_mapping: !!categoryAccountId,
+      });
+
+      toast.success('Rule saved');
+      AppNavigation.back();
+    } catch {
+      toast.error('Failed to save rule');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
     categoryAccountId,
-    journalDescription,
+    disposition,
+    id,
     isActive,
+    isValid,
+    journalDescription,
+    legacyBodyMatch,
+    legacySenderMatch,
+    mode,
     priorityNumber,
     showAccountMapping,
-  });
+    sourceAccountId,
+    structuredConditions,
+    workplaceId,
+  ]);
+
+  const handleDelete = useCallback(async () => {
+    if (!id) return;
+    setIsSubmitting(true);
+    try {
+      await smsService.deleteAutoPostRule(id, workplaceId);
+      analytics.trackFeatureUsage('sms_rule', 'delete', { rule_id: id });
+      toast.success('Rule deleted');
+      AppNavigation.back();
+    } catch {
+      toast.error('Failed to delete rule');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [id, workplaceId]);
 
   return {
     id,
