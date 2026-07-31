@@ -5,17 +5,58 @@ import {
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
+import Account from '@/src/data/models/Account';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useCallback, useMemo } from 'react';
 
 export type SplitModePanelProps = {
-  splitEditor: SplitJournalController;
+  accounts: Account[];
+  editor: ReturnType<typeof useJournalEditor>;
+  onSelectAccountRequest: (lineId: string) => void;
   isEdit: boolean;
   isSubmitting: boolean;
 };
 
-export function SplitModePanel({ splitEditor, isEdit, isSubmitting }: SplitModePanelProps) {
+export function SplitModePanel({
+  accounts,
+  editor,
+  onSelectAccountRequest,
+  isEdit,
+  isSubmitting,
+}: SplitModePanelProps) {
+  const splitEditor = useSplitJournalEditor({
+    accounts,
+    editor,
+    onSelectAccountRequest,
+    isActive: true,
+  });
   const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
+
+  const applyAccountToLine = useCallback(
+    (lineId: string, accountId: AccountId) => {
+      if (lineId === SPLIT_SOURCE_LINE_ID) {
+        splitEditor.setSourceAccountId(accountId);
+      } else {
+        splitEditor.updateSplitRow(lineId, { accountId });
+      }
+    },
+    [splitEditor.setSourceAccountId, splitEditor.updateSplitRow],
+  );
+
+  const resolveSelectedAccountId = useCallback(
+    (lineId: string) => {
+      if (lineId === SPLIT_SOURCE_LINE_ID) {
+        return splitEditor.sourceAccountId !== EMPTY_ACCOUNT_ID
+          ? splitEditor.sourceAccountId
+          : undefined;
+      }
+      return splitEditor.splits.find(row => row.id === lineId)?.accountId;
+    },
+    [splitEditor.sourceAccountId, splitEditor.splits],
+  );
 
   const submit = useCallback(() => {
     void splitEditor.handleSave();
@@ -46,8 +87,18 @@ export function SplitModePanel({ splitEditor, isEdit, isSubmitting }: SplitModeP
       }),
       submit,
       isSubmitting: splitEditor.isSubmitting,
+      applyAccountToLine,
+      resolveSelectedAccountId,
     }),
-    [isEdit, isSubmitting, splitEditor.isSubmitting, isSplitValid, submit],
+    [
+      isEdit,
+      isSubmitting,
+      splitEditor.isSubmitting,
+      isSplitValid,
+      submit,
+      applyAccountToLine,
+      resolveSelectedAccountId,
+    ],
   );
 
   useRegisterModeHandle(handle);

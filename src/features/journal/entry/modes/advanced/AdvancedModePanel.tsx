@@ -12,14 +12,18 @@ import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHa
 import { Spacing } from '@/src/constants';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
+import Account from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 
 export type AdvancedModePanelProps = {
+  accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
 };
 
 export function AdvancedModePanel({
+  accounts,
   editor,
   workplaceCurrency,
   onSelectAccountRequest,
@@ -46,6 +50,25 @@ export function AdvancedModePanel({
     editor.submit();
   }, [editor]);
 
+  const applyAccountToLine = useCallback(
+    (lineId: string, accountId: AccountId) => {
+      const account = accounts.find(candidate => candidate.id === accountId);
+      if (!account) return;
+      editor.updateLine(lineId, {
+        accountId,
+        accountName: account.name,
+        accountType: account.accountType,
+        accountCurrency: account.currencyCode,
+      });
+    },
+    [accounts, editor],
+  );
+
+  const resolveSelectedAccountId = useCallback(
+    (lineId: string) => editor.lines.find(line => line.id === lineId)?.accountId,
+    [editor.lines],
+  );
+
   const handle = useMemo<ModeHandle>(
     () => ({
       submitLabel: resolveJournalEntrySubmitLabel({
@@ -69,8 +92,17 @@ export function AdvancedModePanel({
       }),
       submit,
       isSubmitting: editor.isSubmitting,
+      applyAccountToLine,
+      resolveSelectedAccountId,
     }),
-    [editor.isEdit, editor.isSubmitting, isAdvancedValid, submit],
+    [
+      editor.isEdit,
+      editor.isSubmitting,
+      isAdvancedValid,
+      submit,
+      applyAccountToLine,
+      resolveSelectedAccountId,
+    ],
   );
 
   useRegisterModeHandle(handle);

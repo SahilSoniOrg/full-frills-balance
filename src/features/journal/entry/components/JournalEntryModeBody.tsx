@@ -7,7 +7,6 @@ import {
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import Account from '@/src/data/models/Account';
@@ -23,7 +22,6 @@ export type JournalEntryModeBodyProps = {
   onSelectAccountRequest: (lineId: string) => void;
   onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
   bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
-  splitEditor: SplitJournalController;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
 };
@@ -38,7 +36,6 @@ export function JournalEntryModeBody({
   onSelectAccountRequest,
   onBulkSaveSuccess,
   bulkActionsRef,
-  splitEditor,
   onGuidedFooterAmountChange,
   guidedVoiceActionsRef,
 }: JournalEntryModeBodyProps) {
@@ -58,7 +55,9 @@ export function JournalEntryModeBody({
   if (activeMode === 'split') {
     return (
       <SplitModePanel
-        splitEditor={splitEditor}
+        accounts={accounts}
+        editor={editor}
+        onSelectAccountRequest={onSelectAccountRequest}
         isEdit={editor.isEdit}
         isSubmitting={editor.isSubmitting}
       />
@@ -68,6 +67,7 @@ export function JournalEntryModeBody({
   if (activeMode === 'advanced') {
     return (
       <AdvancedModePanel
+        accounts={accounts}
         editor={editor}
         workplaceCurrency={workplaceCurrency}
         onSelectAccountRequest={onSelectAccountRequest}

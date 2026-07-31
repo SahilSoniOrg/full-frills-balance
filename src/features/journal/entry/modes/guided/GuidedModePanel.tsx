@@ -72,6 +72,25 @@ export function GuidedModePanel({
     },
   });
 
+  const applyAccountToLine = useCallback(
+    (lineId: string, accountId: AccountId) => {
+      const line = editor.lines.find(candidate => candidate.id === lineId);
+      if (!line) return;
+      if (line.transactionType === 'CREDIT') simpleEditor.setSourceId(accountId);
+      else simpleEditor.setDestinationId(accountId);
+    },
+    [editor.lines, simpleEditor.setDestinationId, simpleEditor.setSourceId],
+  );
+
+  const resolveSelectedAccountId = useCallback(
+    (lineId: string) => {
+      const line = editor.lines.find(candidate => candidate.id === lineId);
+      if (!line) return undefined;
+      return line.transactionType === 'CREDIT' ? simpleEditor.sourceId : simpleEditor.destinationId;
+    },
+    [editor.lines, simpleEditor.destinationId, simpleEditor.sourceId],
+  );
+
   const isSimpleValid =
     simpleEditor.isValidAmount &&
     !!simpleEditor.sourceId &&
@@ -174,6 +193,8 @@ export function GuidedModePanel({
         isAdvancedValid: false,
       }),
       submit,
+      applyAccountToLine,
+      resolveSelectedAccountId,
     }),
     [
       isAmountFocused,
@@ -183,6 +204,8 @@ export function GuidedModePanel({
       editor.isEdit,
       editor.isSubmitting,
       submit,
+      applyAccountToLine,
+      resolveSelectedAccountId,
     ],
   );
 

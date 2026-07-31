@@ -42,7 +42,14 @@ function useModeHandleRegistry(): ModeHandleRegistry {
 export function useRegisterModeHandle(handle: ModeHandle): void {
   const { setHandle } = useModeHandleRegistry();
 
-  const { submitLabel, isSubmitDisabled, isSubmitting, submit } = handle;
+  const {
+    submitLabel,
+    isSubmitDisabled,
+    isSubmitting,
+    submit,
+    applyAccountToLine,
+    resolveSelectedAccountId,
+  } = handle;
 
   useEffect(() => {
     setHandle({
@@ -50,9 +57,19 @@ export function useRegisterModeHandle(handle: ModeHandle): void {
       isSubmitDisabled,
       isSubmitting,
       submit,
+      applyAccountToLine,
+      resolveSelectedAccountId,
     });
     return () => setHandle(null);
-  }, [submitLabel, isSubmitDisabled, isSubmitting, submit, setHandle]);
+  }, [
+    submitLabel,
+    isSubmitDisabled,
+    isSubmitting,
+    submit,
+    applyAccountToLine,
+    resolveSelectedAccountId,
+    setHandle,
+  ]);
 }
 
 /** Shell: read the currently registered mode handle (null while switching / before mount). */

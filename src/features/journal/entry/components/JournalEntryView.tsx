@@ -58,7 +58,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     onSelectAccountRequest: vm.onSelectAccountRequest,
     onBulkSaveSuccess: vm.onBulkSaveSuccess,
     bulkActionsRef: vm.bulkActionsRef,
-    splitEditor: vm.splitEditor,
     onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
     guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
   };
