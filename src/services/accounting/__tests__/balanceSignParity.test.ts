@@ -109,17 +109,13 @@ describe('balance sign parity (TS effect vs SQL oracles)', () => {
 
     it('periodFlowSQL() strings encode the same increase/decrease pairs as the oracle', () => {
       const { increaseCase, decreaseCase } = periodFlowSQL();
-      const liabilityEquityIn = `account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}')`;
 
       for (const accountType of ALL_ACCOUNT_TYPES) {
         for (const transactionType of ALL_TRANSACTION_TYPES) {
           const inc = periodFlowIncreaseAmount(accountType, transactionType, 1);
           const dec = periodFlowDecreaseAmount(accountType, transactionType, 1);
           const typeSnippet = `transaction_type = '${transactionType}'`;
-          const accountSnippet =
-            accountType === AccountType.LIABILITY || accountType === AccountType.EQUITY
-              ? liabilityEquityIn
-              : `account_type = '${accountType}'`;
+          const accountSnippet = `account_type = '${accountType}'`;
 
           if (inc > 0) {
             expect(increaseCase).toContain(accountSnippet);

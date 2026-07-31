@@ -54,6 +54,19 @@ function signFor(accountType: AccountType, transactionType: TransactionType): Ba
   }
 }
 
+function buildSignCase(sign: BalanceSign): string {
+  const clauses = Object.values(AccountType).flatMap(accountType =>
+    Object.values(TransactionType)
+      .filter(transactionType => signFor(accountType, transactionType) === sign)
+      .map(
+        transactionType =>
+          `WHEN (a.account_type = '${accountType}' AND t.transaction_type = '${transactionType}') THEN t.amount`,
+      ),
+  );
+
+  return `CASE\n      ${clauses.join('\n      ')}\n      ELSE 0\n    END`;
+}
+
 /**
  * The signed effect of one (accountType × transactionType) pair.
  */
@@ -136,23 +149,7 @@ export function checkJournal(
  */
 export function periodFlowSQL(): { increaseCase: string; decreaseCase: string } {
   return {
-    increaseCase: `
-    CASE 
-      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      ELSE 0 
-    END
-  `.trim(),
-    decreaseCase: `
-    CASE 
-      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      ELSE 0 
-    END
-  `.trim(),
+    increaseCase: buildSignCase(1),
+    decreaseCase: buildSignCase(-1),
   };
 }
