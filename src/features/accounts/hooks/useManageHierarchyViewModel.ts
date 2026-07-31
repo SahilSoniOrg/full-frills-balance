@@ -207,8 +207,8 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
         if (parentId) {
           setExpandedAccountIds(prev => new Set([...prev, parentId]));
         }
-      } catch (error: any) {
-        toast.error(error.message || 'Move failed');
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : 'Move failed');
       }
 
       setSelectedAccountId(null);
@@ -224,8 +224,8 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       try {
         await updateAccount(childAccount, { parentAccountId: parentId });
         setExpandedAccountIds(prev => new Set([...prev, parentId]));
-      } catch (error: any) {
-        toast.error(error.message || 'Move failed');
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : 'Move failed');
       }
 
       setSelectedAccountId(null);
