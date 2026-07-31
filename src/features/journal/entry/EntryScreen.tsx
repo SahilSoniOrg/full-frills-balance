@@ -1,9 +1,9 @@
 import { JournalEntryView } from '@/src/features/journal/entry/components/JournalEntryView';
-import { useJournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
+import { useJournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { ModeHandleProvider } from '@/src/features/journal/entry/modes/ModeHandleContext';
 
 function EntryScreenContent() {
-  const vm = useJournalEntryViewModel();
+  const vm = useJournalEntryShell();
   return <JournalEntryView {...vm} />;
 }
 

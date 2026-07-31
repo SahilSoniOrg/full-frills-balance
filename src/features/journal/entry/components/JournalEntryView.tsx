@@ -11,7 +11,7 @@ import { JournalMetaCard } from '@/src/features/journal/entry/components/Journal
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
-import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
+import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -19,7 +19,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-export function JournalEntryView(vm: JournalEntryViewModel) {
+export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
   const modeHandle = useActiveModeHandle();

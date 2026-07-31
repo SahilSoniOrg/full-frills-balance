@@ -3,7 +3,10 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
-import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
+import {
+  RecentTransactions,
+  useRecentTransactions,
+} from '@/src/features/dashboard/hooks/useRecentTransactions';
 import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -24,7 +27,7 @@ export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
   isPrivacyMode: boolean;
   showSafeToSpendChart: boolean;
-  listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
+  recentTransactions: RecentTransactions;
   headerProps: {
     greeting: string;
     notificationCount: number;
@@ -124,26 +127,21 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const { strings } = AppConfig;
 
-  const { listViewProps, vm } = useJournalListScreen(
-    {
-      pageSize: AppConfig.pagination.dashboardPageSize,
-      emptyState: {
-        title: strings.dashboard.emptyTitle,
-        subtitle: strings.dashboard.emptySubtitle,
-      },
-      defaultToCurrentMonth: false,
-      initialItems: () => {
-        const snapshot = snapshotService.getDashboardSnapshot(workplaceId);
-        const items = snapshot?.enrichedJournals || [];
-        // Progressive Mount: Only show 5 items in the very first frame
-        // to keep the view hierarchy light for the splash hide animation.
-        return items.slice(0, 5);
-      },
-    },
+  const recentTransactions = useRecentTransactions({
     workplaceId,
-  );
+    pageSize: AppConfig.pagination.dashboardPageSize,
+    emptyTitle: strings.dashboard.emptyTitle,
+    emptySubtitle: strings.dashboard.emptySubtitle,
+    initialItems: () => {
+      const snapshot = snapshotService.getDashboardSnapshot(workplaceId);
+      const items = snapshot?.enrichedJournals || [];
+      // Progressive Mount: Only show 5 items in the very first frame
+      // to keep the view hierarchy light for the splash hide animation.
+      return items.slice(0, 5);
+    },
+  });
 
-  const hasJournalItems = listViewProps.items.length > 0;
+  const hasJournalItems = recentTransactions.items.length > 0;
   // Log Journal List arrival
   useEffect(() => {
     if (hasJournalItems) {
@@ -169,9 +167,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => strings.dashboard.greeting(userName),
     [userName, strings.dashboard],
   );
-  const sectionTitle = vm.searchQuery
-    ? strings.dashboard.searchResults
-    : strings.dashboard.recentTransactions;
+  const sectionTitle = strings.dashboard.recentTransactions;
 
   // Memoize headerProps to prevent re-renders when observables fire
   const headerProps = useMemo(
@@ -236,7 +232,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       hasCompletedOnboarding,
       isPrivacyMode: isLocalPrivacyMode,
       showSafeToSpendChart,
-      listViewProps,
+      recentTransactions,
       headerProps,
       transactionSectionTitle: sectionTitle,
       fab,
@@ -249,7 +245,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       hasCompletedOnboarding,
       isLocalPrivacyMode,
       showSafeToSpendChart,
-      listViewProps,
+      recentTransactions,
       headerProps,
       sectionTitle,
       fab,

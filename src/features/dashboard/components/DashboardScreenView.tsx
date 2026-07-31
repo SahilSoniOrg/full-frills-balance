@@ -17,7 +17,7 @@ import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
 export function DashboardScreenView({
   hasCompletedOnboarding,
-  listViewProps,
+  recentTransactions,
   headerProps,
   fab,
   safeToSpendData,
@@ -99,7 +99,7 @@ export function DashboardScreenView({
   });
 
   const plannedOccurrences = React.useMemo(() => {
-    const planned = listViewProps.plannedJournals || [];
+    const planned = recentTransactions.plannedJournals || [];
     if (!safeToSpendData?.report?.allFlows) {
       return mergePlannedOccurrences(planned, []);
     }
@@ -111,7 +111,7 @@ export function DashboardScreenView({
     });
 
     return mergePlannedOccurrences(planned, simulated);
-  }, [listViewProps.plannedJournals, safeToSpendData]);
+  }, [recentTransactions.plannedJournals, safeToSpendData]);
 
   if (!hasCompletedOnboarding) {
     return null;
@@ -120,7 +120,30 @@ export function DashboardScreenView({
   return (
     <View testID="dashboard-screen" style={{ flex: 1 }}>
       <JournalListView
-        {...listViewProps}
+        items={recentTransactions.items}
+        isLoading={recentTransactions.isLoading}
+        isLoadingMore={recentTransactions.isLoadingMore}
+        loadingText={recentTransactions.loadingText}
+        loadingMoreText={recentTransactions.loadingMoreText}
+        emptyTitle={recentTransactions.emptyTitle}
+        emptySubtitle={recentTransactions.emptySubtitle}
+        onEndReached={recentTransactions.onEndReached}
+        selection={{
+          selectedIds: recentTransactions.selectedIds,
+          isSelectionModeActive: recentTransactions.isSelectionModeActive,
+          onLongPressItem: recentTransactions.onLongPressItem,
+          toggleSelection: recentTransactions.toggleSelection,
+          selectAll: recentTransactions.selectAll,
+          clearItems: recentTransactions.clearItems,
+          exitSelectionMode: recentTransactions.exitSelectionMode,
+          onShareSelected: recentTransactions.onShareSelected,
+        }}
+        datePicker={{
+          visible: false,
+          onClose: () => {},
+          currentFilter: { type: 'ALL_TIME' },
+          onSelect: () => {},
+        }}
         ref={listRef}
         showBack={false}
         isPrivacyMode={isPrivacyMode}
@@ -141,7 +164,7 @@ export function DashboardScreenView({
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
                 items={plannedOccurrences}
-                onItemPress={listViewProps.onPlannedJournalPress}
+                onItemPress={recentTransactions.onPlannedJournalPress}
               />
             </View>
             <Inset horizontal="lg" vertical="lg">

@@ -1,4 +1,4 @@
-import { useJournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
+import { useJournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useAccounts } from '@/src/features/accounts';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -47,7 +47,7 @@ function VoiceApplyRegistrar({
   return null;
 }
 
-describe('useJournalEntryViewModel - Voice Input', () => {
+describe('useJournalEntryShell - Voice Input', () => {
   const mockWorkplaceId = 'workplace-123' as WorkplaceId;
   const mockAccounts = [
     {
@@ -134,7 +134,7 @@ describe('useJournalEntryViewModel - Voice Input', () => {
       );
     }
 
-    const { result } = renderHook(() => useJournalEntryViewModel(), { wrapper });
+    const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
 
     act(() => {
       result.current.handleApplyVoiceInput({
@@ -162,7 +162,7 @@ describe('useJournalEntryViewModel - Voice Input', () => {
       return <ModeHandleProvider>{children}</ModeHandleProvider>;
     }
 
-    const { result } = renderHook(() => useJournalEntryViewModel(), { wrapper });
+    const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
 
     act(() => {
       result.current.handleApplyVoiceInput({
@@ -205,7 +205,7 @@ describe('useJournalEntryViewModel - Voice Input', () => {
       return <ModeHandleProvider>{children}</ModeHandleProvider>;
     }
 
-    const { result } = renderHook(() => useJournalEntryViewModel(), { wrapper });
+    const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
 
     act(() => {
       result.current.handleApplyVoiceInput({
