@@ -2,7 +2,13 @@ import { useChartInteractionRegistry } from '@/src/components/charts/ChartIntera
 import { triggerHaptic } from '@/src/utils/haptics';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
-import { Gesture } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureStateChangeEvent,
+  GestureUpdateEvent,
+  PanGestureHandlerEventPayload,
+  TapGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 export type InteractionState =
@@ -104,59 +110,58 @@ export const useChartInteraction = ({
   );
 
   const onPanBegin = useCallback(
-    (e: any) => {
+    (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => {
       'worklet';
       runOnJS(handleGesture)(e.x, e.y, 'start');
     },
     [handleGesture],
   );
   const onPanUpdate = useCallback(
-    (e: any) => {
+    (e: GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
       'worklet';
       runOnJS(handleGesture)(e.x, e.y, 'update');
     },
     [handleGesture],
   );
   const onPanFinalize = useCallback(
-    (e: any, success: boolean) => {
+    (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>, success: boolean) => {
       'worklet';
       runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel');
     },
     [handleGesture],
   );
   const onTapBegin = useCallback(
-    (e: any) => {
+    (e: GestureStateChangeEvent<TapGestureHandlerEventPayload>) => {
       'worklet';
       runOnJS(handleGesture)(e.x, e.y, 'start');
     },
     [handleGesture],
   );
   const onTapFinalize = useCallback(
-    (e: any, success: boolean) => {
+    (e: GestureStateChangeEvent<TapGestureHandlerEventPayload>, success: boolean) => {
       'worklet';
       runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel');
     },
     [handleGesture],
   );
 
-  const assignCb = (g: any, m: string, cb: any) => g[m](cb);
   const gesture = useMemo(() => {
     const pan = Gesture.Pan();
     // eslint-disable-next-line react-hooks/refs
-    assignCb(pan, 'onBegin', onPanBegin);
+    pan.onBegin(onPanBegin);
     // eslint-disable-next-line react-hooks/refs
-    assignCb(pan, 'onUpdate', onPanUpdate);
+    pan.onUpdate(onPanUpdate);
     // eslint-disable-next-line react-hooks/refs
-    assignCb(pan, 'onFinalize', onPanFinalize);
+    pan.onFinalize(onPanFinalize);
     if (gestureConfig.activeOffsetX !== undefined) pan.activeOffsetX(gestureConfig.activeOffsetX);
     if (gestureConfig.activateAfterLongPress !== undefined)
       pan.activateAfterLongPress(gestureConfig.activateAfterLongPress);
 
     const tap = Gesture.Tap();
     // eslint-disable-next-line react-hooks/refs
-    assignCb(tap, 'onBegin', onTapBegin);
+    tap.onBegin(onTapBegin);
     // eslint-disable-next-line react-hooks/refs
-    assignCb(tap, 'onFinalize', onTapFinalize);
+    tap.onFinalize(onTapFinalize);
 
     return gestureConfig.type === 'simultaneous'
       ? Gesture.Simultaneous(pan, tap)
