@@ -18,11 +18,11 @@ import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import { isGuidedDisabledForMode } from '@/src/features/journal/entry/journalModeTransition';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import {
   createTwoLegJournalScaffold,
-  isSimpleModeDisabledByLines,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
@@ -112,13 +112,13 @@ export function useJournalEntryShell(): JournalEntryShell {
     onSuccess,
   });
 
-  const isSimpleModeDisabled = isSimpleModeDisabledByLines(editor.lines);
-
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
   const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
     resolveJournalEntryScreenMode(route.mode),
   );
+
+  const isSimpleModeDisabled = isGuidedDisabledForMode(activeMode, editor.lines);
 
   const { setIsGuidedMode, setTransactionType } = editor;
 
