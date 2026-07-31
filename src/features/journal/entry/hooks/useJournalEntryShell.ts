@@ -1,8 +1,7 @@
 import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
@@ -15,7 +14,10 @@ import {
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { GuidedFooterAmount } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import {
+  GuidedFooterAmount,
+  GuidedVoiceActions,
+} from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
@@ -43,6 +45,7 @@ export interface JournalEntryShell {
   splitEditor: SplitJournalController;
   guidedFooterAmount: GuidedFooterAmount | null;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
+  guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
   isLoading: boolean;
   headerTitle: string;
   showEditBanner: boolean;
@@ -58,16 +61,6 @@ export interface JournalEntryShell {
   suggestions: string[];
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
-  isVoiceModalVisible: boolean;
-  setIsVoiceModalVisible: (visible: boolean) => void;
-  handleApplyVoiceInput: (params: {
-    amount?: number;
-    merchantName?: string;
-    direction: 'debit' | 'credit' | 'unknown';
-    sourceAccountId: AccountId;
-    categoryAccountId: AccountId;
-    transcription: string;
-  }) => void;
 }
 
 /** @deprecated Use JournalEntryShell */
@@ -238,66 +231,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     [editor.isEdit],
   );
 
-  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
-
-  const handleApplyVoiceInput = useCallback(
-    (params: {
-      amount?: number;
-      merchantName?: string;
-      direction: 'debit' | 'credit' | 'unknown';
-      transactionType?: 'expense' | 'income' | 'transfer';
-      sourceAccountId: AccountId;
-      categoryAccountId: AccountId;
-      transcription: string;
-    }) => {
-      const {
-        amount,
-        merchantName,
-        direction,
-        transactionType,
-        sourceAccountId,
-        categoryAccountId,
-        transcription,
-      } = params;
-
-      if (merchantName) {
-        editor.setDescription(merchantName);
-      }
-      if (transcription) {
-        editor.setNotes(`Spoken transcript: ${transcription}`);
-      }
-
-      // Temporary shell fallback until Guided owns voice (next commit).
-      const mappedType = transactionType || (direction === 'credit' ? 'income' : 'expense');
-      editor.setTransactionType(mappedType);
-      editor.setLines(prev =>
-        prev.map(line => {
-          const isDebit = line.transactionType === TransactionType.DEBIT;
-
-          const lineAccountId =
-            mappedType === 'income'
-              ? isDebit
-                ? sourceAccountId
-                : categoryAccountId
-              : isDebit
-                ? categoryAccountId
-                : sourceAccountId;
-
-          const account = accounts.find(a => a.id === lineAccountId);
-
-          return {
-            ...line,
-            accountId: lineAccountId,
-            accountName: account?.name || '',
-            accountType: account?.accountType || AccountType.ASSET,
-            accountCurrency: account?.currencyCode,
-            amount: amount ? String(amount) : line.amount,
-          };
-        }),
-      );
-    },
-    [accounts, editor],
-  );
+  const guidedVoiceActionsRef = useRef<GuidedVoiceActions | null>(null);
 
   return {
     editor,
@@ -311,6 +245,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     splitEditor,
     guidedFooterAmount,
     onGuidedFooterAmountChange,
+    guidedVoiceActionsRef,
     isLoading: isLoadingAccounts || editor.isLoading,
     headerTitle,
     showEditBanner: editor.isEdit,
@@ -326,9 +261,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     suggestions,
     workplaceCurrency,
     workplaceId,
-    isVoiceModalVisible,
-    setIsVoiceModalVisible,
-    handleApplyVoiceInput,
   };
 }
 

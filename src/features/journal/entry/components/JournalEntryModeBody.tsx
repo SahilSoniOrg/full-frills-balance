@@ -4,6 +4,7 @@ import { BulkModePanel } from '@/src/features/journal/entry/modes/bulk/BulkModeP
 import {
   GuidedFooterAmount,
   GuidedModePanel,
+  GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
@@ -24,6 +25,7 @@ export type JournalEntryModeBodyProps = {
   bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
   splitEditor: SplitJournalController;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
+  guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
 };
 
 /** Lazy-mounts only the active mode panel so inactive mode *forms* are not running. */
@@ -38,14 +40,17 @@ export function JournalEntryModeBody({
   bulkActionsRef,
   splitEditor,
   onGuidedFooterAmountChange,
+  guidedVoiceActionsRef,
 }: JournalEntryModeBodyProps) {
   if (activeMode === 'guided') {
     return (
       <GuidedModePanel
         accounts={accounts}
         editor={editor}
+        workplaceId={workplaceId}
         onSelectAccountRequest={onSelectAccountRequest}
         onFooterAmountChange={onGuidedFooterAmountChange}
+        voiceActionsRef={guidedVoiceActionsRef}
       />
     );
   }

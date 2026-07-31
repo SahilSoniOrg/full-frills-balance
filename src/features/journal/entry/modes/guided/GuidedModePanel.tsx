@@ -1,5 +1,6 @@
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
+import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import {
@@ -11,8 +12,8 @@ import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountRole, TabType } from '@/src/types/domain';
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { AccountId, AccountRole, TabType, WorkplaceId } from '@/src/types/domain';
+import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard } from 'react-native';
 
 export type GuidedFooterAmount = {
@@ -24,21 +25,41 @@ export type GuidedFooterAmount = {
   onBlur: () => void;
 };
 
+export type GuidedVoiceActions = {
+  open: () => void;
+};
+
+export type GuidedVoiceApplyParams = {
+  amount?: number;
+  merchantName?: string;
+  direction: 'debit' | 'credit' | 'unknown';
+  transactionType?: 'expense' | 'income' | 'transfer';
+  sourceAccountId: AccountId;
+  categoryAccountId: AccountId;
+  transcription: string;
+};
+
 export type GuidedModePanelProps = {
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
+  workplaceId: WorkplaceId;
   onSelectAccountRequest: (lineId: string) => void;
   /** Shell footer top slot — guided amount chrome (not ModeHandle). */
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
+  /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
+  voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
 };
 
 export function GuidedModePanel({
   accounts,
   editor,
+  workplaceId,
   onSelectAccountRequest,
   onFooterAmountChange,
+  voiceActionsRef,
 }: GuidedModePanelProps) {
   const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
   const simpleEditor = useSimpleJournalEditor({
     accounts,
@@ -95,6 +116,42 @@ export function GuidedModePanel({
     return () => onFooterAmountChange?.(null);
   }, [footerAmount, onFooterAmountChange]);
 
+  const openVoice = useCallback(() => setIsVoiceModalVisible(true), []);
+
+  useEffect(() => {
+    if (!voiceActionsRef) return;
+    voiceActionsRef.current = { open: openVoice };
+    return () => {
+      voiceActionsRef.current = null;
+    };
+  }, [voiceActionsRef, openVoice]);
+
+  const handleApplyVoiceInput = useCallback(
+    (params: GuidedVoiceApplyParams) => {
+      if (params.merchantName) {
+        editor.setDescription(params.merchantName);
+      }
+      if (params.transcription) {
+        editor.setNotes(`Spoken transcript: ${params.transcription}`);
+      }
+
+      const mappedType =
+        params.transactionType || (params.direction === 'credit' ? 'income' : 'expense');
+      simpleEditor.setType(mappedType);
+      if (params.amount) {
+        simpleEditor.setAmount(String(params.amount));
+      }
+      if (mappedType === 'income') {
+        if (params.categoryAccountId) simpleEditor.setSourceId(params.categoryAccountId);
+        if (params.sourceAccountId) simpleEditor.setDestinationId(params.sourceAccountId);
+      } else {
+        if (params.sourceAccountId) simpleEditor.setSourceId(params.sourceAccountId);
+        if (params.categoryAccountId) simpleEditor.setDestinationId(params.categoryAccountId);
+      }
+    },
+    [editor, simpleEditor],
+  );
+
   const handle = useMemo<ModeHandle>(
     () => ({
       submitLabel: resolveJournalEntrySubmitLabel({
@@ -131,7 +188,17 @@ export function GuidedModePanel({
 
   useRegisterModeHandle(handle);
 
-  return <SimpleForm {...simpleEditor} />;
+  return (
+    <>
+      <SimpleForm {...simpleEditor} />
+      <VoiceInputModal
+        visible={isVoiceModalVisible}
+        onClose={() => setIsVoiceModalVisible(false)}
+        onApply={handleApplyVoiceInput}
+        workplaceId={workplaceId}
+      />
+    </>
+  );
 }
 
 /** Renders guided amount strip for SubmitFooter topSlot from shell-held chrome. */

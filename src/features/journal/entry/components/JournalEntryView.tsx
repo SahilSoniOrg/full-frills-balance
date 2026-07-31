@@ -9,14 +9,13 @@ import {
 } from '@/src/features/journal/entry/components/JournalEntryModeBody';
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
-import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { useTheme } from '@/src/hooks/use-theme';
 
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
@@ -30,10 +29,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     editBannerText,
     activeMode,
     onToggleMode,
-    workplaceId,
-    isVoiceModalVisible,
-    setIsVoiceModalVisible,
-    handleApplyVoiceInput,
     savedSummary,
     setSavedSummary,
     guidedFooterAmount,
@@ -65,6 +60,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     bulkActionsRef: vm.bulkActionsRef,
     splitEditor: vm.splitEditor,
     onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
+    guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
   };
 
   if (isLoading) {
@@ -128,7 +124,9 @@ export function JournalEntryView(vm: JournalEntryShell) {
             suggestions={vm.suggestions}
             hideSuggestions={hideSuggestions}
             onDescriptionFocus={onDescriptionFocus}
-            onVoiceInputPress={() => setIsVoiceModalVisible(true)}
+            onVoiceInputPress={
+              activeMode === 'guided' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
+            }
           />
         )}
 
@@ -144,12 +142,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
         onClose={vm.onCloseAccountPicker}
         onCreateRequest={vm.onCreateAccountRequest}
         excludeParentAccounts={true}
-      />
-      <VoiceInputModal
-        visible={isVoiceModalVisible}
-        onClose={() => setIsVoiceModalVisible(false)}
-        onApply={handleApplyVoiceInput}
-        workplaceId={workplaceId}
       />
 
       <BulkSaveSummaryModal
