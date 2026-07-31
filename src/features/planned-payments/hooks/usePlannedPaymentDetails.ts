@@ -1,22 +1,14 @@
 import { JournalStatus } from '@/src/data/models/Journal';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournals } from '@/src/features/journal';
-import { useObservable } from '@/src/hooks/useObservable';
+import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
-import { of } from 'rxjs';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/domain';
 
 export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
-  const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
-    () =>
-      id ? plannedPaymentRepository.observeById(workplaceId, id as PlannedPaymentId) : of(null),
-    [id, workplaceId],
-    null,
-  );
+  const { item, isLoading: isItemLoading } = usePlannedPaymentRecord(workplaceId, id);
 
   // Fetch history (linked journals)
   // We use a separate status filter to show both POSTED (past) and PLANNED (future generated) journals

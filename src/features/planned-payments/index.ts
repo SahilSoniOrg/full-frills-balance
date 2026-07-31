@@ -2,12 +2,11 @@ import PlannedPaymentDetailsScreen from './screens/PlannedPaymentDetailsScreen';
 import PlannedPaymentFormScreen from './screens/PlannedPaymentFormScreen';
 import PlannedPaymentListScreen from './screens/PlannedPaymentListScreen';
 
-export {
-    PlannedPaymentDetailsScreen, PlannedPaymentFormScreen, PlannedPaymentListScreen
-};
+export { PlannedPaymentDetailsScreen, PlannedPaymentFormScreen, PlannedPaymentListScreen };
 
 export * from './hooks/usePlannedPaymentDetails';
 export * from './hooks/usePlannedPaymentForm';
+export * from './hooks/usePlannedPaymentRecord';
 export * from './hooks/usePlannedPayments';
 
 export { PlannedPaymentListView } from './components/PlannedPaymentListView';

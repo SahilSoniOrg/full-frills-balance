@@ -1,70 +1,43 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import {
+  createEmptyPlannedPaymentForm,
+  mapPlannedPaymentToForm,
+  PlannedPaymentFormState,
+  shouldSeedPlannedPaymentDraft,
+} from '@/src/features/planned-payments/hooks/plannedPaymentFormDraft';
+import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, EMPTY_ACCOUNT_ID, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-export interface PlannedPaymentFormState {
-  name: string;
-  amount: string;
-  currencyCode: string;
-  fromAccountId: AccountId;
-  toAccountId: AccountId;
-  intervalN: number;
-  intervalType: PlannedPaymentInterval;
-  startDate: number;
-  endDate?: number;
-  isAutoPost: boolean;
-  recurrenceDay?: number;
-  recurrenceMonth?: number;
-}
+export type { PlannedPaymentFormState };
 
+/**
+ * Planned payment create/edit form.
+ * Draft is intentional local state, seeded once per `id` from observeById.
+ * Later observe ticks never overwrite a dirty draft.
+ */
 export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { item } = usePlannedPaymentRecord(workplaceId, id);
 
-  const [form, setForm] = useState<PlannedPaymentFormState>(() => ({
-    name: '',
-    amount: '',
-    currencyCode: workplaceCurrency,
-    fromAccountId: EMPTY_ACCOUNT_ID,
-    toAccountId: EMPTY_ACCOUNT_ID,
-    intervalN: 1,
-    intervalType: PlannedPaymentInterval.MONTHLY,
-    startDate: Date.now(),
-    isAutoPost: false,
-    recurrenceDay: new Date().getDate(),
-    recurrenceMonth: undefined,
-  }));
+  const [seededId, setSeededId] = useState<string | null>(null);
+  const [form, setForm] = useState<PlannedPaymentFormState>(() =>
+    createEmptyPlannedPaymentForm(workplaceCurrency),
+  );
 
-  // Load initial values if editing
-  useEffect(() => {
-    if (id) {
-      plannedPaymentRepository.find(workplaceId, id as PlannedPaymentId).then(pp => {
-        if (pp) {
-          setForm({
-            name: pp.name,
-            amount: pp.amount.toString(),
-            currencyCode: pp.currencyCode,
-            fromAccountId: pp.fromAccountId,
-            toAccountId: pp.toAccountId || EMPTY_ACCOUNT_ID,
-            intervalN: pp.intervalN,
-            intervalType: pp.intervalType,
-            startDate: pp.startDate,
-            endDate: pp.endDate,
-            isAutoPost: pp.isAutoPost,
-            recurrenceDay: pp.recurrenceDay,
-            recurrenceMonth: pp.recurrenceMonth,
-          });
-        }
-      });
-    }
-  }, [id, workplaceId]);
+  const canSeed = shouldSeedPlannedPaymentDraft({ id, seededId, item });
+  if (canSeed && item) {
+    setSeededId(id!);
+    setForm(mapPlannedPaymentToForm(item));
+  } else if (!id && seededId !== null) {
+    setSeededId(null);
+    setForm(createEmptyPlannedPaymentForm(workplaceCurrency));
+  }
 
   const isValid = useMemo(() => {
     return (
@@ -97,12 +70,11 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
       };
 
       if (id) {
-        const pp = await plannedPaymentRepository.find(workplaceId, id as PlannedPaymentId);
-        if (pp) {
+        if (item) {
           const schedulingChanged =
-            pp.startDate !== data.startDate ||
-            pp.intervalType !== data.intervalType ||
-            pp.intervalN !== data.intervalN;
+            item.startDate !== data.startDate ||
+            item.intervalType !== data.intervalType ||
+            item.intervalN !== data.intervalN;
 
           await plannedPaymentService.update(workplaceId, id as PlannedPaymentId, data);
 
@@ -131,7 +103,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, id, isValid, workplaceId]);
+  }, [form, id, isValid, item, workplaceId]);
 
   return {
     form,
