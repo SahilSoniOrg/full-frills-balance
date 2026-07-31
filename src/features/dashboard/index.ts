@@ -1,6 +1,8 @@
 export * from './components/DashboardHeader';
 export * from './components/DashboardSummary';
 export * from './components/SafeToSpendCard';
+export { TransactionFeed } from './components/TransactionFeed';
+export type { TransactionFeedProps } from './components/TransactionFeed';
 export {
   mapLiabilityFlowsToPlannedOccurrences,
   mapPlannedJournalToOccurrence,
