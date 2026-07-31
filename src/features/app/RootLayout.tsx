@@ -26,8 +26,6 @@ import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { useWidgetSync } from './hooks/useWidgetSync';
 
-import '@/src/services/audit-handlers';
-
 /**
  * Root Layout
  */

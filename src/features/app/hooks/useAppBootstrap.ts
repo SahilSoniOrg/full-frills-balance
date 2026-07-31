@@ -18,6 +18,7 @@ import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
+import { runAppBootstrapSideEffects } from '../bootstrap';
 
 /**
  * Bootstraps app-wide side effects and data hydration.
@@ -26,6 +27,9 @@ import { WorkplaceId } from '@/src/types/domain';
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useUI();
   const lastInitializedWorkplaceRef = useRef<string | null>(null);
+
+  // Register audit revert handlers once on cold start (idempotent).
+  runAppBootstrapSideEffects();
 
   useEffect(() => {
     // Prevent double-running for the same workspace ID
