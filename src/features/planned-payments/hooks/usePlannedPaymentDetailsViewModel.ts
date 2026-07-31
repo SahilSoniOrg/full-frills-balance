@@ -5,11 +5,11 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
+import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
-import { confirm } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -141,36 +141,12 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
     const intervalLabel = formatPlannedPaymentInterval(item);
 
-    const headerActions = {
-      onEdit: handleEdit,
-      onDelete: () => {
-        confirm.show({
-          title: AppConfig.strings.plannedPayments.details.deleteConfirmTitle,
-          message: AppConfig.strings.plannedPayments.details.deleteConfirmMessage,
-          destructive: true,
-          confirmText: AppConfig.strings.common.delete,
-          onConfirm: handleDelete,
-        });
-      },
-    };
-
-    const onPost = () => {
-      confirm.show({
-        title: AppConfig.strings.plannedPayments.details.postNowTitle,
-        message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
-        onConfirm: handlePostNow,
-      });
-    };
-
-    const onSkip = () => {
-      confirm.show({
-        title: AppConfig.strings.plannedPayments.details.skipTitle,
-        message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
-        confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
-        destructive: true,
-        onConfirm: handleSkip,
-      });
-    };
+    const { headerActions, onPost, onSkip } = buildPlannedPaymentDetailsActions(item, {
+      handleEdit,
+      handleDelete,
+      handlePostNow,
+      handleSkip,
+    });
 
     const onToggleStatus = handleToggleStatus;
 
