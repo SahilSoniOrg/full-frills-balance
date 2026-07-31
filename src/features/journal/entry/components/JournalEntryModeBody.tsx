@@ -1,94 +1,73 @@
-import { Spacing } from '@/src/constants';
-import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
-import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
-import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
-import { SplitForm } from '@/src/features/journal/entry/components/SplitForm';
-import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
-import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
-import { BulkEntryGrid } from '@/src/features/journal/entry/components/BulkEntryGrid';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
+import { BulkModePanel } from '@/src/features/journal/entry/modes/bulk/BulkModePanel';
+import { GuidedModePanel } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
+import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import Account from '@/src/data/models/Account';
-import { View } from 'react-native';
+import { WorkplaceId } from '@/src/types/domain';
+import { MutableRefObject } from 'react';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
-  simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
-  splitEditor: SplitJournalController;
-  bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
+  workplaceId: WorkplaceId;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
-  totalDebits: number;
-  totalCredits: number;
-  isBalanced: boolean;
-  isBalancedDisplay: boolean;
-  baseImbalance: number;
-  availableCurrencies: string[];
-  selectedCurrency: string;
-  onSelectCurrency: (currency: string) => void;
+  onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
+  bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
 };
 
+/** Lazy-mounts only the active mode panel so inactive mode hooks are not running. */
 export function JournalEntryModeBody({
   activeMode,
-  simpleEditor,
-  splitEditor,
-  bulkEditor,
   accounts,
   editor,
+  workplaceId,
   workplaceCurrency,
   onSelectAccountRequest,
-  totalDebits,
-  totalCredits,
-  isBalanced,
-  isBalancedDisplay,
-  baseImbalance,
-  availableCurrencies,
-  selectedCurrency,
-  onSelectCurrency,
+  onBulkSaveSuccess,
+  bulkActionsRef,
 }: JournalEntryModeBodyProps) {
   if (activeMode === 'guided') {
-    return <SimpleForm {...simpleEditor} />;
+    return (
+      <GuidedModePanel
+        accounts={accounts}
+        editor={editor}
+        onSelectAccountRequest={onSelectAccountRequest}
+      />
+    );
   }
 
   if (activeMode === 'split') {
-    return <SplitForm {...splitEditor} />;
+    return (
+      <SplitModePanel
+        accounts={accounts}
+        editor={editor}
+        onSelectAccountRequest={onSelectAccountRequest}
+      />
+    );
   }
 
   if (activeMode === 'advanced') {
     return (
-      <View style={{ paddingHorizontal: Spacing.lg }}>
-        <AdvancedForm
-          editor={editor}
-          workplaceCurrency={workplaceCurrency}
-          onSelectAccountRequest={onSelectAccountRequest}
-        />
-        <JournalSummary
-          totalDebits={totalDebits}
-          totalCredits={totalCredits}
-          isBalanced={isBalanced}
-          isBalancedDisplay={isBalancedDisplay}
-          baseImbalance={baseImbalance}
-          availableCurrencies={availableCurrencies}
-          selectedCurrency={selectedCurrency}
-          onSelectCurrency={onSelectCurrency}
-          workplaceCurrency={workplaceCurrency}
-        />
-      </View>
+      <AdvancedModePanel
+        editor={editor}
+        workplaceCurrency={workplaceCurrency}
+        onSelectAccountRequest={onSelectAccountRequest}
+      />
     );
   }
 
   return (
-    <BulkEntryGrid
-      rows={bulkEditor.rows}
-      submitError={bulkEditor.submitError}
+    <BulkModePanel
+      workplaceId={workplaceId}
+      workplaceCurrency={workplaceCurrency}
       accounts={accounts}
-      addRow={bulkEditor.addRow}
-      removeRow={bulkEditor.removeRow}
-      clearRows={bulkEditor.clearRows}
-      updateRowField={bulkEditor.updateRowField}
+      onSaveSuccess={onBulkSaveSuccess}
+      bulkActionsRef={bulkActionsRef}
     />
   );
 }

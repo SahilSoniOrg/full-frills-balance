@@ -13,68 +13,13 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
-import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import {
-  ModeHandleProvider,
-  useActiveModeHandle,
-  useRegisterModeHandle,
-} from '@/src/features/journal/entry/modes/ModeHandleContext';
+import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-/** Temporary bridge: VM still owns editors; registers ModeHandle until mode panels take over. */
-function JournalEntryModeHandleBridge({ vm }: { vm: JournalEntryViewModel }) {
-  const onFocusAmount = useCallback(() => vm.setIsAmountFocused(true), [vm]);
-  const onBlurAmount = useCallback(() => vm.setIsAmountFocused(false), [vm]);
-
-  const footerAmount = useMemo(
-    () =>
-      vm.activeMode === 'guided'
-        ? {
-            amount: vm.primaryDisplayAmount,
-            setAmount: vm.simpleEditor.setAmount,
-            accentType: vm.simpleEditor.type,
-            displayCurrency: vm.primaryDisplayCurrency,
-            onFocus: onFocusAmount,
-            onBlur: onBlurAmount,
-          }
-        : undefined,
-    [
-      vm.activeMode,
-      vm.primaryDisplayAmount,
-      vm.primaryDisplayCurrency,
-      vm.simpleEditor.setAmount,
-      vm.simpleEditor.type,
-      onFocusAmount,
-      onBlurAmount,
-    ],
-  );
-
-  const handle = useMemo<ModeHandle>(
-    () => ({
-      submitLabel: vm.submitLabel,
-      isSubmitDisabled: vm.isSubmitDisabled,
-      submit: vm.handleSubmit,
-      isSubmitting: vm.activeMode === 'bulk' && vm.bulkEditor.isSubmitting,
-      footerAmount,
-    }),
-    [
-      vm.submitLabel,
-      vm.isSubmitDisabled,
-      vm.handleSubmit,
-      vm.activeMode,
-      vm.bulkEditor.isSubmitting,
-      footerAmount,
-    ],
-  );
-
-  useRegisterModeHandle(handle);
-  return null;
-}
-
-function JournalEntryViewInner(vm: JournalEntryViewModel) {
+export function JournalEntryView(vm: JournalEntryViewModel) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
   const modeHandle = useActiveModeHandle();
@@ -94,9 +39,9 @@ function JournalEntryViewInner(vm: JournalEntryViewModel) {
     setSavedSummary,
   } = vm;
 
-  const submitLabel = modeHandle?.submitLabel ?? vm.submitLabel;
-  const isSubmitDisabled = modeHandle?.isSubmitDisabled ?? vm.isSubmitDisabled;
-  const handleSubmit = modeHandle?.submit ?? vm.handleSubmit;
+  const submitLabel = modeHandle?.submitLabel ?? '';
+  const isSubmitDisabled = modeHandle?.isSubmitDisabled ?? true;
+  const handleSubmit = modeHandle?.submit ?? (() => {});
   const isSubmitting = modeHandle?.isSubmitting ?? false;
   const footerAmount = modeHandle?.footerAmount;
 
@@ -112,21 +57,13 @@ function JournalEntryViewInner(vm: JournalEntryViewModel) {
 
   const modeBodyProps: JournalEntryModeBodyProps = {
     activeMode: vm.activeMode,
-    simpleEditor: vm.simpleEditor,
-    splitEditor: vm.splitEditor,
-    bulkEditor: vm.bulkEditor,
     accounts: vm.accounts,
     editor: vm.editor,
+    workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,
-    totalDebits: vm.totalDebits,
-    totalCredits: vm.totalCredits,
-    isBalanced: vm.isBalanced,
-    isBalancedDisplay: vm.isBalancedDisplay,
-    baseImbalance: vm.baseImbalance,
-    availableCurrencies: vm.availableCurrencies,
-    selectedCurrency: vm.selectedCurrency,
-    onSelectCurrency: vm.onSelectCurrency,
+    onBulkSaveSuccess: vm.onBulkSaveSuccess,
+    bulkActionsRef: vm.bulkActionsRef,
   };
 
   if (isLoading) {
@@ -140,114 +77,103 @@ function JournalEntryViewInner(vm: JournalEntryViewModel) {
   }
 
   return (
-    <>
-      <JournalEntryModeHandleBridge vm={vm} />
-      <Page
-        testID="journal-entry-screen"
-        keyboardAvoiding
-        scrollable={activeMode !== 'bulk'}
-        scrollViewProps={{
-          onScrollBeginDrag,
-          scrollEventThrottle: 16,
-        }}
-        header={
-          <>
-            <JournalEntryHeader title={headerTitle} />
-            <JournalModeToggle
-              mode={activeMode}
-              onToggleMode={onToggleMode}
-              variant="bar"
-              isSimpleDisabled={vm.isSimpleModeDisabled}
-            />
-          </>
-        }
-        footer={
-          <SubmitFooter
-            onPress={handleSubmit}
-            disabled={isSubmitDisabled}
-            label={submitLabel}
-            loading={isSubmitting}
-            topSlot={
-              footerAmount ? (
-                <SimpleFormAmountInput
-                  amount={footerAmount.amount}
-                  setAmount={footerAmount.setAmount}
-                  readOnly={false}
-                  activeColor={resolveSimpleTypeAccentColor(footerAmount.accentType, theme)}
-                  displayCurrency={footerAmount.displayCurrency}
-                  onFocus={footerAmount.onFocus}
-                  onBlur={footerAmount.onBlur}
-                  variant="default"
-                />
-              ) : undefined
-            }
+    <Page
+      testID="journal-entry-screen"
+      keyboardAvoiding
+      scrollable={activeMode !== 'bulk'}
+      scrollViewProps={{
+        onScrollBeginDrag,
+        scrollEventThrottle: 16,
+      }}
+      header={
+        <>
+          <JournalEntryHeader title={headerTitle} />
+          <JournalModeToggle
+            mode={activeMode}
+            onToggleMode={onToggleMode}
+            variant="bar"
+            isSimpleDisabled={vm.isSimpleModeDisabled}
           />
-        }
-      >
-        <View style={styles.content}>
-          {activeMode !== 'bulk' && (
-            <JournalMetaCard
-              date={vm.editor.journalDate}
-              setDate={vm.editor.setJournalDate}
-              time={vm.editor.journalTime}
-              setTime={vm.editor.setJournalTime}
-              description={vm.editor.description}
-              setDescription={setDescription}
-              notes={vm.editor.notes}
-              setNotes={vm.editor.setNotes}
-              showBanner={showEditBanner}
-              bannerText={editBannerText}
-              variant="minimal"
-              density="tight"
-              suggestions={vm.suggestions}
-              hideSuggestions={hideSuggestions}
-              onDescriptionFocus={onDescriptionFocus}
-              onVoiceInputPress={() => setIsVoiceModalVisible(true)}
-            />
-          )}
-
-          <JournalEntryModeBody {...modeBodyProps} />
-        </View>
-
-        <AccountPickerModal
-          visible={vm.showAccountPicker}
-          title="Select Account"
-          accounts={vm.selectableAccounts}
-          selectedId={vm.selectedAccountId}
-          onSelect={vm.onAccountSelected}
-          onClose={vm.onCloseAccountPicker}
-          onCreateRequest={vm.onCreateAccountRequest}
-          excludeParentAccounts={true}
+        </>
+      }
+      footer={
+        <SubmitFooter
+          onPress={handleSubmit}
+          disabled={isSubmitDisabled}
+          label={submitLabel}
+          loading={isSubmitting}
+          topSlot={
+            footerAmount ? (
+              <SimpleFormAmountInput
+                amount={footerAmount.amount}
+                setAmount={footerAmount.setAmount}
+                readOnly={false}
+                activeColor={resolveSimpleTypeAccentColor(footerAmount.accentType, theme)}
+                displayCurrency={footerAmount.displayCurrency}
+                onFocus={footerAmount.onFocus}
+                onBlur={footerAmount.onBlur}
+                variant="default"
+              />
+            ) : undefined
+          }
         />
-        <VoiceInputModal
-          visible={isVoiceModalVisible}
-          onClose={() => setIsVoiceModalVisible(false)}
-          onApply={handleApplyVoiceInput}
-          workplaceId={workplaceId}
-        />
+      }
+    >
+      <View style={styles.content}>
+        {activeMode !== 'bulk' && (
+          <JournalMetaCard
+            date={vm.editor.journalDate}
+            setDate={vm.editor.setJournalDate}
+            time={vm.editor.journalTime}
+            setTime={vm.editor.setJournalTime}
+            description={vm.editor.description}
+            setDescription={setDescription}
+            notes={vm.editor.notes}
+            setNotes={vm.editor.setNotes}
+            showBanner={showEditBanner}
+            bannerText={editBannerText}
+            variant="minimal"
+            density="tight"
+            suggestions={vm.suggestions}
+            hideSuggestions={hideSuggestions}
+            onDescriptionFocus={onDescriptionFocus}
+            onVoiceInputPress={() => setIsVoiceModalVisible(true)}
+          />
+        )}
 
-        <BulkSaveSummaryModal
-          summary={savedSummary}
-          onClose={() => setSavedSummary(null)}
-          onContinueBulk={() => {
-            setSavedSummary(null);
-            vm.bulkEditor.clearRows();
-          }}
-          onDone={() => {
-            setSavedSummary(null);
-            AppNavigation.back();
-          }}
-        />
-      </Page>
-    </>
-  );
-}
+        <JournalEntryModeBody {...modeBodyProps} />
+      </View>
 
-export function JournalEntryView(vm: JournalEntryViewModel) {
-  return (
-    <ModeHandleProvider>
-      <JournalEntryViewInner {...vm} />
-    </ModeHandleProvider>
+      <AccountPickerModal
+        visible={vm.showAccountPicker}
+        title="Select Account"
+        accounts={vm.selectableAccounts}
+        selectedId={vm.selectedAccountId}
+        onSelect={vm.onAccountSelected}
+        onClose={vm.onCloseAccountPicker}
+        onCreateRequest={vm.onCreateAccountRequest}
+        excludeParentAccounts={true}
+      />
+      <VoiceInputModal
+        visible={isVoiceModalVisible}
+        onClose={() => setIsVoiceModalVisible(false)}
+        onApply={handleApplyVoiceInput}
+        workplaceId={workplaceId}
+      />
+
+      <BulkSaveSummaryModal
+        summary={savedSummary}
+        onClose={() => setSavedSummary(null)}
+        onContinueBulk={() => {
+          setSavedSummary(null);
+          vm.bulkActionsRef.current?.clearRows();
+        }}
+        onDone={() => {
+          setSavedSummary(null);
+          AppNavigation.back();
+        }}
+      />
+    </Page>
   );
 }
 

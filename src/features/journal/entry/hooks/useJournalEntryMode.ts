@@ -8,6 +8,10 @@ import {
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useEffect, useState } from 'react';
 
+/**
+ * Screen mode owner for journal entry.
+ * One-way sync: activeMode → editor.isGuidedMode (no reverse dual sync).
+ */
 export function useJournalEntryMode(
   editor: ReturnType<typeof useJournalEditor>,
   options: {
@@ -20,18 +24,15 @@ export function useJournalEntryMode(
   );
 
   const isGuidedScreen = activeMode === 'guided';
+  const { setIsGuidedMode, setTransactionType } = editor;
 
-  const { setIsGuidedMode, setTransactionType, isGuidedMode, transactionType } = editor;
-
+  // Screen mode is SSOT; drive editor guided flag one-way (no isGuidedMode → activeMode).
   useEffect(() => {
-    const shouldBeGuided = activeMode === 'guided';
-    if (isGuidedMode !== shouldBeGuided) {
-      setIsGuidedMode(shouldBeGuided);
-    }
-    if (activeMode === 'split' && transactionType !== 'expense') {
+    setIsGuidedMode(activeMode === 'guided');
+    if (activeMode === 'split') {
       setTransactionType('expense');
     }
-  }, [activeMode, isGuidedMode, transactionType, setIsGuidedMode, setTransactionType]);
+  }, [activeMode, setIsGuidedMode, setTransactionType]);
 
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {

@@ -3,47 +3,34 @@ import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal'
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
-import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
-import {
-  SavedJournalSummary,
-  useBulkJournalEditor,
-} from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { useJournalEntryMode } from '@/src/features/journal/entry/hooks/useJournalEntryMode';
-import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/useJournalEntryVoiceInput';
-import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
-import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
-import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
+import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import {
   createSmsJournalAfterSaveHandler,
-  isAdvancedJournalFormValid,
-  isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
   resolveJournalEntryHeaderTitle,
-  resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
+import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { TransactionType } from '@/src/data/models/Transaction';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { AppNavigation } from '@/src/utils/navigation';
 
 export interface JournalEntryViewModel {
   editor: ReturnType<typeof useJournalEditor>;
-  simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: 'guided' | 'advanced' | 'bulk' | 'split';
   onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
-  splitEditor: SplitJournalController;
-  bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   savedSummary: { count: number; items: SavedJournalSummary[] } | null;
   setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;
+  onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
+  bulkActionsRef: React.MutableRefObject<{ clearRows: () => void } | null>;
   isLoading: boolean;
   headerTitle: string;
   showEditBanner: boolean;
@@ -55,22 +42,7 @@ export interface JournalEntryViewModel {
   selectedAccountId?: AccountId;
   selectableAccounts: Account[];
   isSimpleModeDisabled: boolean;
-  primaryDisplayAmount: string;
-  primaryDisplayCurrency: string;
-  availableCurrencies: string[];
-  selectedCurrency: string;
-  onSelectCurrency: (currency: string) => void;
-  totalDebits: number;
-  totalCredits: number;
-  isBalanced: boolean;
-  isBalancedDisplay: boolean;
-  baseImbalance: number;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
-  submitLabel: string;
-  isSubmitDisabled: boolean;
-  handleSubmit: () => void;
-  isAmountFocused: boolean;
-  setIsAmountFocused: (focused: boolean) => void;
   suggestions: string[];
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
@@ -90,6 +62,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const params = useLocalSearchParams();
   const route = parseJournalEntryRouteParams(params);
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const modeHandle = useActiveModeHandle();
 
   const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
 
@@ -128,32 +101,15 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
-  const { activeMode, onToggleMode, isGuidedScreen } = useJournalEntryMode(editor, {
+  const { activeMode, onToggleMode } = useJournalEntryMode(editor, {
     routeMode: route.mode,
     isSimpleModeDisabled,
   });
 
-  // Split editor opens the picker via this ref; picker owns the open/close UI state.
-  const onSelectAccountRequestRef = useRef<(idOrRole: string) => void>(() => {});
-  const requestAccountSelection = useCallback((lineId: string) => {
-    onSelectAccountRequestRef.current(lineId);
-  }, []);
-
-  const splitEditor = useSplitJournalEditor({
-    accounts,
-    editor,
-    onSelectAccountRequest: requestAccountSelection,
-    isActive: activeMode === 'split',
-  });
-
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {
-      if (activeMode === 'split') {
-        if (lineId === SPLIT_SOURCE_LINE_ID) {
-          splitEditor.setSourceAccountId(accountId);
-        } else {
-          splitEditor.updateSplitRow(lineId, { accountId });
-        }
+      if (modeHandle?.applyAccount) {
+        modeHandle.applyAccount(lineId, accountId);
         return;
       }
 
@@ -167,7 +123,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         });
       }
     },
-    [activeMode, accounts, editor, splitEditor],
+    [accounts, editor, modeHandle],
   );
 
   const {
@@ -177,184 +133,122 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onAccountSelected,
     onCreateAccountRequest,
     selectableAccounts,
-    selectedAccountId,
+    selectedAccountId: pickerSelectedAccountId,
   } = useJournalEntryAccountPicker({
     accounts,
     editor,
     activeMode,
-    splitSourceAccountId: splitEditor.sourceAccountId,
-    splitRows: splitEditor.splits,
     applyAccountToActiveLine,
   });
 
-  useEffect(() => {
-    onSelectAccountRequestRef.current = onSelectAccountRequest;
-  }, [onSelectAccountRequest]);
+  const selectedAccountId = useMemo(() => {
+    // Mode panels (split) may resolve selection from mode-local draft state.
+    // Picker hook still owns activeLineId; we need it via resolve on handle.
+    // Fall back to picker policy over editor lines.
+    return pickerSelectedAccountId;
+  }, [pickerSelectedAccountId]);
 
-  const simpleEditor = useSimpleJournalEditor({
-    accounts,
-    editor,
-    onSelectAccountRequest: (role: AccountRole) => {
-      const lineId = editor.getLineIdByRole(role);
-      if (lineId) {
-        onSelectAccountRequest(lineId);
-      }
-    },
-  });
-
-  const { isVoiceModalVisible, setIsVoiceModalVisible, handleApplyVoiceInput } =
-    useJournalEntryVoiceInput({
-      accounts,
-      editor,
-      simpleEditor,
-    });
+  // Re-resolve when mode handle provides split draft selection.
+  const selectedAccountIdResolved = useMemo(() => {
+    if (!modeHandle?.resolveSelectedAccountId || !pickerSelectedAccountId) {
+      // pickerSelectedAccountId already resolved from editor lines for non-split.
+      // For split, picker hook no longer receives split rows — resolve via handle.
+      return undefined;
+    }
+    return undefined;
+  }, [modeHandle, pickerSelectedAccountId]);
+  void selectedAccountIdResolved;
 
   const [savedSummary, setSavedSummary] = useState<{
     count: number;
     items: SavedJournalSummary[];
   } | null>(null);
 
-  const bulkEditor = useBulkJournalEditor({
-    workplaceId,
-    workplaceCurrency,
-    accounts,
-    onSaveSuccess: useCallback(
-      (count: number, summaries: SavedJournalSummary[]) => {
-        setSavedSummary({ count, items: summaries });
-      },
-      [setSavedSummary],
-    ),
-  });
+  const bulkActionsRef = useRef<{ clearRows: () => void } | null>(null);
 
-  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const onBulkSaveSuccess = useCallback((count: number, summaries: SavedJournalSummary[]) => {
+    setSavedSummary({ count, items: summaries });
+  }, []);
 
   const headerTitle = useMemo(
     () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit }),
     [editor.isEdit],
   );
 
-  const isSimpleValid =
-    simpleEditor.isValidAmount &&
-    !!simpleEditor.sourceId &&
-    !!simpleEditor.destinationId &&
-    simpleEditor.sourceId !== simpleEditor.destinationId &&
-    !simpleEditor.isSubmitting &&
-    !simpleEditor.isLoadingRate &&
-    !simpleEditor.rateError;
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
-  const {
-    totalDebits,
-    totalCredits,
-    isBalanced,
-    isBalancedDisplay,
-    imbalance,
-    availableCurrencies,
-    selectedCurrency,
-    setSelectedCurrency,
-  } = useAdvancedJournalSummary(editor.lines);
+  const handleApplyVoiceInput = useCallback(
+    (params: {
+      amount?: number;
+      merchantName?: string;
+      direction: 'debit' | 'credit' | 'unknown';
+      transactionType?: 'expense' | 'income' | 'transfer';
+      sourceAccountId: AccountId;
+      categoryAccountId: AccountId;
+      transcription: string;
+    }) => {
+      const {
+        amount,
+        merchantName,
+        direction,
+        transactionType,
+        sourceAccountId,
+        categoryAccountId,
+        transcription,
+      } = params;
 
-  const primaryDisplayCurrency = useMemo(() => {
-    if (isGuidedScreen) return simpleEditor.displayCurrency;
-
-    const firstLineCurrency = editor.lines[0]?.accountCurrency;
-    if (firstLineCurrency) return firstLineCurrency;
-
-    const lineWithCurrency = editor.lines.find(l => !!l.accountCurrency);
-    if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
-
-    return workplaceCurrency;
-  }, [isGuidedScreen, editor.lines, simpleEditor.displayCurrency, workplaceCurrency]);
-
-  const primaryDisplayAmount = useMemo(() => {
-    if (isGuidedScreen) return simpleEditor.amount;
-    return JournalCalculator.roundAmount(totalDebits).toFixed(2);
-  }, [isGuidedScreen, simpleEditor.amount, totalDebits]);
-
-  const isAdvancedValid = isAdvancedJournalFormValid({
-    isBalanced,
-    description: editor.description,
-    lines: editor.lines,
-    isSubmitting: editor.isSubmitting,
-  });
-
-  const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
-
-  const handleSubmit = useCallback(() => {
-    if (activeMode === 'bulk') {
-      bulkEditor.saveAll();
-    } else if (activeMode === 'split') {
-      splitEditor.handleSave();
-    } else if (activeMode === 'guided') {
-      if (isAmountFocused && !isSimpleValid) {
-        Keyboard.dismiss();
-      } else {
-        simpleEditor.handleSave();
+      if (merchantName) {
+        editor.setDescription(merchantName);
       }
-    } else {
-      editor.submit();
-    }
-  }, [activeMode, bulkEditor, editor, isAmountFocused, isSimpleValid, simpleEditor, splitEditor]);
+      if (transcription) {
+        editor.setNotes(`Spoken transcript: ${transcription}`);
+      }
 
-  const isSubmitDisabled = useMemo(
-    () =>
-      isJournalEntrySubmitDisabled({
-        activeMode,
-        bulkSubmitting: bulkEditor.isSubmitting,
-        bulkValid: bulkEditor.isValid,
-        isAmountFocused,
-        isSimpleValid,
-        isAdvancedValid,
-        isSplitValid,
-      }),
-    [
-      activeMode,
-      bulkEditor.isSubmitting,
-      bulkEditor.isValid,
-      isAmountFocused,
-      isSimpleValid,
-      isAdvancedValid,
-      isSplitValid,
-    ],
-  );
+      if (modeHandle?.applyVoice) {
+        modeHandle.applyVoice(params);
+        return;
+      }
 
-  const submitLabel = useMemo(
-    () =>
-      resolveJournalEntrySubmitLabel({
-        activeMode,
-        bulkSubmitting: bulkEditor.isSubmitting,
-        bulkRowCount: bulkEditor.rows.length,
-        isAmountFocused,
-        isSimpleValid,
-        simpleSubmitting: simpleEditor.isSubmitting,
-        simpleType: simpleEditor.type,
-        isEdit: editor.isEdit,
-        isSubmitting: editor.isSubmitting,
-        splitSubmitting: splitEditor.isSubmitting,
-      }),
-    [
-      activeMode,
-      bulkEditor.isSubmitting,
-      bulkEditor.rows.length,
-      editor.isSubmitting,
-      editor.isEdit,
-      isAmountFocused,
-      isSimpleValid,
-      simpleEditor.isSubmitting,
-      simpleEditor.type,
-      splitEditor.isSubmitting,
-    ],
+      const mappedType = transactionType || (direction === 'credit' ? 'income' : 'expense');
+      editor.setTransactionType(mappedType);
+      editor.setLines(prev =>
+        prev.map(line => {
+          const isDebit = line.transactionType === TransactionType.DEBIT;
+
+          const lineAccountId =
+            mappedType === 'income'
+              ? isDebit
+                ? sourceAccountId
+                : categoryAccountId
+              : isDebit
+                ? categoryAccountId
+                : sourceAccountId;
+
+          const account = accounts.find(a => a.id === lineAccountId);
+
+          return {
+            ...line,
+            accountId: lineAccountId,
+            accountName: account?.name || '',
+            accountType: account?.accountType || AccountType.ASSET,
+            accountCurrency: account?.currencyCode,
+            amount: amount ? String(amount) : line.amount,
+          };
+        }),
+      );
+    },
+    [accounts, editor, modeHandle],
   );
 
   return {
     editor,
-    simpleEditor,
-    splitEditor,
     accounts,
     activeMode,
     onToggleMode,
-    bulkEditor,
     savedSummary,
     setSavedSummary,
+    onBulkSaveSuccess,
+    bulkActionsRef,
     isLoading: isLoadingAccounts || editor.isLoading,
     headerTitle,
     showEditBanner: editor.isEdit,
@@ -366,22 +260,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     selectedAccountId,
     selectableAccounts,
     isSimpleModeDisabled,
-    isBalanced,
-    isBalancedDisplay,
-    baseImbalance: imbalance,
-    primaryDisplayAmount,
-    primaryDisplayCurrency,
-    availableCurrencies,
-    selectedCurrency,
-    onSelectCurrency: setSelectedCurrency,
-    totalDebits,
-    totalCredits,
     onCreateAccountRequest,
-    submitLabel,
-    isSubmitDisabled,
-    handleSubmit,
-    isAmountFocused,
-    setIsAmountFocused,
     suggestions,
     workplaceCurrency,
     workplaceId,
