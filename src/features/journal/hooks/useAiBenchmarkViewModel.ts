@@ -1,10 +1,12 @@
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 import type { AIModelMetadata, ModelDownloadStatus } from '@/src/services/ai/types';
+import {
+  AiBackendOverride,
+  useAiModelManagement,
+} from '@/src/features/journal/hooks/useAiModelManagement';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
 import { nativeAIProvider } from '@/src/services/transaction-ingestion';
-import { alert, confirm } from '@/src/utils/alerts';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 const TEST_TRANSCRIPTS = [
   'spent 250 rs for coffee at starbucks using hdfc card',
@@ -12,8 +14,6 @@ const TEST_TRANSCRIPTS = [
   'refund 1200 from amazon to sbi bank',
   'transfer 5000 from savings to wallet',
 ];
-
-export type AiBackendOverride = 'auto' | 'cpu' | 'gpu' | 'npu';
 
 export interface AiBenchmarkResult {
   transcript: string;
@@ -53,15 +53,11 @@ export interface AiBenchmarkViewModel {
 }
 
 export function useAiBenchmarkViewModel(): AiBenchmarkViewModel {
-  const [availableModels, setAllModels] = useState<AIModelMetadata[]>([]);
-  const [statuses, setStatuses] = useState<Record<string, ModelDownloadStatus>>({});
-  const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
-  const [isLoadingMemory, setIsLoadingMemory] = useState(false);
   const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
   const [benchmarkResults, setBenchmarkResults] = useState<AiBenchmarkResult[]>([]);
   const [inferenceMode, setInferenceMode] = useState<'single' | 'multi'>('multi');
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [backendOverride, setBackendOverride] = useState<AiBackendOverride>('auto');
+  const modelManagement = useAiModelManagement(backendOverride);
 
   const backendOptions = React.useMemo(
     () => [
@@ -74,110 +70,6 @@ export function useAiBenchmarkViewModel(): AiBenchmarkViewModel {
   );
 
   const isCancelledRef = React.useRef(false);
-  const lastUpdateRef = React.useRef<Record<string, number>>({});
-
-  async function refreshData() {
-    const allModels = modelManagementService.getAllModels();
-    setAllModels(allModels);
-
-    if (allModels.length > 0) {
-      setSelectedModelId(prev =>
-        prev && allModels.some(m => m.id === prev) ? prev : allModels[0].id,
-      );
-    }
-
-    const newStatuses: Record<string, ModelDownloadStatus> = {};
-    for (const model of allModels) {
-      newStatuses[model.id] = await modelManagementService.getDownloadStatus(model.id);
-    }
-    setStatuses(newStatuses);
-  }
-
-  useEffect(() => {
-    setTimeout(() => refreshData(), 0);
-
-    const handleProgress = (modelId: string, progress: number, isComplete: boolean) => {
-      const now = Date.now();
-      const lastUpdate = lastUpdateRef.current[modelId] || 0;
-
-      // Throttle updates to ~10fps (every 100ms) to prevent UI thread/Skia overload
-      if (now - lastUpdate > 100 || isComplete || progress === 0) {
-        lastUpdateRef.current[modelId] = now;
-        setStatuses(prev => ({
-          ...prev,
-          [modelId]: {
-            ...prev[modelId],
-            progress,
-            isDownloaded: isComplete,
-          },
-        }));
-        if (isComplete) refreshData();
-      }
-    };
-    modelManagementService.addListener(handleProgress);
-
-    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
-
-    return () => modelManagementService.removeListener(handleProgress);
-  }, []);
-
-  const handleDownload = async (modelId: string) => {
-    try {
-      await modelManagementService.downloadModel(modelId);
-      await refreshData();
-    } catch (e) {
-      alert.show({ title: 'Download Failed', message: String(e), type: 'error' });
-    }
-  };
-
-  const handleCancelDownload = async (modelId: string) => {
-    await modelManagementService.cancelDownload(modelId);
-    await refreshData();
-  };
-
-  const performLoadModel = async (modelId: string) => {
-    setIsLoadingMemory(true);
-    try {
-      await smallModelProvider.switchModel(modelId, backendOverride);
-      setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
-    } catch (e) {
-      alert.show({ title: 'Load Failed', message: String(e), type: 'error' });
-    } finally {
-      setIsLoadingMemory(false);
-    }
-  };
-
-  const handleLoadModel = (modelId: string) => {
-    if (loadedModelId && loadedModelId !== modelId) {
-      confirm.show({
-        title: 'Switch Model',
-        message:
-          'Loading this model will unload the currently loaded model. Are you sure you want to proceed?',
-        confirmText: 'Switch',
-        destructive: true,
-        onConfirm: () => performLoadModel(modelId),
-      });
-    } else {
-      performLoadModel(modelId);
-    }
-  };
-
-  const handleUnloadModel = async () => {
-    setIsLoadingMemory(true);
-    try {
-      await nativeAIProvider.unload();
-      setLoadedModelId(null);
-    } catch (e) {
-      alert.show({ title: 'Unload Failed', message: String(e), type: 'error' });
-    } finally {
-      setIsLoadingMemory(false);
-    }
-  };
-
-  const handleDeleteModel = async (modelId: string) => {
-    await modelManagementService.deleteModel(modelId);
-    await refreshData();
-  };
 
   const runBenchmark = async (modelId: string) => {
     setBenchmarkingId(modelId);
@@ -233,56 +125,30 @@ export function useAiBenchmarkViewModel(): AiBenchmarkViewModel {
         setBenchmarkingId(null);
       }
     }
-    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
+    modelManagement.syncLoadedModel();
   };
 
   const abortBenchmark = () => {
     isCancelledRef.current = true;
     setBenchmarkingId(null);
     nativeAIProvider.abort();
-    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
+    modelManagement.syncLoadedModel();
   };
 
-  const selectedModel = availableModels.find(m => m.id === selectedModelId);
-  const status = selectedModel ? statuses[selectedModel.id] : undefined;
-  const isDownloading = selectedModel
-    ? modelManagementService.isDownloading(selectedModel.id)
+  const isBenchmarking = modelManagement.selectedModel
+    ? benchmarkingId === modelManagement.selectedModel.id
     : false;
-  const progress = status?.progress || 0;
-  const isLoaded = selectedModel ? loadedModelId === selectedModel.id : false;
-  const isBenchmarking = selectedModel ? benchmarkingId === selectedModel.id : false;
-  const sizeStr = selectedModel
-    ? selectedModel.sizeBytes > 1024 * 1024 * 1024
-      ? `${(selectedModel.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-      : `${(selectedModel.sizeBytes / 1024 / 1024).toFixed(0)} MB`
-    : '';
 
   return {
-    availableModels,
-    statuses,
-    loadedModelId,
-    isLoadingMemory,
+    ...modelManagement,
     benchmarkingId,
     benchmarkResults,
     inferenceMode,
     setInferenceMode,
-    selectedModelId,
-    setSelectedModelId,
     backendOverride,
     setBackendOverride,
     backendOptions,
-    selectedModel,
-    status,
-    isDownloading,
-    progress,
-    isLoaded,
     isBenchmarking,
-    sizeStr,
-    handleDownload,
-    handleCancelDownload,
-    handleLoadModel,
-    handleUnloadModel,
-    handleDeleteModel,
     runBenchmark,
     abortBenchmark,
   };
