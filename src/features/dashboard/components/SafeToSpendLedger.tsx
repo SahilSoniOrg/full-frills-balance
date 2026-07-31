@@ -9,9 +9,10 @@ import { PlannedPaymentId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { formatAmountOrLoading } from '../utils/formatAmount';
+import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
 
 interface SafeToSpendLedgerProps {
-  labels: any;
+  labels: SafeToSpendLabels;
   currencyCode: string;
   isPrivacyMode: boolean;
   isLoading?: boolean;

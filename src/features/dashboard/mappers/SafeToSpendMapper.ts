@@ -4,7 +4,7 @@ import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadM
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
-import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import { ResolvedCopy, SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface MapperOptions {
   isPrivacyMode: boolean;
@@ -144,20 +144,20 @@ export class SafeToSpendMapper {
     };
   }
 
-  private static resolveLabels<T>(obj: T, days: number): T {
+  private static resolveLabels<T>(obj: T, days: number): ResolvedCopy<T> {
     if (typeof obj === 'function') {
-      return (obj as (value: number) => unknown)(days) as T;
+      return (obj as (value: number) => unknown)(days) as ResolvedCopy<T>;
     }
     if (Array.isArray(obj)) {
-      return obj.map(item => SafeToSpendMapper.resolveLabels(item, days)) as T;
+      return obj.map(item => SafeToSpendMapper.resolveLabels(item, days)) as ResolvedCopy<T>;
     }
     if (typeof obj === 'object' && obj !== null) {
       const resolved: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         resolved[key] = SafeToSpendMapper.resolveLabels(value, days);
       }
-      return resolved as T;
+      return resolved as ResolvedCopy<T>;
     }
-    return obj;
+    return obj as ResolvedCopy<T>;
   }
 }

@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { AccountSubtype } from '@/src/data/models/Account';
 import {
   AccountCommitment,
@@ -5,6 +6,19 @@ import {
   DebtEntry,
   IncomeEntry,
 } from '@/src/services/simulation/types';
+
+export type ResolvedCopy<T> = T extends (...args: never[]) => infer R
+  ? R
+  : T extends readonly (infer Item)[]
+    ? ResolvedCopy<Item>[]
+    : T extends object
+      ? { [K in keyof T]: ResolvedCopy<T[K]> }
+      : T;
+
+export type SafeToSpendLabels = ResolvedCopy<typeof AppConfig.strings.dashboard.safeToSpendUi>;
+export type SafeToSpendInfo = ResolvedCopy<
+  typeof AppConfig.strings.dashboard.safeToSpendExplanation
+>;
 
 export interface SafeToSpendViewModel {
   currencyCode: string;
@@ -41,6 +55,6 @@ export interface SafeToSpendViewModel {
   isLoading: boolean;
   safeToSpendDays: number;
 
-  labels: any;
-  info: any;
+  labels: SafeToSpendLabels;
+  info: SafeToSpendInfo;
 }
