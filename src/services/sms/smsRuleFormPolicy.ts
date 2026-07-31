@@ -23,6 +23,19 @@ export interface SmsRuleBuilderFieldState {
   amountSecondaryValue: string;
 }
 
+export interface SmsRuleFormHydration {
+  mode: SmsRuleMode;
+  legacySenderMatch: string;
+  legacyBodyMatch: string;
+  disposition: SmsRuleDisposition;
+  sourceAccountId?: AccountId;
+  categoryAccountId?: AccountId;
+  journalDescription: string;
+  priority: string;
+  isActive: boolean;
+  builderFields: SmsRuleBuilderFieldState;
+}
+
 export interface SmsRuleValidationInput {
   mode: SmsRuleMode;
   legacySenderMatch: string;
@@ -74,6 +87,44 @@ export function parseSmsRuleActions(rule: TransactionAutoPostRule): SmsRuleActio
     disposition: 'auto_post',
     sourceAccountId: rule.sourceAccountId || undefined,
     categoryAccountId: rule.categoryAccountId || undefined,
+  };
+}
+
+export function hydrateSmsRuleForm(rule: TransactionAutoPostRule): SmsRuleFormHydration {
+  const conditions = parseSmsRuleConditions(rule);
+  const actions = parseSmsRuleActions(rule);
+  const amountCondition = getSmsRuleConditionValue(conditions, 'amount');
+  const directionValue = getSmsRuleConditionValue(conditions, 'direction')?.value;
+  const amountOperator = amountCondition?.operator;
+
+  return {
+    mode: conditions.length > 0 ? 'builder' : 'regex',
+    legacySenderMatch: rule.senderMatch || '',
+    legacyBodyMatch: rule.bodyMatch || '',
+    disposition: actions.disposition,
+    sourceAccountId: actions.sourceAccountId,
+    categoryAccountId: actions.categoryAccountId,
+    journalDescription: actions.journalDescription || '',
+    priority: String(rule.priority ?? 100),
+    isActive: rule.isActive,
+    builderFields: {
+      senderContains: getSmsRuleConditionValue(conditions, 'sender')?.value || '',
+      bodyContains: getSmsRuleConditionValue(conditions, 'body')?.value || '',
+      merchantContains: getSmsRuleConditionValue(conditions, 'merchant')?.value || '',
+      accountSourceContains: getSmsRuleConditionValue(conditions, 'account_source')?.value || '',
+      direction: directionValue === 'debit' || directionValue === 'credit' ? directionValue : '',
+      currencyCode: getSmsRuleConditionValue(conditions, 'currency')?.value || '',
+      amountOperator:
+        amountOperator === 'eq' ||
+        amountOperator === 'gt' ||
+        amountOperator === 'lt' ||
+        amountOperator === 'between'
+          ? amountOperator
+          : '',
+      amountValue: amountCondition?.minValue !== undefined ? String(amountCondition.minValue) : '',
+      amountSecondaryValue:
+        amountCondition?.maxValue !== undefined ? String(amountCondition.maxValue) : '',
+    },
   };
 }
 

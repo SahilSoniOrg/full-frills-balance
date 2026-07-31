@@ -7,10 +7,8 @@ import { useSmsRuleFormActions } from '@/src/features/settings/hooks/useSmsRuleF
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
 import {
   buildStructuredSmsRuleConditions,
-  getSmsRuleConditionValue,
+  hydrateSmsRuleForm,
   isSmsRuleFormValid,
-  parseSmsRuleActions,
-  parseSmsRuleConditions,
   shouldShowSmsRuleAccountMapping,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
@@ -107,42 +105,27 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
       try {
         const rule = await smsRuleReadService.find(id);
         if (!rule) return;
-        const conditions = parseSmsRuleConditions(rule);
-        const actions = parseSmsRuleActions(rule);
-        const structured = conditions.length > 0;
+        const hydrated = hydrateSmsRuleForm(rule);
+        setMode(hydrated.mode);
+        setLegacySenderMatch(hydrated.legacySenderMatch);
+        setLegacyBodyMatch(hydrated.legacyBodyMatch);
+        setDisposition(hydrated.disposition);
+        setSourceAccountId(hydrated.sourceAccountId || EMPTY_ACCOUNT_ID);
+        setCategoryAccountId(hydrated.categoryAccountId || EMPTY_ACCOUNT_ID);
+        setJournalDescription(hydrated.journalDescription);
+        setPriority(hydrated.priority);
+        setIsActive(hydrated.isActive);
 
-        setMode(structured ? 'builder' : 'regex');
-        setLegacySenderMatch(rule.senderMatch || '');
-        setLegacyBodyMatch(rule.bodyMatch || '');
-        setDisposition(actions.disposition);
-        setSourceAccountId(actions.sourceAccountId || EMPTY_ACCOUNT_ID);
-        setCategoryAccountId(actions.categoryAccountId || EMPTY_ACCOUNT_ID);
-        setJournalDescription(actions.journalDescription || '');
-        setPriority(String(rule.priority ?? 100));
-        setIsActive(rule.isActive);
-
-        if (structured) {
-          setSenderContains(getSmsRuleConditionValue(conditions, 'sender')?.value || '');
-          setBodyContains(getSmsRuleConditionValue(conditions, 'body')?.value || '');
-          setMerchantContains(getSmsRuleConditionValue(conditions, 'merchant')?.value || '');
-          setAccountSourceContains(
-            getSmsRuleConditionValue(conditions, 'account_source')?.value || '',
-          );
-          setDirection(
-            (getSmsRuleConditionValue(conditions, 'direction')?.value as
-              '' | 'debit' | 'credit' | undefined) || '',
-          );
-          setCurrencyCode(getSmsRuleConditionValue(conditions, 'currency')?.value || '');
-          const amountCondition = getSmsRuleConditionValue(conditions, 'amount');
-          setAmountOperator(
-            (amountCondition?.operator as '' | 'eq' | 'gt' | 'lt' | 'between' | undefined) || '',
-          );
-          setAmountValue(
-            amountCondition?.minValue !== undefined ? String(amountCondition.minValue) : '',
-          );
-          setAmountSecondaryValue(
-            amountCondition?.maxValue !== undefined ? String(amountCondition.maxValue) : '',
-          );
+        if (hydrated.mode === 'builder') {
+          setSenderContains(hydrated.builderFields.senderContains);
+          setBodyContains(hydrated.builderFields.bodyContains);
+          setMerchantContains(hydrated.builderFields.merchantContains);
+          setAccountSourceContains(hydrated.builderFields.accountSourceContains);
+          setDirection(hydrated.builderFields.direction);
+          setCurrencyCode(hydrated.builderFields.currencyCode);
+          setAmountOperator(hydrated.builderFields.amountOperator);
+          setAmountValue(hydrated.builderFields.amountValue);
+          setAmountSecondaryValue(hydrated.builderFields.amountSecondaryValue);
         }
       } catch {
         toast.error('Failed to load rule');
