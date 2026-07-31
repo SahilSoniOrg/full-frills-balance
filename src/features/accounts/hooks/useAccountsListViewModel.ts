@@ -6,11 +6,10 @@ import {
   filterAccountSectionsForTab,
   filterAccountsBySearch,
   filterAccountsForListTab,
-  resolveAccountListPressAction,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
+import { useAccountsListActions } from '@/src/features/accounts/hooks/useAccountsListActions';
 import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
 import { useAccountsListUiState } from '@/src/features/accounts/hooks/useAccountsListUiState';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import {
   AccountCardViewModel,
   transformAccountsToSections,
@@ -19,10 +18,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
-import { traceService } from '@/src/utils/TraceService';
-import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountSectionViewModel {
@@ -169,58 +166,21 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       dataVersion: version,
     });
 
-  const onAccountPress = useCallback(
-    (accountId: AccountId) => {
-      const account = accounts.find(a => a.id === accountId);
-      if (!account) return;
-
-      if (resolveAccountListPressAction(accountId, accounts, expandedAccountIds) === 'expand') {
-        setExpandedAccountIds(prev => {
-          const next = new Set(prev);
-          next.add(accountId);
-          return next;
-        });
-      } else {
-        const balance = balancesByAccountId.get(accountId);
-        AppNavigation.toAccountDetails(accountId, {
-          preview: {
-            name: account.name,
-            balance: balance?.balance,
-            currency: balance?.currencyCode || account.currencyCode,
-            icon: getAccountIcon(account),
-            type: account.accountType,
-          },
-        });
-      }
-    },
-    [accounts, expandedAccountIds, balancesByAccountId, setExpandedAccountIds],
-  );
-
-  const onCreateAccount = useCallback(() => {
-    if (activeTab === 'categories') {
-      AppNavigation.toCategoryCreation();
-    } else {
-      AppNavigation.toAccountCreation();
-    }
-  }, [activeTab]);
-
-  const onReorderPress = useCallback(() => {
-    AppNavigation.toAccountReorder(activeTab);
-  }, [activeTab]);
-
-  const onTogglePrivacy = useCallback(() => {
-    traceService.startTrace('Toggle Privacy Mode');
-    togglePrivacyMode();
-  }, [togglePrivacyMode]);
-
-  const onManageHierarchy = useCallback(() => {
-    AppNavigation.toManageHierarchy({ filterMode: activeTab });
-  }, [activeTab]);
-
-  const onRefresh = useCallback(() => {
-    traceService.startTrace('Refresh Account List');
-    // Refresh is handled reactively by observables
-  }, []);
+  const {
+    onAccountPress,
+    onCreateAccount,
+    onReorderPress,
+    onManageHierarchy,
+    onTogglePrivacy,
+    onRefresh,
+  } = useAccountsListActions({
+    accounts,
+    balancesByAccountId,
+    expandedAccountIds,
+    setExpandedAccountIds,
+    activeTab,
+    togglePrivacyMode,
+  });
 
   const filteredAccounts = useMemo(
     () => filterAccountsBySearch(accounts, searchQuery),
