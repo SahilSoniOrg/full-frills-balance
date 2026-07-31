@@ -16,7 +16,7 @@ export default function JournalScreen() {
   const initialDateRange = useJournalRouteDateRange();
   const canGoBack = router.canGoBack();
 
-  const { listViewProps, vm } = useJournalListScreen(
+  const { render, vm } = useJournalListScreen(
     {
       pageSize: AppConfig.pagination.dashboardPageSize,
       emptyState: {
@@ -65,21 +65,6 @@ export default function JournalScreen() {
     [vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext],
   );
 
-  const list = useMemo(
-    () => ({
-      items: listViewProps.items,
-      isLoading: listViewProps.isLoading,
-      isLoadingMore: listViewProps.isLoadingMore,
-      loadingText: listViewProps.loadingText,
-      loadingMoreText: listViewProps.loadingMoreText,
-      emptyTitle: listViewProps.emptyTitle,
-      emptySubtitle: listViewProps.emptySubtitle,
-      onEndReached: listViewProps.onEndReached,
-      listHeader: null,
-    }),
-    [listViewProps],
-  );
-
   const chrome = useMemo(
     () => ({
       screenTitle: AppConfig.strings.journal.transactions,
@@ -99,10 +84,10 @@ export default function JournalScreen() {
 
   return (
     <JournalListView
-      list={list}
+      list={{ ...render.list, listHeader: null }}
       chrome={chrome}
-      datePicker={listViewProps.datePicker}
-      selection={listViewProps.selection}
+      datePicker={render.datePicker}
+      selection={render.selection}
     />
   );
 }

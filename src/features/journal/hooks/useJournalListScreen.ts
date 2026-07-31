@@ -1,6 +1,17 @@
+import {
+  type JournalDatePickerBundle,
+  type JournalListBundle,
+  type JournalSelectionBundle,
+} from '@/src/features/journal/components/JournalListView';
 import { WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
+
+export type JournalListRenderBundle = {
+  list: Omit<JournalListBundle, 'listHeader' | 'listContentStyle' | 'isPrivacyMode'>;
+  datePicker: JournalDatePickerBundle;
+  selection: JournalSelectionBundle;
+};
 
 /**
  * Helper hook that encapsulates the common pattern of using JournalListViewModel
@@ -12,8 +23,8 @@ export function useJournalListScreen(
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
 
-  const listViewProps = useMemo(
-    () => ({
+  const list = useMemo(
+    (): JournalListRenderBundle['list'] => ({
       items: vm.items,
       isLoading: vm.isLoading,
       isLoadingMore: vm.isLoadingMore,
@@ -22,22 +33,6 @@ export function useJournalListScreen(
       emptyTitle: vm.emptyState.title,
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
-      datePicker: {
-        visible: vm.isDatePickerVisible,
-        onClose: vm.hideDatePicker,
-        currentFilter: vm.periodFilter,
-        onSelect: vm.onDateSelect,
-      },
-      selection: {
-        selectedIds: vm.selectedIds,
-        isSelectionModeActive: vm.isSelectionModeActive,
-        onLongPressItem: vm.onLongPressItem,
-        toggleSelection: vm.toggleSelection,
-        selectAll: vm.selectAll,
-        clearItems: vm.clearItems,
-        exitSelectionMode: vm.exitSelectionMode,
-        onShareSelected: vm.onShareSelected,
-      },
     }),
     [
       vm.items,
@@ -48,10 +43,31 @@ export function useJournalListScreen(
       vm.emptyState.title,
       vm.emptyState.subtitle,
       vm.onEndReached,
-      vm.isDatePickerVisible,
-      vm.hideDatePicker,
-      vm.periodFilter,
-      vm.onDateSelect,
+    ],
+  );
+
+  const datePicker = useMemo(
+    (): JournalDatePickerBundle => ({
+      visible: vm.isDatePickerVisible,
+      onClose: vm.hideDatePicker,
+      currentFilter: vm.periodFilter,
+      onSelect: vm.onDateSelect,
+    }),
+    [vm.isDatePickerVisible, vm.hideDatePicker, vm.periodFilter, vm.onDateSelect],
+  );
+
+  const selection = useMemo(
+    (): JournalSelectionBundle => ({
+      selectedIds: vm.selectedIds,
+      isSelectionModeActive: vm.isSelectionModeActive,
+      onLongPressItem: vm.onLongPressItem,
+      toggleSelection: vm.toggleSelection,
+      selectAll: vm.selectAll,
+      clearItems: vm.clearItems,
+      exitSelectionMode: vm.exitSelectionMode,
+      onShareSelected: vm.onShareSelected,
+    }),
+    [
       vm.selectedIds,
       vm.isSelectionModeActive,
       vm.onLongPressItem,
@@ -63,8 +79,16 @@ export function useJournalListScreen(
     ],
   );
 
+  const render = useMemo(
+    (): JournalListRenderBundle => ({ list, datePicker, selection }),
+    [list, datePicker, selection],
+  );
+
   return {
-    listViewProps,
+    render,
+    list,
+    datePicker,
+    selection,
     vm,
   };
 }
