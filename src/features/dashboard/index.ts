@@ -3,6 +3,11 @@ export * from './components/DashboardSummary';
 export * from './components/SafeToSpendCard';
 export { TransactionFeed } from './components/TransactionFeed';
 export type { TransactionFeedProps } from './components/TransactionFeed';
+export { useRecentTransactions } from './hooks/useRecentTransactions';
+export type {
+  RecentTransactions,
+  UseRecentTransactionsParams,
+} from './hooks/useRecentTransactions';
 export {
   mapLiabilityFlowsToPlannedOccurrences,
   mapPlannedJournalToOccurrence,

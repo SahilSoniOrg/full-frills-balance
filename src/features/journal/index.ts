@@ -12,6 +12,11 @@ export { default as TransactionDetailsScreen } from './screens/TransactionDetail
 export { JournalListViewProps } from './components/JournalListView';
 export { useJournalListScreen } from './hooks/useJournalListScreen';
 export { usePlannedOccurrenceActions } from './hooks/usePlannedOccurrenceActions';
+export { useJournalTransactionList } from './list/hooks/useJournalTransactionList';
+export type {
+  JournalTransactionListCore,
+  UseJournalTransactionListParams,
+} from './list/hooks/useJournalTransactionList';
 export { AiBenchmarkView } from './components/AiBenchmarkView';
 export { AiExampleView } from './components/AiExampleView';
 export { BulkEntryGrid } from './entry/components/BulkEntryGrid';
