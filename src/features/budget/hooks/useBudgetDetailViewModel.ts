@@ -6,6 +6,7 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
 import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -14,7 +15,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { BudgetId, DisplayTransaction, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { safeAdd, safeSubtract } from '@/src/utils/money';
+import { safeAdd } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
@@ -114,34 +115,14 @@ export function useBudgetDetailViewModel() {
       items: transactions,
       getDate: (t: DisplayTransaction) => t.transactionDate,
       sortByDate: 'desc' as const,
-      getStats: (txsForDay: DisplayTransaction[]) => {
-        let netAmount = 0;
-
-        txsForDay.forEach(tx => {
-          let amount = 0;
-          if (tx.currencyCode === baseCurrency) {
-            amount = tx.amount;
-          } else {
-            const rate = ratesMap[tx.currencyCode];
-            if (rate && rate > 0) {
-              amount = tx.amount / rate;
-            }
-          }
-
-          // In budget view, we sum everything flowing in/out of the scoped expenses.
-          if (tx.transactionType === 'DEBIT') {
-            netAmount = safeAdd(netAmount, amount, precision);
-          } else if (tx.transactionType === 'CREDIT') {
-            netAmount = safeSubtract(netAmount, amount, precision);
-          }
-        });
-
-        return {
-          count: txsForDay.length,
-          netAmount,
-          currencyCode: baseCurrency,
-        };
-      },
+      getStats: (txsForDay: DisplayTransaction[]) =>
+        buildDayNetStats(txsForDay, baseCurrency, precision, tx => {
+          const amount = amountInBaseCurrency(tx.amount, tx.currencyCode, baseCurrency, ratesMap);
+          // Budget view: debits increase spent net, credits decrease.
+          if (tx.transactionType === 'DEBIT') return amount;
+          if (tx.transactionType === 'CREDIT') return -amount;
+          return 0;
+        }),
       renderItem: (tx: DisplayTransaction) =>
         mapAccountLedgerTransactionToListItem(tx, () => handleJournalPress(tx.journalId)),
     }),
