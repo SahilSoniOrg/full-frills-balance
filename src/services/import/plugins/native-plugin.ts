@@ -36,7 +36,10 @@ import { UIPreferences } from '@/src/utils/preferences';
 
 interface NativeImportData {
   version: string;
-  preferences?: Partial<UIPreferences>;
+  preferences?: Partial<UIPreferences> & {
+    /** Legacy native backups stored the workplace currency in preferences. */
+    defaultCurrencyCode?: string;
+  };
   accounts: ImportedAccount[];
   journals: ImportedJournal[];
   transactions: ImportedTransaction[];
@@ -139,7 +142,7 @@ export const nativePlugin: ImportPlugin = {
 
     try {
       const currencyCode =
-        data.workplace?.defaultCurrencyCode || (data.preferences as any)?.defaultCurrencyCode;
+        data.workplace?.defaultCurrencyCode || data.preferences?.defaultCurrencyCode;
 
       const defaultCurrencyCode = currencyCode || fallbackCurrency; // Fallback if no preferences exist
 
