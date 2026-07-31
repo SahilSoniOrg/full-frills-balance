@@ -7,8 +7,15 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { MotiView } from 'moti';
-import { memo, useMemo } from 'react';
-import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { memo, useMemo, type ReactNode } from 'react';
+import {
+  Keyboard,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 export interface TransactionBadge {
   id?: string;
@@ -35,35 +42,13 @@ export interface TransactionCardProps {
   isPrivacyMode?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
-  isSelected?: boolean;
-  isSelectionModeActive?: boolean;
+  /** Optional chrome rendered inside the card (e.g. selection indicator). */
+  overlay?: ReactNode;
+  /** Extra styles applied to the card surface. */
+  cardStyle?: StyleProp<ViewStyle>;
+  /** Scale applied to card content (e.g. selection press-in). */
+  contentScale?: number;
 }
-
-const SelectionIndicator = memo(({ isSelected, isActive, color, border }: any) => {
-  if (!isSelected && !isActive) return null;
-
-  return (
-    <Box
-      width={24}
-      height={24}
-      borderRadius="full"
-      alignItems="center"
-      justifyContent="center"
-      background={isSelected ? color : 'transparent'}
-      style={[
-        styles.selectionIndicator,
-        {
-          borderWidth: isSelected ? 0 : 2,
-          borderColor: isSelected ? 'transparent' : border,
-          opacity: isSelected ? Opacity.high : Opacity.medium,
-        },
-      ]}
-    >
-      {isSelected && <AppIcon name="check" size={12} color="white" />}
-    </Box>
-  );
-});
-SelectionIndicator.displayName = 'SelectionIndicator';
 
 const TransactionCardComponent = ({
   title,
@@ -76,8 +61,9 @@ const TransactionCardComponent = ({
   isPrivacyMode: overridePrivacy,
   onPress,
   onLongPress,
-  isSelected,
-  isSelectionModeActive,
+  overlay,
+  cardStyle,
+  contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
   const { isPrivacyMode: globalPrivacy } = useUI();
@@ -117,22 +103,14 @@ const TransactionCardComponent = ({
         elevation="sm"
         padding="none"
         radius="r2"
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.surface,
-            borderWidth: isSelected ? 1.5 : 0,
-            borderColor: isSelected ? theme.primary : 'transparent',
-          },
-        ]}
+        style={[styles.container, { backgroundColor: theme.surface }, cardStyle]}
       >
         <Inset space="lg">
           <MotiView
-            animate={{ scale: isSelected ? 0.96 : 1 }}
+            animate={{ scale: contentScale }}
             transition={{ type: 'timing', duration: 100 }}
           >
             <Stack gap="lg">
-              {/* Badges */}
               <Inline gap="sm" wrap>
                 <Badge
                   testID="transaction-type-badge"
@@ -165,7 +143,6 @@ const TransactionCardComponent = ({
                 ))}
               </Inline>
 
-              {/* Title + Notes */}
               <Stack gap="xs">
                 <AppText
                   variant="body"
@@ -188,7 +165,6 @@ const TransactionCardComponent = ({
                 )}
               </Stack>
 
-              {/* Footer */}
               <Inline align="center" justify="space-between">
                 <Inline align="center" space="sm">
                   <Box
@@ -214,12 +190,7 @@ const TransactionCardComponent = ({
               </Inline>
             </Stack>
 
-            <SelectionIndicator
-              isSelected={isSelected}
-              isActive={isSelectionModeActive}
-              color={theme.primary}
-              border={withOpacity(theme.textTertiary, Opacity.hover)}
-            />
+            {overlay}
           </MotiView>
         </Inset>
       </AppCard>
@@ -243,12 +214,5 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: Typography.sizes.xs,
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    right: Spacing.md,
-    top: '50%',
-    marginTop: -12,
-    zIndex: 10,
   },
 });

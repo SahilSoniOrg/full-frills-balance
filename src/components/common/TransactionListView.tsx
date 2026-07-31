@@ -8,7 +8,7 @@ import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
-import { TransactionCard } from './TransactionCard';
+import { SelectableTransactionCard } from './SelectableTransactionCard';
 
 interface TransactionListViewProps {
   items: TransactionListItem[];
@@ -62,7 +62,7 @@ function renderListItem({
   }
 
   return (
-    <TransactionCard
+    <SelectableTransactionCard
       {...item.cardProps!}
       onPress={item.onPress!}
       onLongPress={onLongPressItem ? () => onLongPressItem(item.id) : undefined}
