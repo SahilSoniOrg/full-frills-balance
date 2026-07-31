@@ -19,10 +19,12 @@ import {
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
 import { findAccountByName as findAccountByNameQuery } from '@/src/services/accounts/accountSystemAccounts';
-import { observeAccountBalance } from '@/src/services/accounts/accountReadService';
+import {
+  observeAccountBalance,
+  observeActiveTransactions,
+} from '@/src/services/accounts/accountReadService';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -150,7 +152,7 @@ export function useAccountBalances(
       }
 
       return combineLatest([
-        transactionRepository.observeActiveWithColumns(workplaceId, [
+        observeActiveTransactions(workplaceId, [
           'amount',
           'transaction_type',
           'transaction_date',

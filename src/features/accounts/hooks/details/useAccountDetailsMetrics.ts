@@ -1,9 +1,11 @@
 import { AppConfig } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
-import { observeAccountChartTransactions } from '@/src/services/accounts/accountReadService';
+import {
+  observeAccountChartTransactions,
+  observeAccountPeriodMetrics,
+} from '@/src/services/accounts/accountReadService';
 import { buildAccountRollingBalanceSeries, RunningBalanceTx } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -73,31 +75,29 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
           isLoading: false,
         });
       }
-      return transactionRawRepository
-        .observeAccountPeriodMetricsRaw(
-          workplaceId,
-          accountId,
-          dateRange.startDate,
-          dateRange.endDate,
-          isAssetOrExpense,
-        )
-        .pipe(
-          map(metrics => {
-            const netChange = metrics.totalIncrease - metrics.totalDecrease;
-            const ds = new Date(dateRange.startDate);
-            const de = new Date(dateRange.endDate);
-            const days = Math.max(
-              1,
-              Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay),
-            );
-            return {
-              ...metrics,
-              netChange,
-              dailyAverage: netChange / days,
-              isLoading: false,
-            };
-          }),
-        );
+      return observeAccountPeriodMetrics(
+        workplaceId,
+        accountId,
+        dateRange.startDate,
+        dateRange.endDate,
+        isAssetOrExpense,
+      ).pipe(
+        map(metrics => {
+          const netChange = metrics.totalIncrease - metrics.totalDecrease;
+          const ds = new Date(dateRange.startDate);
+          const de = new Date(dateRange.endDate);
+          const days = Math.max(
+            1,
+            Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay),
+          );
+          return {
+            ...metrics,
+            netChange,
+            dailyAverage: netChange / days,
+            isLoading: false,
+          };
+        }),
+      );
     },
     [accountId, dateRange, accountType, isAssetOrExpense, workplaceId],
     { totalIncrease: 0, totalDecrease: 0, netChange: 0, dailyAverage: null, isLoading: true },

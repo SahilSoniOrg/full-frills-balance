@@ -49,6 +49,31 @@ export function observeUnreconciledMetrics(
   );
 }
 
+/** Period metrics for an account, kept behind the account read boundary. */
+export function observeAccountPeriodMetrics(
+  workplaceId: WorkplaceId,
+  accountId: AccountId | null,
+  startDate: number,
+  endDate: number,
+  isAssetOrExpense: boolean,
+) {
+  if (!accountId || !workplaceId) {
+    return of({ totalIncrease: 0, totalDecrease: 0 });
+  }
+  return transactionRawRepository.observeAccountPeriodMetricsRaw(
+    workplaceId,
+    accountId,
+    startDate,
+    endDate,
+    isAssetOrExpense,
+  );
+}
+
+/** Active transaction stream used to invalidate account balance projections. */
+export function observeActiveTransactions(workplaceId: WorkplaceId, columns: string[]) {
+  return transactionRepository.observeActiveWithColumns(workplaceId, columns);
+}
+
 /** Chart-range transactions with running balance for rolling-balance series. */
 export function observeAccountChartTransactions(
   workplaceId: WorkplaceId,
