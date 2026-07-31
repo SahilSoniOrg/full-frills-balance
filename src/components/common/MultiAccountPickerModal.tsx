@@ -1,7 +1,10 @@
 import Account from '@/src/data/models/Account';
 import { AccountId } from '@/src/types/domain';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
+import {
+  AccountPickerList,
+  CreateAccountIntent,
+} from '@/src/features/accounts/components/AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 
 export interface MultiAccountPickerModalProps {

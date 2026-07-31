@@ -1,4 +1,4 @@
-import { AccountPickerList } from '@/src/components/common/AccountPickerList';
+import { AccountPickerList } from '@/src/features/accounts/components/AccountPickerList';
 import { BaseAccountPickerModal } from '@/src/components/common/BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';

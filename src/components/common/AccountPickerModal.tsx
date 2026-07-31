@@ -1,7 +1,10 @@
 import Account from '@/src/data/models/Account';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
-import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
+import {
+  AccountPickerList,
+  CreateAccountIntent,
+} from '@/src/features/accounts/components/AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 
 export type { CreateAccountIntent };
