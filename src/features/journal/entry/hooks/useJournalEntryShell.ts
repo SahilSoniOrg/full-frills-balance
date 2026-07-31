@@ -20,6 +20,7 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import {
   isGuidedDisabledForMode,
+  JournalModeLineSnapshots,
   resolveJournalModeTransition,
 } from '@/src/features/journal/entry/journalModeTransition';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
@@ -144,12 +145,16 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { lines: editorLines, setLines } = editor;
 
+  /** Lines parked on the way out of Guided/Advanced, so a detour through Split/Bulk is not lossy. */
+  const modeSnapshotsRef = useRef<JournalModeLineSnapshots>({});
+
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {
       const transition = resolveJournalModeTransition({
         from: activeMode,
         to: mode,
         lines: editorLines,
+        snapshots: modeSnapshotsRef.current,
       });
 
       if (transition.status === 'blocked') {
@@ -157,6 +162,7 @@ export function useJournalEntryShell(): JournalEntryShell {
         return;
       }
 
+      modeSnapshotsRef.current = transition.snapshots;
       setLines(transition.nextLines);
       setActiveMode(transition.nextMode);
     },
