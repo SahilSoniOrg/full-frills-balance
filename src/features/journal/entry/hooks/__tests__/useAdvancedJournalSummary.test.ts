@@ -1,6 +1,6 @@
 import { TransactionType } from '@/src/data/models/Transaction';
 import { act, renderHook } from '@testing-library/react-native';
-import { useAdvancedJournalSummary } from '../useAdvancedJournalSummary';
+import { AdvancedJournalLineLike, useAdvancedJournalSummary } from '../useAdvancedJournalSummary';
 
 // Mock dependencies
 jest.mock('@/src/hooks/use-theme', () => ({
@@ -120,9 +120,10 @@ describe('useAdvancedJournalSummary', () => {
       { amount: '100', transactionType: TransactionType.DEBIT as const, accountCurrency: 'USD' },
       { amount: '100', transactionType: TransactionType.CREDIT as const, accountCurrency: 'EUR' },
     ];
-    const { result, rerender } = renderHook(({ lines }) => useAdvancedJournalSummary(lines), {
-      initialProps: { lines: initialLines },
-    });
+    const { result, rerender } = renderHook(
+      ({ lines }: { lines: AdvancedJournalLineLike[] }) => useAdvancedJournalSummary(lines),
+      { initialProps: { lines: initialLines } },
+    );
 
     expect(result.current.selectedCurrency).toBe('USD');
 

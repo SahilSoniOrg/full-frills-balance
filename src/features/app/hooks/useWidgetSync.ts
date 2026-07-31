@@ -127,8 +127,8 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     }
 
     const bootstrapWidgets = async () => {
-      // Lazy load the module to avoid issues during bootstrap using require
-      const expoWidgetsModule = require('@/modules/expo-widgets').default;
+      // Lazy load the native module to avoid touching it during web/bootstrap paths.
+      const { default: expoWidgetsModule } = await import('@/modules/expo-widgets');
 
       const isShortfall = (shortfall ?? 0) > 0;
       const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);

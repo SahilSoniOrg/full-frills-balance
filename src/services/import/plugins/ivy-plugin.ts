@@ -819,6 +819,7 @@ export const ivyPlugin: ImportPlugin = {
     onProgress?.('Mapping budgets...', 0.9);
     const budgetImports: ImportedBudget[] = [];
     const budgetScopeImports: ImportedBudgetScope[] = [];
+    const importedAccountIds = new Set(accountImports.map(account => account.id));
 
     if (data.budgets) {
       data.budgets.forEach(ivyBudget => {
@@ -846,6 +847,7 @@ export const ivyPlugin: ImportPlugin = {
             // Find all category-currency accounts for this category
             for (const [key, balanceId] of categoryAccountMap.entries()) {
               if (key.startsWith(`${catId}:::`)) {
+                if (!importedAccountIds.has(balanceId)) continue;
                 budgetScopeImports.push({
                   id: generateId(),
                   budgetId: budgetId as BudgetId,

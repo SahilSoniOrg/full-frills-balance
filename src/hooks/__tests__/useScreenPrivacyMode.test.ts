@@ -4,7 +4,8 @@ import { useScreenPrivacyMode } from '../useScreenPrivacyMode';
 describe('useScreenPrivacyMode', () => {
   it('mirrors global privacy mode when there is no override', () => {
     const { result, rerender } = renderHook(
-      ({ globalPrivacyMode }) => useScreenPrivacyMode(globalPrivacyMode),
+      ({ globalPrivacyMode }: { globalPrivacyMode: boolean }) =>
+        useScreenPrivacyMode(globalPrivacyMode),
       { initialProps: { globalPrivacyMode: false } },
     );
 
@@ -32,7 +33,8 @@ describe('useScreenPrivacyMode', () => {
 
   it('does not clear override when global privacy mode changes', () => {
     const { result, rerender } = renderHook(
-      ({ globalPrivacyMode }) => useScreenPrivacyMode(globalPrivacyMode),
+      ({ globalPrivacyMode }: { globalPrivacyMode: boolean }) =>
+        useScreenPrivacyMode(globalPrivacyMode),
       { initialProps: { globalPrivacyMode: false } },
     );
 
@@ -50,7 +52,8 @@ describe('useScreenPrivacyMode', () => {
 
   it('keeps override when global catches up to the overridden value', () => {
     const { result, rerender } = renderHook(
-      ({ globalPrivacyMode }) => useScreenPrivacyMode(globalPrivacyMode),
+      ({ globalPrivacyMode }: { globalPrivacyMode: boolean }) =>
+        useScreenPrivacyMode(globalPrivacyMode),
       { initialProps: { globalPrivacyMode: true } },
     );
 

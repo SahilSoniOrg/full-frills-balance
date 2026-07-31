@@ -2,7 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import { useMemo, useState } from 'react';
 
-interface AdvancedJournalLineLike {
+export interface AdvancedJournalLineLike {
   amount: number | string;
   exchangeRate?: number | string;
   transactionType: JournalLineInput['type'];

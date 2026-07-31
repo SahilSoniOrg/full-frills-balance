@@ -32,7 +32,8 @@ const SelectionIndicator = memo(
         borderRadius="full"
         alignItems="center"
         justifyContent="center"
-        background={isSelected ? color : 'transparent'}
+        background={isSelected ? undefined : 'transparent'}
+        unsafe_backgroundRaw={isSelected ? color : undefined}
         style={[
           styles.selectionIndicator,
           {

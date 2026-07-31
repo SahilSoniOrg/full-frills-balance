@@ -5,7 +5,7 @@ import {
   resolveInflowTotals,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import { reportService } from '@/src/services/report-service';
-import { AccountBalance, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import Account from '@/src/data/models/Account';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 export interface UseAccountsInflowSummaryArgs {
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  accounts: Account[];
+  accounts: (Account | PlainAccount)[];
   balances: AccountBalance[];
   totalIncome: number;
   totalExpense: number;

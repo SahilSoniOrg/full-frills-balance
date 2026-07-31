@@ -15,6 +15,7 @@ export function useToastListener() {
   const timeoutIds = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   useEffect(() => {
+    const activeTimeoutIds = timeoutIds.current;
     const listener = (payload: ToastPayload) => {
       const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       const newToast: ToastItem = { ...payload, id };
@@ -32,8 +33,8 @@ export function useToastListener() {
     setToastListener(listener);
 
     return () => {
-      timeoutIds.current.forEach(clearTimeout);
-      timeoutIds.current.clear();
+      activeTimeoutIds.forEach(clearTimeout);
+      activeTimeoutIds.clear();
       clearToastListener();
     };
   }, []);

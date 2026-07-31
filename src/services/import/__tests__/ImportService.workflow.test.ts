@@ -87,7 +87,7 @@ function createMockPlugin(overrides?: Partial<ImportPlugin>): ImportPlugin {
     detect: () => true,
     parse: jest.fn().mockResolvedValue({
       data: {
-        accounts: [{ currencyCode: 'USD' }],
+        accounts: [{ id: 'account-1', name: 'Cash', accountType: 'ASSET', currencyCode: 'USD' }],
         journals: [],
         transactions: [],
       },
@@ -129,7 +129,13 @@ describe('ImportService import workflow (public executeImport contract)', () => 
       parse: jest.fn().mockImplementation(async () => {
         phaseOrder.push('parse');
         return {
-          data: { accounts: [{ currencyCode: 'EUR' }], journals: [], transactions: [] },
+          data: {
+            accounts: [
+              { id: 'account-1', name: 'Cash', accountType: 'ASSET', currencyCode: 'EUR' },
+            ],
+            journals: [],
+            transactions: [],
+          },
           stats: { accounts: 1, journals: 0, transactions: 0, skippedTransactions: 0 },
         };
       }),

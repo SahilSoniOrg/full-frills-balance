@@ -18,10 +18,17 @@ function minimalImport(overrides?: {
       accountType: 'ASSET',
       currencyCode: 'USD',
     },
+    {
+      id: 'acc-2',
+      name: 'Expenses',
+      accountType: 'EXPENSE',
+      currencyCode: 'USD',
+    },
   ];
 
   const journalId = 'j-1' as JournalId;
   const accountId = 'acc-1' as AccountId;
+  const categoryId = 'acc-2' as AccountId;
 
   const journals: ImportedJournal[] = overrides?.journals ?? [
     {
@@ -40,7 +47,7 @@ function minimalImport(overrides?: {
     {
       id: 't-1' as TransactionId,
       journalId,
-      accountId,
+      accountId: categoryId,
       amount: 10,
       transactionType: 'DEBIT',
       currencyCode: 'USD',
@@ -112,5 +119,59 @@ describe('validateImportedData', () => {
     });
 
     expect(() => validateImportedData(data)).toThrow(/journal "j-only-id" \(j-only-id\)/);
+  });
+
+  it('rejects transactions that reference a missing account', () => {
+    const data = minimalImport({
+      transactions: [
+        {
+          id: 't-1' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'missing-account' as AccountId,
+          amount: 10,
+          transactionType: 'DEBIT',
+          currencyCode: 'USD',
+          transactionDate: Date.now(),
+        },
+        {
+          id: 't-2' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'acc-1' as AccountId,
+          amount: 10,
+          transactionType: 'CREDIT',
+          currencyCode: 'USD',
+          transactionDate: Date.now(),
+        },
+      ],
+    });
+
+    expect(() => validateImportedData(data)).toThrow(/missing account "missing-account"/);
+  });
+
+  it('rejects duplicate record ids within an imported table', () => {
+    const data = minimalImport({
+      transactions: [
+        {
+          id: 't-1' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'acc-2' as AccountId,
+          amount: 10,
+          transactionType: 'DEBIT',
+          currencyCode: 'USD',
+          transactionDate: Date.now(),
+        },
+        {
+          id: 't-1' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'acc-1' as AccountId,
+          amount: 10,
+          transactionType: 'CREDIT',
+          currencyCode: 'USD',
+          transactionDate: Date.now(),
+        },
+      ],
+    });
+
+    expect(() => validateImportedData(data)).toThrow(/duplicate transaction id "t-1"/);
   });
 });

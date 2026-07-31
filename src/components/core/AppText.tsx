@@ -115,6 +115,7 @@ export const AppText = memo(function AppText({
     loadedFontId,
     fontId,
     children,
+    themeMode,
   ]);
 
   return (

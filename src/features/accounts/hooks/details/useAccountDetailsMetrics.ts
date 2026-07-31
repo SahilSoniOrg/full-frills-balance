@@ -4,7 +4,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeAccountChartTransactions } from '@/src/services/accounts/accountReadService';
-import { buildAccountRollingBalanceSeries } from '@/src/services/projections';
+import { buildAccountRollingBalanceSeries, RunningBalanceTx } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange } from '@/src/utils/dateUtils';
@@ -149,7 +149,10 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
   const { chartData, rollingAverageData, xTicks } = useMemo(
     () =>
       buildAccountRollingBalanceSeries({
-        transactions: chartTransactions ?? [],
+        transactions: (chartTransactions ?? []).map<RunningBalanceTx>(transaction => ({
+          transactionDate: transaction.transactionDate,
+          runningBalance: transaction.runningBalance,
+        })),
         visibleStart: dateRange?.startDate,
         visibleEnd: dateRange?.endDate,
         msPerDay: AppConfig.time.msPerDay,

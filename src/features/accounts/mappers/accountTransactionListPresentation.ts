@@ -1,3 +1,4 @@
+import { TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 
 /** Inserts reconciled markers into grouped transaction list items. */
@@ -16,7 +17,7 @@ export function injectReconciledMarkersIntoTransactionList(
     if (!markerAdded) {
       if (item.type === 'transaction' && item.date && item.date <= reconTime) {
         result.push({
-          id: 'reconciled-separator',
+          id: 'reconciled-separator' as TransactionId,
           type: 'reconciledMarker',
           date: reconTime,
         });
@@ -29,7 +30,7 @@ export function injectReconciledMarkersIntoTransactionList(
           if (reconTime <= endOfDay || item.isCollapsed) markerAdded = true;
           if (!item.isCollapsed && reconTime > endOfDay) {
             result.push({
-              id: 'reconciled-separator',
+              id: 'reconciled-separator' as TransactionId,
               type: 'reconciledMarker',
               date: reconTime,
             });

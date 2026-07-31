@@ -12,7 +12,7 @@ import { Shape, Spacing } from '@/src/constants';
 import { useAiBenchmarkViewModel } from '@/src/features/journal/hooks/useAiBenchmarkViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function AiBenchmarkView() {

@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { AccountId } from '@/src/types/domain';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccountPickerList,
   CreateAccountIntent,
