@@ -4,11 +4,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import {
-  ModeHandleProvider,
-  useRegisterModeHandle,
-} from '@/src/features/journal/entry/modes/ModeHandleContext';
-import { ModeHandleVoiceParams } from '@/src/features/journal/entry/modes/ModeHandle';
+import { ModeHandleProvider } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 import { ReactNode } from 'react';
@@ -25,6 +21,31 @@ jest.mock('@/src/features/journal/entry/hooks/useJournalEditor', () => ({
   useJournalEditor: jest.fn(),
 }));
 
+jest.mock('@/src/features/journal/entry/hooks/useSplitJournalEditor', () => ({
+  useSplitJournalEditor: jest.fn(() => ({
+    sourceAccountId: '',
+    setSourceAccountId: jest.fn(),
+    totalAmount: '',
+    setTotalAmount: jest.fn(),
+    splits: [],
+    addSplitRow: jest.fn(),
+    removeSplitRow: jest.fn(),
+    updateSplitRow: jest.fn(),
+    totals: { total: 0, allocated: 0, remaining: 0 },
+    isValid: false,
+    validationError: null,
+    transactionAccounts: [],
+    expenseAccounts: [],
+    sourceAccount: undefined,
+    displayCurrency: 'INR',
+    openSourceAccountPicker: jest.fn(),
+    openSplitAccountPicker: jest.fn(),
+    handleSave: jest.fn(),
+    isSubmitting: false,
+    isValidTotal: false,
+  })),
+}));
+
 jest.mock('@/src/features/journal/hooks/useJournalSuggestions', () => ({
   useJournalSuggestions: jest.fn(() => ({ suggestions: [] })),
 }));
@@ -32,20 +53,6 @@ jest.mock('@/src/features/journal/hooks/useJournalSuggestions', () => ({
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(() => ({})),
 }));
-
-function VoiceApplyRegistrar({
-  applyVoice,
-}: {
-  applyVoice: (params: ModeHandleVoiceParams) => void;
-}) {
-  useRegisterModeHandle({
-    submitLabel: 'Save',
-    isSubmitDisabled: false,
-    submit: () => {},
-    applyVoice,
-  });
-  return null;
-}
 
 describe('useJournalEntryShell - Voice Input', () => {
   const mockWorkplaceId = 'workplace-123' as WorkplaceId;
@@ -121,46 +128,12 @@ describe('useJournalEntryShell - Voice Input', () => {
     (useJournalEditor as jest.Mock).mockReturnValue(mockEditor);
   });
 
-  it('routes guided voice apply through ModeHandle.applyVoice', () => {
-    mockEditor.isGuidedMode = true;
-    const applyVoice = jest.fn();
+  function wrapper({ children }: { children: ReactNode }) {
+    return <ModeHandleProvider>{children}</ModeHandleProvider>;
+  }
 
-    function wrapper({ children }: { children: ReactNode }) {
-      return (
-        <ModeHandleProvider>
-          <VoiceApplyRegistrar applyVoice={applyVoice} />
-          {children}
-        </ModeHandleProvider>
-      );
-    }
-
-    const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
-
-    act(() => {
-      result.current.handleApplyVoiceInput({
-        amount: 250,
-        merchantName: 'Starbucks Coffee',
-        direction: 'debit',
-        sourceAccountId: 'acc-cash' as AccountId,
-        categoryAccountId: 'acc-food' as AccountId,
-        transcription: '250 rs for coffee from cash',
-      });
-    });
-
-    expect(mockEditor.setDescription).toHaveBeenCalledWith('Starbucks Coffee');
-    expect(mockEditor.setNotes).toHaveBeenCalledWith(
-      'Spoken transcript: 250 rs for coffee from cash',
-    );
-    expect(applyVoice).toHaveBeenCalled();
-    expect(mockEditor.setLines).not.toHaveBeenCalled();
-  });
-
-  it('updates transaction lines in Advanced Mode when voice transcription is applied', () => {
+  it('updates transaction lines when voice transcription is applied', () => {
     mockEditor.isGuidedMode = false;
-
-    function wrapper({ children }: { children: ReactNode }) {
-      return <ModeHandleProvider>{children}</ModeHandleProvider>;
-    }
 
     const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
 
@@ -198,12 +171,8 @@ describe('useJournalEntryShell - Voice Input', () => {
     expect(creditLine.amount).toBe('250');
   });
 
-  it('updates transaction lines for income when no ModeHandle.applyVoice is registered', () => {
+  it('updates transaction lines for income voice apply', () => {
     mockEditor.isGuidedMode = false;
-
-    function wrapper({ children }: { children: ReactNode }) {
-      return <ModeHandleProvider>{children}</ModeHandleProvider>;
-    }
 
     const { result } = renderHook(() => useJournalEntryShell(), { wrapper });
 

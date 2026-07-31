@@ -4,7 +4,6 @@ import {
   useRegisterModeHandle,
 } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { AccountId } from '@/src/types/domain';
 import { act, render, renderHook } from '@testing-library/react-native';
 import { ReactNode, useState } from 'react';
 import { Text } from 'react-native';
@@ -66,37 +65,36 @@ describe('ModeHandle registry', () => {
     expect(result.current.active?.isSubmitDisabled).toBe(false);
   });
 
-  it('invokes latest applyAccount through stable registration', () => {
-    const applyA = jest.fn();
-    const applyB = jest.fn();
+  it('invokes latest submit through stable registration', () => {
+    const submitA = jest.fn();
+    const submitB = jest.fn();
 
-    function useHarness(applyAccount: (lineId: string, accountId: AccountId) => void) {
+    function useHarness(submit: () => void) {
       useRegisterModeHandle({
         submitLabel: 'Save',
         isSubmitDisabled: false,
-        submit: () => {},
-        applyAccount,
+        submit,
       });
       return useActiveModeHandle();
     }
 
     const { result, rerender } = renderHook(
-      ({ apply }: { apply: typeof applyA }) => useHarness(apply),
-      { wrapper, initialProps: { apply: applyA } },
+      ({ submit }: { submit: typeof submitA }) => useHarness(submit),
+      { wrapper, initialProps: { submit: submitA } },
     );
 
     act(() => {
-      result.current?.applyAccount?.('line-1', 'acc-1' as AccountId);
+      result.current?.submit();
     });
-    expect(applyA).toHaveBeenCalledWith('line-1', 'acc-1');
+    expect(submitA).toHaveBeenCalledTimes(1);
 
-    rerender({ apply: applyB });
+    rerender({ submit: submitB });
 
     act(() => {
-      result.current?.applyAccount?.('line-2', 'acc-2' as AccountId);
+      result.current?.submit();
     });
-    expect(applyB).toHaveBeenCalledWith('line-2', 'acc-2');
-    expect(applyA).toHaveBeenCalledTimes(1);
+    expect(submitB).toHaveBeenCalledTimes(1);
+    expect(submitA).toHaveBeenCalledTimes(1);
   });
 
   it('clears the active handle when the registrar unmounts', () => {

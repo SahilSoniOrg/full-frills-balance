@@ -1,8 +1,12 @@
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
 import { BulkModePanel } from '@/src/features/journal/entry/modes/bulk/BulkModePanel';
-import { GuidedModePanel } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import {
+  GuidedFooterAmount,
+  GuidedModePanel,
+} from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import Account from '@/src/data/models/Account';
@@ -18,9 +22,11 @@ export type JournalEntryModeBodyProps = {
   onSelectAccountRequest: (lineId: string) => void;
   onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
   bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
+  splitEditor: SplitJournalController;
+  onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
 };
 
-/** Lazy-mounts only the active mode panel so inactive mode hooks are not running. */
+/** Lazy-mounts only the active mode panel so inactive mode *forms* are not running. */
 export function JournalEntryModeBody({
   activeMode,
   accounts,
@@ -30,6 +36,8 @@ export function JournalEntryModeBody({
   onSelectAccountRequest,
   onBulkSaveSuccess,
   bulkActionsRef,
+  splitEditor,
+  onGuidedFooterAmountChange,
 }: JournalEntryModeBodyProps) {
   if (activeMode === 'guided') {
     return (
@@ -37,6 +45,7 @@ export function JournalEntryModeBody({
         accounts={accounts}
         editor={editor}
         onSelectAccountRequest={onSelectAccountRequest}
+        onFooterAmountChange={onGuidedFooterAmountChange}
       />
     );
   }
@@ -44,9 +53,9 @@ export function JournalEntryModeBody({
   if (activeMode === 'split') {
     return (
       <SplitModePanel
-        accounts={accounts}
-        editor={editor}
-        onSelectAccountRequest={onSelectAccountRequest}
+        splitEditor={splitEditor}
+        isEdit={editor.isEdit}
+        isSubmitting={editor.isSubmitting}
       />
     );
   }

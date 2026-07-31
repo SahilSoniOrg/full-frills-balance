@@ -11,14 +11,18 @@ import { AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
+type SplitRowPick = { id: string; accountId?: AccountId };
+
 export interface UseJournalEntryAccountPickerOptions {
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
   activeMode: JournalEntryScreenMode;
-  /** Mode-agnostic apply; parent routes via ModeHandle.applyAccount or editor lines. */
+  /** Mode-agnostic apply; parent routes via switch(activeMode). */
   applyAccountToActiveLine: (lineId: string, accountId: AccountId) => void;
-  /** Mode-local picker highlight (e.g. split draft via ModeHandle). */
+  /** Mode-local picker highlight override (e.g. split draft). */
   resolveModeSelectedAccountId?: (activeLineId: string) => AccountId | undefined;
+  splitSourceAccountId?: AccountId;
+  splitRows?: SplitRowPick[];
 }
 
 /**
@@ -26,8 +30,15 @@ export interface UseJournalEntryAccountPickerOptions {
  * Split / guided / advanced account application is injected via callback.
  */
 export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPickerOptions) {
-  const { accounts, editor, activeMode, applyAccountToActiveLine, resolveModeSelectedAccountId } =
-    options;
+  const {
+    accounts,
+    editor,
+    activeMode,
+    applyAccountToActiveLine,
+    resolveModeSelectedAccountId,
+    splitSourceAccountId,
+    splitRows = [],
+  } = options;
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -89,15 +100,24 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
 
   const selectedAccountId = useMemo(() => {
     if (activeLineId && resolveModeSelectedAccountId) {
-      return resolveModeSelectedAccountId(activeLineId);
+      const resolved = resolveModeSelectedAccountId(activeLineId);
+      if (resolved !== undefined) return resolved;
     }
     return resolveJournalEntrySelectedAccountId({
       activeMode,
       activeLineId,
       lines: editor.lines,
-      splitRows: [],
+      splitSourceAccountId,
+      splitRows,
     });
-  }, [activeMode, activeLineId, editor.lines, resolveModeSelectedAccountId]);
+  }, [
+    activeMode,
+    activeLineId,
+    editor.lines,
+    resolveModeSelectedAccountId,
+    splitSourceAccountId,
+    splitRows,
+  ]);
 
   return {
     showAccountPicker,

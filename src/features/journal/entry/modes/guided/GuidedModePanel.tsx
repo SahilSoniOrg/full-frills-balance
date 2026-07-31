@@ -1,27 +1,42 @@
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
+import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
+  resolveSimpleTypeAccentColor,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { ModeHandle, ModeHandleVoiceParams } from '@/src/features/journal/entry/modes/ModeHandle';
+import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import Account from '@/src/data/models/Account';
-import { AccountRole } from '@/src/types/domain';
-import { useCallback, useMemo, useState } from 'react';
+import { useTheme } from '@/src/hooks/use-theme';
+import { AccountRole, TabType } from '@/src/types/domain';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard } from 'react-native';
+
+export type GuidedFooterAmount = {
+  amount: string;
+  setAmount: (amount: string) => void;
+  accentType: TabType;
+  displayCurrency: string;
+  onFocus: () => void;
+  onBlur: () => void;
+};
 
 export type GuidedModePanelProps = {
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
   onSelectAccountRequest: (lineId: string) => void;
+  /** Shell footer top slot — guided amount chrome (not ModeHandle). */
+  onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
 };
 
 export function GuidedModePanel({
   accounts,
   editor,
   onSelectAccountRequest,
+  onFooterAmountChange,
 }: GuidedModePanelProps) {
   const [isAmountFocused, setIsAmountFocused] = useState(false);
 
@@ -56,26 +71,7 @@ export function GuidedModePanel({
   const onFocusAmount = useCallback(() => setIsAmountFocused(true), []);
   const onBlurAmount = useCallback(() => setIsAmountFocused(false), []);
 
-  const applyVoice = useCallback(
-    (params: ModeHandleVoiceParams) => {
-      const mappedType =
-        params.transactionType || (params.direction === 'credit' ? 'income' : 'expense');
-      simpleEditor.setType(mappedType);
-      if (params.amount) {
-        simpleEditor.setAmount(String(params.amount));
-      }
-      if (mappedType === 'income') {
-        if (params.categoryAccountId) simpleEditor.setSourceId(params.categoryAccountId);
-        if (params.sourceAccountId) simpleEditor.setDestinationId(params.sourceAccountId);
-      } else {
-        if (params.sourceAccountId) simpleEditor.setSourceId(params.sourceAccountId);
-        if (params.categoryAccountId) simpleEditor.setDestinationId(params.categoryAccountId);
-      }
-    },
-    [simpleEditor],
-  );
-
-  const footerAmount = useMemo(
+  const footerAmount = useMemo<GuidedFooterAmount>(
     () => ({
       amount: simpleEditor.amount,
       setAmount: simpleEditor.setAmount,
@@ -93,6 +89,11 @@ export function GuidedModePanel({
       onBlurAmount,
     ],
   );
+
+  useEffect(() => {
+    onFooterAmountChange?.(footerAmount);
+    return () => onFooterAmountChange?.(null);
+  }, [footerAmount, onFooterAmountChange]);
 
   const handle = useMemo<ModeHandle>(
     () => ({
@@ -116,8 +117,6 @@ export function GuidedModePanel({
         isAdvancedValid: false,
       }),
       submit,
-      applyVoice,
-      footerAmount,
     }),
     [
       isAmountFocused,
@@ -127,12 +126,31 @@ export function GuidedModePanel({
       editor.isEdit,
       editor.isSubmitting,
       submit,
-      applyVoice,
-      footerAmount,
     ],
   );
 
   useRegisterModeHandle(handle);
 
   return <SimpleForm {...simpleEditor} />;
+}
+
+/** Renders guided amount strip for SubmitFooter topSlot from shell-held chrome. */
+export function GuidedFooterAmountSlot({
+  footerAmount,
+}: {
+  footerAmount: GuidedFooterAmount;
+}): ReactNode {
+  const { theme } = useTheme();
+  return (
+    <SimpleFormAmountInput
+      amount={footerAmount.amount}
+      setAmount={footerAmount.setAmount}
+      readOnly={false}
+      activeColor={resolveSimpleTypeAccentColor(footerAmount.accentType, theme)}
+      displayCurrency={footerAmount.displayCurrency}
+      onFocus={footerAmount.onFocus}
+      onBlur={footerAmount.onBlur}
+      variant="default"
+    />
+  );
 }

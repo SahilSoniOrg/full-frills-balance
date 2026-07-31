@@ -1,37 +1,11 @@
-import { AccountId, TabType } from '@/src/types/domain';
-
-export type ModeHandleVoiceParams = {
-  amount?: number;
-  merchantName?: string;
-  direction: 'debit' | 'credit' | 'unknown';
-  transactionType?: 'expense' | 'income' | 'transfer';
-  sourceAccountId: AccountId;
-  categoryAccountId: AccountId;
-  transcription: string;
-};
-
 /**
- * Contract the active journal entry mode panel registers with the shell.
- * Shell footer / account apply read the current handle; panels clear on unmount.
+ * Submit-only contract the active journal entry mode panel registers with the shell.
+ * Shell footer reads the current handle; panels clear on unmount.
+ * Account apply, voice, and footer chrome are owned outside this registry.
  */
 export type ModeHandle = {
   submitLabel: string;
   isSubmitDisabled: boolean;
   submit: () => void;
   isSubmitting?: boolean;
-  /** Mode-local account apply (e.g. split draft). Absent → shell updates editor lines. */
-  applyAccount?: (lineId: string, accountId: AccountId) => void;
-  /** Mode-local picker highlight (e.g. split draft ids). */
-  resolveSelectedAccountId?: (activeLineId: string) => AccountId | undefined;
-  /** Guided voice apply via simple editor. Absent → shell applies to editor lines. */
-  applyVoice?: (params: ModeHandleVoiceParams) => void;
-  /** Guided amount strip rendered in the submit footer top slot. */
-  footerAmount?: {
-    amount: string;
-    setAmount: (amount: string) => void;
-    accentType: TabType;
-    displayCurrency: string;
-    onFocus: () => void;
-    onBlur: () => void;
-  };
 };

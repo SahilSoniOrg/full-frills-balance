@@ -7,6 +7,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
+import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import {
   createSmsJournalAfterSaveHandler,
   JournalEntryScreenMode,
@@ -14,11 +15,13 @@ import {
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import { GuidedFooterAmount } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -26,7 +29,7 @@ import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } f
 
 /**
  * Shell-facing contract for journal entry.
- * Owns screen mode + ModeHandle wiring; mode panels own mode-local editors.
+ * Owns screen mode + ModeHandle (submit) wiring; mode panels own mode-local UI.
  */
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
@@ -37,6 +40,9 @@ export interface JournalEntryShell {
   setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;
   onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
   bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
+  splitEditor: SplitJournalController;
+  guidedFooterAmount: GuidedFooterAmount | null;
+  onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   isLoading: boolean;
   headerTitle: string;
   showEditBanner: boolean;
@@ -68,14 +74,13 @@ export interface JournalEntryShell {
 export type JournalEntryViewModel = JournalEntryShell;
 
 /**
- * Journal entry shell: screen mode SSOT, shared editor, account picker, ModeHandle consumer.
- * Guided/Advanced/Bulk/Split editors live in lazy mode panels.
+ * Journal entry shell: screen mode SSOT, shared editor, account picker.
+ * Split draft lives here so account apply works via switch(activeMode), not ModeHandle.
  */
 export function useJournalEntryShell(): JournalEntryShell {
   const params = useLocalSearchParams();
   const route = parseJournalEntryRouteParams(params);
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const modeHandle = useActiveModeHandle();
 
   const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
 
@@ -114,7 +119,6 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
-  // Screen mode owned here only (one-way → editor.isGuidedMode).
   const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
     resolveJournalEntryScreenMode(route.mode),
   );
@@ -139,24 +143,56 @@ export function useJournalEntryShell(): JournalEntryShell {
     [isSimpleModeDisabled],
   );
 
+  const onSelectAccountRequestRef = useRef<(lineId: string) => void>(() => {});
+
+  const splitEditor = useSplitJournalEditor({
+    accounts,
+    editor,
+    onSelectAccountRequest: (lineId: string) => onSelectAccountRequestRef.current(lineId),
+    isActive: activeMode === 'split',
+  });
+
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {
-      if (modeHandle?.applyAccount) {
-        modeHandle.applyAccount(lineId, accountId);
-        return;
-      }
-
-      const account = accounts.find(a => a.id === accountId);
-      if (account) {
-        editor.updateLine(lineId, {
-          accountId,
-          accountName: account.name,
-          accountType: account.accountType,
-          accountCurrency: account.currencyCode,
-        });
+      switch (activeMode) {
+        case 'split': {
+          if (lineId === SPLIT_SOURCE_LINE_ID) {
+            splitEditor.setSourceAccountId(accountId);
+          } else {
+            splitEditor.updateSplitRow(lineId, { accountId });
+          }
+          return;
+        }
+        case 'guided':
+        case 'advanced':
+        case 'bulk':
+        default: {
+          const account = accounts.find(a => a.id === accountId);
+          if (account) {
+            editor.updateLine(lineId, {
+              accountId,
+              accountName: account.name,
+              accountType: account.accountType,
+              accountCurrency: account.currencyCode,
+            });
+          }
+        }
       }
     },
-    [accounts, editor, modeHandle],
+    [accounts, activeMode, editor, splitEditor],
+  );
+
+  const resolveModeSelectedAccountId = useCallback(
+    (activeLineId: string) => {
+      if (activeMode !== 'split') return undefined;
+      if (activeLineId === SPLIT_SOURCE_LINE_ID) {
+        return splitEditor.sourceAccountId !== EMPTY_ACCOUNT_ID
+          ? splitEditor.sourceAccountId
+          : undefined;
+      }
+      return splitEditor.splits.find(s => s.id === activeLineId)?.accountId;
+    },
+    [activeMode, splitEditor.sourceAccountId, splitEditor.splits],
   );
 
   const {
@@ -172,8 +208,19 @@ export function useJournalEntryShell(): JournalEntryShell {
     editor,
     activeMode,
     applyAccountToActiveLine,
-    resolveModeSelectedAccountId: modeHandle?.resolveSelectedAccountId,
+    resolveModeSelectedAccountId,
+    splitSourceAccountId: splitEditor.sourceAccountId,
+    splitRows: splitEditor.splits,
   });
+
+  useEffect(() => {
+    onSelectAccountRequestRef.current = onSelectAccountRequest;
+  }, [onSelectAccountRequest]);
+
+  const [guidedFooterAmount, setGuidedFooterAmount] = useState<GuidedFooterAmount | null>(null);
+  const onGuidedFooterAmountChange = useCallback((footer: GuidedFooterAmount | null) => {
+    setGuidedFooterAmount(footer);
+  }, []);
 
   const [savedSummary, setSavedSummary] = useState<{
     count: number;
@@ -220,11 +267,7 @@ export function useJournalEntryShell(): JournalEntryShell {
         editor.setNotes(`Spoken transcript: ${transcription}`);
       }
 
-      if (modeHandle?.applyVoice) {
-        modeHandle.applyVoice(params);
-        return;
-      }
-
+      // Temporary shell fallback until Guided owns voice (next commit).
       const mappedType = transactionType || (direction === 'credit' ? 'income' : 'expense');
       editor.setTransactionType(mappedType);
       editor.setLines(prev =>
@@ -253,7 +296,7 @@ export function useJournalEntryShell(): JournalEntryShell {
         }),
       );
     },
-    [accounts, editor, modeHandle],
+    [accounts, editor],
   );
 
   return {
@@ -265,6 +308,9 @@ export function useJournalEntryShell(): JournalEntryShell {
     setSavedSummary,
     onBulkSaveSuccess,
     bulkActionsRef,
+    splitEditor,
+    guidedFooterAmount,
+    onGuidedFooterAmountChange,
     isLoading: isLoadingAccounts || editor.isLoading,
     headerTitle,
     showEditBanner: editor.isEdit,

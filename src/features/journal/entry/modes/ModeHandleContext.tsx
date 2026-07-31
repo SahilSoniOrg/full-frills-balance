@@ -37,22 +37,12 @@ function useModeHandleRegistry(): ModeHandleRegistry {
 
 /**
  * Active mode panel: publish submit contract for the shell footer.
- * Re-registers when label / disabled / submitting / footer amount fields change.
- * Cleared on unmount.
+ * Re-registers when label / disabled / submitting change. Cleared on unmount.
  */
 export function useRegisterModeHandle(handle: ModeHandle): void {
   const { setHandle } = useModeHandleRegistry();
 
-  const {
-    submitLabel,
-    isSubmitDisabled,
-    isSubmitting,
-    submit,
-    applyAccount,
-    resolveSelectedAccountId,
-    applyVoice,
-    footerAmount,
-  } = handle;
+  const { submitLabel, isSubmitDisabled, isSubmitting, submit } = handle;
 
   useEffect(() => {
     setHandle({
@@ -60,23 +50,9 @@ export function useRegisterModeHandle(handle: ModeHandle): void {
       isSubmitDisabled,
       isSubmitting,
       submit,
-      applyAccount,
-      resolveSelectedAccountId,
-      applyVoice,
-      footerAmount,
     });
     return () => setHandle(null);
-  }, [
-    submitLabel,
-    isSubmitDisabled,
-    isSubmitting,
-    submit,
-    applyAccount,
-    resolveSelectedAccountId,
-    applyVoice,
-    footerAmount,
-    setHandle,
-  ]);
+  }, [submitLabel, isSubmitDisabled, isSubmitting, submit, setHandle]);
 }
 
 /** Shell: read the currently registered mode handle (null while switching / before mount). */
