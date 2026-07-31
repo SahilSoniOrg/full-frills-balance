@@ -1,21 +1,19 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {
   buildJournalLinesFromSplitState,
   computeSplitTotals,
-  createEmptySplitRow,
   SPLIT_SOURCE_LINE_ID,
-  SplitRowState,
   validateSplitState,
 } from '@/src/services/journal/splitJournalHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { preferences } from '@/src/utils/preferences';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
+import { useSplitEntryState } from './useSplitEntryState';
 
 export interface UseSplitJournalEditorProps {
   accounts: Account[];
@@ -44,12 +42,16 @@ export function useSplitJournalEditor({
     setDescription,
   } = editor;
 
-  const [sourceAccountId, setSourceAccountId] = useState<AccountId>(EMPTY_ACCOUNT_ID);
-  const [totalAmount, setTotalAmount] = useState('');
-  const [splits, setSplits] = useState<SplitRowState[]>(() => [
-    createEmptySplitRow(generateId()),
-    createEmptySplitRow(generateId()),
-  ]);
+  const {
+    sourceAccountId,
+    setSourceAccountId,
+    totalAmount,
+    setTotalAmount,
+    splits,
+    addSplitRow,
+    removeSplitRow,
+    updateSplitRow,
+  } = useSplitEntryState();
 
   const resolvedSourceAccountId = useMemo(() => {
     if (sourceAccountId !== EMPTY_ACCOUNT_ID) return sourceAccountId;
@@ -93,24 +95,6 @@ export function useSplitJournalEditor({
   );
 
   const displayCurrency = sourceAccount?.currencyCode || accounts[0]?.currencyCode || 'USD';
-
-  const addSplitRow = useCallback(() => {
-    setSplits(prev => [...prev, createEmptySplitRow(generateId())]);
-  }, []);
-
-  const removeSplitRow = useCallback((id: string) => {
-    setSplits(prev => {
-      if (prev.length <= 2) return prev;
-      return prev.filter(row => row.id !== id);
-    });
-  }, []);
-
-  const updateSplitRow = useCallback(
-    (id: string, patch: Partial<Pick<SplitRowState, 'accountId' | 'amount'>>) => {
-      setSplits(prev => prev.map(row => (row.id === id ? { ...row, ...patch } : row)));
-    },
-    [],
-  );
 
   const openSourceAccountPicker = useCallback(() => {
     onSelectAccountRequest(SPLIT_SOURCE_LINE_ID);
@@ -181,7 +165,9 @@ export function useSplitJournalEditor({
     }),
     [
       resolvedSourceAccountId,
+      setSourceAccountId,
       totalAmount,
+      setTotalAmount,
       splits,
       addSplitRow,
       removeSplitRow,
