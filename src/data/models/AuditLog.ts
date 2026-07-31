@@ -9,6 +9,12 @@ export enum AuditAction {
 
 export type AuditEntityType = 'account' | 'journal' | 'transaction';
 
+export type ParsedAuditChanges = {
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
 export default class AuditLog extends BaseScopedModel {
   static table = 'audit_logs';
 
@@ -21,9 +27,12 @@ export default class AuditLog extends BaseScopedModel {
   @date('created_at') createdAt!: Date;
 
   // Helper to parse changes JSON
-  get parsedChanges(): any {
+  get parsedChanges(): ParsedAuditChanges | null {
     try {
-      return JSON.parse(this.changes);
+      const parsed: unknown = JSON.parse(this.changes);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+        ? (parsed as ParsedAuditChanges)
+        : null;
     } catch {
       return null;
     }

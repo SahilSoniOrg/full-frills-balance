@@ -29,6 +29,8 @@ export class AuditService {
     if (!log) return { success: false, error: AppConfig.strings.audit.errors.notFound(logId) };
     if (!log.canRevert)
       return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
+    const changes = log.parsedChanges;
+    if (!changes) return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
 
     const handler = revertRegistry.getHandler(log.entityType);
     if (!handler) {
@@ -39,7 +41,7 @@ export class AuditService {
     }
 
     try {
-      await handler(log.entityId, log.parsedChanges, log.action, workplaceId);
+      await handler(log.entityId, changes, log.action, workplaceId);
       return { success: true };
     } catch (error: unknown) {
       return {
