@@ -5,7 +5,8 @@ import {
   getThemeColors,
   Theme,
 } from '@/src/constants/design-tokens';
-import { useThemeOverride, useUI } from '@/src/contexts/UIContext';
+import { useThemeOverride } from '@/src/contexts/UIContext';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
 import { useCallback, useMemo } from 'react';
@@ -13,7 +14,7 @@ import { useCallback, useMemo } from 'react';
 const _contrastCache = new Map<string, string>();
 
 export function useTheme() {
-  const { themeMode: uiThemeMode, themeId, fontId } = useUI();
+  const { themeMode: uiThemeMode, themeId, fontId } = useThemePrefs();
   const themeOverride = useThemeOverride();
   const themeMode = themeOverride ?? uiThemeMode;
 

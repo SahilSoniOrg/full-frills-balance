@@ -1,5 +1,6 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
 import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';
 import { CrimsonText_700Bold } from '@expo-google-fonts/crimson-text/700Bold';
@@ -55,7 +56,8 @@ function loadDeepSpaceFonts(): Promise<void> {
  * useFonts - Dynamically loads fonts based on the selected theme.
  */
 export function useFonts() {
-  const { fontId, setFontsReady } = useUI();
+  const { fontId } = useThemePrefs();
+  const { setFontsReady } = useUI();
   const loadedFontSetsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {

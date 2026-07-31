@@ -8,7 +8,7 @@ import {
   ThemeId,
   ThemeIds,
 } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { Box, Stack } from '@/src/design-system';
 import { OnboardingStsPreview } from '@/src/features/onboarding/components/OnboardingStsPreview';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -35,16 +35,16 @@ let globalThemeId: ThemeId | null = null;
 
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const { theme } = useTheme();
-  const ui = useUI();
+  const { themeId, fontId, setThemeId, setFontId } = useThemePrefs();
 
-  const handleSelectTheme = (themeId: ThemeId) => {
+  const handleSelectTheme = (nextThemeId: ThemeId) => {
     void triggerHaptic('light');
-    ui.setThemeId(themeId);
+    setThemeId(nextThemeId);
   };
 
-  const handleSelectFont = (fontId: FontId) => {
+  const handleSelectFont = (nextFontId: FontId) => {
     void triggerHaptic('light');
-    ui.setFontId(fontId);
+    setFontId(nextFontId);
   };
 
   const strings = AppConfig.strings.onboarding.appearance;
@@ -58,8 +58,8 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   ];
 
   useEffect(() => {
-    globalThemeId = ui.themeId;
-  }, [ui.themeId]);
+    globalThemeId = themeId;
+  }, [themeId]);
   const [slideDirection, setSlideDirection] = useState<number>(1);
 
   const cycleTheme = (direction: number) => {
@@ -117,7 +117,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   };
 
   const getThemeLabel = (offset: number) => {
-    const currentIndex = THEME_ORDER.indexOf(ui.themeId);
+    const currentIndex = THEME_ORDER.indexOf(themeId);
     if (currentIndex === -1) return '';
     let targetIndex = currentIndex + offset;
     if (targetIndex >= THEME_ORDER.length) targetIndex = 0;
@@ -126,7 +126,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   };
 
   const renderFontOption = (id: FontId, label: string) => {
-    const isSelected = ui.fontId === id;
+    const isSelected = fontId === id;
     return (
       <Pressable style={{ flex: 1 }} onPress={() => handleSelectFont(id)}>
         <AppCard
@@ -200,7 +200,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           >
             <AppIcon name="chevronLeft" size={20} color={theme.textSecondary} />
             <MotiView
-              key={`prev-${ui.themeId}`}
+              key={`prev-${themeId}`}
               from={{ opacity: 0, translateX: slideDirection * 10 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ type: 'timing', duration: 250 }}
@@ -213,7 +213,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
 
           <View style={{ flex: 1, alignItems: 'center', overflow: 'hidden' }}>
             <MotiView
-              key={`curr-${ui.themeId}`}
+              key={`curr-${themeId}`}
               from={{ opacity: 0, translateX: slideDirection * 20 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ type: 'timing', duration: 250 }}
@@ -236,7 +236,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
             }}
           >
             <MotiView
-              key={`next-${ui.themeId}`}
+              key={`next-${themeId}`}
               from={{ opacity: 0, translateX: slideDirection * 10 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ type: 'timing', duration: 250 }}

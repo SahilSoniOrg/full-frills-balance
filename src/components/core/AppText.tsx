@@ -2,6 +2,7 @@ import { Typography } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
 import { processTextChildren, resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { memo, useMemo } from 'react';
@@ -28,7 +29,8 @@ export const AppText = memo(function AppText({
   ...props
 }: AppTextProps) {
   const { fonts, getVariantColors, theme, themeMode } = useTheme();
-  const { fontsReady, loadedFontId, fontId } = useUI();
+  const { fontId } = useThemePrefs();
+  const { fontsReady, loadedFontId } = useUI();
 
   const processedChildren = useMemo(() => processTextChildren(children), [children]);
 
