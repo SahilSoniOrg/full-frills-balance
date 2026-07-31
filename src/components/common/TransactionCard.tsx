@@ -1,6 +1,6 @@
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -66,7 +66,7 @@ const TransactionCardComponent = ({
   contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
-  const { isPrivacyMode: globalPrivacy } = useUI();
+  const { isPrivacyMode: globalPrivacy } = usePrivacyPrefs();
 
   const isPrivacyMode = overridePrivacy ?? globalPrivacy;
 

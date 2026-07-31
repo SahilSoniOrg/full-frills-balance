@@ -1,6 +1,6 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard/types/PlannedOccurrenceViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -35,7 +35,7 @@ export function PlannedPaymentsSection({
   isPrivacyMode: isPrivacyModeOverride,
 }: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
-  const { isPrivacyMode: globalPrivacyMode } = useUI();
+  const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
   const isPrivacyMode = isPrivacyModeOverride ?? globalPrivacyMode;
   const [isExpanded, setIsExpanded] = useState(false);
 

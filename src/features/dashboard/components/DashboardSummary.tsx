@@ -1,6 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Size, withOpacity } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -20,7 +20,7 @@ export const DashboardSummary = ({
   isHidden: controlledHidden,
 }: DashboardSummaryProps) => {
   const { theme, fonts } = useTheme();
-  const { isPrivacyMode } = useUI();
+  const { isPrivacyMode } = usePrivacyPrefs();
 
   const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : isPrivacyMode;
 

@@ -1,5 +1,6 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   filterAccountSectionsForTab,
@@ -71,7 +72,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { theme, onContrast } = useTheme();
   const { workplaceId } = useWorkplace();
 
-  const { showAccountMonthlyStats, isPrivacyMode } = useUI();
+  const { showAccountMonthlyStats } = useAccountDisplayPrefs();
+  const { isPrivacyMode } = usePrivacyPrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const mountTimeRef = useRef<number>(0);

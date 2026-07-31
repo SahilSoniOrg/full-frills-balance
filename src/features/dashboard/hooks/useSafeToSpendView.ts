@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import React, { useCallback, useMemo } from 'react';
@@ -28,7 +28,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
 } {
   const { currencyCode, isLoading: propsIsLoading } = props;
 
-  const { isPrivacyMode: globalPrivacyMode } = useUI();
+  const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
   const isPrivacyMode = props.uiState?.isPrivacyMode ?? globalPrivacyMode;
 
   // UI State management

@@ -1,6 +1,9 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
+import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import {
@@ -60,14 +63,10 @@ export interface DashboardViewModel {
 
 export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId } = useWorkplace();
-  const {
-    userName,
-    hasCompletedOnboarding,
-    isInitialized,
-    isAppReady,
-    isPrivacyMode,
-    isSmsImportEnabled,
-  } = useUI();
+  const { hasCompletedOnboarding, isInitialized, isAppReady } = useUI();
+  const { userName } = useProfilePrefs();
+  const { isPrivacyMode } = usePrivacyPrefs();
+  const { isSmsImportEnabled } = useSmsPrefs();
   const { showSafeToSpendChart } = useDashboardPreferences();
 
   const mountTimeRef = useRef<number>(0);
