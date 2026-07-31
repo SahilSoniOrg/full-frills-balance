@@ -1,18 +1,23 @@
 /**
  * App shell context: session/boot state (lock, fonts, import restart, onboarding
- * completion flag) and share-format preference still exposed for data flows.
- *
- * Prefer scoped pref hooks (`useThemePrefs`, `usePrivacyPrefs`, etc.) for persisted
- * user preferences. This context adds non-persisted session state and a few shell
- * fields that routing/bootstrap still need.
+ * completion flag). Persisted prefs use scoped hooks (`useThemePrefs`,
+ * `usePrivacyPrefs`, `useSharePrefs`, etc.) — this provider only does targeted
+ * reads for shell-derived flags (onboarding, font readiness, app lock).
  */
 
 import { FontId, FontIds, ThemeMode } from '@/src/constants/design-tokens';
-import { ShareFormat } from '@/src/types/sharing';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { logger } from '@/src/utils/logger';
-import { preferences, usePreferences } from '@/src/utils/preferences';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { preferences } from '@/src/utils/preferences';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 export interface ImportStats {
   accounts: number;
@@ -51,9 +56,6 @@ interface UIContextType extends UISessionState {
   // Shell routing / onboarding
   hasCompletedOnboarding: boolean;
 
-  // Share format (kept on shell for data management / list share flows)
-  defaultShareFormat: ShareFormat;
-
   // Derived
   isAppCurrentlyLocked: boolean;
   isAppReady: boolean;
@@ -67,7 +69,6 @@ interface UIContextType extends UISessionState {
   authenticateSession: (unlocked: boolean) => void;
   setIsAppActive: (isActive: boolean) => void;
   setIsLockAuthenticating: (isAuthenticating: boolean) => void;
-  setDefaultShareFormat: (format: ShareFormat) => void;
   requireRestart: (options: RestartOptions) => void;
 }
 
@@ -102,9 +103,35 @@ const INITIAL_SESSION: UISessionState = {
 };
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
-  const prefs = usePreferences();
-
   const [session, setSession] = useState<UISessionState>(INITIAL_SESSION);
+
+  // Targeted pref reads only — never observeAll / usePreferences.
+  const hasCompletedOnboarding = useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.observe('onboardingCompleted').subscribe(() => onStoreChange());
+      return () => sub.unsubscribe();
+    },
+    () => preferences.onboardingCompleted,
+    () => preferences.onboardingCompleted,
+  );
+
+  const fontId = useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.themePrefs.observeFontId().subscribe(() => onStoreChange());
+      return () => sub.unsubscribe();
+    },
+    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
+    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
+  );
+
+  const isAppLockEnabled = useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.privacy.observeAppLockEnabled().subscribe(() => onStoreChange());
+      return () => sub.unsubscribe();
+    },
+    () => preferences.privacy.isAppLockEnabled || false,
+    () => preferences.privacy.isAppLockEnabled || false,
+  );
 
   // Ensure AsyncStorage → MMKV migration completes before marking ready
   useEffect(() => {
@@ -126,12 +153,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
     loadPreferences();
   }, []);
-
-  const hasCompletedOnboarding = prefs.onboardingCompleted;
-  // Internal reads for derived shell flags — not exposed on context value.
-  const fontId = prefs.fontId || FontIds.DEEP_SPACE;
-  const isAppLockEnabled = prefs.isAppLockEnabled || false;
-  const defaultShareFormat = prefs.defaultShareFormat || ShareFormat.TEXT;
 
   const setFontsReady = useCallback(
     (fontsReady: boolean, nextFontId?: FontId) => {
@@ -182,14 +203,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setSession(prev => ({ ...prev, isLockAuthenticating }));
   }, []);
 
-  const setDefaultShareFormat = useCallback((format: ShareFormat) => {
-    try {
-      preferences.setDefaultShareFormat(format);
-    } catch (error) {
-      logger.warn('[UIContext] Failed to set default share format', { error });
-    }
-  }, []);
-
   const requireRestart = useCallback((options: RestartOptions) => {
     setSession(prev => ({
       ...prev,
@@ -223,7 +236,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<UIContextType>(
     () => ({
       hasCompletedOnboarding,
-      defaultShareFormat,
       ...session,
       isAppCurrentlyLocked,
       isAppReady,
@@ -233,12 +245,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       authenticateSession,
       setIsAppActive,
       setIsLockAuthenticating,
-      setDefaultShareFormat,
       requireRestart,
     }),
     [
       hasCompletedOnboarding,
-      defaultShareFormat,
       session,
       isAppCurrentlyLocked,
       isAppReady,
@@ -248,7 +258,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       authenticateSession,
       setIsAppActive,
       setIsLockAuthenticating,
-      setDefaultShareFormat,
       requireRestart,
     ],
   );

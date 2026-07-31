@@ -4,7 +4,6 @@ import React, { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UIContext } from '@/src/contexts/UIContext';
-import { ShareFormat } from '@/src/types/sharing';
 
 const mockUIContext: any = {
   hasCompletedOnboarding: true,
@@ -22,7 +21,6 @@ const mockUIContext: any = {
   isLockAuthenticating: false,
   isAppCurrentlyLocked: false,
   isAppReady: true,
-  defaultShareFormat: ShareFormat.TEXT,
   defaultCurrency: AppConfig.defaultCurrency,
   completeOnboarding: async () => Promise.resolve(),
   setFontsReady: () => {},
@@ -30,7 +28,6 @@ const mockUIContext: any = {
   authenticateSession: () => {},
   setIsAppActive: () => {},
   setIsLockAuthenticating: () => {},
-  setDefaultShareFormat: () => {},
   requireRestart: () => {},
 };
 

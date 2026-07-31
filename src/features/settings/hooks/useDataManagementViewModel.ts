@@ -2,6 +2,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
+import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { analytics } from '@/src/services/analytics-service';
 import { sharingService } from '@/src/services/SharingService';
 import { ShareFormat } from '@/src/types/sharing';
@@ -42,7 +43,8 @@ export interface DataManagementViewModel {
 
 export function useDataManagementViewModel(): DataManagementViewModel {
   const { workplaceId } = useWorkplace();
-  const { defaultShareFormat, setDefaultShareFormat, requireRestart } = useUI();
+  const { requireRestart } = useUI();
+  const { defaultShareFormat, setDefaultShareFormat } = useSharePrefs();
   const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } =
     useSettingsActions(workplaceId);
   const { isImporting } = useImport();

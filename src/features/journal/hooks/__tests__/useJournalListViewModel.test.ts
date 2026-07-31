@@ -33,7 +33,11 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 
 jest.mock('@/src/contexts/UIContext', () => ({
-  useUI: () => ({ defaultCurrency: 'USD', isInitialized: true, defaultShareFormat: 'text' }),
+  useUI: () => ({ defaultCurrency: 'USD', isInitialized: true }),
+}));
+
+jest.mock('@/src/hooks/useSharePrefs', () => ({
+  useSharePrefs: () => ({ defaultShareFormat: 'text', setDefaultShareFormat: jest.fn() }),
 }));
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({

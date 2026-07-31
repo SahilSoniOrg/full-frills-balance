@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
 import { injectReconciledMarkersIntoTransactionList } from '@/src/features/accounts/mappers/accountTransactionListPresentation';
 import { useLedgerTransactionsForAccount } from '@/src/hooks/useLedgerTransactions';
 import { useSelection } from '@/src/hooks/useSelection';
+import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildDayNetStats } from '@/src/services/ledger';
@@ -63,7 +63,7 @@ export function useAccountTransactionFeed(
     accountName,
     workplaceCurrency,
   } = options;
-  const { defaultShareFormat } = useUI();
+  const { defaultShareFormat } = useSharePrefs();
 
   const {
     transactions,

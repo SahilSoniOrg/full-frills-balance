@@ -6,6 +6,7 @@ import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useSelection } from '@/src/hooks/useSelection';
+import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -72,7 +73,8 @@ export function useJournalTransactionList({
   shareTitle = 'Transactions Report',
   paginationPolicy = 'default',
 }: UseJournalTransactionListParams): JournalTransactionListCore {
-  const { isInitialized, defaultShareFormat } = useUI();
+  const { isInitialized } = useUI();
+  const { defaultShareFormat } = useSharePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
