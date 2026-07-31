@@ -1,22 +1,28 @@
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
-import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { useJournalListViewModel } from '../useJournalListViewModel';
 import { JournalDisplayType, WorkplaceId, AccountId, JournalId } from '@/src/types/domain';
 
-// Purely mock everything to avoid model compilation issues
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
   useJournals: jest.fn(),
 }));
 
+const mockSetFilter = jest.fn();
+let mockDateRange: { startDate: number; endDate: number } | null = {
+  startDate: 1,
+  endDate: 2,
+};
+
 jest.mock('@/src/hooks/useDateRangeFilter', () => ({
   useDateRangeFilter: () => ({
-    dateRange: null,
-    periodFilter: 'MONTH',
+    get dateRange() {
+      return mockDateRange;
+    },
+    periodFilter: { type: 'MONTH' },
     isPickerVisible: false,
     showPicker: jest.fn(),
     hidePicker: jest.fn(),
-    setFilter: jest.fn(),
+    setFilter: mockSetFilter,
     navigatePrevious: jest.fn(),
     navigateNext: jest.fn(),
   }),
@@ -27,7 +33,7 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 
 jest.mock('@/src/contexts/UIContext', () => ({
-  useUI: () => ({ defaultCurrency: 'USD', isInitialized: true }),
+  useUI: () => ({ defaultCurrency: 'USD', isInitialized: true, defaultShareFormat: 'text' }),
 }));
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
@@ -35,16 +41,18 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
     activeWorkplaceId: 'wp-1',
     activeWorkplace: { id: 'wp-1', name: 'Personal' },
     defaultCurrencyCode: 'USD',
+    workplaceId: 'wp-1',
   }),
 }));
 
-let mockRateMap: Record<string, number> = { EUR: 0.5 };
 jest.mock('@/src/hooks/useExchangeRates', () => ({
-  useExchangeRates: () => ({
-    get rateMap() {
-      return mockRateMap;
-    },
-  }),
+  useExchangeRates: () => ({ rateMap: { EUR: 0.5 } }),
+}));
+
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: {
+    getRate: jest.fn(() => Promise.resolve(1)),
+  },
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -75,17 +83,15 @@ jest.mock('@/src/constants', () => ({
   },
 }));
 
-// Mock safeAdd/safeSubtract
 jest.mock('@/src/utils/money', () => ({
   safeAdd: (a: number, b: number) => a + b,
   safeSubtract: (a: number, b: number) => a - b,
 }));
 
-// Use date components to avoid timezone shift
 const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
   {
     id: 'j1' as JournalId,
-    journalDate: new Date(2024, 2, 20, 10).getTime(), // March 20
+    journalDate: new Date(2024, 2, 20, 10).getTime(),
     displayType: JournalDisplayType.INCOME,
     totalAmount: 100,
     currencyCode: 'USD',
@@ -94,36 +100,14 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     transactionCount: 1,
     accounts: [{ id: 'a1' as AccountId, name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }],
   },
-  {
-    id: 'j2' as JournalId,
-    journalDate: new Date(2024, 2, 20, 15).getTime(),
-    displayType: JournalDisplayType.EXPENSE,
-    totalAmount: 20,
-    currencyCode: 'USD',
-    description: 'Coffee',
-    status: 'POSTED',
-    transactionCount: 1,
-    accounts: [{ id: 'a2' as AccountId, name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }],
-  },
-  {
-    id: 'j3' as JournalId,
-    journalDate: new Date(2024, 2, 21, 9).getTime(), // March 21
-    displayType: JournalDisplayType.EXPENSE,
-    totalAmount: 50,
-    currencyCode: 'EUR',
-    description: 'Lunch',
-    status: 'POSTED',
-    transactionCount: 1,
-    accounts: [{ id: 'a3' as AccountId, name: 'Card', role: 'SOURCE', accountType: 'ASSET' }],
-  },
 ];
 
-describe('useJournalListViewModel', () => {
+describe('useJournalListViewModel adapter', () => {
   const useJournalsMock = useJournals as jest.MockedFunction<typeof useJournals>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRateMap = { EUR: 0.5 };
+    mockDateRange = { startDate: 1, endDate: 2 };
     useJournalsMock.mockReturnValue({
       journals: mockEnrichedJournals,
       isLoading: false,
@@ -134,103 +118,63 @@ describe('useJournalListViewModel', () => {
     });
   });
 
-  it('should group journals by date and inject separators', () => {
+  it('preserves JournalListViewModel public shape for dashboard/list consumers', () => {
     const { result } = renderHook(() =>
       useJournalListViewModel(
-        {
-          emptyState: { title: 'Empty', subtitle: 'None' },
-        },
+        { emptyState: { title: 'Empty', subtitle: 'None' } },
         'test-wp' as WorkplaceId,
       ),
     );
 
-    const items = result.current.items;
-
-    // Standardized behavior: Decending date sort
-    // Day 21 comes first
-    expect(items[0].type).toBe('separator');
-    expect(items[0].date).toBe(new Date(2024, 2, 21).getTime());
-    expect(items[1].id).toBe('j3');
-
-    // Day 20 comes second
-    expect(items[2].type).toBe('separator');
-    expect(items[2].date).toBe(new Date(2024, 2, 20).getTime());
-    expect(items[3].id).toBe('j1');
-    expect(items[4].id).toBe('j2');
+    expect(result.current).toEqual(
+      expect.objectContaining({
+        items: expect.any(Array),
+        isLoading: false,
+        searchQuery: '',
+        isSearchGlobal: true,
+        plannedJournals: expect.any(Array),
+        emptyState: { title: 'Empty', subtitle: 'None' },
+        selectedIds: expect.any(Set),
+        onSearchChange: expect.any(Function),
+        toggleSearchGlobal: expect.any(Function),
+        onDateSelect: expect.any(Function),
+      }),
+    );
   });
 
-  it('should calculate daily stats correctly for same currency', () => {
+  it('clears effective date range for the core while global search is active', () => {
     const { result } = renderHook(() =>
       useJournalListViewModel(
-        {
-          emptyState: { title: 'Empty', subtitle: 'None' },
-        },
+        { emptyState: { title: 'Empty', subtitle: 'None' } },
         'test-wp' as WorkplaceId,
       ),
     );
 
-    const sep20 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 20).getTime()}`);
-
-    expect(sep20?.count).toBe(2);
-    // Income 100 - Expense 20 = 80
-    expect(sep20?.netAmount).toBe(80);
-  });
-
-  it('should normalize amounts using exchangeRateMap', () => {
-    const { result } = renderHook(() =>
-      useJournalListViewModel(
-        {
-          emptyState: { title: 'Empty', subtitle: 'None' },
-        },
-        'test-wp' as WorkplaceId,
-      ),
-    );
-
-    const sep21 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 21).getTime()}`);
-
-    expect(sep21?.count).toBe(1);
-    // 50 EUR / 0.5 = 100 USD (Expense)
-    expect(sep21?.netAmount).toBe(-100);
-  });
-
-  it('should log warning and skip amount when exchange rate is missing', () => {
-    mockRateMap = {};
-
-    const { result } = renderHook(() =>
-      useJournalListViewModel(
-        {
-          emptyState: { title: 'Empty', subtitle: 'None' },
-        },
-        'test-wp' as WorkplaceId,
-      ),
-    );
-
-    const sep21 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 21).getTime()}`);
-
-    expect(sep21?.netAmount).toBe(0); // Skipped
-    expect(logger.warn).toHaveBeenCalledWith('Missing EUR to USD');
-  });
-
-  it('should handle collapsed days', () => {
-    const { result } = renderHook(() =>
-      useJournalListViewModel(
-        {
-          emptyState: { title: 'Empty', subtitle: 'None' },
-        },
-        'test-wp' as WorkplaceId,
-      ),
-    );
-
-    // Toggle day 21 (first separator index 0)
     act(() => {
-      result.current.items[0].onToggle?.();
+      result.current.onSearchChange('rent');
     });
 
-    const itemsAfter = result.current.items;
-    // j3 should be gone
-    expect(itemsAfter.find(i => i.id === 'j3')).toBeUndefined();
-    expect(itemsAfter.find(i => i.id === 'j1')).toBeDefined();
-    expect(itemsAfter.find(i => i.id === 'j2')).toBeDefined();
-    expect(itemsAfter.length).toBe(4); // 2 seps + j1 + j2
+    // Core journals fetch: pageSize 20, no statuses (planned uses plannedJournalLimit + PLANNED).
+    const coreCalls = useJournalsMock.mock.calls.filter(
+      call => call[1] === 20 && call[4] === undefined,
+    );
+    const latestCoreCall = coreCalls[coreCalls.length - 1];
+    expect(latestCoreCall?.[2]).toBeUndefined();
+    expect(latestCoreCall?.[3]).toBe('rent');
+  });
+
+  it('disables onEndReached when adapter searchQuery is set', () => {
+    const { result } = renderHook(() =>
+      useJournalListViewModel(
+        { emptyState: { title: 'Empty', subtitle: 'None' } },
+        'test-wp' as WorkplaceId,
+      ),
+    );
+
+    act(() => {
+      result.current.onSearchChange('rent');
+    });
+
+    expect(result.current.onEndReached).toBeUndefined();
   });
 });
