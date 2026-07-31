@@ -1,8 +1,5 @@
 import { TransactionListItem } from '@/src/types/ui';
 
-export type { DisplayCounterAccount as CounterAccountChip } from '@/src/types/domain';
-export { buildCounterAccountChips } from '@/src/services/accounting/displayTransactionCounterAccounts';
-
 /** Inserts reconciled markers into grouped transaction list items. */
 export function injectReconciledMarkersIntoTransactionList(
   rawGroupedItems: TransactionListItem[],
