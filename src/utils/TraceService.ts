@@ -19,7 +19,7 @@ export class Trace {
   /**
    * Add context metadata to the trace
    */
-  setMetadata(key: string, value: any): this {
+  setMetadata(key: string, value: unknown): this {
     this.metadata[key] = value;
     return this;
   }
