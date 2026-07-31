@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -133,7 +133,7 @@ export class JournalEnrichmentQueries {
 
       for (const tx of txs) {
         try {
-          const account: any = await database.collections.get('accounts').find(tx.accountId);
+          const account = await database.collections.get<Account>('accounts').find(tx.accountId);
           if (account) {
             enriched.push({
               journal_id: journal.id,
