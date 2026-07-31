@@ -19,6 +19,7 @@ import {
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
 import { findAccountByName as findAccountByNameQuery } from '@/src/services/accounts/accountSystemAccounts';
+import { observeAccountBalance } from '@/src/services/accounts/accountReadService';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -66,14 +67,13 @@ export function useAccount(accountId: AccountId | null, workplaceId: WorkplaceId
 }
 
 /**
- * Hook to reactively get account balance.
- * Uses PURE REACTIVITY: No async enrichment, no race conditions.
- * Calculates sum in-memory for instant consistency.
+ * Hook to reactively get account balance for a single account.
+ * Uses targeted observeAccountBalance (not workplace-wide getAccountBalances).
  */
 export function useAccountBalance(
   workplaceId: WorkplaceId,
   accountId: AccountId | null,
-  currencyCode: string,
+  _currencyCode: string,
 ) {
   const {
     data: balanceData,
@@ -81,41 +81,8 @@ export function useAccountBalance(
     version,
     error,
   } = useObservable(
-    () => {
-      if (!accountId || !workplaceId) return of(null);
-
-      return combineLatest([
-        accountQueries.observeById(workplaceId, accountId),
-        transactionRepository.observeActiveWithColumns(workplaceId, [
-          'amount',
-          'transaction_type',
-          'transaction_date',
-          'currency_code',
-          'account_id',
-          'exchange_rate',
-          'updated_at',
-        ]),
-        currencyRepository.observeAll(),
-      ]).pipe(
-        firstFastDebounce(Animation.dataRefreshDebounce),
-        switchMap(async ([account]) => {
-          if (!account) return null;
-
-          const targetCurrency = currencyCode;
-
-          // If it's a leaf account (no children), we can just get its direct balance
-          // But for consistency with parent accounts, we use the optimized getAccountBalances
-          // which is now near-instant thanks to non-blocking exchange rates.
-          const balances = await balanceService.getAccountBalances(
-            workplaceId,
-            undefined,
-            targetCurrency,
-          );
-          return balances.find(b => b.accountId === account.id) || null;
-        }),
-      );
-    },
-    [accountId, currencyCode, workplaceId],
+    () => observeAccountBalance(workplaceId, accountId),
+    [accountId, workplaceId],
     null as AccountBalance | null,
   );
 
