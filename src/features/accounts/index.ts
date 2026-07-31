@@ -1,5 +1,6 @@
 export { AccountPickerList, type CreateAccountIntent } from './components/AccountPickerList';
 export { CurrencySelector } from './components/CurrencySelector';
+export { ReconciledMarker } from './components/ReconciledMarker';
 export { useAccountPickerList } from './hooks/useAccountPickerList';
 export { useAccount, useAccountActions, useAccountBalance, useAccounts } from './hooks/useAccounts';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';

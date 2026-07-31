@@ -14,12 +14,7 @@ import {
   type SelectionAction,
 } from '@/src/components/common/SelectionActionBar';
 
-export interface JournalListViewProps {
-  screenTitle?: string;
-  showBack?: boolean;
-  backIcon?: React.ComponentProps<typeof Screen>['backIcon'];
-  headerActions?: React.ReactNode;
-  listHeader: React.ReactElement | null;
+export type JournalListBundle = {
   items: JournalListViewModel['items'];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -28,71 +23,66 @@ export interface JournalListViewProps {
   emptyTitle: string;
   emptySubtitle: string;
   onEndReached?: () => void;
+  listHeader: React.ReactElement | null;
   listContentStyle?: StyleProp<ViewStyle>;
-  containerStyle?: StyleProp<ViewStyle>;
-  datePicker: {
-    visible: boolean;
-    onClose: () => void;
-    currentFilter: PeriodFilter;
-    onSelect: (range: DateRange | null, filter: PeriodFilter) => void;
-  };
+  isPrivacyMode?: boolean;
+};
+
+export type JournalChromeBundle = {
+  screenTitle?: string;
+  showBack?: boolean;
+  backIcon?: React.ComponentProps<typeof Screen>['backIcon'];
+  headerActions?: React.ReactNode;
   fab?: {
     onPress: () => void;
     label?: string;
     placement?: 'end' | 'center';
     accessibilityLabel?: string;
   };
-  isPrivacyMode?: boolean;
   isSearchActive?: boolean;
   alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
-  selection?: {
-    selectedIds: Set<JournalId>;
-    isSelectionModeActive: boolean;
-    onLongPressItem: (id: JournalId) => void;
-    toggleSelection: (id: JournalId) => void;
-    selectAll: () => void;
-    clearItems: () => void;
-    exitSelectionMode: () => void;
-    onShareSelected?: () => void;
-    actions?: SelectionAction[];
-  };
+  containerStyle?: StyleProp<ViewStyle>;
+};
+
+export type JournalDatePickerBundle = {
+  visible: boolean;
+  onClose: () => void;
+  currentFilter: PeriodFilter;
+  onSelect: (range: DateRange | null, filter: PeriodFilter) => void;
+};
+
+export type JournalSelectionBundle = {
+  selectedIds: Set<JournalId>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: JournalId) => void;
+  toggleSelection: (id: JournalId) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected?: () => void;
+  actions?: SelectionAction[];
+};
+
+export interface JournalListViewProps {
+  list: JournalListBundle;
+  chrome?: JournalChromeBundle;
+  datePicker: JournalDatePickerBundle;
+  selection?: JournalSelectionBundle;
 }
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
-  const {
-    screenTitle,
-    showBack,
-    backIcon,
-    headerActions,
-    listHeader,
-    items,
-    isLoading,
-    isLoadingMore,
-    loadingText,
-    loadingMoreText,
-    emptyTitle,
-    emptySubtitle,
-    onEndReached,
-    listContentStyle,
-    containerStyle,
-    datePicker,
-    fab,
-    isSearchActive,
-    isPrivacyMode,
-    alignTitle,
-    selection,
-  } = props;
+  const { list, chrome, datePicker, selection } = props;
   return (
     <Screen
-      title={screenTitle}
-      showBack={showBack && !selection?.isSelectionModeActive}
-      backIcon={backIcon}
-      headerActions={headerActions}
-      isSearchActive={isSearchActive}
-      alignTitle={alignTitle}
+      title={chrome?.screenTitle}
+      showBack={chrome?.showBack && !selection?.isSelectionModeActive}
+      backIcon={chrome?.backIcon}
+      headerActions={chrome?.headerActions}
+      isSearchActive={chrome?.isSearchActive}
+      alignTitle={chrome?.alignTitle}
       headerStyle={{ opacity: selection?.isSelectionModeActive ? Opacity.medium : 1 }}
     >
-      <View style={[styles.container, containerStyle]}>
+      <View style={[styles.container, chrome?.containerStyle]}>
         {/* Backdrop (Back) - catches taps that miss the list entirely */}
         {selection?.isSelectionModeActive && (
           <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
@@ -100,17 +90,17 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
 
         <TransactionListView
           ref={ref}
-          items={items}
-          isLoading={isLoading}
-          isLoadingMore={isLoadingMore}
-          loadingText={loadingText}
-          loadingMoreText={loadingMoreText}
-          emptyTitle={emptyTitle}
-          emptySubtitle={emptySubtitle}
-          ListHeaderComponent={listHeader}
-          onEndReached={onEndReached}
-          contentContainerStyle={[styles.listContent, listContentStyle]}
-          isPrivacyMode={isPrivacyMode}
+          items={list.items}
+          isLoading={list.isLoading}
+          isLoadingMore={list.isLoadingMore}
+          loadingText={list.loadingText}
+          loadingMoreText={list.loadingMoreText}
+          emptyTitle={list.emptyTitle}
+          emptySubtitle={list.emptySubtitle}
+          ListHeaderComponent={list.listHeader}
+          onEndReached={list.onEndReached}
+          contentContainerStyle={[styles.listContent, list.listContentStyle]}
+          isPrivacyMode={list.isPrivacyMode}
           selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={selection?.onLongPressItem as (id: string) => void}
           isSelectionModeActive={selection?.isSelectionModeActive}
@@ -122,18 +112,18 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           }
         />
 
-        {fab && !selection?.isSelectionModeActive && (
+        {chrome?.fab && !selection?.isSelectionModeActive && (
           <FloatingActionButton
-            onPress={fab.onPress}
-            label={fab.label}
-            placement={fab.placement}
-            accessibilityLabel={fab.accessibilityLabel}
+            onPress={chrome.fab.onPress}
+            label={chrome.fab.label}
+            placement={chrome.fab.placement}
+            accessibilityLabel={chrome.fab.accessibilityLabel}
           />
         )}
 
         <SelectionActionBar
           selectedCount={selection?.selectedIds.size || 0}
-          totalCount={journalsCount(items)}
+          totalCount={journalsCount(list.items)}
           onClear={selection?.exitSelectionMode || (() => {})}
           onSelectAll={selection?.selectAll || (() => {})}
           onDeselectAll={selection?.clearItems || (() => {})}

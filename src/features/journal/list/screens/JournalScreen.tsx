@@ -65,26 +65,44 @@ export default function JournalScreen() {
     [vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext],
   );
 
-  const fab = useMemo(
+  const list = useMemo(
     () => ({
-      onPress: handleFabPress,
-      label: 'New Entry',
-      placement: 'end' as const,
-      accessibilityLabel: 'Open new entry options',
+      items: listViewProps.items,
+      isLoading: listViewProps.isLoading,
+      isLoadingMore: listViewProps.isLoadingMore,
+      loadingText: listViewProps.loadingText,
+      loadingMoreText: listViewProps.loadingMoreText,
+      emptyTitle: listViewProps.emptyTitle,
+      emptySubtitle: listViewProps.emptySubtitle,
+      onEndReached: listViewProps.onEndReached,
+      listHeader: null,
     }),
-    [handleFabPress],
+    [listViewProps],
+  );
+
+  const chrome = useMemo(
+    () => ({
+      screenTitle: AppConfig.strings.journal.transactions,
+      headerActions,
+      fab: {
+        onPress: handleFabPress,
+        label: 'New Entry',
+        placement: 'end' as const,
+        accessibilityLabel: 'Open new entry options',
+      },
+      showBack: canGoBack,
+      isSearchActive: false,
+      alignTitle: (canGoBack ? 'center' : 'left') as 'center' | 'left',
+    }),
+    [headerActions, handleFabPress, canGoBack],
   );
 
   return (
     <JournalListView
-      {...listViewProps}
-      screenTitle={AppConfig.strings.journal.transactions}
-      headerActions={headerActions}
-      listHeader={null}
-      fab={fab}
-      showBack={canGoBack}
-      isSearchActive={false}
-      alignTitle={canGoBack ? 'center' : 'left'}
+      list={list}
+      chrome={chrome}
+      datePicker={listViewProps.datePicker}
+      selection={listViewProps.selection}
     />
   );
 }

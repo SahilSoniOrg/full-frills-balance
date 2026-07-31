@@ -120,17 +120,21 @@ export default function JournalSearchScreen() {
   return (
     <>
       <JournalListView
-        items={vm.items}
-        isLoading={vm.isLoading}
-        isLoadingMore={vm.isLoadingMore}
-        loadingText={AppConfig.strings.common.loading}
-        loadingMoreText={AppConfig.strings.common.loading}
-        emptyTitle="No transactions found"
-        emptySubtitle="Try adjusting your filters"
-        onEndReached={vm.onEndReached}
-        listHeader={filterHeader}
-        screenTitle="Search"
-        showBack={true}
+        list={{
+          items: vm.items,
+          isLoading: vm.isLoading,
+          isLoadingMore: vm.isLoadingMore,
+          loadingText: AppConfig.strings.common.loading,
+          loadingMoreText: AppConfig.strings.common.loading,
+          emptyTitle: 'No transactions found',
+          emptySubtitle: 'Try adjusting your filters',
+          onEndReached: vm.onEndReached,
+          listHeader: filterHeader,
+        }}
+        chrome={{
+          screenTitle: 'Search',
+          showBack: true,
+        }}
         datePicker={{
           visible: false,
           onClose: () => {},
