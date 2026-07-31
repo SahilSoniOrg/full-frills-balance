@@ -1,10 +1,12 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
+import { modelManagementService } from '@/src/services/ai/ModelManagementService';
+import { AIModelMetadata } from '@/src/services/ai/types';
 import {
   notificationService,
   NotificationCadence,
 } from '@/src/services/notification/NotificationService';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface NotificationSettingsViewModel {
   notificationCadence: NotificationCadence;
@@ -22,6 +24,7 @@ export interface NotificationSettingsViewModel {
   setPreferredAiModelId: (modelId: string) => void;
   aiInferenceMode: 'single' | 'multi';
   setAiInferenceMode: (mode: 'single' | 'multi') => void;
+  downloadedModels: AIModelMetadata[];
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
@@ -36,6 +39,31 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     aiInferenceMode,
     setAiInferenceMode,
   } = ui;
+  const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkModels = async () => {
+      const allModels = modelManagementService.getAllModels();
+      const downloaded: AIModelMetadata[] = [];
+      for (const model of allModels) {
+        const status = await modelManagementService.getDownloadStatus(model.id);
+        if (status.isDownloaded) {
+          downloaded.push(model);
+        }
+      }
+      if (!cancelled) {
+        setDownloadedModels(downloaded);
+      }
+    };
+
+    checkModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isNativeAiEnabled]);
 
   const onUpdateNotificationCadence = useCallback(
     async (cadence: NotificationCadence) => {
@@ -100,5 +128,6 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     setPreferredAiModelId,
     aiInferenceMode,
     setAiInferenceMode,
+    downloadedModels,
   };
 }

@@ -7,10 +7,8 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { NotificationSettingsViewModel } from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
-import { AIModelMetadata } from '@/src/services/ai/types';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
@@ -18,34 +16,18 @@ interface AutomationSettingsViewProps {
 }
 
 export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
-  const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
   const [isModelPickerVisible, setIsModelPickerVisible] = useState(false);
 
-  useEffect(() => {
-    const checkModels = async () => {
-      const allModels = modelManagementService.getAllModels();
-      const downloaded = [];
-      for (const model of allModels) {
-        const status = await modelManagementService.getDownloadStatus(model.id);
-        if (status.isDownloaded) {
-          downloaded.push(model);
-        }
-      }
-      setDownloadedModels(downloaded);
-    };
-    checkModels();
-  }, [vm.isNativeAiEnabled]);
-
-  const modelOptions = downloadedModels.map(m => ({
+  const modelOptions = vm.downloadedModels.map(m => ({
     id: m.id,
     label: m.name,
     description: `${m.parameters} • ${m.quantization}`,
   }));
 
   const activeModel =
-    downloadedModels.find(m => m.id === vm.preferredAiModelId) ||
-    downloadedModels.find(m => m.id === AppConfig.defaults.defaultAiModelId) ||
-    downloadedModels[0];
+    vm.downloadedModels.find(m => m.id === vm.preferredAiModelId) ||
+    vm.downloadedModels.find(m => m.id === AppConfig.defaults.defaultAiModelId) ||
+    vm.downloadedModels[0];
 
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.remindersAndAutomation}>
