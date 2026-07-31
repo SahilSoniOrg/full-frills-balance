@@ -315,7 +315,7 @@ export class ModelManagementService {
     try {
       ModelRegistry.deleteFile(model.url);
     } catch (e) {
-      logger.error(`Failed to delete model ${modelId}`, e as any);
+      logger.error(`Failed to delete model ${modelId}`, e);
     }
 
     if (model.isCustom) {

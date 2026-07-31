@@ -236,7 +236,7 @@ class RebuildQueueService {
 
         // Process all accounts in the batch sequentially.
         // This avoids DB lock contention and long-held write locks, especially for large accounts.
-        const results: { status: 'fulfilled' | 'rejected'; reason?: any }[] = [];
+        const results: { status: 'fulfilled' | 'rejected'; reason?: unknown }[] = [];
         for (const item of batch) {
           try {
             const [workplaceId, accountId] = parseQueueKey(item.id);
