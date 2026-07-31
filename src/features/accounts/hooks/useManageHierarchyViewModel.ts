@@ -1,10 +1,16 @@
 import Account from '@/src/data/models/Account';
 import {
+  collectDescendantIds,
+  getAddChildCandidates,
+  getParentCandidates,
+  getVisibleRootAccountsByCategory,
+  groupAccountsByParent,
+} from '@/src/features/accounts/helpers/hierarchyHelpers';
+import {
   useAccountActions,
   useAccountBalances,
   useAccounts,
 } from '@/src/features/accounts/hooks/useAccounts';
-import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountId } from '@/src/types/domain';
@@ -93,37 +99,16 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, [initialFocusedId, filteredAccounts]);
 
   const accountsByParent = useMemo(() => {
-    const groups = new Map<AccountId | null, Account[]>();
-    filteredAccounts.forEach((account: Account) => {
-      const parentId = account.parentAccountId || null;
-      if (!groups.has(parentId)) {
-        groups.set(parentId, []);
-      }
-      groups.get(parentId)!.push(account);
-    });
-    return groups;
+    return groupAccountsByParent(filteredAccounts);
   }, [filteredAccounts]);
 
-  const rootAccounts = useMemo(
-    () => filteredAccounts.filter((account: Account) => !account.parentAccountId),
-    [filteredAccounts],
-  );
-
   const visibleRootAccountsByCategory = useMemo(() => {
-    const groups = createAccountTypeRecord<Account[]>(() => []);
-
-    rootAccounts.forEach((account: Account) => {
-      const children = accountsByParent.get(account.id) || [];
-      const balance = balancesByAccountId.get(account.id);
-      const hasDirectTransactions = (balance?.directTransactionCount || 0) > 0;
-
-      if (children.length > 0 || !hasDirectTransactions) {
-        groups[account.accountType].push(account);
-      }
-    });
-
-    return groups;
-  }, [accountsByParent, balancesByAccountId, rootAccounts]);
+    return getVisibleRootAccountsByCategory(
+      filteredAccounts,
+      accountsByParent,
+      balancesByAccountId,
+    );
+  }, [accountsByParent, balancesByAccountId, filteredAccounts]);
 
   const selectedAccount = useMemo(
     () => filteredAccounts.find(account => account.id === selectedAccountId),
@@ -136,45 +121,20 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, [balancesByAccountId, selectedAccountId]);
 
   const descendantIds = useMemo(() => {
-    if (!selectedAccountId) return new Set<string>();
-    const ids = new Set<string>();
-    const stack = [selectedAccountId];
-    while (stack.length > 0) {
-      const currentId = stack.pop()!;
-      const children = accountsByParent.get(currentId) || [];
-      children.forEach(child => {
-        ids.add(child.id);
-        stack.push(child.id);
-      });
-    }
-    return ids;
+    return collectDescendantIds(accountsByParent, selectedAccountId);
   }, [accountsByParent, selectedAccountId]);
 
   const addChildCandidates = useMemo(() => {
-    if (!selectedAccount) return [];
-
-    return filteredAccounts.filter((account: Account) => {
-      const isOwnParent = account.id === selectedAccount.id;
-      const isCurrentParent = account.id === selectedAccount.parentAccountId;
-      const isDescendant = descendantIds.has(account.id);
-      const isAlreadyChild = account.parentAccountId === selectedAccount.id;
-      const sameType = account.accountType === selectedAccount.accountType;
-      return !isOwnParent && !isCurrentParent && !isDescendant && !isAlreadyChild && sameType;
-    });
+    return getAddChildCandidates(filteredAccounts, selectedAccount, descendantIds);
   }, [filteredAccounts, selectedAccount, descendantIds]);
 
   const parentCandidates = useMemo(() => {
-    if (!selectedAccount) return [];
-
-    return filteredAccounts.filter(account => {
-      const isDescendant = descendantIds.has(account.id);
-      const isCurrentParent = account.id === selectedAccount.parentAccountId;
-      const balance = balancesByAccountId.get(account.id);
-      const isSameAccount = account.id === selectedAccount.id;
-      const canTakeChild = (balance?.directTransactionCount || 0) === 0;
-      const sameType = account.accountType === selectedAccount.accountType;
-      return !isSameAccount && !isCurrentParent && !isDescendant && canTakeChild && sameType;
-    });
+    return getParentCandidates(
+      filteredAccounts,
+      selectedAccount,
+      descendantIds,
+      balancesByAccountId,
+    );
   }, [filteredAccounts, balancesByAccountId, selectedAccount, descendantIds]);
 
   const onToggleExpand = useCallback((accountId: AccountId) => {
