@@ -5,20 +5,20 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
+import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics-service';
-import { insightService, Insight } from '@/src/services/insight/InsightService';
 import {
   safeToSpendReadModel,
   SafeToSpendDashboard,
 } from '@/src/services/simulation/SafeToSpendReadModel';
-import { smsService } from '@/src/services/sms-service';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
-import { EMPTY, of } from 'rxjs';
+import { EMPTY } from 'rxjs';
 
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
@@ -98,11 +98,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [hasSafeToSpendData]);
 
-  const { data: insights } = useObservable<Insight[]>(
-    () => (isAppReady ? insightService.observePatterns(workplaceId) : EMPTY),
-    [workplaceId, isAppReady],
-    [],
-  );
+  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
 
   const hasInsights = !!(insights && insights.length > 0);
   // Log Insights arrival
@@ -113,11 +109,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [hasInsights]);
 
-  const { data: unreadSmsCount } = useObservable(
-    () => (Platform.OS === 'android' ? smsService.observeUnprocessedCount(workplaceId) : of(0)),
-    [workplaceId],
-    0,
-  );
+  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
   // Modal states lifted for non-native overlay support
   const [isExplanationVisible, setExplanationVisible] = React.useState(false);
