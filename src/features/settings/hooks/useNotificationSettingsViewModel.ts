@@ -1,4 +1,6 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAiPrefs } from '@/src/hooks/useAiPrefs';
+import { useNotificationPrefs } from '@/src/hooks/useNotificationPrefs';
+import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { analytics } from '@/src/services/analytics-service';
 import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import { AIModelMetadata } from '@/src/services/ai/types';
@@ -28,17 +30,24 @@ export interface NotificationSettingsViewModel {
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
-  const ui = useUI();
   const {
-    isSmsImportEnabled,
-    setIsSmsImportEnabled,
+    notificationCadence,
+    notificationHour,
+    notificationMinute,
+    notificationWeekday,
+    setNotificationCadence,
+    setNotificationTime,
+    setNotificationWeekday,
+  } = useNotificationPrefs();
+  const { isSmsImportEnabled, setIsSmsImportEnabled } = useSmsPrefs();
+  const {
     isNativeAiEnabled,
     setIsNativeAiEnabled,
     preferredAiModelId,
     setPreferredAiModelId,
     aiInferenceMode,
     setAiInferenceMode,
-  } = ui;
+  } = useAiPrefs();
   const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
 
   useEffect(() => {
@@ -71,52 +80,54 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
         const granted = await notificationService.requestPermissions();
         if (!granted) return;
       }
-      await ui.setNotificationCadence(cadence);
+      setNotificationCadence(cadence);
+      analytics.logNotificationPreferenceChanged(cadence, notificationHour);
       await notificationService.scheduleReminder(
         cadence,
-        ui.notificationHour,
-        ui.notificationMinute,
-        ui.notificationWeekday,
+        notificationHour,
+        notificationMinute,
+        notificationWeekday,
       );
       analytics.trackFeatureUsage('settings', 'change_notification_cadence', { cadence });
     },
-    [ui],
+    [setNotificationCadence, notificationHour, notificationMinute, notificationWeekday],
   );
 
   const onUpdateNotificationTime = useCallback(
     async (hour: number, minute: number, weekday?: number) => {
-      await ui.setNotificationTime(hour, minute);
+      setNotificationTime(hour, minute);
       if (weekday !== undefined) {
-        await ui.setNotificationWeekday(weekday);
+        setNotificationWeekday(weekday);
       }
       await notificationService.scheduleReminder(
-        ui.notificationCadence,
+        notificationCadence,
         hour,
         minute,
-        weekday ?? ui.notificationWeekday,
+        weekday ?? notificationWeekday,
       );
       analytics.trackFeatureUsage('settings', 'change_notification_time', {
         hour,
         minute,
-        weekday: weekday ?? ui.notificationWeekday,
+        weekday: weekday ?? notificationWeekday,
       });
     },
-    [ui],
+    [setNotificationTime, setNotificationWeekday, notificationCadence, notificationWeekday],
   );
 
   const handleSetIsSmsImportEnabled = useCallback(
     (enabled: boolean) => {
       setIsSmsImportEnabled(enabled);
+      analytics.logSmsImportSettingsChanged(enabled);
       analytics.trackFeatureUsage('settings', 'toggle_sms_import', { enabled });
     },
     [setIsSmsImportEnabled],
   );
 
   return {
-    notificationCadence: ui.notificationCadence,
-    notificationHour: ui.notificationHour,
-    notificationMinute: ui.notificationMinute,
-    notificationWeekday: ui.notificationWeekday,
+    notificationCadence,
+    notificationHour,
+    notificationMinute,
+    notificationWeekday,
     onUpdateNotificationCadence,
     onUpdateNotificationTime,
     onSendTestNotification: () => notificationService.sendImmediateTest(),

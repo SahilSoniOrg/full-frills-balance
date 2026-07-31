@@ -8,7 +8,7 @@ import {
   JournalEntryModeBodyProps,
 } from '@/src/features/journal/entry/components/JournalEntryModeBody';
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
-import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
+import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
@@ -88,10 +88,9 @@ export function JournalEntryView(vm: JournalEntryShell) {
       header={
         <>
           <JournalEntryHeader title={headerTitle} />
-          <JournalModeToggle
+          <JournalModeBar
             mode={activeMode}
             onToggleMode={onToggleMode}
-            variant="bar"
             isSimpleDisabled={vm.isSimpleModeDisabled}
           />
         </>

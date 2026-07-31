@@ -7,29 +7,33 @@ import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
-interface JournalModeToggleProps {
+export type JournalModeBarProps = {
   mode: JournalEntryScreenMode;
   onToggleMode: (mode: JournalEntryScreenMode) => void;
+  /** `bar`: slim full-width row under the header. `chips`: inline compact chip group. */
+  variant?: 'bar' | 'chips';
   isSimpleDisabled?: boolean;
-}
+};
 
-/** Default (pill) mode toggle. Prefer `JournalModeBar` for the journal entry header. */
-export const JournalModeToggle = ({
+/** Slim mode switcher used under the journal entry header (`bar`) or as compact chips. */
+export function JournalModeBar({
   mode,
   onToggleMode,
+  variant = 'bar',
   isSimpleDisabled,
-}: JournalModeToggleProps) => {
+}: JournalModeBarProps) {
   const { theme } = useTheme();
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const isBar = variant === 'bar';
   const modes = useJournalModeOptions();
 
   return (
-    <View style={styles.defaultWrapper}>
+    <View style={[styles.wrapper, isBar && styles.barWrapper]}>
       <View
         style={[
-          styles.modeToggleContainer,
-          styles.modeToggleContainerDefault,
-          { backgroundColor: theme.surfaceSecondary },
+          styles.container,
+          isBar && styles.barContainer,
+          { borderColor: theme.border, backgroundColor: theme.surfaceSecondary },
         ]}
       >
         {modes.map(m => {
@@ -39,17 +43,18 @@ export const JournalModeToggle = ({
             <TouchableOpacity
               key={m.id}
               style={[
-                styles.modeButton,
+                styles.button,
+                isBar && styles.barButton,
                 { backgroundColor: isActive ? theme.surface : 'transparent' },
-                isActive && Shape.elevation.sm,
                 disabled && { opacity: Opacity.muted },
               ]}
               onPress={() => !disabled && onToggleMode(m.id)}
             >
               <AppText
-                variant="body"
+                variant="caption"
                 weight={isActive ? 'bold' : 'medium'}
                 style={{ color: isActive ? theme.primary : theme.textSecondary }}
+                numberOfLines={1}
               >
                 {m.label}
               </AppText>
@@ -64,7 +69,7 @@ export const JournalModeToggle = ({
         size={Size.iconSm}
         onPress={() => setInfoModalVisible(true)}
         accessibilityLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
-        style={styles.infoIconDefault}
+        style={isBar ? styles.infoIconBar : styles.infoIconChips}
       />
 
       <AdvancedModeInfoModal
@@ -74,34 +79,49 @@ export const JournalModeToggle = ({
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  modeToggleContainer: {
+  wrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  barWrapper: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
+  container: {
     flexDirection: 'row',
     borderRadius: Shape.radius.full,
+    borderWidth: 1,
     padding: Spacing.xs,
+    gap: Spacing.xs,
   },
-  modeToggleContainerDefault: {
+  barContainer: {
     flex: 1,
-    marginHorizontal: Spacing.lg,
-    marginVertical: Spacing.md,
+    minWidth: 0,
   },
-  modeButton: {
-    flex: 1,
-    paddingVertical: Spacing.md,
+  button: {
+    paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  defaultWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: Spacing.lg,
+  barButton: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: 2,
   },
-  infoIconDefault: {
+  infoIconChips: {
     width: Size.buttonMd,
     height: Size.buttonMd,
+  },
+  infoIconBar: {
+    width: Size.buttonMd,
+    height: Size.buttonMd,
+    marginRight: -Spacing.xs,
   },
 });

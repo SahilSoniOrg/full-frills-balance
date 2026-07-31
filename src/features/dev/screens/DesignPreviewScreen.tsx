@@ -32,10 +32,10 @@ import {
   Badge,
   ColoredDot,
   EmptyStateView,
-  ExpandableSearchButton,
   FilterChipButton,
   FloatingActionButton,
   IconButton,
+  InlineSearchField,
   LoadingView,
 } from '@/src/components/core';
 import { ListRow } from '@/src/components/core/ListRow';
@@ -525,7 +525,7 @@ export default function DesignPreviewScreen() {
 
             {/* Search */}
             <PreviewSectionCard title="Search">
-              <ExpandableSearchButton value={searchQuery} onChangeText={setSearchQuery} />
+              <InlineSearchField value={searchQuery} onChangeText={setSearchQuery} />
             </PreviewSectionCard>
 
             {/* Date range */}
