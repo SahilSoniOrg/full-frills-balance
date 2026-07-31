@@ -4,9 +4,9 @@ import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
-import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTransactionDetailsSmsInfo } from '@/src/features/journal/hooks/useTransactionDetailsSmsInfo';
+import { useTransactionDetailsActions } from '@/src/features/journal/hooks/useTransactionDetailsActions';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   JournalStatusChipVariant,
@@ -16,12 +16,8 @@ import {
   resolveRevertPlannedActionLabels,
   resolveTransactionAmountPresentation,
 } from '@/src/services/journal/transactionDetailsHelpers';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { AccountId, DisplayTransaction, JournalId, PlannedPaymentId } from '@/src/types/domain';
-import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
+import { AccountId, DisplayTransaction, JournalId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
-import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
@@ -105,8 +101,6 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
-    useJournalActions(workplaceId);
   const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(
     workplaceId,
     journalId,
@@ -164,42 +158,6 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
 
   const statusVariant = useMemo(() => resolveJournalStatusChipVariant(journalInfo), [journalInfo]);
 
-  const handleDelete = useCallback(() => {
-    showConfirmationAlert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction? This action cannot be undone.',
-      async () => {
-        try {
-          const found = await findJournal(journalId);
-          if (!found) {
-            showErrorAlert('Transaction not found. It may have already been deleted.');
-            AppNavigation.back();
-            return;
-          }
-          await deleteJournal(found);
-          toast.success('Transaction has been deleted.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error('Failed to delete transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not delete transaction: ${errorMessage}`);
-        }
-      },
-    );
-  }, [deleteJournal, findJournal, journalId]);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      const newJournal = await duplicateJournal(journalId);
-      toast.success('New transaction created from copy.');
-      AppNavigation.toJournalEntry({ journalId: newJournal.id });
-    } catch (error) {
-      logger.error('Failed to copy transaction:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showErrorAlert(`Could not copy transaction: ${errorMessage}`);
-    }
-  }, [duplicateJournal, journalId]);
-
   const handleEdit = useCallback(() => {
     AppNavigation.toJournalEntry({ journalId });
   }, [journalId]);
@@ -212,75 +170,15 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     AppNavigation.back();
   }, []);
 
-  const handlePost = useCallback(async () => {
-    if (!journalInfo || journalInfo.status !== 'PLANNED') return;
-
-    showConfirmationAlert(
-      'Post Transaction',
-      `Are you sure you want to mark this planned transaction for ${amountText} as posted?`,
-      async () => {
-        try {
-          await postJournal(journalId);
-          toast.success('Transaction has been marked as posted.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error('Failed to post transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not post transaction: ${errorMessage}`);
-        }
-      },
-    );
-  }, [journalId, journalInfo, postJournal, amountText]);
-
-  const handleRevertToScheduled = useCallback(async () => {
-    const { actionLabel, statusLabel } = resolveRevertPlannedActionLabels(
-      journalInfo?.status || '',
-    );
-
-    if (!journalInfo || (journalInfo.status !== 'POSTED' && journalInfo.status !== 'SKIPPED'))
-      return;
-
-    showConfirmationAlert(
-      `${actionLabel} Transaction`,
-      `Are you sure you want to revert this ${statusLabel} transaction for ${amountText} back to scheduled status?`,
-      async () => {
-        try {
-          await revertToPlanned(journalId);
-          toast.success('Transaction has been reverted to scheduled status.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error(`Failed to ${actionLabel.toLowerCase()} transaction:`, error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not ${actionLabel.toLowerCase()} transaction: ${errorMessage}`);
-        }
-      },
-    );
-  }, [journalId, journalInfo, revertToPlanned, amountText]);
-
-  const handleSkip = useCallback(async () => {
-    if (!journalInfo || journalInfo.status !== 'PLANNED' || !journalInfo.plannedPaymentId) return;
-
-    showConfirmationAlert(
-      'Skip Transaction',
-      `Are you sure you want to skip this planned transaction for ${amountText}? The schedule will advance to the next occurrence.`,
-      async () => {
-        try {
-          const pp = await plannedPaymentReadService.find(
-            workplaceId,
-            journalInfo.plannedPaymentId! as PlannedPaymentId,
-          );
-          if (!pp) throw new Error('Planned payment rule not found.');
-          await plannedPaymentService.skipOccurrence(workplaceId, pp, journalInfo.journalDate);
-          toast.success('Transaction has been skipped.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error('Failed to skip transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not skip transaction: ${errorMessage}`);
-        }
-      },
-    );
-  }, [journalInfo, amountText, workplaceId]);
+  const { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip } =
+    useTransactionDetailsActions({
+      workplaceId,
+      journalId,
+      amountText,
+      status: journalInfo?.status,
+      plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
+      journalDate: journalInfo?.journalDate,
+    });
 
   const splitItems = useMemo(() => {
     return transactions.map((item: DisplayTransaction) => {
