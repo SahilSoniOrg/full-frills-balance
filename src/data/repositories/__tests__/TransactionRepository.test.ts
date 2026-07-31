@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -68,6 +69,46 @@ describe('TransactionRepository', () => {
       );
       expect(transactions).toHaveLength(2);
       expect(transactions[0].journalId).toBe(journal.id);
+    });
+  });
+
+  describe('findEarliest', () => {
+    it('returns the earliest active journal transaction only', async () => {
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Planned earlier',
+          journalDate: 1_000,
+          currencyCode: 'USD',
+          status: JournalStatus.PLANNED,
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+      const posted = await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Posted later',
+          journalDate: 2_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 20,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const earliest = await transactionRepository.findEarliest('wp-1' as WorkplaceId);
+      expect(earliest?.journalId).toBe(posted.id);
+      expect(earliest?.transactionDate).toBe(2_000);
     });
   });
 

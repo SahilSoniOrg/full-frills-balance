@@ -8,7 +8,6 @@ import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { Q } from '@nozbe/watermelondb';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 
 /**
@@ -83,14 +82,5 @@ export function observeAccountChartTransactions(
   end: number,
 ): Observable<Transaction[]> {
   if (!accountId || !workplaceId) return of([]);
-  return transactionRepository
-    .transactionsQuery(
-      Q.where('workplace_id', workplaceId),
-      Q.where('account_id', accountId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('transaction_date', Q.gte(start)),
-      Q.where('transaction_date', Q.lte(end)),
-      Q.sortBy('transaction_date', Q.asc),
-    )
-    .observeWithColumns(['running_balance', 'transaction_date']);
+  return transactionRepository.observeByAccountDateRange(workplaceId, accountId, start, end);
 }

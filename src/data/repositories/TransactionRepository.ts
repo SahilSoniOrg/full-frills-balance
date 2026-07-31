@@ -17,6 +17,17 @@ export class TransactionRepository {
     return this.transactions.query(...clauses);
   }
 
+  async findEarliest(workplaceId: WorkplaceId): Promise<Transaction | null> {
+    const transactions = await this.transactions
+      .query(
+        ...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]),
+        Q.sortBy('transaction_date', Q.asc),
+        Q.take(1),
+      )
+      .fetch();
+    return transactions[0] ?? null;
+  }
+
   /**
    * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.
    * Prevents logic divergence across the repository.
@@ -344,6 +355,25 @@ export class TransactionRepository {
         'exchange_rate',
         'updated_at',
       ]);
+  }
+
+  observeByAccountDateRange(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    startDate: number,
+    endDate: number,
+  ) {
+    return this.transactions
+      .query(
+        ...this.buildActiveClauses([
+          Q.where('workplace_id', workplaceId),
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', Q.gte(startDate)),
+          Q.where('transaction_date', Q.lte(endDate)),
+        ]),
+        Q.sortBy('transaction_date', Q.asc),
+      )
+      .observeWithColumns(['running_balance', 'transaction_date']);
   }
 
   /**
