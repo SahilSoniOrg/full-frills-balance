@@ -210,8 +210,12 @@ export class ModelManagementService {
 
   getAllModels(): AIModelMetadata[] {
     const models = [...SUPPORTED_MODELS, ...this.getCustomModels()];
+    const supportedPlatform =
+      Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
     return models.filter(
-      m => !m.supportedPlatforms || m.supportedPlatforms.includes(Platform.OS as any),
+      m =>
+        !m.supportedPlatforms ||
+        (supportedPlatform !== null && m.supportedPlatforms.includes(supportedPlatform)),
     );
   }
 
