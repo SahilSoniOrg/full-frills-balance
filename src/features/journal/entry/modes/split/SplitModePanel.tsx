@@ -43,7 +43,7 @@ export function SplitModePanel({
         splitEditor.updateSplitRow(lineId, { accountId });
       }
     },
-    [splitEditor.setSourceAccountId, splitEditor.updateSplitRow],
+    [splitEditor],
   );
 
   const resolveSelectedAccountId = useCallback(

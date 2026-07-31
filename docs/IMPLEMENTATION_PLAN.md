@@ -89,11 +89,11 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 | # | Task | Notes |
 |---|------|--------|
-| 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ list/write/metadata |
-| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | ✅ ongoing: editor line state, account-list actions/hierarchy policies, AI model lifecycle |
+| 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ list/write/metadata; active transaction reads centralized |
+| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | ✅ editor line state, account-list actions/hierarchy policies, dashboard modal, SMS import/form orchestration |
 | 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” | ✅ accounts list MTD |
 | 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
-| 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
+| 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ `AccountType`-driven metrics and unreconciled SQL with parity coverage |
 | 4.6 | Spike: schema-driven import (mirror export `tableTasks`) | Cuts 8–12 touchpoint tax | ✅ table registry |
 | 4.7 | E2E greenfield completion (Detox PR CI, harness, critical specs) | [e2e-decisions.md](./testing/e2e-decisions.md) | ✅ |
 
@@ -114,7 +114,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 
 ## Next up
 
-1. **Phase 4** — deeper 4.2 (details VM, journal entry VM), account repo splits, reports/budget features
+1. **Phase 4** — details VM, journal entry VM, account repo splits, reports/budget features
 2. **Ops** — push `main` (~71 commits ahead) to run GitHub CI
 
 ---

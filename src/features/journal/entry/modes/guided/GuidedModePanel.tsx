@@ -79,7 +79,7 @@ export function GuidedModePanel({
       if (line.transactionType === 'CREDIT') simpleEditor.setSourceId(accountId);
       else simpleEditor.setDestinationId(accountId);
     },
-    [editor.lines, simpleEditor.setDestinationId, simpleEditor.setSourceId],
+    [editor.lines, simpleEditor],
   );
 
   const resolveSelectedAccountId = useCallback(

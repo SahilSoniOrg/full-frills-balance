@@ -21,7 +21,7 @@
 | --- | --- | --- | --- |
 | Write lifecycle | `create`, `update`, `delete` | `ledgerWriteService`, journal write path | Journal/ledger services only |
 | Journal-scoped reads | `findByJournal`, `findByJournals`, `observeByJournal`, `observeByJournals` | Journal enrichment, transaction details | `journalTimelineModule` + ledger services |
-| Account-scoped reads | `findByAccount`, `observeByAccounts`, `findByAccountsAndDateRange` | Reports, account ledger, simulations | Services (`report-service`, balance) |
+| Account-scoped reads | `findByAccount`, `observeByAccounts`, `findByAccountsAndDateRange`, `observeByAccountDateRange` | Reports, account ledger, simulations | Services (`report-service`, balance); active-journal clauses live in the repository |
 | Inbox / activity | `observeByDateRange`, `observeActiveCount`, `observeByDateRangeWithColumns` | Dashboard, audit, reactive aggregates | Service-layer observables |
 | Integrity / counts | `hasTransactions`, `getCountForAccount`, `findLatestForAccount*` | Account delete rules, reconciliation | `accountRules`, commands |
 

@@ -222,14 +222,15 @@ features / app  →  services & read models  →  repositories / adapters
 
 **Imports:** External file formats are normalized to a single canonical import shape at the plugin boundary before validation and persistence.
 
-**CI ratchets (commits 50–51):**
+**CI ratchets and boundary checks:**
 
 | Script | Command | Purpose |
 | --- | --- | --- |
 | Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **183** allowed hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded; the current scan is **71**). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
 | Journal façade | `bun run check:journal-facade` | The deleted `JournalRepository` façade must remain absent. New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
+| Read boundaries | `bun run check:read-boundaries` | Currency precision/rate reads in services go through `currencyReadService`; repository access remains limited to initialization and the read module. |
 
-Run both via `bun run check:architecture`.
+Run all three via `bun run check:architecture`.
 
 **Pull requests:** Before merge, run `bun run check:architecture` locally (or confirm CI green on `check:architecture`). New work must not increase the unsafe-type baseline or reintroduce deleted repository façades.
 

@@ -97,8 +97,13 @@ the journal timeline modules). Repositories remain persistence adapters; they
 must not become feature-facing god objects. Feature hooks own screen state and
 presentation mapping, while services own query shape and domain projections.
 
-Run `bun run check:architecture` to enforce the unsafe-type ratchet and the
-journal façade guard.
+Run `bun run check:architecture` to enforce the unsafe-type ratchet, journal
+façade guard, and currency read boundary.
+
+Journal and transaction reads use active-journal semantics: planned entries
+remain visible until their scheduled date, while soft-deleted entries are
+excluded. Account chart transaction observers should use the repository's
+active, workplace-scoped query rather than rebuilding those clauses locally.
 
 ---
 
