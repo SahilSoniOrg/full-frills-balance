@@ -524,8 +524,8 @@ class ExportService {
               name: workplace.name,
               icon: workplace.icon,
               defaultCurrencyCode: workplace.defaultCurrencyCode,
-              createdAt: (workplace as any).createdAt.toISOString(),
-              updatedAt: (workplace as any).updatedAt.toISOString(),
+              createdAt: workplace.createdAt.toISOString(),
+              updatedAt: workplace.updatedAt.toISOString(),
             }
           : undefined,
       });
