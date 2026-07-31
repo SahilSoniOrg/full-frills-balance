@@ -2,10 +2,11 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import Currency from '@/src/data/models/Currency';
 import { analytics } from '@/src/services/analytics-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 export interface PersonalizationViewModel {
   userName: string;
@@ -24,6 +25,7 @@ export interface PersonalizationViewModel {
 
 export function usePersonalizationViewModel(): PersonalizationViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { data: workplace } = useWorkplaceSnapshot(workplaceId);
   const ui = useUI();
   const { showSafeToSpendChart, setShowSafeToSpendChart: setDashboardShowChart } =
     useDashboardPreferences();
@@ -36,15 +38,8 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
     setSafeToSpendDays: setUiSafeToSpendDays,
   } = ui;
 
-  const [workplaceName, setWorkplaceName] = useState('');
+  const workplaceName = workplace?.name ?? '';
   const { currencies } = useCurrencies();
-
-  useEffect(() => {
-    const sub = workplaceService.observeWorkplace(workplaceId).subscribe(w => {
-      if (w) setWorkplaceName(w.name);
-    });
-    return () => sub.unsubscribe();
-  }, [workplaceId]);
 
   const setUserName = useCallback(
     (newName: string) => {

@@ -3,10 +3,10 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useState } from 'react';
-import { of as observableOf } from 'rxjs';
 
 export interface WorkplaceSettingsViewModel {
   workplaces: Workplace[];
@@ -39,14 +39,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     [],
   );
 
-  const { data: activeWorkplace } = useObservable(
-    () =>
-      activeWorkplaceId
-        ? workplaceService.observeWorkplace(activeWorkplaceId)
-        : observableOf(undefined),
-    [activeWorkplaceId],
-    undefined,
-  );
+  const { data: activeWorkplace } = useWorkplaceSnapshot(activeWorkplaceId);
 
   const setActiveWorkplace = useCallback(
     (workplace: Workplace) => {
@@ -103,7 +96,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
 
   return {
     workplaces: [...workplaces].sort((a, b) => a.name.localeCompare(b.name)),
-    activeWorkplace,
+    activeWorkplace: activeWorkplace ?? undefined,
     isCreating,
     isCreatingWorkplace,
     setActiveWorkplace,
