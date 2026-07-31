@@ -8,8 +8,8 @@ export class SmsRuleReadService {
     return transactionAutoPostRuleRepository.observeAllByWorkplace(workplaceId);
   }
 
-  find(id: string): Promise<TransactionAutoPostRule | undefined> {
-    return transactionAutoPostRuleRepository.find(id);
+  find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | undefined> {
+    return transactionAutoPostRuleRepository.find(workplaceId, id);
   }
 }
 

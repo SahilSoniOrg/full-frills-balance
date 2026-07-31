@@ -190,8 +190,8 @@ class SmsService {
     return smsRuleEngine.saveAutoPostRule(data, workplaceId);
   }
 
-  async deleteAutoPostRule(id: string) {
-    return smsRuleEngine.deleteAutoPostRule(id);
+  async deleteAutoPostRule(id: string, workplaceId: WorkplaceId) {
+    return smsRuleEngine.deleteAutoPostRule(id, workplaceId);
   }
 
   async getMatchingRule(

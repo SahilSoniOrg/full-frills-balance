@@ -111,7 +111,7 @@ export function useSmsRuleFormActions({
     if (!id) return;
     setIsSubmitting(true);
     try {
-      await smsService.deleteAutoPostRule(id);
+      await smsService.deleteAutoPostRule(id, workplaceId);
       analytics.trackFeatureUsage('sms_rule', 'delete', { rule_id: id });
       toast.success('Rule deleted');
       AppNavigation.back();

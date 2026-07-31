@@ -21,9 +21,12 @@ export class TransactionAutoPostRuleRepository {
     return database.collections.get<TransactionAutoPostRule>('transaction_auto_post_rules');
   }
 
-  async find(id: string): Promise<TransactionAutoPostRule | undefined> {
+  async find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | undefined> {
     try {
-      return await this.rules.find(id);
+      const matches = await this.rules
+        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+        .fetch();
+      return matches[0];
     } catch {
       return undefined;
     }
@@ -43,10 +46,10 @@ export class TransactionAutoPostRuleRepository {
       .fetch();
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(workplaceId: WorkplaceId, id: string): Promise<void> {
     await database.write(async () => {
-      const rule = await this.rules.find(id);
-      await rule.destroyPermanently();
+      const rule = await this.find(workplaceId, id);
+      if (rule) await rule.destroyPermanently();
     });
   }
 
@@ -72,7 +75,8 @@ export class TransactionAutoPostRuleRepository {
 
     return await database.write(async () => {
       if (data.id) {
-        const rule = await this.rules.find(data.id);
+        const rule = await this.find(workplaceId, data.id);
+        if (!rule) throw new Error('SMS rule not found in workplace');
         await rule.update(record => {
           record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;

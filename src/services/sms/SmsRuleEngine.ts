@@ -326,8 +326,8 @@ export class SmsRuleEngine {
     await transactionAutoPostRuleRepository.save(data, workplaceId);
   }
 
-  async deleteAutoPostRule(id: string) {
-    await transactionAutoPostRuleRepository.delete(id);
+  async deleteAutoPostRule(id: string, workplaceId: WorkplaceId) {
+    await transactionAutoPostRuleRepository.delete(workplaceId, id);
   }
 
   async prepareMergeOperations(

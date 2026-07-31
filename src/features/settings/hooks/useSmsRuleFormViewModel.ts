@@ -103,7 +103,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     const loadRule = async () => {
       try {
-        const rule = await smsRuleReadService.find(id);
+        const rule = await smsRuleReadService.find(workplaceId, id);
         if (!rule) return;
         const hydrated = hydrateSmsRuleForm(rule);
         setMode(hydrated.mode);
@@ -134,7 +134,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     };
 
     loadRule();
-  }, [id]);
+  }, [id, workplaceId]);
 
   const structuredConditions = useMemo(
     () =>
