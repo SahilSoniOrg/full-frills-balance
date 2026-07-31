@@ -18,6 +18,10 @@ export interface JournalLineInput {
   accountCurrency?: string;
 }
 
+export interface JournalCurrencyLine {
+  accountCurrency?: string;
+}
+
 /**
  * Standard rounding for financial amounts (2 decimal places).
  * Uses EPSILON to avoid floating point precision errors.
@@ -177,7 +181,10 @@ export class JournalCalculator {
   /**
    * Groups journal lines by their account currency to detect shared non-base currencies.
    */
-  static identifyCurrencyGroups(lines: any[], baseCurrency: string): Record<string, number[]> {
+  static identifyCurrencyGroups(
+    lines: JournalCurrencyLine[],
+    baseCurrency: string,
+  ): Record<string, number[]> {
     const groups: Record<string, number[]> = {};
     lines.forEach((line, index) => {
       const currency = line.accountCurrency || baseCurrency;

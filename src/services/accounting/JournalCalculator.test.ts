@@ -17,6 +17,19 @@ describe('JournalCalculator', () => {
     expect(JournalCalculator.calculateTotalCredits(lines, 'USD')).toBe(150);
   });
 
+  it('groups lines by account currency and falls back to the base currency', () => {
+    expect(
+      JournalCalculator.identifyCurrencyGroups(
+        [{ accountCurrency: 'EUR' }, {}, { accountCurrency: 'EUR' }, { accountCurrency: 'GBP' }],
+        'USD',
+      ),
+    ).toEqual({
+      EUR: [0, 2],
+      USD: [1],
+      GBP: [3],
+    });
+  });
+
   it('identifies balanced journals', () => {
     const lines = [debit100, credit100];
     expect(JournalCalculator.isBalanced(lines, 'USD')).toBe(true);
