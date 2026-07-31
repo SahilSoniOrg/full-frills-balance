@@ -1,4 +1,4 @@
-import { registerChart } from '@/src/hooks/chartInteractionRegistry';
+import { useChartInteractionRegistry } from '@/src/components/charts/ChartInteractionProvider';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
@@ -6,9 +6,7 @@ import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 export type InteractionState =
-  | { type: 'none' }
-  | { type: 'index'; index: number }
-  | { type: 'grid'; col: number; row: number };
+  { type: 'none' } | { type: 'index'; index: number } | { type: 'grid'; col: number; row: number };
 
 interface GestureConfig {
   /**
@@ -38,9 +36,6 @@ interface UseChartInteractionProps {
   onInteractionChange: (state: InteractionState) => void;
 }
 
-let globalIsInteracting = false;
-let globalLastActiveState: string | null = null;
-
 export const useChartInteraction = ({
   enabled = true,
   hapticThrottleMs = 50,
@@ -48,10 +43,12 @@ export const useChartInteraction = ({
   getInteractionFromTouch,
   onInteractionChange,
 }: UseChartInteractionProps) => {
+  const { registerChart, setIsInteracting, isInteracting } = useChartInteractionRegistry();
   const chartRef = useMemo(() => ({ current: null as View | null }), []);
   const layoutRef = useMemo(() => ({ current: { pageX: 0, pageY: 0, width: 0, height: 0 } }), []);
 
   const lastHapticTime = useRef(0);
+  const lastActiveState = useRef<string | null>(null);
 
   const throttledHaptic = useCallback(() => {
     const now = Date.now();
@@ -72,12 +69,12 @@ export const useChartInteraction = ({
       if (!enabled) return;
 
       if (phase === 'start') {
-        globalIsInteracting = true;
+        setIsInteracting(true);
       }
 
       const isEnding = phase === 'end' || phase === 'cancel';
       if (isEnding) {
-        globalIsInteracting = false;
+        setIsInteracting(false);
         // 🎯 STICKY BEHAVIOR:
         // We release the lock so global taps can reset the chart,
         // but we don't clear the selection ourselves.
@@ -93,8 +90,8 @@ export const useChartInteraction = ({
             ? `i:${state.index}`
             : `g:${state.col}_${state.row}`;
 
-      if (stateKey !== globalLastActiveState) {
-        globalLastActiveState = stateKey;
+      if (stateKey !== lastActiveState.current) {
+        lastActiveState.current = stateKey;
 
         if (state.type !== 'none' && !isEnding) {
           throttledHaptic();
@@ -103,7 +100,7 @@ export const useChartInteraction = ({
         onInteractionChange(state);
       }
     },
-    [enabled, getInteractionFromTouch, onInteractionChange, throttledHaptic],
+    [enabled, getInteractionFromTouch, onInteractionChange, throttledHaptic, setIsInteracting],
   );
 
   const onPanBegin = useCallback(
@@ -177,7 +174,7 @@ export const useChartInteraction = ({
 
   const resetInteraction = useCallback(
     (x?: number, y?: number) => {
-      if (globalIsInteracting) return;
+      if (isInteracting()) return;
 
       if (x !== undefined && y !== undefined) {
         const { pageX, pageY, width, height } = layoutRef.current;
@@ -187,16 +184,16 @@ export const useChartInteraction = ({
         if (isInside) return; // 🚫 DO NOTHING if touch is inside chart
       }
 
-      globalLastActiveState = null;
+      lastActiveState.current = null;
       onInteractionChange({ type: 'none' });
     },
-    [onInteractionChange, layoutRef],
+    [onInteractionChange, layoutRef, isInteracting],
   );
 
   useEffect(() => {
     if (!enabled) return;
     return registerChart(resetInteraction);
-  }, [enabled, resetInteraction]);
+  }, [enabled, resetInteraction, registerChart]);
 
   return {
     chartRef,

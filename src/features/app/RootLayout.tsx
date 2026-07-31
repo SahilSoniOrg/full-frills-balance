@@ -1,3 +1,4 @@
+import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
 import { AlertContainer } from '@/src/components/common/AlertContainer';
 import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
@@ -5,7 +6,6 @@ import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
-import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
@@ -44,35 +44,31 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View
-        style={{ flex: 1, backgroundColor: '#000000' }}
-        onStartShouldSetResponderCapture={e => {
-          resetAllCharts(e.nativeEvent.pageX, e.nativeEvent.pageY);
-          return false;
-        }}
-      >
-        <SafeAreaProvider>
-          <ErrorBoundary>
-            <DatabaseProvider database={database}>
-              <UIProvider>
-                <EarlyBootstrap />
-                <WorkplaceProvider>
-                  <MaybeAnalyticsProvider client={analytics.posthog}>
-                    <ThemeProvider value={theme}>
-                      <WorkplaceBootstrap />
-                      <AppLockInterceptor>
-                        <AppContent />
-                      </AppLockInterceptor>
-                      <AlertContainer />
-                      <ToastContainer />
-                      <SplashOrchestrator />
-                    </ThemeProvider>
-                  </MaybeAnalyticsProvider>
-                </WorkplaceProvider>
-              </UIProvider>
-            </DatabaseProvider>
-          </ErrorBoundary>
-        </SafeAreaProvider>
+      <View style={{ flex: 1, backgroundColor: '#000000' }}>
+        <ChartInteractionProvider>
+          <SafeAreaProvider>
+            <ErrorBoundary>
+              <DatabaseProvider database={database}>
+                <UIProvider>
+                  <EarlyBootstrap />
+                  <WorkplaceProvider>
+                    <MaybeAnalyticsProvider client={analytics.posthog}>
+                      <ThemeProvider value={theme}>
+                        <WorkplaceBootstrap />
+                        <AppLockInterceptor>
+                          <AppContent />
+                        </AppLockInterceptor>
+                        <AlertContainer />
+                        <ToastContainer />
+                        <SplashOrchestrator />
+                      </ThemeProvider>
+                    </MaybeAnalyticsProvider>
+                  </WorkplaceProvider>
+                </UIProvider>
+              </DatabaseProvider>
+            </ErrorBoundary>
+          </SafeAreaProvider>
+        </ChartInteractionProvider>
       </View>
     </GestureHandlerRootView>
   );
