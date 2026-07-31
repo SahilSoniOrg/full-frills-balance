@@ -115,12 +115,11 @@ export class IntegrityService {
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM)
     // Optimization: Bypasses ORM bridge deserialization (O(1) Memory, O(N) DB Scan)
-    const isAssetOrExpense = ['ASSET', 'EXPENSE'].includes(account.accountType);
     const deltaResult = await transactionRawRepository.getAccountSumRaw(
       workplaceId,
       accountId,
       effectiveCutoff,
-      isAssetOrExpense,
+      account.accountType,
       undefined, // upToTransactionId
       snapshot?.transactionId, // afterTransactionId
     );
@@ -224,12 +223,11 @@ export class IntegrityService {
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
-    const isAssetOrExpense = ['ASSET', 'EXPENSE'].includes(account.accountType);
     return transactionRawRepository.getAccountSumRaw(
       workplaceId,
       accountId,
       cutoffDate,
-      isAssetOrExpense,
+      account.accountType,
       limitTransactionId, // upToTransactionId
       undefined, // afterTransactionId
     );

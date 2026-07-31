@@ -4,6 +4,7 @@ import { logger } from '@/src/utils/logger';
 import { from, Observable } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { TransactionType } from '../models/Transaction';
+import { AccountType } from '../models/Account';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
 import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries';
 import { transactionRawRebuildQueries } from './raw/TransactionRawRebuildQueries';
@@ -52,7 +53,7 @@ export class TransactionRawRepository {
     workplaceId: WorkplaceId,
     accountId: AccountId,
     cutoffDate: number,
-    isAssetOrExpense: boolean = true,
+    accountType: AccountType,
     upToTransactionId?: TransactionId,
     afterTransactionId?: TransactionId,
   ): Promise<number> {
@@ -60,7 +61,7 @@ export class TransactionRawRepository {
       workplaceId,
       accountId,
       cutoffDate,
-      isAssetOrExpense,
+      accountType,
       upToTransactionId,
       afterTransactionId,
     );

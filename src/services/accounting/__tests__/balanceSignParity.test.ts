@@ -54,7 +54,7 @@ function periodFlowDecreaseAmount(
   return 0;
 }
 
-/** Mirrors `TransactionRawRebuildQueries.getAccountSumRaw` multiplier SQL (isAssetOrExpense branch). */
+/** Mirrors `TransactionRawRebuildQueries.getAccountSumRaw` multiplier SQL. */
 function rebuildSumDelta(
   isAssetOrExpense: boolean,
   transactionType: TransactionType,

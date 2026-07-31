@@ -13,11 +13,11 @@ export class TransactionRawRebuildQueries {
     workplaceId: WorkplaceId,
     accountId: AccountId,
     cutoffDate: number,
-    isAssetOrExpense: boolean = true,
+    accountType: AccountType,
     upToTransactionId?: TransactionId,
     afterTransactionId?: TransactionId,
   ): Promise<number> {
-    const multiplierSql = isAssetOrExpense
+    const multiplierSql = [AccountType.ASSET, AccountType.EXPENSE].includes(accountType)
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
@@ -115,10 +115,7 @@ export class TransactionRawRebuildQueries {
           continue;
         }
         if (startFound) {
-          sum += effect(
-            isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
-            tx.transactionType,
-          ).delta(tx.amount);
+          sum += effect(accountType, tx.transactionType).delta(tx.amount);
         }
         if (upToTransactionId && tx.id === upToTransactionId) {
           endReached = true;
@@ -132,12 +129,7 @@ export class TransactionRawRebuildQueries {
       .query(...filterClauses)
       .fetch();
     return txs.reduce(
-      (acc, tx) =>
-        acc +
-        effect(
-          isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
-          tx.transactionType,
-        ).delta(tx.amount),
+      (acc, tx) => acc + effect(accountType, tx.transactionType).delta(tx.amount),
       0,
     );
   }
