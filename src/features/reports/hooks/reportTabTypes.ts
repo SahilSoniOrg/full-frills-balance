@@ -64,12 +64,10 @@ export interface ReportOverviewTabVm {
 }
 
 export interface ReportSpendingTabVm {
+  /** By-account expense breakdown (donut + legend). */
+  expenseViewState: ReportBreakdownViewState;
   expenseCategoryViewState: ReportBreakdownViewState;
   incomeCategoryViewState: ReportBreakdownViewState;
-  expenseDonutData: ReportDonutDatum[];
-  legendRows: ReportLegendRow[];
-  totalExpenseCount: number;
-  showExpenseExpansionButton: boolean;
   expandedExpenses: boolean;
   toggleExpenseExpansion: () => void;
   expandedExpenseCategories: boolean;

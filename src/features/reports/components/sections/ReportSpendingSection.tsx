@@ -15,11 +15,8 @@ interface ReportSpendingSectionProps {
 
 export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionProps) {
   const {
+    expenseViewState,
     expenseCategoryViewState,
-    expenseDonutData,
-    legendRows,
-    totalExpenseCount,
-    showExpenseExpansionButton,
     expandedExpenses,
     toggleExpenseExpansion,
     incomeCategoryViewState,
@@ -37,12 +34,12 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
   return (
     <>
       <ReportChartCard title={AppConfig.strings.reports.spendingByAccount}>
-        {expenseCategoryViewState.hasData ? (
+        {expenseViewState.hasData ? (
           <BreakdownDonutCard
-            donutData={expenseDonutData}
-            legendRows={legendRows}
-            totalCount={totalExpenseCount}
-            showExpansionButton={showExpenseExpansionButton}
+            donutData={expenseViewState.donutData}
+            legendRows={expenseViewState.legendRows}
+            totalCount={expenseViewState.totalCount}
+            showExpansionButton={expenseViewState.showExpansionButton}
             expanded={expandedExpenses}
             onToggleExpansion={toggleExpenseExpansion}
             onLegendRowPress={onLegendRowPress}

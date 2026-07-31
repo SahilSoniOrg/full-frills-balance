@@ -13,9 +13,6 @@ import { ReportFilters, useReportFilters } from './useReportFilters';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
-import { useReportOverviewTab } from './useReportOverviewTab';
-import { useReportSpendingTab } from './useReportSpendingTab';
-import { useReportWealthTab } from './useReportWealthTab';
 
 export type { ReportTab } from './reportTabTypes';
 
@@ -99,7 +96,7 @@ export function useReportsViewModel(): ReportsViewModel {
     dateRange,
   });
 
-  const overview = useReportOverviewTab({
+  const overview: ReportOverviewTabVm = {
     netWorthSeries: chartData.netWorthSeries,
     barChartData: chartData.barChartData,
     displayedNetWorthText: chartData.displayedNetWorthText,
@@ -111,15 +108,12 @@ export function useReportsViewModel(): ReportsViewModel {
     targetCurrency,
     onViewTransactions: actions.onViewTransactions,
     onViewSelectedTransactions: actions.onViewSelectedTransactions,
-  });
+  };
 
-  const spending = useReportSpendingTab({
+  const spending: ReportSpendingTabVm = {
+    expenseViewState: breakdownDetails.expenseViewState,
     expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
     incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
-    expenseDonutData: breakdownDetails.expenseViewState.donutData,
-    legendRows: breakdownDetails.expenseViewState.legendRows,
-    totalExpenseCount: breakdownDetails.expenseViewState.totalCount,
-    showExpenseExpansionButton: breakdownDetails.expenseViewState.showExpansionButton,
     expandedExpenses: breakdownDetails.expandedExpenses,
     toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
     expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
@@ -131,15 +125,15 @@ export function useReportsViewModel(): ReportsViewModel {
     onLegendRowPress: actions.onLegendRowPress,
     onCategoryPress: actions.onCategoryPress,
     targetCurrency,
-  });
+  };
 
-  const wealth = useReportWealthTab({
+  const wealth: ReportWealthTabVm = {
     wealthAreaSeries: chartData.wealthAreaSeries,
     barChartData: chartData.barChartData,
     dailyData: chartData.dailyData,
     targetCurrency,
     onViewTransactions: actions.onViewTransactions,
-  });
+  };
 
   return {
     filters,
