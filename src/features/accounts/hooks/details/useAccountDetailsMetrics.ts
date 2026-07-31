@@ -1,14 +1,13 @@
 import { AppConfig } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
+import { observeAccountChartTransactions } from '@/src/services/accounts/accountReadService';
 import { buildAccountRollingBalanceSeries } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange } from '@/src/utils/dateUtils';
-import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { map, of } from 'rxjs';
@@ -117,22 +116,12 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
 
   const { data: chartTransactions } = useObservable<Transaction[]>(
     () => {
-      if (!accountId) return of([]);
       const MS_PER_DAY = AppConfig.time.msPerDay;
       const start =
         (dateRange ? dateRange.startDate : dayjs().startOf('month').valueOf()) - 7 * MS_PER_DAY;
       const end =
         (dateRange ? dateRange.endDate : dayjs().endOf('month').valueOf()) + 7 * MS_PER_DAY;
-      return transactionRepository
-        .transactionsQuery(
-          Q.where('workplace_id', workplaceId),
-          Q.where('account_id', accountId),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('transaction_date', Q.gte(start)),
-          Q.where('transaction_date', Q.lte(end)),
-          Q.sortBy('transaction_date', Q.asc),
-        )
-        .observeWithColumns(['running_balance', 'transaction_date']);
+      return observeAccountChartTransactions(workplaceId, accountId, start, end);
     },
     [workplaceId, accountId, dateRange],
     [],

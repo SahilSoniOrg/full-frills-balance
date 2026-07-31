@@ -1,18 +1,17 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
+import { observeUnreconciledMetrics } from '@/src/services/accounts/accountReadService';
 import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { of } from 'rxjs';
 
 export interface AccountDetailsData {
   accountId: AccountId;
@@ -171,15 +170,13 @@ export function useAccountDetailsData(): AccountDetailsData {
   );
 
   const { data: unreconciledMetrics } = useObservable<{ count: number; total: number }>(
-    () => {
-      if (!accountId) return of({ count: 0, total: 0 });
-      return transactionRawRepository.observeUnreconciledMetricsRaw(
+    () =>
+      observeUnreconciledMetrics(
         workplaceId,
         accountId,
         reconciledAt?.getTime() || null,
         isAssetOrExpense,
-      );
-    },
+      ),
     [workplaceId, accountId, reconciledAt, isAssetOrExpense],
     { count: 0, total: 0 },
   );
