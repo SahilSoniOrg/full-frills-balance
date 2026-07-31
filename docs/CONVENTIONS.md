@@ -226,7 +226,7 @@ features / app  →  services & read models  →  repositories / adapters
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **183** allowed hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded; the current scan is **94**). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
+| Unsafe types | `bun run check:unsafe-types` | Production `src/` + `app/` must not exceed the baseline in `scripts/unsafe-type-baseline.json` (currently **183** allowed hits across `: any`, `as any`, `@ts-ignore` / `@ts-expect-error`, and `as unknown as`; tests excluded; the current scan is **93**). **Policy:** reduce the baseline by **5** per calendar month (any module); update with `node scripts/check-unsafe-type-ratchet.mjs --update` after cleanup. |
 | Journal façade | `bun run check:journal-facade` | The deleted `JournalRepository` façade must remain absent. New persistence APIs belong in `src/data/repositories/journal/*` intent modules. |
 
 Run both via `bun run check:architecture`.
