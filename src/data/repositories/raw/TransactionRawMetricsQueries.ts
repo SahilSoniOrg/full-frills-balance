@@ -1,13 +1,13 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { getRawAdapter } from '../../database/DatabaseUtils';
 import Account from '../../models/Account';
-import Transaction, { TransactionType } from '../../models/Transaction';
+import Transaction from '../../models/Transaction';
 import { AccountDelta, DailyDelta, RawSQLArg } from '../TransactionTypes';
 
 export interface AccountPeriodMetrics {
@@ -24,6 +24,10 @@ export interface RawPeriodMetricsRow {
 export interface RawUnreconciledMetricsRow {
   count: number;
   total: number | null;
+}
+
+interface RawDailyDeltaRow extends DailyDelta {
+  dayStartStr: string;
 }
 
 export class TransactionRawMetricsQueries {
@@ -157,18 +161,13 @@ export class TransactionRawMetricsQueries {
     const accountPlaceholders = accountIds.map(() => '?').join(',');
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
+    const { increaseCase, decreaseCase } = periodFlowSQL();
     const sql = `
       SELECT
         strftime('%Y-%m-%d', t.transaction_date / 1000, 'unixepoch', 'localtime') AS dayStartStr,
         t.currency_code AS currencyCode,
         a.account_type AS accountType,
-        SUM(
-          CASE
-            WHEN a.account_type IN ('ASSET', 'EXPENSE')
-              THEN CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END
-            ELSE CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END
-          END
-        ) AS delta
+        SUM(${increaseCase}) - SUM(${decreaseCase}) AS delta
       FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
@@ -183,7 +182,7 @@ export class TransactionRawMetricsQueries {
       ORDER BY dayStartStr ASC
     `;
 
-    const raws = await this.queryRaw<any>(sql, [
+    const raws = await this.queryRaw<RawDailyDeltaRow>(sql, [
       ...accountIds,
       startDate,
       endDate,
@@ -192,7 +191,7 @@ export class TransactionRawMetricsQueries {
     ]);
 
     if (raws !== null) {
-      return raws.map((r: any) => ({
+      return raws.map(r => ({
         ...r,
         dayStart: new Date(r.dayStartStr + 'T00:00:00').getTime(),
       }));
@@ -250,17 +249,12 @@ export class TransactionRawMetricsQueries {
     const accountPlaceholders = accountIds.map(() => '?').join(',');
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
+    const { increaseCase, decreaseCase } = periodFlowSQL();
     const sql = `
       SELECT
         t.account_id AS accountId,
         t.currency_code AS currencyCode,
-        SUM(
-          CASE
-            WHEN a.account_type IN ('ASSET', 'EXPENSE')
-              THEN CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END
-            ELSE CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END
-          END
-        ) AS delta
+        SUM(${increaseCase}) - SUM(${decreaseCase}) AS delta
       FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
