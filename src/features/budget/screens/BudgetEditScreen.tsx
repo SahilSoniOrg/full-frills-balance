@@ -65,8 +65,8 @@ export default function BudgetEditScreen() {
     try {
       await save();
       toast.success('Budget saved');
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to save budget');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save budget');
     }
   };
 
