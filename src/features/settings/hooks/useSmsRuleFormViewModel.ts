@@ -3,7 +3,7 @@ import Account from '@/src/data/models/Account';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
-import { analytics } from '@/src/services/analytics-service';
+import { useSmsRuleFormActions } from '@/src/features/settings/hooks/useSmsRuleFormActions';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
 import {
   buildStructuredSmsRuleConditions,
@@ -12,9 +12,7 @@ import {
   parseSmsRuleActions,
   parseSmsRuleConditions,
   shouldShowSmsRuleAccountMapping,
-  validateSmsRuleRegexPatterns,
 } from '@/src/services/sms/smsRuleFormPolicy';
-import { smsService } from '@/src/services/sms-service';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
@@ -102,7 +100,6 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   const [journalDescription, setJournalDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
     if (!id) return;
 
@@ -207,75 +204,22 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     emptyAccountId: EMPTY_ACCOUNT_ID,
   });
 
-  const handleSave = async () => {
-    if (!isValid) return;
-
-    if (mode === 'regex' && !validateSmsRuleRegexPatterns(legacySenderMatch, legacyBodyMatch)) {
-      toast.error('Invalid regex syntax in advanced match fields');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await smsService.saveAutoPostRule(
-        {
-          id,
-          mode,
-          senderMatch: legacySenderMatch.trim() || undefined,
-          bodyMatch: legacyBodyMatch.trim() || undefined,
-          conditions: mode === 'builder' ? structuredConditions : [],
-          actions: {
-            disposition,
-            sourceAccountId: showAccountMapping ? sourceAccountId : undefined,
-            categoryAccountId: showAccountMapping ? categoryAccountId : undefined,
-            journalDescription: journalDescription.trim() || undefined,
-          },
-          isActive,
-          priority: priorityNumber,
-        },
-        workplaceId,
-      );
-
-      // Track Analytics
-      analytics.trackFeatureUsage('sms_rule', id ? 'update' : 'create', {
-        rule_id: id,
-        mode,
-        disposition,
-        is_active: isActive,
-        priority: priorityNumber,
-        condition_count: structuredConditions.length,
-        has_source_mapping: !!sourceAccountId,
-        has_category_mapping: !!categoryAccountId,
-      });
-
-      toast.success('Rule saved');
-      AppNavigation.back();
-    } catch {
-      toast.error('Failed to save rule');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!id) return;
-    setIsSubmitting(true);
-    try {
-      await smsService.deleteAutoPostRule(id);
-
-      // Track Analytics
-      analytics.trackFeatureUsage('sms_rule', 'delete', {
-        rule_id: id,
-      });
-
-      toast.success('Rule deleted');
-      AppNavigation.back();
-    } catch {
-      toast.error('Failed to delete rule');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { isSubmitting, handleSave, handleDelete } = useSmsRuleFormActions({
+    id,
+    workplaceId,
+    isValid,
+    mode,
+    legacySenderMatch,
+    legacyBodyMatch,
+    structuredConditions,
+    disposition,
+    sourceAccountId,
+    categoryAccountId,
+    journalDescription,
+    isActive,
+    priorityNumber,
+    showAccountMapping,
+  });
 
   return {
     id,
