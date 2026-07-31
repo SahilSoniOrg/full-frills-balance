@@ -99,14 +99,14 @@ export class TransactionService {
 
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
-        if (!journal) return of([] as any[]);
+        if (!journal) return of([] as Account[]);
         return accountRepository.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
-        const accountMap = new Map(accounts.map(a => [a.id, a as any]));
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
         const isJournalDeleted = !!(journal && journal.deletedAt);
         const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
 
@@ -159,14 +159,14 @@ export class TransactionService {
 
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
-        if (!journal) return of([] as any[]);
+        if (!journal) return of([] as Account[]);
         return accountRepository.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
-        const accountMap = new Map(accounts.map(a => [a.id, a as any]));
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
         const isJournalDeleted = !!(journal && journal.deletedAt);
         const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
 
