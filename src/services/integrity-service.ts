@@ -10,6 +10,7 @@
 
 import { schema } from '@/src/data/database/schema';
 import Account from '@/src/data/models/Account';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
@@ -62,7 +63,7 @@ export class IntegrityService {
   async scanForNullAccountTransactions(workplaceId?: WorkplaceId): Promise<void> {
     const { database } = await import('@/src/data/database/Database');
     const query = database.collections
-      .get('transactions')
+      .get<Transaction>('transactions')
       .query(
         Q.where('account_id', Q.eq(null)),
         ...(workplaceId ? [Q.where('workplace_id', workplaceId)] : []),
@@ -71,7 +72,7 @@ export class IntegrityService {
     const nullAccountTxs = await query.fetch();
 
     if (nullAccountTxs.length > 0) {
-      const sample = nullAccountTxs[0] as any;
+      const sample = nullAccountTxs[0];
       const errorMsg =
         `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!` +
         (workplaceId ? ` (Workplace: ${workplaceId})` : '') +
