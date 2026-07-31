@@ -3,7 +3,6 @@ import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataModule';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
@@ -20,6 +19,7 @@ import {
   resolveTransactionAmountPresentation,
 } from '@/src/services/journal/transactionDetailsHelpers';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, DisplayTransaction, JournalId, PlannedPaymentId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
@@ -293,7 +293,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
       `Are you sure you want to skip this planned transaction for ${amountText}? The schedule will advance to the next occurrence.`,
       async () => {
         try {
-          const pp = await plannedPaymentRepository.find(
+          const pp = await plannedPaymentReadService.find(
             workplaceId,
             journalInfo.plannedPaymentId! as PlannedPaymentId,
           );
