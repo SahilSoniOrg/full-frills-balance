@@ -1,7 +1,11 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
+import Account, {
+  AccountType,
+  formatAccountSubtypeLabel,
+  isAccountType,
+} from '@/src/data/models/Account';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
@@ -122,9 +126,9 @@ export function useAccountDetailsData(
         ? {
             id: accountId,
             name: pName,
-            accountType: (pType || 'ASSET') as any,
+            accountType: pType && isAccountType(pType) ? pType : AccountType.ASSET,
             currencyCode: pCurrency || workplaceCurrency,
-            icon: (pIcon || getAccountFallbackIcon(pType)) as any,
+            icon: (pIcon || getAccountFallbackIcon(pType)) as IconName,
             colorKey: pColor,
             deletedAt: undefined,
           }

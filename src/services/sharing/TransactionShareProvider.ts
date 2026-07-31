@@ -170,8 +170,8 @@ export class TransactionShareProvider implements ShareProvider {
     const headers = ['Date', 'Description', 'Type', 'Amount', 'Currency'];
 
     // Tier 2: CSV Injection protection
-    const makeSafe = (val: any) => {
-      const str = String(val);
+    const makeSafe = (value: string) => {
+      const str = value;
       return /^[=+\-@]/.test(str) ? `'${str}` : str;
     };
 
@@ -210,8 +210,8 @@ export class TransactionShareProvider implements ShareProvider {
         .replace(/\n/g, ' '); // Newlines (break layout)
     };
 
-    const makeSafe = (val: any) => {
-      const str = String(val);
+    const makeSafe = (value: string) => {
+      const str = value;
       // Even in Markdown, prefixing dangerous math chars is good for safety when copied to Excel
       return /^[=+\-@]/.test(str) ? `'${str}` : str;
     };
