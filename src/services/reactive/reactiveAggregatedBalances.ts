@@ -2,7 +2,7 @@ import { Animation } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { mapAccountListRowToBalance } from '@/src/data/repositories/account/accountListBalanceMapping';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import {
@@ -91,7 +91,7 @@ export function observeAggregatedAccountBalances(
         const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
         const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
 
-        const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
+        const currencyPrecisionMap = await currencyReadService.getAllPrecisions();
         const precisionMap = new Map<string, number>();
         for (const account of accounts) {
           const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;

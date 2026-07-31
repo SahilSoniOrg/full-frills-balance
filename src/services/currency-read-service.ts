@@ -2,6 +2,10 @@ import Currency from '@/src/data/models/Currency';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 
 export class CurrencyReadService {
+  getPrecision(code: string): Promise<number> {
+    return currencyRepository.getPrecision(code);
+  }
+
   observeAll() {
     return currencyRepository.observeAll();
   }

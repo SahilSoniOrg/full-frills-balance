@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { balanceService } from '@/src/services/BalanceService';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import {
@@ -23,7 +23,7 @@ export async function adjustAccountBalance(
   targetBalance: number,
   counterparty: BalanceChangeCounterparty = { kind: 'adjustment' },
 ): Promise<void> {
-  const precision = await currencyRepository.getPrecision(account.currencyCode);
+  const precision = await currencyReadService.getPrecision(account.currencyCode);
   const currentBalanceData = await balanceService.getAccountBalance(account.id, workplaceId);
   const currentBalance = currentBalanceData.balance;
 

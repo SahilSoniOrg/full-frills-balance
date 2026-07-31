@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
@@ -28,11 +28,11 @@ export async function prepareJournalData(
   const accountPrecisions = new Map<string, number>();
   await Promise.all(
     accounts.map(async acc => {
-      const precision = await currencyRepository.getPrecision(acc.currencyCode);
+      const precision = await currencyReadService.getPrecision(acc.currencyCode);
       accountPrecisions.set(acc.id, precision);
     }),
   );
-  const journalPrecision = await currencyRepository.getPrecision(data.currencyCode);
+  const journalPrecision = await currencyReadService.getPrecision(data.currencyCode);
 
   const roundedTransactions = data.transactions.map(t => ({
     ...t,

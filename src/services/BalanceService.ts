@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { convertAmount } from '@/src/services/currencyConversion';
@@ -432,7 +432,7 @@ export class BalanceService {
       // Phase 1: Metadata & Snapshots (Parallel)
       const [latestSnapshotsMap, currencyPrecisionMap] = await Promise.all([
         balanceSnapshotRepository.findLatestForAccountsRaw(workplaceId, accountIds, cutoffDate),
-        currencyRepository.getAllPrecisions(),
+        currencyReadService.getAllPrecisions(),
       ]);
       trace.metric('fetchMetadata');
 

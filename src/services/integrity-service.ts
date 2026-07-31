@@ -13,7 +13,7 @@ import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
@@ -145,7 +145,7 @@ export class IntegrityService {
       throw new Error(`Account ${accountId} not found`);
     }
 
-    const precision = await currencyRepository.getPrecision(account.currencyCode);
+    const precision = await currencyReadService.getPrecision(account.currencyCode);
 
     // 1. Get the "Cached" balance (the actual running_balance column of the latest transaction)
     const latestBalances = await transactionRawRepository.getLatestBalancesRaw(

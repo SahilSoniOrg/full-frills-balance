@@ -4,7 +4,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
 import { foldBalances } from '@/src/services/accounting/BalanceEffects';
@@ -67,7 +67,7 @@ export class AccountingRebuildService {
     const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
 
-    const precision = await currencyRepository.getPrecision(account.currencyCode);
+    const precision = await currencyReadService.getPrecision(account.currencyCode);
 
     // 1. Find the latest checkpoint strictly before the change
     const snapshot = fromDate

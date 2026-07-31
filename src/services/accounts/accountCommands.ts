@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
@@ -56,7 +56,7 @@ export async function createAccount(
     metadata: input.metadata,
   });
 
-  const precision = await currencyRepository.getPrecision(currencyCode);
+  const precision = await currencyReadService.getPrecision(currencyCode);
   await auditService.log(
     {
       entityType: 'account',
