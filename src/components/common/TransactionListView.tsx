@@ -5,7 +5,7 @@ import { TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
 import { SelectableTransactionCard } from './SelectableTransactionCard';
@@ -21,13 +21,13 @@ interface TransactionListViewProps {
   ListHeaderComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
   onEndReached?: () => void;
-  contentContainerStyle?: any;
+  contentContainerStyle?: StyleProp<ViewStyle>;
   /** Screen/VM privacy flag forwarded to day headers and transaction cards. */
   isPrivacyMode?: boolean;
   selectedIds?: Set<TransactionId>;
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 function renderListItem({
