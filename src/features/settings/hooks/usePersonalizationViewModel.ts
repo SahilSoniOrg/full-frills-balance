@@ -1,7 +1,8 @@
-import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
+import { useStsPreferences } from '@/src/hooks/useStsPreferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import Currency from '@/src/data/models/Currency';
 import { analytics } from '@/src/services/analytics-service';
@@ -26,17 +27,10 @@ export interface PersonalizationViewModel {
 export function usePersonalizationViewModel(): PersonalizationViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { data: workplace } = useWorkplaceSnapshot(workplaceId);
-  const ui = useUI();
+  const { userName, archetype, updateUserDetails, setArchetype } = useProfilePrefs();
+  const { safeToSpendDays, setSafeToSpendDays: setStsSafeToSpendDays } = useStsPreferences();
   const { showSafeToSpendChart, setShowSafeToSpendChart: setDashboardShowChart } =
     useDashboardPreferences();
-  const {
-    userName,
-    updateUserDetails,
-    archetype,
-    setArchetype,
-    safeToSpendDays,
-    setSafeToSpendDays: setUiSafeToSpendDays,
-  } = ui;
 
   const workplaceName = workplace?.name ?? '';
   const { currencies } = useCurrencies();
@@ -55,7 +49,7 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
 
   const onUpdateArchetype = useCallback(
     async (id: string) => {
-      await setArchetype(id);
+      setArchetype(id);
       analytics.trackFeatureUsage('settings', 'change_archetype', { archetype_id: id });
     },
     [setArchetype],
@@ -71,12 +65,12 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
 
   const setSafeToSpendDays = useCallback(
     (value: number) => {
-      setUiSafeToSpendDays(value);
+      setStsSafeToSpendDays(value);
       analytics.trackFeatureUsage('settings', 'change_safe_to_spend_days', {
         days: value,
       });
     },
-    [setUiSafeToSpendDays],
+    [setStsSafeToSpendDays],
   );
 
   const setShowSafeToSpendChart = useCallback(
