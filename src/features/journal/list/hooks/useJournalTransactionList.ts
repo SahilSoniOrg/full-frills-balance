@@ -8,12 +8,13 @@ import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
 import { buildJournalGroupingOptions } from './journalDayNetGrouping';
 
@@ -76,6 +77,7 @@ export function useJournalTransactionList({
   const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
   const { precision } = useCurrencyPrecision(baseCurrency);
+  const missingCurrenciesCache = useRef(new Set<string>());
 
   const journalOptions = useMemo(
     () => ({
@@ -188,6 +190,30 @@ export function useJournalTransactionList({
       return filtered.size === prev.size ? prev : filtered;
     });
   }, [journals, selectedIds, setSelectedIds, isLoading]);
+
+  // On-demand FX backfill for foreign journals missing from the rate map (list + search).
+  useEffect(() => {
+    const toFetch = new Set<string>();
+    journals.forEach(j => {
+      if (j.currencyCode !== baseCurrency) {
+        const rate = exchangeRateMap[j.currencyCode];
+        if (!rate || rate <= 0) {
+          if (!missingCurrenciesCache.current.has(j.currencyCode)) {
+            toFetch.add(j.currencyCode);
+            missingCurrenciesCache.current.add(j.currencyCode);
+          }
+        }
+      }
+    });
+
+    toFetch.forEach(currencyCode => {
+      exchangeRateService
+        .getRate(baseCurrency, currencyCode)
+        .catch(e =>
+          logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e),
+        );
+    });
+  }, [journals, baseCurrency, exchangeRateMap]);
 
   const onEndReached = useMemo(() => {
     if (paginationPolicy === 'default') {

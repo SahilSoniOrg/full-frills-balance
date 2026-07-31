@@ -1,12 +1,8 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
-import { useExchangeRates } from '@/src/hooks/useExchangeRates';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -76,17 +72,11 @@ export function useJournalListViewModel(
   }: UseJournalListViewModelParams,
   workplaceId: WorkplaceId,
 ): JournalListViewModel {
-  const { isInitialized } = useUI();
-  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const baseCurrency = workplaceCurrency;
-  const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
-
   const mountTimeRef = useRef<number | null>(null);
   if (mountTimeRef.current === null) mountTimeRef.current = getPerfNow();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchGlobal, setIsSearchGlobal] = useState(true);
-  const missingCurrenciesCache = useRef(new Set<string>());
 
   const {
     dateRange,
@@ -152,30 +142,6 @@ export function useJournalListViewModel(
     },
     [hideDatePicker, setFilter],
   );
-
-  // FX backfill stays on the list adapter until unified into the shared core.
-  useEffect(() => {
-    const toFetch = new Set<string>();
-    core.journals.forEach(j => {
-      if (j.currencyCode !== baseCurrency) {
-        const rate = exchangeRateMap[j.currencyCode];
-        if (!rate || rate <= 0) {
-          if (!missingCurrenciesCache.current.has(j.currencyCode)) {
-            toFetch.add(j.currencyCode);
-            missingCurrenciesCache.current.add(j.currencyCode);
-          }
-        }
-      }
-    });
-
-    toFetch.forEach(currencyCode => {
-      exchangeRateService
-        .getRate(baseCurrency, currencyCode)
-        .catch(e =>
-          logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e),
-        );
-    });
-  }, [core.journals, baseCurrency, exchangeRateMap]);
 
   return {
     items: core.items,
