@@ -1,30 +1,42 @@
 import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import {
   resolveJournalEntrySelectableAccounts,
   resolveJournalEntrySelectedAccountId,
 } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
-import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
+type SplitRowPick = { id: string; accountId?: AccountId };
+
 export interface UseJournalEntryAccountPickerOptions {
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;
   activeMode: JournalEntryScreenMode;
+  /** Split draft ids for picker highlight (owned by split editor, not this hook). */
+  splitSourceAccountId?: AccountId;
+  splitRows?: SplitRowPick[];
+  /** Mode-agnostic apply; parent routes to split editor or core editor lines. */
+  applyAccountToActiveLine: (lineId: string, accountId: AccountId) => void;
 }
 
 /**
- * Account picker UI + split editor in one hook so split account selection
- * can call splitEditor directly (no render-time ref bridge).
+ * Account picker UI state — mode-agnostic.
+ * Split / guided / advanced account application is injected via callback.
  */
 export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPickerOptions) {
-  const { accounts, editor, activeMode } = options;
+  const {
+    accounts,
+    editor,
+    activeMode,
+    splitSourceAccountId,
+    splitRows = [],
+    applyAccountToActiveLine,
+  } = options;
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -38,13 +50,6 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     [editor, activeMode],
   );
 
-  const splitEditor = useSplitJournalEditor({
-    accounts,
-    editor,
-    onSelectAccountRequest,
-    isActive: activeMode === 'split',
-  });
-
   const onCloseAccountPicker = useCallback(() => {
     setShowAccountPicker(false);
     setActiveLineId(null);
@@ -52,31 +57,12 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
 
   const onAccountSelected = useCallback(
     (accountId: AccountId) => {
-      if (activeMode === 'split' && activeLineId) {
-        if (activeLineId === SPLIT_SOURCE_LINE_ID) {
-          splitEditor.setSourceAccountId(accountId);
-        } else {
-          splitEditor.updateSplitRow(activeLineId, { accountId });
-        }
-        onCloseAccountPicker();
-        return;
-      }
-
       if (activeLineId) {
-        const account = accounts.find(a => a.id === accountId);
-        if (account) {
-          editor.updateLine(activeLineId, {
-            accountId,
-            accountName: account.name,
-            accountType: account.accountType,
-            accountCurrency: account.currencyCode,
-          });
-        }
+        applyAccountToActiveLine(activeLineId, accountId);
       }
-      setShowAccountPicker(false);
-      setActiveLineId(null);
+      onCloseAccountPicker();
     },
-    [accounts, activeLineId, activeMode, editor, onCloseAccountPicker, splitEditor],
+    [activeLineId, applyAccountToActiveLine, onCloseAccountPicker],
   );
 
   const onCreateAccountRequest = useCallback(
@@ -116,14 +102,13 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
         activeMode,
         activeLineId,
         lines: editor.lines,
-        splitSourceAccountId: splitEditor.sourceAccountId,
-        splitRows: splitEditor.splits,
+        splitSourceAccountId,
+        splitRows,
       }),
-    [activeMode, activeLineId, editor.lines, splitEditor.sourceAccountId, splitEditor.splits],
+    [activeMode, activeLineId, editor.lines, splitSourceAccountId, splitRows],
   );
 
   return {
-    splitEditor,
     showAccountPicker,
     onSelectAccountRequest,
     onCloseAccountPicker,

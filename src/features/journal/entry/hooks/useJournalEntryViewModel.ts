@@ -13,9 +13,11 @@ import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks
 import { useJournalEntryMode } from '@/src/features/journal/entry/hooks/useJournalEntryMode';
 import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/useJournalEntryVoiceInput';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import {
   createSmsJournalAfterSaveHandler,
   isAdvancedJournalFormValid,
@@ -28,7 +30,7 @@ import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEdito
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, AccountRole, WorkplaceId } from '@/src/types/domain';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import { AppNavigation } from '@/src/utils/navigation';
 
@@ -131,8 +133,44 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     isSimpleModeDisabled,
   });
 
+  // Split editor opens the picker via this ref; picker owns the open/close UI state.
+  const onSelectAccountRequestRef = useRef<(idOrRole: string) => void>(() => {});
+  const requestAccountSelection = useCallback((lineId: string) => {
+    onSelectAccountRequestRef.current(lineId);
+  }, []);
+
+  const splitEditor = useSplitJournalEditor({
+    accounts,
+    editor,
+    onSelectAccountRequest: requestAccountSelection,
+    isActive: activeMode === 'split',
+  });
+
+  const applyAccountToActiveLine = useCallback(
+    (lineId: string, accountId: AccountId) => {
+      if (activeMode === 'split') {
+        if (lineId === SPLIT_SOURCE_LINE_ID) {
+          splitEditor.setSourceAccountId(accountId);
+        } else {
+          splitEditor.updateSplitRow(lineId, { accountId });
+        }
+        return;
+      }
+
+      const account = accounts.find(a => a.id === accountId);
+      if (account) {
+        editor.updateLine(lineId, {
+          accountId,
+          accountName: account.name,
+          accountType: account.accountType,
+          accountCurrency: account.currencyCode,
+        });
+      }
+    },
+    [activeMode, accounts, editor, splitEditor],
+  );
+
   const {
-    splitEditor,
     showAccountPicker,
     onSelectAccountRequest,
     onCloseAccountPicker,
@@ -144,7 +182,14 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     accounts,
     editor,
     activeMode,
+    splitSourceAccountId: splitEditor.sourceAccountId,
+    splitRows: splitEditor.splits,
+    applyAccountToActiveLine,
   });
+
+  useEffect(() => {
+    onSelectAccountRequestRef.current = onSelectAccountRequest;
+  }, [onSelectAccountRequest]);
 
   const simpleEditor = useSimpleJournalEditor({
     accounts,
