@@ -2,17 +2,15 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataModule';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
+import { useTransactionDetailsSmsInfo } from '@/src/features/journal/hooks/useTransactionDetailsSmsInfo';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useObservable } from '@/src/hooks/useObservable';
 import {
   JournalStatusChipVariant,
   mapDisplayTransactionSplitPresentation,
-  mapSmsJournalMetadataDisplay,
   resolveJournalDetailsInfo,
   resolveJournalStatusChipVariant,
   resolveRevertPlannedActionLabels,
@@ -20,7 +18,6 @@ import {
 } from '@/src/services/journal/transactionDetailsHelpers';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { smsService } from '@/src/services/sms-service';
 import { AccountId, DisplayTransaction, JournalId, PlannedPaymentId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -28,8 +25,6 @@ import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { from, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
 
 export interface TransactionSplitItemViewModel {
   id: string;
@@ -123,30 +118,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     version,
   } = useJournal(workplaceId, journalId, true);
 
-  const { data: smsInfo } = useObservable(
-    () => {
-      if (!journalId) return of(undefined);
-
-      return from(journalMetadataRepository.findByJournalId(journalId, workplaceId)).pipe(
-        switchMap(metadata => {
-          if (!metadata) return of(undefined);
-
-          return from(smsService.findByLinkedJournalId(journalId)).pipe(
-            map(inboxRecord =>
-              mapSmsJournalMetadataDisplay({
-                originalSmsSender: metadata.originalSmsSender,
-                originalSmsBody: metadata.originalSmsBody,
-                metadataJson: metadata.metadataJson,
-                inboxRecord: inboxRecord ?? null,
-              }),
-            ),
-          );
-        }),
-      );
-    },
-    [journalId, workplaceId],
-    undefined,
-  );
+  const smsInfo = useTransactionDetailsSmsInfo(workplaceId, journalId);
 
   const journalInfo = useMemo(
     () =>
