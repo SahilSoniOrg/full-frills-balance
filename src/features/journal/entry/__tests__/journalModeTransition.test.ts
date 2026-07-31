@@ -1,6 +1,7 @@
 import {
   isGuidedDisabledForMode,
   modeOwnsEditorLines,
+  resolveJournalModeTransition,
 } from '@/src/features/journal/entry/journalModeTransition';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -28,11 +29,12 @@ function filledLine(id: string, transactionType: TransactionType): JournalEntryL
   return line(id, transactionType, { accountId: `acc-${id}` as AccountId, amount: '10' });
 }
 
-const threeSubstantiveLines = [
+const twoLegLines = [
   filledLine('1', TransactionType.CREDIT),
   filledLine('2', TransactionType.DEBIT),
-  filledLine('3', TransactionType.DEBIT),
 ];
+
+const threeSubstantiveLines = [...twoLegLines, filledLine('3', TransactionType.DEBIT)];
 
 describe('modeOwnsEditorLines', () => {
   it('is true for the modes that edit editor.lines directly', () => {
@@ -58,10 +60,87 @@ describe('isGuidedDisabledForMode', () => {
   });
 
   it('does not block Guided when a lines-owning mode is within the two-leg limit', () => {
-    const twoLegs = [
+    expect(isGuidedDisabledForMode('advanced', twoLegLines)).toBe(false);
+  });
+});
+
+describe('resolveJournalModeTransition', () => {
+  it('blocks Guided when the lines it would inherit exceed two legs', () => {
+    const transition = resolveJournalModeTransition({
+      from: 'advanced',
+      to: 'guided',
+      lines: threeSubstantiveLines,
+    });
+
+    expect(transition).toEqual({ status: 'blocked' });
+  });
+
+  it('lets Guided through from Split even though editor.lines are stale', () => {
+    const transition = resolveJournalModeTransition({
+      from: 'split',
+      to: 'guided',
+      lines: threeSubstantiveLines,
+    });
+
+    expect(transition.status).toBe('applied');
+    expect(transition.status === 'applied' && transition.nextMode).toBe('guided');
+  });
+
+  it('lands on Advanced when the lines cannot collapse into two guided legs', () => {
+    const creditOnly = [
       filledLine('1', TransactionType.CREDIT),
-      filledLine('2', TransactionType.DEBIT),
+      filledLine('2', TransactionType.CREDIT),
     ];
-    expect(isGuidedDisabledForMode('advanced', twoLegs)).toBe(false);
+
+    const transition = resolveJournalModeTransition({
+      from: 'advanced',
+      to: 'guided',
+      lines: creditOnly,
+    });
+
+    expect(transition).toEqual({ status: 'applied', nextMode: 'advanced', nextLines: creditOnly });
+  });
+
+  it('normalizes to a credit-then-debit pair when entering Guided', () => {
+    const transition = resolveJournalModeTransition({
+      from: 'advanced',
+      to: 'guided',
+      lines: [filledLine('1', TransactionType.DEBIT), filledLine('2', TransactionType.CREDIT)],
+    });
+
+    expect(transition.status).toBe('applied');
+    if (transition.status !== 'applied') return;
+    expect(transition.nextMode).toBe('guided');
+    expect(transition.nextLines.map(l => l.transactionType)).toEqual([
+      TransactionType.CREDIT,
+      TransactionType.DEBIT,
+    ]);
+  });
+
+  it('carries lines across between the two modes that own them', () => {
+    const transition = resolveJournalModeTransition({
+      from: 'guided',
+      to: 'advanced',
+      lines: twoLegLines,
+    });
+
+    expect(transition).toEqual({
+      status: 'applied',
+      nextMode: 'advanced',
+      nextLines: twoLegLines,
+    });
+  });
+
+  it('scaffolds fresh lines when leaving a draft mode', () => {
+    const transition = resolveJournalModeTransition({
+      from: 'bulk',
+      to: 'advanced',
+      lines: threeSubstantiveLines,
+    });
+
+    expect(transition.status).toBe('applied');
+    if (transition.status !== 'applied') return;
+    expect(transition.nextLines).toHaveLength(2);
+    expect(transition.nextLines.every(l => l.accountId === EMPTY_ACCOUNT_ID)).toBe(true);
   });
 });

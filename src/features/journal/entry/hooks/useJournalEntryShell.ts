@@ -18,13 +18,12 @@ import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import { isGuidedDisabledForMode } from '@/src/features/journal/entry/journalModeTransition';
+import {
+  isGuidedDisabledForMode,
+  resolveJournalModeTransition,
+} from '@/src/features/journal/entry/journalModeTransition';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
-import {
-  createTwoLegJournalScaffold,
-  normalizeJournalLinesForGuidedMode,
-} from '@/src/services/journal/journalEditorHelpers';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
@@ -120,7 +119,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const isSimpleModeDisabled = isGuidedDisabledForMode(activeMode, editor.lines);
 
-  const { setIsGuidedMode, setTransactionType } = editor;
+  const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, setTransactionType } = editor;
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'guided');
@@ -129,27 +128,39 @@ export function useJournalEntryShell(): JournalEntryShell {
     }
   }, [activeMode, setIsGuidedMode, setTransactionType]);
 
+  const wasEditorGuidedRef = useRef(editorIsGuidedMode);
+
+  /**
+   * The editor can drop guided on its own — loading a multi-leg journal for edit is the main
+   * case. Follow it down to Advanced so the Guided UI is never rendered over a non-guided editor.
+   */
+  useEffect(() => {
+    const wasGuided = wasEditorGuidedRef.current;
+    wasEditorGuidedRef.current = editorIsGuidedMode;
+    if (wasGuided && !editorIsGuidedMode) {
+      setActiveMode(current => (current === 'guided' ? 'advanced' : current));
+    }
+  }, [editorIsGuidedMode]);
+
+  const { lines: editorLines, setLines } = editor;
+
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {
-      if (mode === 'guided' && isSimpleModeDisabled) {
+      const transition = resolveJournalModeTransition({
+        from: activeMode,
+        to: mode,
+        lines: editorLines,
+      });
+
+      if (transition.status === 'blocked') {
         showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
         return;
       }
 
-      if ((activeMode === 'split' || activeMode === 'bulk') && mode !== activeMode) {
-        editor.setLines(createTwoLegJournalScaffold());
-      }
-
-      if (mode === 'guided') {
-        editor.setLines(current => {
-          const normalized = normalizeJournalLinesForGuidedMode(current);
-          return normalized.forceAdvancedMode ? current : normalized.lines;
-        });
-      }
-
-      setActiveMode(mode);
+      setLines(transition.nextLines);
+      setActiveMode(transition.nextMode);
     },
-    [isSimpleModeDisabled, activeMode, editor],
+    [activeMode, editorLines, setLines],
   );
 
   const onSelectAccountRequestRef = useRef<(lineId: string) => void>(() => {});
