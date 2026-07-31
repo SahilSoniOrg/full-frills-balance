@@ -1,9 +1,7 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
-import { useEffectivePrivacyMode, usePrivacyScopeOptional } from '@/src/contexts/PrivacyScope';
+import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface NetWorthCardProps {
@@ -12,8 +10,9 @@ interface NetWorthCardProps {
   totalLiabilities: number;
   currencyCode: string;
   isLoading?: boolean;
-  hidden?: boolean;
-  onToggleHidden?: (hidden: boolean) => void;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode: boolean;
+  onTogglePrivacy?: () => void;
 }
 
 export const NetWorthCard = ({
@@ -22,35 +21,14 @@ export const NetWorthCard = ({
   totalLiabilities,
   currencyCode,
   isLoading = false,
-  hidden: controlledHidden,
-  onToggleHidden,
+  isPrivacyMode,
+  onTogglePrivacy,
 }: NetWorthCardProps) => {
   const { theme, fonts } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
-  const privacyScope = usePrivacyScopeOptional();
-
-  const [overrideHidden, setOverrideHidden] = useState<boolean | null>(null);
-
-  const isActuallyHidden =
-    controlledHidden !== undefined
-      ? controlledHidden
-      : overrideHidden !== null
-        ? overrideHidden
-        : isPrivacyMode;
-
-  const handleToggle = () => {
-    if (onToggleHidden) {
-      onToggleHidden(!isActuallyHidden);
-    } else if (privacyScope) {
-      privacyScope.togglePrivacyMode();
-    } else {
-      setOverrideHidden(!isActuallyHidden);
-    }
-  };
 
   const formatCurrency = (amount: number) => {
     if (isLoading) return '...';
-    if (isActuallyHidden) return '••••';
+    if (isPrivacyMode) return AppConfig.privacyMask;
     return CurrencyFormatter.format(amount, currencyCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -62,22 +40,24 @@ export const NetWorthCard = ({
       elevation="md"
       padding="lg"
       radius="r1"
-      style={[styles.container, { backgroundColor: theme.surface }]} // Maybe use primary color bg?
+      style={[styles.container, { backgroundColor: theme.surface }]}
     >
       <View style={styles.header}>
         <AppText variant="subheading" color="secondary">
           Net Worth
         </AppText>
-        <TouchableOpacity
-          onPress={handleToggle}
-          hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-        >
-          <AppIcon
-            name={isActuallyHidden ? 'eyeOff' : 'eye'}
-            size={Size.sm}
-            color={theme.textTertiary}
-          />
-        </TouchableOpacity>
+        {onTogglePrivacy ? (
+          <TouchableOpacity
+            onPress={onTogglePrivacy}
+            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+          >
+            <AppIcon
+              name={isPrivacyMode ? 'eyeOff' : 'eye'}
+              size={Size.sm}
+              color={theme.textTertiary}
+            />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <AppText variant="title" style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}>
@@ -132,7 +112,7 @@ const styles = StyleSheet.create({
   breakdownContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start', // specific alignment
+    alignItems: 'flex-start',
   },
   breakdownItem: {
     flex: 1,
@@ -143,7 +123,7 @@ const styles = StyleSheet.create({
     width: Spacing.sm,
     height: Spacing.sm,
     borderRadius: Shape.radius.full,
-    marginTop: Spacing.xs + 2, // Optical alignment with text
+    marginTop: Spacing.xs + 2,
   },
   divider: {
     width: 1,

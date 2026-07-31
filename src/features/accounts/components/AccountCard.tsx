@@ -1,21 +1,35 @@
 import { AppCard, AppIcon, IvyIcon } from '@/src/components/core';
-import { Opacity, Size } from '@/src/constants';
+import { AppConfig, Opacity, Size } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountType } from '@/src/data/models/Account';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface AccountCardProps {
   account: AccountCardViewModel;
+  isPrivacyMode: boolean;
+  isLoading?: boolean;
   onPress: () => void;
   onCollapse?: () => void;
   dividerColor: ColorKey;
   surfaceColor: ColorKey;
+}
+
+function formatAmount(
+  amount: number,
+  currencyCode: string,
+  isPrivacyMode: boolean,
+  isLoading: boolean,
+) {
+  if (isLoading) return '...';
+  if (isPrivacyMode) return AppConfig.privacyMask;
+  return CurrencyFormatter.format(amount, currencyCode);
 }
 
 function getAccountStatsConfig(
@@ -65,6 +79,8 @@ function getAccountStatsConfig(
 
 export function AccountCardBase({
   account,
+  isPrivacyMode,
+  isLoading = false,
   onPress,
   onCollapse,
   dividerColor,
@@ -73,11 +89,20 @@ export function AccountCardBase({
   const { theme, fonts } = useTheme();
   const resolvedTextColor = resolveThemeColor(theme, account.textColor);
 
-  const stats = getAccountStatsConfig(
-    account.accountType,
-    account.monthlyIncomeText,
-    account.monthlyExpenseText,
+  const balanceText = useMemo(
+    () => formatAmount(account.balance, account.currencyCode, isPrivacyMode, isLoading),
+    [account.balance, account.currencyCode, isPrivacyMode, isLoading],
   );
+  const monthlyIncomeText = useMemo(
+    () => formatAmount(account.monthlyIncome, account.currencyCode, isPrivacyMode, isLoading),
+    [account.monthlyIncome, account.currencyCode, isPrivacyMode, isLoading],
+  );
+  const monthlyExpenseText = useMemo(
+    () => formatAmount(account.monthlyExpenses, account.currencyCode, isPrivacyMode, isLoading),
+    [account.monthlyExpenses, account.currencyCode, isPrivacyMode, isLoading],
+  );
+
+  const stats = getAccountStatsConfig(account.accountType, monthlyIncomeText, monthlyExpenseText);
 
   return (
     <AppCard
@@ -163,7 +188,7 @@ export function AccountCardBase({
                   fontFamily: fonts.bold,
                 }}
               >
-                {account.balanceText}
+                {balanceText}
               </Text>
             </Column>
           </Column>

@@ -9,7 +9,7 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
@@ -17,6 +17,7 @@ import {
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const TAB_OPTIONS = [
@@ -136,7 +137,9 @@ export function AccountsListView({
                   </View>
                   <View style={styles.flexRowGapMd}>
                     <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
-                      {section.totalDisplay}
+                      {isPrivacyMode
+                        ? AppConfig.privacyMask
+                        : CurrencyFormatter.formatShort(section.total, currencyCode)}
                     </AppText>
                     <AppIcon
                       name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
@@ -159,6 +162,8 @@ export function AccountsListView({
             return (
               <AccountCard
                 account={item}
+                isPrivacyMode={isPrivacyMode}
+                isLoading={isLoading}
                 onPress={() => onAccountPress(item.id)}
                 onCollapse={() => onCollapseAccount(item.id)}
                 dividerColor="divider"
@@ -175,6 +180,8 @@ export function AccountsListView({
                   totalLiabilities={totalLiabilities}
                   currencyCode={currencyCode}
                   isLoading={isLoading}
+                  isPrivacyMode={isPrivacyMode}
+                  onTogglePrivacy={onTogglePrivacy}
                 />
               </View>
             ) : (
@@ -186,6 +193,8 @@ export function AccountsListView({
                   onChangePeriod={setInflowPeriod}
                   currencyCode={currencyCode}
                   isLoading={isLoading || isPeriodLoading}
+                  isPrivacyMode={isPrivacyMode}
+                  onTogglePrivacy={onTogglePrivacy}
                 />
               </View>
             )

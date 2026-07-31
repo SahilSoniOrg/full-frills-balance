@@ -53,6 +53,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       projection={projection}
       safeToSpend={safeToSpend}
       isOverCommitted={isOverCommitted}
+      isPrivacyMode={viewModel.isPrivacyMode}
       currencyCode={viewModel.currencyCode}
       formatValue={formatValue}
     />

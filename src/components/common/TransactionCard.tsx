@@ -1,6 +1,5 @@
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { AppConfig, Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -39,6 +38,8 @@ export interface TransactionCardProps {
   };
   badges: TransactionBadge[];
   notes?: string;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
   /** Optional chrome rendered inside the card (e.g. selection indicator). */
@@ -57,6 +58,7 @@ const TransactionCardComponent = ({
   presentation,
   badges = [],
   notes,
+  isPrivacyMode = false,
   onPress,
   onLongPress,
   overlay,
@@ -64,7 +66,6 @@ const TransactionCardComponent = ({
   contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
 
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
 
@@ -74,7 +75,7 @@ const TransactionCardComponent = ({
   );
 
   const formattedAmount = useMemo(
-    () => (isPrivacyMode ? '••••' : CurrencyFormatter.format(amount, currencyCode)),
+    () => (isPrivacyMode ? AppConfig.privacyMask : CurrencyFormatter.format(amount, currencyCode)),
     [isPrivacyMode, amount, currencyCode],
   );
 

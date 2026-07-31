@@ -1,6 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -14,6 +13,8 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 export interface PlannedPaymentsSectionProps {
   items: PlannedOccurrenceViewModel[];
   onItemPress?: (item: PlannedOccurrenceViewModel) => void;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode?: boolean;
 }
 
 function resolveDisplayType(displayType: string): JournalDisplayType {
@@ -28,9 +29,12 @@ function resolveDisplayType(displayType: string): JournalDisplayType {
   return JournalDisplayType.EXPENSE;
 }
 
-export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSectionProps) {
+export function PlannedPaymentsSection({
+  items,
+  onItemPress,
+  isPrivacyMode = false,
+}: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const sortedItems = useMemo(() => {
@@ -111,7 +115,7 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
             else if (isDueSoon) dateColor = theme.warning;
 
             const amountStr = isPrivacyMode
-              ? '••••'
+              ? AppConfig.privacyMask
               : CurrencyFormatter.format(item.amount, item.currencyCode, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,

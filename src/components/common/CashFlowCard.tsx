@@ -1,9 +1,7 @@
 import { AppCard, AppIcon, AppText, AppSegmentedControl } from '@/src/components/core';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
-import { useEffectivePrivacyMode, usePrivacyScopeOptional } from '@/src/contexts/PrivacyScope';
+import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface CashFlowCardProps {
@@ -13,8 +11,9 @@ interface CashFlowCardProps {
   onChangePeriod: (period: 'overall' | 'month' | '30days') => void;
   currencyCode: string;
   isLoading?: boolean;
-  hidden?: boolean;
-  onToggleHidden?: (hidden: boolean) => void;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode: boolean;
+  onTogglePrivacy?: () => void;
 }
 
 export const CashFlowCard = ({
@@ -24,35 +23,14 @@ export const CashFlowCard = ({
   onChangePeriod,
   currencyCode,
   isLoading = false,
-  hidden: controlledHidden,
-  onToggleHidden,
+  isPrivacyMode,
+  onTogglePrivacy,
 }: CashFlowCardProps) => {
   const { theme, fonts } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
-  const privacyScope = usePrivacyScopeOptional();
-
-  const [overrideHidden, setOverrideHidden] = useState<boolean | null>(null);
-
-  const isActuallyHidden =
-    controlledHidden !== undefined
-      ? controlledHidden
-      : overrideHidden !== null
-        ? overrideHidden
-        : isPrivacyMode;
-
-  const handleToggle = () => {
-    if (onToggleHidden) {
-      onToggleHidden(!isActuallyHidden);
-    } else if (privacyScope) {
-      privacyScope.togglePrivacyMode();
-    } else {
-      setOverrideHidden(!isActuallyHidden);
-    }
-  };
 
   const formatCurrency = (amount: number) => {
     if (isLoading) return '...';
-    if (isActuallyHidden) return '••••';
+    if (isPrivacyMode) return AppConfig.privacyMask;
     return CurrencyFormatter.format(amount, currencyCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -72,16 +50,18 @@ export const CashFlowCard = ({
         <AppText variant="subheading" color="secondary">
           Net Inflow
         </AppText>
-        <TouchableOpacity
-          onPress={handleToggle}
-          hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-        >
-          <AppIcon
-            name={isActuallyHidden ? 'eyeOff' : 'eye'}
-            size={Size.sm}
-            color={theme.textTertiary}
-          />
-        </TouchableOpacity>
+        {onTogglePrivacy ? (
+          <TouchableOpacity
+            onPress={onTogglePrivacy}
+            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+          >
+            <AppIcon
+              name={isPrivacyMode ? 'eyeOff' : 'eye'}
+              size={Size.sm}
+              color={theme.textTertiary}
+            />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <AppText

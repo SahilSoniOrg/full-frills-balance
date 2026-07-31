@@ -1,6 +1,5 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Opacity, Size, withOpacity } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -10,22 +9,20 @@ interface DashboardSummaryProps {
   income: number;
   expense: number;
   currencyCode: string;
-  isHidden?: boolean;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode?: boolean;
 }
 
 export const DashboardSummary = ({
   income,
   expense,
   currencyCode,
-  isHidden: controlledHidden,
+  isPrivacyMode = false,
 }: DashboardSummaryProps) => {
   const { theme, fonts } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
-
-  const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : isPrivacyMode;
 
   const formatValue = (val: number) => {
-    if (isActuallyHidden) return '••••';
+    if (isPrivacyMode) return AppConfig.privacyMask;
     return CurrencyFormatter.format(val, currencyCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,

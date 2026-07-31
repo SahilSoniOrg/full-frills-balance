@@ -1,6 +1,5 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
 import { formatCurrency } from '@/src/utils/money';
@@ -14,6 +13,8 @@ export interface JournalDayHeaderProps {
   netAmount?: number;
   currencyCode?: string;
   reconciledAt?: number | null;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode?: boolean;
 }
 
 export function JournalDayHeader({
@@ -24,9 +25,9 @@ export function JournalDayHeader({
   netAmount,
   currencyCode,
   reconciledAt,
+  isPrivacyMode = false,
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
@@ -80,7 +81,7 @@ export function JournalDayHeader({
               ]}
             >
               {isPositive ? '+' : ''}
-              {isPrivacyMode ? '••••' : formatCurrency(netAmount, currencyCode)}
+              {isPrivacyMode ? AppConfig.privacyMask : formatCurrency(netAmount, currencyCode)}
             </AppText>
           )}
           <AppIcon

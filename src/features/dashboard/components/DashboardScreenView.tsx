@@ -22,6 +22,7 @@ import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
 export function DashboardScreenView({
   hasCompletedOnboarding,
+  isPrivacyMode,
   recentTransactions,
   headerProps,
   fab,
@@ -40,6 +41,7 @@ export function DashboardScreenView({
       setExpandedSection: explanationModalState.setExpandedSection,
       selectedLegendItem: legendModalState.selectedItem,
       setSelectedLegendItem: legendModalState.setSelectedItem,
+      isPrivacyMode,
     }),
     [
       explanationModalState.visible,
@@ -48,6 +50,7 @@ export function DashboardScreenView({
       explanationModalState.setExpandedSection,
       legendModalState.selectedItem,
       legendModalState.setSelectedItem,
+      isPrivacyMode,
     ],
   );
 
@@ -156,6 +159,7 @@ export function DashboardScreenView({
         emptyTitle={emptyTitle}
         emptySubtitle={emptySubtitle}
         onEndReached={onEndReached}
+        isPrivacyMode={isPrivacyMode}
         selectedIds={selectedIds as Set<string> as Set<TransactionId>}
         onLongPressItem={onLongPressItem as (id: string) => void}
         isSelectionModeActive={isSelectionModeActive}
@@ -178,6 +182,7 @@ export function DashboardScreenView({
               <PlannedPaymentsSection
                 items={plannedOccurrences}
                 onItemPress={onPlannedJournalPress}
+                isPrivacyMode={isPrivacyMode}
               />
             </View>
             <Inset horizontal="lg" vertical="lg">

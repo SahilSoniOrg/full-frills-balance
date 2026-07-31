@@ -46,6 +46,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     transactionsLoading,
     transactionsLoadingMore,
     transactionItems,
+    isPrivacyMode,
     onLoadMore,
     secondaryBalances,
     isParent,
@@ -194,6 +195,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
           onEndReached={onLoadMore}
           emptyTitle="No transactions yet"
           emptySubtitle="Transactions for this account will appear here."
+          isPrivacyMode={isPrivacyMode}
           selectedIds={selectedIds}
           onLongPressItem={onLongPressItem}
           isSelectionModeActive={isSelectionModeActive}
