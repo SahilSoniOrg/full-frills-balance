@@ -5,6 +5,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
+import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
@@ -138,50 +139,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     const typeColorKey = presentation.colorKey as ColorKey;
     const typeLabel = presentation.label;
 
-    // Interval label
-    const n = item.intervalN;
-    const type = item.intervalType;
-
-    let baseLabel = '';
-    if (n === 1) {
-      switch (type) {
-        case 'DAILY':
-          baseLabel = AppConfig.strings.plannedPayments.everyDay;
-          break;
-        case 'WEEKLY':
-          baseLabel = AppConfig.strings.plannedPayments.everyWeek;
-          break;
-        case 'MONTHLY':
-          baseLabel = AppConfig.strings.plannedPayments.everyMonth;
-          break;
-        case 'YEARLY':
-          baseLabel = AppConfig.strings.plannedPayments.everyYear;
-          break;
-      }
-    } else {
-      baseLabel = AppConfig.strings.plannedPayments.everyN(n, type.toLowerCase());
-    }
-
-    let detailLabel = '';
-    if (type === 'WEEKLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
-      const days = AppConfig.strings.plannedPayments.dayNames;
-      detailLabel = ` on ${days[item.recurrenceDay]}`;
-    } else if (
-      type === 'MONTHLY' &&
-      item.recurrenceDay !== undefined &&
-      item.recurrenceDay !== null
-    ) {
-      detailLabel = ` on day ${item.recurrenceDay}`;
-    } else if (type === 'YEARLY') {
-      const months = AppConfig.strings.plannedPayments.monthNames;
-      const monthStr = item.recurrenceMonth ? months[item.recurrenceMonth - 1] : '';
-      const dayStr = item.recurrenceDay ? ` day ${item.recurrenceDay}` : '';
-      if (monthStr || dayStr) {
-        detailLabel = ` on ${monthStr}${dayStr}`;
-      }
-    }
-
-    const intervalLabel = `${baseLabel}${detailLabel}`;
+    const intervalLabel = formatPlannedPaymentInterval(item);
 
     const headerActions = {
       onEdit: handleEdit,
