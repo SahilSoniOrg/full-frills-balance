@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
+import { AccountType } from '@/src/data/models/Account';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
@@ -25,8 +26,7 @@ export interface PeriodMetrics {
 export interface UseAccountDetailsMetricsOptions {
   accountId: AccountId;
   workplaceId: WorkplaceId;
-  accountType: string;
-  isAssetOrExpense: boolean;
+  accountType: AccountType;
   balanceCurrency: string;
   dateRange: DateRange | null;
   balanceData: AccountBalance | null;
@@ -47,7 +47,6 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     accountId,
     workplaceId,
     accountType,
-    isAssetOrExpense,
     balanceCurrency,
     dateRange,
     balanceData,
@@ -80,7 +79,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         accountId,
         dateRange.startDate,
         dateRange.endDate,
-        isAssetOrExpense,
+        accountType,
       ).pipe(
         map(metrics => {
           const netChange = metrics.totalIncrease - metrics.totalDecrease;
@@ -99,7 +98,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         }),
       );
     },
-    [accountId, dateRange, accountType, isAssetOrExpense, workplaceId],
+    [accountId, dateRange, accountType, workplaceId],
     { totalIncrease: 0, totalDecrease: 0, netChange: 0, dailyAverage: null, isLoading: true },
   );
 

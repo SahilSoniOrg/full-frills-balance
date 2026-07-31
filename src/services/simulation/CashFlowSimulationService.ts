@@ -515,7 +515,7 @@ export class CashFlowSimulationService {
               lb.account.id,
               s1Date.valueOf(),
               now.endOf('day').valueOf(),
-              false,
+              lb.account.accountType,
             ),
           ]);
 
@@ -541,7 +541,7 @@ export class CashFlowSimulationService {
             lb.account.id,
             prevDue.valueOf(),
             now.endOf('day').valueOf(),
-            false,
+            lb.account.accountType,
           );
 
           const rawSettled = metrics.totalDecrease;

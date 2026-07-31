@@ -1,5 +1,6 @@
 import { Animation } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
+import { AccountType } from '@/src/data/models/Account';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -38,14 +39,14 @@ export function observeUnreconciledMetrics(
   workplaceId: WorkplaceId,
   accountId: AccountId | null,
   reconciledAt: number | null,
-  isAssetOrExpense: boolean,
+  accountType: AccountType,
 ): Observable<{ count: number; total: number }> {
   if (!accountId || !workplaceId) return of({ count: 0, total: 0 });
   return transactionRawRepository.observeUnreconciledMetricsRaw(
     workplaceId,
     accountId,
     reconciledAt,
-    isAssetOrExpense,
+    accountType,
   );
 }
 
@@ -55,7 +56,7 @@ export function observeAccountPeriodMetrics(
   accountId: AccountId | null,
   startDate: number,
   endDate: number,
-  isAssetOrExpense: boolean,
+  accountType: AccountType,
 ) {
   if (!accountId || !workplaceId) {
     return of({ totalIncrease: 0, totalDecrease: 0 });
@@ -65,7 +66,7 @@ export function observeAccountPeriodMetrics(
     accountId,
     startDate,
     endDate,
-    isAssetOrExpense,
+    accountType,
   );
 }
 

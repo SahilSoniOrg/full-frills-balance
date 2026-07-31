@@ -30,13 +30,12 @@ export interface AccountDetailsData {
   accountLoading: boolean;
   accountMissing: boolean;
   accountName: string;
-  accountType: string;
+  accountType: AccountType;
   accountSubtypeLabel: string;
   accountTypeVariant: string;
   accountIcon: IconName | null;
   accountTypeColorKey: string;
   isDeleted: boolean;
-  isAssetOrExpense: boolean;
   balanceCurrency: string;
   balanceText: string;
   transactionCount: number;
@@ -151,8 +150,8 @@ export function useAccountDetailsData(
   );
 
   const accountLoading = dashboardLoading && !pName;
-  const accountType = account?.accountType || '';
-  const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
+  const rawAccountType = account?.accountType || '';
+  const accountType = isAccountType(rawAccountType) ? rawAccountType : AccountType.ASSET;
   const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || workplaceCurrency;
   // Unified resolved balance (DB or preview pBalance) — previously ignored pBalance for header text.
   const balance = balanceData?.balance ?? 0;
@@ -191,9 +190,9 @@ export function useAccountDetailsData(
         workplaceId,
         accountId,
         reconciledAt?.getTime() || null,
-        isAssetOrExpense,
+        accountType,
       ),
-    [workplaceId, accountId, reconciledAt, isAssetOrExpense],
+    [workplaceId, accountId, reconciledAt, accountType],
     { count: 0, total: 0 },
   );
 
@@ -215,7 +214,6 @@ export function useAccountDetailsData(
     accountIcon: account?.icon || null,
     accountTypeColorKey,
     isDeleted,
-    isAssetOrExpense,
     balanceCurrency,
     balanceText,
     transactionCount,

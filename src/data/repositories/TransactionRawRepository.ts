@@ -1,4 +1,5 @@
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { from, Observable } from 'rxjs';
@@ -24,8 +25,8 @@ export interface AccountPeriodMetrics {
 
 export interface RawPeriodMetricsRow {
   accountId: AccountId;
-  totalDebit: number;
-  totalCredit: number;
+  totalIncrease: number;
+  totalDecrease: number;
 }
 
 export interface RawUnreconciledMetricsRow {
@@ -264,11 +265,11 @@ export class TransactionRawRepository {
     accountId: AccountId,
     startDate: number,
     endDate: number,
-    isAssetOrExpense: boolean = true,
+    accountType: AccountType,
   ): Promise<{ totalIncrease: number; totalDecrease: number }> {
     const results = await this.getBulkAccountPeriodMetricsRaw(
       workplaceId,
-      [{ accountId, isAssetOrExpense }],
+      [{ accountId, accountType }],
       startDate,
       endDate,
     );
@@ -282,7 +283,7 @@ export class TransactionRawRepository {
 
   async getBulkAccountPeriodMetricsRaw(
     workplaceId: WorkplaceId,
-    accountConfigs: { accountId: AccountId; isAssetOrExpense: boolean }[],
+    accountConfigs: { accountId: AccountId; accountType: AccountType }[],
     startDate: number,
     endDate: number,
   ): Promise<Map<string, { totalIncrease: number; totalDecrease: number }>> {
@@ -292,12 +293,14 @@ export class TransactionRawRepository {
     const accountPlaceholders = accountIds.map(() => '?').join(',');
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
+    const { increaseCase, decreaseCase } = periodFlowSQL();
     const sql = `
       SELECT 
         t.account_id as accountId,
-        SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END) as totalDebit,
-        SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END) as totalCredit
+        SUM(${increaseCase}) as totalIncrease,
+        SUM(${decreaseCase}) as totalDecrease
       FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
       WHERE t.workplace_id = ?
         AND t.account_id IN (${accountPlaceholders})
@@ -320,12 +323,10 @@ export class TransactionRawRepository {
       ]);
 
       if (raws) {
-        const configMap = new Map(accountConfigs.map(c => [c.accountId, c.isAssetOrExpense]));
         for (const row of raws) {
-          const isAssetOrExpense = configMap.get(row.accountId) ?? true;
           results.set(row.accountId, {
-            totalIncrease: isAssetOrExpense ? row.totalDebit : row.totalCredit,
-            totalDecrease: isAssetOrExpense ? row.totalCredit : row.totalDebit,
+            totalIncrease: row.totalIncrease,
+            totalDecrease: row.totalDecrease,
           });
         }
       }
@@ -347,7 +348,7 @@ export class TransactionRawRepository {
     accountId: AccountId,
     startDate: number,
     endDate: number,
-    isAssetOrExpense: boolean = true,
+    accountType: AccountType,
   ): Observable<AccountPeriodMetrics> {
     return from(import('./TransactionRepository')).pipe(
       switchMap(({ transactionRepository }) =>
@@ -355,13 +356,7 @@ export class TransactionRawRepository {
       ),
       switchMap(() =>
         from(
-          this.getAccountPeriodMetricsRaw(
-            workplaceId,
-            accountId,
-            startDate,
-            endDate,
-            isAssetOrExpense,
-          ),
+          this.getAccountPeriodMetricsRaw(workplaceId, accountId, startDate, endDate, accountType),
         ),
       ),
       distinctUntilChanged(
@@ -391,22 +386,22 @@ export class TransactionRawRepository {
     workplaceId: WorkplaceId,
     accountId: AccountId,
     reconciledAt: number | null,
-    isAssetOrExpense: boolean = true,
+    accountType: AccountType,
   ): Observable<{ count: number; total: number }> {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
-    const multiplierSql = isAssetOrExpense
-      ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
-      : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
+    const { increaseCase, decreaseCase } = periodFlowSQL();
     return from(import('./TransactionRepository')).pipe(
       switchMap(({ transactionRepository }) =>
         transactionRepository.observeActiveCount(workplaceId),
       ),
       switchMap(() => {
         const sql = `
-          SELECT COUNT(*) as count, SUM(${multiplierSql}) as total
+          SELECT COUNT(*) as count, SUM(${increaseCase}) - SUM(${decreaseCase}) as total
           FROM transactions t
+          JOIN accounts a ON t.account_id = a.id
           JOIN journals j ON t.journal_id = j.id
           WHERE t.account_id = ?
+            AND a.account_type = ?
             AND (t.transaction_date > ? OR ? IS NULL)
             AND t.deleted_at IS NULL
             AND j.deleted_at IS NULL
@@ -416,6 +411,7 @@ export class TransactionRawRepository {
         return from(
           this.queryRaw<RawUnreconciledMetricsRow>(sql, [
             accountId,
+            accountType,
             reconciledAt || 0,
             reconciledAt ?? 0,
             workplaceId,
