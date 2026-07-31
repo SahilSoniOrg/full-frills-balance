@@ -379,11 +379,11 @@ export const nativePlugin: ImportPlugin = {
           id: generateId(),
           accountId: accountMap.get(snapshot.accountId)!,
           transactionId: transactionMap.get(snapshot.transactionId)!,
-          transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
-          absoluteBalance: snapshot.absoluteBalance as number,
-          transactionCount: snapshot.transactionCount as number,
-          createdAt: parseTimestamp(snapshot.createdAt as any),
-          updatedAt: parseTimestamp(snapshot.updatedAt as any),
+          transactionDate: parseTimestamp(snapshot.transactionDate) ?? Date.now(),
+          absoluteBalance: snapshot.absoluteBalance,
+          transactionCount: snapshot.transactionCount,
+          createdAt: parseTimestamp(snapshot.createdAt),
+          updatedAt: parseTimestamp(snapshot.updatedAt),
         })),
       };
 
