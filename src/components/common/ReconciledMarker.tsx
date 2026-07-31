@@ -10,9 +10,7 @@ export interface ReconciledMarkerProps {
 
 export function ReconciledMarker({ date }: ReconciledMarkerProps) {
   const { theme } = useTheme();
-  const label = AppConfig.strings.journal.reconciledUntilHere(
-    formatRelativeReconciledDate(date),
-  );
+  const label = AppConfig.strings.journal.reconciledUntilHere(formatRelativeReconciledDate(date));
 
   return (
     <View

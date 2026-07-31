@@ -1,13 +1,13 @@
 import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
-import { ReconciledMarker } from '@/src/features/accounts/components/ReconciledMarker';
-import { JournalDayHeader } from '@/src/features/journal/components/JournalDayHeader';
 import { TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
+import { JournalDayHeader } from './JournalDayHeader';
+import { ReconciledMarker } from './ReconciledMarker';
 import { SelectableTransactionCard } from './SelectableTransactionCard';
 
 interface TransactionListViewProps {

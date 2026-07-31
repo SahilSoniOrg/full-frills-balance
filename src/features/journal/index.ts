@@ -1,4 +1,4 @@
-export { JournalDayHeader } from './components/JournalDayHeader';
+export { JournalDayHeader } from '@/src/components/common/JournalDayHeader';
 export { JournalListView } from './components/JournalListView';
 export { default as EntryScreen } from './entry/EntryScreen';
 export * from './hooks/useJournal';
