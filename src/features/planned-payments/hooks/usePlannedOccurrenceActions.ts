@@ -1,6 +1,6 @@
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -51,7 +51,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              const pp = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
+              const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
               if (pp) {
                 await plannedPaymentService.postOccurrence(workplaceId, pp, item.occurrenceDate);
                 toast.success('Payment recorded successfully');
@@ -71,7 +71,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
               destructive: true,
               onConfirm: async () => {
                 try {
-                  const pp = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
+                  const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
                   if (pp) {
                     await plannedPaymentService.skipOccurrence(
                       workplaceId,

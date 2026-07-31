@@ -1,11 +1,14 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useObservable } from '@/src/hooks/useObservable';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { useMemo } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 
 export function usePlannedPayments(workplaceId: WorkplaceId) {
-  const observable = useMemo(() => plannedPaymentRepository.observeAll(workplaceId), [workplaceId]);
+  const observable = useMemo(
+    () => plannedPaymentReadService.observeAll(workplaceId),
+    [workplaceId],
+  );
 
   const { data: items, isLoading } = useObservable<PlannedPayment[]>(
     () => observable,
