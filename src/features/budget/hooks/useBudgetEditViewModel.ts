@@ -1,19 +1,31 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import { accountQueries } from '@/src/services/accounts/accountQueries';
+import BudgetScope from '@/src/data/models/BudgetScope';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import {
+  BudgetEditDraft,
+  createEmptyBudgetDraft,
+  mapBudgetToEditDraft,
+  shouldSeedBudgetDraft,
+} from '@/src/features/budget/hooks/budgetEditDraft';
 import { useObservable } from '@/src/hooks/useObservable';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { AccountId, BudgetId } from '@/src/types/domain';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
-import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useLocalSearchParams } from 'expo-router';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { of } from 'rxjs';
 
+/**
+ * Budget create/edit form.
+ * Draft fields are intentional local state, seeded once per `budgetId` from
+ * observeById + observeScopes. Later observe ticks never overwrite a dirty draft.
+ */
 export function useBudgetEditViewModel() {
   const params = useLocalSearchParams<{
     id: BudgetId;
@@ -23,6 +35,7 @@ export function useBudgetEditViewModel() {
   }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const budgetId = params.id;
+
   const { data: expenseAccounts = [] } = useObservable(
     () => accountQueries.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
@@ -37,142 +50,162 @@ export function useBudgetEditViewModel() {
 
   const { data: currencies = [] } = useObservable(() => currencyRepository.observeAll(), [], []);
 
-  // Initial Data Injection: Extract preview data from params
   const pName = params.pName || '';
   const pAmount = params.pAmount || '';
   const pCurrency = params.pCurrency || workplaceCurrency;
 
-  const [budget, setBudget] = useState<Budget | null>(null);
-  const [name, setName] = useState(pName);
-  const [amount, setAmount] = useState(pAmount);
-  const [currencyCode, setCurrencyCode] = useState<string>(pCurrency);
-  const [startMonth, setStartMonth] = useState(new Date());
-  const [intervalType, setIntervalType] = useState('MONTHLY');
-  const [intervalN, setIntervalN] = useState(1);
-  const [recurrenceDay, setRecurrenceDay] = useState(1);
-  const [recurrenceMonth, setRecurrenceMonth] = useState(1);
-  const [startDate, setStartDate] = useState<number | undefined>(undefined);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<AccountId[]>([]);
-  const [assetAccountIds, setAssetAccountIds] = useState<AccountId[]>([]);
-  const [loading, setLoading] = useState(!!budgetId && !pName);
+  const { data: observedBudget, isLoading: budgetLoading } = useObservable<Budget | null>(
+    () => (budgetId ? budgetRepository.observeById(workplaceId, budgetId) : of(null)),
+    [workplaceId, budgetId],
+    null,
+  );
+
+  const { data: scopes = [], isLoading: scopesLoading } = useObservable<BudgetScope[]>(
+    () => (budgetId ? budgetRepository.observeScopes(workplaceId, budgetId) : of([])),
+    [workplaceId, budgetId],
+    [],
+  );
+
+  const [seededBudgetId, setSeededBudgetId] = useState<BudgetId | null>(null);
+  const [draft, setDraft] = useState<BudgetEditDraft>(() =>
+    createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }),
+  );
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (!budgetId) return;
+  const scopesReady = !budgetId || !scopesLoading;
+  const canSeed = shouldSeedBudgetDraft({
+    budgetId,
+    seededBudgetId,
+    observedBudget,
+    scopesReady,
+  });
 
-    budgetRepository
-      .find(workplaceId, budgetId)
-      .then(async b => {
-        if (!b) return;
-        setBudget(b);
-        setName(b.name);
-        setAmount(b.amount.toString());
-        setCurrencyCode(b.currencyCode || workplaceCurrency);
-        const [year, month] = b.startMonth.split('-');
-        setStartMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
-        setIntervalType(b.intervalType || 'MONTHLY');
-        setIntervalN(b.intervalN || 1);
-        setRecurrenceDay(b.recurrenceDay || 1);
-        setRecurrenceMonth(b.recurrenceMonth || 1);
-        setStartDate(b.startDate);
+  // Seed once per entity id during render — never on every observe tick.
+  if (canSeed && observedBudget) {
+    setSeededBudgetId(budgetId);
+    setDraft(mapBudgetToEditDraft(observedBudget, scopes, workplaceCurrency));
+  } else if (!budgetId && seededBudgetId !== null) {
+    setSeededBudgetId(null);
+    setDraft(createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }));
+  }
 
-        const scopes = await budgetRepository.getScopes(workplaceId, budgetId);
-        setSelectedAccountIds(scopes.map(s => s.accountId));
+  const loading =
+    !!budgetId &&
+    !pName &&
+    seededBudgetId !== budgetId &&
+    (budgetLoading || scopesLoading || observedBudget != null);
 
-        if (b.assetAccountIds) {
-          setAssetAccountIds(b.assetAccountIds.split(',') as AccountId[]);
-        }
-
-        setLoading(false);
-      })
-      .catch(e => {
-        logger.error('Failed to load budget', e);
-        setLoading(false);
-      });
-  }, [workplaceId, budgetId, workplaceCurrency]);
+  const setName = useCallback((name: string) => setDraft(d => ({ ...d, name })), []);
+  const setAmount = useCallback((amount: string) => setDraft(d => ({ ...d, amount })), []);
+  const setCurrencyCode = useCallback(
+    (currencyCode: string) => setDraft(d => ({ ...d, currencyCode })),
+    [],
+  );
+  const setStartMonth = useCallback(
+    (startMonth: Date) => setDraft(d => ({ ...d, startMonth })),
+    [],
+  );
+  const setIntervalType = useCallback(
+    (intervalType: string) => setDraft(d => ({ ...d, intervalType })),
+    [],
+  );
+  const setIntervalN = useCallback((intervalN: number) => setDraft(d => ({ ...d, intervalN })), []);
+  const setRecurrenceDay = useCallback(
+    (recurrenceDay: number) => setDraft(d => ({ ...d, recurrenceDay })),
+    [],
+  );
+  const setRecurrenceMonth = useCallback(
+    (recurrenceMonth: number) => setDraft(d => ({ ...d, recurrenceMonth })),
+    [],
+  );
+  const setStartDate = useCallback(
+    (startDate: number | undefined) => setDraft(d => ({ ...d, startDate })),
+    [],
+  );
+  const setSelectedAccountIds = useCallback(
+    (selectedAccountIds: AccountId[]) => setDraft(d => ({ ...d, selectedAccountIds })),
+    [],
+  );
+  const setAssetAccountIds = useCallback(
+    (assetAccountIds: AccountId[]) => setDraft(d => ({ ...d, assetAccountIds })),
+    [],
+  );
 
   const save = useCallback(async () => {
-    if (!name.trim() || !amount || selectedAccountIds.length === 0) {
+    if (!draft.name.trim() || !draft.amount || draft.selectedAccountIds.length === 0) {
       throw new Error('Please fill all required fields and select at least one account.');
     }
 
     setIsSaving(true);
     try {
-      const parsedAmount = parseFloat(amount);
-      const monthStr = `${startMonth.getFullYear()}-${String(startMonth.getMonth() + 1).padStart(2, '0')}`;
+      const parsedAmount = parseFloat(draft.amount);
+      const monthStr = `${draft.startMonth.getFullYear()}-${String(draft.startMonth.getMonth() + 1).padStart(2, '0')}`;
 
       const resolvedStartDate =
-        intervalType === 'DAILY' ? (startDate ?? dayjs().startOf('day').valueOf()) : startDate;
+        draft.intervalType === 'DAILY'
+          ? (draft.startDate ?? dayjs().startOf('day').valueOf())
+          : draft.startDate;
 
       const input = {
-        name: name.trim(),
+        name: draft.name.trim(),
         amount: parsedAmount,
-        currencyCode,
+        currencyCode: draft.currencyCode,
         startMonth: monthStr,
-        intervalType,
-        intervalN: intervalN || 1,
+        intervalType: draft.intervalType,
+        intervalN: draft.intervalN || 1,
         startDate: resolvedStartDate,
-        recurrenceDay: recurrenceDay || 1,
-        recurrenceMonth: recurrenceMonth || 1,
+        recurrenceDay: draft.recurrenceDay || 1,
+        recurrenceMonth: draft.recurrenceMonth || 1,
         active: true,
-        assetAccountIds,
+        assetAccountIds: draft.assetAccountIds,
       };
 
-      if (budget) {
-        await budgetWriteService.updateBudget(workplaceId, budget, input, selectedAccountIds);
+      if (observedBudget) {
+        await budgetWriteService.updateBudget(
+          workplaceId,
+          observedBudget,
+          input,
+          draft.selectedAccountIds,
+        );
       } else {
-        await budgetWriteService.createBudget(workplaceId, input, selectedAccountIds);
+        await budgetWriteService.createBudget(workplaceId, input, draft.selectedAccountIds);
       }
       AppNavigation.back();
     } finally {
       setIsSaving(false);
     }
-  }, [
-    budget,
-    name,
-    amount,
-    startMonth,
-    selectedAccountIds,
-    assetAccountIds,
-    currencyCode,
-    intervalType,
-    intervalN,
-    startDate,
-    recurrenceDay,
-    recurrenceMonth,
-    workplaceId,
-  ]);
+  }, [draft, observedBudget, workplaceId]);
 
   return {
     expenseAccounts,
     liquidAssetAccounts,
-    budget,
-    name,
+    budget: observedBudget,
+    name: draft.name,
     setName,
-    amount,
+    amount: draft.amount,
     setAmount,
-    startMonth,
+    startMonth: draft.startMonth,
     setStartMonth,
-    intervalType,
+    intervalType: draft.intervalType,
     setIntervalType,
-    intervalN,
+    intervalN: draft.intervalN,
     setIntervalN,
-    recurrenceDay,
+    recurrenceDay: draft.recurrenceDay,
     setRecurrenceDay,
-    recurrenceMonth,
+    recurrenceMonth: draft.recurrenceMonth,
     setRecurrenceMonth,
-    startDate,
+    startDate: draft.startDate,
     setStartDate,
-    selectedAccountIds,
+    selectedAccountIds: draft.selectedAccountIds,
     setSelectedAccountIds,
-    assetAccountIds,
+    assetAccountIds: draft.assetAccountIds,
     setAssetAccountIds,
     currencies,
-    currencyCode,
+    currencyCode: draft.currencyCode,
     setCurrencyCode,
     save,
     loading,
     isSaving,
-    isFormValid: name.trim() && amount && selectedAccountIds.length > 0,
+    isFormValid: draft.name.trim() && draft.amount && draft.selectedAccountIds.length > 0,
   };
 }
