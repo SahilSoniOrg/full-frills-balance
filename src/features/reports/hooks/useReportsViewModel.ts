@@ -1,36 +1,21 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
 import { AccountId } from '@/src/types/domain';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
-import { useReportDateFilter } from './useReportDateFilter';
+import { ReportFilters, useReportFilters } from './useReportFilters';
 
 export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
 
-export interface ReportsViewModel {
+export interface ReportsViewModel extends ReportFilters {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
-  showAccountPicker: boolean;
-  onOpenAccountPicker: () => void;
-  onCloseAccountPicker: () => void;
-  accountIds: AccountId[];
-  onAccountSelect: (ids: AccountId[]) => void;
-  showDatePicker: boolean;
-  onOpenDatePicker: () => void;
-  onCloseDatePicker: () => void;
-  onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
-  dateLabel: string;
-  accounts: Account[]; // Repository return type varies
   loading: boolean;
-  periodFilter: PeriodFilter;
-  onRefresh: () => void;
   netWorthSeries: {
     x: number;
     y: number;
@@ -163,7 +148,6 @@ export function useReportsViewModel(): ReportsViewModel {
   } = useReports(workplaceId, defaultCurrencyCode);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
-  const [showAccountPicker, setShowAccountPicker] = useState(false);
 
   const chartData = useReportChartData({
     netWorthHistory,
@@ -193,9 +177,11 @@ export function useReportsViewModel(): ReportsViewModel {
     breakdownDetails.setExpandedIncome(false);
   }, [breakdownDetails]);
 
-  const dateFilter = useReportDateFilter({
+  const filters = useReportFilters({
+    accounts,
     workplaceId,
     dateRange,
+    periodFilter,
     accountIds,
     updateFilter,
     onResetSelections: resetSelections,
@@ -206,21 +192,9 @@ export function useReportsViewModel(): ReportsViewModel {
     dateRange,
   });
 
-  const onRefresh = useCallback(() => {
-    resetSelections();
-    updateFilter({ ...dateRange }, { ...periodFilter }, [...accountIds]);
-  }, [dateRange, periodFilter, accountIds, resetSelections, updateFilter]);
-
-  const onAccountSelect = useCallback(
-    (ids: AccountId[]) => {
-      updateFilter(dateRange, periodFilter, ids);
-      setShowAccountPicker(false);
-      resetSelections();
-    },
-    [dateRange, periodFilter, updateFilter, resetSelections],
-  );
-
   return {
+    ...filters,
+
     // Tab State
     activeTab,
     setActiveTab: (tab: ReportTab) => {
@@ -228,25 +202,8 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
 
-    // Account Filter
-    showAccountPicker,
-    onOpenAccountPicker: () => setShowAccountPicker(true),
-    onCloseAccountPicker: () => setShowAccountPicker(false),
-    accountIds,
-    onAccountSelect,
-
-    // Date Filter
-    showDatePicker: dateFilter.showDatePicker,
-    onOpenDatePicker: dateFilter.onOpenDatePicker,
-    onCloseDatePicker: dateFilter.onCloseDatePicker,
-    onDateSelect: dateFilter.onDateSelect,
-    dateLabel: dateFilter.dateLabel,
-
     // Reports state
-    accounts,
     loading,
-    periodFilter,
-    onRefresh,
 
     // Chart Data
     netWorthSeries: chartData.netWorthSeries,

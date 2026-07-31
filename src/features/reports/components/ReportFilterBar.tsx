@@ -3,12 +3,12 @@ import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { ReportFilters } from '@/src/features/reports/hooks/useReportFilters';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-export function ReportFilterBar(vm: ReportsViewModel) {
+export function ReportFilterBar(filters: ReportFilters) {
   const { theme } = useTheme();
   const {
     showDatePicker,
@@ -22,7 +22,8 @@ export function ReportFilterBar(vm: ReportsViewModel) {
     onCloseAccountPicker,
     accountIds,
     onAccountSelect,
-  } = vm;
+    accounts,
+  } = filters;
 
   const accountLabel =
     accountIds.length === 0
@@ -71,7 +72,7 @@ export function ReportFilterBar(vm: ReportsViewModel) {
         visible={showAccountPicker}
         onClose={onCloseAccountPicker}
         onSelect={onAccountSelect}
-        accounts={vm.accounts}
+        accounts={accounts}
         selectedIds={accountIds}
         title={AppConfig.strings.reports.filterByAccounts}
       />
