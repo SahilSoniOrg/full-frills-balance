@@ -9,6 +9,7 @@ import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { analytics } from '@/src/services/analytics-service';
+import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import {
   AccountId,
@@ -20,7 +21,6 @@ import {
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
-import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -261,26 +261,27 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       items: journals,
       getDate: (j: EnrichedJournal) => j.journalDate,
       sortByDate: 'desc' as const,
-      getStats: (journalsForDay: EnrichedJournal[]) => {
-        let netAmount = 0;
-        journalsForDay.forEach(j => {
-          let amount = 0;
-          if (j.currencyCode === baseCurrency) {
-            amount = j.totalAmount;
-          } else {
-            const rate = exchangeRateMap[j.currencyCode];
-            if (rate && rate > 0) amount = j.totalAmount / rate;
+      getStats: (journalsForDay: EnrichedJournal[]) =>
+        buildDayNetStats(journalsForDay, baseCurrency, precision, j => {
+          const amount = amountInBaseCurrency(
+            j.totalAmount,
+            j.currencyCode,
+            baseCurrency,
+            exchangeRateMap,
+          );
+          if (
+            amount === 0 &&
+            j.currencyCode !== baseCurrency &&
+            !(exchangeRateMap[j.currencyCode] > 0)
+          ) {
+            logger.warn(
+              AppConfig.strings.journal.errors.missingExchangeRate(j.currencyCode, baseCurrency),
+            );
           }
-
-          if (amount !== 0) {
-            if (j.displayType === JournalDisplayType.INCOME)
-              netAmount = safeAdd(netAmount, amount, precision);
-            else if (j.displayType === JournalDisplayType.EXPENSE)
-              netAmount = safeSubtract(netAmount, amount, precision);
-          }
-        });
-        return { count: journalsForDay.length, netAmount, currencyCode: baseCurrency };
-      },
+          if (j.displayType === JournalDisplayType.INCOME) return amount;
+          if (j.displayType === JournalDisplayType.EXPENSE) return -amount;
+          return 0;
+        }),
       renderItem: (journal: EnrichedJournal) => ({
         id: journal.id as string as TransactionId,
         type: 'transaction' as const,

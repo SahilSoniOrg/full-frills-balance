@@ -21,8 +21,9 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { injectReconciledMarkersIntoTransactionList } from '@/src/services/accounting/accountTransactionListPresentation';
-import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { buildDayNetStats } from '@/src/services/ledger';
+import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import {
   AccountBalance,
   AccountId,
@@ -35,7 +36,6 @@ import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -372,15 +372,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       items: transactions,
       getDate: (t: DisplayTransaction) => t.transactionDate,
       sortByDate: 'desc' as const,
-      getStats: (txnsForDay: DisplayTransaction[]) => {
-        let netAmount = 0;
-        txnsForDay.forEach(t => {
-          netAmount = t.isIncrease
-            ? safeAdd(netAmount, t.amount, precision)
-            : safeSubtract(netAmount, t.amount, precision);
-        });
-        return { count: txnsForDay.length, netAmount, currencyCode: balanceCurrency };
-      },
+      getStats: (txnsForDay: DisplayTransaction[]) =>
+        buildDayNetStats(txnsForDay, balanceCurrency, precision, t =>
+          t.isIncrease ? t.amount : -t.amount,
+        ),
       renderItem: (transaction: DisplayTransaction) =>
         mapAccountLedgerTransactionToListItem(transaction, () => onTransactionPress(transaction)),
     }),
