@@ -4,7 +4,7 @@ import {
   AppIcon,
   AppTabs,
   AppText,
-  ExpandableSearchButton,
+  InlineSearchField,
   FloatingActionButton,
   IconButton,
 } from '@/src/components/core';
@@ -82,7 +82,7 @@ export function AccountsListView({
           />
         </>
       ) : null}
-      <ExpandableSearchButton
+      <InlineSearchField
         value={searchQuery}
         onChangeText={onSearchChange}
         onExpandChange={setIsSearching}
