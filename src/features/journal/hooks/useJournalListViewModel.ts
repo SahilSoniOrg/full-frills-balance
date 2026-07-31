@@ -4,22 +4,15 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
-import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
-import { useSelection } from '@/src/hooks/useSelection';
-import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildJournalGroupingOptions } from '../list/hooks/journalDayNetGrouping';
-import { mapJournalToCardProps } from '../utils/journalUiUtils';
+import { useJournalTransactionList } from '../list/hooks/useJournalTransactionList';
 
 export interface JournalListEmptyState {
   title: string;
@@ -83,7 +76,7 @@ export function useJournalListViewModel(
   }: UseJournalListViewModelParams,
   workplaceId: WorkplaceId,
 ): JournalListViewModel {
-  const { isInitialized, defaultShareFormat } = useUI();
+  const { isInitialized } = useUI();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
@@ -111,24 +104,23 @@ export function useJournalListViewModel(
     return dateRange || undefined;
   }, [searchQuery, isSearchGlobal, dateRange]);
 
-  const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+  const core = useJournalTransactionList({
     workplaceId,
     pageSize,
-    effectiveDateRange,
+    dateRange: effectiveDateRange,
     searchQuery,
-    undefined,
-    undefined,
-    { initialItems },
-  );
+    initialItems,
+    shareTitle: 'Transactions Report',
+    paginationPolicy: 'default',
+  });
 
-  // Log Journal Query completion
   useEffect(() => {
-    if (!isLoading && journals.length > 0) {
+    if (!core.isLoading && core.journals.length > 0) {
       const duration = Math.round(getPerfNow() - (mountTimeRef.current ?? 0));
-      logger.info(`[JournalList] Data Loaded (Count: ${journals.length}) in ${duration}ms`);
+      logger.info(`[JournalList] Data Loaded (Count: ${core.journals.length}) in ${duration}ms`);
       logger.metric('JournalList.LoadTime', duration);
     }
-  }, [isLoading, journals.length]);
+  }, [core.isLoading, core.journals.length]);
 
   const { journals: plannedJournals } = useJournals(
     workplaceId,
@@ -137,92 +129,6 @@ export function useJournalListViewModel(
     undefined,
     PLANNED_STATUS,
   );
-
-  const selectionControl = useSelection<JournalId>();
-  const {
-    selectedIds,
-    isSelectionModeActive,
-    toggleSelection,
-    onLongPressItem,
-    clearItems,
-    exitSelectionMode,
-    setSelectedIds,
-  } = selectionControl;
-
-  const handleJournalPress = useCallback(
-    (journal: EnrichedJournal) => {
-      if (isSelectionModeActive) {
-        toggleSelection(journal.id);
-        return;
-      }
-
-      const cardProps = mapJournalToCardProps(journal);
-      AppNavigation.toTransactionDetails(journal.id, {
-        title: cardProps.title,
-        amount: cardProps.amount,
-        currencyCode: cardProps.currencyCode,
-        date:
-          typeof cardProps.transactionDate === 'number'
-            ? cardProps.transactionDate
-            : (cardProps.transactionDate as Date).getTime(),
-        typeColor: cardProps.presentation.typeColor,
-        typeIcon: cardProps.presentation.typeIcon,
-        displayType: journal.displayType,
-      });
-    },
-    [isSelectionModeActive, toggleSelection],
-  );
-
-  const { precision } = useCurrencyPrecision(baseCurrency);
-
-  const transactionGroupingOptions = useMemo(
-    () =>
-      buildJournalGroupingOptions(
-        journals,
-        baseCurrency,
-        precision,
-        exchangeRateMap,
-        handleJournalPress,
-      ),
-    [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision],
-  );
-
-  const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
-
-  const onShareSelected = useCallback(async () => {
-    if (selectedIds.size === 0) return;
-
-    try {
-      const selectedJournals = journals.filter(j => selectedIds.has(j.id));
-      const provider = new TransactionShareProvider(
-        selectedJournals.map(j => ({
-          id: j.id,
-          date: j.journalDate,
-          description: j.description || j.semanticLabel || 'Transaction',
-          amount: j.totalAmount,
-          currencyCode: j.currencyCode,
-          displayType: j.displayType,
-        })),
-        {
-          title: 'Transactions Report',
-          includeTime: true,
-          sort: 'desc',
-          showEmojis: true,
-          defaultCurrency: baseCurrency,
-        },
-      );
-      await sharingService.share(provider, defaultShareFormat);
-    } catch (error) {
-      logger.error('Failed to share transactions', error);
-    }
-  }, [selectedIds, journals, defaultShareFormat, baseCurrency]);
-
-  const selectAll = useCallback(() => {
-    const visibleIds = items
-      .filter(i => i.type === 'transaction')
-      .map(i => i.id as string as JournalId);
-    selectionControl.selectAll(visibleIds);
-  }, [items, selectionControl]);
 
   const onSearchChange = useCallback(
     (value: string) => {
@@ -247,9 +153,10 @@ export function useJournalListViewModel(
     [hideDatePicker, setFilter],
   );
 
+  // FX backfill stays on the list adapter until unified into the shared core.
   useEffect(() => {
     const toFetch = new Set<string>();
-    journals.forEach(j => {
+    core.journals.forEach(j => {
       if (j.currencyCode !== baseCurrency) {
         const rate = exchangeRateMap[j.currencyCode];
         if (!rate || rate <= 0) {
@@ -268,28 +175,13 @@ export function useJournalListViewModel(
           logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e),
         );
     });
-  }, [journals, baseCurrency, exchangeRateMap]);
-
-  useEffect(() => {
-    if (selectedIds.size === 0 || isLoading) return;
-
-    setSelectedIds(prev => {
-      const validIds = new Set(journals.map(j => j.id));
-      const filtered = new Set([...prev].filter(id => validIds.has(id)));
-      return filtered.size === prev.size ? prev : filtered;
-    });
-  }, [journals, selectedIds, setSelectedIds, isLoading]);
-
-  const onEndReached = useMemo(() => {
-    if (searchQuery || !hasMore) return undefined;
-    return loadMore;
-  }, [searchQuery, hasMore, loadMore]);
+  }, [core.journals, baseCurrency, exchangeRateMap]);
 
   return {
-    items,
-    isLoading,
-    isLoadingMore,
-    onEndReached,
+    items: core.items,
+    isLoading: core.isLoading,
+    isLoadingMore: core.isLoadingMore,
+    onEndReached: core.onEndReached,
     searchQuery,
     onSearchChange,
     isSearchGlobal,
@@ -302,19 +194,19 @@ export function useJournalListViewModel(
     navigatePrevious,
     navigateNext,
     onDateSelect,
-    hasMore,
+    hasMore: core.hasMore,
     emptyState,
     loadingText,
     loadingMoreText,
     plannedJournals,
-    selectedIds,
-    isSelectionModeActive,
-    onLongPressItem,
-    toggleSelection,
-    selectAll,
-    clearItems,
-    exitSelectionMode,
-    onShareSelected,
-    setSelectedIds,
+    selectedIds: core.selectedIds,
+    isSelectionModeActive: core.isSelectionModeActive,
+    onLongPressItem: core.onLongPressItem,
+    toggleSelection: core.toggleSelection,
+    selectAll: core.selectAll,
+    clearItems: core.clearItems,
+    exitSelectionMode: core.exitSelectionMode,
+    onShareSelected: core.onShareSelected,
+    setSelectedIds: core.setSelectedIds,
   };
 }
