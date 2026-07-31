@@ -3,14 +3,12 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
-import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import {
   buildSimpleCrossCurrencyLineUpdates,
   buildSimpleDefaultDescription,
   buildSimpleFormAccountSections,
   computeSimpleConvertedAmount,
   parseSimpleAmountInput,
-  resolveSimpleCrossCurrencyRates,
   shouldApplyLastUsedAccountDefault,
 } from '@/src/services/journal/simpleJournalHelpers';
 import {
@@ -21,9 +19,9 @@ import {
   TabType,
 } from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
 
 export interface UseSimpleJournalEditorProps {
@@ -52,16 +50,11 @@ export function useSimpleJournalEditor({
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { fetchRate } = useExchangeRate();
-
-  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
-  const [sourceBaseRate, setSourceBaseRate] = useState<number | null>(null);
-  const [destBaseRate, setDestBaseRate] = useState<number | null>(null);
-  const [isLoadingRate, setIsLoadingRate] = useState(false);
-  const [rateError, setRateError] = useState<string | null>(null);
 
   // Derived State from Editor
   const type = editor.transactionType;
+  const isGuidedMode = editor.isGuidedMode;
+  const updateLines = editor.updateLines;
 
   const sourceLine = useMemo(
     () => editor.lines.find(l => l.transactionType === TransactionType.CREDIT),
@@ -75,6 +68,11 @@ export function useSimpleJournalEditor({
   const amount = sourceLine?.amount || destinationLine?.amount || '';
   const sourceId = sourceLine?.accountId || EMPTY_ACCOUNT_ID;
   const destinationId = destinationLine?.accountId || EMPTY_ACCOUNT_ID;
+  const sourceLineId = sourceLine?.id;
+  const destinationLineId = destinationLine?.id;
+  const sourceLineExchangeRate = sourceLine?.exchangeRate ?? '';
+  const destinationLineExchangeRate = destinationLine?.exchangeRate ?? '';
+  const destinationLineAmount = destinationLine?.amount ?? '';
 
   // Use shared account selection logic for filtering
   const { transactionAccounts, expenseAccounts, incomeAccounts, leafAccounts } =
@@ -88,50 +86,18 @@ export function useSimpleJournalEditor({
     [accounts, destinationId],
   );
 
-  const sourceCurrency = useMemo(() => sourceAccount?.currencyCode, [sourceAccount]);
-  const destCurrency = useMemo(() => destAccount?.currencyCode, [destAccount]);
+  const sourceCurrency = sourceAccount?.currencyCode;
+  const destCurrency = destAccount?.currencyCode;
 
   const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
 
-  // Rate calculations
-  useEffect(() => {
-    const fetchCurrentRate = async () => {
-      if (!isCrossCurrency || !sourceCurrency || !destCurrency) {
-        setExchangeRate(null);
-        setSourceBaseRate(null);
-        setDestBaseRate(null);
-        return;
-      }
-
-      setIsLoadingRate(true);
-      setRateError(null);
-      try {
-        // To ensure balance in base currency, we fetch both rates relative to workplace currency
-        const [fetchedSourceToWorkplace, fetchedDestToWorkplace] = await Promise.all([
-          sourceCurrency !== workplaceCurrency ? fetchRate(sourceCurrency, workplaceCurrency) : 1.0,
-          destCurrency !== workplaceCurrency ? fetchRate(destCurrency, workplaceCurrency) : 1.0,
-        ]);
-
-        const resolved = resolveSimpleCrossCurrencyRates({
-          sourceCurrency,
-          destCurrency,
-          workplaceCurrency,
-          fetchedSourceToWorkplace,
-          fetchedDestToWorkplace,
-        });
-        setSourceBaseRate(resolved.sourceBaseRate);
-        setDestBaseRate(resolved.destBaseRate);
-        setExchangeRate(resolved.exchangeRate);
-      } catch (error) {
-        setRateError('Rate unavailable');
-        logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
-      } finally {
-        setIsLoadingRate(false);
-      }
-    };
-
-    fetchCurrentRate();
-  }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate, workplaceCurrency]);
+  const { exchangeRate, sourceBaseRate, destBaseRate, isLoadingRate, rateError } =
+    useCrossCurrencyRates({
+      sourceCurrency,
+      destCurrency,
+      workplaceCurrency,
+      enabled: isCrossCurrency,
+    });
 
   const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
 
@@ -140,9 +106,10 @@ export function useSimpleJournalEditor({
     [numAmount, isCrossCurrency, exchangeRate],
   );
 
-  // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
+  // Sync exchange rate and converted amounts back to lines for Advanced mode consistency.
+  // Primitive deps + empty-update guard prevent child→parent write loops.
   useEffect(() => {
-    if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
+    if (!isGuidedMode || !sourceLineId || !destinationLineId) return;
 
     const updates = buildSimpleCrossCurrencyLineUpdates({
       isCrossCurrency,
@@ -154,27 +121,33 @@ export function useSimpleJournalEditor({
       baseCurrency: workplaceCurrency,
       amount,
       convertedAmount,
-      sourceLine,
-      destinationLine,
+      sourceLine: { id: sourceLineId, exchangeRate: sourceLineExchangeRate, amount },
+      destinationLine: {
+        id: destinationLineId,
+        exchangeRate: destinationLineExchangeRate,
+        amount: destinationLineAmount,
+      },
     });
 
-    if (Object.keys(updates).length > 0) {
-      editor.updateLines(updates);
-    }
+    if (Object.keys(updates).length === 0) return;
+    updateLines(updates);
   }, [
+    isGuidedMode,
+    isCrossCurrency,
     exchangeRate,
     sourceBaseRate,
     destBaseRate,
-    isCrossCurrency,
-    sourceLine,
-    destinationLine,
-    convertedAmount,
-    amount,
-    editor,
     sourceCurrency,
     destCurrency,
-    numAmount,
     workplaceCurrency,
+    amount,
+    convertedAmount,
+    sourceLineId,
+    destinationLineId,
+    sourceLineExchangeRate,
+    destinationLineExchangeRate,
+    destinationLineAmount,
+    updateLines,
   ]);
 
   // Helpers to update editor state
