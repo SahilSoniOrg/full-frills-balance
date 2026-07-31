@@ -19,10 +19,10 @@ import {
   TabType,
 } from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
+import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
-import { useJournalNavMemory } from './useJournalNavMemory';
 
 export interface UseSimpleJournalEditorProps {
   accounts: Account[];
@@ -49,8 +49,9 @@ export function useSimpleJournalEditor({
   editor,
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
-  const { defaultCurrencyCode: workplaceCurrency, workplaceId } = useWorkplace();
-  const journalNav = useJournalNavMemory(workplaceId);
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  // journalNav prefs are global today; workplace scoping is F9.
+  const journalNav = preferences.journalNav;
 
   // Derived State from Editor
   const type = editor.transactionType;

@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {
   buildJournalLinesFromSplitState,
   computeSplitTotals,
@@ -16,7 +16,6 @@ import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournalEditor } from './useJournalEditor';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 
 export interface UseSplitJournalEditorProps {
   accounts: Account[];
@@ -31,8 +30,7 @@ export function useSplitJournalEditor({
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
-  const { workplaceId: _workplaceId } = useWorkplace();
-  void _workplaceId; // reserved for per-workplace journalNav prefs (F9)
+  // journalNav prefs are global today; workplace scoping is F9.
   const { transactionAccounts, expenseAccounts } = useAccountSelection({ accounts });
   const initializedRef = useRef(false);
 

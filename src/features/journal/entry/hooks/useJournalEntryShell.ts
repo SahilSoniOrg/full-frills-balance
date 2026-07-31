@@ -20,7 +20,11 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
+import {
+  createTwoLegJournalScaffold,
+  isSimpleModeDisabledByLines,
+  normalizeJournalLinesForGuidedMode,
+} from '@/src/services/journal/journalEditorHelpers';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
@@ -131,9 +135,21 @@ export function useJournalEntryShell(): JournalEntryShell {
         showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
         return;
       }
+
+      if ((activeMode === 'split' || activeMode === 'bulk') && mode !== activeMode) {
+        editor.setLines(createTwoLegJournalScaffold());
+      }
+
+      if (mode === 'guided') {
+        editor.setLines(current => {
+          const normalized = normalizeJournalLinesForGuidedMode(current);
+          return normalized.forceAdvancedMode ? current : normalized.lines;
+        });
+      }
+
       setActiveMode(mode);
     },
-    [isSimpleModeDisabled],
+    [isSimpleModeDisabled, activeMode, editor],
   );
 
   const onSelectAccountRequestRef = useRef<(lineId: string) => void>(() => {});
