@@ -1,98 +1,66 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import {
   AccountDetailsViewModel,
   PeriodMetrics,
   SubAccountViewModel,
 } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { useAccountDetailsActions } from '@/src/features/accounts/hooks/details/useAccountDetailsActions';
+import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
 import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { useAccountActions, useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
-import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
 import { useLedgerTransactionsForAccount } from '@/src/hooks/useLedgerTransactions';
-import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { injectReconciledMarkersIntoTransactionList } from '@/src/services/accounting/accountTransactionListPresentation';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildDayNetStats } from '@/src/services/ledger';
 import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
-import {
-  AccountBalance,
-  AccountId,
-  DisplayTransaction,
-  JournalDisplayType,
-  PlainAccount,
-  TransactionId,
-} from '@/src/types/domain';
-import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DisplayTransaction, JournalDisplayType, TransactionId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
-import { of } from 'rxjs';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { defaultShareFormat } = useUI();
-  const params = useLocalSearchParams<{
-    accountId: AccountId;
-    pName?: string;
-    pBalance?: string;
-    pCurrency?: string;
-    pIcon?: string;
-    pType?: string;
-    pColor?: string;
-    startDate?: string;
-    endDate?: string;
-  }>();
-  const accountId = params.accountId;
-  const startDateParam = params.startDate;
-  const endDateParam = params.endDate;
-
-  // --- Date Handling ---
-  const initialDateRange = useMemo(() => {
-    if (startDateParam && endDateParam) {
-      const parsedStartDate = Number.parseInt(startDateParam, 10);
-      const parsedEndDate = Number.parseInt(endDateParam, 10);
-      if (!Number.isFinite(parsedStartDate) || !Number.isFinite(parsedEndDate)) {
-        return null;
-      }
-      return { startDate: parsedStartDate, endDate: parsedEndDate };
-    }
-    return null;
-  }, [startDateParam, endDateParam]);
-
+  const data = useAccountDetailsData();
   const {
+    accountId,
+    workplaceId,
+    workplaceCurrency,
+    account,
+    balanceData,
+    accounts,
+    rawSubBalances,
+    dashboardLoading,
+    accountLoading,
+    accountMissing,
+    accountName,
+    accountType,
+    accountSubtypeLabel,
+    accountTypeVariant,
+    accountIcon,
+    accountTypeColorKey,
+    isDeleted,
+    isAssetOrExpense,
+    balanceCurrency,
+    balanceText,
+    transactionCount,
+    transactionCountText,
+    reconciledAt,
     dateRange,
     periodFilter,
-    isPickerVisible: isDatePickerVisible,
-    showPicker: showDatePicker,
-    hidePicker,
-    setFilter,
+    isDatePickerVisible,
+    showDatePicker,
+    hideDatePicker,
     navigatePrevious,
     navigateNext,
-  } = useDateRangeFilter({
-    defaultToCurrentMonth: !initialDateRange,
-    initialDateRange,
-  });
-
-  // --- Data Services ---
-  const {
-    account: dbAccount,
-    balanceData: dbBalanceData,
-    subAccounts: rawSubBalances,
-    allAccounts: accounts,
-    isLoading: dashboardLoading,
-  } = useAccountDashboard(workplaceId, accountId, workplaceCurrency);
+    onDateSelect,
+    unreconciledCount,
+    unreconciledAmountText,
+  } = data;
 
   const {
     deleteAccount,
@@ -114,7 +82,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dateRange || undefined,
   );
 
-  // --- Selection State ---
   const selectionControl = useSelection<TransactionId>();
   const {
     selectedIds,
@@ -126,69 +93,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     setSelectedIds,
   } = selectionControl;
 
-  // --- Initial Data Extraction (Preview) ---
-  const pName = params.pName;
-  const pBalance = params.pBalance;
-  const pCurrency = params.pCurrency;
-  const pIcon = params.pIcon;
-  const pType = params.pType;
-  const pColor = params.pColor;
-
-  const account = useMemo<Account | PlainAccount | null>(
-    () =>
-      dbAccount ||
-      (pName
-        ? {
-            id: accountId,
-            name: pName,
-            accountType: (pType || 'ASSET') as any,
-            currencyCode: pCurrency || workplaceCurrency,
-            icon: (pIcon || getAccountFallbackIcon(pType)) as any,
-            colorKey: pColor,
-            deletedAt: undefined,
-          }
-        : null),
-    [dbAccount, pName, accountId, pType, pCurrency, workplaceCurrency, pIcon, pColor],
-  );
-
-  const balanceData = useMemo(
-    () =>
-      dbBalanceData ||
-      ((pBalance
-        ? {
-            accountId,
-            balance: parseFloat(pBalance),
-            currencyCode: pCurrency || account?.currencyCode || workplaceCurrency,
-            transactionCount: 0,
-          }
-        : null) as AccountBalance | null),
-    [dbBalanceData, pBalance, accountId, pCurrency, account?.currencyCode, workplaceCurrency],
-  );
-
-  // --- Derived State ---
-  const accountLoading = dashboardLoading && !pName;
-  const accountType = account?.accountType || '';
-  const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
-  const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || workplaceCurrency;
-  const balance = dbBalanceData?.balance || 0;
-  const transactionCount = balanceData?.transactionCount || 0;
-  const isDeleted = account?.deletedAt != null;
-  const reconciledAt = (() => {
-    if (!account?.reconciledAt) return null;
-    return account.reconciledAt instanceof Date
-      ? account.reconciledAt
-      : new Date(account.reconciledAt);
-  })();
-
-  const accountSubtypeLabel = account?.accountSubtype
-    ? formatAccountSubtypeLabel(account.accountSubtype)
-    : '';
-  const accountTypeVariant = getAccountTypeVariant(accountType);
-  const accountTypeColorKey = getAccountTypeColorKey(accountType);
-  const balanceText = account ? CurrencyFormatter.format(balance, balanceCurrency) : '...';
-  const transactionCountText = String(transactionCount);
-
-  // --- Composed Sub-Hooks ---
   const {
     precision,
     secondaryBalances,
@@ -250,7 +154,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     selectedIds,
   });
 
-  // --- Handlers ---
   const onTransactionPress = useCallback(
     (transaction: DisplayTransaction) => {
       if (isSelectionModeActive) {
@@ -276,15 +179,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [isSelectionModeActive, toggleSelection],
   );
 
-  const onDateSelect = useCallback(
-    (range: DateRange | null, filter: PeriodFilter) => {
-      setFilter(range, filter);
-      hidePicker();
-    },
-    [hidePicker, setFilter],
-  );
-
-  // --- Transaction List Grouping ---
   const transactionGroupingOptions = useMemo(
     () => ({
       items: transactions,
@@ -321,30 +215,15 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     });
   }, [transactions, selectedIds.size, setSelectedIds]);
 
-  // --- Unreconciled Metrics ---
-  const { data: unreconciledMetrics } = useObservable<{ count: number; total: number }>(
-    () => {
-      if (!accountId) return of({ count: 0, total: 0 });
-      return transactionRawRepository.observeUnreconciledMetricsRaw(
-        workplaceId,
-        accountId,
-        reconciledAt?.getTime() || null,
-        isAssetOrExpense,
-      );
-    },
-    [workplaceId, accountId, reconciledAt, isAssetOrExpense],
-    { count: 0, total: 0 },
-  );
-
   return {
     accountId,
     accountLoading,
-    accountMissing: !accountLoading && !account,
-    accountName: account?.name || '',
+    accountMissing,
+    accountName,
     accountType,
     accountSubtypeLabel,
     accountTypeVariant,
-    accountIcon: account?.icon || null,
+    accountIcon,
     accountTypeColorKey,
     isDeleted,
     currencyCode: balanceCurrency,
@@ -368,7 +247,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     periodFilter,
     isDatePickerVisible,
     showDatePicker,
-    hideDatePicker: hidePicker,
+    hideDatePicker,
     navigatePrevious,
     navigateNext,
     onDateSelect,
@@ -389,8 +268,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     isSubAccountsModalVisible,
     onShowSubAccounts,
     onHideSubAccounts,
-    unreconciledCount: unreconciledMetrics.count,
-    unreconciledAmountText: CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
+    unreconciledCount,
+    unreconciledAmountText,
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
