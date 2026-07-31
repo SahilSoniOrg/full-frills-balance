@@ -1,26 +1,23 @@
 import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { useJournalEditorLoader } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   AccountId,
   AccountRole,
-  EMPTY_ACCOUNT_ID,
   JournalEntryLine,
   JournalId,
   TabType,
-  TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
+import { useJournalEditorLineState } from './useJournalEditorLineState';
 
 export interface UseJournalEditorOptions {
   journalId?: JournalId;
@@ -109,45 +106,33 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const isEdit = !!journalId;
 
   // Advanced / Generic state
-  const [lines, setLines] = useState<JournalEntryLine[]>(() => [
-    {
-      id: '1' as TransactionId,
-      accountId: initialDestinationId || EMPTY_ACCOUNT_ID,
-      accountName: '',
-      accountType: AccountType.ASSET,
-      amount: initialAmount || '',
-      transactionType: TransactionType.DEBIT,
-      notes: '',
-      exchangeRate: '',
-    },
-    {
-      id: '2' as TransactionId,
-      accountId: initialSourceId || EMPTY_ACCOUNT_ID,
-      accountName: '',
-      accountType: AccountType.ASSET,
-      amount: initialAmount || '',
-      transactionType: TransactionType.CREDIT,
-      notes: '',
-      exchangeRate: '',
-    },
-  ]);
-
-  const setGuidedModeInternal = useCallback((mode: boolean) => {
-    if (!mode) {
-      setIsGuidedMode(false);
-      return;
-    }
-
-    setLines(current => {
-      const normalized = normalizeJournalLinesForGuidedMode(current);
-      if (normalized.forceAdvancedMode) {
-        setIsGuidedMode(false);
-        return current;
-      }
-      setIsGuidedMode(true);
-      return normalized.lines;
+  const { lines, setLines, addLine, removeLine, updateLine, updateLines, balanceLine } =
+    useJournalEditorLineState({
+      initialAmount,
+      initialSourceId,
+      initialDestinationId,
+      workplaceCurrency,
     });
-  }, []);
+
+  const setGuidedModeInternal = useCallback(
+    (mode: boolean) => {
+      if (!mode) {
+        setIsGuidedMode(false);
+        return;
+      }
+
+      setLines(current => {
+        const normalized = normalizeJournalLinesForGuidedMode(current);
+        if (normalized.forceAdvancedMode) {
+          setIsGuidedMode(false);
+          return current;
+        }
+        setIsGuidedMode(true);
+        return normalized.lines;
+      });
+    },
+    [setLines],
+  );
   const [description, setDescription] = useState(initialDescription || '');
   const [notes, setNotes] = useState(initialNotes || '');
   const [journalDate, setJournalDate] = useState(() =>
@@ -169,42 +154,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     setGuidedMode: setGuidedModeInternal,
   });
 
-  const addLine = useCallback(() => {
-    setLines(prev => {
-      const ids = prev.map(l => parseInt(l.id)).filter(id => !isNaN(id));
-      const nextId = (ids.length > 0 ? Math.max(...ids) + 1 : prev.length + 1).toString();
-      return [
-        ...prev,
-        {
-          id: nextId as TransactionId,
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: AccountType.ASSET,
-          amount: '',
-          transactionType: TransactionType.DEBIT,
-          notes: '',
-          exchangeRate: '',
-        },
-      ];
-    });
-  }, []);
-
-  const removeLine = useCallback((id: string) => {
-    setLines(prev => {
-      if (prev.length <= 2) return prev;
-      return prev.filter(l => l.id !== id);
-    });
-  }, []);
-
-  const updateLine = useCallback((id: string, updates: Partial<JournalEntryLine>) => {
-    setLines(prev => prev.map(line => (line.id === id ? { ...line, ...updates } : line)));
-  }, []);
-
-  const updateLines = useCallback((batch: Record<string, Partial<JournalEntryLine>>) => {
-    if (Object.keys(batch).length === 0) return;
-    setLines(prev => prev.map(line => (batch[line.id] ? { ...line, ...batch[line.id] } : line)));
-  }, []);
-
   const { fetchRatesForLines } = useJournalEditorExchangeRates({
     lines,
     workplaceCurrency,
@@ -212,20 +161,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     isSubmitting,
     updateLines,
   });
-
-  const balanceLine = useCallback(
-    (id: string) => {
-      setLines(prev => {
-        const corrected = JournalCalculator.applyImbalanceRateCorrectionToLines(
-          prev,
-          id,
-          workplaceCurrency,
-        );
-        return corrected ?? prev;
-      });
-    },
-    [workplaceCurrency],
-  );
 
   const submit = useCallback(
     async (overrides?: { description?: string; lines?: JournalEntryLine[] }) => {
@@ -291,6 +226,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       rawSmsBody,
       onAfterSave,
       onSuccess,
+      setLines,
     ],
   );
 
@@ -381,6 +317,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       imbalance,
       isUnbalanced,
       isEntryReadyToBalance,
+      setLines,
     ],
   );
 }
