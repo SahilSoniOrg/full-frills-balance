@@ -10,10 +10,9 @@ import {
 } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { Box, Stack } from '@/src/design-system';
-import { SafeToSpendCard } from '@/src/features/dashboard';
+import { OnboardingStsPreview } from '@/src/features/onboarding/components/OnboardingStsPreview';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
-import dayjs from 'dayjs';
 import { MotiView } from 'moti';
 import { useState, useEffect } from 'react';
 import {
@@ -32,116 +31,7 @@ type OnboardingThemeStepProps = {
   isCompleting: boolean;
 };
 
-const MOCK_SAFE_TO_SPEND_PROPS: any = {
-  safeToSpend: 2400,
-  shortfall: 0,
-  projection: {
-    history: Array.from({ length: 14 }).map((_, i) => ({
-      timestamp: dayjs()
-        .subtract(14 - i, 'day')
-        .valueOf(),
-      value: 1200 + Math.sin(i / 2) * 200 + i * 50,
-      isProjected: false,
-      details: i % 4 === 0 ? [{ name: 'Grocery Store', amount: -65.2, type: 'OUTFLOW' }] : [],
-    })),
-    projection: Array.from({ length: 30 }).map((_, i) => {
-      const date = dayjs().add(i, 'day');
-      const isRentDay = i === 5;
-      const isPayDay = i === 15;
-      const valueBase = 2400 - i * 15;
-
-      const details: any[] = [];
-      if (isRentDay) details.push({ name: 'Rent Payment', amount: 1200, type: 'OUTFLOW' });
-      if (isPayDay) details.push({ name: 'Salary', amount: 3000, type: 'INFLOW' });
-      if (i % 7 === 2) details.push({ name: 'Utilities', amount: 80, type: 'OUTFLOW' });
-
-      return {
-        timestamp: date.valueOf(),
-        value: isRentDay ? valueBase - 1200 : isPayDay ? valueBase + 3000 : valueBase,
-        isProjected: true,
-        details,
-        dailyBurn: i < 7 ? 45.5 : undefined,
-      };
-    }),
-    safeDaysCount: 15,
-    safeToSpend: 2400,
-  },
-  committedBudget: 600,
-  committedPlanned: 200,
-  committedLiabilities: 100,
-  committedLiabilitiesCC: 50,
-  committedLiabilitiesOther: 50,
-  totalFutureInflow: 3000,
-  totalLiquidAssets: 4000,
-  totalLiabilities: 1000,
-  currencyCode: AppConfig.defaultCurrency,
-  liquidAssetSubtypes: [],
-  liquidAssetAccounts: [],
-  committedBreakdown: [
-    {
-      accountId: 'mock1',
-      accountName: 'Groceries',
-      amount: 150,
-      details: [
-        {
-          id: 'mock1-detail',
-          name: 'Whole Foods Target',
-          amount: 150,
-          type: 'BUDGET',
-          dayOffset: 10,
-        },
-      ],
-    },
-  ],
-  debtBreakdown: [],
-  incomeBreakdown: [
-    { id: 'mock2', name: 'Salary', amount: 3000, dayOffset: 15, type: 'PLANNED_PAYMENT' },
-  ],
-  firstMajorInflowDay: 15,
-  isLoading: false,
-  viewModel: {
-    safeToSpend: 2400,
-    shortfall: 0,
-    totalLiquidAssets: 4000,
-    committedTotal: 800,
-    committedLiabilities: 100,
-    effectiveTotal: 3300,
-    totalFutureInflow: 3000,
-    totalLiabilities: 1000,
-    displaySafeToSpend: '₹2,400',
-    displayShortfall: '₹0',
-    displayTotalLiquidAssets: '₹4,000',
-    displayCommittedTotal: '₹800',
-    displayCommittedLiabilities: '₹100',
-    displayTotalFutureInflow: '₹3,000',
-    income: [],
-    committed: [],
-    debt: [],
-    accountSummaries: [],
-    liquidAssetSubtypes: [],
-    insights: {
-      firstMajorInflowDay: 15,
-      committedLiabilitiesCC: 50,
-      committedLiabilitiesOther: 50,
-    },
-    isOverCommitted: false,
-    isPositiveSafeToSpend: true,
-    isPrivacyMode: false,
-    isLoading: false,
-    formatValue: (val: number) => {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: AppConfig.defaultCurrency || 'INR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(val);
-    },
-    labels: AppConfig.strings.dashboard.safeToSpendUi,
-    info: AppConfig.strings.dashboard.safeToSpendExplanation,
-  },
-};
-
-let globalThemeId: any = null;
+let globalThemeId: ThemeId | null = null;
 
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const { theme } = useTheme();
@@ -173,7 +63,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const [slideDirection, setSlideDirection] = useState<number>(1);
 
   const cycleTheme = (direction: number) => {
-    const currentIndex = THEME_ORDER.indexOf(globalThemeId as any);
+    const currentIndex = globalThemeId ? THEME_ORDER.indexOf(globalThemeId) : -1;
     if (currentIndex === -1) return;
 
     let nextIndex = currentIndex + direction;
@@ -227,7 +117,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   };
 
   const getThemeLabel = (offset: number) => {
-    const currentIndex = THEME_ORDER.indexOf(ui.themeId as any);
+    const currentIndex = THEME_ORDER.indexOf(ui.themeId);
     if (currentIndex === -1) return '';
     let targetIndex = currentIndex + offset;
     if (targetIndex >= THEME_ORDER.length) targetIndex = 0;
@@ -289,7 +179,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
         </AppText>
         <View {...panResponder.panHandlers}>
           <View pointerEvents="none">
-            <SafeToSpendCard {...MOCK_SAFE_TO_SPEND_PROPS} />
+            <OnboardingStsPreview />
           </View>
         </View>
 
