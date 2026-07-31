@@ -1,11 +1,16 @@
+import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { FloatingActionButton } from '@/src/components/core';
+import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
+import { TransactionFeed } from '@/src/features/dashboard/components/TransactionFeed';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
+import { PlannedPaymentsSection } from '@/src/features/journal';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
+import { TransactionId } from '@/src/types/domain';
 import React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import {
   mapLiabilityFlowsToPlannedOccurrences,
@@ -117,37 +122,50 @@ export function DashboardScreenView({
     return null;
   }
 
+  const {
+    items,
+    isLoading,
+    isLoadingMore,
+    loadingText,
+    loadingMoreText,
+    emptyTitle,
+    emptySubtitle,
+    onEndReached,
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    onShareSelected,
+    onPlannedJournalPress,
+  } = recentTransactions;
+
+  const transactionCount = items.filter(i => i.type === 'transaction').length;
+
   return (
-    <View testID="dashboard-screen" style={{ flex: 1 }}>
-      <JournalListView
-        items={recentTransactions.items}
-        isLoading={recentTransactions.isLoading}
-        isLoadingMore={recentTransactions.isLoadingMore}
-        loadingText={recentTransactions.loadingText}
-        loadingMoreText={recentTransactions.loadingMoreText}
-        emptyTitle={recentTransactions.emptyTitle}
-        emptySubtitle={recentTransactions.emptySubtitle}
-        onEndReached={recentTransactions.onEndReached}
-        selection={{
-          selectedIds: recentTransactions.selectedIds,
-          isSelectionModeActive: recentTransactions.isSelectionModeActive,
-          onLongPressItem: recentTransactions.onLongPressItem,
-          toggleSelection: recentTransactions.toggleSelection,
-          selectAll: recentTransactions.selectAll,
-          clearItems: recentTransactions.clearItems,
-          exitSelectionMode: recentTransactions.exitSelectionMode,
-          onShareSelected: recentTransactions.onShareSelected,
-        }}
-        datePicker={{
-          visible: false,
-          onClose: () => {},
-          currentFilter: { type: 'ALL_TIME' },
-          onSelect: () => {},
-        }}
+    <View testID="dashboard-screen" style={styles.container}>
+      {isSelectionModeActive && (
+        <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
+      )}
+
+      <TransactionFeed
         ref={listRef}
-        showBack={false}
+        items={items}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        loadingText={loadingText}
+        loadingMoreText={loadingMoreText}
+        emptyTitle={emptyTitle}
+        emptySubtitle={emptySubtitle}
+        onEndReached={onEndReached}
         isPrivacyMode={isPrivacyMode}
-        listHeader={
+        selectedIds={selectedIds as Set<string> as Set<TransactionId>}
+        onLongPressItem={onLongPressItem as (id: string) => void}
+        isSelectionModeActive={isSelectionModeActive}
+        contentContainerStyle={styles.listContent}
+        style={styles.feed}
+        ListHeaderComponent={
           <View style={{ zIndex: 10 }}>
             <DashboardHeader {...headerProps} />
             <View style={{ zIndex: 10 }}>
@@ -164,7 +182,7 @@ export function DashboardScreenView({
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
                 items={plannedOccurrences}
-                onItemPress={recentTransactions.onPlannedJournalPress}
+                onItemPress={onPlannedJournalPress}
               />
             </View>
             <Inset horizontal="lg" vertical="lg">
@@ -172,7 +190,30 @@ export function DashboardScreenView({
             </Inset>
           </View>
         }
-        fab={fab}
+        ListFooterComponent={
+          isSelectionModeActive ? (
+            <Pressable style={{ height: 500 }} onPress={exitSelectionMode} />
+          ) : undefined
+        }
+      />
+
+      {fab && !isSelectionModeActive && (
+        <FloatingActionButton
+          onPress={fab.onPress}
+          label={fab.label}
+          placement={fab.placement}
+          accessibilityLabel={fab.accessibilityLabel}
+        />
+      )}
+
+      <SelectionActionBar
+        selectedCount={selectedIds.size}
+        totalCount={transactionCount}
+        onClear={exitSelectionMode}
+        onSelectAll={selectAll}
+        onDeselectAll={clearItems}
+        onShare={onShareSelected}
+        isVisible={isSelectionModeActive}
       />
 
       <SafeToSpendExplanationModal
@@ -196,3 +237,16 @@ export function DashboardScreenView({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  feed: {
+    flex: 1,
+  },
+  listContent: {
+    padding: Spacing.lg,
+    paddingBottom: Size.buttonLg + Spacing.xl,
+  },
+});
