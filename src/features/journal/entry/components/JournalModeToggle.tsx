@@ -1,13 +1,15 @@
 import { AppText, IconButton } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { useJournalModeOptions } from '@/src/features/journal/entry/hooks/useJournalModeOptions';
+import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
 interface JournalModeToggleProps {
-  mode: 'guided' | 'advanced' | 'bulk' | 'split';
-  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
+  mode: JournalEntryScreenMode;
+  onToggleMode: (mode: JournalEntryScreenMode) => void;
   /** `bar`: slim full-width row under the header (journal entry). `compact`: inline chip group. */
   variant?: 'default' | 'compact' | 'bar';
   isSimpleDisabled?: boolean;
@@ -23,13 +25,7 @@ export const JournalModeToggle = ({
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const isBar = variant === 'bar';
   const isCompact = variant === 'compact';
-
-  const modes: { id: 'guided' | 'advanced' | 'bulk' | 'split'; label: string }[] = [
-    { id: 'guided', label: 'Simple' },
-    { id: 'split', label: 'Split' },
-    { id: 'advanced', label: 'Advanced' },
-    { id: 'bulk', label: 'Bulk' },
-  ];
+  const modes = useJournalModeOptions();
 
   if (isBar || isCompact) {
     return (
