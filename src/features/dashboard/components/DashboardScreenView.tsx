@@ -7,10 +7,6 @@ import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
-import {
-  mapLiabilityFlowsToPlannedOccurrences,
-  mergePlannedOccurrences,
-} from '@/src/features/planned-payments';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { TransactionId } from '@/src/types/domain';
 import React from 'react';
@@ -24,6 +20,7 @@ export function DashboardScreenView({
   hasCompletedOnboarding,
   isPrivacyMode,
   recentTransactions,
+  plannedOccurrences,
   headerProps,
   fab,
   safeToSpendData,
@@ -103,21 +100,6 @@ export function DashboardScreenView({
     isLoading: !safeToSpendData,
   });
 
-  const plannedOccurrences = React.useMemo(() => {
-    const planned = recentTransactions.plannedJournals || [];
-    if (!safeToSpendData?.report?.allFlows) {
-      return mergePlannedOccurrences(planned, []);
-    }
-
-    const simulated = mapLiabilityFlowsToPlannedOccurrences({
-      allFlows: safeToSpendData.report.allFlows,
-      accountMap: safeToSpendData.accountMap ?? new Map(),
-      currencyCode: safeToSpendData.currencyCode || 'INR',
-    });
-
-    return mergePlannedOccurrences(planned, simulated);
-  }, [recentTransactions.plannedJournals, safeToSpendData]);
-
   if (!hasCompletedOnboarding) {
     return null;
   }
@@ -138,7 +120,6 @@ export function DashboardScreenView({
     clearItems,
     exitSelectionMode,
     onShareSelected,
-    onPlannedJournalPress,
   } = recentTransactions;
 
   const transactionCount = items.filter(i => i.type === 'transaction').length;
@@ -180,8 +161,8 @@ export function DashboardScreenView({
             </View>
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
-                items={plannedOccurrences}
-                onItemPress={onPlannedJournalPress}
+                items={plannedOccurrences.items}
+                onItemPress={plannedOccurrences.onItemPress}
                 isPrivacyMode={isPrivacyMode}
               />
             </View>

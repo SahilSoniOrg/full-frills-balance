@@ -9,6 +9,11 @@ export * from './hooks/usePlannedPaymentForm';
 export * from './hooks/usePlannedPaymentRecord';
 export * from './hooks/usePlannedPayments';
 export { usePlannedOccurrenceActions } from './hooks/usePlannedOccurrenceActions';
+export { usePlannedOccurrences } from './hooks/usePlannedOccurrences';
+export type {
+  UsePlannedOccurrencesParams,
+  PlannedOccurrencesResult,
+} from './hooks/usePlannedOccurrences';
 
 export {
   mapLiabilityFlowsToPlannedOccurrences,

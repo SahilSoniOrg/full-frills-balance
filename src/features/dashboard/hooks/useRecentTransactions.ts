@@ -1,10 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { JournalStatus } from '@/src/data/models/Journal';
-import { useJournals, useJournalTransactionList } from '@/src/features/journal';
-import {
-  usePlannedOccurrenceActions,
-  type PlannedOccurrenceViewModel,
-} from '@/src/features/planned-payments';
+import { useJournalTransactionList } from '@/src/features/journal';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 
@@ -27,8 +22,6 @@ export interface RecentTransactions {
   emptyTitle: string;
   emptySubtitle: string;
   onEndReached?: () => void;
-  plannedJournals: EnrichedJournal[];
-  onPlannedJournalPress: (item: PlannedOccurrenceViewModel) => void;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
@@ -39,11 +32,10 @@ export interface RecentTransactions {
   onShareSelected: () => void;
 }
 
-const PLANNED_STATUS = [JournalStatus.PLANNED];
-
 /**
  * Headless recent-activity feed for the dashboard.
- * Builds on the shared journal transaction list core plus planned-occurrence actions.
+ * Builds on the shared journal transaction list core.
+ * Planned occurrences live in usePlannedOccurrences.
  */
 export function useRecentTransactions({
   workplaceId,
@@ -62,16 +54,6 @@ export function useRecentTransactions({
     paginationPolicy: 'default',
   });
 
-  const { journals: plannedJournals } = useJournals(
-    workplaceId,
-    AppConfig.defaults.plannedJournalLimit,
-    undefined,
-    undefined,
-    PLANNED_STATUS,
-  );
-
-  const { onPlannedJournalPress } = usePlannedOccurrenceActions(workplaceId);
-
   return {
     items: core.items,
     isLoading: core.isLoading,
@@ -81,8 +63,6 @@ export function useRecentTransactions({
     emptyTitle,
     emptySubtitle,
     onEndReached: core.onEndReached,
-    plannedJournals,
-    onPlannedJournalPress,
     selectedIds: core.selectedIds,
     isSelectionModeActive: core.isSelectionModeActive,
     onLongPressItem: core.onLongPressItem,

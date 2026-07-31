@@ -10,6 +10,7 @@ import {
   RecentTransactions,
   useRecentTransactions,
 } from '@/src/features/dashboard/hooks/useRecentTransactions';
+import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
@@ -31,6 +32,7 @@ export interface DashboardViewModel {
   isPrivacyMode: boolean;
   showSafeToSpendChart: boolean;
   recentTransactions: RecentTransactions;
+  plannedOccurrences: PlannedOccurrencesResult;
   headerProps: {
     greeting: string;
     notificationCount: number;
@@ -138,6 +140,13 @@ export function useDashboardViewModel(): DashboardViewModel {
     },
   });
 
+  const plannedOccurrences = usePlannedOccurrences({
+    workplaceId,
+    allFlows: safeToSpendData?.report?.allFlows,
+    accountMap: safeToSpendData?.accountMap,
+    currencyCode: safeToSpendData?.currencyCode,
+  });
+
   const hasJournalItems = recentTransactions.items.length > 0;
   // Log Journal List arrival
   useEffect(() => {
@@ -230,6 +239,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       isPrivacyMode: isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
+      plannedOccurrences,
       headerProps,
       transactionSectionTitle: sectionTitle,
       fab,
@@ -243,6 +253,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
+      plannedOccurrences,
       headerProps,
       sectionTitle,
       fab,
