@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { analytics } from '@/src/services/analytics-service';
 import { alert, confirm } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
@@ -15,7 +15,6 @@ export interface PrivacySettingsViewModel {
 }
 
 export function usePrivacySettingsViewModel(): PrivacySettingsViewModel {
-  const ui = useUI();
   const {
     isPrivacyMode,
     setPrivacyMode,
@@ -23,7 +22,7 @@ export function usePrivacySettingsViewModel(): PrivacySettingsViewModel {
     setAppLockEnabled,
     isWidgetPrivacyEnabled,
     setWidgetPrivacyEnabled,
-  } = ui;
+  } = usePrivacyPrefs();
 
   const onTogglePrivacy = useCallback(() => {
     const newState = !isPrivacyMode;
