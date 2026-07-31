@@ -1,5 +1,6 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics-service';
 import { useCallback } from 'react';
 
@@ -15,46 +16,41 @@ export interface AppearanceSettingsViewModel {
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
-  const ui = useUI();
-  const {
-    themePreference,
-    setThemePreference,
-    themeId,
-    setThemeId,
-    fontId,
-    setFontId,
-    showAccountMonthlyStats,
-    setShowAccountMonthlyStats,
-  } = ui;
+  const { themePreference, setThemePreference, themeId, setThemeId, fontId, setFontId } =
+    useThemePrefs();
+  const { showAccountMonthlyStats, setShowAccountMonthlyStats } = useAccountDisplayPrefs();
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
       setThemePreference(value);
+      analytics.logThemeChanged(value, themeId, fontId);
       analytics.trackFeatureUsage('settings', 'change_theme_preference', {
         preference: value,
       });
     },
-    [setThemePreference],
+    [setThemePreference, themeId, fontId],
   );
 
   const handleSetThemeId = useCallback(
     (value: ThemeId) => {
       setThemeId(value);
+      analytics.logThemeChanged(themePreference, value, fontId);
       analytics.trackFeatureUsage('settings', 'change_theme', {
         theme_id: value,
       });
     },
-    [setThemeId],
+    [setThemeId, themePreference, fontId],
   );
 
   const handleSetFontId = useCallback(
     (value: FontId) => {
       setFontId(value);
+      analytics.logThemeChanged(themePreference, themeId, value);
       analytics.trackFeatureUsage('settings', 'change_font', {
         font_id: value,
       });
     },
-    [setFontId],
+    [setFontId, themePreference, themeId],
   );
 
   const onToggleAccountMonthlyStats = useCallback(() => {
