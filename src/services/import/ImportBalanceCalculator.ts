@@ -7,7 +7,7 @@ import type {
   ImportedTransaction,
 } from '@/src/data/repositories/ImportRepository';
 import { foldBalances } from '@/src/services/accounting/BalanceEffects';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
@@ -71,7 +71,7 @@ export async function calculateImportRunningBalances(
     const prepared: OrderedImportTx[] = ordered.map(t => {
       const journalStatus = journalStatusMap.get(t.journalId);
       const isDeleted = !!t.deletedAt;
-      const isActive = !isDeleted && ACTIVE_JOURNAL_STATUSES.includes(journalStatus as any);
+      const isActive = !isDeleted && isActiveJournalStatus(journalStatus);
       const transactionType = Object.values(TransactionType).includes(
         t.transactionType as TransactionType,
       )

@@ -98,12 +98,12 @@ export async function createAccount(
           {
             accountId: account.id as AccountId,
             amount: roundedAmount,
-            transactionType: accountTxType as any,
+            transactionType: accountTxType,
           },
           {
             accountId: balancingAccountId as AccountId,
             amount: roundedAmount,
-            transactionType: balancingTxType as any,
+            transactionType: balancingTxType,
           },
         ],
       },

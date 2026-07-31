@@ -68,12 +68,12 @@ export async function adjustAccountBalance(
         {
           accountId: account.id as AccountId,
           amount: amount,
-          transactionType: accountTxType as any,
+          transactionType: accountTxType,
         },
         {
           accountId: balancingAccountId,
           amount: amount,
-          transactionType: balancingTxType as any,
+          transactionType: balancingTxType,
         },
       ],
     },
