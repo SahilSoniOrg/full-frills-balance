@@ -1,6 +1,10 @@
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Budget from '@/src/data/models/Budget';
+import {
+  buildBudgetDetailPreview,
+  buildBudgetUsagePreview,
+} from '@/src/features/budget/helpers/budgetDetailPresentation';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -71,41 +75,23 @@ export function useBudgetDetailViewModel() {
   const pCurrency = params.pCurrency as string;
   const pPeriod = params.pPeriod as string;
 
-  const budget: Budget | PlainBudget | null = useMemo(() => {
-    if (dbBudgetData) return dbBudgetData[0];
-    if (pName) {
-      return {
-        id: budgetId,
-        name: pName,
-        amount: pAmount ? parseFloat(pAmount) : 0,
-        currencyCode: pCurrency || baseCurrency,
-        intervalType: pPeriod || 'MONTHLY',
-        periodType: pPeriod || 'MONTHLY',
-        intervalN: 1,
-        startDate: undefined,
-        recurrenceDay: undefined,
-        recurrenceMonth: undefined,
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    }
-    return null;
-  }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, baseCurrency]);
+  const previewInput = useMemo(
+    () => ({
+      budgetId,
+      name: pName,
+      amount: pAmount,
+      currency: pCurrency,
+      period: pPeriod,
+      baseCurrency,
+    }),
+    [baseCurrency, budgetId, pAmount, pCurrency, pName, pPeriod],
+  );
 
-  const usage = useMemo(() => {
-    if (dbBudgetData) return dbBudgetData[1];
-    if (pName) {
-      const target = pAmount ? parseFloat(pAmount) : 0;
-      return {
-        spent: 0,
-        remaining: target,
-        budgetAmount: target,
-        usagePercent: 0,
-      };
-    }
-    return null;
-  }, [dbBudgetData, pName, pAmount]);
+  const budget: Budget | PlainBudget | null = dbBudgetData
+    ? dbBudgetData[0]
+    : buildBudgetDetailPreview(previewInput);
+
+  const usage = dbBudgetData ? dbBudgetData[1] : buildBudgetUsagePreview(previewInput);
 
   const transactions = useMemo(() => (dbBudgetData ? dbBudgetData[2] : []), [dbBudgetData]);
 
@@ -207,8 +193,11 @@ export function useBudgetDetailViewModel() {
           } else {
             logger.warn('Cannot delete preview/mock budget');
           }
-        } catch (e: any) {
-          logger.error('Failed to delete budget', e);
+        } catch (error: unknown) {
+          logger.error(
+            'Failed to delete budget',
+            error instanceof Error ? error : new Error(String(error)),
+          );
         }
       },
     });
