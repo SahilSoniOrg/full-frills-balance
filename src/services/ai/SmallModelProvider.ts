@@ -12,6 +12,10 @@ import {
 import { modelManagementService } from './ModelManagementService';
 import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStats } from './types';
 
+function isBackend(value: unknown): value is Backend {
+  return value === 'cpu' || value === 'gpu' || value === 'npu';
+}
+
 export class SmallModelProvider implements DynamicLLMEngine {
   private llm: LiteRTLMInstance | null = null;
   private currentModelId: string | null = null;
@@ -111,7 +115,8 @@ export class SmallModelProvider implements DynamicLLMEngine {
     this.currentSystemPrompt = targetSystemPrompt;
     // Synchronize activeBackend with what was actually initialized (falls back natively to cpu if gpu fails)
     try {
-      this.activeBackend = (this.llm as any).backend || requestedBackend;
+      const nativeBackend = Reflect.get(this.llm, 'backend');
+      this.activeBackend = isBackend(nativeBackend) ? nativeBackend : requestedBackend;
     } catch {
       this.activeBackend = requestedBackend;
     }
