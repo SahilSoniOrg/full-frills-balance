@@ -3,9 +3,8 @@ import { TransactionListView } from '@/src/components/common/TransactionListView
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Size, Spacing } from '@/src/constants';
-import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
-import { EnrichedJournal, JournalId, TransactionId } from '@/src/types/domain';
+import { JournalId, TransactionId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -43,8 +42,6 @@ export interface JournalListViewProps {
     placement?: 'end' | 'center';
     accessibilityLabel?: string;
   };
-  plannedJournals?: EnrichedJournal[];
-  onPlannedJournalPress?: (item: PlannedOccurrenceViewModel) => void;
   isPrivacyMode?: boolean;
   isSearchActive?: boolean;
   alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];

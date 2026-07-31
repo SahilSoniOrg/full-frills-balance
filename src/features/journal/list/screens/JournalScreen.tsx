@@ -82,8 +82,6 @@ export default function JournalScreen() {
       headerActions={headerActions}
       listHeader={null}
       fab={fab}
-      plannedJournals={vm.plannedJournals}
-      onPlannedJournalPress={listViewProps.onPlannedJournalPress}
       showBack={canGoBack}
       isSearchActive={false}
       alignTitle={canGoBack ? 'center' : 'left'}

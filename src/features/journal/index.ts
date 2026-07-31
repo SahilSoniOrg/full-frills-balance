@@ -1,5 +1,4 @@
 export { JournalListView } from './components/JournalListView';
-export { PlannedPaymentsSection } from './components/PlannedPaymentsSection';
 export { default as EntryScreen } from './entry/EntryScreen';
 export * from './hooks/useJournal';
 export * from './hooks/useJournalActions';

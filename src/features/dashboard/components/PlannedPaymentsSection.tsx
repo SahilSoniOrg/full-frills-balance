@@ -1,7 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard';
+import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard/types/PlannedOccurrenceViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { journalDisplayTypeChrome } from '@/src/services/accounting/journalTimelineMapper';

@@ -1,20 +1,16 @@
 import { WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
-import { usePlannedOccurrenceActions } from './usePlannedOccurrenceActions';
 
 /**
  * Helper hook that encapsulates the common pattern of using JournalListViewModel
  * and mapping its props to JournalListView component.
- *
- * Eliminates duplication between Dashboard and Journal screens.
  */
 export function useJournalListScreen(
   config: Parameters<typeof useJournalListViewModel>[0],
   workplaceId: WorkplaceId,
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
-  const { onPlannedJournalPress } = usePlannedOccurrenceActions(workplaceId);
 
   const listViewProps = useMemo(
     () => ({
@@ -26,8 +22,6 @@ export function useJournalListScreen(
       emptyTitle: vm.emptyState.title,
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
-      plannedJournals: vm.plannedJournals,
-      onPlannedJournalPress,
       datePicker: {
         visible: vm.isDatePickerVisible,
         onClose: vm.hideDatePicker,
@@ -54,8 +48,6 @@ export function useJournalListScreen(
       vm.emptyState.title,
       vm.emptyState.subtitle,
       vm.onEndReached,
-      vm.plannedJournals,
-      onPlannedJournalPress,
       vm.isDatePickerVisible,
       vm.hideDatePicker,
       vm.periodFilter,

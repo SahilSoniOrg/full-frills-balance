@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 
 /**
  * Actions for tapping a planned occurrence (record / skip / open journal entry).
- * Shared by Journal list and Dashboard via useJournalListScreen.
+ * Shared by Dashboard (and other planned-occurrence surfaces).
  */
 export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
   const onPlannedJournalPress = useCallback(
