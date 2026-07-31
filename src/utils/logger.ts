@@ -10,11 +10,15 @@ import { AppConfig } from '@/src/constants/app-config';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'metric';
 
-type PerformanceReporter = (metric: string, value: number, context?: Record<string, any>) => void;
+type PerformanceReporter = (
+  metric: string,
+  value: number,
+  context?: Record<string, unknown>,
+) => void;
 
 interface LogContext {
   traceId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class Logger {

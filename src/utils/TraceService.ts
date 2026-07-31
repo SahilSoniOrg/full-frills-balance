@@ -8,7 +8,7 @@ export class Trace {
   public readonly traceId: string;
   public readonly actionName: string;
   private readonly startTime: number;
-  private metadata: Record<string, any> = {};
+  private metadata: Record<string, unknown> = {};
 
   constructor(actionName: string, traceId?: string) {
     this.actionName = actionName;
@@ -28,7 +28,7 @@ export class Trace {
    * Log a sub-segment or child metric within this trace.
    * Internal duration is calculated since trace start.
    */
-  metric(name: string, context?: Record<string, any>) {
+  metric(name: string, context?: Record<string, unknown>) {
     const duration = Date.now() - this.startTime;
     logger.metric(`${this.actionName}.${name}`, duration, {
       ...this.metadata,
@@ -40,7 +40,7 @@ export class Trace {
   /**
    * Complete the trace and log the total duration.
    */
-  end(context?: Record<string, any>) {
+  end(context?: Record<string, unknown>) {
     const duration = Date.now() - this.startTime;
     logger.metric(this.actionName, duration, {
       ...this.metadata,
@@ -60,7 +60,7 @@ export class Trace {
   /**
    * Log an info message correlated with this trace.
    */
-  info(message: string, context?: Record<string, any>) {
+  info(message: string, context?: Record<string, unknown>) {
     logger.info(message, {
       ...this.metadata,
       ...context,
