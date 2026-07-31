@@ -6,6 +6,7 @@ import {
   createLLM,
   type Backend,
   type LiteRTLMInstance,
+  type MemoryTrackerSummary,
   type MultimodalPart,
 } from 'react-native-litert-lm';
 import { modelManagementService } from './ModelManagementService';
@@ -244,7 +245,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
     }
   }
 
-  getMemorySummary(): any {
+  getMemorySummary(): MemoryTrackerSummary | null {
     if (!this.llm) return null;
     return this.llm.memoryTracker?.getSummary() || null;
   }

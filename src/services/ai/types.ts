@@ -1,3 +1,5 @@
+import type { MemoryTrackerSummary } from 'react-native-litert-lm';
+
 export interface AIModelMetadata {
   id: string;
   name: string;
@@ -69,7 +71,7 @@ export interface LLMEngine {
     options?: AIGenerateOptions,
   ): Promise<void>;
   dispose(): Promise<void>;
-  getMemorySummary?(): any;
+  getMemorySummary?(): MemoryTrackerSummary | null;
 }
 
 export interface DynamicLLMEngine extends LLMEngine {

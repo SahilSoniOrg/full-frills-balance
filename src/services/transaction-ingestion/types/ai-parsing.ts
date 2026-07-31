@@ -1,4 +1,5 @@
 import type { InferenceStats } from '@/src/services/ai/types';
+import type { MemoryTrackerSummary } from 'react-native-litert-lm';
 
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'unknown';
 
@@ -30,7 +31,7 @@ export interface ParserOutput {
     passTimings?: Record<string, number>;
     totalInferenceMs?: number;
     lastPassStats?: InferenceStats;
-    memorySummary?: any;
+    memorySummary?: MemoryTrackerSummary;
   };
 }
 
