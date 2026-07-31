@@ -12,9 +12,9 @@ import {
 } from '@/src/features/dashboard/hooks/useRecentTransactions';
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
+import { useDashboardModalState } from '@/src/features/dashboard/hooks/useDashboardModalState';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
-import { analytics } from '@/src/services/analytics-service';
 import {
   safeToSpendReadModel,
   SafeToSpendDashboard,
@@ -22,7 +22,7 @@ import {
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
@@ -114,13 +114,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
   // Modal states lifted for non-native overlay support
-  const [isExplanationVisible, setExplanationVisible] = React.useState(false);
-  const [expandedSection, setExpandedSection] = React.useState<
-    'assets' | 'income' | 'committed' | 'debts' | null
-  >(null);
-  const [selectedLegendItem, setSelectedLegendItem] = React.useState<
-    'safe' | 'committed' | 'debts' | null
-  >(null);
+  const { explanationModalState, legendModalState } = useDashboardModalState();
 
   const totalNotifications = insights?.length || 0;
 
@@ -206,30 +200,6 @@ export function useDashboardViewModel(): DashboardViewModel {
       onPress: onAddPress,
     }),
     [onAddPress],
-  );
-
-  const explanationModalState = useMemo(
-    () => ({
-      visible: isExplanationVisible,
-      setVisible: (v: boolean) => {
-        setExplanationVisible(v);
-        if (v) analytics.logChartInteracted('safe_to_spend', 'explanation_open');
-      },
-      expandedSection,
-      setExpandedSection: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => {
-        setExpandedSection(s);
-        if (s) analytics.logChartInteracted('safe_to_spend', `explanation_expand_${s}`);
-      },
-    }),
-    [isExplanationVisible, expandedSection],
-  );
-
-  const legendModalState = useMemo(
-    () => ({
-      selectedItem: selectedLegendItem,
-      setSelectedItem: setSelectedLegendItem,
-    }),
-    [selectedLegendItem],
   );
 
   return useMemo(
