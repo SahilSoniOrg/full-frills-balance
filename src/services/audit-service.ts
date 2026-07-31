@@ -41,10 +41,13 @@ export class AuditService {
     try {
       await handler(log.entityId, log.parsedChanges, log.action, workplaceId);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || AppConfig.strings.audit.errors.revertFailed,
+        error:
+          error instanceof Error && error.message
+            ? error.message
+            : AppConfig.strings.audit.errors.revertFailed,
       };
     }
   }
