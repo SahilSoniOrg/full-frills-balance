@@ -9,7 +9,6 @@ import {
   buildSimpleFormAccountSections,
   computeSimpleConvertedAmount,
   parseSimpleAmountInput,
-  shouldApplyLastUsedAccountDefault,
 } from '@/src/services/journal/simpleJournalHelpers';
 import {
   AccountId,
@@ -23,6 +22,7 @@ import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
+import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
 
 export interface UseSimpleJournalEditorProps {
   accounts: Account[];
@@ -81,6 +81,15 @@ export function useSimpleJournalEditor({
     useAccountSelection({
       accounts,
     });
+
+  useSimpleJournalAccountSync({
+    accounts,
+    editor,
+    type,
+    sourceId,
+    destinationId,
+    transactionAccounts,
+  });
 
   const sourceAccount = useMemo(() => accounts.find(a => a.id === sourceId), [accounts, sourceId]);
   const destAccount = useMemo(
@@ -232,87 +241,6 @@ export function useSimpleJournalEditor({
     },
     [accounts, destinationLine, editor],
   );
-
-  // Account defaulting logic (re-implemented to work with editor state)
-  useEffect(() => {
-    if (!editor.isGuidedMode || editor.isEdit) return;
-
-    const lastSourceId = journalNav.lastUsedSourceAccountId;
-    const lastDestId = journalNav.lastUsedDestinationAccountId;
-
-    let shouldUpdate = false;
-    let newSourceId: AccountId | undefined;
-    let newDestId: AccountId | undefined;
-
-    if (
-      shouldApplyLastUsedAccountDefault(type, 'source', sourceId) &&
-      lastSourceId &&
-      transactionAccounts.some(a => a.id === lastSourceId)
-    ) {
-      newSourceId = lastSourceId;
-      shouldUpdate = true;
-    }
-
-    if (
-      shouldApplyLastUsedAccountDefault(type, 'destination', destinationId) &&
-      lastDestId &&
-      transactionAccounts.some(a => a.id === lastDestId)
-    ) {
-      newDestId = lastDestId;
-      shouldUpdate = true;
-    }
-
-    if (shouldUpdate) {
-      editor.setLines(prev => {
-        return prev.map(line => {
-          if (line.transactionType === TransactionType.CREDIT && newSourceId) {
-            const account = accounts.find(a => a.id === newSourceId);
-            return {
-              ...line,
-              accountId: newSourceId,
-              accountName: account?.name || '',
-              accountType: account?.accountType || AccountType.ASSET,
-              accountCurrency: account?.currencyCode,
-            };
-          }
-          if (line.transactionType === TransactionType.DEBIT && newDestId) {
-            const account = accounts.find(a => a.id === newDestId);
-            return {
-              ...line,
-              accountId: newDestId,
-              accountName: account?.name || '',
-              accountType: account?.accountType || AccountType.ASSET,
-              accountCurrency: account?.currencyCode,
-            };
-          }
-          return line;
-        });
-      });
-    }
-  }, [type, transactionAccounts, destinationId, sourceId, accounts, editor, journalNav]); // Run when type changes or accounts load
-
-  // Hydrate account details into lines if they were initialized just with accountId (like from deep link or params)
-  useEffect(() => {
-    if (accounts.length === 0) return;
-
-    const updates: Record<string, Partial<JournalEntryLine>> = {};
-    editor.lines.forEach(line => {
-      if (line.accountId && !line.accountName) {
-        const acct = accounts.find(a => a.id === line.accountId);
-        if (acct) {
-          updates[line.id] = {
-            accountName: acct.name,
-            accountType: acct.accountType,
-            accountCurrency: acct.currencyCode,
-          };
-        }
-      }
-    });
-
-    if (Object.keys(updates).length > 0) {
-      editor.updateLines(updates);
-    }
-  }, [accounts, editor.lines, editor]);
 
   const handleSave = useCallback(async () => {
     if (numAmount <= 0) {
