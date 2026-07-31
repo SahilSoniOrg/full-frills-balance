@@ -4,27 +4,33 @@ import React, { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UIContext } from '@/src/contexts/UIContext';
-
-// Mock Theme
-// Mock Theme
-// const mockTheme: Theme = { ... };
+import { ShareFormat } from '@/src/types/sharing';
 
 const mockUIContext: any = {
-  themePreference: 'system' as const,
-  themeMode: 'light' as const,
   hasCompletedOnboarding: true,
   isLoading: false,
   isInitialized: true,
-  userName: 'Test User',
-  defaultCurrency: AppConfig.defaultCurrency,
-  isPrivacyMode: false,
+  fontsReady: true,
+  loadedFontId: null,
   isRestartRequired: false,
   restartType: null,
   importStats: null,
+  isDataHydrated: true,
+  isUnlocked: true,
+  hasUnlockedThisSession: true,
+  isAppActive: true,
+  isLockAuthenticating: false,
+  isAppCurrentlyLocked: false,
+  isAppReady: true,
+  defaultShareFormat: ShareFormat.TEXT,
+  defaultCurrency: AppConfig.defaultCurrency,
   completeOnboarding: async () => Promise.resolve(),
-  setThemePreference: async () => Promise.resolve(),
-  updateUserDetails: async () => Promise.resolve(),
-  setPrivacyMode: async () => Promise.resolve(),
+  setFontsReady: () => {},
+  setDataHydrated: () => {},
+  authenticateSession: () => {},
+  setIsAppActive: () => {},
+  setIsLockAuthenticating: () => {},
+  setDefaultShareFormat: () => {},
   requireRestart: () => {},
 };
 

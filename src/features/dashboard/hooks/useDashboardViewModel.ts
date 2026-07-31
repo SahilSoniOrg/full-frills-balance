@@ -1,7 +1,7 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
+import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useUI } from '@/src/contexts/UIContext';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -10,7 +10,6 @@ import {
   RecentTransactions,
   useRecentTransactions,
 } from '@/src/features/dashboard/hooks/useRecentTransactions';
-import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
@@ -65,9 +64,10 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId } = useWorkplace();
   const { hasCompletedOnboarding, isInitialized, isAppReady } = useUI();
   const { userName } = useProfilePrefs();
-  const { isPrivacyMode } = usePrivacyPrefs();
   const { isSmsImportEnabled } = useSmsPrefs();
   const { showSafeToSpendChart } = useDashboardPreferences();
+  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode: onTogglePrivacy } =
+    usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -81,9 +81,6 @@ export function useDashboardViewModel(): DashboardViewModel {
       appLogger.info(`[Dashboard] UI Initialized (Prefs Loaded) in ${duration}ms`);
     }
   }, [isInitialized]);
-
-  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode: onTogglePrivacy } =
-    useScreenPrivacyMode(isPrivacyMode);
 
   const { data: safeToSpendData } = useObservable<SafeToSpendDashboard | null>(
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),

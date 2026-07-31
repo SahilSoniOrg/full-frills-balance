@@ -1,6 +1,6 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
+import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   filterAccountSectionsForTab,
@@ -15,7 +15,6 @@ import {
   transformAccountsToSections,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
@@ -73,8 +72,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { workplaceId } = useWorkplace();
 
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
-  const { isPrivacyMode } = usePrivacyPrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode } = usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -85,9 +84,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   useEffect(() => {
     logger.info('[AccountsList] Screen Mounted');
   }, []);
-
-  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode } =
-    useScreenPrivacyMode(isPrivacyMode);
 
   const targetCurrency = workplaceCurrency;
 
