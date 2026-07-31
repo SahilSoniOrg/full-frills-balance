@@ -1,8 +1,9 @@
 import { AppTabs, FloatingActionButton } from '@/src/components/core';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { Screen } from '@/src/components/layout';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
-import { BudgetListView } from '@/src/features/budget';
+import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView } from '@/src/features/planned-payments';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
@@ -12,6 +13,8 @@ type Tab = 'budgets' | 'planned';
 
 export default function CommitmentsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
+  const { workplaceId } = useWorkplace();
+  const { items: budgetItems } = useBudgetListViewModel(workplaceId);
 
   // Log UI Mount
   useEffect(() => {
@@ -57,7 +60,11 @@ export default function CommitmentsScreen() {
       </Stack>
 
       <Box flex={1} marginTop="md">
-        {activeTab === 'budgets' ? <BudgetListView /> : <PlannedPaymentListView />}
+        {activeTab === 'budgets' ? (
+          <BudgetListView items={budgetItems} />
+        ) : (
+          <PlannedPaymentListView />
+        )}
       </Box>
 
       <FloatingActionButton

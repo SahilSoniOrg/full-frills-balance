@@ -1,17 +1,17 @@
 import { AppIcon } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Column, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
-import { useBudgetListViewModel } from '../hooks/useBudgetListViewModel';
 import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';
 
-export function BudgetListView() {
-  const { workplaceId } = useWorkplace();
-  const { items } = useBudgetListViewModel(workplaceId);
+export type BudgetListViewProps = {
+  items: BudgetItem[];
+};
+
+export function BudgetListView({ items }: BudgetListViewProps) {
   const { theme } = useTheme();
 
   const handlePress = (item: BudgetItem) => {
