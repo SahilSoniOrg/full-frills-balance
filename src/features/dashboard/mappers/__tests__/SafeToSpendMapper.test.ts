@@ -126,18 +126,19 @@ describe('SafeToSpendMapper', () => {
     expect(vm.effectiveTotal).toBe(2000);
   });
 
-  it('handles privacy mode correctly by masking display values and raw list amounts', () => {
+  it('handles privacy mode by masking display values while keeping raw list amounts', () => {
     const privacyOptions = { ...mockOptions, isPrivacyMode: true };
     const vm = mapToVM(mockResult, privacyOptions);
 
     // Masked display values
     expect(vm.displaySafeToSpend).toBe(AppConfig.privacyMask);
     expect(vm.displayTotalLiquidAssets).toBe(AppConfig.privacyMask);
+    expect(vm.isPrivacyMode).toBe(true);
 
-    // Masked raw list amounts
-    expect(vm.income[0].amount).toBe(0);
-    expect(vm.committed[0]?.amount).toBe(0);
-    expect(vm.debt[0]?.amount).toBe(0);
+    // Raw list amounts preserved — leaves format from isPrivacyMode / formatValue
+    expect(vm.income[0].amount).not.toBe(0);
+    expect(vm.committed[0]?.amount).not.toBe(0);
+    expect(vm.debt[0]?.amount).not.toBe(0);
   });
 
   it('handles small values with "< $1" formatting', () => {

@@ -3,6 +3,7 @@ import {
   type JournalListBundle,
   type JournalSelectionBundle,
 } from '@/src/features/journal/components/JournalListView';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
@@ -22,6 +23,8 @@ export function useJournalListScreen(
   workplaceId: WorkplaceId,
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
+  // One VM-level privacy read — leaves receive isPrivacyMode via the list bundle.
+  const { isPrivacyMode } = usePrivacyPrefs();
 
   const list = useMemo(
     (): JournalListRenderBundle['list'] => ({
@@ -33,6 +36,7 @@ export function useJournalListScreen(
       emptyTitle: vm.emptyState.title,
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
+      isPrivacyMode,
     }),
     [
       vm.items,
@@ -43,6 +47,7 @@ export function useJournalListScreen(
       vm.emptyState.title,
       vm.emptyState.subtitle,
       vm.onEndReached,
+      isPrivacyMode,
     ],
   );
 

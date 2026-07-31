@@ -9,12 +9,14 @@ import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
 import { useAccountTransactionFeed } from '@/src/features/accounts/hooks/details/useAccountTransactionFeed';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
+  const { isPrivacyMode } = usePrivacyPrefs();
   const {
     workplaceId,
     workplaceCurrency,
@@ -100,6 +102,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconciledAt,
     dateRange,
     currencyCode: balanceCurrency,
+    isPrivacyMode,
     onBack,
     onAuditPress,
     onAddPress,

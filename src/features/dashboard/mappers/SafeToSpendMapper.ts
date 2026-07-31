@@ -172,22 +172,10 @@ export class SafeToSpendMapper {
         result.safeToSpendDays,
       ),
 
-      // Derived UI Groupings (Extracted to Selectors)
-      income: selectIncomeEntries(report.allFlows).map(e => ({
-        ...e,
-        amount: isPrivacyMode ? 0 : e.amount,
-      })),
-      committed: selectCommittedEntries(report.allFlows, accountMap, firstMajorInflowDay).map(
-        c => ({
-          ...c,
-          amount: isPrivacyMode ? 0 : c.amount,
-          details: c.details.map(d => ({ ...d, amount: isPrivacyMode ? 0 : d.amount })),
-        }),
-      ),
-      debt: selectDebtEntries(report.allFlows, accountMap).map(e => ({
-        ...e,
-        amount: isPrivacyMode ? 0 : e.amount,
-      })),
+      // Derived UI Groupings — raw amounts; display masking via formatValue / isPrivacyMode
+      income: selectIncomeEntries(report.allFlows),
+      committed: selectCommittedEntries(report.allFlows, accountMap, firstMajorInflowDay),
+      debt: selectDebtEntries(report.allFlows, accountMap),
     };
   }
 

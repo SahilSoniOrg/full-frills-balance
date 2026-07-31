@@ -8,7 +8,6 @@ describe('transformAccountsToSections', () => {
     balancesByAccountId: new Map(),
     defaultCurrency: 'USD',
     showAccountMonthlyStats: false,
-    isPrivacyMode: false,
     isLoading: false,
     collapsedSections: new Set<string>(),
     theme: { background: '#ffffff' } as Theme,
@@ -94,7 +93,7 @@ describe('transformAccountsToSections', () => {
     expect(childRemoved[0].data[0].hasChildren).toBe(false);
   });
 
-  it('masks balances when privacy mode is enabled', () => {
+  it('returns raw numeric amounts (privacy masking is presentational)', () => {
     const account: PlainAccount = {
       id: 'acc_priv' as AccountId,
       name: 'Private Vault',
@@ -102,15 +101,23 @@ describe('transformAccountsToSections', () => {
       currencyCode: 'USD',
     };
 
+    const balancesByAccountId = new Map([
+      [
+        account.id,
+        { balance: 1234.56, monthlyIncome: 100, monthlyExpenses: 50, currencyCode: 'USD' },
+      ],
+    ]);
+
     const sections = transformAccountsToSections([account], {
       ...defaultOptions,
-      isPrivacyMode: true,
+      balancesByAccountId,
     });
 
     const card = sections[0].data[0];
-    expect(card.balanceText).toBe('••••');
-    expect(card.monthlyIncomeText).toBe('••••');
-    expect(card.monthlyExpenseText).toBe('••••');
+    expect(card.balance).toBe(1234.56);
+    expect(card.monthlyIncome).toBe(100);
+    expect(card.monthlyExpenses).toBe(50);
+    expect(sections[0].total).toBe(1000);
   });
 
   it('enables monthly stats when card is expanded or global stats toggle is on', () => {

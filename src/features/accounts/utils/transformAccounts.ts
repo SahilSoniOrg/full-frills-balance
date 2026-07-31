@@ -8,7 +8,6 @@ import {
   getSectionColor,
 } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 
 export interface AccountCardViewModel {
@@ -18,9 +17,10 @@ export interface AccountCardViewModel {
   accountType?: AccountType;
   accentColor: string;
   textColor: string;
-  balanceText: string;
-  monthlyIncomeText: string;
-  monthlyExpenseText: string;
+  /** Raw balance — presentational layer formats using screen privacy flag. */
+  balance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
   showMonthlyStats: boolean;
   currencyCode: string;
   depth: number;
@@ -32,7 +32,8 @@ export interface AccountCardViewModel {
 export interface AccountSectionViewModel {
   title: string;
   count: number;
-  totalDisplay: string;
+  /** Raw section total — presentational layer formats using screen privacy flag. */
+  total: number;
   totalColor: string;
   isCollapsed: boolean;
   data: AccountCardViewModel[];
@@ -50,7 +51,6 @@ interface TransformOptions {
   balancesByAccountId: Map<string, BalancesByAccountId | null>;
   defaultCurrency: string;
   showAccountMonthlyStats: boolean;
-  isPrivacyMode: boolean;
   isLoading: boolean;
   collapsedSections: Set<string>;
   theme: Theme;
@@ -88,10 +88,7 @@ export function transformAccountsToSections(
 
   const {
     balancesByAccountId,
-    defaultCurrency,
     showAccountMonthlyStats,
-    isPrivacyMode,
-    isLoading,
     collapsedSections,
     theme,
     totalAssets,
@@ -114,10 +111,6 @@ export function transformAccountsToSections(
     else if (section.type === AccountType.EQUITY) sectionTotal = totalEquity;
     else if (section.type === AccountType.INCOME) sectionTotal = totalIncome;
     else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
-
-    const totalDisplay = isPrivacyMode
-      ? '••••'
-      : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency);
 
     const typeAccounts = section.data;
     const accountsByParent = new Map<string, (Account | PlainAccount)[]>();
@@ -146,6 +139,7 @@ export function transformAccountsToSections(
       // CACHE KEY: account identity + record version + rendered fields + volatile UI flags.
       // updatedAt covers WatermelonDB model mutations; name+icon cover PlainAccount snapshots
       // that may reconstruct fields without bumping updatedAt.
+      // Privacy is intentionally excluded — leaves format from a screen-level flag.
       const updatedAtTs =
         account.updatedAt instanceof Date
           ? account.updatedAt.getTime()
@@ -157,7 +151,7 @@ export function transformAccountsToSections(
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
       // hasChildren is keyed explicitly: child writes don't bump this account's updatedAt.
-      const stateKey = `${account.id}:${updatedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
+      const stateKey = `${account.id}:${updatedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
@@ -192,23 +186,6 @@ export function transformAccountsToSections(
       }
 
       const currencyCode = balanceData?.currencyCode || account.currencyCode;
-      const mask = '••••';
-
-      const balanceText = isLoading
-        ? '...'
-        : isPrivacyMode
-          ? mask
-          : CurrencyFormatter.format(balance, currencyCode);
-      const monthlyIncomeText = isLoading
-        ? '...'
-        : isPrivacyMode
-          ? mask
-          : CurrencyFormatter.format(monthlyIncome, currencyCode);
-      const monthlyExpenseText = isLoading
-        ? '...'
-        : isPrivacyMode
-          ? mask
-          : CurrencyFormatter.format(monthlyExpenses, currencyCode);
 
       const createdViewModel: AccountCardViewModel = {
         id: account.id,
@@ -217,11 +194,11 @@ export function transformAccountsToSections(
         accountType: account.accountType,
         accentColor: meta.accentColor,
         textColor: meta.textColor,
-        balanceText,
-        monthlyIncomeText,
-        monthlyExpenseText,
+        balance,
+        monthlyIncome,
+        monthlyExpenses,
         showMonthlyStats: showAccountMonthlyStats || isExpanded,
-        currencyCode: account.currencyCode,
+        currencyCode,
         depth,
         hasChildren: children.length > 0,
         isExpanded,
@@ -253,7 +230,7 @@ export function transformAccountsToSections(
     return {
       title: section.title,
       count: typeAccounts.length,
-      totalDisplay,
+      total: sectionTotal,
       totalColor: sectionColor,
       isCollapsed: collapsedSections.has(section.title),
       data: flattenedData,

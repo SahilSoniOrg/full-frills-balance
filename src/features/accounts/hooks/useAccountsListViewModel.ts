@@ -27,7 +27,7 @@ import { of } from 'rxjs';
 export interface AccountSectionViewModel {
   title: string;
   count: number;
-  totalDisplay: string;
+  total: number;
   totalColor: string;
   isCollapsed: boolean;
   data: AccountCardViewModel[];
@@ -242,7 +242,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       balancesByAccountId,
       defaultCurrency: workplaceCurrency,
       showAccountMonthlyStats,
-      isPrivacyMode: isLocalPrivacyMode,
       isLoading,
       collapsedSections,
       expandedAccountIds,
@@ -258,7 +257,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       balancesByAccountId,
       workplaceCurrency,
       showAccountMonthlyStats,
-      isLocalPrivacyMode,
       isLoading,
       collapsedSections,
       expandedAccountIds,

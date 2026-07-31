@@ -1,4 +1,3 @@
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import React, { useCallback, useMemo } from 'react';
@@ -14,6 +13,8 @@ export interface SafeToSpendViewProps extends SafeToSpendDashboard {
     setExpandedSection?: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
     selectedLegendItem?: 'safe' | 'committed' | 'debts' | null;
     setSelectedLegendItem?: (i: 'safe' | 'committed' | 'debts' | null) => void;
+    /** Screen/VM privacy flag from usePrivacyScope — required for masking. */
+    isPrivacyMode?: boolean;
   };
 }
 
@@ -27,7 +28,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
 } {
   const { currencyCode, isLoading: propsIsLoading } = props;
 
-  const isPrivacyMode = useEffectivePrivacyMode();
+  const isPrivacyMode = props.uiState?.isPrivacyMode ?? false;
 
   // UI State management
   const [internalInfoVisible, setInternalInfoVisible] = React.useState(false);

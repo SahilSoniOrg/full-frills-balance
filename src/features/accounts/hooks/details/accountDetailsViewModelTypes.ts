@@ -61,6 +61,8 @@ export interface AccountDetailsViewModel {
   transactionsLoading: boolean;
   transactionsLoadingMore: boolean;
   transactionItems: TransactionListItem[];
+  /** Global privacy flag for transaction list amount masking. */
+  isPrivacyMode: boolean;
   onLoadMore?: () => void;
   secondaryBalances: { currencyCode: string; amountText: string }[];
   isParent: boolean;
