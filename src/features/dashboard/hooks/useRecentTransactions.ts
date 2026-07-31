@@ -1,11 +1,10 @@
 import { AppConfig } from '@/src/constants';
 import { JournalStatus } from '@/src/data/models/Journal';
-import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard/types/PlannedOccurrenceViewModel';
+import { useJournals, useJournalTransactionList } from '@/src/features/journal';
 import {
-  useJournals,
-  useJournalTransactionList,
   usePlannedOccurrenceActions,
-} from '@/src/features/journal';
+  type PlannedOccurrenceViewModel,
+} from '@/src/features/planned-payments';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 

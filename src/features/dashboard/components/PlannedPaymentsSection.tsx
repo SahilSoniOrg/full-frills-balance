@@ -1,7 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard/types/PlannedOccurrenceViewModel';
+import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { journalDisplayTypeChrome } from '@/src/services/accounting/journalTimelineMapper';

@@ -15,7 +15,7 @@ import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import {
   mapLiabilityFlowsToPlannedOccurrences,
   mergePlannedOccurrences,
-} from '../mappers/plannedOccurrenceMapper';
+} from '@/src/features/planned-payments';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';

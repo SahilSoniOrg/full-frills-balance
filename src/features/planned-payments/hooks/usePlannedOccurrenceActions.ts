@@ -1,4 +1,4 @@
-import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard';
+import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';

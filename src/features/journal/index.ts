@@ -18,7 +18,6 @@ export type {
 } from './components/JournalListView';
 export { useJournalListScreen } from './hooks/useJournalListScreen';
 export type { JournalListRenderBundle } from './hooks/useJournalListScreen';
-export { usePlannedOccurrenceActions } from './hooks/usePlannedOccurrenceActions';
 export { useJournalTransactionList } from './list/hooks/useJournalTransactionList';
 export type {
   JournalTransactionListCore,

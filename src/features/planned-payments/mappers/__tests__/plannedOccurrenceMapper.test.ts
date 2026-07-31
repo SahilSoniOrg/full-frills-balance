@@ -1,4 +1,4 @@
-import { mapLiabilityFlowsToPlannedOccurrences } from '@/src/features/dashboard/mappers/plannedOccurrenceMapper';
+import { mapLiabilityFlowsToPlannedOccurrences } from '@/src/features/planned-payments/mappers/plannedOccurrenceMapper';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId, JournalDisplayType } from '@/src/types/domain';
 
