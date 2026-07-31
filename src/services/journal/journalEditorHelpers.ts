@@ -161,3 +161,34 @@ export function countSubstantiveEditorLines(lines: JournalEntryLine[]): number {
 export function isSimpleModeDisabledByLines(lines: JournalEntryLine[]): boolean {
   return countSubstantiveEditorLines(lines) > 2;
 }
+
+/** Empty two-leg credit/debit scaffold used when leaving Split/Bulk or creating a new entry. */
+export function createTwoLegJournalScaffold(options?: {
+  amount?: string;
+  sourceAccountId?: AccountId;
+  destinationAccountId?: AccountId;
+}): JournalEntryLine[] {
+  const amount = options?.amount ?? '';
+  return [
+    {
+      id: '1' as TransactionId,
+      accountId: options?.destinationAccountId || EMPTY_ACCOUNT_ID,
+      accountName: '',
+      accountType: AccountType.ASSET,
+      amount,
+      transactionType: TransactionType.DEBIT,
+      notes: '',
+      exchangeRate: '',
+    },
+    {
+      id: '2' as TransactionId,
+      accountId: options?.sourceAccountId || EMPTY_ACCOUNT_ID,
+      accountName: '',
+      accountType: AccountType.ASSET,
+      amount,
+      transactionType: TransactionType.CREDIT,
+      notes: '',
+      exchangeRate: '',
+    },
+  ];
+}

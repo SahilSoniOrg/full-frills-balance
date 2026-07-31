@@ -328,7 +328,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   );
 
   const submit = useCallback(
-    async (overrides?: { description?: string }) => {
+    async (overrides?: { description?: string; lines?: JournalEntryLine[] }) => {
       setIsSubmitting(true);
       try {
         // Default description to transaction type if empty
@@ -338,8 +338,13 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           setDescription(finalDescription);
         }
 
+        const linesToSave = overrides?.lines ?? lines;
+        if (overrides?.lines) {
+          setLines(overrides.lines);
+        }
+
         const result = await journalService.saveJournalEntry({
-          lines,
+          lines: linesToSave,
           description: finalDescription,
           notes: notes.trim(),
           journalDate,
