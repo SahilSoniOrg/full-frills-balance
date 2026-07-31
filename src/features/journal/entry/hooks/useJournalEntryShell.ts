@@ -12,23 +12,17 @@ import {
   JournalEntryScreenMode,
   parseJournalEntryRouteParams,
   resolveJournalEntryHeaderTitle,
-  resolveJournalEntryScreenMode,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import {
-  isGuidedDisabledForMode,
-  JournalModeLineSnapshots,
-  resolveJournalModeTransition,
-} from '@/src/features/journal/entry/journalModeTransition';
+import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
-import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -114,59 +108,9 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
-  const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
-    resolveJournalEntryScreenMode(route.mode),
-  );
-
-  const isSimpleModeDisabled = isGuidedDisabledForMode(activeMode, editor.lines);
-
-  const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, setTransactionType } = editor;
-
-  useEffect(() => {
-    setIsGuidedMode(activeMode === 'guided');
-    if (activeMode === 'split') {
-      setTransactionType('expense');
-    }
-  }, [activeMode, setIsGuidedMode, setTransactionType]);
-
-  const wasEditorGuidedRef = useRef(editorIsGuidedMode);
-
-  /**
-   * The editor can drop guided on its own — loading a multi-leg journal for edit is the main
-   * case. Follow it down to Advanced so the Guided UI is never rendered over a non-guided editor.
-   */
-  useEffect(() => {
-    const wasGuided = wasEditorGuidedRef.current;
-    wasEditorGuidedRef.current = editorIsGuidedMode;
-    if (wasGuided && !editorIsGuidedMode) {
-      setActiveMode(current => (current === 'guided' ? 'advanced' : current));
-    }
-  }, [editorIsGuidedMode]);
-
-  const { lines: editorLines, setLines } = editor;
-
-  /** Lines parked on the way out of Guided/Advanced, so a detour through Split/Bulk is not lossy. */
-  const modeSnapshotsRef = useRef<JournalModeLineSnapshots>({});
-
-  const onToggleMode = useCallback(
-    (mode: JournalEntryScreenMode) => {
-      const transition = resolveJournalModeTransition({
-        from: activeMode,
-        to: mode,
-        lines: editorLines,
-        snapshots: modeSnapshotsRef.current,
-      });
-
-      if (transition.status === 'blocked') {
-        showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
-        return;
-      }
-
-      modeSnapshotsRef.current = transition.snapshots;
-      setLines(transition.nextLines);
-      setActiveMode(transition.nextMode);
-    },
-    [activeMode, editorLines, setLines],
+  const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
+    editor,
+    route.mode,
   );
 
   const onSelectAccountRequestRef = useRef<(lineId: string) => void>(() => {});
