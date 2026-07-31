@@ -1,6 +1,6 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/dashboard/types/PlannedOccurrenceViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -14,7 +14,6 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 export interface PlannedPaymentsSectionProps {
   items: PlannedOccurrenceViewModel[];
   onItemPress?: (item: PlannedOccurrenceViewModel) => void;
-  isPrivacyMode?: boolean;
 }
 
 function resolveDisplayType(displayType: string): JournalDisplayType {
@@ -29,14 +28,9 @@ function resolveDisplayType(displayType: string): JournalDisplayType {
   return JournalDisplayType.EXPENSE;
 }
 
-export function PlannedPaymentsSection({
-  items,
-  onItemPress,
-  isPrivacyMode: isPrivacyModeOverride,
-}: PlannedPaymentsSectionProps) {
+export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
-  const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
-  const isPrivacyMode = isPrivacyModeOverride ?? globalPrivacyMode;
+  const isPrivacyMode = useEffectivePrivacyMode();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const sortedItems = useMemo(() => {

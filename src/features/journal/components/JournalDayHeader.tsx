@@ -1,9 +1,9 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
 import { formatCurrency } from '@/src/utils/money';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface JournalDayHeaderProps {
@@ -14,7 +14,6 @@ export interface JournalDayHeaderProps {
   netAmount?: number;
   currencyCode?: string;
   reconciledAt?: number | null;
-  isPrivacyMode?: boolean;
 }
 
 export function JournalDayHeader({
@@ -25,11 +24,9 @@ export function JournalDayHeader({
   netAmount,
   currencyCode,
   reconciledAt,
-  isPrivacyMode: isPrivacyModeOverride,
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
-  const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
-  const isPrivacyMode = isPrivacyModeOverride ?? globalPrivacyMode;
+  const isPrivacyMode = useEffectivePrivacyMode();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;

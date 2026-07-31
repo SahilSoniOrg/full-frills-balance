@@ -27,7 +27,6 @@ import { EMPTY } from 'rxjs';
 
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
-  isPrivacyMode: boolean;
   showSafeToSpendChart: boolean;
   recentTransactions: RecentTransactions;
   headerProps: {
@@ -226,7 +225,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => ({
       isInitialized,
       hasCompletedOnboarding,
-      isPrivacyMode: isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
       headerProps,
@@ -239,7 +237,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     [
       isInitialized,
       hasCompletedOnboarding,
-      isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
       headerProps,

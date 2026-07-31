@@ -15,7 +15,6 @@ export interface TransactionFeedProps {
   ListFooterComponent?: React.ReactElement | null;
   onEndReached?: () => void;
   contentContainerStyle?: object;
-  isPrivacyMode?: boolean;
   selectedIds?: Set<TransactionId>;
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;

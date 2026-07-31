@@ -30,7 +30,6 @@ export function DashboardScreenView({
   listRef,
   explanationModalState,
   legendModalState,
-  isPrivacyMode,
   showSafeToSpendChart,
 }: DashboardViewModel & { listRef?: React.RefObject<FlatList | null> }) {
   const uiState = React.useMemo(
@@ -41,7 +40,6 @@ export function DashboardScreenView({
       setExpandedSection: explanationModalState.setExpandedSection,
       selectedLegendItem: legendModalState.selectedItem,
       setSelectedLegendItem: legendModalState.setSelectedItem,
-      isPrivacyMode,
     }),
     [
       explanationModalState.visible,
@@ -50,7 +48,6 @@ export function DashboardScreenView({
       explanationModalState.setExpandedSection,
       legendModalState.selectedItem,
       legendModalState.setSelectedItem,
-      isPrivacyMode,
     ],
   );
 
@@ -159,7 +156,6 @@ export function DashboardScreenView({
         emptyTitle={emptyTitle}
         emptySubtitle={emptySubtitle}
         onEndReached={onEndReached}
-        isPrivacyMode={isPrivacyMode}
         selectedIds={selectedIds as Set<string> as Set<TransactionId>}
         onLongPressItem={onLongPressItem as (id: string) => void}
         isSelectionModeActive={isSelectionModeActive}
@@ -175,7 +171,6 @@ export function DashboardScreenView({
                 onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
                 onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
                 isLoading={!safeToSpendData}
-                isPrivacyMode={isPrivacyMode}
                 showChart={showSafeToSpendChart}
               />
             </View>

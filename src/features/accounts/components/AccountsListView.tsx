@@ -175,8 +175,6 @@ export function AccountsListView({
                   totalLiabilities={totalLiabilities}
                   currencyCode={currencyCode}
                   isLoading={isLoading}
-                  hidden={isPrivacyMode}
-                  onToggleHidden={onTogglePrivacy}
                 />
               </View>
             ) : (
@@ -188,8 +186,6 @@ export function AccountsListView({
                   onChangePeriod={setInflowPeriod}
                   currencyCode={currencyCode}
                   isLoading={isLoading || isPeriodLoading}
-                  hidden={isPrivacyMode}
-                  onToggleHidden={onTogglePrivacy}
                 />
               </View>
             )

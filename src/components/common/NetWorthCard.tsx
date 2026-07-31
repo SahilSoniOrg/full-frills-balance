@@ -1,6 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useEffectivePrivacyMode, usePrivacyScopeOptional } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useState } from 'react';
@@ -26,7 +26,8 @@ export const NetWorthCard = ({
   onToggleHidden,
 }: NetWorthCardProps) => {
   const { theme, fonts } = useTheme();
-  const { isPrivacyMode } = usePrivacyPrefs();
+  const isPrivacyMode = useEffectivePrivacyMode();
+  const privacyScope = usePrivacyScopeOptional();
 
   const [overrideHidden, setOverrideHidden] = useState<boolean | null>(null);
 
@@ -40,6 +41,8 @@ export const NetWorthCard = ({
   const handleToggle = () => {
     if (onToggleHidden) {
       onToggleHidden(!isActuallyHidden);
+    } else if (privacyScope) {
+      privacyScope.togglePrivacyMode();
     } else {
       setOverrideHidden(!isActuallyHidden);
     }

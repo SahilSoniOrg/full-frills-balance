@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
 
 export type JournalListRenderBundle = {
-  list: Omit<JournalListBundle, 'listHeader' | 'listContentStyle' | 'isPrivacyMode'>;
+  list: Omit<JournalListBundle, 'listHeader' | 'listContentStyle'>;
   datePicker: JournalDatePickerBundle;
   selection: JournalSelectionBundle;
 };

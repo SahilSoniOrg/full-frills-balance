@@ -1,6 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
@@ -16,7 +17,6 @@ interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
   safeToSpend: number;
   isOverCommitted: boolean;
-  isPrivacyMode: boolean;
   currencyCode: string;
   formatValue: (val: number) => string | React.ReactNode;
 }
@@ -25,11 +25,11 @@ export const SafeToSpendChart = ({
   projection,
   safeToSpend,
   isOverCommitted,
-  isPrivacyMode,
   currencyCode,
   formatValue,
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
 
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);

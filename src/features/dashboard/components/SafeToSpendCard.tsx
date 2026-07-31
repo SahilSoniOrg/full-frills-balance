@@ -15,21 +15,12 @@ export interface SafeToSpendCardProps extends SafeToSpendDashboard {
   onInfoPress: () => void;
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;
   viewModel: SafeToSpendViewModel;
-  isPrivacyMode?: boolean;
   /** When false, hides the projection chart; amount and breakdown stay. Default true. */
   showChart?: boolean;
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
-  const {
-    viewModel,
-    projection,
-    isLoading,
-    isPrivacyMode,
-    onInfoPress,
-    onLegendPress,
-    showChart = true,
-  } = props;
+  const { viewModel, projection, isLoading, onInfoPress, onLegendPress, showChart = true } = props;
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= TABLET_BREAKPOINT;
 
@@ -62,7 +53,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       projection={projection}
       safeToSpend={safeToSpend}
       isOverCommitted={isOverCommitted}
-      isPrivacyMode={isPrivacyMode || false}
       currencyCode={viewModel.currencyCode}
       formatValue={formatValue}
     />
