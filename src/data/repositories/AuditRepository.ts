@@ -5,7 +5,7 @@ import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { WorkplaceId } from '@/src/types/domain';
 
-export interface AuditEntry<T = any> {
+export interface AuditEntry<T = unknown> {
   entityType: AuditEntityType;
   entityId: string;
   action: AuditAction;
