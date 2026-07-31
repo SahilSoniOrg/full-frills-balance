@@ -9,6 +9,7 @@ import {
   resolveAccountListPressAction,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
+import { useAccountsListUiState } from '@/src/features/accounts/hooks/useAccountsListUiState';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import {
   AccountCardViewModel,
@@ -21,7 +22,7 @@ import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountSectionViewModel {
@@ -143,11 +144,19 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { netWorth, totalAssets, totalLiabilities, totalEquity, totalIncome, totalExpense } =
     dashboardData.wealthSummary;
 
-  const [activeTab, setActiveTab] = useState<'accounts' | 'categories'>('accounts');
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']));
-  const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const {
+    activeTab,
+    setActiveTab,
+    collapsedSections,
+    expandedAccountIds,
+    setExpandedAccountIds,
+    searchQuery,
+    setSearchQuery,
+    isSearching,
+    setIsSearching,
+    onToggleSection,
+    onCollapseAccount,
+  } = useAccountsListUiState();
 
   const { inflowPeriod, setInflowPeriod, inflowIncome, inflowExpense, isPeriodLoading } =
     useAccountsInflowSummary({
@@ -159,15 +168,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       totalExpense,
       dataVersion: version,
     });
-
-  const onToggleSection = useCallback((title: string) => {
-    setCollapsedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(title)) next.delete(title);
-      else next.add(title);
-      return next;
-    });
-  }, []);
 
   const onAccountPress = useCallback(
     (accountId: AccountId) => {
@@ -193,16 +193,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         });
       }
     },
-    [accounts, expandedAccountIds, balancesByAccountId],
+    [accounts, expandedAccountIds, balancesByAccountId, setExpandedAccountIds],
   );
-
-  const onCollapseAccount = useCallback((accountId: AccountId) => {
-    setExpandedAccountIds(prev => {
-      const next = new Set(prev);
-      next.delete(accountId);
-      return next;
-    });
-  }, []);
 
   const onCreateAccount = useCallback(() => {
     if (activeTab === 'categories') {
