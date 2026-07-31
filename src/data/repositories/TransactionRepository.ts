@@ -5,7 +5,7 @@ import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/do
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
-import { Q } from '@nozbe/watermelondb';
+import { Q, Query } from '@nozbe/watermelondb';
 import { of } from 'rxjs';
 
 export class TransactionRepository {
@@ -13,7 +13,7 @@ export class TransactionRepository {
     return database.collections.get<Transaction>('transactions');
   }
 
-  transactionsQuery(...clauses: any[]) {
+  transactionsQuery(...clauses: Q.Clause[]) {
     return this.transactions.query(...clauses);
   }
 
@@ -21,7 +21,7 @@ export class TransactionRepository {
    * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.
    * Prevents logic divergence across the repository.
    */
-  private buildActiveClauses(extraClauses: any[] = []): any[] {
+  private buildActiveClauses(extraClauses: Q.Clause[] = []): Q.Clause[] {
     return [
       Q.experimentalJoinTables(['journals']),
       Q.where('deleted_at', Q.eq(null)),
@@ -33,7 +33,7 @@ export class TransactionRepository {
     ];
   }
 
-  private deterministicSort(query: any, qSort: any = Q.desc) {
+  private deterministicSort(query: Query<Transaction>, qSort: Q.SortOrder = Q.desc) {
     return query.extend(
       Q.sortBy('transaction_date', qSort),
       Q.sortBy('created_at', qSort),
@@ -232,7 +232,7 @@ export class TransactionRepository {
     journalId: JournalId,
     includeDeleted: boolean = false,
   ) {
-    const clauses: any[] = [
+    const clauses: Q.Clause[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('journal_id', journalId),
       Q.where('workplace_id', workplaceId),
@@ -324,7 +324,7 @@ export class TransactionRepository {
    * avoids deserializing the entire transaction history across the bridge.
    */
   observeByDateRange(workplaceId: WorkplaceId, startDate: number, endDate?: number) {
-    const extra: any[] = [
+    const extra: Q.Clause[] = [
       Q.where('transaction_date', Q.gte(startDate)),
       Q.where('workplace_id', workplaceId),
     ];

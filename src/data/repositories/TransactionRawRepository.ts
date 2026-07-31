@@ -32,6 +32,16 @@ export interface RawUnreconciledMetricsRow {
   total: number | null;
 }
 
+interface RawTransactionMetadataRow {
+  id: string;
+  journalId: string;
+  accountId: string;
+  amount: number;
+  transactionDate: number;
+  transactionType: TransactionType;
+  currencyCode: string;
+}
+
 /**
  * High-performance repository for raw SQL queries on transactions.
  * Delegates specialized queries to modular raw query engines while providing a unified facade.
@@ -242,7 +252,7 @@ export class TransactionRawRepository {
       ORDER BY t.transaction_date DESC
     `;
 
-    const results = await this.queryRaw<any>(sql, [
+    const results = await this.queryRaw<RawTransactionMetadataRow>(sql, [
       ...accountIds,
       startDate,
       endDate,
@@ -250,7 +260,12 @@ export class TransactionRawRepository {
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
-    return (results || []) as any[];
+    return (results || []).map(row => ({
+      ...row,
+      id: row.id as TransactionId,
+      journalId: row.journalId as JournalId,
+      accountId: row.accountId as AccountId,
+    }));
   }
 
   async getAccountPeriodMetricsRaw(
