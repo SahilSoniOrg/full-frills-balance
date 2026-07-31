@@ -1,7 +1,7 @@
 import Currency from '@/src/data/models/Currency';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { currencyInitService } from '@/src/services/currency-init-service';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo } from 'react';
@@ -11,7 +11,7 @@ import { useEffect, useMemo } from 'react';
  */
 export function useCurrencies() {
   const { data: currencies, isLoading } = useObservable(
-    () => currencyRepository.observeAll(),
+    () => currencyReadService.observeAll(),
     [],
     [] as Currency[],
   );

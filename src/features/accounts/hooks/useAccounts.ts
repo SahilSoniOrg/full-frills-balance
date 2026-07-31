@@ -23,10 +23,10 @@ import {
   observeAccountBalance,
   observeActiveTransactions,
 } from '@/src/services/accounts/accountReadService';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
@@ -161,7 +161,7 @@ export function useAccountBalances(
           'exchange_rate',
           'updated_at',
         ]),
-        currencyRepository.observeAll(),
+        currencyReadService.observeAll(),
         journalObserveQueries.observeStatusMeta(workplaceId),
       ]).pipe(
         firstFastDebounce(Animation.dataRefreshDebounce),

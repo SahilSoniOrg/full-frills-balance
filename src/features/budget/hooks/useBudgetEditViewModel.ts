@@ -2,7 +2,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   BudgetEditDraft,
   createEmptyBudgetDraft,
@@ -13,6 +12,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { AccountId, BudgetId } from '@/src/types/domain';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -48,7 +48,7 @@ export function useBudgetEditViewModel() {
   );
   const liquidAssetAccounts = assetAccounts.filter(a => isLiquidAssetSubtype(a.accountSubtype));
 
-  const { data: currencies = [] } = useObservable(() => currencyRepository.observeAll(), [], []);
+  const { data: currencies = [] } = useObservable(() => currencyReadService.observeAll(), [], []);
 
   const pName = params.pName || '';
   const pAmount = params.pAmount || '';

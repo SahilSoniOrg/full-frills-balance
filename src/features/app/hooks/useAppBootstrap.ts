@@ -1,6 +1,7 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
@@ -8,7 +9,6 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 // Cache Warmup Imports
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -72,7 +72,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
           // Stage B: Lean Cache Warming (Shared SQL Streams)
           await Promise.allSettled([
-            currencyRepository.getAllPrecisions(),
+            currencyReadService.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
             safeToSpendReadModel.forWorkplace(workplaceId).preWarm(),
