@@ -1,6 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface AdvancedJournalLineLike {
   amount: number | string;
@@ -29,32 +29,18 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     return Array.from(currencies).sort();
   }, [lines, defaultCurrency]);
 
-  // Default to first line currency when available, otherwise app default.
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(() => {
-    return lines[0]?.accountCurrency || defaultCurrency;
-  });
-  const [isCurrencyManuallySelected, setIsCurrencyManuallySelected] = useState(false);
+  // Manual pick is sticky while still valid; otherwise derive from lines.
+  const [manualCurrency, setManualCurrency] = useState<string | null>(null);
 
-  // If user has not manually chosen a currency, keep summary currency aligned with first line.
-  useEffect(() => {
-    if (
-      !isCurrencyManuallySelected &&
-      firstLineCurrency &&
-      firstLineCurrency !== selectedCurrency
-    ) {
-      setTimeout(() => setSelectedCurrency(firstLineCurrency), 0);
+  const selectedCurrency = useMemo(() => {
+    if (manualCurrency && availableCurrencies.includes(manualCurrency)) {
+      return manualCurrency;
     }
-  }, [firstLineCurrency, isCurrencyManuallySelected, selectedCurrency]);
-
-  // Keep selected currency valid if available currencies change.
-  useEffect(() => {
-    if (!availableCurrencies.includes(selectedCurrency)) {
-      setTimeout(() => {
-        setSelectedCurrency(availableCurrencies[0] || defaultCurrency);
-        setIsCurrencyManuallySelected(false);
-      }, 0);
+    if (firstLineCurrency && availableCurrencies.includes(firstLineCurrency)) {
+      return firstLineCurrency;
     }
-  }, [availableCurrencies, selectedCurrency, defaultCurrency]);
+    return availableCurrencies[0] || defaultCurrency;
+  }, [manualCurrency, availableCurrencies, firstLineCurrency, defaultCurrency]);
 
   const selectedCurrencyRate = useMemo(() => {
     const line = lines.find(l => l.accountCurrency === selectedCurrency);
@@ -126,8 +112,7 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
   );
 
   const onSelectCurrency = (currency: string) => {
-    setIsCurrencyManuallySelected(true);
-    setSelectedCurrency(currency);
+    setManualCurrency(currency);
   };
 
   return {

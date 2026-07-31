@@ -28,6 +28,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
     activeWorkplaceId: 'test-workplace',
     currentCurrency: 'USD',
     currency: 'USD',
+    defaultCurrencyCode: 'USD',
   }),
 }));
 
@@ -112,5 +113,39 @@ describe('useAdvancedJournalSummary', () => {
 
     expect(result.current.selectedCurrency).toBe('EUR');
     expect(result.current.isBalanced).toBe(true);
+  });
+
+  it('derives selected currency from the first line until manually chosen', () => {
+    const initialLines = [
+      { amount: '100', transactionType: TransactionType.DEBIT as const, accountCurrency: 'USD' },
+      { amount: '100', transactionType: TransactionType.CREDIT as const, accountCurrency: 'EUR' },
+    ];
+    const { result, rerender } = renderHook(({ lines }) => useAdvancedJournalSummary(lines), {
+      initialProps: { lines: initialLines },
+    });
+
+    expect(result.current.selectedCurrency).toBe('USD');
+
+    rerender({
+      lines: [
+        { amount: '50', transactionType: TransactionType.DEBIT as const, accountCurrency: 'EUR' },
+        { amount: '50', transactionType: TransactionType.CREDIT as const, accountCurrency: 'USD' },
+      ],
+    });
+    expect(result.current.selectedCurrency).toBe('EUR');
+
+    act(() => {
+      result.current.setSelectedCurrency('USD');
+    });
+    expect(result.current.selectedCurrency).toBe('USD');
+
+    rerender({
+      lines: [
+        { amount: '50', transactionType: TransactionType.DEBIT as const, accountCurrency: 'EUR' },
+        { amount: '50', transactionType: TransactionType.CREDIT as const, accountCurrency: 'GBP' },
+      ],
+    });
+    // Manual USD is no longer available — fall back to first line.
+    expect(result.current.selectedCurrency).toBe('EUR');
   });
 });
