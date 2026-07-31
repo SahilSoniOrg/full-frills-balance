@@ -2,7 +2,7 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Insight, insightService } from '@/src/services/insight/InsightService';
+import { Insight } from '@/src/services/insight/InsightService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
@@ -12,21 +12,19 @@ import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
 interface HubWidgetProps {
   insights: Insight[];
   currencyCode: string;
+  onDismiss: (id: string) => void;
   hideManageDismissed?: boolean;
 }
 
 export const HubWidget = ({
   insights,
   currencyCode,
+  onDismiss,
   hideManageDismissed = false,
 }: HubWidgetProps) => {
   const { theme, fonts } = useTheme();
 
   const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
-
-  const handleDismiss = async (id: string) => {
-    await insightService.dismissPattern(id);
-  };
 
   const isEmergencyFundInsight = (insight: Insight) => insight.id === 'no_emergency_fund';
 
@@ -263,7 +261,7 @@ export const HubWidget = ({
                     <TouchableOpacity
                       onPress={e => {
                         e.stopPropagation();
-                        handleDismiss(insight.id);
+                        onDismiss(insight.id);
                       }}
                       style={[styles.dismissPill, { backgroundColor: theme.surfaceSecondary }]}
                       accessibilityRole="button"

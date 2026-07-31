@@ -17,7 +17,8 @@ export default function HubScreen() {
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const [activeTab, setActiveTab] = useState<Tab>('active');
-  const { activeInsights, dismissedInsights, unreadSmsCount, restoreInsight } = useHub(workplaceId);
+  const { activeInsights, dismissedInsights, unreadSmsCount, dismissInsight, restoreInsight } =
+    useHub(workplaceId);
 
   const tabOptions = useMemo(
     () => [
@@ -72,6 +73,7 @@ export default function HubScreen() {
             <HubWidget
               insights={activeInsights}
               currencyCode={defaultCurrencyCode}
+              onDismiss={dismissInsight}
               hideManageDismissed
             />
           ) : unreadSmsCount === 0 ? (
