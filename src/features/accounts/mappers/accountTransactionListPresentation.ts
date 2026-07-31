@@ -17,24 +17,22 @@ export function injectReconciledMarkersIntoTransactionList(
       if (item.type === 'transaction' && item.date && item.date <= reconTime) {
         result.push({
           id: 'reconciled-separator',
-          type: 'separator' as TransactionListItem['type'],
+          type: 'reconciledMarker',
           date: reconTime,
-          isReconciledMarker: true,
-        } as TransactionListItem);
+        });
         markerAdded = true;
       } else if (item.type === 'separator') {
         const startOfDay = item.date;
         const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
         if (reconTime >= startOfDay) {
-          itemToPush = { ...item, reconciledAt: reconTime } as TransactionListItem;
+          itemToPush = { ...item, reconciledAt: reconTime };
           if (reconTime <= endOfDay || item.isCollapsed) markerAdded = true;
           if (!item.isCollapsed && reconTime > endOfDay) {
             result.push({
               id: 'reconciled-separator',
-              type: 'separator' as TransactionListItem['type'],
+              type: 'reconciledMarker',
               date: reconTime,
-              isReconciledMarker: true,
-            } as TransactionListItem);
+            });
             markerAdded = true;
           }
         }

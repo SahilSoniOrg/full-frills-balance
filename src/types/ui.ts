@@ -1,7 +1,7 @@
 import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { TransactionId } from './domain';
 
-export type TransactionListItemType = 'transaction' | 'separator';
+export type TransactionListItemType = 'transaction' | 'separator' | 'reconciledMarker';
 
 export interface TransactionListItem {
   id: TransactionId;
@@ -14,6 +14,5 @@ export interface TransactionListItem {
   count?: number;
   netAmount?: number;
   currencyCode?: string;
-  isReconciledMarker?: boolean;
   reconciledAt?: number | null;
 }

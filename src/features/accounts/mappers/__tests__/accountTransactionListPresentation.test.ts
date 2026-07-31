@@ -20,8 +20,7 @@ describe('injectReconciledMarkersIntoTransactionList', () => {
     const result = injectReconciledMarkersIntoTransactionList(items, recon);
     expect(result.map(i => i.id)).toEqual(['t-new', 'reconciled-separator', 't-old']);
     expect(result[1]).toMatchObject({
-      type: 'separator',
-      isReconciledMarker: true,
+      type: 'reconciledMarker',
       date: 2000,
     });
   });
@@ -36,6 +35,6 @@ describe('injectReconciledMarkersIntoTransactionList', () => {
 
     const result = injectReconciledMarkersIntoTransactionList(items, recon);
     expect(result[0]).toMatchObject({ id: 'day', reconciledAt: recon.getTime() });
-    expect(result.some(i => i.isReconciledMarker)).toBe(false);
+    expect(result.some(i => i.type === 'reconciledMarker')).toBe(false);
   });
 });

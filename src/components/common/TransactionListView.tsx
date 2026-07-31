@@ -1,12 +1,13 @@
 import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
+import { ReconciledMarker } from '@/src/features/accounts/components/ReconciledMarker';
+import { JournalDayHeader } from '@/src/features/journal/components/JournalDayHeader';
 import { TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
-import { DaySeparator } from './DaySeparator';
 import { TransactionCard } from './TransactionCard';
 
 interface TransactionListViewProps {
@@ -26,6 +27,50 @@ interface TransactionListViewProps {
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
   style?: any;
+}
+
+function renderListItem({
+  item,
+  isPrivacyMode,
+  selectedIds,
+  onLongPressItem,
+  isSelectionModeActive,
+}: {
+  item: TransactionListItem;
+  isPrivacyMode?: boolean;
+  selectedIds?: Set<TransactionId>;
+  onLongPressItem?: (id: TransactionId) => void;
+  isSelectionModeActive?: boolean;
+}) {
+  if (item.type === 'reconciledMarker') {
+    return <ReconciledMarker date={item.date} />;
+  }
+
+  if (item.type === 'separator') {
+    return (
+      <JournalDayHeader
+        date={item.date}
+        isCollapsed={item.isCollapsed}
+        onToggle={item.onToggle}
+        count={item.count}
+        netAmount={item.netAmount}
+        currencyCode={item.currencyCode}
+        reconciledAt={item.reconciledAt}
+        isPrivacyMode={isPrivacyMode}
+      />
+    );
+  }
+
+  return (
+    <TransactionCard
+      {...item.cardProps!}
+      onPress={item.onPress!}
+      onLongPress={onLongPressItem ? () => onLongPressItem(item.id) : undefined}
+      isSelected={selectedIds?.has(item.id)}
+      isSelectionModeActive={isSelectionModeActive}
+      isPrivacyMode={isPrivacyMode}
+    />
+  );
 }
 
 export const TransactionListView = React.forwardRef<any, TransactionListViewProps>((props, ref) => {
@@ -77,27 +122,13 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
       ref={ref}
       data={items}
       renderItem={({ item }: { item: TransactionListItem }) =>
-        item.type === 'separator' ? (
-          <DaySeparator
-            date={item.date}
-            isCollapsed={item.isCollapsed}
-            onToggle={item.onToggle}
-            count={item.count}
-            netAmount={item.netAmount}
-            currencyCode={item.currencyCode}
-            reconciledAt={item.reconciledAt}
-            isPrivacyMode={isPrivacyMode}
-          />
-        ) : (
-          <TransactionCard
-            {...item.cardProps!}
-            onPress={item.onPress!}
-            onLongPress={onLongPressItem ? () => onLongPressItem(item.id) : undefined}
-            isSelected={selectedIds?.has(item.id)}
-            isSelectionModeActive={isSelectionModeActive}
-            isPrivacyMode={isPrivacyMode}
-          />
-        )
+        renderListItem({
+          item,
+          isPrivacyMode,
+          selectedIds,
+          onLongPressItem,
+          isSelectionModeActive,
+        })
       }
       keyExtractor={(item: TransactionListItem) => item.id}
       getItemType={(item: TransactionListItem) => item.type}
