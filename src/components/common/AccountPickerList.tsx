@@ -2,6 +2,7 @@ import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useDebounce } from '@/src/hooks/useDebounce';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   AccountSection,
@@ -10,25 +11,13 @@ import {
   getAccountVariant,
   getSectionColor,
 } from '@/src/utils/accountCategory';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type CreateAccountIntent = {
   suggestedName: string;
   type?: AccountType;
 };
-
-/**
- * useDebounce - Simple hook for debouncing values
- */
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
-}
 
 /**
  * useAccountPicker - Logic hook for the account picker.
