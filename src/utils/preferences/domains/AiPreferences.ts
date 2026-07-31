@@ -32,4 +32,12 @@ export class AiPreferences {
   observeNativeAiEnabled(): Observable<boolean> {
     return this.store.observe('isNativeAiEnabled');
   }
+
+  observePreferredAiModelId(): Observable<string | undefined> {
+    return this.store.observe('preferredAiModelId');
+  }
+
+  observeAiInferenceMode(): Observable<'single' | 'multi'> {
+    return this.store.observe('aiInferenceMode');
+  }
 }

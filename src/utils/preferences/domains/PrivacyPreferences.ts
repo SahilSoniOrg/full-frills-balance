@@ -32,4 +32,12 @@ export class PrivacyPreferences {
   observePrivacyMode(): Observable<boolean> {
     return this.store.observe('isPrivacyMode');
   }
+
+  observeWidgetPrivacyEnabled(): Observable<boolean> {
+    return this.store.observe('isWidgetPrivacyEnabled');
+  }
+
+  observeAppLockEnabled(): Observable<boolean> {
+    return this.store.observe('isAppLockEnabled');
+  }
 }

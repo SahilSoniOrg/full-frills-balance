@@ -46,4 +46,16 @@ export class NotificationPreferences {
   observeCadence(): Observable<NotificationCadence> {
     return this.store.observe('notificationCadence');
   }
+
+  observeHour(): Observable<number> {
+    return this.store.observe('notificationHour');
+  }
+
+  observeMinute(): Observable<number> {
+    return this.store.observe('notificationMinute');
+  }
+
+  observeWeekday(): Observable<number> {
+    return this.store.observe('notificationWeekday');
+  }
 }
