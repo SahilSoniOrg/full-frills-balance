@@ -6,7 +6,6 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { useJournalEditorLoader } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
-import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   AccountId,
@@ -18,10 +17,10 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
-import { logger } from '@/src/utils/logger';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
 
 export interface UseJournalEditorOptions {
   journalId?: JournalId;
@@ -73,7 +72,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     onAfterSave,
     onSuccess,
   } = options;
-  const { fetchRate } = useExchangeRate();
 
   /**
    * Initialize mode from explicit prop or user preference
@@ -207,64 +205,13 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     setLines(prev => prev.map(line => (batch[line.id] ? { ...line, ...batch[line.id] } : line)));
   }, []);
 
-  const fetchRatesForLines = useCallback(
-    async (ids: string[], forceRefresh: boolean = false) => {
-      const pendingLines = lines.filter(l => ids.includes(l.id) && l.accountCurrency);
-      if (pendingLines.length === 0) return;
-
-      try {
-        const defaultCurrency = workplaceCurrency;
-        const updates: Record<string, Partial<JournalEntryLine>> = {};
-
-        await Promise.all(
-          pendingLines.map(async line => {
-            const currency = line.accountCurrency;
-            if (!currency) return;
-
-            if (currency === defaultCurrency) {
-              updates[line.id] = { exchangeRate: '' };
-            } else {
-              const rate = await fetchRate(currency, defaultCurrency, forceRefresh);
-              updates[line.id] = { exchangeRate: rate.toString() };
-            }
-          }),
-        );
-
-        updateLines(updates);
-      } catch (error) {
-        logger.error('Failed to auto-fetch rates for lines', { ids, error });
-        showErrorAlert('Failed to fetch exchange rates');
-      }
-    },
-    [lines, fetchRate, updateLines, workplaceCurrency],
-  );
-
-  const autoFetchedLines = useRef<Set<string>>(new Set());
-
-  // Auto-fetch rates when currency changes or line is added
-  useEffect(() => {
-    const idsToFetch: string[] = [];
-
-    lines.forEach(line => {
-      if (
-        line.accountCurrency &&
-        line.accountCurrency !== workplaceCurrency &&
-        !line.exchangeRate &&
-        !isLoading &&
-        !isSubmitting
-      ) {
-        const cacheKey = `${line.id}_${line.accountCurrency}`;
-        if (!autoFetchedLines.current.has(cacheKey)) {
-          autoFetchedLines.current.add(cacheKey);
-          idsToFetch.push(line.id);
-        }
-      }
-    });
-
-    if (idsToFetch.length > 0) {
-      fetchRatesForLines(idsToFetch);
-    }
-  }, [lines, workplaceCurrency, fetchRatesForLines, isLoading, isSubmitting]);
+  const { fetchRatesForLines } = useJournalEditorExchangeRates({
+    lines,
+    workplaceCurrency,
+    isLoading,
+    isSubmitting,
+    updateLines,
+  });
 
   const balanceLine = useCallback(
     (id: string) => {
