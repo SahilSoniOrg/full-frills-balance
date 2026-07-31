@@ -7,6 +7,8 @@ export {
   observeDisplayTransactionsForAccounts,
 } from './ledgerEnrichedDisplay';
 export { ledgerWriteService, LedgerWriteService } from './ledgerWriteService';
+export { amountInBaseCurrency, buildDayNetStats } from './buildDayNetStats';
+export type { DayNetStats } from './buildDayNetStats';
 
 export type {
   RawTransactionInput,
