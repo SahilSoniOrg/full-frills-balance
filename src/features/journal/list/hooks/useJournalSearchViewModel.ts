@@ -1,25 +1,14 @@
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
-import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { useExchangeRates } from '@/src/hooks/useExchangeRates';
-import { useSelection } from '@/src/hooks/useSelection';
-import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { sharingService } from '@/src/services/SharingService';
 import { analytics } from '@/src/services/analytics-service';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { AccountId, EnrichedJournal, JournalId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useJournals } from '../../hooks/useJournals';
-import { mapJournalToCardProps } from '../../utils/journalUiUtils';
-import { buildJournalGroupingOptions } from './journalDayNetGrouping';
+import { useJournalTransactionList } from './useJournalTransactionList';
 
 export interface JournalSearchViewModel {
   items: TransactionListItem[];
@@ -67,11 +56,7 @@ export interface JournalSearchViewModel {
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
-  const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const baseCurrency = defaultCurrencyCode;
-  const { defaultShareFormat } = useUI();
-  const { rateMap: exchangeRateMap } = useExchangeRates(baseCurrency);
-  const { precision } = useCurrencyPrecision(baseCurrency);
+  const { workplaceId } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
 
   // Route Params
@@ -123,7 +108,6 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   const lastTrackedQueryRef = useRef('');
 
   useEffect(() => {
-    // Only track if query is meaningful (at least 2 chars or has filters)
     const hasMeaningfulQuery =
       searchQuery.length >= 2 ||
       accountIds.length > 0 ||
@@ -134,7 +118,6 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
 
     if (!hasMeaningfulQuery) return;
 
-    // Debounce tracking - wait 2 seconds after user stops typing
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
@@ -142,12 +125,10 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     searchTimeoutRef.current = setTimeout(() => {
       const queryKey = `${searchQuery}:${accountIds.join(',')}:${minAmount}:${maxAmount}:${displayType}:${dateRange?.startDate}`;
 
-      // Don't track the same query multiple times
       if (queryKey === lastTrackedQueryRef.current) return;
       lastTrackedQueryRef.current = queryKey;
 
       analytics.logSearchPerformed('journal', searchQuery.length);
-      // Keep detailed tracking for research
       analytics.trackFeatureUsage('journal_search', 'query_details', {
         query_length: searchQuery.length,
         has_account_filter: accountIds.length > 0,
@@ -176,7 +157,6 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     setDisplayType('');
   }, []);
 
-  // WatermelonDB Query Params
   const queryDateRange = useMemo(
     () =>
       dateRange
@@ -198,123 +178,21 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     [minAmount, maxAmount, displayType, accountIds],
   );
 
-  // Data Fetching
-  const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+  const core = useJournalTransactionList({
     workplaceId,
-    AppConfig.defaults.journalPageSize,
-    queryDateRange as any,
+    pageSize: AppConfig.defaults.journalPageSize,
+    dateRange: queryDateRange,
     searchQuery,
-    undefined, // status
-    undefined, // plannedPaymentId
-    queryOptions as any,
-  );
-
-  const onEndReached = useCallback(() => {
-    if (!hasMore || isLoadingMore) return;
-    loadMore();
-  }, [hasMore, isLoadingMore, loadMore]);
-
-  const selectionControl = useSelection<JournalId>();
-  const {
-    selectedIds,
-    isSelectionModeActive,
-    toggleSelection,
-    onLongPressItem,
-    clearItems,
-    exitSelectionMode,
-    setSelectedIds,
-  } = selectionControl;
-
-  const handleJournalPress = useCallback(
-    (journal: EnrichedJournal) => {
-      if (isSelectionModeActive) {
-        // Fix: use mode instead of size
-        toggleSelection(journal.id);
-        return;
-      }
-
-      const cardProps = mapJournalToCardProps(journal);
-      AppNavigation.toTransactionDetails(journal.id, {
-        title: cardProps.title,
-        amount: cardProps.amount,
-        currencyCode: cardProps.currencyCode,
-        date:
-          typeof cardProps.transactionDate === 'number'
-            ? cardProps.transactionDate
-            : (cardProps.transactionDate as Date).getTime(),
-        typeColor: cardProps.presentation.typeColor,
-        typeIcon: cardProps.presentation.typeIcon,
-        displayType: journal.displayType,
-      });
-    },
-    [isSelectionModeActive, toggleSelection],
-  );
-
-  const transactionGroupingOptions = useMemo(
-    () =>
-      buildJournalGroupingOptions(
-        journals,
-        baseCurrency,
-        precision,
-        exchangeRateMap,
-        handleJournalPress,
-      ),
-    [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision],
-  );
-
-  const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
-
-  // Cleanup stale selection IDs (defensive cleanup)
-  useEffect(() => {
-    if (selectedIds.size === 0) return;
-
-    setSelectedIds(prev => {
-      const validIds = new Set(journals.map(j => j.id));
-      const filtered = new Set([...prev].filter(id => validIds.has(id)));
-      return filtered.size === prev.size ? prev : filtered;
-    });
-  }, [journals, selectedIds, setSelectedIds]);
-
-  const selectAll = useCallback(() => {
-    const visibleIds = items
-      .filter(i => i.type === 'transaction')
-      .map(i => i.id as string as JournalId);
-    selectionControl.selectAll(visibleIds);
-  }, [items, selectionControl]);
-
-  const onShareSelected = useCallback(async () => {
-    if (selectedIds.size === 0) return;
-
-    try {
-      const selectedJournals = journals.filter(j => selectedIds.has(j.id));
-      const provider = new TransactionShareProvider(
-        selectedJournals.map(j => ({
-          id: j.id,
-          date: j.journalDate,
-          description: j.description || j.semanticLabel || 'Transaction',
-          amount: j.totalAmount,
-          currencyCode: j.currencyCode,
-          displayType: j.displayType,
-        })),
-        {
-          title: 'Search Transactions',
-          includeTime: true,
-          sort: 'desc',
-          showEmojis: true,
-          defaultCurrency: defaultCurrencyCode,
-        },
-      );
-      await sharingService.share(provider, defaultShareFormat);
-    } catch (error) {
-      logger.error('Failed to share search transactions', error);
-    }
-  }, [selectedIds, journals, defaultShareFormat, defaultCurrencyCode]);
+    queryOptions,
+    shareTitle: 'Search Transactions',
+    paginationPolicy: 'always',
+  });
 
   return {
-    items,
-    isLoading,
-    isLoadingMore,
-    onEndReached,
+    items: core.items,
+    isLoading: core.isLoading,
+    isLoadingMore: core.isLoadingMore,
+    onEndReached: core.onEndReached,
     searchQuery,
     setSearchQuery,
     dateRange,
@@ -329,17 +207,17 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     displayType,
     setDisplayType,
     clearFilters,
-    hasMore,
+    hasMore: core.hasMore,
     plannedJournals: [], // Not showing planned in search for now
     accounts,
-    selectedIds,
-    isSelectionModeActive,
-    onLongPressItem,
-    toggleSelection,
-    selectAll,
-    clearItems,
-    exitSelectionMode,
-    onShareSelected,
-    setSelectedIds,
+    selectedIds: core.selectedIds,
+    isSelectionModeActive: core.isSelectionModeActive,
+    onLongPressItem: core.onLongPressItem,
+    toggleSelection: core.toggleSelection,
+    selectAll: core.selectAll,
+    clearItems: core.clearItems,
+    exitSelectionMode: core.exitSelectionMode,
+    onShareSelected: core.onShareSelected,
+    setSelectedIds: core.setSelectedIds,
   };
 }
