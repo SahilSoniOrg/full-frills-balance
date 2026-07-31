@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
@@ -49,7 +50,14 @@ export interface AccountDetailsData {
   unreconciledAmountText: string;
 }
 
-export function useAccountDetailsData(): AccountDetailsData {
+export interface UseAccountDetailsDataOptions {
+  isPrivacyMode: boolean;
+}
+
+export function useAccountDetailsData(
+  options: UseAccountDetailsDataOptions = { isPrivacyMode: false },
+): AccountDetailsData {
+  const { isPrivacyMode } = options;
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams<{
     accountId: AccountId;
@@ -158,7 +166,11 @@ export function useAccountDetailsData(): AccountDetailsData {
     : '';
   const accountTypeVariant = getAccountTypeVariant(accountType);
   const accountTypeColorKey = getAccountTypeColorKey(accountType);
-  const balanceText = account ? CurrencyFormatter.format(balance, balanceCurrency) : '...';
+  const balanceText = !account
+    ? '...'
+    : isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(balance, balanceCurrency);
   const transactionCountText = String(transactionCount);
 
   const onDateSelect = useCallback(

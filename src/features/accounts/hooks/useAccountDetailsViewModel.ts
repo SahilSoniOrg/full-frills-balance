@@ -34,7 +34,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconciledAt,
     dateRange,
     ...dataVm
-  } = useAccountDetailsData();
+  } = useAccountDetailsData({ isPrivacyMode });
 
   const {
     deleteAccount,
@@ -60,6 +60,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     rawSubBalances,
     workplaceCurrency,
     dashboardLoading,
+    isPrivacyMode,
   });
 
   const { transactions: _transactions, ...feedVm } = useAccountTransactionFeed({

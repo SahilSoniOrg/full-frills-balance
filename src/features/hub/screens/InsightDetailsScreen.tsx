@@ -18,7 +18,7 @@ export default function InsightDetailsScreen() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { insightDetails: strings } = AppConfig.strings.dashboard;
 
-  const { items, isLoading } = useInsightDetailsViewModel({
+  const { items, isLoading, isPrivacyMode } = useInsightDetailsViewModel({
     workplaceId,
     workplaceCurrency: defaultCurrencyCode,
     journalIds: params.journalIds ? params.journalIds.split(',') : [],
@@ -135,6 +135,7 @@ export default function InsightDetailsScreen() {
       <TransactionListView
         items={items}
         isLoading={isLoading}
+        isPrivacyMode={isPrivacyMode}
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         emptyTitle={strings.emptyTitle}

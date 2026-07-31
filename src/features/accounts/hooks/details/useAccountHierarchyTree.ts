@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -24,11 +25,19 @@ export interface UseAccountHierarchyTreeOptions {
   rawSubBalances: AccountBalance[];
   workplaceCurrency: string;
   dashboardLoading: boolean;
+  isPrivacyMode: boolean;
 }
 
 export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions) {
-  const { accountId, account, accounts, rawSubBalances, workplaceCurrency, dashboardLoading } =
-    options;
+  const {
+    accountId,
+    account,
+    accounts,
+    rawSubBalances,
+    workplaceCurrency,
+    dashboardLoading,
+    isPrivacyMode,
+  } = options;
   const { theme } = useTheme();
 
   const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
@@ -73,20 +82,20 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
       const subBalance = subBalances.get(child.id);
       const color = theme[getAccountTypeColorKey(child.accountType)];
       const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
+      const currencyCode = subBalance?.currencyCode || child.currencyCode || workplaceCurrency;
       return {
         id: child.id,
         name: child.name,
         icon: getAccountIcon(child),
-        balanceText: CurrencyFormatter.format(
-          subBalance?.balance ?? 0,
-          subBalance?.currencyCode || child.currencyCode || workplaceCurrency,
-        ),
+        balanceText: isPrivacyMode
+          ? AppConfig.privacyMask
+          : CurrencyFormatter.format(subBalance?.balance ?? 0, currencyCode),
         color,
         level,
         isGroup,
       };
     });
-  }, [descendants, subBalances, workplaceCurrency, theme, accounts]);
+  }, [descendants, subBalances, workplaceCurrency, theme, accounts, isPrivacyMode]);
 
   const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
   const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);

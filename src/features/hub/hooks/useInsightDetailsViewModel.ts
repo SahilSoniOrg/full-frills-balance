@@ -4,6 +4,7 @@ import { mapJournalToCardProps } from '@/src/adapters/transactionCardAdapter';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { EnrichedJournal, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -23,6 +24,7 @@ export function useInsightDetailsViewModel({
   journalIds,
   baseCurrency: manualBaseCurrency,
 }: UseInsightDetailsViewModelParams) {
+  const { isPrivacyMode } = usePrivacyPrefs();
   const baseCurrency = manualBaseCurrency || workplaceCurrency;
   const journals$ = useMemo(() => {
     if (journalIds.length === 0) return of([]);
@@ -95,5 +97,6 @@ export function useInsightDetailsViewModel({
   return {
     items,
     isLoading,
+    isPrivacyMode,
   };
 }

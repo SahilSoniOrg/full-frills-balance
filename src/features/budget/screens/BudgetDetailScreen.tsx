@@ -59,6 +59,7 @@ export function BudgetDetailScreen() {
           items={vm.items}
           isLoading={vm.isLoading}
           isLoadingMore={false}
+          isPrivacyMode={vm.isPrivacyMode}
           emptyTitle="No activity"
           emptySubtitle="No transactions found for this budget in the selected month."
           ListHeaderComponent={
