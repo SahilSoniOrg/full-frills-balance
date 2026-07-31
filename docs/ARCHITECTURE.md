@@ -72,7 +72,7 @@ This document describes the technical architecture of Full Frills Balance, a dou
                              │
 ┌────────────────────────────┴──────────────────────────────────┐
 │                Repository Layer + Raw SQL                      │
-│  JournalRepository          TransactionRepository              │
+│  Journal intent modules     TransactionRepository              │
 │  TransactionRawRepository   AccountRepository                  │
 │  BalanceSnapshotRepository  BudgetRepository                   │
 │  PlannedPaymentRepository   CurrencyRepository                 │
@@ -88,6 +88,17 @@ This document describes the technical architecture of Full Frills Balance, a dou
 │  TransactionInboxRecord · TransactionAutoPostRule · Workplace │
 └───────────────────────────────────────────────────────────────┘
 ```
+
+### Persistence access
+
+Feature code reads through domain-specific read services or intent modules when
+they exist (for example `budgetReadService`, `plannedPaymentReadService`, and
+the journal timeline modules). Repositories remain persistence adapters; they
+must not become feature-facing god objects. Feature hooks own screen state and
+presentation mapping, while services own query shape and domain projections.
+
+Run `bun run check:architecture` to enforce the unsafe-type ratchet and the
+journal façade guard.
 
 ---
 
