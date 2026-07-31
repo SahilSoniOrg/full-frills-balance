@@ -2,7 +2,10 @@ import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { useJournalEditorLoader } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
+import {
+  JournalEditorHydration,
+  useJournalEditorLoader,
+} from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import {
@@ -142,16 +145,30 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hydrateEditor = useCallback(
+    (snapshot: JournalEditorHydration) => {
+      setDescription(snapshot.description);
+      setNotes(snapshot.notes);
+      setJournalDate(snapshot.journalDate);
+      setJournalTime(snapshot.journalTime);
+      if (snapshot.transactionType) setTransactionType(snapshot.transactionType);
+      if (snapshot.lines) setLines(snapshot.lines);
+      if (snapshot.isGuidedMode !== undefined) setGuidedModeInternal(snapshot.isGuidedMode);
+    },
+    [
+      setDescription,
+      setGuidedModeInternal,
+      setJournalDate,
+      setJournalTime,
+      setLines,
+      setNotes,
+      setTransactionType,
+    ],
+  );
   const isLoading = useJournalEditorLoader({
     workplaceId,
     journalId,
-    setDescription,
-    setNotes,
-    setJournalDate,
-    setJournalTime,
-    setTransactionType,
-    setLines,
-    setGuidedMode: setGuidedModeInternal,
+    hydrateEditor,
   });
 
   const { fetchRatesForLines } = useJournalEditorExchangeRates({

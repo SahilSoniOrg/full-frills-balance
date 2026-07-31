@@ -4,30 +4,28 @@ import { transactionService } from '@/src/services/transaction-ingestion';
 import { JournalEntryLine, JournalId, TabType, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+export interface JournalEditorHydration {
+  description: string;
+  notes: string;
+  journalDate: string;
+  journalTime: string;
+  transactionType?: TabType;
+  lines?: JournalEntryLine[];
+  isGuidedMode?: boolean;
+}
 
 interface JournalEditorLoaderOptions {
   workplaceId: WorkplaceId;
   journalId?: JournalId;
-  setDescription: Dispatch<SetStateAction<string>>;
-  setNotes: Dispatch<SetStateAction<string>>;
-  setJournalDate: Dispatch<SetStateAction<string>>;
-  setJournalTime: Dispatch<SetStateAction<string>>;
-  setTransactionType: Dispatch<SetStateAction<TabType>>;
-  setLines: Dispatch<SetStateAction<JournalEntryLine[]>>;
-  setGuidedMode: (guided: boolean) => void;
+  hydrateEditor: (snapshot: JournalEditorHydration) => void;
 }
 
 export function useJournalEditorLoader({
   workplaceId,
   journalId,
-  setDescription,
-  setNotes,
-  setJournalDate,
-  setJournalTime,
-  setTransactionType,
-  setLines,
-  setGuidedMode,
+  hydrateEditor,
 }: JournalEditorLoaderOptions): boolean {
   const [isLoading, setIsLoading] = useState(Boolean(journalId));
 
@@ -45,10 +43,12 @@ export function useJournalEditorLoader({
 
         if (journal) {
           const dateObj = new Date(journal.journalDate);
-          setDescription(journal.description || '');
-          setNotes(journal.notes || '');
-          setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
-          setJournalTime(dayjs(dateObj).format('HH:mm'));
+          const snapshot: JournalEditorHydration = {
+            description: journal.description || '',
+            notes: journal.notes || '',
+            journalDate: dayjs(dateObj).format('YYYY-MM-DD'),
+            journalTime: dayjs(dateObj).format('HH:mm'),
+          };
 
           const transactions = await transactionService.getEnrichedByJournal(
             workplaceId,
@@ -59,9 +59,14 @@ export function useJournalEditorLoader({
           if (transactions.length > 0) {
             const { lines, forceAdvancedMode, simpleTabType } =
               mapEnrichedLinesToEditorState(transactions);
-            if (forceAdvancedMode) setGuidedMode(false);
-            else if (simpleTabType) setTransactionType(simpleTabType);
-            setLines(lines);
+            hydrateEditor({
+              ...snapshot,
+              lines,
+              transactionType: simpleTabType,
+              isGuidedMode: forceAdvancedMode ? false : undefined,
+            });
+          } else {
+            hydrateEditor(snapshot);
           }
         }
       } catch {
@@ -75,17 +80,7 @@ export function useJournalEditorLoader({
     return () => {
       isActive = false;
     };
-  }, [
-    journalId,
-    setDescription,
-    setGuidedMode,
-    setJournalDate,
-    setJournalTime,
-    setLines,
-    setNotes,
-    setTransactionType,
-    workplaceId,
-  ]);
+  }, [journalId, hydrateEditor, workplaceId]);
 
   return isLoading;
 }
