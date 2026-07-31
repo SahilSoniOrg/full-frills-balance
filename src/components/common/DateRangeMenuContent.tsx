@@ -2,12 +2,12 @@ import { AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/componen
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface DateRangeMenuContentProps {
   draftFilter: PeriodFilter;
-  customRange: { startDate: any; endDate: any };
+  customRange: { startDate: Dayjs | null; endDate: Dayjs | null };
   lastNValue: string;
   lastNUnit: 'days' | 'weeks' | 'months';
   monthList: { month: number; year: number; label: string }[];
