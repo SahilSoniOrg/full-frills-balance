@@ -2,39 +2,29 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTransactionDetailsSmsInfo } from '@/src/features/journal/hooks/useTransactionDetailsSmsInfo';
 import { useTransactionDetailsActions } from '@/src/features/journal/hooks/useTransactionDetailsActions';
+import {
+  buildTransactionSplitItems,
+  TransactionSplitItemViewModel,
+} from '@/src/features/journal/hooks/transactionDetailsSplitItems';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   JournalStatusChipVariant,
-  mapDisplayTransactionSplitPresentation,
   resolveJournalDetailsInfo,
   resolveJournalStatusChipVariant,
   resolveRevertPlannedActionLabels,
   resolveTransactionAmountPresentation,
 } from '@/src/services/journal/transactionDetailsHelpers';
-import { AccountId, DisplayTransaction, JournalId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
-export interface TransactionSplitItemViewModel {
-  id: string;
-  accountId: AccountId;
-  accountName: string;
-  transactionType: string;
-  amountText: string;
-  amountColor: ColorKey;
-  iconName: IconName | string | null;
-  fallbackIcon?: IconName;
-  iconColor: ColorKey;
-  iconBackground: ColorKey;
-  onPress: () => void;
-}
+export type { TransactionSplitItemViewModel } from '@/src/features/journal/hooks/transactionDetailsSplitItems';
 
 export interface TransactionDetailsViewModel {
   theme: ReturnType<typeof useTheme>['theme'];
@@ -181,23 +171,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     });
 
   const splitItems = useMemo(() => {
-    return transactions.map((item: DisplayTransaction) => {
-      const presentation = mapDisplayTransactionSplitPresentation(item);
-
-      return {
-        id: item.id,
-        accountId: item.accountId,
-        accountName: item.accountName || 'Unknown Account',
-        transactionType: presentation.transactionTypeLabel,
-        amountText: presentation.amountText,
-        amountColor: presentation.amountColor,
-        iconName: item.icon || null,
-        fallbackIcon: getAccountFallbackIcon(item.accountType),
-        iconColor: presentation.iconColor,
-        iconBackground: presentation.iconBackground,
-        onPress: () => AppNavigation.toAccountDetails(item.accountId),
-      };
-    });
+    return buildTransactionSplitItems(transactions, AppNavigation.toAccountDetails);
   }, [transactions]);
 
   const revertLabels = journalInfo
