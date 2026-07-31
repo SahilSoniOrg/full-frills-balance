@@ -1,5 +1,4 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import Account from '@/src/data/models/Account';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
@@ -17,6 +16,7 @@ import {
   validateSmsRuleRegexPatterns,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsService } from '@/src/services/sms-service';
+import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -111,7 +111,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     const loadRule = async () => {
       try {
-        const rule = await transactionAutoPostRuleRepository.find(id);
+        const rule = await smsRuleReadService.find(id);
         if (!rule) return;
         const conditions = parseSmsRuleConditions(rule);
         const actions = parseSmsRuleActions(rule);
