@@ -14,7 +14,7 @@ import { useJournalEntryMode } from '@/src/features/journal/entry/hooks/useJourn
 import { useJournalEntryVoiceInput } from '@/src/features/journal/entry/hooks/useJournalEntryVoiceInput';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   createSmsJournalAfterSaveHandler,
@@ -38,7 +38,7 @@ export interface JournalEntryViewModel {
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: 'guided' | 'advanced' | 'bulk' | 'split';
   onToggleMode: (mode: 'guided' | 'advanced' | 'bulk' | 'split') => void;
-  splitEditor: ReturnType<typeof useSplitJournalEditor>;
+  splitEditor: SplitJournalController;
   bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   savedSummary: { count: number; items: SavedJournalSummary[] } | null;
   setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;

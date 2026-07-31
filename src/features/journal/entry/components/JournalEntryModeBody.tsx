@@ -6,16 +6,16 @@ import { SplitForm } from '@/src/features/journal/entry/components/SplitForm';
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
-import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { BulkEntryGrid } from '@/src/features/journal/entry/components/BulkEntryGrid';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import Account from '@/src/data/models/Account';
 import { View } from 'react-native';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
   simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
-  splitEditor: ReturnType<typeof useSplitJournalEditor>;
+  splitEditor: SplitJournalController;
   bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   accounts: Account[];
   editor: ReturnType<typeof useJournalEditor>;

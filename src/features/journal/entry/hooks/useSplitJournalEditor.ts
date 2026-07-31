@@ -16,6 +16,7 @@ import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 import { useJournalNavMemory } from './useJournalNavMemory';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 
 export interface UseSplitJournalEditorProps {
   accounts: Account[];
@@ -29,7 +30,7 @@ export function useSplitJournalEditor({
   editor,
   onSelectAccountRequest,
   isActive,
-}: UseSplitJournalEditorProps) {
+}: UseSplitJournalEditorProps): SplitJournalController {
   const { workplaceId } = useWorkplace();
   const journalNav = useJournalNavMemory(workplaceId);
   const { transactionAccounts, expenseAccounts } = useAccountSelection({ accounts });
@@ -198,5 +199,3 @@ export function useSplitJournalEditor({
     ],
   );
 }
-
-export type SplitJournalEditor = ReturnType<typeof useSplitJournalEditor>;

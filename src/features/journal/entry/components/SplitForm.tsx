@@ -3,7 +3,7 @@ import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
-import { SplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useTheme } from '@/src/hooks/use-theme';
 import Account from '@/src/data/models/Account';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
@@ -17,7 +17,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
-type SplitFormProps = SplitJournalEditor;
+type SplitFormProps = SplitJournalController;
 
 const AMOUNT_COL_WIDTH = 116;
 const DELETE_COL_WIDTH = 28;
@@ -34,7 +34,7 @@ function accountChipStyles(account: Account | undefined, theme: Theme) {
 }
 
 interface SplitRowItemProps {
-  row: SplitJournalEditor['splits'][number];
+  row: SplitJournalController['splits'][number];
   index: number;
   isLast: boolean;
   canRemove: boolean;
