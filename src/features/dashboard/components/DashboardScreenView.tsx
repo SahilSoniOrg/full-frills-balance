@@ -1,21 +1,21 @@
 import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { FloatingActionButton } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
-import { TransactionFeed } from '@/src/features/dashboard/components/TransactionFeed';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
+import {
+  mapLiabilityFlowsToPlannedOccurrences,
+  mergePlannedOccurrences,
+} from '@/src/features/planned-payments';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { TransactionId } from '@/src/types/domain';
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
-import {
-  mapLiabilityFlowsToPlannedOccurrences,
-  mergePlannedOccurrences,
-} from '@/src/features/planned-payments';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
@@ -146,7 +146,7 @@ export function DashboardScreenView({
         <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
       )}
 
-      <TransactionFeed
+      <TransactionListView
         ref={listRef}
         items={items}
         isLoading={isLoading}
