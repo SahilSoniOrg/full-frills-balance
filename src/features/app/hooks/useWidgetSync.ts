@@ -1,6 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
@@ -97,7 +99,9 @@ function buildWidgetThemeSnapshot(
 }
 
 export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
-  const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked, isAppReady } = useUI();
+  const { themeId } = useThemePrefs();
+  const { isWidgetPrivacyEnabled } = usePrivacyPrefs();
+  const { isAppCurrentlyLocked, isAppReady } = useUI();
   const { theme, themeMode } = useTheme();
 
   // Delay safeToSpend calculation until the app is ready to avoid blocking hydration

@@ -1,4 +1,5 @@
 import { useUI } from '@/src/contexts/UIContext';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppConfig } from '@/src/constants/app-config';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,14 +8,9 @@ import { AppState } from 'react-native';
 const AUTH_COOLDOWN_MS = 2000;
 
 export function useAppLockEngine() {
-  const {
-    isAppLockEnabled,
-    isUnlocked,
-    isAppActive,
-    authenticateSession,
-    setIsAppActive,
-    setIsLockAuthenticating,
-  } = useUI();
+  const { isAppLockEnabled } = usePrivacyPrefs();
+  const { isUnlocked, isAppActive, authenticateSession, setIsAppActive, setIsLockAuthenticating } =
+    useUI();
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);

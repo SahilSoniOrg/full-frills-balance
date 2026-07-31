@@ -1,6 +1,6 @@
 import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAiPrefs } from '@/src/hooks/useAiPrefs';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -48,7 +48,7 @@ const PREDEFINED_TEMPLATES = [
 
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
-  const { isNativeAiEnabled } = useUI();
+  const { isNativeAiEnabled } = useAiPrefs();
   const insets = useSafeAreaInsets();
 
   const [transcription, setTranscription] = useState('');

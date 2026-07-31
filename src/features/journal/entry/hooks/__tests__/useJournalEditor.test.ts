@@ -21,9 +21,9 @@ jest.mock('@/src/utils/alerts', () => ({
 const mockBack = jest.fn();
 (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
 
-// Mock useUI
-jest.mock('@/src/contexts/UIContext', () => ({
-  useUI: jest.fn(() => ({
+// Mock useAdvancedModePrefs
+jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
+  useAdvancedModePrefs: jest.fn(() => ({
     advancedMode: false,
     setAdvancedMode: jest.fn(),
   })),

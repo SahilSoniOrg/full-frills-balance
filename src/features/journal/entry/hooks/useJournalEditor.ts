@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -58,7 +58,7 @@ export interface UseJournalEditorOptions {
  * Consolidates state management and business logic for both simple and advanced modes.
  */
 export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
-  const { advancedMode, setAdvancedMode } = useUI();
+  const { advancedMode, setAdvancedMode } = useAdvancedModePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const {
     journalId,
