@@ -36,6 +36,16 @@ describe('useAccountSelection', () => {
     },
   ] as any[];
 
+  it('exposes filter buckets without selection state', () => {
+    const { result } = renderHook(() => useAccountSelection({ accounts: mockAccounts }));
+
+    expect(result.current).not.toHaveProperty('selectedId');
+    expect(result.current).not.toHaveProperty('handleSelect');
+    expect(result.current).not.toHaveProperty('setSelectedId');
+    expect(result.current.transactionAccounts).toBeDefined();
+    expect(result.current.leafAccounts).toBeDefined();
+  });
+
   it('should filter out accounts that are parents of other accounts in the list', () => {
     const { result } = renderHook(() => useAccountSelection({ accounts: mockAccounts }));
 

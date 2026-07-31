@@ -4,29 +4,14 @@ import { useCallback, useMemo, useState } from 'react';
 
 export interface UseAccountSelectionOptions {
   accounts: Account[];
-  initialSelectedId?: string;
-  onSelect?: (id: string) => void;
 }
 
 /**
- * useAccountSelection - Shared logic for filtering and selecting accounts.
- * Used by both modal selectors and inline tile lists.
+ * useAccountSelection - Shared logic for filtering accounts into leaf buckets.
+ * Used by journal editors for source/destination account lists.
  */
-export function useAccountSelection({
-  accounts,
-  initialSelectedId,
-  onSelect,
-}: UseAccountSelectionOptions) {
-  const [selectedId, setSelectedId] = useState(initialSelectedId || '');
+export function useAccountSelection({ accounts }: UseAccountSelectionOptions) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      setSelectedId(id);
-      onSelect?.(id);
-    },
-    [onSelect],
-  );
 
   const toggleSection = useCallback((title: string) => {
     setCollapsedSections(prev => {
@@ -63,9 +48,6 @@ export function useAccountSelection({
   );
 
   return {
-    selectedId,
-    setSelectedId,
-    handleSelect,
     sections,
     collapsedSections,
     toggleSection,
