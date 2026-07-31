@@ -1,5 +1,5 @@
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { transactionReadService } from '@/src/services/transactions/transactionReadService';
 import {
   DateRange,
   formatDate,
@@ -7,7 +7,6 @@ import {
   getStartOfDay,
   PeriodFilter,
 } from '@/src/utils/dateUtils';
-import { Q } from '@nozbe/watermelondb';
 import { useCallback, useMemo, useState } from 'react';
 
 interface UseReportDateFilterProps {
@@ -36,16 +35,8 @@ export function useReportDateFilter({
 
       if (filter.type === 'ALL_TIME') {
         // Find earliest transaction to bound the "All Time" start date
-        const earliest = await transactionRepository
-          .transactionsQuery(
-            Q.where('workplace_id', workplaceId),
-            Q.where('deleted_at', Q.eq(null)),
-            Q.sortBy('transaction_date', Q.asc),
-            Q.take(1),
-          )
-          .fetch();
-
-        const startTimestamp = earliest.length > 0 ? earliest[0].transactionDate : Date.now();
+        const earliest = await transactionReadService.findEarliest(workplaceId);
+        const startTimestamp = earliest?.transactionDate ?? Date.now();
         finalRange = {
           startDate: getStartOfDay(startTimestamp),
           endDate: getEndOfDay(Date.now()),
