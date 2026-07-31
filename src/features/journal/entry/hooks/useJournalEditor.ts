@@ -2,14 +2,10 @@ import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { useJournalEditorLoader } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
-import {
-  mapEnrichedLinesToEditorState,
-  normalizeJournalLinesForGuidedMode,
-} from '@/src/services/journal/journalEditorHelpers';
-import { transactionService } from '@/src/services/transaction-ingestion';
+import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
@@ -22,8 +18,8 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
-import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
+import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -163,60 +159,17 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(isEdit);
-
-  // Load initial data for edit mode
-  useEffect(() => {
-    if (!journalId) return;
-
-    let isActive = true;
-
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const journal = await journalQueryRepository.find(workplaceId, journalId);
-        if (!isActive) return;
-
-        if (journal) {
-          const dateObj = new Date(journal.journalDate);
-          setDescription(journal.description || '');
-          setNotes(journal.notes || '');
-          setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
-          setJournalTime(dayjs(dateObj).format('HH:mm'));
-
-          const txs = await transactionService.getEnrichedByJournal(workplaceId, journalId);
-          if (!isActive) return;
-
-          if (txs.length > 0) {
-            const {
-              lines: loadedLines,
-              forceAdvancedMode,
-              simpleTabType,
-            } = mapEnrichedLinesToEditorState(txs);
-            if (forceAdvancedMode) {
-              setGuidedModeInternal(false);
-            } else if (simpleTabType) {
-              setTransactionType(simpleTabType);
-            }
-            setLines(loadedLines);
-          }
-        }
-      } catch {
-        if (!isActive) return;
-        showErrorAlert('Failed to load transaction');
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadData();
-
-    return () => {
-      isActive = false;
-    };
-  }, [journalId, setGuidedModeInternal, workplaceId]);
+  const isLoading = useJournalEditorLoader({
+    workplaceId,
+    journalId,
+    setDescription,
+    setNotes,
+    setJournalDate,
+    setJournalTime,
+    setTransactionType,
+    setLines,
+    setGuidedMode: setGuidedModeInternal,
+  });
 
   const addLine = useCallback(() => {
     setLines(prev => {
