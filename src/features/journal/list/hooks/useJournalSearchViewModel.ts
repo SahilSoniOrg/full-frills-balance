@@ -3,7 +3,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, EnrichedJournal, JournalId } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
@@ -39,7 +39,6 @@ export interface JournalSearchViewModel {
   clearFilters: () => void;
 
   hasMore: boolean;
-  plannedJournals: EnrichedJournal[];
   accounts: Account[];
 
   // Selection
@@ -208,7 +207,6 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     setDisplayType,
     clearFilters,
     hasMore: core.hasMore,
-    plannedJournals: [], // Not showing planned in search for now
     accounts,
     selectedIds: core.selectedIds,
     isSelectionModeActive: core.isSelectionModeActive,

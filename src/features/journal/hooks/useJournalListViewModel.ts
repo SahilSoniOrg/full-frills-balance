@@ -1,7 +1,5 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { JournalStatus } from '@/src/data/models/Journal';
-import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
@@ -36,7 +34,6 @@ export interface JournalListViewModel {
   emptyState: JournalListEmptyState;
   loadingText: string;
   loadingMoreText: string;
-  plannedJournals: EnrichedJournal[];
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
@@ -57,8 +54,6 @@ interface UseJournalListViewModelParams {
   defaultToCurrentMonth?: boolean;
   initialItems?: EnrichedJournal[] | (() => EnrichedJournal[]);
 }
-
-const PLANNED_STATUS = [JournalStatus.PLANNED];
 
 export function useJournalListViewModel(
   {
@@ -112,14 +107,6 @@ export function useJournalListViewModel(
     }
   }, [core.isLoading, core.journals.length]);
 
-  const { journals: plannedJournals } = useJournals(
-    workplaceId,
-    AppConfig.defaults.plannedJournalLimit,
-    undefined,
-    undefined,
-    PLANNED_STATUS,
-  );
-
   const onSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
@@ -164,7 +151,6 @@ export function useJournalListViewModel(
     emptyState,
     loadingText,
     loadingMoreText,
-    plannedJournals,
     selectedIds: core.selectedIds,
     isSelectionModeActive: core.isSelectionModeActive,
     onLongPressItem: core.onLongPressItem,

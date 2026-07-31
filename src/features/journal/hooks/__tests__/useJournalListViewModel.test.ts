@@ -132,7 +132,6 @@ describe('useJournalListViewModel adapter', () => {
         isLoading: false,
         searchQuery: '',
         isSearchGlobal: true,
-        plannedJournals: expect.any(Array),
         emptyState: { title: 'Empty', subtitle: 'None' },
         selectedIds: expect.any(Set),
         onSearchChange: expect.any(Function),
@@ -154,7 +153,7 @@ describe('useJournalListViewModel adapter', () => {
       result.current.onSearchChange('rent');
     });
 
-    // Core journals fetch: pageSize 20, no statuses (planned uses plannedJournalLimit + PLANNED).
+    // Core journals fetch: pageSize 20, no statuses.
     const coreCalls = useJournalsMock.mock.calls.filter(
       call => call[1] === 20 && call[4] === undefined,
     );
