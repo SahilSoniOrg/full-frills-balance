@@ -1,4 +1,3 @@
-import { useUI } from '@/src/contexts/UIContext';
 import {
   AccountDetailsViewModel,
   PeriodMetrics,
@@ -16,8 +15,6 @@ import { useCallback } from 'react';
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
-  const { defaultShareFormat } = useUI();
-
   const {
     workplaceId,
     workplaceCurrency,
@@ -63,13 +60,15 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dashboardLoading,
   });
 
-  const { transactions, ...feedVm } = useAccountTransactionFeed({
+  const { transactions: _transactions, ...feedVm } = useAccountTransactionFeed({
     accountId,
     workplaceId,
     dateRange,
     balanceCurrency,
     precision,
     reconciledAt,
+    accountName: account?.name,
+    workplaceCurrency,
   });
 
   const actionsVm = useAccountDetailsActions({
@@ -78,14 +77,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accounts,
     transactionCount,
     isDeleted,
-    workplaceCurrency,
-    defaultShareFormat,
     deleteAccount,
     recoverAction,
     reconcileAccount,
     mergeAccounts,
-    transactions,
-    selectedIds: feedVm.selectedIds,
   });
 
   const onBack = useCallback(() => AppNavigation.back(), []);

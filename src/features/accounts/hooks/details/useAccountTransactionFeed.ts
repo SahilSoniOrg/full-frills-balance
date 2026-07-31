@@ -1,11 +1,14 @@
 import { AppConfig } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
+import { injectReconciledMarkersIntoTransactionList } from '@/src/features/accounts/mappers/accountTransactionListPresentation';
 import { useLedgerTransactionsForAccount } from '@/src/hooks/useLedgerTransactions';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { injectReconciledMarkersIntoTransactionList } from '@/src/features/accounts/mappers/accountTransactionListPresentation';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildDayNetStats } from '@/src/services/ledger';
 import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
+import { sharingService } from '@/src/services/SharingService';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import {
   AccountId,
   DisplayTransaction,
@@ -15,6 +18,7 @@ import {
 } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange } from '@/src/utils/dateUtils';
+import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 
@@ -25,6 +29,8 @@ export interface UseAccountTransactionFeedOptions {
   balanceCurrency: string;
   precision: number;
   reconciledAt: Date | null;
+  accountName?: string;
+  workplaceCurrency: string;
 }
 
 export interface AccountTransactionFeed {
@@ -41,12 +47,23 @@ export interface AccountTransactionFeed {
   clearItems: () => void;
   exitSelectionMode: () => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<TransactionId>>>;
+  onShareSelected: () => void;
 }
 
 export function useAccountTransactionFeed(
   options: UseAccountTransactionFeedOptions,
 ): AccountTransactionFeed {
-  const { accountId, workplaceId, dateRange, balanceCurrency, precision, reconciledAt } = options;
+  const {
+    accountId,
+    workplaceId,
+    dateRange,
+    balanceCurrency,
+    precision,
+    reconciledAt,
+    accountName,
+    workplaceCurrency,
+  } = options;
+  const { defaultShareFormat } = useUI();
 
   const {
     transactions,
@@ -124,6 +141,33 @@ export function useAccountTransactionFeed(
     selectionControl.selectAll(visibleIds);
   }, [transactionItems, selectionControl]);
 
+  const onShareSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const selectedTransactions = transactions.filter(t => selectedIds.has(t.id));
+      const provider = new TransactionShareProvider(
+        selectedTransactions.map(t => ({
+          id: t.id,
+          date: t.transactionDate,
+          description: t.journalDescription || t.displayTitle || 'Transaction',
+          amount: t.amount,
+          currencyCode: t.currencyCode,
+          displayType: (t.displayType as JournalDisplayType) || JournalDisplayType.MIXED,
+        })),
+        {
+          title: `Transactions for ${accountName || 'Account'}`,
+          includeTime: true,
+          sort: 'desc',
+          showEmojis: true,
+          defaultCurrency: workplaceCurrency,
+        },
+      );
+      await sharingService.share(provider, defaultShareFormat);
+    } catch (error) {
+      logger.error('Failed to share transactions', error);
+    }
+  }, [selectedIds, transactions, accountName, workplaceCurrency, defaultShareFormat]);
+
   useEffect(() => {
     if (selectedIds.size === 0) return;
     setSelectedIds(prev => {
@@ -147,5 +191,6 @@ export function useAccountTransactionFeed(
     clearItems,
     exitSelectionMode,
     setSelectedIds,
+    onShareSelected,
   };
 }

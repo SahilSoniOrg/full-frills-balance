@@ -1,15 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
-import { sharingService } from '@/src/services/SharingService';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import {
-  AccountId,
-  DisplayTransaction,
-  JournalDisplayType,
-  PlainAccount,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountId, PlainAccount } from '@/src/types/domain';
 import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -21,14 +13,10 @@ export interface UseAccountDetailsActionsOptions {
   accounts: (Account | PlainAccount)[];
   transactionCount: number;
   isDeleted: boolean;
-  workplaceCurrency: string;
-  defaultShareFormat: any;
   deleteAccount: (account: Account) => Promise<void>;
   recoverAction: (id: AccountId) => Promise<void>;
   reconcileAccount: (id: AccountId, date: Date) => Promise<Account | null>;
   mergeAccounts: (targetId: AccountId, sourceIds: AccountId[]) => Promise<void>;
-  transactions: DisplayTransaction[];
-  selectedIds: Set<TransactionId>;
 }
 
 export function useAccountDetailsActions(options: UseAccountDetailsActionsOptions) {
@@ -38,14 +26,10 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     accounts,
     transactionCount,
     isDeleted,
-    workplaceCurrency,
-    defaultShareFormat,
     deleteAccount,
     recoverAction,
     reconcileAccount,
     mergeAccounts,
-    transactions,
-    selectedIds,
   } = options;
 
   const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
@@ -191,33 +175,6 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     }
   }, [accountId, account]);
 
-  const onShareSelected = async () => {
-    if (selectedIds.size === 0) return;
-    try {
-      const selectedTransactions = transactions.filter(t => selectedIds.has(t.id));
-      const provider = new TransactionShareProvider(
-        selectedTransactions.map(t => ({
-          id: t.id,
-          date: t.transactionDate,
-          description: t.journalDescription || t.displayTitle || 'Transaction',
-          amount: t.amount,
-          currencyCode: t.currencyCode,
-          displayType: (t.displayType as JournalDisplayType) || JournalDisplayType.MIXED,
-        })),
-        {
-          title: `Transactions for ${account?.name || 'Account'}`,
-          includeTime: true,
-          sort: 'desc',
-          showEmojis: true,
-          defaultCurrency: workplaceCurrency,
-        },
-      );
-      await sharingService.share(provider, defaultShareFormat);
-    } catch (error) {
-      logger.error('Failed to share transactions', error);
-    }
-  };
-
   return {
     headerActions: {
       canRecover: isDeleted,
@@ -236,6 +193,5 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     setIsMergeModalVisible,
     mergeCandidates,
     onConfirmMerge,
-    onShareSelected,
   };
 }
