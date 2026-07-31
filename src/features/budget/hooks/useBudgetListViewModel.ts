@@ -1,4 +1,3 @@
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
@@ -8,7 +7,7 @@ import { BudgetItem } from '../types';
 import { WorkplaceId } from '@/src/types/domain';
 
 export function useBudgetListViewModel(workplaceId: WorkplaceId) {
-  const budgetsObservable = budgetRepository.observeAllActive(workplaceId).pipe(
+  const budgetsObservable = budgetReadService.observeAllActive(workplaceId).pipe(
     switchMap(budgets => {
       if (budgets.length === 0) return of([]);
 

@@ -2,7 +2,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   BudgetEditDraft,
@@ -13,6 +12,7 @@ import {
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
+import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { AccountId, BudgetId } from '@/src/types/domain';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -55,13 +55,13 @@ export function useBudgetEditViewModel() {
   const pCurrency = params.pCurrency || workplaceCurrency;
 
   const { data: observedBudget, isLoading: budgetLoading } = useObservable<Budget | null>(
-    () => (budgetId ? budgetRepository.observeById(workplaceId, budgetId) : of(null)),
+    () => (budgetId ? budgetReadService.observeById(workplaceId, budgetId) : of(null)),
     [workplaceId, budgetId],
     null,
   );
 
   const { data: scopes = [], isLoading: scopesLoading } = useObservable<BudgetScope[]>(
-    () => (budgetId ? budgetRepository.observeScopes(workplaceId, budgetId) : of([])),
+    () => (budgetId ? budgetReadService.observeScopes(workplaceId, budgetId) : of([])),
     [workplaceId, budgetId],
     [],
   );

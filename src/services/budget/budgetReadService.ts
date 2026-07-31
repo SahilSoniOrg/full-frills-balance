@@ -9,7 +9,7 @@ import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { observeDisplayTransactionsForAccounts } from '@/src/services/ledger/ledgerEnrichedDisplay';
-import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -26,6 +26,18 @@ export interface BudgetUsage {
 }
 
 export class BudgetReadService {
+  observeAllActive(workplaceId: WorkplaceId) {
+    return budgetRepository.observeAllActive(workplaceId);
+  }
+
+  observeById(workplaceId: WorkplaceId, budgetId: BudgetId) {
+    return budgetRepository.observeById(workplaceId, budgetId);
+  }
+
+  observeScopes(workplaceId: WorkplaceId, budgetId: BudgetId) {
+    return budgetRepository.observeScopes(workplaceId, budgetId);
+  }
+
   /**
    * Observe the reactive usage of a budget based on its assigned scopes.
    * Resolves scopes to leaf expense accounts, fetches transactions

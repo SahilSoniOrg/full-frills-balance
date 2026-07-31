@@ -1,7 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Budget from '@/src/data/models/Budget';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -48,7 +47,7 @@ export function useBudgetDetailViewModel() {
   }, []);
 
   const budgetData$ = useMemo(() => {
-    return budgetRepository.observeById(workplaceId, budgetId).pipe(
+    return budgetReadService.observeById(workplaceId, budgetId).pipe(
       switchMap(budget => {
         if (!budget) return of(null);
         return combineLatest([
