@@ -19,6 +19,7 @@ import {
   safeToSpendReadModel,
   SafeToSpendDashboard,
 } from '@/src/services/simulation/SafeToSpendReadModel';
+import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -88,7 +89,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: safeToSpendData } = useObservable<SafeToSpendDashboard | null>(
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
     [workplaceId, isAppReady],
-    () => snapshotService.getCustomSnapshot(workplaceId, `safe_to_spend`),
+    () => snapshotService.getCustomSnapshot<SafeToSpendDashboard>(workplaceId, `safe_to_spend`),
   );
 
   const hasSafeToSpendData = !!safeToSpendData;
@@ -126,7 +127,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     emptyTitle: strings.dashboard.emptyTitle,
     emptySubtitle: strings.dashboard.emptySubtitle,
     initialItems: () => {
-      const snapshot = snapshotService.getDashboardSnapshot(workplaceId);
+      const snapshot = snapshotService.getDashboardSnapshot<DashboardData>(workplaceId);
       const items = snapshot?.enrichedJournals || [];
       // Progressive Mount: Only show 5 items in the very first frame
       // to keep the view hierarchy light for the splash hide animation.

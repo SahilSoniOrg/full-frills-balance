@@ -7,7 +7,7 @@ const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
 // 2 days TTL for snapshots to ensure they don't get too stale
 const SNAPSHOT_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 
-export interface Snapshot<T> {
+export interface Snapshot<T = unknown> {
   data: T;
   timestamp: number;
   workplaceId: string;
@@ -18,14 +18,18 @@ export interface Snapshot<T> {
  * Uses MMKV for synchronous, high-performance disk access.
  */
 class SnapshotService {
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
   /**
    * Helper to handle Map serialization and WatermelonDB Model sanitization during JSON.stringify.
    */
-  private replacer(_key: string, value: any): any {
+  private replacer(_key: string, value: unknown): unknown {
     // Handle WatermelonDB Models (they have a private _raw property or public raw getter)
     // We only want the data, not the database instance/observables which cause circularity.
-    if (value && typeof value === 'object') {
-      if (value._raw && typeof value._raw === 'object') {
+    if (SnapshotService.isRecord(value)) {
+      if (SnapshotService.isRecord(value._raw)) {
         return value._raw;
       }
       if (value.asOfDate && value.accountId && value.balance !== undefined) {
@@ -54,12 +58,12 @@ class SnapshotService {
   /**
    * Helper to handle Map/Set deserialization during JSON.parse
    */
-  private reviver(_key: string, value: any): any {
-    if (typeof value === 'object' && value !== null) {
-      if (value.dataType === 'Map') {
+  private reviver(_key: string, value: unknown): unknown {
+    if (SnapshotService.isRecord(value)) {
+      if (value.dataType === 'Map' && Array.isArray(value.value)) {
         return new Map(value.value);
       }
-      if (value.dataType === 'Set') {
+      if (value.dataType === 'Set' && Array.isArray(value.value)) {
         return new Set(value.value);
       }
     }
@@ -69,9 +73,9 @@ class SnapshotService {
   /**
    * Persists a dashboard snapshot to disk.
    */
-  saveDashboardSnapshot(workplaceId: string, data: any): void {
+  saveDashboardSnapshot<T>(workplaceId: string, data: T): void {
     try {
-      const snapshot: Snapshot<any> = {
+      const snapshot: Snapshot<T> = {
         data,
         timestamp: Date.now(),
         workplaceId,
@@ -91,16 +95,16 @@ class SnapshotService {
    * Retrieves the last saved dashboard snapshot for a specific workplace.
    * Includes TTL validation (max 2 days old).
    */
-  getDashboardSnapshot(workplaceId: string): any | null {
-    return this.getValidatedSnapshot(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
+  getDashboardSnapshot<T = unknown>(workplaceId: string): T | null {
+    return this.getValidatedSnapshot<T>(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
   }
 
   /**
    * Persists a wealth summary snapshot.
    */
-  saveWealthSnapshot(workplaceId: string, data: any): void {
+  saveWealthSnapshot<T>(workplaceId: string, data: T): void {
     try {
-      const snapshot: Snapshot<any> = {
+      const snapshot: Snapshot<T> = {
         data,
         timestamp: Date.now(),
         workplaceId,
@@ -116,16 +120,16 @@ class SnapshotService {
   /**
    * Retrieves the last saved wealth summary for a specific workplace.
    */
-  getWealthSnapshot(workplaceId: string): any | null {
-    return this.getValidatedSnapshot(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
+  getWealthSnapshot<T = unknown>(workplaceId: string): T | null {
+    return this.getValidatedSnapshot<T>(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
   }
 
   /**
    * Persists a custom snapshot by key.
    */
-  saveCustomSnapshot(workplaceId: string, key: string, data: any): void {
+  saveCustomSnapshot<T>(workplaceId: string, key: string, data: T): void {
     try {
-      const snapshot: Snapshot<any> = {
+      const snapshot: Snapshot<T> = {
         data,
         timestamp: Date.now(),
         workplaceId,
@@ -141,19 +145,19 @@ class SnapshotService {
   /**
    * Retrieves a custom snapshot by key.
    */
-  getCustomSnapshot(workplaceId: string, key: string): any | null {
-    return this.getValidatedSnapshot(`${key}_${workplaceId}`, workplaceId);
+  getCustomSnapshot<T = unknown>(workplaceId: string, key: string): T | null {
+    return this.getValidatedSnapshot<T>(`${key}_${workplaceId}`, workplaceId);
   }
 
   /**
    * Internal helper to validate snapshot workplace and age.
    */
-  private getValidatedSnapshot(key: string, workplaceId: string): any | null {
+  private getValidatedSnapshot<T>(key: string, workplaceId: string): T | null {
     try {
       const stored = storage.getString(key);
       if (!stored) return null;
 
-      const snapshot = JSON.parse(stored, this.reviver) as Snapshot<any>;
+      const snapshot = JSON.parse(stored, this.reviver) as Snapshot<T>;
 
       // 1. Workplace Isolation Check (Prevent Data Leaks)
       if (snapshot.workplaceId !== workplaceId) {
