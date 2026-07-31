@@ -1,18 +1,12 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import {
-  AccountId,
-  JournalEntryLine,
-  WorkplaceId,
-  EMPTY_ACCOUNT_ID,
-  TransactionId,
-} from '@/src/types/domain';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import Account from '@/src/data/models/Account';
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { AccountId, WorkplaceId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
+import { buildBulkJournalEntries, validateBulkJournalRow } from './bulkJournalHelpers';
 
 export interface BulkJournalRow {
   id: string;
@@ -255,43 +249,17 @@ export function useBulkJournalEditor({
     [fetchRatesForChangedAccounts],
   );
 
-  const validateRow = useCallback((row: BulkJournalRow): string | undefined => {
-    if (!row.description.trim()) {
-      return 'Description is required';
-    }
-    const sanitizedVal = sanitizeAmount(row.amount);
-    if (sanitizedVal === null || sanitizedVal <= 0) {
-      return 'Amount must be greater than 0';
-    }
-    if (!row.sourceId) {
-      return 'Source account is required';
-    }
-    if (!row.destinationId) {
-      return 'Destination account is required';
-    }
-    if (row.sourceId === row.destinationId) {
-      return 'Source and destination accounts must be distinct';
-    }
-    if (row.isLoadingRate) {
-      return 'Exchange rate is loading...';
-    }
-    if (row.isCrossCurrency && (!row.exchangeRate || parseFloat(row.exchangeRate) <= 0)) {
-      return 'Exchange rate is required for cross-currency';
-    }
-    return undefined;
-  }, []);
-
   const isValid = useMemo(() => {
     if (rows.length === 0) return false;
-    return rows.every(row => validateRow(row) === undefined && !row.isLoadingRate);
-  }, [rows, validateRow]);
+    return rows.every(row => validateBulkJournalRow(row) === undefined && !row.isLoadingRate);
+  }, [rows]);
 
   const saveAll = useCallback(async () => {
     if (isSubmitting) return;
 
     let hasErrors = false;
     const validatedRows = latestRowsRef.current.map(row => {
-      const error = validateRow(row);
+      const error = validateBulkJournalRow(row);
       if (error) hasErrors = true;
       return { ...row, error };
     });
@@ -307,43 +275,12 @@ export function useBulkJournalEditor({
     setSubmitError(null);
 
     try {
-      // Build entries array
-      const entries = latestRowsRef.current.map(row => {
-        const sourceAccount = accounts.find(a => a.id === row.sourceId);
-        const destAccount = accounts.find(a => a.id === row.destinationId);
-
-        const sourceCurrency = sourceAccount?.currencyCode || workplaceCurrency;
-        const destCurrency = destAccount?.currencyCode || workplaceCurrency;
-
-        const isCross = row.isCrossCurrency;
-
-        const lines: JournalEntryLine[] = [
-          {
-            id: generateId() as TransactionId,
-            accountId: row.destinationId,
-            accountName: destAccount?.name || '',
-            accountType: destAccount?.accountType || AccountType.ASSET,
-            amount: isCross ? row.convertedAmount.toFixed(2) : row.amount,
-            transactionType: TransactionType.DEBIT,
-            notes: '',
-            exchangeRate: isCross && row.destBaseRate ? row.destBaseRate.toFixed(6) : '',
-            accountCurrency: destCurrency,
-          },
-          {
-            id: generateId() as TransactionId,
-            accountId: row.sourceId,
-            accountName: sourceAccount?.name || '',
-            accountType: sourceAccount?.accountType || AccountType.ASSET,
-            amount: row.amount,
-            transactionType: TransactionType.CREDIT,
-            notes: '',
-            exchangeRate: isCross && row.sourceBaseRate ? row.sourceBaseRate.toFixed(6) : '',
-            accountCurrency: sourceCurrency,
-          },
-        ];
-
-        return { lines, description: row.description, journalDate: row.journalDate, workplaceId };
-      });
+      const entries = buildBulkJournalEntries(
+        latestRowsRef.current,
+        accounts,
+        workplaceCurrency,
+        workplaceId,
+      );
 
       const result = await journalService.saveBulkJournalEntries(entries);
 
@@ -359,7 +296,7 @@ export function useBulkJournalEditor({
     } finally {
       setIsSubmitting(false);
     }
-  }, [accounts, workplaceId, workplaceCurrency, validateRow, isSubmitting, onSaveSuccess]);
+  }, [accounts, workplaceId, workplaceCurrency, isSubmitting, onSaveSuccess]);
 
   return {
     rows,
