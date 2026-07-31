@@ -20,7 +20,7 @@ import {
  */
 export class PreferencesStore {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
-  private legacyData: Record<string, any> = {};
+  private legacyData: Record<string, unknown> = {};
   private preferencesSubject = new BehaviorSubject<UIPreferences>(DEFAULT_UI_PREFERENCES);
   private _loadPromise: Promise<UIPreferences> | null = null;
 
@@ -167,20 +167,24 @@ export class PreferencesStore {
     return this._loadPromise;
   }
 
-  restorePreferences(data?: any): void {
+  restorePreferences(data?: unknown): void {
     const currentActiveId = this.preferences.activeWorkplaceId;
+    const record =
+      data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : undefined;
 
-    if (data && typeof data === 'object') {
+    if (record) {
       LEGACY_PREFERENCE_KEYS.forEach(key => {
-        if (key in data) {
-          this.legacyData[key] = data[key];
+        if (key in record) {
+          this.legacyData[key] = record[key];
         }
       });
     }
 
     this.preferences = {
       ...DEFAULT_UI_PREFERENCES,
-      ...(data ? this.sanitizePreferences(data) : {}),
+      ...(record ? this.sanitizePreferences(record as Partial<UIPreferences>) : {}),
     };
 
     if (!this.preferences.activeWorkplaceId && currentActiveId) {
