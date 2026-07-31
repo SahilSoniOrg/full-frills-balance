@@ -87,8 +87,8 @@ export class NotificationService {
     let trigger: Notifications.NotificationTriggerInput = null;
 
     if (Platform.OS === 'ios') {
-      const calendarTrigger: any = {
-        type: 'calendar',
+      const calendarTrigger: Notifications.CalendarTriggerInput = {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour,
         minute,
         repeats: true,
@@ -116,15 +116,14 @@ export class NotificationService {
       }
     }
 
+    const content: Notifications.NotificationContentInput = {
+      title,
+      body,
+      ...(Platform.OS === 'android' ? { channelId } : {}),
+    };
+
     await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        ...Platform.select({
-          android: { channelId } as any,
-          default: {},
-        }),
-      },
+      content,
       trigger,
     });
 
@@ -135,15 +134,14 @@ export class NotificationService {
 
   async sendImmediateTest(): Promise<void> {
     if (Platform.OS === 'web') return;
+    const content: Notifications.NotificationContentInput = {
+      title: AppConfig.strings.settings.notifications.testTitle,
+      body: AppConfig.strings.settings.notifications.testBody,
+      ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
+    };
+
     await Notifications.scheduleNotificationAsync({
-      content: {
-        title: AppConfig.strings.settings.notifications.testTitle,
-        body: AppConfig.strings.settings.notifications.testBody,
-        ...Platform.select({
-          android: { channelId: 'default' } as any,
-          default: {},
-        }),
-      },
+      content,
       trigger: null,
     });
   }
