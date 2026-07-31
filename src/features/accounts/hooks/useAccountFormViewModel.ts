@@ -5,7 +5,6 @@ import Account, {
   AccountSubtype,
   AccountType,
   getAccountSubtypesForType,
-  getDefaultSubtypeForType,
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Currency from '@/src/data/models/Currency';
@@ -22,12 +21,21 @@ import {
   isCategoryAccountType,
   resolveAccountFormHeroCopy,
 } from '@/src/features/accounts/helpers/accountFormHelpers';
-import { useAccountMetadataForm } from '@/src/features/accounts/hooks/useAccountMetadataForm';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
+import {
+  accountFormDraftReducer,
+  createAccountFormDraft,
+  coreFromDefaults,
+  mapAccountToCoreDraft,
+  mapBalanceToDraftBalance,
+  mapMetadataToDraft,
+  shouldSeedAccountBalanceDraft,
+  shouldSeedAccountCoreDraft,
+  shouldSeedAccountMetadataDraft,
+} from '@/src/features/accounts/hooks/accountFormDraft';
 import {
   buildAccountSavePayload,
   resolveAccountFormDefaults,
-  resolveAccountInitialBalance,
 } from '@/src/features/accounts/services/accountFormService';
 import {
   BalanceChangeCounterparty,
@@ -43,7 +51,7 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountMetadataFormModel {
@@ -128,6 +136,11 @@ export interface AccountFormViewModel {
   } | null;
 }
 
+/**
+ * Account create/edit form.
+ * Draft fields live in an id-keyed reducer: seeded once per `accountId` from
+ * observe. Later observe ticks never overwrite a dirty draft (charting lock).
+ */
 export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams<{
     accountId: AccountId;
@@ -143,11 +156,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const typeParam = params.type;
   const isEditMode = Boolean(accountId);
 
-  const {
-    account: existingAccount,
-    version: accountVersion,
-    isLoading: isAccountLoading,
-  } = useAccount(accountId || null, workplaceId);
+  const { account: existingAccount, isLoading: isAccountLoading } = useAccount(
+    accountId || null,
+    workplaceId,
+  );
   const { balanceData, isLoading: isBalanceLoading } = useAccountBalance(
     workplaceId,
     accountId || null,
@@ -169,7 +181,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   );
   const existingMetadata = metadataRecords[0];
 
-  // Initial Data Injection: Extract preview data from params
   const pName = params.pName as string;
   const pType = params.pType as string;
   const pCurrency = params.pCurrency as string;
@@ -194,53 +205,72 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     [routeContext, workplaceCurrency],
   );
 
-  // Form State
-  const [accountName, setAccountName] = useState(createFormDefaults.accountName);
-  const [accountType, setAccountType] = useState<AccountType>(createFormDefaults.accountType);
-  const [accountSubtype, setAccountSubtype] = useState<AccountSubtype>(
-    createFormDefaults.accountSubtype,
+  const [draft, dispatch] = useReducer(
+    accountFormDraftReducer,
+    createFormDefaults,
+    createAccountFormDraft,
   );
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(
-    createFormDefaults.selectedCurrency,
-  );
-  const [selectedIcon, setSelectedIcon] = useState<IconName>(createFormDefaults.selectedIcon);
-  const [initialBalance, setInitialBalance] = useState('');
-  const [parentAccountId, setParentAccountId] = useState(createFormDefaults.parentAccountId);
-  const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
-  const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
-  const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
-  const [isBalanceClassifyVisible, setIsBalanceClassifyVisible] = useState(false);
-  const [pendingBalanceDiscrepancy, setPendingBalanceDiscrepancy] = useState(0);
-  const hasInjectedAccountRef = useRef(false);
-  const hasInjectedBalanceRef = useRef(false);
 
-  const [localFormError, setLocalFormError] = useState<string | null>(null);
-  const clearLocalError = useCallback(() => setLocalFormError(null), []);
+  const {
+    core,
+    metadata: metadataValues,
+    pickers,
+    balanceClassify: balanceClassifyDraft,
+    localFormError,
+    seededAccountId,
+    seededBalanceAccountId,
+    seededMetadataAccountId,
+  } = draft;
 
-  const metadataForm = useAccountMetadataForm(existingMetadata, clearLocalError);
-  const metadataValues = metadataForm.values;
+  // Seed once per entity id during render — never on every observe tick.
+  // One dispatch per render (React discards + re-renders on mid-render setState).
+  const canSeedCore = shouldSeedAccountCoreDraft({
+    accountId,
+    seededAccountId,
+    existingAccount,
+  });
+  const canSeedBalance = shouldSeedAccountBalanceDraft({
+    accountId,
+    seededBalanceAccountId,
+    balanceData,
+  });
+  const canSeedMetadata = shouldSeedAccountMetadataDraft({
+    accountId,
+    seededMetadataAccountId,
+    existingMetadata,
+  });
 
-  // Load existing account base data
-  useEffect(() => {
-    if (existingAccount && !hasInjectedAccountRef.current) {
-      hasInjectedAccountRef.current = true;
-      const defaults = resolveAccountFormDefaults(routeContext, workplaceCurrency, existingAccount);
-      setAccountName(defaults.accountName);
-      setAccountType(defaults.accountType);
-      setAccountSubtype(defaults.accountSubtype);
-      setSelectedCurrency(defaults.selectedCurrency);
-      setSelectedIcon(defaults.selectedIcon);
-      setParentAccountId(defaults.parentAccountId);
-    }
-  }, [existingAccount, accountVersion, routeContext, workplaceCurrency]);
+  if (canSeedCore && existingAccount && accountId) {
+    dispatch({
+      type: 'SEED_EDIT_CORE',
+      accountId,
+      core: mapAccountToCoreDraft(existingAccount, routeContext, workplaceCurrency),
+    });
+  } else if (!accountId && seededAccountId !== null) {
+    dispatch({ type: 'SEED_CREATE', core: coreFromDefaults(createFormDefaults) });
+  } else if (canSeedBalance && accountId && balanceData) {
+    dispatch({
+      type: 'SEED_BALANCE',
+      accountId,
+      initialBalance: mapBalanceToDraftBalance(balanceData),
+    });
+  } else if (canSeedMetadata && accountId && existingMetadata) {
+    dispatch({
+      type: 'SEED_METADATA',
+      accountId,
+      metadata: mapMetadataToDraft(existingMetadata),
+    });
+  }
 
-  // Load existing balance
-  useEffect(() => {
-    if (balanceData && !hasInjectedBalanceRef.current) {
-      hasInjectedBalanceRef.current = true;
-      setInitialBalance(resolveAccountInitialBalance(balanceData));
-    }
-  }, [balanceData]);
+  const {
+    accountName,
+    accountType,
+    accountSubtype,
+    selectedCurrency,
+    selectedIcon,
+    initialBalance,
+    parentAccountId,
+  } = core;
 
   const validation = useAccountValidation(accountName, accounts, accountId);
 
@@ -251,22 +281,61 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accounts.length > 0,
   );
 
-  const onAccountTypeChange = (value: AccountType) => {
-    setAccountType(value);
-    // Reset subtype to default for new type
-    setAccountSubtype(getDefaultSubtypeForType(value));
-  };
+  const setAccountName = useCallback(
+    (value: string) => dispatch({ type: 'PATCH_CORE', patch: { accountName: value } }),
+    [],
+  );
+  const onAccountTypeChange = useCallback(
+    (value: AccountType) => dispatch({ type: 'SET_ACCOUNT_TYPE', accountType: value }),
+    [],
+  );
+  const onAccountSubtypeChange = useCallback(
+    (value: AccountSubtype) => dispatch({ type: 'PATCH_CORE', patch: { accountSubtype: value } }),
+    [],
+  );
+  const setSelectedCurrency = useCallback(
+    (value: string) => dispatch({ type: 'PATCH_CORE', patch: { selectedCurrency: value } }),
+    [],
+  );
+  const setSelectedIcon = useCallback(
+    (value: IconName) => dispatch({ type: 'PATCH_CORE', patch: { selectedIcon: value } }),
+    [],
+  );
+  const setParentAccountId = useCallback(
+    (value: AccountId) => dispatch({ type: 'PATCH_CORE', patch: { parentAccountId: value } }),
+    [],
+  );
 
-  const onAccountSubtypeChange = (value: AccountSubtype) => {
-    setAccountSubtype(value);
-  };
+  const onInitialBalanceChange = useCallback(
+    (value: string) => {
+      if (isCategoryAccountType(accountType)) return;
+      dispatch({ type: 'PATCH_CORE', patch: { initialBalance: value } });
+    },
+    [accountType],
+  );
 
-  const onInitialBalanceChange = (value: string) => {
-    // Income/Expense category amounts are not editable.
-    if (isCategoryAccountType(accountType)) return;
-    setInitialBalance(value);
-    if (localFormError) setLocalFormError(null);
-  };
+  const updateMetadataField = useCallback(
+    <K extends keyof typeof metadataValues>(key: K, value: (typeof metadataValues)[K]) => {
+      dispatch({ type: 'PATCH_METADATA', key, value });
+      if (localFormError) dispatch({ type: 'SET_LOCAL_ERROR', error: null });
+    },
+    [localFormError],
+  );
+
+  const setIsIconPickerVisible = useCallback(
+    (visible: boolean) => dispatch({ type: 'SET_PICKER', picker: 'isIconPickerVisible', visible }),
+    [],
+  );
+  const setIsParentPickerVisible = useCallback(
+    (visible: boolean) =>
+      dispatch({ type: 'SET_PICKER', picker: 'isParentPickerVisible', visible }),
+    [],
+  );
+  const setIsPayFromPickerVisible = useCallback(
+    (visible: boolean) =>
+      dispatch({ type: 'SET_PICKER', picker: 'isPayFromPickerVisible', visible }),
+    [],
+  );
 
   const commitSave = useCallback(
     async (balanceChange?: BalanceChangeCounterparty) => {
@@ -286,9 +355,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       });
 
       if (!saveResult.ok) {
-        setLocalFormError(saveResult.error);
-        setIsBalanceClassifyVisible(false);
-        setPendingBalanceDiscrepancy(0);
+        dispatch({ type: 'SET_LOCAL_ERROR', error: saveResult.error });
+        dispatch({ type: 'HIDE_BALANCE_CLASSIFY' });
         return;
       }
 
@@ -300,26 +368,25 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         currentBalance !== undefined &&
         isBalanceChangedBeyondEpsilon(targetBalance, currentBalance);
 
-      // Edit + balance change on Asset/Liability/Equity → classify before save.
       if (
         !balanceChange &&
         balanceChanged &&
         needsBalanceChangeClassification(payload.accountType)
       ) {
-        setPendingBalanceDiscrepancy(targetBalance - currentBalance);
-        setIsBalanceClassifyVisible(true);
+        dispatch({
+          type: 'SHOW_BALANCE_CLASSIFY',
+          discrepancy: targetBalance - currentBalance,
+        });
         return;
       }
 
-      setIsBalanceClassifyVisible(false);
+      dispatch({ type: 'HIDE_BALANCE_CLASSIFY' });
       try {
         await persistence.handleSave({ payload, balanceChange });
       } catch (error) {
         showErrorAlert(
           error instanceof ValidationError ? error : new ValidationError('Failed to save account'),
         );
-      } finally {
-        setPendingBalanceDiscrepancy(0);
       }
     },
     [
@@ -344,8 +411,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   }, [commitSave]);
 
   const onBalanceClassifyClose = useCallback(() => {
-    setIsBalanceClassifyVisible(false);
-    setPendingBalanceDiscrepancy(0);
+    dispatch({ type: 'HIDE_BALANCE_CLASSIFY' });
   }, []);
 
   const onBalanceClassifySelect = useCallback(
@@ -405,39 +471,46 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const metadata = useMemo(
     (): AccountMetadataFormModel => ({
       statementDay: metadataValues.statementDay,
-      setStatementDay: v => metadataForm.updateField('statementDay', v),
+      setStatementDay: v => updateMetadataField('statementDay', v),
       dueDay: metadataValues.dueDay,
-      setDueDay: v => metadataForm.updateField('dueDay', v),
+      setDueDay: v => updateMetadataField('dueDay', v),
       creditLimitAmount: metadataValues.creditLimitAmount,
-      setCreditLimitAmount: v => metadataForm.updateField('creditLimitAmount', v),
+      setCreditLimitAmount: v => updateMetadataField('creditLimitAmount', v),
       apr: metadataValues.apr,
-      setApr: v => metadataForm.updateField('apr', v),
+      setApr: v => updateMetadataField('apr', v),
       emiDay: metadataValues.emiDay,
-      setEmiDay: v => metadataForm.updateField('emiDay', v),
+      setEmiDay: v => updateMetadataField('emiDay', v),
       loanTenureMonths: metadataValues.loanTenureMonths,
-      setLoanTenureMonths: v => metadataForm.updateField('loanTenureMonths', v),
+      setLoanTenureMonths: v => updateMetadataField('loanTenureMonths', v),
       minimumPaymentAmount: metadataValues.minimumPaymentAmount,
-      setMinimumPaymentAmount: v => metadataForm.updateField('minimumPaymentAmount', v),
+      setMinimumPaymentAmount: v => updateMetadataField('minimumPaymentAmount', v),
       minimumPaymentPercent: metadataValues.minimumPaymentPercent,
-      setMinimumPaymentPercent: v => metadataForm.updateField('minimumPaymentPercent', v),
+      setMinimumPaymentPercent: v => updateMetadataField('minimumPaymentPercent', v),
       payFromAccountId: metadataValues.payFromAccountId,
       payFromAccountName,
-      setPayFromAccountId: v => metadataForm.updateField('payFromAccountId', v),
-      isPayFromPickerVisible,
+      setPayFromAccountId: v => updateMetadataField('payFromAccountId', v),
+      isPayFromPickerVisible: pickers.isPayFromPickerVisible,
       setIsPayFromPickerVisible,
       notes: metadataValues.notes,
-      setNotes: v => metadataForm.updateField('notes', v),
+      setNotes: v => updateMetadataField('notes', v),
       isMinPaymentOnly: metadataValues.isMinPaymentOnly,
-      setIsMinPaymentOnly: v => metadataForm.updateField('isMinPaymentOnly', v),
+      setIsMinPaymentOnly: v => updateMetadataField('isMinPaymentOnly', v),
     }),
-    [metadataValues, metadataForm.updateField, payFromAccountName, isPayFromPickerVisible],
+    [
+      metadataValues,
+      updateMetadataField,
+      payFromAccountName,
+      pickers.isPayFromPickerVisible,
+      setIsPayFromPickerVisible,
+    ],
   );
 
   const balanceClassify = useMemo(() => {
-    if (!accountId || !isBalanceClassifyVisible) return null;
-    const absDelta = Math.abs(pendingBalanceDiscrepancy);
+    if (!accountId || !balanceClassifyDraft.visible) return null;
+    const absDelta = Math.abs(balanceClassifyDraft.discrepancy);
     const signedLabel = CurrencyFormatter.formatAmount(absDelta, selectedCurrency);
-    const discrepancyLabel = pendingBalanceDiscrepancy >= 0 ? `+${signedLabel}` : `−${signedLabel}`;
+    const discrepancyLabel =
+      balanceClassifyDraft.discrepancy >= 0 ? `+${signedLabel}` : `−${signedLabel}`;
 
     return {
       visible: true,
@@ -446,7 +519,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       editedAccountName: accountName.trim() || 'This account',
       editedAccountType: accountType,
       currencyCode: selectedCurrency,
-      discrepancy: pendingBalanceDiscrepancy,
+      discrepancy: balanceClassifyDraft.discrepancy,
       discrepancyLabel,
       onClose: onBalanceClassifyClose,
       onSelect: onBalanceClassifySelect,
@@ -454,8 +527,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   }, [
     accountId,
     accountName,
-    isBalanceClassifyVisible,
-    pendingBalanceDiscrepancy,
+    balanceClassifyDraft,
     selectedCurrency,
     accounts,
     accountType,
@@ -480,7 +552,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setSelectedCurrency,
     selectedIcon,
     setSelectedIcon,
-    isIconPickerVisible,
+    isIconPickerVisible: pickers.isIconPickerVisible,
     setIsIconPickerVisible,
     initialBalance,
     onInitialBalanceChange,
@@ -498,7 +570,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setParentAccountId,
     potentialParents,
     payFromAccountOptions,
-    isParentPickerVisible,
+    isParentPickerVisible: pickers.isParentPickerVisible,
     setIsParentPickerVisible,
     isParent: effectiveIsParent,
     showCurrency,
