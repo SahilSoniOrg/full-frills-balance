@@ -144,19 +144,19 @@ export class SafeToSpendMapper {
     };
   }
 
-  private static resolveLabels(obj: any, days: number): any {
+  private static resolveLabels<T>(obj: T, days: number): T {
     if (typeof obj === 'function') {
-      return obj(days);
+      return (obj as (value: number) => unknown)(days) as T;
     }
     if (Array.isArray(obj)) {
-      return obj.map(item => SafeToSpendMapper.resolveLabels(item, days));
+      return obj.map(item => SafeToSpendMapper.resolveLabels(item, days)) as T;
     }
     if (typeof obj === 'object' && obj !== null) {
-      const resolved: any = {};
-      for (const key in obj) {
-        resolved[key] = SafeToSpendMapper.resolveLabels(obj[key], days);
+      const resolved: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        resolved[key] = SafeToSpendMapper.resolveLabels(value, days);
       }
-      return resolved;
+      return resolved as T;
     }
     return obj;
   }
