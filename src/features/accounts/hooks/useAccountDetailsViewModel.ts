@@ -17,9 +17,8 @@ export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const { defaultShareFormat } = useUI();
-  const data = useAccountDetailsData();
+
   const {
-    accountId,
     workplaceId,
     workplaceCurrency,
     account,
@@ -27,32 +26,16 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accounts,
     rawSubBalances,
     dashboardLoading,
-    accountLoading,
-    accountMissing,
-    accountName,
-    accountType,
-    accountSubtypeLabel,
-    accountTypeVariant,
-    accountIcon,
-    accountTypeColorKey,
-    isDeleted,
     isAssetOrExpense,
-    balanceCurrency,
-    balanceText,
     transactionCount,
-    transactionCountText,
+    balanceCurrency,
+    accountId,
+    accountType,
+    isDeleted,
     reconciledAt,
     dateRange,
-    periodFilter,
-    isDatePickerVisible,
-    showDatePicker,
-    hideDatePicker,
-    navigatePrevious,
-    navigateNext,
-    onDateSelect,
-    unreconciledCount,
-    unreconciledAmountText,
-  } = data;
+    ...dataVm
+  } = useAccountDetailsData();
 
   const {
     deleteAccount,
@@ -61,15 +44,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     mergeAccounts,
   } = useAccountActions(workplaceId);
 
-  const {
-    precision,
-    secondaryBalances,
-    periodMetrics,
-    periodMetricsFormatted,
-    chartData,
-    rollingAverageData,
-    xTicks,
-  } = useAccountDetailsMetrics({
+  const { precision, ...metricsVm } = useAccountDetailsMetrics({
     accountId,
     workplaceId,
     accountType,
@@ -79,15 +54,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     balanceData,
   });
 
-  const {
-    isParent,
-    subAccountCount,
-    subAccounts,
-    subAccountsLoading,
-    isSubAccountsModalVisible,
-    onShowSubAccounts,
-    onHideSubAccounts,
-  } = useAccountHierarchyTree({
+  const hierarchyVm = useAccountHierarchyTree({
     accountId,
     account,
     accounts,
@@ -96,21 +63,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dashboardLoading,
   });
 
-  const {
-    transactions,
-    transactionsLoading,
-    transactionsLoadingMore,
-    transactionItems,
-    onLoadMore,
-    selectedIds,
-    isSelectionModeActive,
-    onLongPressItem,
-    toggleSelection,
-    selectAll,
-    clearItems,
-    exitSelectionMode,
-    setSelectedIds,
-  } = useAccountTransactionFeed({
+  const { transactions, ...feedVm } = useAccountTransactionFeed({
     accountId,
     workplaceId,
     dateRange,
@@ -119,17 +72,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconciledAt,
   });
 
-  const {
-    headerActions,
-    isReconcileModalVisible,
-    setIsReconcileModalVisible,
-    onConfirmReconcile,
-    isMergeModalVisible,
-    setIsMergeModalVisible,
-    mergeCandidates,
-    onConfirmMerge,
-    onShareSelected,
-  } = useAccountDetailsActions({
+  const actionsVm = useAccountDetailsActions({
     accountId,
     account,
     accounts,
@@ -142,76 +85,33 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconcileAccount,
     mergeAccounts,
     transactions,
-    selectedIds,
+    selectedIds: feedVm.selectedIds,
   });
+
+  const onBack = useCallback(() => AppNavigation.back(), []);
+  const onAuditPress = useCallback(
+    () => AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId }),
+    [accountId],
+  );
+  const onAddPress = useCallback(
+    () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
+    [accountId],
+  );
 
   return {
     accountId,
-    accountLoading,
-    accountMissing,
-    accountName,
     accountType,
-    accountSubtypeLabel,
-    accountTypeVariant,
-    accountIcon,
-    accountTypeColorKey,
     isDeleted,
-    currencyCode: balanceCurrency,
-    balanceText,
-    transactionCountText,
-    headerActions,
-    isReconcileModalVisible,
-    setIsReconcileModalVisible,
-    onConfirmReconcile,
     reconciledAt,
-    onBack: useCallback(() => AppNavigation.back(), []),
-    onAuditPress: useCallback(
-      () => AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId }),
-      [accountId],
-    ),
-    onAddPress: useCallback(
-      () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
-      [accountId],
-    ),
     dateRange,
-    periodFilter,
-    isDatePickerVisible,
-    showDatePicker,
-    hideDatePicker,
-    navigatePrevious,
-    navigateNext,
-    onDateSelect,
-    chartData,
-    rollingAverageData,
-    xTicks,
-    periodMetrics,
-    periodMetricsFormatted,
-    transactionsLoading,
-    transactionsLoadingMore,
-    transactionItems,
-    onLoadMore,
-    secondaryBalances,
-    isParent,
-    subAccountCount,
-    subAccounts,
-    subAccountsLoading,
-    isSubAccountsModalVisible,
-    onShowSubAccounts,
-    onHideSubAccounts,
-    unreconciledCount,
-    unreconciledAmountText,
-    selectedIds,
-    isSelectionModeActive,
-    onLongPressItem,
-    toggleSelection,
-    selectAll,
-    clearItems,
-    exitSelectionMode,
-    onShareSelected,
-    setSelectedIds,
-    isMergeModalVisible,
-    setIsMergeModalVisible,
-    mergeCandidates,
-    onConfirmMerge,
+    currencyCode: balanceCurrency,
+    onBack,
+    onAuditPress,
+    onAddPress,
+    ...dataVm,
+    ...metricsVm,
+    ...hierarchyVm,
+    ...feedVm,
+    ...actionsVm,
   };
 }
