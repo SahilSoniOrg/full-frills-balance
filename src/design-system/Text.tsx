@@ -75,9 +75,9 @@ export function Text({
       textAlign: align,
       fontFamily: resolvedFontFamily,
       fontStyle: (italic ? 'italic' : 'normal') as TextStyle['fontStyle'],
-      marginTop: resolveMarginSpacing(marginTop) as any,
-      marginBottom: resolveMarginSpacing(marginBottom) as any,
-      marginHorizontal: resolveMarginSpacing(marginHorizontal) as any,
+      marginTop: resolveMarginSpacing(marginTop) as number | undefined,
+      marginBottom: resolveMarginSpacing(marginBottom) as number | undefined,
+      marginHorizontal: resolveMarginSpacing(marginHorizontal) as number | undefined,
       opacity,
       ...Typography.androidDefaults,
     };

@@ -27,7 +27,7 @@ export const Skeleton = ({ width = '100%', height = 20, radius = 'sm', color }: 
       width={width}
       height={height}
       borderRadius={radius}
-      background={baseColor as any}
+      unsafe_backgroundRaw={baseColor}
       style={styles.container}
     >
       {!reduceMotion && (
