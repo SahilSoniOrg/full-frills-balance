@@ -2,17 +2,16 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
+import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics-service';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
 import {
-  buildSmsRulePreviewInput,
   buildStructuredSmsRuleConditions,
   getSmsRuleConditionValue,
   isSmsRuleFormValid,
   parseSmsRuleActions,
   parseSmsRuleConditions,
   shouldShowSmsRuleAccountMapping,
-  smsRulePreviewHasConditions,
   validateSmsRuleRegexPatterns,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsService } from '@/src/services/sms-service';
@@ -104,8 +103,6 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   const [isActive, setIsActive] = useState(true);
   const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewMatches, setPreviewMatches] = useState<TransactionInboxRecord[]>([]);
-
   useEffect(() => {
     if (!id) return;
 
@@ -185,45 +182,12 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     ],
   );
 
-  useEffect(() => {
-    let active = true;
-
-    const loadPreview = async () => {
-      const input = buildSmsRulePreviewInput(
-        mode,
-        structuredConditions,
-        legacySenderMatch,
-        legacyBodyMatch,
-      );
-
-      const hasConditions = smsRulePreviewHasConditions(
-        mode,
-        structuredConditions,
-        legacySenderMatch,
-      );
-
-      if (!hasConditions) {
-        setPreviewMatches([]);
-        return;
-      }
-
-      try {
-        const matches = await smsService.previewRuleMatches(input);
-        if (active) {
-          setPreviewMatches(matches);
-        }
-      } catch {
-        if (active) {
-          setPreviewMatches([]);
-        }
-      }
-    };
-
-    loadPreview();
-    return () => {
-      active = false;
-    };
-  }, [legacyBodyMatch, legacySenderMatch, mode, structuredConditions]);
+  const previewMatches = useSmsRulePreview(
+    mode,
+    structuredConditions,
+    legacySenderMatch,
+    legacyBodyMatch,
+  );
 
   const showAccountMapping = shouldShowSmsRuleAccountMapping(disposition);
   const priorityNumber = priority.trim() ? Number(priority.trim()) : 100;
