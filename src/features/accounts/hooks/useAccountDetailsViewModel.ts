@@ -1,18 +1,16 @@
-import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { useAccountDetailsActions } from '@/src/features/accounts/hooks/details/useAccountDetailsActions';
 import {
+  AccountDetailsViewModel,
   PeriodMetrics,
-  useAccountDetailsMetrics,
-} from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
-import {
   SubAccountViewModel,
-  useAccountHierarchyTree,
-} from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
+} from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
+import { useAccountDetailsActions } from '@/src/features/accounts/hooks/details/useAccountDetailsActions';
+import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
+import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
 import { useAccountActions, useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
@@ -32,7 +30,6 @@ import {
   PlainAccount,
   TransactionId,
 } from '@/src/types/domain';
-import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -41,86 +38,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
 import { of } from 'rxjs';
 
-export { PeriodMetrics, SubAccountViewModel };
-
-export interface AccountDetailsViewModel {
-  accountId: AccountId;
-  accountLoading: boolean;
-  accountMissing: boolean;
-  accountName: string;
-  accountType: string;
-  accountSubtypeLabel: string;
-  accountTypeVariant: string;
-  accountIcon: IconName | null;
-  accountTypeColorKey: string;
-  isDeleted: boolean;
-  currencyCode: string;
-  balanceText: string;
-  transactionCountText: string;
-  headerActions: {
-    canRecover: boolean;
-    onRecover: () => void;
-    onEdit: () => void;
-    onDelete: () => void;
-    onReconcile: () => void;
-    onMerge: () => void;
-    canDelete: boolean;
-    canMerge: boolean;
-  };
-  isReconcileModalVisible: boolean;
-  setIsReconcileModalVisible: (visible: boolean) => void;
-  onConfirmReconcile: () => void;
-  reconciledAt: Date | null;
-  onBack: () => void;
-  onAuditPress: () => void;
-  onAddPress: () => void;
-  dateRange: DateRange | null;
-  periodFilter: PeriodFilter;
-  isDatePickerVisible: boolean;
-  showDatePicker: () => void;
-  hideDatePicker: () => void;
-  navigatePrevious?: () => void;
-  navigateNext?: () => void;
-  onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
-  chartData: { x: number; y: number }[];
-  rollingAverageData: { x: number; y: number }[];
-  xTicks: number[];
-  periodMetrics: PeriodMetrics;
-  periodMetricsFormatted: {
-    totalIncreaseText: string;
-    totalDecreaseText: string;
-    netChangeText: string;
-    dailyAverageText: string | null;
-    isLoading: boolean;
-  };
-  transactionsLoading: boolean;
-  transactionsLoadingMore: boolean;
-  transactionItems: TransactionListItem[];
-  onLoadMore?: () => void;
-  secondaryBalances: { currencyCode: string; amountText: string }[];
-  isParent: boolean;
-  subAccountCount: number;
-  subAccounts: SubAccountViewModel[];
-  subAccountsLoading: boolean;
-  isSubAccountsModalVisible: boolean;
-  onShowSubAccounts: () => void;
-  onHideSubAccounts: () => void;
-  unreconciledCount: number;
-  unreconciledAmountText: string;
-  selectedIds: Set<TransactionId>;
-  isSelectionModeActive: boolean;
-  onLongPressItem: (id: TransactionId) => void;
-  toggleSelection: (id: TransactionId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<TransactionId>>>;
-  isMergeModalVisible: boolean;
-  setIsMergeModalVisible: (visible: boolean) => void;
-  mergeCandidates: (Account | PlainAccount)[];
-  onConfirmMerge: (targetAccountId: AccountId) => void;
-}
+export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
