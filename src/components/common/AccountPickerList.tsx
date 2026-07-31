@@ -153,8 +153,13 @@ type AccountPickerListProps = {
   onClose: () => void;
   excludeParentAccounts?: boolean;
 } & (
-  | { isMultiple: true; onApply: (ids: Set<AccountId>) => void; onSelect?: never }
-  | { isMultiple: false; onSelect: (id: AccountId) => void; onApply?: never }
+  | {
+      isMultiple: true;
+      onToggle: (id: AccountId) => void;
+      onApply: (ids: Set<AccountId>) => void;
+      onSelect?: never;
+    }
+  | { isMultiple: false; onSelect: (id: AccountId) => void; onApply?: never; onToggle?: never }
 );
 
 export function AccountPickerList(props: AccountPickerListProps) {
@@ -162,6 +167,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     accounts,
     selectedIds,
     onSelect,
+    onToggle,
     onApply,
     onCreateRequest,
     onClose,
@@ -170,14 +176,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
   } = props;
 
   const { theme } = useTheme();
-
-  // Immutability Fix: Always clone the Set to prevent reference sharing
-  const [localSelected, setLocalSelected] = useState<Set<AccountId>>(() => new Set(selectedIds));
-
-  // Sync with prop changes using fresh cloning
-  useEffect(() => {
-    setTimeout(() => setLocalSelected(new Set(selectedIds)), 0);
-  }, [selectedIds]);
 
   const {
     searchQuery,
@@ -193,28 +191,23 @@ export function AccountPickerList(props: AccountPickerListProps) {
   // Memoize extraData to prevent SectionList identity churn
   const extraData = useMemo(
     () => ({
-      selectedIds: isMultiple ? localSelected : selectedIds,
+      selectedIds,
       collapsedSections,
       isSearchMode,
     }),
-    [isMultiple, localSelected, selectedIds, collapsedSections, isSearchMode],
+    [selectedIds, collapsedSections, isSearchMode],
   );
 
   const handleToggleSelection = useCallback(
     (id: AccountId) => {
-      if (isMultiple) {
-        setLocalSelected(prev => {
-          const next = new Set(prev);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
-        });
+      if (isMultiple && onToggle) {
+        onToggle(id);
       } else if (onSelect) {
         onSelect(id);
         Keyboard.dismiss();
       }
     },
-    [isMultiple, onSelect],
+    [isMultiple, onToggle, onSelect],
   );
 
   const renderEmpty = useCallback(
@@ -310,8 +303,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       const isCollapsed = collapsedSections.has(sectionKey) && !isSearchMode;
       if (isCollapsed) return null;
 
-      const currentSelected = isMultiple ? localSelected : selectedIds;
-      const isSelected = currentSelected.has(item.id);
+      const isSelected = selectedIds.has(item.id);
 
       return (
         <AccountPickerRow
@@ -322,14 +314,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
         />
       );
     },
-    [
-      collapsedSections,
-      isSearchMode,
-      isMultiple,
-      localSelected,
-      selectedIds,
-      handleToggleSelection,
-    ],
+    [collapsedSections, isSearchMode, isMultiple, selectedIds, handleToggleSelection],
   );
 
   return (
@@ -378,11 +363,11 @@ export function AccountPickerList(props: AccountPickerListProps) {
           <AppButton
             onPress={() => {
               Keyboard.dismiss();
-              onApply(localSelected);
+              onApply(selectedIds);
             }}
             variant="primary"
           >
-            {AppConfig.strings.accounts.picker.applySelection(localSelected.size)}
+            {AppConfig.strings.accounts.picker.applySelection(selectedIds.size)}
           </AppButton>
         </View>
       )}
