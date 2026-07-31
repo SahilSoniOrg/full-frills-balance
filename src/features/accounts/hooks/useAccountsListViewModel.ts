@@ -33,8 +33,6 @@ export interface AccountSectionViewModel {
 
 export interface AccountsListViewModel {
   sections: AccountSectionViewModel[];
-  isRefreshing: boolean;
-  onRefresh: () => void;
   onToggleSection: (title: string) => void;
   onAccountPress: (accountId: AccountId) => void;
   onCollapseAccount: (accountId: AccountId) => void;
@@ -166,21 +164,15 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       dataVersion: version,
     });
 
-  const {
-    onAccountPress,
-    onCreateAccount,
-    onReorderPress,
-    onManageHierarchy,
-    onTogglePrivacy,
-    onRefresh,
-  } = useAccountsListActions({
-    accounts,
-    balancesByAccountId,
-    expandedAccountIds,
-    setExpandedAccountIds,
-    activeTab,
-    togglePrivacyMode,
-  });
+  const { onAccountPress, onCreateAccount, onReorderPress, onManageHierarchy, onTogglePrivacy } =
+    useAccountsListActions({
+      accounts,
+      balancesByAccountId,
+      expandedAccountIds,
+      setExpandedAccountIds,
+      activeTab,
+      togglePrivacyMode,
+    });
 
   const filteredAccounts = useMemo(
     () => filterAccountsBySearch(accounts, searchQuery),
@@ -230,8 +222,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   return {
     sections,
-    isRefreshing: isLoading,
-    onRefresh,
     onToggleSection,
     onAccountPress,
     onCollapseAccount,

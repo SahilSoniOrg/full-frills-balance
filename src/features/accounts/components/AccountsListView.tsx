@@ -27,8 +27,6 @@ const TAB_OPTIONS = [
 
 export function AccountsListView({
   sections,
-  isRefreshing,
-  onRefresh,
   onToggleSection,
   onAccountPress,
   onCollapseAccount,
@@ -107,8 +105,6 @@ export function AccountsListView({
 
         <SectionList
           sections={sections}
-          refreshing={isRefreshing}
-          onRefresh={onRefresh}
           keyExtractor={(item: AccountCardViewModel) => item.id}
           renderSectionHeader={({ section }: { section: AccountSectionViewModel }) => {
             const isStartOfGroup =

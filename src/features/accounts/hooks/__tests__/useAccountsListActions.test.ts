@@ -106,13 +106,11 @@ describe('useAccountsListActions', () => {
       result.current.onReorderPress();
       result.current.onManageHierarchy();
       result.current.onTogglePrivacy();
-      result.current.onRefresh();
     });
 
     expect(AppNavigation.toCategoryCreation).toHaveBeenCalled();
     expect(AppNavigation.toAccountReorder).toHaveBeenCalledWith('categories');
     expect(AppNavigation.toManageHierarchy).toHaveBeenCalledWith({ filterMode: 'categories' });
     expect(traceService.startTrace).toHaveBeenCalledWith('Toggle Privacy Mode');
-    expect(traceService.startTrace).toHaveBeenCalledWith('Refresh Account List');
   });
 });

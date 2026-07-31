@@ -77,17 +77,11 @@ export function useAccountsListActions({
     togglePrivacyMode();
   }, [togglePrivacyMode]);
 
-  const onRefresh = useCallback(() => {
-    traceService.startTrace('Refresh Account List');
-    // Refresh is handled reactively by observables.
-  }, []);
-
   return {
     onAccountPress,
     onCreateAccount,
     onReorderPress,
     onManageHierarchy,
     onTogglePrivacy,
-    onRefresh,
   };
 }
