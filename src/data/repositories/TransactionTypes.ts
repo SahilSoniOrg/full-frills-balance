@@ -1,4 +1,5 @@
-import { AccountId, AccountType, TransactionId } from '@/src/types/domain';
+import { AccountId, AccountType, JournalId, TransactionId } from '@/src/types/domain';
+import { TransactionType } from '../models/Transaction';
 
 /**
  * Valid primitive types for raw SQL query arguments.
@@ -56,6 +57,19 @@ export interface RecurringPattern {
   description?: string;
   firstDate: number;
   lastDate: number;
+}
+
+/**
+ * Minimal transaction projection used by insight calculations.
+ */
+export interface TransactionMetadata {
+  id: TransactionId;
+  journalId: JournalId;
+  accountId: AccountId;
+  amount: number;
+  transactionDate: number;
+  transactionType: TransactionType;
+  currencyCode: string;
 }
 
 /**

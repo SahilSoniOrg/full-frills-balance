@@ -1,4 +1,6 @@
-import { AccountSubtype } from '@/src/data/models/Account';
+import Account, { AccountSubtype } from '@/src/data/models/Account';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { RecurringPattern, TransactionMetadata } from '@/src/data/repositories/TransactionTypes';
 
 export interface Insight {
   id: string;
@@ -15,9 +17,9 @@ export interface Insight {
 }
 
 export interface CalculationInput {
-  recurringCandidates: any[];
-  expenseTransactions: any[];
-  accounts: any[];
-  activePlannedPayments: any[];
+  recurringCandidates: RecurringPattern[];
+  expenseTransactions: TransactionMetadata[];
+  accounts: Account[];
+  activePlannedPayments: PlannedPayment[];
   workplaceId: string;
 }

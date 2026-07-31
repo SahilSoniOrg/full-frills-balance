@@ -14,6 +14,7 @@ import {
   RawSQLArg,
   RebuildTransaction,
   RecurringPattern,
+  TransactionMetadata,
 } from './TransactionTypes';
 
 export interface AccountPeriodMetrics {
@@ -215,17 +216,7 @@ export class TransactionRawRepository {
     accountIds: string[],
     startDate: number,
     endDate: number,
-  ): Promise<
-    {
-      id: TransactionId;
-      journalId: JournalId;
-      accountId: AccountId;
-      amount: number;
-      transactionDate: number;
-      transactionType: TransactionType;
-      currencyCode: string;
-    }[]
-  > {
+  ): Promise<TransactionMetadata[]> {
     if (accountIds.length === 0) return [];
 
     const accountPlaceholders = accountIds.map(() => '?').join(',');
