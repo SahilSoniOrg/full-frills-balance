@@ -1,4 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import type { Theme } from '@/src/constants/design-tokens';
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useMemo } from 'react';
@@ -23,7 +24,7 @@ interface UseReportChartDataProps {
   sankeyData: SankeyData;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
-  theme: any;
+  theme: Theme;
   workplaceId: WorkplaceId;
 }
 

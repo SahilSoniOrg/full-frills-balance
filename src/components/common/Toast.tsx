@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig } from '@/src/constants';
-import { Size, Spacing, ZIndex, Typography } from '@/src/constants/design-tokens';
+import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
@@ -95,7 +95,7 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
   );
 }
 
-function getToastColors(type: ToastPayload['type'], theme: any) {
+function getToastColors(type: ToastPayload['type'], theme: Theme) {
   switch (type) {
     case 'success':
       return {
