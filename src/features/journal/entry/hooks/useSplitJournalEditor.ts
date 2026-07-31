@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
@@ -12,9 +13,9 @@ import {
 } from '@/src/services/journal/splitJournalHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournalEditor } from './useJournalEditor';
+import { useJournalNavMemory } from './useJournalNavMemory';
 
 export interface UseSplitJournalEditorProps {
   accounts: Account[];
@@ -29,6 +30,8 @@ export function useSplitJournalEditor({
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps) {
+  const { workplaceId } = useWorkplace();
+  const journalNav = useJournalNavMemory(workplaceId);
   const { transactionAccounts, expenseAccounts } = useAccountSelection({ accounts });
   const initializedRef = useRef(false);
 
@@ -53,12 +56,12 @@ export function useSplitJournalEditor({
   const resolvedSourceAccountId = useMemo(() => {
     if (sourceAccountId !== EMPTY_ACCOUNT_ID) return sourceAccountId;
     if (!isActive || isEdit) return EMPTY_ACCOUNT_ID;
-    const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
+    const lastSourceId = journalNav.lastUsedSourceAccountId;
     if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
       return lastSourceId;
     }
     return EMPTY_ACCOUNT_ID;
-  }, [sourceAccountId, isActive, isEdit, transactionAccounts]);
+  }, [sourceAccountId, isActive, isEdit, transactionAccounts, journalNav]);
 
   useEffect(() => {
     if (!isActive) {
@@ -145,11 +148,11 @@ export function useSplitJournalEditor({
     }
 
     if (resolvedSourceAccountId) {
-      await preferences.journalNav.setLastUsedSourceAccountId(resolvedSourceAccountId);
+      journalNav.setLastUsedSourceAccountId(resolvedSourceAccountId);
     }
 
     await submit(overrides);
-  }, [isValid, description, setDescription, submit, resolvedSourceAccountId]);
+  }, [isValid, description, setDescription, submit, resolvedSourceAccountId, journalNav]);
 
   return useMemo(
     () => ({

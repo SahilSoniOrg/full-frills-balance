@@ -19,10 +19,10 @@ import {
   TabType,
 } from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
+import { useJournalNavMemory } from './useJournalNavMemory';
 
 export interface UseSimpleJournalEditorProps {
   accounts: Account[];
@@ -49,7 +49,8 @@ export function useSimpleJournalEditor({
   editor,
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
-  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultCurrencyCode: workplaceCurrency, workplaceId } = useWorkplace();
+  const journalNav = useJournalNavMemory(workplaceId);
 
   // Derived State from Editor
   const type = editor.transactionType;
@@ -235,8 +236,8 @@ export function useSimpleJournalEditor({
   useEffect(() => {
     if (!editor.isGuidedMode || editor.isEdit) return;
 
-    const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
-    const lastDestId = preferences.journalNav.lastUsedDestinationAccountId;
+    const lastSourceId = journalNav.lastUsedSourceAccountId;
+    const lastDestId = journalNav.lastUsedDestinationAccountId;
 
     let shouldUpdate = false;
     let newSourceId: AccountId | undefined;
@@ -287,7 +288,7 @@ export function useSimpleJournalEditor({
         });
       });
     }
-  }, [type, transactionAccounts, destinationId, sourceId, accounts, editor]); // Run when type changes or accounts load
+  }, [type, transactionAccounts, destinationId, sourceId, accounts, editor, journalNav]); // Run when type changes or accounts load
 
   // Hydrate account details into lines if they were initialized just with accountId (like from deep link or params)
   useEffect(() => {
@@ -329,14 +330,13 @@ export function useSimpleJournalEditor({
     }
 
     // Save preferences
-    if (type === 'expense' || type === 'transfer')
-      await preferences.journalNav.setLastUsedSourceAccountId(sourceId);
+    if (type === 'expense' || type === 'transfer') journalNav.setLastUsedSourceAccountId(sourceId);
     if (type === 'income' || type === 'transfer')
-      await preferences.journalNav.setLastUsedDestinationAccountId(destinationId);
+      journalNav.setLastUsedDestinationAccountId(destinationId);
 
     // Use the main editor submit
     await editor.submit(overrides);
-  }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
+  }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount, journalNav]);
 
   const accountSections = useMemo((): SimpleFormSection[] => {
     return buildSimpleFormAccountSections(type, {

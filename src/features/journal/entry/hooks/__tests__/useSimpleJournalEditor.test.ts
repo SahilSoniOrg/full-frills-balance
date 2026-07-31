@@ -37,6 +37,7 @@ jest.mock('@/src/utils/preferences', () => ({
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({
+    workplaceId: 'wp-1',
     activeWorkplaceId: 'wp-1',
     activeWorkplace: { id: 'wp-1', name: 'Personal' },
     defaultCurrencyCode: 'USD',
