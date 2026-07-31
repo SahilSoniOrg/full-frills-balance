@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
+import { formatAmount } from '@/src/features/dashboard/utils/formatAmount';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
@@ -104,7 +105,8 @@ describe('SafeToSpendMapper', () => {
   it('returns fallback data if report is missing', () => {
     const vm = SafeToSpendMapper.mapToViewModel({} as any, mockOptions);
     expect(vm.safeToSpend).toBe(0);
-    expect(vm.displaySafeToSpend).toBe('---');
+    expect(vm.isLoading).toBe(true);
+    expect(vm.isPrivacyMode).toBe(false);
   });
 
   it('correctly calculates effectiveTotal for bar chart scale', () => {
@@ -126,28 +128,21 @@ describe('SafeToSpendMapper', () => {
     expect(vm.effectiveTotal).toBe(2000);
   });
 
-  it('handles privacy mode by masking display values while keeping raw list amounts', () => {
+  it('keeps raw amounts and privacy flag; leaves formatting to formatAmount', () => {
     const privacyOptions = { ...mockOptions, isPrivacyMode: true };
     const vm = mapToVM(mockResult, privacyOptions);
 
-    // Masked display values
-    expect(vm.displaySafeToSpend).toBe(AppConfig.privacyMask);
-    expect(vm.displayTotalLiquidAssets).toBe(AppConfig.privacyMask);
+    expect(vm.safeToSpend).toBe(1000);
+    expect(vm.totalLiquidAssets).toBe(1500);
     expect(vm.isPrivacyMode).toBe(true);
+    expect(formatAmount(vm.safeToSpend, vm.currencyCode, vm.isPrivacyMode)).toBe(
+      AppConfig.privacyMask,
+    );
 
-    // Raw list amounts preserved — leaves format from isPrivacyMode / formatValue
+    // Raw list amounts preserved
     expect(vm.income[0].amount).not.toBe(0);
     expect(vm.committed[0]?.amount).not.toBe(0);
     expect(vm.debt[0]?.amount).not.toBe(0);
-  });
-
-  it('handles small values with "< $1" formatting', () => {
-    const smallResult = {
-      ...mockResult,
-      summary: { ...mockResult.summary, safeToSpend: 0.2 },
-    };
-    const vm = mapToVM(smallResult as any);
-    expect(vm.displaySafeToSpend).toBe('< $1');
   });
 
   it('resolves dynamic labels with safeToSpendDays', () => {

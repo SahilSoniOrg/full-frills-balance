@@ -9,6 +9,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
 
 function parseFormulaItem(
@@ -41,7 +42,6 @@ export const SafeToSpendExplanationModal = ({
   const {
     info,
     labels,
-    formatValue,
     totalLiquidAssets,
     totalFutureInflow,
     committedTotal,
@@ -53,7 +53,13 @@ export const SafeToSpendExplanationModal = ({
     income,
     committed,
     debt,
+    currencyCode,
+    isPrivacyMode,
+    isLoading,
   } = viewModel;
+
+  const formatValue = (raw: number) =>
+    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   const formulaDays = viewModel.safeToSpendDays;
 
@@ -186,7 +192,9 @@ export const SafeToSpendExplanationModal = ({
           <View style={styles.expandedContentRow}>
             <SafeToSpendLedger
               labels={labels}
-              formatValue={formatValue}
+              currencyCode={currencyCode}
+              isPrivacyMode={isPrivacyMode}
+              isLoading={isLoading}
               liquidAssetSubtypes={liquidAssetSubtypes}
               accountSummaries={accountSummaries}
             />

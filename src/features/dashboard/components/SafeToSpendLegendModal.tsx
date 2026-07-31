@@ -5,6 +5,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendLegendModalProps {
   visible: boolean;
@@ -18,7 +19,6 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
   const { visible, onClose, type, viewModel, onRequestExplanation } = props;
   const {
     labels,
-    formatValue,
     committedTotal,
     committedLiabilities,
     safeToSpend,
@@ -28,7 +28,13 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
     committed: committedBreakdown,
     debt: debtBreakdown,
     safeToSpendDays,
+    currencyCode,
+    isPrivacyMode,
+    isLoading,
   } = viewModel;
+
+  const formatValue = (raw: number) =>
+    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   const { firstMajorInflowDay, committedLiabilitiesCC, committedLiabilitiesOther } = insights;
 

@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
@@ -19,7 +20,7 @@ interface SafeToSpendChartProps {
   /** From STS view model — do not read privacy hooks in this leaf. */
   isPrivacyMode: boolean;
   currencyCode: string;
-  formatValue: (val: number) => string | React.ReactNode;
+  isLoading?: boolean;
 }
 
 export const SafeToSpendChart = ({
@@ -28,10 +29,12 @@ export const SafeToSpendChart = ({
   isOverCommitted,
   isPrivacyMode,
   currencyCode,
-  formatValue,
+  isLoading = false,
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
+  const formatValue = (raw: number) =>
+    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 

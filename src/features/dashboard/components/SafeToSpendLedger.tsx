@@ -7,23 +7,29 @@ import { analytics } from '@/src/services/analytics-service';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { PlannedPaymentId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendLedgerProps {
   labels: any;
-  formatValue: (val: number) => string | React.ReactNode;
+  currencyCode: string;
+  isPrivacyMode: boolean;
+  isLoading?: boolean;
   liquidAssetSubtypes: AccountSubtype[];
   accountSummaries?: AccountSimulationSummary[];
 }
 
 export const SafeToSpendLedger = ({
   labels,
-  formatValue,
+  currencyCode,
+  isPrivacyMode,
+  isLoading = false,
   liquidAssetSubtypes,
   accountSummaries,
 }: SafeToSpendLedgerProps) => {
   const { theme } = useTheme();
+  const formatValue = (raw: number) =>
+    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   return (
     <Stack gap="md">

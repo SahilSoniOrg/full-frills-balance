@@ -4,7 +4,6 @@ import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadM
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface MapperOptions {
@@ -26,7 +25,7 @@ export interface SafeToSpendMapperInput {
 export class SafeToSpendMapper {
   /**
    * Maps a raw SafeToSpendDashboard into a UI-ready ViewModel.
-   * This is a pure function that handles formatting and derived logic.
+   * Raw numeric fields + privacy/loading flags only — leaves format in components.
    */
   static mapToViewModel(
     result: SafeToSpendMapperInput,
@@ -46,12 +45,6 @@ export class SafeToSpendMapper {
         effectiveTotal: result.totalLiquidAssets || 0,
         totalFutureInflow: 0,
         totalLiabilities: 0,
-        displaySafeToSpend: '---',
-        displayShortfall: '---',
-        displayTotalLiquidAssets: '---',
-        displayCommittedTotal: '---',
-        displayCommittedLiabilities: '---',
-        displayTotalFutureInflow: '---',
         insights: {
           firstMajorInflowDay: null,
           committedLiabilitiesCC: 0,
@@ -67,7 +60,6 @@ export class SafeToSpendMapper {
         isPrivacyMode,
         isLoading: true,
         safeToSpendDays: result.safeToSpendDays || 60,
-        formatValue: (_v: number): string => '---',
         labels: SafeToSpendMapper.resolveLabels(
           AppConfig.strings.dashboard.safeToSpendUi,
           result.safeToSpendDays || 60,
@@ -92,25 +84,6 @@ export class SafeToSpendMapper {
     const shortfall = summary?.shortfall ?? 0;
     const isOverCommitted = shortfall > 0;
     const isPositiveSafeToSpend = safeToSpend > 0;
-
-    const formatValue = (val: number) => {
-      if (isLoading) return '---';
-      if (isPrivacyMode) return AppConfig.privacyMask;
-
-      const isVerySmall = Math.abs(val) > 0 && Math.abs(val) < 0.5;
-      if (isVerySmall) {
-        const oneFormatted = CurrencyFormatter.format(1, currencyCode, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        });
-        return val > 0 ? `< ${oneFormatted}` : `> -${oneFormatted}`;
-      }
-
-      return CurrencyFormatter.format(val, currencyCode, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-    };
 
     const committedTotal = report.summary.totalCommittedPlanned ?? 0;
     const committedLiabilities = report.liabilities.committed || 0;
@@ -144,13 +117,6 @@ export class SafeToSpendMapper {
       accountSummaries: accountSummaries || [],
       liquidAssetSubtypes: liquidAssetSubtypes || [],
 
-      displaySafeToSpend: formatValue(safeToSpend),
-      displayShortfall: formatValue(shortfall),
-      displayTotalLiquidAssets: formatValue(totalLiquidAssets || 0),
-      displayCommittedTotal: formatValue(committedTotal),
-      displayCommittedLiabilities: formatValue(committedLiabilities),
-      displayTotalFutureInflow: formatValue(totalFutureInflow),
-
       insights: {
         firstMajorInflowDay,
         committedLiabilitiesCC: report.liabilities.committedCreditCard || 0,
@@ -162,7 +128,6 @@ export class SafeToSpendMapper {
       isPrivacyMode,
       isLoading,
       safeToSpendDays: result.safeToSpendDays,
-      formatValue,
       labels: SafeToSpendMapper.resolveLabels(
         AppConfig.strings.dashboard.safeToSpendUi,
         result.safeToSpendDays,
@@ -172,7 +137,7 @@ export class SafeToSpendMapper {
         result.safeToSpendDays,
       ),
 
-      // Derived UI Groupings — raw amounts; display masking via formatValue / isPrivacyMode
+      // Derived UI Groupings — raw amounts; display masking via isPrivacyMode + formatAmount
       income: selectIncomeEntries(report.allFlows),
       committed: selectCommittedEntries(report.allFlows, accountMap, firstMajorInflowDay),
       debt: selectDebtEntries(report.allFlows, accountMap),

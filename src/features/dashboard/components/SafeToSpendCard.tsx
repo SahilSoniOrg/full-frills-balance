@@ -2,6 +2,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';
@@ -25,7 +26,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
   const isWide = screenWidth >= TABLET_BREAKPOINT;
 
   const {
-    formatValue,
     isOverCommitted,
     isPositiveSafeToSpend,
     committedTotal,
@@ -33,7 +33,13 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     safeToSpend,
     shortfall,
     committedLiabilities,
+    currencyCode,
+    isPrivacyMode,
+    isLoading: vmLoading,
   } = viewModel;
+
+  const loading = isLoading ?? vmLoading;
+  const fmt = (raw: number) => formatAmountOrLoading(raw, currencyCode, isPrivacyMode, loading);
 
   const breakdown = (
     <SafeToSpendBreakdownBar
@@ -41,9 +47,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       committedTotal={committedTotal}
       committedLiabilities={committedLiabilities}
       safeToSpend={safeToSpend}
-      displaySafe={formatValue(safeToSpend)}
-      displayCommitted={formatValue(committedTotal)}
-      displayDebts={formatValue(committedLiabilities)}
+      displaySafe={fmt(safeToSpend)}
+      displayCommitted={fmt(committedTotal)}
+      displayDebts={fmt(committedLiabilities)}
       onLegendPress={onLegendPress}
     />
   );
@@ -53,9 +59,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       projection={projection}
       safeToSpend={safeToSpend}
       isOverCommitted={isOverCommitted}
-      isPrivacyMode={viewModel.isPrivacyMode}
-      currencyCode={viewModel.currencyCode}
-      formatValue={formatValue}
+      isPrivacyMode={isPrivacyMode}
+      currencyCode={currencyCode}
+      isLoading={loading}
     />
   ) : null;
 
@@ -63,9 +69,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     <SafeToSpendHeader
       isOverCommitted={isOverCommitted}
       isPositiveSafeToSpend={isPositiveSafeToSpend}
-      displayValue={formatValue(isOverCommitted ? shortfall : safeToSpend)}
+      displayValue={fmt(isOverCommitted ? shortfall : safeToSpend)}
       onInfoPress={onInfoPress}
-      isLoading={isLoading}
+      isLoading={loading}
     />
   );
 
