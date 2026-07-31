@@ -90,7 +90,7 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | # | Task | Notes |
 |---|------|--------|
 | 4.1 | Continue journal/account repository intent splits | Partial in §0 | ✅ list/write/metadata |
-| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | ✅ starter (form + editor helpers) |
+| 4.2 | Thin fat view-models (journal/account editors) — push rules to services | P1 in AUDIT | ✅ ongoing: editor line state, account-list actions/hierarchy policies, AI model lifecycle |
 | 4.3 | Coalesce ReportService / ReactiveDataService entry points | Avoid duplicate “dashboard knowledge” | ✅ accounts list MTD |
 | 4.4 | Block account delete when transactions exist (or force merge) | Invariant #11 | ✅ |
 | 4.5 | Sign rules: parity test TS vs SQL | P2 | ✅ (starter test) |
@@ -127,4 +127,4 @@ This is the **active work queue**. Check items off here; keep `FUTURE_ROADMAP.md
 | 1 | ✅ |
 | 2 | ✅ |
 | 3 | ✅ |
-| 4 | Ongoing (starters + split mode) |
+| 4 | Ongoing (policy/workflow extraction + split mode) |

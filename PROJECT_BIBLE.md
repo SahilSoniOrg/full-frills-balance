@@ -166,7 +166,7 @@ bypass (persisting unbalanced books).**
 | Feature folders | Shape is a **maximum**, not a minimum; only 2 of 14 use all four subfolders | Fine as-is; don't force empty folders |
 | Money math | `src/utils/money.ts` only | Never raw `+`/`-`/`*` on amounts |
 | Logging | `src/utils/logger.ts` | ~9 raw `console.*` calls remain |
-| Business logic | `src/services/`, not in hooks | Several 400–600 LOC view-models still hold rules |
+| Business logic | `src/services/`, not in hooks | Residual view-model orchestration remains; recent work extracted editor, hierarchy, account-list, and AI lifecycle policies |
 
 ---
 
