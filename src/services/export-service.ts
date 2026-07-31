@@ -23,6 +23,8 @@ import { AppSchema } from '@nozbe/watermelondb/Schema';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { compression } from '../utils/compression';
+import Workplace from '@/src/data/models/Workplace';
+import Collection from '@nozbe/watermelondb/Collection';
 
 export interface AccountExport {
   id: string;
@@ -297,6 +299,14 @@ function toIsoDate(value: Date | number | undefined | null): string | undefined 
 }
 
 class ExportService {
+  private getCollection(tableName: string): Collection<Model> | undefined {
+    try {
+      return database.collections.get<Model>(tableName);
+    } catch {
+      return undefined;
+    }
+  }
+
   private typeSafeColumns(tableSchema: TableSchema): { name: string; type: string }[] {
     const rawColumns = Array.isArray(tableSchema?.columns)
       ? tableSchema.columns
@@ -371,11 +381,11 @@ class ExportService {
       logger.warn(
         `[ExportService] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
       );
-      const collection = (database.collections as any).get?.(tableName);
+      const collection = this.getCollection(tableName);
       if (!collection?.query) return [];
       const rows = await collection.query().fetch();
       raws = rows.map((row: Model) => {
-        const source = (row as any)._raw ?? row;
+        const source = (row._raw as unknown as Record<string, unknown>) ?? row;
         const mapped: Record<string, unknown> = {};
         for (const snake of columnNames) {
           const camel = snakeToCamel(snake);
@@ -447,10 +457,14 @@ class ExportService {
       const fetchResults = await Promise.all(
         tableTasks.map(async task => {
           const startTime = Date.now();
-          const result = await this.fetchAndTransformTable<any>(workplaceId, task.table, (p, t) => {
-            tableProgress.set(task.table, p / t);
-            updateGlobalProgress(`Gathering ${task.name}...`);
-          });
+          const result = await this.fetchAndTransformTable<Record<string, unknown>>(
+            workplaceId,
+            task.table,
+            (p, t) => {
+              tableProgress.set(task.table, p / t);
+              updateGlobalProgress(`Gathering ${task.name}...`);
+            },
+          );
           const endTime = Date.now();
           tableProgress.set(task.table, 1.0);
           updateGlobalProgress(`Gathering ${task.name}...`);
@@ -488,7 +502,7 @@ class ExportService {
       onProgress?.('Processing preferences...', 0.53);
       const [userPreferences, workplace] = await Promise.all([
         preferences.loadPreferences(),
-        database.collections.get('workplaces').find(workplaceId),
+        database.collections.get<Workplace>('workplaces').find(workplaceId),
       ]);
 
       onProgress?.('Optimizing data structure...', 0.54);
@@ -507,9 +521,9 @@ class ExportService {
         workplace: workplace
           ? {
               id: workplace.id,
-              name: (workplace as any).name,
-              icon: (workplace as any).icon,
-              defaultCurrencyCode: (workplace as any).defaultCurrencyCode,
+              name: workplace.name,
+              icon: workplace.icon,
+              defaultCurrencyCode: workplace.defaultCurrencyCode,
               createdAt: (workplace as any).createdAt.toISOString(),
               updatedAt: (workplace as any).updatedAt.toISOString(),
             }
@@ -613,7 +627,7 @@ class ExportService {
    */
   async getExportSummary(): Promise<ExportSummary> {
     const getCount = async (tableName: string): Promise<number> => {
-      const collection = (database.collections as any).get?.(tableName);
+      const collection = this.getCollection(tableName);
       if (!collection?.query) return 0;
       return collection.query().fetchCount();
     };
