@@ -81,8 +81,20 @@ export class BudgetFlowGenerator {
         });
       });
 
+      // Current + next cycle only describe the whole window for long cadences. Short
+      // ones (daily/weekly) recur many times inside it, so post-cycle planned spend
+      // belongs to several cycles rather than being charged against a single one.
+      const futureCycles = Math.max(
+        1,
+        Math.ceil((context.simulationDays - daysLeftInCycle) / nextCycleDays),
+      );
+      const windowSpansExtraCycles = daysLeftInCycle + nextCycleDays < context.simulationDays;
+
       const effectiveRemaining = Math.max(0, usage.remaining - currentCyclePlannedTotal);
-      const effectiveNextCycleTotal = Math.max(0, budget.amount - nextCyclePlannedTotal);
+      const effectiveNextCycleTotal = Math.max(
+        0,
+        budget.amount - nextCyclePlannedTotal / futureCycles,
+      );
 
       if (effectiveRemaining === 0 && effectiveNextCycleTotal === 0 && budget.amount === 0)
         continue;
@@ -94,7 +106,9 @@ export class BudgetFlowGenerator {
       const useConstant30 =
         (AppConfig.insights.useConstant30DayBurn ?? true) && intervalType === 'MONTHLY';
 
-      if (isSmoothed) {
+      // Averaging across the window would smear an already-spent cycle over later ones,
+      // so it only applies when the window holds no cycles beyond the next.
+      if (isSmoothed && !windowSpansExtraCycles) {
         const totalInWindow =
           effectiveRemaining +
           Math.max(0, context.simulationDays - daysLeftInCycle) *

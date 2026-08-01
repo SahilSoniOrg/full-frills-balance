@@ -78,6 +78,33 @@ describe('BudgetFlowGenerator', () => {
     expect(day0Acc1 && 'amount' in day0Acc1 ? day0Acc1.amount : 0).toBeCloseTo(1.67, 2);
   });
 
+  it('keeps future days at the full daily amount after today is fully spent', () => {
+    // Daily budget of 4000 with today's 4000 already spent: today burns nothing and
+    // each later day gets a fresh cycle, rather than averaging 3866.67 across the window.
+    const dailyBudgets = [
+      {
+        id: 'b-daily-spent',
+        name: 'Daily Allowance',
+        amount: 4000,
+        assetAccountIds: 'acc-1',
+        intervalType: 'DAILY',
+        intervalN: 1,
+        startDate: mockContext.simulationStartMs,
+      },
+    ] as unknown as Budget[];
+
+    const flows = BudgetFlowGenerator.generate(
+      mockContext,
+      dailyBudgets,
+      [{ spent: 4000, remaining: 0, budgetAmount: 4000, usagePercent: 1 }],
+      new Map([['b-daily-spent', new Set(['cat-1'])]]),
+    );
+
+    expect(flows.find(f => f.dayOffset === 0)).toBeUndefined();
+    expect(flows).toHaveLength(29);
+    expect(flows.every(f => Math.abs(f.amount - 4000) < 1e-9)).toBe(true);
+  });
+
   it('burns a daily budget at the full daily amount, not a monthly 30-day rate', () => {
     const originalMode = AppConfig.defaults.budgetMode;
     (AppConfig.defaults as { budgetMode: 'SMOOTHED' | 'ACTUAL' }).budgetMode = 'ACTUAL';
