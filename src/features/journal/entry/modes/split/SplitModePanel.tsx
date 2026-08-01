@@ -35,15 +35,17 @@ export function SplitModePanel({
   });
   const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
 
+  const { setSourceAccountId, updateSplitRow, handleSave } = splitEditor;
+
   const applyAccountToLine = useCallback(
     (lineId: string, accountId: AccountId) => {
       if (lineId === SPLIT_SOURCE_LINE_ID) {
-        splitEditor.setSourceAccountId(accountId);
+        setSourceAccountId(accountId);
       } else {
-        splitEditor.updateSplitRow(lineId, { accountId });
+        updateSplitRow(lineId, { accountId });
       }
     },
-    [splitEditor],
+    [setSourceAccountId, updateSplitRow],
   );
 
   const resolveSelectedAccountId = useCallback(
@@ -59,8 +61,8 @@ export function SplitModePanel({
   );
 
   const submit = useCallback(() => {
-    void splitEditor.handleSave();
-  }, [splitEditor]);
+    void handleSave();
+  }, [handleSave]);
 
   const handle = useMemo<ModeHandle>(
     () => ({

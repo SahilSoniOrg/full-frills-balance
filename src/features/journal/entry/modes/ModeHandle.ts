@@ -1,9 +1,17 @@
+import { AccountId } from '@/src/types/domain';
+
+/** Submit chrome the shell footer renders for the active mode. */
+export type ModeSubmitState = {
+  submitLabel: string;
+  isSubmitDisabled: boolean;
+  isSubmitting: boolean;
+};
+
 /**
  * Contract the active journal entry mode panel registers with the shell.
- * Covers submit (footer) and account application (picker); panels clear on unmount.
- * The shell only coordinates the picker — mode panels own how selected accounts apply.
+ * Submit chrome drives the footer; callbacks are imperative handoffs invoked
+ * after the user acts (footer press, account picked). Panels clear on unmount.
  */
-import { AccountId } from '@/src/types/domain';
 export type ModeHandle = {
   submitLabel: string;
   isSubmitDisabled: boolean;

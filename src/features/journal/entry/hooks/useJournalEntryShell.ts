@@ -16,7 +16,7 @@ import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import { useModeAccountActions } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { smsService } from '@/src/services/sms-service';
@@ -110,19 +110,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     route.mode,
   );
 
-  const activeModeHandle = useActiveModeHandle();
-
-  const applyAccountToActiveLine = useCallback(
-    (lineId: string, accountId: AccountId) => {
-      activeModeHandle?.applyAccountToLine?.(lineId, accountId);
-    },
-    [activeModeHandle],
-  );
-
-  const resolveModeSelectedAccountId = useCallback(
-    (activeLineId: string) => activeModeHandle?.resolveSelectedAccountId?.(activeLineId),
-    [activeModeHandle],
-  );
+  const { applyAccountToLine, resolveSelectedAccountId } = useModeAccountActions();
 
   const {
     showAccountPicker,
@@ -136,8 +124,8 @@ export function useJournalEntryShell(): JournalEntryShell {
     accounts,
     editor,
     activeMode,
-    applyAccountToActiveLine,
-    resolveModeSelectedAccountId,
+    applyAccountToActiveLine: applyAccountToLine,
+    resolveModeSelectedAccountId: resolveSelectedAccountId,
   });
 
   const [guidedFooterAmount, setGuidedFooterAmount] = useState<GuidedFooterAmount | null>(null);

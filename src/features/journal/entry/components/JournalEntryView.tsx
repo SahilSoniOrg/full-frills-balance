@@ -11,7 +11,7 @@ import { JournalMetaCard } from '@/src/features/journal/entry/components/Journal
 import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import { useActiveModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import { useModeSubmitBar } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
@@ -20,7 +20,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
-  const modeHandle = useActiveModeHandle();
+  const { submitLabel, isSubmitDisabled, isSubmitting, submit } = useModeSubmitBar();
 
   const {
     isLoading,
@@ -33,11 +33,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     setSavedSummary,
     guidedFooterAmount,
   } = vm;
-
-  const submitLabel = modeHandle?.submitLabel ?? '';
-  const isSubmitDisabled = modeHandle?.isSubmitDisabled ?? true;
-  const handleSubmit = modeHandle?.submit ?? (() => {});
-  const isSubmitting = modeHandle?.isSubmitting ?? false;
 
   const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
   const onDescriptionFocus = useCallback(() => setHideSuggestions(false), []);
@@ -93,7 +88,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }
       footer={
         <SubmitFooter
-          onPress={handleSubmit}
+          onPress={submit}
           disabled={isSubmitDisabled}
           label={submitLabel}
           loading={isSubmitting}

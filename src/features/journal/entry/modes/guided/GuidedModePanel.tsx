@@ -61,25 +61,34 @@ export function GuidedModePanel({
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
-  const simpleEditor = useSimpleJournalEditor({
-    accounts,
-    editor,
-    onSelectAccountRequest: (role: AccountRole) => {
-      const lineId = editor.getLineIdByRole(role);
+  const { getLineIdByRole } = editor;
+
+  const requestAccountForRole = useCallback(
+    (role: AccountRole) => {
+      const lineId = getLineIdByRole(role);
       if (lineId) {
         onSelectAccountRequest(lineId);
       }
     },
+    [getLineIdByRole, onSelectAccountRequest],
+  );
+
+  const simpleEditor = useSimpleJournalEditor({
+    accounts,
+    editor,
+    onSelectAccountRequest: requestAccountForRole,
   });
+
+  const { setSourceId, setDestinationId, handleSave } = simpleEditor;
 
   const applyAccountToLine = useCallback(
     (lineId: string, accountId: AccountId) => {
       const line = editor.lines.find(candidate => candidate.id === lineId);
       if (!line) return;
-      if (line.transactionType === 'CREDIT') simpleEditor.setSourceId(accountId);
-      else simpleEditor.setDestinationId(accountId);
+      if (line.transactionType === 'CREDIT') setSourceId(accountId);
+      else setDestinationId(accountId);
     },
-    [editor.lines, simpleEditor],
+    [editor.lines, setSourceId, setDestinationId],
   );
 
   const resolveSelectedAccountId = useCallback(
@@ -104,9 +113,9 @@ export function GuidedModePanel({
     if (isAmountFocused && !isSimpleValid) {
       Keyboard.dismiss();
     } else {
-      void simpleEditor.handleSave();
+      void handleSave();
     }
-  }, [isAmountFocused, isSimpleValid, simpleEditor]);
+  }, [isAmountFocused, isSimpleValid, handleSave]);
 
   const onFocusAmount = useCallback(() => setIsAmountFocused(true), []);
   const onBlurAmount = useCallback(() => setIsAmountFocused(false), []);
