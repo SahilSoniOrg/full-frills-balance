@@ -1,9 +1,10 @@
-import { BudgetFlowGenerator } from '../BudgetFlowGenerator';
-import { SimulationContext } from '../../types';
+import { AppConfig } from '@/src/constants/app-config';
+import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { AccountId } from '@/src/types/domain';
-import Account from '@/src/data/models/Account';
+import { SimulationContext } from '../../types';
+import { BudgetFlowGenerator } from '../BudgetFlowGenerator';
 
 describe('BudgetFlowGenerator', () => {
   const mockContext: SimulationContext = {
@@ -75,5 +76,38 @@ describe('BudgetFlowGenerator', () => {
       f => f.dayOffset === 0 && 'accountId' in f && f.accountId === ('acc-1' as AccountId),
     );
     expect(day0Acc1 && 'amount' in day0Acc1 ? day0Acc1.amount : 0).toBeCloseTo(1.67, 2);
+  });
+
+  it('burns a daily budget at the full daily amount, not a monthly 30-day rate', () => {
+    const originalMode = AppConfig.defaults.budgetMode;
+    (AppConfig.defaults as { budgetMode: 'SMOOTHED' | 'ACTUAL' }).budgetMode = 'ACTUAL';
+
+    try {
+      const dailyBudgets = [
+        {
+          id: 'b-daily',
+          name: 'Daily Coffee',
+          amount: 100,
+          assetAccountIds: 'acc-1',
+          intervalType: 'DAILY',
+          intervalN: 1,
+          startDate: mockContext.simulationStartMs,
+        },
+      ] as unknown as Budget[];
+
+      const flows = BudgetFlowGenerator.generate(
+        mockContext,
+        dailyBudgets,
+        [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],
+        new Map([['b-daily', new Set(['cat-1'])]]),
+      );
+
+      expect(flows).toHaveLength(30);
+      expect(flows[0].amount).toBeCloseTo(100, 5);
+      expect(flows[1].amount).toBeCloseTo(100, 5);
+      expect(flows.every(f => Math.abs(f.amount - 100) < 1e-9)).toBe(true);
+    } finally {
+      (AppConfig.defaults as { budgetMode: 'SMOOTHED' | 'ACTUAL' }).budgetMode = originalMode;
+    }
   });
 });

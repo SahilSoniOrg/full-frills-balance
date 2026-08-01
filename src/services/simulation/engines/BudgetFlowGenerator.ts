@@ -89,6 +89,10 @@ export class BudgetFlowGenerator {
 
       const burns = new Array(context.simulationDays).fill(0);
       const isSmoothed = AppConfig.defaults.budgetMode === 'SMOOTHED';
+      const intervalType = budget.intervalType || 'MONTHLY';
+      // Constant-30 smoothing is a monthly heuristic; other cadences must use real cycle length.
+      const useConstant30 =
+        (AppConfig.insights.useConstant30DayBurn ?? true) && intervalType === 'MONTHLY';
 
       if (isSmoothed) {
         const totalInWindow =
@@ -98,7 +102,6 @@ export class BudgetFlowGenerator {
         const smoothedDaily = totalInWindow / context.simulationDays;
         burns.fill(smoothedDaily);
       } else {
-        const useConstant30 = AppConfig.insights.useConstant30DayBurn ?? true;
         const minDays = AppConfig.insights.burnRateLookbackMinDays ?? 7;
         const nextCycleDailyRate =
           effectiveNextCycleTotal /

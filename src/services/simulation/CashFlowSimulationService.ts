@@ -155,7 +155,9 @@ export class CashFlowSimulationService {
       this.fetchBudgetCategoryMap(budgets, allAccounts, workplaceId),
     ]);
 
-    // Currency Normalization using explicit mapping (avoiding class spread)
+    // Currency Normalization using explicit mapping (avoiding class spread).
+    // Preserve period fields so BudgetFlowGenerator can burn DAILY/WEEKLY/etc.
+    // correctly — dropping them silently defaults every budget to MONTHLY.
     const normalizedBudgets = budgets.map(
       b =>
         ({
@@ -164,6 +166,12 @@ export class CashFlowSimulationService {
           amount: convert(b.amount, b.currencyCode || resultCurrency),
           currencyCode: resultCurrency,
           assetAccountIds: b.assetAccountIds,
+          intervalType: b.intervalType,
+          intervalN: b.intervalN,
+          startDate: b.startDate,
+          recurrenceDay: b.recurrenceDay,
+          recurrenceMonth: b.recurrenceMonth,
+          createdAt: b.createdAt,
         }) as Budget,
     );
 
