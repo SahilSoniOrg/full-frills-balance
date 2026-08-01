@@ -1,7 +1,7 @@
 /**
- * Submit-only contract the active journal entry mode panel registers with the shell.
- * Shell footer reads the current handle; panels clear on unmount.
- * Account application belongs to the active mode panel; the shell only coordinates the picker.
+ * Contract the active journal entry mode panel registers with the shell.
+ * Covers submit (footer) and account application (picker); panels clear on unmount.
+ * The shell only coordinates the picker — mode panels own how selected accounts apply.
  */
 import { AccountId } from '@/src/types/domain';
 export type ModeHandle = {
