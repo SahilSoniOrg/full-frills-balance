@@ -14,6 +14,7 @@ interface HubWidgetProps {
   currencyCode: string;
   onDismiss: (id: string) => void;
   hideManageDismissed?: boolean;
+  isPrivacyMode?: boolean;
 }
 
 export const HubWidget = ({
@@ -21,6 +22,7 @@ export const HubWidget = ({
   currencyCode,
   onDismiss,
   hideManageDismissed = false,
+  isPrivacyMode = false,
 }: HubWidgetProps) => {
   const { theme, fonts } = useTheme();
 
@@ -204,10 +206,12 @@ export const HubWidget = ({
                           { color: severity.color, fontFamily: fonts.bold },
                         ]}
                       >
-                        {CurrencyFormatter.format(
-                          insight.amount,
-                          insight.currencyCode || currencyCode,
-                        )}
+                        {isPrivacyMode
+                          ? AppConfig.privacyMask
+                          : CurrencyFormatter.format(
+                              insight.amount,
+                              insight.currencyCode || currencyCode,
+                            )}
                       </AppText>
                     </View>
                   ) : null}

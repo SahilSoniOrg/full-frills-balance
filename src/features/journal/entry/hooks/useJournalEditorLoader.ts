@@ -27,7 +27,10 @@ export function useJournalEditorLoader({
   journalId,
   hydrateEditor,
 }: JournalEditorLoaderOptions): boolean {
-  const [isLoading, setIsLoading] = useState(Boolean(journalId));
+  // Derive loading from the id we have finished hydrating — avoids setState-in-effect
+  // when journalId changes (edit → edit) while still blocking UI on the new id.
+  const [loadedJournalId, setLoadedJournalId] = useState<JournalId | null>(null);
+  const isLoading = Boolean(journalId) && loadedJournalId !== journalId;
 
   useEffect(() => {
     if (!journalId) {
@@ -72,7 +75,7 @@ export function useJournalEditorLoader({
       } catch {
         if (isActive) showErrorAlert('Failed to load transaction');
       } finally {
-        if (isActive) setIsLoading(false);
+        if (isActive) setLoadedJournalId(journalId);
       }
     };
 

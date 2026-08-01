@@ -96,7 +96,9 @@ export default function InsightDetailsScreen() {
               {strings.impact}
             </AppText>
             <AppText variant="title" style={{ color: severityMeta.color, fontFamily: fonts.bold }}>
-              {CurrencyFormatter.format(amount, params.currencyCode)}
+              {isPrivacyMode
+                ? AppConfig.privacyMask
+                : CurrencyFormatter.format(amount, params.currencyCode)}
             </AppText>
           </View>
         ) : null}

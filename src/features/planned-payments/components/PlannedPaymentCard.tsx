@@ -15,6 +15,7 @@ import { TouchableOpacity } from 'react-native';
 export interface PlannedPaymentCardProps {
   item: PlannedPayment;
   onPress: () => void;
+  isPrivacyMode?: boolean;
 }
 
 export interface PlannedPaymentCardViewModel {
@@ -36,6 +37,7 @@ export interface PlannedPaymentCardViewModel {
 export function presentPlannedPaymentCard(
   item: PlannedPayment,
   theme: Theme,
+  isPrivacyMode = false,
 ): PlannedPaymentCardViewModel {
   const getIntervalLabel = () => {
     const n = item.intervalN;
@@ -95,7 +97,9 @@ export function presentPlannedPaymentCard(
 
   return {
     name: item.name,
-    amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
+    amountText: isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(item.amount, item.currencyCode),
     amountColor: item.amount < 0 ? 'error' : 'success',
     intervalLabel: getIntervalLabel(),
     statusBadge,
@@ -106,9 +110,13 @@ export function presentPlannedPaymentCard(
   };
 }
 
-function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps) {
+function PlannedPaymentCardComponent({
+  item,
+  onPress,
+  isPrivacyMode = false,
+}: PlannedPaymentCardProps) {
   const { theme } = useTheme();
-  const vm = presentPlannedPaymentCard(item, theme);
+  const vm = presentPlannedPaymentCard(item, theme, isPrivacyMode);
 
   return (
     <TouchableOpacity

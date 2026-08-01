@@ -1,6 +1,7 @@
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Size } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
@@ -16,6 +17,7 @@ export default function HubScreen() {
   const { strings } = AppConfig;
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const [activeTab, setActiveTab] = useState<Tab>('active');
   const { activeInsights, dismissedInsights, unreadSmsCount, dismissInsight, restoreInsight } =
     useHub(workplaceId);
@@ -75,6 +77,7 @@ export default function HubScreen() {
               currencyCode={defaultCurrencyCode}
               onDismiss={dismissInsight}
               hideManageDismissed
+              isPrivacyMode={isPrivacyMode}
             />
           ) : unreadSmsCount === 0 ? (
             <EmptyStateView

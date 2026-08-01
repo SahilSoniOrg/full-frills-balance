@@ -49,7 +49,8 @@ export class TransactionAutoPostRuleRepository {
   async delete(workplaceId: WorkplaceId, id: string): Promise<void> {
     await database.write(async () => {
       const rule = await this.find(workplaceId, id);
-      if (rule) await rule.destroyPermanently();
+      if (!rule) throw new Error('SMS rule not found in workplace');
+      await rule.destroyPermanently();
     });
   }
 

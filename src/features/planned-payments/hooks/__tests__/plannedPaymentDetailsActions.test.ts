@@ -45,4 +45,13 @@ describe('plannedPaymentDetailsActions', () => {
       expect.objectContaining({ onConfirm: handlers.handleSkip, destructive: true }),
     );
   });
+
+  it('masks the post confirmation amount when privacy mode is on', () => {
+    const actions = buildPlannedPaymentDetailsActions(item, handlers, { isPrivacyMode: true });
+
+    actions.onPost();
+    const call = (confirm.show as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(call.message).toContain('\u2022\u2022\u2022\u2022');
+    expect(call.message).not.toContain('125');
+  });
 });

@@ -68,6 +68,7 @@ export function BudgetDetailScreen() {
               usage={usage}
               periodLabel={vm.periodLabel}
               isCurrentMonth={vm.isCurrentMonth}
+              isPrivacyMode={vm.isPrivacyMode}
               chartData={vm.chartData}
               prevMonth={vm.prevMonth}
               nextMonth={vm.nextMonth}

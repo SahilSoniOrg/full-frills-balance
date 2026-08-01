@@ -1,7 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
 import Budget from '@/src/data/models/Budget';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -17,6 +17,7 @@ interface BudgetDetailHeaderProps {
   usage: BudgetUsage;
   periodLabel: string;
   isCurrentMonth: boolean;
+  isPrivacyMode?: boolean;
   chartData: { data: { x: number; y: number }[]; domainX: [number, number] } | null;
   prevMonth: () => void;
   nextMonth: () => void;
@@ -28,6 +29,7 @@ export function BudgetDetailHeader({
   usage,
   periodLabel,
   isCurrentMonth,
+  isPrivacyMode = false,
   chartData,
   prevMonth,
   nextMonth,
@@ -46,6 +48,13 @@ export function BudgetDetailHeader({
   const stripColor = resolveThemeColor(theme, stripColorBase) as string;
 
   const isOver = usage.remaining < 0;
+
+  const formatAmount = (value: number) =>
+    isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(value, budget.currencyCode, {
+          maximumFractionDigits: 0,
+        });
 
   return (
     <View style={styles.headerContainer}>
@@ -76,11 +85,7 @@ export function BudgetDetailHeader({
           />
           <View style={styles.titleInfo}>
             <AppText variant="title">{budget.name}</AppText>
-            <AppText variant="heading">
-              {CurrencyFormatter.format(budget.amount, budget.currencyCode, {
-                maximumFractionDigits: 0,
-              })}
-            </AppText>
+            <AppText variant="heading">{formatAmount(budget.amount)}</AppText>
           </View>
         </View>
 
@@ -90,9 +95,7 @@ export function BudgetDetailHeader({
               Spent
             </AppText>
             <AppText variant="subheading" style={{ marginTop: 4 }}>
-              {CurrencyFormatter.format(usage.spent, budget.currencyCode, {
-                maximumFractionDigits: 0,
-              })}
+              {formatAmount(usage.spent)}
             </AppText>
           </View>
           <View style={styles.statItem}>
@@ -104,9 +107,7 @@ export function BudgetDetailHeader({
                 <AppIcon name="alert" size={14} color={theme.error} style={{ marginRight: 4 }} />
               )}
               <AppText variant="subheading" color={isOver ? 'error' : 'success'}>
-                {CurrencyFormatter.format(Math.abs(usage.remaining), budget.currencyCode, {
-                  maximumFractionDigits: 0,
-                })}
+                {formatAmount(Math.abs(usage.remaining))}
               </AppText>
             </View>
           </View>
@@ -130,6 +131,7 @@ export function BudgetDetailHeader({
                 domainX={chartData.domainX}
                 width={chartWidth}
                 color={stripColor}
+                hideLabels={isPrivacyMode}
                 renderTooltipContent={index => {
                   const point = chartData.data[index];
                   if (!point) return null;
@@ -143,9 +145,7 @@ export function BudgetDetailHeader({
                         {dayjs(point.x).format('MMM D')}
                       </AppText>
                       <AppText variant="body" weight="bold">
-                        {CurrencyFormatter.format(point.y, budget.currencyCode, {
-                          maximumFractionDigits: 0,
-                        })}
+                        {formatAmount(point.y)}
                       </AppText>
                     </View>
                   );

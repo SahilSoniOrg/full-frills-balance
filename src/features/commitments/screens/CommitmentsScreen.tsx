@@ -14,7 +14,7 @@ type Tab = 'budgets' | 'planned';
 export default function CommitmentsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
   const { workplaceId } = useWorkplace();
-  const { items: budgetItems } = useBudgetListViewModel(workplaceId);
+  const { items: budgetItems, isPrivacyMode } = useBudgetListViewModel(workplaceId);
   const { items: plannedItems, isLoading: plannedLoading } = usePlannedPayments(workplaceId);
 
   // Log UI Mount
@@ -62,9 +62,13 @@ export default function CommitmentsScreen() {
 
       <Box flex={1} marginTop="md">
         {activeTab === 'budgets' ? (
-          <BudgetListView items={budgetItems} />
+          <BudgetListView items={budgetItems} isPrivacyMode={isPrivacyMode} />
         ) : (
-          <PlannedPaymentListView items={plannedItems} isLoading={plannedLoading} />
+          <PlannedPaymentListView
+            items={plannedItems}
+            isLoading={plannedLoading}
+            isPrivacyMode={isPrivacyMode}
+          />
         )}
       </Box>
 

@@ -1,3 +1,5 @@
+import { AppConfig } from '@/src/constants/app-config';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
@@ -12,6 +14,8 @@ import { useCallback } from 'react';
  * Shared by Dashboard (and other planned-occurrence surfaces).
  */
 export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
+  const isPrivacyMode = useEffectivePrivacyMode();
+
   const onPlannedJournalPress = useCallback(
     async (item: PlannedOccurrenceViewModel) => {
       const sourceAcc = item.accounts.find(a => a.role === 'SOURCE');
@@ -29,7 +33,9 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           'expense' | 'income' | 'transfer';
       }
 
-      const displayAmount = CurrencyFormatter.format(item.amount, item.currencyCode);
+      const displayAmount = isPrivacyMode
+        ? AppConfig.privacyMask
+        : CurrencyFormatter.format(item.amount, item.currencyCode);
       const displayTitle = item.title;
       const isSimulated = item.origin === 'SIMULATED_LIABILITY';
 
@@ -111,7 +117,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
         });
       }
     },
-    [workplaceId],
+    [workplaceId, isPrivacyMode],
   );
 
   return { onPlannedJournalPress };

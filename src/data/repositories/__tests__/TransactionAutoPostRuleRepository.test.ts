@@ -93,7 +93,9 @@ describe('TransactionAutoPostRuleRepository', () => {
         other,
       ),
     ).rejects.toThrow('SMS rule not found in workplace');
-    await transactionAutoPostRuleRepository.delete(other, rule.id);
+    await expect(transactionAutoPostRuleRepository.delete(other, rule.id)).rejects.toThrow(
+      'SMS rule not found in workplace',
+    );
     expect(await transactionAutoPostRuleRepository.find(owner, rule.id)).toBeTruthy();
   });
 });

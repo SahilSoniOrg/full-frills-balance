@@ -13,7 +13,12 @@ interface PlannedPaymentDetailsActionHandlers {
 export function buildPlannedPaymentDetailsActions(
   item: PlannedPayment,
   handlers: PlannedPaymentDetailsActionHandlers,
+  options: { isPrivacyMode?: boolean } = {},
 ) {
+  const displayAmount = options.isPrivacyMode
+    ? AppConfig.privacyMask
+    : CurrencyFormatter.format(item.amount, item.currencyCode);
+
   const headerActions = {
     onEdit: handlers.handleEdit,
     onDelete: () => {
@@ -30,7 +35,7 @@ export function buildPlannedPaymentDetailsActions(
   const onPost = () => {
     confirm.show({
       title: AppConfig.strings.plannedPayments.details.postNowTitle,
-      message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
+      message: `This will post the upcoming instance for ${displayAmount} and advance the schedule to the next occurrence.`,
       onConfirm: handlers.handlePostNow,
     });
   };

@@ -9,9 +9,14 @@ import { StyleSheet, View } from 'react-native';
 export type PlannedPaymentListViewProps = {
   items: PlannedPayment[];
   isLoading: boolean;
+  isPrivacyMode?: boolean;
 };
 
-export function PlannedPaymentListView({ items, isLoading }: PlannedPaymentListViewProps) {
+export function PlannedPaymentListView({
+  items,
+  isLoading,
+  isPrivacyMode = false,
+}: PlannedPaymentListViewProps) {
   if (isLoading && items.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -35,6 +40,7 @@ export function PlannedPaymentListView({ items, isLoading }: PlannedPaymentListV
       renderItem={({ item }) => (
         <PlannedPaymentCard
           item={item}
+          isPrivacyMode={isPrivacyMode}
           onPress={() =>
             AppNavigation.toPlannedPaymentDetails(item.id, {
               description: item.name,

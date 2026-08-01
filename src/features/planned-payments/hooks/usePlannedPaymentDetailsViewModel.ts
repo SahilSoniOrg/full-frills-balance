@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccount } from '@/src/features/accounts';
@@ -58,6 +59,7 @@ export interface PlannedPaymentDetailsViewModel {
 export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDetailsViewModel {
   const { theme } = useTheme();
   const { workplaceId } = useWorkplace();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const params = useLocalSearchParams();
 
   // Initial Data Injection: Extract preview data from params
@@ -95,7 +97,11 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           isMissing: false,
           onBack: () => AppNavigation.back(),
           title: AppConfig.strings.plannedPayments.details.screenTitle,
-          amountText: pAmount ? CurrencyFormatter.format(parseFloat(pAmount), pCurrency) : '...',
+          amountText: pAmount
+            ? isPrivacyMode
+              ? AppConfig.privacyMask
+              : CurrencyFormatter.format(parseFloat(pAmount), pCurrency)
+            : '...',
           nameText: pDesc,
           statusLabel: '',
           typeLabel: '',
@@ -141,12 +147,16 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
     const intervalLabel = formatPlannedPaymentInterval(item);
 
-    const { headerActions, onPost, onSkip } = buildPlannedPaymentDetailsActions(item, {
-      handleEdit,
-      handleDelete,
-      handlePostNow,
-      handleSkip,
-    });
+    const { headerActions, onPost, onSkip } = buildPlannedPaymentDetailsActions(
+      item,
+      {
+        handleEdit,
+        handleDelete,
+        handlePostNow,
+        handleSkip,
+      },
+      { isPrivacyMode },
+    );
 
     const onToggleStatus = handleToggleStatus;
 
@@ -158,7 +168,9 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
       // Core Details
       title: AppConfig.strings.plannedPayments.details.screenTitle,
-      amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
+      amountText: isPrivacyMode
+        ? AppConfig.privacyMask
+        : CurrencyFormatter.format(item.amount, item.currencyCode),
       nameText: item.name,
       statusLabel: item.status,
       statusVariant: item.status === 'ACTIVE' ? 'success' : 'default',
@@ -215,5 +227,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     pCurrency,
     pDate,
     isLoadingVisible,
+    isPrivacyMode,
   ]);
 }
