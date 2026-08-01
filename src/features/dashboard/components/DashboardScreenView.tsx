@@ -2,6 +2,7 @@ import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { FloatingActionButton } from '@/src/components/core';
+import { Screen } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
@@ -125,97 +126,99 @@ export function DashboardScreenView({
   const transactionCount = items.filter(i => i.type === 'transaction').length;
 
   return (
-    <View testID="dashboard-screen" style={styles.container}>
-      {isSelectionModeActive && (
-        <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
-      )}
+    <Screen testID="dashboard-screen" edges={['top']}>
+      <View style={styles.container}>
+        {isSelectionModeActive && (
+          <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
+        )}
 
-      <TransactionListView
-        ref={listRef}
-        items={items}
-        isLoading={isLoading}
-        isLoadingMore={isLoadingMore}
-        loadingText={loadingText}
-        loadingMoreText={loadingMoreText}
-        emptyTitle={emptyTitle}
-        emptySubtitle={emptySubtitle}
-        onEndReached={onEndReached}
-        isPrivacyMode={isPrivacyMode}
-        selectedIds={selectedIds as Set<string> as Set<TransactionId>}
-        onLongPressItem={onLongPressItem as (id: string) => void}
-        isSelectionModeActive={isSelectionModeActive}
-        contentContainerStyle={styles.listContent}
-        style={styles.feed}
-        ListHeaderComponent={
-          <View style={{ zIndex: 10 }}>
-            <DashboardHeader {...headerProps} />
+        <TransactionListView
+          ref={listRef}
+          items={items}
+          isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          loadingText={loadingText}
+          loadingMoreText={loadingMoreText}
+          emptyTitle={emptyTitle}
+          emptySubtitle={emptySubtitle}
+          onEndReached={onEndReached}
+          isPrivacyMode={isPrivacyMode}
+          selectedIds={selectedIds as Set<string> as Set<TransactionId>}
+          onLongPressItem={onLongPressItem as (id: string) => void}
+          isSelectionModeActive={isSelectionModeActive}
+          contentContainerStyle={styles.listContent}
+          style={styles.feed}
+          ListHeaderComponent={
             <View style={{ zIndex: 10 }}>
-              <SafeToSpendCard
-                {...(safeToSpendData || ({} as unknown as SafeToSpendDashboard))}
-                viewModel={safeToSpendViewModel}
-                onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
-                onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
-                isLoading={!safeToSpendData}
-                showChart={showSafeToSpendChart}
-              />
+              <DashboardHeader {...headerProps} />
+              <View style={{ zIndex: 10 }}>
+                <SafeToSpendCard
+                  {...(safeToSpendData || ({} as unknown as SafeToSpendDashboard))}
+                  viewModel={safeToSpendViewModel}
+                  onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
+                  onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
+                  isLoading={!safeToSpendData}
+                  showChart={showSafeToSpendChart}
+                />
+              </View>
+              <View style={{ zIndex: 1 }}>
+                <PlannedPaymentsSection
+                  items={plannedOccurrences.items}
+                  onItemPress={plannedOccurrences.onItemPress}
+                  isPrivacyMode={isPrivacyMode}
+                />
+              </View>
+              <Inset horizontal="lg" vertical="lg">
+                <ScreenSectionHeader title={transactionSectionTitle} />
+              </Inset>
             </View>
-            <View style={{ zIndex: 1 }}>
-              <PlannedPaymentsSection
-                items={plannedOccurrences.items}
-                onItemPress={plannedOccurrences.onItemPress}
-                isPrivacyMode={isPrivacyMode}
-              />
-            </View>
-            <Inset horizontal="lg" vertical="lg">
-              <ScreenSectionHeader title={transactionSectionTitle} />
-            </Inset>
-          </View>
-        }
-        ListFooterComponent={
-          isSelectionModeActive ? (
-            <Pressable style={{ height: 500 }} onPress={exitSelectionMode} />
-          ) : undefined
-        }
-      />
-
-      {fab && !isSelectionModeActive && (
-        <FloatingActionButton
-          onPress={fab.onPress}
-          label={fab.label}
-          placement={fab.placement}
-          accessibilityLabel={fab.accessibilityLabel}
+          }
+          ListFooterComponent={
+            isSelectionModeActive ? (
+              <Pressable style={{ height: 500 }} onPress={exitSelectionMode} />
+            ) : undefined
+          }
         />
-      )}
 
-      <SelectionActionBar
-        selectedCount={selectedIds.size}
-        totalCount={transactionCount}
-        onClear={exitSelectionMode}
-        onSelectAll={selectAll}
-        onDeselectAll={clearItems}
-        onShare={onShareSelected}
-        isVisible={isSelectionModeActive}
-      />
+        {fab && !isSelectionModeActive && (
+          <FloatingActionButton
+            onPress={fab.onPress}
+            label={fab.label}
+            placement={fab.placement}
+            accessibilityLabel={fab.accessibilityLabel}
+          />
+        )}
 
-      <SafeToSpendExplanationModal
-        visible={uiState.isInfoVisible}
-        onClose={() => uiState.setInfoVisible(false)}
-        expandedSection={uiState.expandedSection}
-        setExpandedSection={uiState.setExpandedSection}
-        viewModel={safeToSpendViewModel}
-      />
+        <SelectionActionBar
+          selectedCount={selectedIds.size}
+          totalCount={transactionCount}
+          onClear={exitSelectionMode}
+          onSelectAll={selectAll}
+          onDeselectAll={clearItems}
+          onShare={onShareSelected}
+          isVisible={isSelectionModeActive}
+        />
 
-      <SafeToSpendLegendModal
-        visible={!!uiState.selectedLegendItem}
-        onClose={() => uiState.setSelectedLegendItem(null)}
-        type={uiState.selectedLegendItem}
-        viewModel={safeToSpendViewModel}
-        onRequestExplanation={() => {
-          uiState.setSelectedLegendItem(null);
-          uiState.setInfoVisible(true);
-        }}
-      />
-    </View>
+        <SafeToSpendExplanationModal
+          visible={uiState.isInfoVisible}
+          onClose={() => uiState.setInfoVisible(false)}
+          expandedSection={uiState.expandedSection}
+          setExpandedSection={uiState.setExpandedSection}
+          viewModel={safeToSpendViewModel}
+        />
+
+        <SafeToSpendLegendModal
+          visible={!!uiState.selectedLegendItem}
+          onClose={() => uiState.setSelectedLegendItem(null)}
+          type={uiState.selectedLegendItem}
+          viewModel={safeToSpendViewModel}
+          onRequestExplanation={() => {
+            uiState.setSelectedLegendItem(null);
+            uiState.setInfoVisible(true);
+          }}
+        />
+      </View>
+    </Screen>
   );
 }
 
