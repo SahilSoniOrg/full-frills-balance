@@ -68,11 +68,11 @@ function minimalImport(overrides?: {
 }
 
 describe('validateImportedData', () => {
-  it('accepts balanced journals', () => {
+  it('accepts structurally valid imports without re-checking journal balance', () => {
     expect(() => validateImportedData(minimalImport())).not.toThrow();
   });
 
-  it('rejects unbalanced journals with journal id and imbalance', () => {
+  it('trusts historical amounts and does not soft-delete unbalanced journals', () => {
     const data = minimalImport({
       transactions: [
         {
@@ -87,38 +87,9 @@ describe('validateImportedData', () => {
       ],
     });
 
-    expect(() => validateImportedData(data)).toThrow(
-      /Import validation failed: journal "Coffee" \(j-1\) is unbalanced.*imbalance: 10/,
-    );
-  });
-
-  it('uses journal id in message when description is missing', () => {
-    const data = minimalImport({
-      journals: [
-        {
-          id: 'j-only-id' as JournalId,
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          status: 'POSTED',
-          totalAmount: 5,
-          transactionCount: 1,
-          displayType: 'EXPENSE' as JournalDisplayType,
-        },
-      ],
-      transactions: [
-        {
-          id: 't-1' as TransactionId,
-          journalId: 'j-only-id' as JournalId,
-          accountId: 'acc-1' as AccountId,
-          amount: 5,
-          transactionType: 'DEBIT',
-          currencyCode: 'USD',
-          transactionDate: Date.now(),
-        },
-      ],
-    });
-
-    expect(() => validateImportedData(data)).toThrow(/journal "j-only-id" \(j-only-id\)/);
+    expect(() => validateImportedData(data)).not.toThrow();
+    expect(data.journals[0].deletedAt).toBeUndefined();
+    expect(data.transactions[0].deletedAt).toBeUndefined();
   });
 
   it('rejects transactions that reference a missing account', () => {
@@ -173,5 +144,35 @@ describe('validateImportedData', () => {
     });
 
     expect(() => validateImportedData(data)).toThrow(/duplicate transaction id "t-1"/);
+  });
+
+  it('allows review auto-post rules with an empty category account', () => {
+    const data = minimalImport();
+    data.transactionAutoPostRules = [
+      {
+        id: 'rule-review',
+        sourceAccountId: 'acc-1' as AccountId,
+        categoryAccountId: '' as AccountId,
+        isActive: true,
+      },
+    ];
+
+    expect(() => validateImportedData(data)).not.toThrow();
+  });
+
+  it('rejects auto-post rules that reference a real missing account', () => {
+    const data = minimalImport();
+    data.transactionAutoPostRules = [
+      {
+        id: 'rule-bad',
+        sourceAccountId: 'missing-account' as AccountId,
+        categoryAccountId: 'acc-1' as AccountId,
+        isActive: true,
+      },
+    ];
+
+    expect(() => validateImportedData(data)).toThrow(
+      /auto-post rule "rule-bad" references missing account "missing-account"/,
+    );
   });
 });

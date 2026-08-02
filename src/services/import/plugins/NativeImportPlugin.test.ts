@@ -258,7 +258,7 @@ describe('NativeImportPlugin', () => {
       ).rejects.toThrow(/missing required data/);
     });
 
-    it('does not wipe workplace when journals are unbalanced', async () => {
+    it('imports historically unbalanced journals as written', async () => {
       const unbalanced = {
         ...validNativeData,
         transactions: [validNativeData.transactions[0]],
@@ -267,10 +267,12 @@ describe('NativeImportPlugin', () => {
 
       await expect(
         importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId),
-      ).rejects.toThrow(/Import validation failed/);
+      ).resolves.toMatchObject({ accounts: 1 });
 
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      expect(data.journals[0].deletedAt).toBeUndefined();
+      expect(data.transactions[0].deletedAt).toBeUndefined();
       expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
-      expect(importRepository.batchInsert).not.toHaveBeenCalled();
     });
 
     it('remaps IDs correctly and maintains references', async () => {

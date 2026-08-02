@@ -1,35 +1,6 @@
-import { AppConfig } from '@/src/constants/app-config';
-import { TransactionType } from '@/src/data/models/Transaction';
-import {
-  BatchImportData,
-  ImportedAccount,
-  ImportedJournal,
-  ImportedTransaction,
-} from '@/src/data/repositories/ImportRepository';
-import { checkJournal, JournalLineForCheck } from '@/src/services/accounting/BalanceEffects';
+import { BatchImportData, ImportedAccount } from '@/src/data/repositories/ImportRepository';
 import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
-
-function toTransactionType(value: string): TransactionType {
-  return value === TransactionType.CREDIT ? TransactionType.CREDIT : TransactionType.DEBIT;
-}
-
-function currencyPrecision(data: BatchImportData, currencyCode: string): number {
-  const match = data.currencies?.find(c => c.code === currencyCode);
-  return match?.precision ?? AppConfig.constants.precision;
-}
-
-function journalLabel(journal: ImportedJournal): string {
-  const description = journal.description?.trim();
-  return description || journal.id;
-}
-
-function activeTransactionsForJournal(
-  journalId: string,
-  transactions: ImportedTransaction[],
-): ImportedTransaction[] {
-  return transactions.filter(t => t.journalId === journalId && t.deletedAt == null);
-}
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   const seen = new Set<string>();
@@ -155,9 +126,15 @@ function validateReferences(data: BatchImportData): void {
   }
 
   for (const rule of data.transactionAutoPostRules ?? []) {
-    if (!accountIds.has(rule.sourceAccountId) || !accountIds.has(rule.categoryAccountId)) {
+    // Review/ignore rules may leave source or category empty (EMPTY_ACCOUNT_ID).
+    if (rule.sourceAccountId && !accountIds.has(rule.sourceAccountId)) {
       throw new Error(
-        `Import validation failed: auto-post rule "${rule.id}" references a missing account`,
+        `Import validation failed: auto-post rule "${rule.id}" references missing account "${rule.sourceAccountId}"`,
+      );
+    }
+    if (rule.categoryAccountId && !accountIds.has(rule.categoryAccountId)) {
+      throw new Error(
+        `Import validation failed: auto-post rule "${rule.id}" references missing account "${rule.categoryAccountId}"`,
       );
     }
   }
@@ -201,38 +178,15 @@ function validateReferences(data: BatchImportData): void {
   }
 }
 
-/** Validates accounting invariants on canonical plugin output before persistence. */
+/** Validates structural integrity on canonical plugin output before persistence. */
 export function validateCanonicalImport(canonical: CanonicalImport): void {
   validateImportedData(batchImportDataFromCanonical(canonical));
 }
 
 /**
- * Ensures every non-deleted imported journal satisfies double-entry (debits ≡ credits).
- * Call before wiping or persisting workplace data.
+ * Ensures imported graphs hang together (IDs, FKs, hierarchy).
+ * Does not re-check historical debit≡credit / FX math — trust the backup as written.
  */
 export function validateImportedData(data: BatchImportData): void {
   validateReferences(data);
-
-  for (const journal of data.journals) {
-    if (journal.deletedAt != null) {
-      continue;
-    }
-
-    const legs = activeTransactionsForJournal(journal.id, data.transactions);
-    const lines: JournalLineForCheck[] = legs.map(t => ({
-      amount: t.amount,
-      type: toTransactionType(t.transactionType),
-      exchangeRate: t.exchangeRate,
-    }));
-
-    const precision = currencyPrecision(data, journal.currencyCode);
-    const validation = checkJournal(lines, precision);
-
-    if (!validation.isValid) {
-      throw new Error(
-        `Import validation failed: journal "${journalLabel(journal)}" (${journal.id}) is unbalanced ` +
-          `(imbalance: ${validation.imbalance}, debits: ${validation.totalDebits}, credits: ${validation.totalCredits})`,
-      );
-    }
-  }
 }
