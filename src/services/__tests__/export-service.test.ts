@@ -1,5 +1,7 @@
 import { database } from '@/src/data/database/Database';
+import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { schema } from '@/src/data/database/schema';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { exportService } from '@/src/services/export-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -12,6 +14,16 @@ jest.mock('@/src/data/database/Database', () => ({
     collections: {
       get: jest.fn(),
     },
+  },
+}));
+
+jest.mock('@/src/data/database/DatabaseUtils', () => ({
+  supportsRawSql: jest.fn(() => false),
+}));
+
+jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
+  transactionRawRepository: {
+    queryRaw: jest.fn(),
   },
 }));
 
@@ -230,6 +242,113 @@ describe('ExportService', () => {
       expect(parsed.currencies).toEqual(expect.any(Array));
       expect(parsed.exchange_rates).toEqual(expect.any(Array));
       expect(parsed.balance_snapshots).toEqual(expect.any(Array));
+    });
+
+    it('excludes soft-deleted journals and transaction legs from raw SQL export', async () => {
+      const FIXED_DATE = new Date('2024-01-01T12:00:00Z');
+      (supportsRawSql as jest.Mock).mockReturnValue(true);
+      (transactionRawRepository.queryRaw as jest.Mock).mockImplementation(
+        async (sql: string, _params: unknown[], tableName: string) => {
+          expect(sql).toEqual(expect.any(String));
+          if (tableName === 'transactions') {
+            expect(sql).toContain('deleted_at IS NULL');
+            return [
+              {
+                id: 't-active',
+                journalId: 'j-active',
+                accountId: 'acc1',
+                amount: 10,
+                transactionType: 'DEBIT',
+                currencyCode: 'USD',
+                transactionDate: FIXED_DATE.valueOf(),
+                createdAt: FIXED_DATE.valueOf(),
+                updatedAt: FIXED_DATE.valueOf(),
+              },
+            ];
+          }
+          if (tableName === 'journals') {
+            expect(sql).toContain('deleted_at IS NULL');
+            return [
+              {
+                id: 'j-active',
+                journalDate: FIXED_DATE.valueOf(),
+                currencyCode: 'USD',
+                totalAmount: 10,
+                transactionCount: 1,
+                displayType: 'EXPENSE',
+                status: 'POSTED',
+                createdAt: FIXED_DATE.valueOf(),
+                updatedAt: FIXED_DATE.valueOf(),
+              },
+            ];
+          }
+          if (tableName === 'accounts') {
+            return [
+              {
+                id: 'acc1',
+                name: 'Cash',
+                accountType: 'ASSET',
+                currencyCode: 'USD',
+                createdAt: FIXED_DATE.valueOf(),
+                updatedAt: FIXED_DATE.valueOf(),
+              },
+            ];
+          }
+          if (tableName === 'balance_snapshots') {
+            return [
+              {
+                id: 'snap-active',
+                accountId: 'acc1',
+                transactionId: 't-active',
+                transactionDate: FIXED_DATE.valueOf(),
+                absoluteBalance: 10,
+                transactionCount: 1,
+                createdAt: FIXED_DATE.valueOf(),
+                updatedAt: FIXED_DATE.valueOf(),
+              },
+              {
+                id: 'snap-orphan',
+                accountId: 'acc1',
+                transactionId: 't-deleted',
+                transactionDate: FIXED_DATE.valueOf(),
+                absoluteBalance: 5,
+                transactionCount: 1,
+                createdAt: FIXED_DATE.valueOf(),
+                updatedAt: FIXED_DATE.valueOf(),
+              },
+            ];
+          }
+          return [];
+        },
+      );
+
+      mockGet.mockImplementation((tableName: string) => {
+        if (tableName === 'workplaces') {
+          return createCollectionMock([
+            {
+              id: 'wp-1',
+              name: 'Personal',
+              createdAt: FIXED_DATE,
+              updatedAt: FIXED_DATE,
+              defaultCurrencyCode: 'USD',
+            },
+          ]);
+        }
+        return createCollectionMock([]);
+      });
+      (preferences.loadPreferences as jest.Mock).mockResolvedValue({});
+
+      await exportService.exportToJSON('wp-1' as WorkplaceId);
+      const backupJson = (compression.createZipArchive as jest.Mock).mock.calls[0][1][
+        'backup.json'
+      ] as string;
+      const parsed = JSON.parse(backupJson);
+
+      expect(parsed.transactions.map((t: { id: string }) => t.id)).toEqual(['t-active']);
+      expect(parsed.journals.map((j: { id: string }) => j.id)).toEqual(['j-active']);
+      expect(parsed.balance_snapshots.map((s: { id: string }) => s.id)).toEqual(['snap-active']);
+
+      (supportsRawSql as jest.Mock).mockReturnValue(false);
     });
 
     it('should handle errors', async () => {

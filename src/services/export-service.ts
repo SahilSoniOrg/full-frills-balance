@@ -252,6 +252,12 @@ const DATE_COLUMN_NAMES = [
   'effective_date',
 ];
 
+/**
+ * Soft-deleted journal legs (and whole journals) are edit debris. Including them in
+ * backups reintroduces orphan account FKs after restores. Active state only.
+ */
+const EXPORT_OMIT_SOFT_DELETED_TABLES = new Set(['transactions', 'journals']);
+
 export interface ExportData {
   exportDate: string;
   version: string;
@@ -357,18 +363,29 @@ class ExportService {
 
     let raws: Record<string, unknown>[] = [];
     let useFallback = true;
+    const omitSoftDeleted =
+      EXPORT_OMIT_SOFT_DELETED_TABLES.has(tableName) && columnNames.includes('deleted_at');
+
     if (supportsRawSql(database)) {
       const selectFields = columnNames
         .map(snake => `${snake} AS ${snakeToCamel(snake)}`)
         .join(', ');
-      //if columns contain workplaceId then add where workplace_id = ?
-      let sql = `SELECT ${selectFields} FROM ${tableName}`;
+      const whereClauses: string[] = [];
+      const params: unknown[] = [];
       if (columnNames.includes('workplace_id')) {
-        sql += ` WHERE workplace_id = ?`;
+        whereClauses.push('workplace_id = ?');
+        params.push(workplaceId);
+      }
+      if (omitSoftDeleted) {
+        whereClauses.push('deleted_at IS NULL');
+      }
+      let sql = `SELECT ${selectFields} FROM ${tableName}`;
+      if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`;
       }
       const results = await transactionRawRepository.queryRaw<Record<string, unknown>>(
         sql,
-        columnNames.includes('workplace_id') ? [workplaceId] : [],
+        params,
         tableName,
       );
       if (results !== null) {
@@ -393,6 +410,10 @@ class ExportService {
         }
         return mapped;
       });
+    }
+
+    if (omitSoftDeleted) {
+      raws = raws.filter(raw => raw.deletedAt == null && raw.deleted_at == null);
     }
 
     const total = raws.length;
@@ -496,8 +517,23 @@ class ExportService {
         transactionInboxRecords,
         currencies,
         exchangeRates,
-        balanceSnapshots,
+        balanceSnapshotsRaw,
       ] = fetchResults;
+
+      const exportedTransactionIds = new Set(
+        transactions.map(row => String((row as { id?: unknown }).id ?? '')),
+      );
+      const exportedJournalIds = new Set(
+        journals.map(row => String((row as { id?: unknown }).id ?? '')),
+      );
+      const balanceSnapshots = balanceSnapshotsRaw.filter(row => {
+        const transactionId = (row as { transactionId?: unknown }).transactionId;
+        return typeof transactionId === 'string' && exportedTransactionIds.has(transactionId);
+      });
+      const journalMetadataActive = journalMetadata.filter(row => {
+        const journalId = (row as { journalId?: unknown }).journalId;
+        return typeof journalId === 'string' && exportedJournalIds.has(journalId);
+      });
 
       onProgress?.('Processing preferences...', 0.53);
       const [userPreferences, workplace] = await Promise.all([
@@ -542,7 +578,7 @@ class ExportService {
         { key: 'budgetScopes', data: budgetScopes },
         { key: 'accountMetadata', data: accountMetadata },
         { key: 'plannedPayments', data: plannedPayments },
-        { key: 'journalMetadata', data: journalMetadata },
+        { key: 'journalMetadata', data: journalMetadataActive },
         { key: 'transactionAutoPostRules', data: transactionAutoPostRules },
         { key: 'transactionInboxRecords', data: transactionInboxRecords },
         { key: 'currencies', data: currencies },
@@ -584,7 +620,7 @@ class ExportService {
         budgetScopes: budgetScopes.length,
         accountMetadata: accountMetadata.length,
         plannedPayments: plannedPayments.length,
-        journalMetadata: journalMetadata.length,
+        journalMetadata: journalMetadataActive.length,
         transactionAutoPostRules: transactionAutoPostRules.length,
         currencies: currencies.length,
         exchangeRates: exchangeRates.length,
