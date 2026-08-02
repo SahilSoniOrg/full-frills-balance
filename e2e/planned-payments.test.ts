@@ -8,17 +8,37 @@ test.describe('Planned Payments & Commitments', () => {
     await onboardingPage.goto('/');
     await onboardingPage.completeOnboarding('Commitments User');
 
-    // Create accounts needed for planned payment
-    await accountsPage.navigateToCreation();
     await accountsPage.createAccount('Checking Account', 'Asset');
-    await accountsPage.navigateToCreation();
-    await accountsPage.createAccount('Landlord', 'Expense');
   });
 
-  test('should create a planned payment rule', async ({ plannedPaymentsPage, page }) => {
-    await plannedPaymentsPage.createPayment('Monthly Rent', '1500');
+  test('should create a planned payment rule', async ({ plannedPaymentsPage }) => {
+    await plannedPaymentsPage.createPayment('Monthly Rent', '1500', {
+      fromAccount: 'Checking Account',
+      // Use onboarding system equity account — always present in the picker.
+      toAccount: 'Opening Balances (USD)',
+    });
 
-    // Should return to planned payments list or commitments screen
-    await expect(page.getByText('Monthly Rent')).toBeVisible({ timeout: 15000 });
+    await plannedPaymentsPage.assertPaymentVisible('Monthly Rent');
+  });
+
+  test('should post the next planned payment occurrence', async ({
+    plannedPaymentsPage,
+    dashboardPage,
+    page,
+  }) => {
+    await plannedPaymentsPage.createPayment('Utilities Due', '85.00', {
+      fromAccount: 'Checking Account',
+      toAccount: 'Opening Balances (USD)',
+    });
+
+    await plannedPaymentsPage.openPaymentDetails('Utilities Due');
+    await plannedPaymentsPage.postNextOccurrence();
+
+    await dashboardPage.switchToActivity();
+    await expect(
+      page.getByTestId('transaction-card-title').filter({ hasText: 'Utilities Due' }),
+    ).toBeVisible({
+      timeout: 20000,
+    });
   });
 });

@@ -47,4 +47,14 @@ test.describe('Basic Account Management', () => {
       })
       .toBe(0);
   });
+
+  test('should recover a deleted account via undo toast', async ({ accountsPage }) => {
+    await accountsPage.navigateToCreation();
+    await accountsPage.createAccount('To Recover', 'Asset');
+
+    await accountsPage.clickAccount('To Recover');
+    await accountsPage.deleteAccount('To Recover');
+    await accountsPage.undoDeleteFromToast();
+    await accountsPage.assertAccountVisible('To Recover');
+  });
 });

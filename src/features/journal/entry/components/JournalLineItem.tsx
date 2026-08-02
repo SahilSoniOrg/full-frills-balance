@@ -54,6 +54,7 @@ export const JournalLineItem = React.memo(
               Keyboard.dismiss();
               onSelectAccount();
             }}
+            testID={`advanced-account-${line.id}`}
           >
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
@@ -102,6 +103,7 @@ export const JournalLineItem = React.memo(
             ]}
           >
             <TouchableOpacity
+              testID={`advanced-dr-${line.id}`}
               style={[
                 styles.typeSegment,
                 line.transactionType === TransactionType.DEBIT && {
@@ -127,6 +129,7 @@ export const JournalLineItem = React.memo(
               </AppText>
             </TouchableOpacity>
             <TouchableOpacity
+              testID={`advanced-cr-${line.id}`}
               style={[
                 styles.typeSegment,
                 line.transactionType === TransactionType.CREDIT && {

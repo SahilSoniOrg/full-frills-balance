@@ -179,6 +179,7 @@ export const BulkEntryRow = React.memo(
               Keyboard.dismiss();
               onAccountPickerRequest(row.id, 'source');
             }}
+            testID={`bulk-source-${row.id}`}
           >
             <AppText
               variant="caption"
@@ -207,6 +208,7 @@ export const BulkEntryRow = React.memo(
               Keyboard.dismiss();
               onAccountPickerRequest(row.id, 'destination');
             }}
+            testID={`bulk-destination-${row.id}`}
           >
             <AppText
               variant="caption"

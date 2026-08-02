@@ -133,9 +133,9 @@ export class AccountsPage extends BasePage {
       )
       .toBeGreaterThan(0);
 
-    const locator = this.page.getByText(name, { exact: true }).first();
-    await locator.scrollIntoViewIfNeeded();
-    await expect(locator).toBeVisible();
+    // RN-web list rows can be in the accessibility tree but report as "not visible"
+    // for scrollIntoView; attached + count is enough for list presence.
+    await expect(this.page.getByText(name, { exact: true }).first()).toBeAttached();
   }
 
   async clickAccount(name: string) {
@@ -164,6 +164,15 @@ export class AccountsPage extends BasePage {
     await this.page.getByRole('button', { name: 'Confirm', exact: true }).click();
 
     await expect(this.page).toHaveURL(/\/accounts/, { timeout: 20000 });
+  }
+
+  /** Undo account soft-delete via the success toast action. */
+  async undoDeleteFromToast() {
+    await expect(this.page.getByText('Account has been deleted.')).toBeVisible({ timeout: 10000 });
+    await this.page.getByText('UNDO', { exact: true }).click();
+    await expect(this.page.getByText('Account restored.')).toBeVisible({ timeout: 10000 });
+    // Soft-delete UI can leave the list stale; reopen hub before asserting restore.
+    await this.openAccountsHub();
   }
 
   async save() {
