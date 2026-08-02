@@ -18,10 +18,7 @@ import {
 } from '@/src/services/import/importStaging';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
 import { beginImportRun } from '@/src/services/import/importRun';
-import {
-  validateCanonicalImport,
-  validateImportedData,
-} from '@/src/services/import/validateImportedData';
+import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -78,13 +75,9 @@ export class ImportService {
       onProgress: (msg, p) => parseProgress(msg, p),
     });
 
-    if (parsedResult.canonical) {
-      validateCanonicalImport(parsedResult.canonical);
-    }
+    // Resolve once, then validate the same object that will be inserted.
     const importBatchData = resolveParsedImportBatchData(parsedResult);
-    if (!parsedResult.canonical) {
-      validateImportedData(importBatchData);
-    }
+    validateImportedData(importBatchData);
 
     const backupProgress = run.phaseReporter('backup');
     const backupResult = await preImportBackupService.createBackup(workplaceId, (message, p) =>

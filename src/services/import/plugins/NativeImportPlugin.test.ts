@@ -322,5 +322,194 @@ describe('NativeImportPlugin', () => {
       expect(data.transactionAutoPostRules[0].channelsJson).toBe('["sms"]');
       expect(data.transactionAutoPostRules[0].sourceAccountId).toBe(newAccountId);
     });
+
+    it('remaps account ids inside auto-post rule actionsJson', async () => {
+      const withActionsJson = {
+        ...validNativeData,
+        transactionAutoPostRules: [
+          {
+            id: 'r1',
+            priority: 1,
+            sourceAccountId: 'a1',
+            categoryAccountId: 'a1',
+            isActive: true,
+            channelsJson: '["sms"]',
+            actionsJson: JSON.stringify({
+              disposition: 'auto_post',
+              sourceAccountId: 'a1',
+              categoryAccountId: 'a1',
+              journalDescription: 'Coffee',
+            }),
+          },
+        ],
+      };
+      const context = { json: withActionsJson } as ImportFileContext;
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
+
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const newAccountId = data.accounts[0].id;
+      const actions = JSON.parse(data.transactionAutoPostRules[0].actionsJson);
+      expect(actions.sourceAccountId).toBe(newAccountId);
+      expect(actions.categoryAccountId).toBe(newAccountId);
+      expect(actions.journalDescription).toBe('Coffee');
+    });
+
+    it('sanitizes stale SMS rule actionsJson without creating placeholder accounts', async () => {
+      const withStaleRule = {
+        ...validNativeData,
+        transactionAutoPostRules: [
+          {
+            id: 'r-stale',
+            priority: 1,
+            sourceAccountId: 'a1',
+            categoryAccountId: 'a1',
+            isActive: true,
+            channelsJson: '["sms"]',
+            actionsJson: JSON.stringify({
+              disposition: 'auto_post',
+              sourceAccountId: 'ghost-source',
+              categoryAccountId: 'ghost-category',
+              journalDescription: 'Star Bazaar',
+            }),
+          },
+        ],
+      };
+      const context = { json: withStaleRule } as ImportFileContext;
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
+
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      expect(data.accounts).toHaveLength(1);
+      expect(data.accounts[0].name).toBe('Acc 1');
+      const newAccountId = data.accounts[0].id;
+      const rule = data.transactionAutoPostRules[0];
+      expect(rule.sourceAccountId).toBe(newAccountId);
+      expect(rule.categoryAccountId).toBe(newAccountId);
+      expect(JSON.parse(rule.actionsJson)).toEqual({
+        disposition: 'auto_post',
+        sourceAccountId: newAccountId,
+        categoryAccountId: newAccountId,
+        journalDescription: 'Star Bazaar',
+      });
+    });
+
+    it('clears missing rule column accounts and demotes auto_post to review', async () => {
+      const withBrokenRule = {
+        ...validNativeData,
+        transactionAutoPostRules: [
+          {
+            id: 'r-broken',
+            priority: 1,
+            sourceAccountId: 'missing-source',
+            categoryAccountId: 'a1',
+            isActive: true,
+            actionsJson: JSON.stringify({
+              disposition: 'auto_post',
+              sourceAccountId: 'missing-source',
+              categoryAccountId: 'a1',
+            }),
+          },
+        ],
+      };
+      const context = { json: withBrokenRule } as ImportFileContext;
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
+
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const newAccountId = data.accounts[0].id;
+      const rule = data.transactionAutoPostRules[0];
+      expect(rule.sourceAccountId).toBe('');
+      expect(rule.categoryAccountId).toBe(newAccountId);
+      expect(JSON.parse(rule.actionsJson)).toEqual({
+        disposition: 'review',
+        categoryAccountId: newAccountId,
+      });
+    });
+
+    it('creates placeholder accounts for orphaned transaction account ids', async () => {
+      const withOrphan = {
+        ...validNativeData,
+        transactions: [
+          {
+            id: 't1',
+            accountId: 'missing-account',
+            journalId: 'j1',
+            amount: 10,
+            transactionType: 'DEBIT',
+            currencyCode: 'USD',
+            transactionDate: '2024-01-01T00:00:00Z',
+          },
+          {
+            id: 't2',
+            accountId: 'a1',
+            journalId: 'j1',
+            amount: 10,
+            transactionType: 'CREDIT',
+            currencyCode: 'USD',
+            transactionDate: '2024-01-01T00:00:00Z',
+          },
+        ],
+      };
+      const context = { json: withOrphan } as ImportFileContext;
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
+
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      expect(data.accounts.length).toBe(2);
+      const placeholder = data.accounts.find((a: { name: string }) =>
+        a.name.startsWith('Recovered account'),
+      );
+      expect(placeholder).toBeDefined();
+      expect(data.transactions[0].accountId).toBe(placeholder.id);
+      expect(data.transactions[0].accountId).toBeDefined();
+      expect(data.transactions[0].accountId).not.toBe('missing-account');
+    });
+
+    it('skips soft-deleted journals and transaction legs from older backups', async () => {
+      const withDeletedLegs = {
+        ...validNativeData,
+        journals: [
+          ...validNativeData.journals,
+          {
+            id: 'j-deleted',
+            journalDate: '2024-01-02T00:00:00Z',
+            currencyCode: 'USD',
+            status: 'POSTED',
+            totalAmount: 5,
+            transactionCount: 2,
+            displayType: 'EXPENSE',
+            deletedAt: '2024-01-03T00:00:00Z',
+          },
+        ],
+        transactions: [
+          ...validNativeData.transactions,
+          {
+            id: 't-deleted-leg',
+            accountId: 'missing-old-account',
+            journalId: 'j1',
+            amount: 10,
+            transactionType: 'DEBIT',
+            currencyCode: 'USD',
+            transactionDate: '2024-01-01T00:00:00Z',
+            deletedAt: '2024-01-02T00:00:00Z',
+          },
+          {
+            id: 't-on-deleted-journal',
+            accountId: 'a1',
+            journalId: 'j-deleted',
+            amount: 5,
+            transactionType: 'DEBIT',
+            currencyCode: 'USD',
+            transactionDate: '2024-01-02T00:00:00Z',
+          },
+        ],
+      };
+      const context = { json: withDeletedLegs } as ImportFileContext;
+      await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
+
+      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      expect(data.journals).toHaveLength(1);
+      expect(data.transactions).toHaveLength(2);
+      expect(data.accounts.every((a: { name: string }) => !a.name.startsWith('Recovered'))).toBe(
+        true,
+      );
+    });
   });
 });

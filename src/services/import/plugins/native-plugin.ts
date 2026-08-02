@@ -6,6 +6,7 @@
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import { AccountType, AccountSubtype } from '@/src/data/models/Account';
 import { AuditEntityType } from '@/src/data/models/AuditLog';
 import {
   ImportedAccount,
@@ -25,8 +26,13 @@ import {
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
+  mapOptionalRuleAccountId,
+  sanitizeRuleActionsForImport,
+} from '@/src/services/sms/ruleActionsAccountIds';
+import {
   AccountId,
   BudgetId,
+  EMPTY_ACCOUNT_ID,
   JournalId,
   PlannedPaymentId,
   TransactionId,
@@ -70,6 +76,71 @@ function parseTimestamp(value?: number | string): number | undefined {
 
   const parsed = new Date(value).getTime();
   return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function isPresentRecord(row: { deletedAt?: unknown }): boolean {
+  return row.deletedAt == null || row.deletedAt === '';
+}
+
+function addAccountId(target: Set<string>, value?: string | null): void {
+  if (typeof value === 'string' && value.length > 0) {
+    target.add(value);
+  }
+}
+
+function autoPostRulesFromData(data: NativeImportData): ImportedTransactionAutoPostRule[] {
+  return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
+}
+
+/** Account IDs referenced by transactions/rules/etc that must exist after remap. */
+function collectReferencedAccountIds(data: NativeImportData): Set<string> {
+  const ids = new Set<string>();
+
+  for (const account of data.accounts) {
+    addAccountId(ids, account.parentAccountId);
+  }
+  for (const transaction of data.transactions) {
+    addAccountId(ids, transaction.accountId);
+  }
+  for (const scope of data.budgetScopes || []) {
+    addAccountId(ids, scope.accountId);
+  }
+  for (const metadata of data.accountMetadata || []) {
+    addAccountId(ids, metadata.accountId);
+    addAccountId(ids, metadata.payFromAccountId);
+  }
+  for (const payment of data.plannedPayments || []) {
+    addAccountId(ids, payment.fromAccountId);
+    addAccountId(ids, payment.toAccountId);
+  }
+  for (const snapshot of data.balanceSnapshots || []) {
+    addAccountId(ids, snapshot.accountId);
+  }
+  for (const budget of data.budgets || []) {
+    if (!budget.assetAccountIds) continue;
+    for (const id of budget.assetAccountIds.split(',')) {
+      addAccountId(ids, id.trim());
+    }
+  }
+  // SMS auto-post rules are sanitized separately: stale account refs are cleared,
+  // not recovered as placeholder accounts.
+
+  return ids;
+}
+
+function requireMappedAccountId(
+  accountMap: Map<string, AccountId>,
+  originalId: string | undefined,
+  context: string,
+): AccountId {
+  if (!originalId) {
+    throw new Error(`Import mapping failed: ${context} is missing an account id`);
+  }
+  const mapped = accountMap.get(originalId);
+  if (!mapped) {
+    throw new Error(`Import mapping failed: ${context} references missing account "${originalId}"`);
+  }
+  return mapped;
 }
 
 export const nativePlugin: ImportPlugin = {
@@ -116,6 +187,27 @@ export const nativePlugin: ImportPlugin = {
       throw new Error('Invalid export file: missing required data sections');
     }
 
+    // Drop soft-deleted journals/legs from older backups. They are edit debris and
+    // can reference accounts that no longer exist after prior restores.
+    const activeJournals = data.journals.filter(isPresentRecord);
+    const activeJournalIds = new Set(activeJournals.map(j => j.id));
+    const activeTransactions = data.transactions.filter(
+      t => isPresentRecord(t) && activeJournalIds.has(t.journalId),
+    );
+    const activeTransactionIds = new Set(activeTransactions.map(t => t.id));
+    data.journals = activeJournals;
+    data.transactions = activeTransactions;
+    if (data.journalMetadata) {
+      data.journalMetadata = data.journalMetadata.filter(meta =>
+        activeJournalIds.has(meta.journalId),
+      );
+    }
+    if (data.balanceSnapshots) {
+      data.balanceSnapshots = data.balanceSnapshots.filter(snapshot =>
+        activeTransactionIds.has(snapshot.transactionId),
+      );
+    }
+
     logger.info(
       `[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`,
     );
@@ -146,30 +238,60 @@ export const nativePlugin: ImportPlugin = {
 
       const defaultCurrencyCode = currencyCode || fallbackCurrency; // Fallback if no preferences exist
 
+      // Recover orphaned account FKs (e.g. stale SMS rule actionsJson after a prior restore)
+      // by synthesizing placeholder accounts so restore can succeed without data loss.
+      const placeholderAccounts: ImportedAccount[] = [];
+      const recoveredOriginalIds: string[] = [];
+      for (const originalId of collectReferencedAccountIds(data)) {
+        if (accountMap.has(originalId)) continue;
+        const recoveredId = generateId() as AccountId;
+        accountMap.set(originalId, recoveredId);
+        accountCurrencyMap.set(originalId, defaultCurrencyCode);
+        recoveredOriginalIds.push(originalId);
+        placeholderAccounts.push({
+          id: recoveredId,
+          name: `Recovered account (${originalId.slice(0, 8)})`,
+          accountType: AccountType.ASSET,
+          accountSubtype: AccountSubtype.OTHER,
+          currencyCode: defaultCurrencyCode,
+          description:
+            'Placeholder created during import for transactions or rules that referenced a missing account.',
+        });
+      }
+      if (placeholderAccounts.length > 0) {
+        logger.warn(
+          `[NativePlugin] Created ${placeholderAccounts.length} placeholder account(s) for orphaned references`,
+          { originalIds: recoveredOriginalIds },
+        );
+      }
+
       // 3. Map Data
       onProgress?.('Parsing data records...', 0.5);
       logger.info('[NativePlugin] Starting data mapping...');
 
-      const accounts = data.accounts.map(acc => {
-        const id = accountMap.get(acc.id)!;
-        const currencyCode = acc.currencyCode || defaultCurrencyCode;
+      const accounts = [
+        ...data.accounts.map(acc => {
+          const id = accountMap.get(acc.id)!;
+          const mappedCurrencyCode = acc.currencyCode || defaultCurrencyCode;
 
-        return {
-          id,
-          name: acc.name,
-          accountType: acc.accountType,
-          accountSubtype: acc.accountSubtype,
-          currencyCode,
-          parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
-          description: acc.description,
-          icon: acc.icon,
-          orderNum: acc.orderNum,
-          reconciledAt: parseTimestamp(acc.reconciledAt),
-          createdAt: parseTimestamp(acc.createdAt),
-          updatedAt: parseTimestamp(acc.updatedAt),
-          deletedAt: parseTimestamp(acc.deletedAt),
-        };
-      });
+          return {
+            id,
+            name: acc.name,
+            accountType: acc.accountType,
+            accountSubtype: acc.accountSubtype,
+            currencyCode: mappedCurrencyCode,
+            parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
+            description: acc.description,
+            icon: acc.icon,
+            orderNum: acc.orderNum,
+            reconciledAt: parseTimestamp(acc.reconciledAt),
+            createdAt: parseTimestamp(acc.createdAt),
+            updatedAt: parseTimestamp(acc.updatedAt),
+            deletedAt: parseTimestamp(acc.deletedAt),
+          };
+        }),
+        ...placeholderAccounts,
+      ];
 
       const journals = data.journals.map(j => {
         return {
@@ -199,7 +321,7 @@ export const nativePlugin: ImportPlugin = {
         return {
           id: transactionMap.get(t.id)!,
           journalId: journalMap.get(t.journalId)!,
-          accountId: accountMap.get(t.accountId)!,
+          accountId: requireMappedAccountId(accountMap, t.accountId, `transaction "${t.id}"`),
           amount: t.amount,
           transactionType: t.transactionType,
           currencyCode:
@@ -322,25 +444,41 @@ export const nativePlugin: ImportPlugin = {
           createdAt: parseTimestamp(meta.createdAt),
           updatedAt: parseTimestamp(meta.updatedAt),
         })),
-        transactionAutoPostRules: (
-          data.transactionAutoPostRules ||
-          data.smsAutoPostRules ||
-          data.sms_auto_post_rules ||
-          []
-        ).map(rule => ({
-          id: generateId(),
-          channelsJson: rule.channelsJson,
-          senderMatch: rule.senderMatch,
-          bodyMatch: rule.bodyMatch,
-          conditionsJson: rule.conditionsJson,
-          actionsJson: rule.actionsJson,
-          priority: rule.priority,
-          sourceAccountId: accountMap.get(rule.sourceAccountId)!,
-          categoryAccountId: accountMap.get(rule.categoryAccountId)!,
-          isActive: rule.isActive,
-          createdAt: parseTimestamp(rule.createdAt),
-          updatedAt: parseTimestamp(rule.updatedAt),
-        })),
+        transactionAutoPostRules: autoPostRulesFromData(data).map(rule => {
+          const sourceAccountId = mapOptionalRuleAccountId(accountMap, rule.sourceAccountId);
+          const categoryAccountId = mapOptionalRuleAccountId(accountMap, rule.categoryAccountId);
+          const clearedBadRef =
+            (Boolean(rule.sourceAccountId) && sourceAccountId === EMPTY_ACCOUNT_ID) ||
+            (Boolean(rule.categoryAccountId) && categoryAccountId === EMPTY_ACCOUNT_ID);
+
+          if (clearedBadRef) {
+            logger.warn(
+              `[NativePlugin] Cleared missing account refs on auto-post rule "${rule.id}"`,
+              {
+                sourceAccountId: rule.sourceAccountId,
+                categoryAccountId: rule.categoryAccountId,
+              },
+            );
+          }
+
+          return {
+            id: generateId(),
+            channelsJson: rule.channelsJson,
+            senderMatch: rule.senderMatch,
+            bodyMatch: rule.bodyMatch,
+            conditionsJson: rule.conditionsJson,
+            actionsJson: sanitizeRuleActionsForImport(rule.actionsJson, {
+              sourceAccountId,
+              categoryAccountId,
+            }),
+            priority: rule.priority,
+            sourceAccountId,
+            categoryAccountId,
+            isActive: rule.isActive,
+            createdAt: parseTimestamp(rule.createdAt),
+            updatedAt: parseTimestamp(rule.updatedAt),
+          };
+        }),
         transactionInboxRecords: (
           data.transactionInboxRecords ||
           data.smsInboxRecords ||
@@ -380,7 +518,11 @@ export const nativePlugin: ImportPlugin = {
         })),
         balanceSnapshots: (data.balanceSnapshots || []).map(snapshot => ({
           id: generateId(),
-          accountId: accountMap.get(snapshot.accountId)!,
+          accountId: requireMappedAccountId(
+            accountMap,
+            snapshot.accountId,
+            `balance snapshot "${snapshot.id}"`,
+          ),
           transactionId: transactionMap.get(snapshot.transactionId)!,
           transactionDate: parseTimestamp(snapshot.transactionDate) ?? Date.now(),
           absoluteBalance: snapshot.absoluteBalance,
@@ -412,7 +554,7 @@ export const nativePlugin: ImportPlugin = {
           defaultCurrencyCode: currencyCode,
         },
         stats: {
-          accounts: data.accounts.length,
+          accounts: accounts.length,
           journals: data.journals.length,
           transactions: data.transactions.length,
           budgets: data.budgets?.length || 0,
@@ -423,6 +565,9 @@ export const nativePlugin: ImportPlugin = {
       };
     } catch (error) {
       logger.error('[NativePlugin] Parse failed', error);
+      if (error instanceof Error && error.message.startsWith('Import mapping failed')) {
+        throw error;
+      }
       throw new Error('Failed to parse data');
     }
   },
