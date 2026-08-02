@@ -57,6 +57,9 @@ _Avoid_: Default account, meta account
 - **Account read module**: Curated reactive observe/find API (`accountQueries`) exposing only methods required by feature hooks today; add new methods only when a hook needs them.
 _Avoid_: AccountService, second repository façade
 
+- **Account reference graph**: The single module that owns which persisted fields reference Accounts (including CSV `assetAccountIds`) and the policies for those refs under write assert, delete block, import salvage/sanitize, and merge retarget. Lives under account command modules (ADR-0008); does not reintroduce an AccountService façade. SMS column/`actionsJson` dual-storage is a separate seam.
+_Avoid_: Parallel inventories in validate / delete blockers / import remap; treating balance IntegrityService as this concern
+
 - **Canonical import**: The versioned, validated shape (`canonical-import.v1`) that every import plugin must produce before persistence; the only type the import write path should accept after validation.
 _Avoid_: Raw plugin JSON, `BatchImportData` in persistence without conversion
 
