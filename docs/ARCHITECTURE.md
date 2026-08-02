@@ -23,6 +23,8 @@ This document describes the technical architecture of Full Frills Balance, a dou
 4. **Audit Trail**: Every mutation is logged with before/after state for accountability
 5. **Silent numerical mistakes are higher severity than crashes**
 
+**Domain spines:** Accounts writes/reads/reference graph → [ACCOUNTS.md](./ACCOUNTS.md).
+
 ---
 
 ## System Layers
@@ -37,8 +39,9 @@ This document describes the technical architecture of Full Frills Balance, a dou
 ┌────────────────────────────┴──────────────────────────────────┐
 │                    Feature Layer                               │
 │  accounts · journal · reports · budget · planned-payments      │
-│  dashboard · hub · wealth · settings · onboarding · audit      │
-│  commitments · dev                                             │
+│  dashboard · hub · settings · onboarding · audit               │
+│  commitments · dev · app                                       │
+│  (wealth analytics: wealth-service + reports — not a feature)  │
 └────────────────────────────┬──────────────────────────────────┘
                              │
 ┌────────────────────────────┴──────────────────────────────────┐
@@ -142,7 +145,7 @@ The atomic unit of accounting. Groups 2+ transactions that must sum to zero.
 | Field | Type | Notes |
 |-------|------|-------|
 | `journalDate` | timestamp | When the transaction occurred |
-| `status` | POSTED/VOIDED | Only POSTED affects balances |
+| `status` | POSTED / REVERSED / PLANNED / SKIPPED / PAUSED / DRAFT | Only POSTED/REVERSED affect balances (`ACTIVE_JOURNAL_STATUSES`) |
 | `totalAmount` | number | Denormalized sum of debits |
 | `displayType` | string | INCOME/EXPENSE/TRANSFER/MIXED |
 

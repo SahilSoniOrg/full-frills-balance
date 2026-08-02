@@ -54,7 +54,7 @@ the derived sum. It is not "the cache does not exist".
 - **Cost:** a window after a write where the cache is stale (rebuild is debounced
   ~500ms, `app-config.ts`). Any code path that computes *new* financial values
   from a possibly-stale cache can compound the error — notably
-  `accountDomainService.adjustBalance`.
+  `accountAdjustCommands.adjustAccountBalance`.
 
 ## Consequences
 

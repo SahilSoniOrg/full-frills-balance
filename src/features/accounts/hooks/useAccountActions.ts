@@ -16,7 +16,6 @@ import {
   updateAccountOrder as updateAccountOrderCommand,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
-import { findAccountByName as findAccountByNameQuery } from '@/src/services/accounts/accountSystemAccounts';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
@@ -78,13 +77,6 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
-  const findAccountByName = useCallback(
-    async (name: string) => {
-      return findAccountByNameQuery(workplaceId, name);
-    },
-    [workplaceId],
-  );
-
   const adjustBalance = useCallback(
     async (account: Account, targetBalance: number, counterparty?: BalanceChangeCounterparty) => {
       return adjustAccountBalance(workplaceId, account, targetBalance, counterparty);
@@ -112,7 +104,6 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     deleteAccount,
     recoverAccount,
     updateAccountOrder,
-    findAccountByName,
     adjustBalance,
     reconcileAccount,
     mergeAccounts,

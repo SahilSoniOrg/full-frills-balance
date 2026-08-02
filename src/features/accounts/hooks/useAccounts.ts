@@ -79,46 +79,6 @@ export function useAccountBalance(
 }
 
 /**
- * Hook to reactively check if an account has children.
- */
-export function useAccountHasChildren(accountId: AccountId | null, workplaceId: WorkplaceId) {
-  const {
-    data: hasChildren,
-    isLoading,
-    version,
-    error,
-  } = useObservable(
-    () =>
-      accountId
-        ? accountQueries.observeHasChildren(workplaceId, accountId as AccountId)
-        : of(false),
-    [accountId, workplaceId],
-    false,
-  );
-  return { hasChildren, isLoading, version, error };
-}
-
-/**
- * Hook to reactively get the number of sub-accounts for a parent.
- */
-export function useAccountSubAccountCount(accountId: AccountId | null, workplaceId: WorkplaceId) {
-  const {
-    data: subAccountCount,
-    isLoading,
-    version,
-    error,
-  } = useObservable(
-    () =>
-      accountId
-        ? accountQueries.observeSubAccountCount(workplaceId, accountId as AccountId)
-        : of(0),
-    [accountId, workplaceId],
-    0,
-  );
-  return { subAccountCount, isLoading, version, error };
-}
-
-/**
  * Hook to reactively compute balances for a list of accounts.
  * Supports async balance aggregation with currency conversion.
  */

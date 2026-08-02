@@ -179,7 +179,7 @@ Absorb selectors into projection; thin `SafeToSpendMapper` to format/privacy. De
 
 | Module | Path | ~LOC | Interface | Depth | Priority |
 |--------|------|------|-----------|-------|----------|
-| AccountService (accountDomainService) | `services/accounts/accountDomainService.ts` | 719 | create/update/reconcile/merge/adjust/… | Deep | P2 |
+| AccountService (accountDomainService) | **Deleted** — see [ADR-0008](../adr/0008-account-mutations-via-commands.md) and [ACCOUNTS.md](../ACCOUNTS.md); use named `*Commands.ts` | — | create/update/reconcile/merge/adjust/… | — | — |
 | AccountRepository | `data/repositories/AccountRepository.ts` | 708 | ~33 methods | Wide | P1 |
 | accountMetadataDomain | `features/accounts/services/accountMetadataDomain.ts` | ~140 | form defaults/serialize | Medium — correctly feature-local? | P3 |
 | useAccountDetailsViewModel | features | 594 | large | Shallow–Medium | P1 |
@@ -471,7 +471,7 @@ Details live in [surveys/](./surveys/). Highlights not fully expanded above:
 - PlannedPaymentRepository correctly anemic (domain in PlannedPaymentService).
 - `TransactionRawRepository` is partly façade over deep `raw/*` Modules — depth is in the right place.
 - Account uniqueness dual ownership: repo throws + `useAccountValidation` mirrors.
-- Feature hierarchy tree walks duplicate knowledge that `accountDomainService` also owns.
+- Feature hierarchy tree walks duplicate knowledge that account command modules / `accountDescendants` also own.
 
 ### UI / design-system ([surveys/ui.md](./surveys/ui.md))
 - `useObservable` empty-array ⇒ loading is a surprising Interface invariant.

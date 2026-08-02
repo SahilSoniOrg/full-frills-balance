@@ -35,7 +35,7 @@ account. The on-device SQLite database is the user's only copy of their data.
 | Schema version | **28**, with **27** migrations (`src/data/database/migrations.ts`, 875 lines) |
 | Models | **16** files in `src/data/models/`, **15** registered in `Database.ts` (`BaseScopedModel` is abstract) |
 | Routes | 43 route files in `app/` (includes 6 tab screens under `app/(tabs)/`) |
-| Features | 14 under `src/features/` |
+| Features | 13 under `src/features/` |
 | Tests | 133 suites, 826 tests (825 passed, 1 skipped) — re-run `bun run test` to refresh |
 | Coverage | Jest global + per-file thresholds in `jest.config.js`; `bun run verify` must pass |
 | Typecheck | clean, ~6s |
@@ -133,7 +133,7 @@ holds in production today.
 | 7 | Soft-deleted rows are excluded everywhere | `deleted_at IS NULL` across queries | High | — |
 | 8 | Money arithmetic is rounded at every boundary | `src/utils/money.ts` | Medium — **discipline-based, not enforced** | `Money.multiply` doesn't round; ADR-0003 |
 | 9 | Cross-currency aggregates use a consistent rate | `convertAmount` (`currencyConversion.ts`) on read paths; write path still uses stored `exchange_rate` in `checkJournal` | **Medium** — parity improved; historical vs spot policy still matters | Mis-revaluation if spot used where historical rate is required (ADR-0005) |
-| 10 | Every mutation is audit-logged | `ledgerWriteService`, `accountDomainService` | Medium | Import and integrity repairs are not logged |
+| 10 | Every mutation is audit-logged | `ledgerWriteService`, account `*Commands` | Medium | Import and integrity repairs are not logged |
 | 11 | Referential integrity (no FKs in SQLite) | Null-`account_id` scan in integrity service | Medium | Deleting an account **orphans its transactions** |
 | 12 | SMS ingestion is idempotent | fingerprint + `original_sms_id` + processed-id set | Medium | Sub-threshold duplicates can auto-post |
 
@@ -164,7 +164,7 @@ bypass (persisting unbalanced books).**
 |---|---|---|
 | File naming | **Three** conventions coexist: 370 PascalCase, 181 camelCase, 33 kebab-case; 18 directories mix ≥2 | PascalCase for classes/components, camelCase otherwise. Rename the 33 kebab files |
 | Test location | 92 in `__tests__/`, 9 co-located | `__tests__/` wins |
-| Feature folders | Shape is a **maximum**, not a minimum; only 2 of 14 use all four subfolders | Fine as-is; don't force empty folders |
+| Feature folders | Shape is a **maximum**, not a minimum; only 2 of 13 use all four subfolders | Fine as-is; don't force empty folders |
 | Money math | `src/utils/money.ts` only | Never raw `+`/`-`/`*` on amounts |
 | Logging | `src/utils/logger.ts` | ~9 raw `console.*` calls remain |
 | Business logic | `src/services/`, not in hooks | Residual view-model orchestration remains; recent work extracted editor, hierarchy, account-list, and AI lifecycle policies |
@@ -213,7 +213,7 @@ Ordered by expected return, not severity alone. P0 = do now. **Resolved items** 
 | **P1** | `eas.json` submit points at `google-services.json` (a Firebase config, not a Play service-account key) | `eas.json` | S |
 | **P2** | Sign rules duplicated between TS and raw SQL `CASE` strings | `balanceSignParity.test.ts` guards drift; full codegen optional | M |
 | **P2** | Two "is this journal balanced?" rules with different epsilons | `JournalCalculator.ts:73-78` vs `checkJournal` | S |
-| ~~**P2**~~ | ~~Deleting an account orphans its transactions~~ — **blocked at service** | `accountDomainService.deleteAccount` | — |
+| ~~**P2**~~ | ~~Deleting an account orphans its transactions~~ — **blocked at service** | `accountDeleteCommands` + `accountReferenceGraph` | — |
 | **P2** | Integrity repairs are invisible to the audit log | `integrity-service.ts:457-472` | S |
 | **P2** | Swallowed errors on balance/report/FX read paths | `reactiveAggregatedBalances.ts:116-122` + list in the audit | M |
 | **P2** | Beta React Compiler in production; stable 1.0.0 available | `package.json` | S |
