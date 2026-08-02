@@ -2,28 +2,28 @@
 
 **Hop count (create/save → delete → activity list)**  
 - **before:** 22 files · 2026-08-03 · `325fde10`  
-- **after:** _(pending lane collapses)_  
-- **Entry files for the timed tour:** `useJournalEditor.ts`, `useJournalActions.ts`, `useJournalListViewModel.ts`
+- **after (J2 write gateway):** 22 files · dual save seam collapsed (editors → `useJournalActions`); unique file set unchanged  
+- **Entry files for the timed tour:** `useJournalEditor.ts`, `useJournalActions.ts`, `useJournalListViewModel.ts`  
 
 ### Before tour (files opened)
 
-**Create / save (guided → editor → domain → ledger)**  
+**Create / save (guided → editor → actions → domain → ledger)**  
 1. `src/features/journal/entry/hooks/useJournalEditor.ts`  
 2. `src/features/journal/entry/hooks/useSimpleJournalEditor.ts`  
-3. `src/services/journal/journalDomainService.ts`  
-4. `src/services/journal/journalSaveHelpers.ts`  
-5. `src/services/ledger/prepareJournalData.ts`  
-6. `src/services/accounts/accountReferenceGraph.ts`  
-7. `src/services/ledger/ledgerWriteService.ts`  
-8. `src/data/repositories/journal/journalWriteRepository.ts`  
-9. `src/data/models/Journal.ts`  
-10. `src/data/repositories/TransactionRepository.ts`  
-11. `src/data/repositories/AuditRepository.ts`  
+3. `src/features/journal/hooks/useJournalActions.ts`  
+4. `src/services/journal/journalDomainService.ts`  
+5. `src/services/journal/journalSaveHelpers.ts`  
+6. `src/services/ledger/prepareJournalData.ts`  
+7. `src/services/accounts/accountReferenceGraph.ts`  
+8. `src/services/ledger/ledgerWriteService.ts`  
+9. `src/data/repositories/journal/journalWriteRepository.ts`  
+10. `src/data/models/Journal.ts`  
+11. `src/data/repositories/TransactionRepository.ts`  
+12. `src/data/repositories/AuditRepository.ts`  
 
 **Delete**  
-12. `src/features/journal/hooks/useTransactionDetailsActions.ts`  
-13. `src/features/journal/hooks/useJournalActions.ts`  
-(+ domain service, ledger write, write repo, audit already counted)
+13. `src/features/journal/hooks/useTransactionDetailsActions.ts`  
+(+ `useJournalActions` / domain / ledger / write repo / audit already counted)
 
 **Activity list**  
 14. `src/features/journal/hooks/useJournalListViewModel.ts`  
@@ -55,9 +55,9 @@ See [CONTEXT.md](../CONTEXT.md) (guided vs advanced entry) and [PROJECT_BIBLE.md
 | Layer | Home | Job |
 |-------|------|-----|
 | 1. Map | `docs/JOURNAL.md` (this file) | Onboarding |
-| 2. Editor save | `useJournalEditor` → `journalService.saveJournalEntry` (+ `useBulkJournalEditor` for bulk) | **UI create/update** |
-| 3. App mutations | `useJournalActions` → `journalService` | Delete / recover / duplicate / post / revert |
-| 4. Canonical write | `ledgerWriteService` (+ `prepareJournalData`, `journalSaveHelpers`) | Persist + audit + rebuild enqueue |
+| 2. Feature writes | `useJournalActions` → `journalService` | **All feature mutations** (save, bulk, delete, post, …) |
+| 3. Domain orchestration | `journalDomainService` (`journalService`) + `journalSaveHelpers` | Assemble/validate entry, duplicate, bulk prepare |
+| 4. Canonical write | `ledgerWriteService` (+ `prepareJournalData`) | Persist + audit + rebuild enqueue |
 | 5. Write / timeline repos | `journalWriteModule` · `journalTimelineModule` | Persist vs list/observe/enrich |
 | 6. Activity reads | `useJournalListViewModel` → `useJournals` → `journalEnrichedObserver` | How journals appear on Activity |
 
@@ -66,25 +66,19 @@ Also linked: `accountReferenceGraph` (leg account asserts), SMS/planned-payment 
 ## Write path
 
 ```
-Editor / bulk:
-  useJournalEditor | useBulkJournalEditor
-    → journalService.saveJournalEntry | saveBulkJournalEntries
-      → journalSaveHelpers / prepareJournalData
-      → ledgerWriteService
-        → journalWriteRepository + audit + rebuild queue
-
-Details lifecycle:
-  useTransactionDetailsActions → useJournalActions
-    → journalService.delete|duplicate|post|revert|…
-      → ledgerWriteService (same spine)
+Feature UI (editors + details):
+  useJournalEditor | useBulkJournalEditor | useTransactionDetailsActions
+    → useJournalActions
+      → journalService (saveJournalEntry / saveBulk / delete / post / …)
+        → journalSaveHelpers / prepareJournalData (when assembling)
+        → ledgerWriteService
+          → journalWriteRepository + audit + rebuild queue
 ```
 
-**Known dual seam (lane follow-up):** editors call `journalService` directly; `useJournalActions` is unused for save. Prefer one feature write gateway in a later PR (mirror accounts `useAccountActions`).
+**Single feature write gateway:** all journal feature mutations go through `useJournalActions`. Non-UI writers (account opening balance / adjust, planned payments, SMS sync) still call `ledgerWriteService` directly — intentional.
 
-**Also write journals without the feature hooks:** account opening balance / adjust (`accountCommands`, `accountAdjustCommands`), planned payments, SMS sync pipeline — all go through `ledgerWriteService` (or prepared batch). That is intentional for non-UI writers.
-
-**Do not** call journal write repositories from feature hooks for mutations (lint-enforced).  
-**Do not** invent a second `JournalService` façade beside `journalDomainService` / `ledgerWriteService`.
+**Do not** call `journalService` or journal write repositories from feature hooks for mutations (prefer `useJournalActions`).  
+**Do not** invent a second façade beside `journalDomainService` / `ledgerWriteService`.
 
 ## Read path
 

@@ -2,12 +2,24 @@ import Journal from '@/src/data/models/Journal';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
+type SaveJournalEntryParams = Omit<
+  Parameters<typeof journalService.saveJournalEntry>[0],
+  'workplaceId'
+>;
+
+type BulkJournalEntry = {
+  lines: JournalEntryLine[];
+  description: string;
+  journalDate: number;
+  workplaceId: WorkplaceId;
+};
+
 /**
- * App-facing journal mutations. All writes go through journalService, which
- * delegates persistence/audit/rebuild to ledgerWriteService.
+ * Feature write gateway for journals. Editors and details actions go through here;
+ * journalService still owns orchestration and delegates persist/audit/rebuild to ledgerWriteService.
  */
 export function useJournalActions(workplaceId: WorkplaceId) {
   const createJournal = useCallback(
@@ -66,6 +78,17 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
+  const saveJournalEntry = useCallback(
+    async (params: SaveJournalEntryParams) => {
+      return journalService.saveJournalEntry({ ...params, workplaceId });
+    },
+    [workplaceId],
+  );
+
+  const saveBulkJournalEntries = useCallback(async (entries: BulkJournalEntry[]) => {
+    return journalService.saveBulkJournalEntries(entries);
+  }, []);
+
   return {
     createJournal,
     updateJournal,
@@ -75,5 +98,7 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     duplicateJournal,
     postJournal,
     revertToPlanned,
+    saveJournalEntry,
+    saveBulkJournalEntries,
   };
 }

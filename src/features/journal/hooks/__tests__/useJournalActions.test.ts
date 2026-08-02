@@ -109,4 +109,40 @@ describe('useJournalActions', () => {
       'id1' as JournalId,
     );
   });
+
+  it('should delegate saveJournalEntry to journalService with workplaceId', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
+    const params = {
+      lines: [],
+      description: 'Coffee',
+      journalDate: '2026-08-03',
+    } as any;
+
+    await act(async () => {
+      await result.current.saveJournalEntry(params);
+    });
+
+    expect(journalService.saveJournalEntry).toHaveBeenCalledWith({
+      ...params,
+      workplaceId: 'test-wp' as WorkplaceId,
+    });
+  });
+
+  it('should delegate saveBulkJournalEntries to journalService', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
+    const entries = [
+      {
+        lines: [],
+        description: 'A',
+        journalDate: Date.now(),
+        workplaceId: 'test-wp' as WorkplaceId,
+      },
+    ] as any;
+
+    await act(async () => {
+      await result.current.saveBulkJournalEntries(entries);
+    });
+
+    expect(journalService.saveBulkJournalEntries).toHaveBeenCalledWith(entries);
+  });
 });

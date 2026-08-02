@@ -1,7 +1,7 @@
 import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
   JournalEditorHydration,
   useJournalEditorLoader,
@@ -55,6 +55,7 @@ export interface UseJournalEditorOptions {
 export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
   const { advancedMode, setAdvancedMode } = useAdvancedModePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { saveJournalEntry } = useJournalActions(workplaceId);
   const {
     journalId,
     initialMode,
@@ -195,7 +196,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           setLines(overrides.lines);
         }
 
-        const result = await journalService.saveJournalEntry({
+        const result = await saveJournalEntry({
           lines: linesToSave,
           description: finalDescription,
           notes: notes.trim(),
@@ -207,7 +208,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           smsRecordId,
           smsSender,
           rawSmsBody,
-          workplaceId: workplaceId,
         });
 
         if (!result.success) {
@@ -236,7 +236,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       isEdit,
       journalId,
       isGuidedMode,
-      workplaceId,
       smsId,
       smsRecordId,
       smsSender,
@@ -244,6 +243,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       onAfterSave,
       onSuccess,
       setLines,
+      saveJournalEntry,
     ],
   );
 

@@ -4,7 +4,7 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, WorkplaceId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { buildBulkJournalEntries, validateBulkJournalRow } from './bulkJournalHelpers';
@@ -49,6 +49,7 @@ export function useBulkJournalEditor({
   onSaveSuccess,
 }: UseBulkJournalEditorProps) {
   const { fetchRate } = useExchangeRate();
+  const { saveBulkJournalEntries } = useJournalActions(workplaceId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -285,7 +286,7 @@ export function useBulkJournalEditor({
         workplaceId,
       );
 
-      const result = await journalService.saveBulkJournalEntries(entries);
+      const result = await saveBulkJournalEntries(entries);
 
       if (!result.success) {
         setSubmitError(result.error || 'An error occurred while saving the journals.');
@@ -299,7 +300,14 @@ export function useBulkJournalEditor({
     } finally {
       setIsSubmitting(false);
     }
-  }, [accounts, workplaceId, workplaceCurrency, isSubmitting, onSaveSuccess]);
+  }, [
+    accounts,
+    workplaceId,
+    workplaceCurrency,
+    isSubmitting,
+    onSaveSuccess,
+    saveBulkJournalEntries,
+  ]);
 
   return {
     rows,
