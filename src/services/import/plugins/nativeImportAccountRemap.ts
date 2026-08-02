@@ -1,5 +1,6 @@
 import { AccountType, AccountSubtype } from '@/src/data/models/Account';
 import {
+  BatchImportData,
   ImportedAccount,
   ImportedAccountMetadata,
   ImportedBalanceSnapshot,
@@ -9,6 +10,16 @@ import {
   ImportedTransaction,
   ImportedTransactionAutoPostRule,
 } from '@/src/data/repositories/ImportRepository';
+import {
+  AccountImportBatchDto,
+  AccountImportRef,
+  AccountImportRuleRef,
+  formatFundingAccountIds,
+  importPlan,
+  ImportPlan,
+  parseFundingAccountIds,
+  referenceSites,
+} from '@/src/services/accounts/accountReferenceGraph';
 import {
   mapOptionalRuleAccountId,
   syncRuleActionsFromColumns,
@@ -29,9 +40,14 @@ export type NativeImportAccountSources = {
   sms_auto_post_rules?: ImportedTransactionAutoPostRule[];
 };
 
-function addAccountId(target: Set<string>, value?: string | null): void {
-  if (typeof value === 'string' && value.length > 0) {
-    target.add(value);
+function addRef(
+  refs: AccountImportRef[],
+  siteKey: AccountImportRef['siteKey'],
+  accountId: string | undefined | null,
+  recordId?: string,
+): void {
+  if (typeof accountId === 'string' && accountId.length > 0) {
+    refs.push({ siteKey, accountId, recordId });
   }
 }
 
@@ -41,40 +57,87 @@ export function autoPostRulesFromData(
   return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
 }
 
-/** Account IDs referenced by transactions/scopes/etc that must exist after remap. */
-export function collectReferencedAccountIds(data: NativeImportAccountSources): Set<string> {
-  const ids = new Set<string>();
+/**
+ * Maps native/plugin bags (or post-remap BatchImportData) onto the narrow
+ * Account reference graph import DTO. Soft-deleted transactions should already
+ * be filtered by the caller when building salvage plans.
+ */
+export function accountImportBatchFromSources(
+  data: NativeImportAccountSources | BatchImportData,
+): AccountImportBatchDto {
+  const refs: AccountImportRef[] = [];
+  const rules: AccountImportRuleRef[] = [];
 
-  for (const account of data.accounts) {
-    addAccountId(ids, account.parentAccountId);
-  }
-  for (const transaction of data.transactions) {
-    addAccountId(ids, transaction.accountId);
-  }
-  for (const scope of data.budgetScopes || []) {
-    addAccountId(ids, scope.accountId);
-  }
-  for (const metadata of data.accountMetadata || []) {
-    addAccountId(ids, metadata.accountId);
-    addAccountId(ids, metadata.payFromAccountId);
-  }
-  for (const payment of data.plannedPayments || []) {
-    addAccountId(ids, payment.fromAccountId);
-    addAccountId(ids, payment.toAccountId);
-  }
-  for (const snapshot of data.balanceSnapshots || []) {
-    addAccountId(ids, snapshot.accountId);
-  }
-  for (const budget of data.budgets || []) {
-    if (!budget.assetAccountIds) continue;
-    for (const id of budget.assetAccountIds.split(',')) {
-      addAccountId(ids, id.trim());
+  for (const site of referenceSites()) {
+    if (site.importPolicy !== 'salvage') continue;
+
+    switch (site.key) {
+      case 'account.parentAccountId':
+        for (const account of data.accounts) {
+          addRef(refs, site.key, account.parentAccountId, account.id);
+        }
+        break;
+      case 'transaction.accountId':
+        for (const transaction of data.transactions) {
+          if (transaction.deletedAt != null) continue;
+          addRef(refs, site.key, transaction.accountId, transaction.id);
+        }
+        break;
+      case 'budgetScope.accountId':
+        for (const scope of data.budgetScopes || []) {
+          addRef(refs, site.key, scope.accountId, scope.id);
+        }
+        break;
+      case 'budget.assetAccountIds':
+        for (const budget of data.budgets || []) {
+          for (const id of parseFundingAccountIds(budget.assetAccountIds)) {
+            addRef(refs, site.key, id, budget.id);
+          }
+        }
+        break;
+      case 'accountMetadata.accountId':
+        for (const metadata of data.accountMetadata || []) {
+          addRef(refs, site.key, metadata.accountId, metadata.id);
+        }
+        break;
+      case 'accountMetadata.payFromAccountId':
+        for (const metadata of data.accountMetadata || []) {
+          addRef(refs, site.key, metadata.payFromAccountId, metadata.id);
+        }
+        break;
+      case 'plannedPayment.fromAccountId':
+        for (const payment of data.plannedPayments || []) {
+          addRef(refs, site.key, payment.fromAccountId, payment.id);
+        }
+        break;
+      case 'plannedPayment.toAccountId':
+        for (const payment of data.plannedPayments || []) {
+          addRef(refs, site.key, payment.toAccountId, payment.id);
+        }
+        break;
+      case 'balanceSnapshot.accountId':
+        for (const snapshot of data.balanceSnapshots || []) {
+          addRef(refs, site.key, snapshot.accountId, snapshot.id);
+        }
+        break;
+      default:
+        break;
     }
   }
-  // SMS auto-post rules are sanitized separately: stale account refs are cleared,
-  // not recovered as placeholder accounts.
 
-  return ids;
+  for (const rule of autoPostRulesFromData(data)) {
+    rules.push({
+      ruleKey: rule.id,
+      sourceAccountId: rule.sourceAccountId,
+      categoryAccountId: rule.categoryAccountId,
+    });
+  }
+
+  return {
+    accountIds: data.accounts.map(account => account.id),
+    refs,
+    rules,
+  };
 }
 
 export function requireMappedAccountId(
@@ -92,23 +155,27 @@ export function requireMappedAccountId(
   return mapped;
 }
 
+/**
+ * Plans salvage/sanitize via the Account reference graph, then materializes
+ * placeholder Accounts for missing salvage ids. Rule patches are applied later
+ * during remap (see remapAutoPostRulesForImport).
+ */
 export function buildPlaceholderAccountsForOrphans(args: {
   data: NativeImportAccountSources;
   accountMap: Map<string, AccountId>;
   accountCurrencyMap?: Map<string, string>;
   defaultCurrencyCode: string;
   nextId: () => AccountId;
-}): ImportedAccount[] {
+}): { placeholderAccounts: ImportedAccount[]; plan: ImportPlan } {
   const { data, accountMap, accountCurrencyMap, defaultCurrencyCode, nextId } = args;
+  const plan = importPlan(accountImportBatchFromSources(data));
   const placeholderAccounts: ImportedAccount[] = [];
-  const recoveredOriginalIds: string[] = [];
 
-  for (const originalId of collectReferencedAccountIds(data)) {
+  for (const originalId of plan.missingAccountIds) {
     if (accountMap.has(originalId)) continue;
     const recoveredId = nextId();
     accountMap.set(originalId, recoveredId);
     accountCurrencyMap?.set(originalId, defaultCurrencyCode);
-    recoveredOriginalIds.push(originalId);
     placeholderAccounts.push({
       id: recoveredId,
       name: `Recovered account (${originalId.slice(0, 8)})`,
@@ -123,11 +190,11 @@ export function buildPlaceholderAccountsForOrphans(args: {
   if (placeholderAccounts.length > 0) {
     logger.warn(
       `[NativePlugin] Created ${placeholderAccounts.length} placeholder account(s) for orphaned references`,
-      { originalIds: recoveredOriginalIds },
+      { originalIds: plan.missingAccountIds },
     );
   }
 
-  return placeholderAccounts;
+  return { placeholderAccounts, plan };
 }
 
 export function remapAutoPostRulesForImport(
@@ -135,10 +202,19 @@ export function remapAutoPostRulesForImport(
   accountMap: Map<string, AccountId>,
   nextId: () => string,
   parseTimestamp: (value?: number | string) => number | undefined,
+  plan?: ImportPlan,
 ): ImportedTransactionAutoPostRule[] {
+  const patchesByKey = new Map((plan?.rulePatches ?? []).map(patch => [patch.ruleKey, patch]));
+
   return rules.map(rule => {
-    const sourceAccountId = mapOptionalRuleAccountId(accountMap, rule.sourceAccountId);
-    const categoryAccountId = mapOptionalRuleAccountId(accountMap, rule.categoryAccountId);
+    const patch = patchesByKey.get(rule.id);
+    const sourceOriginal =
+      patch && 'sourceAccountId' in patch ? patch.sourceAccountId : rule.sourceAccountId;
+    const categoryOriginal =
+      patch && 'categoryAccountId' in patch ? patch.categoryAccountId : rule.categoryAccountId;
+
+    const sourceAccountId = mapOptionalRuleAccountId(accountMap, sourceOriginal);
+    const categoryAccountId = mapOptionalRuleAccountId(accountMap, categoryOriginal);
     const clearedBadRef =
       (Boolean(rule.sourceAccountId) && sourceAccountId === EMPTY_ACCOUNT_ID) ||
       (Boolean(rule.categoryAccountId) && categoryAccountId === EMPTY_ACCOUNT_ID);
@@ -168,4 +244,16 @@ export function remapAutoPostRulesForImport(
       updatedAt: parseTimestamp(rule.updatedAt),
     };
   });
+}
+
+/** Remap funding CSV via graph parse/format helpers. */
+export function remapFundingAccountIdsCsv(
+  csv: string | undefined,
+  accountMap: Map<string, AccountId>,
+  context: string,
+): string {
+  const remapped = parseFundingAccountIds(csv).map(id =>
+    requireMappedAccountId(accountMap, id, context),
+  );
+  return formatFundingAccountIds(remapped);
 }

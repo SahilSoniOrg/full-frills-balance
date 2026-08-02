@@ -70,4 +70,38 @@ describe('mergeAccounts command', () => {
     expect(callArgs).toContain('source2');
     expect(callArgs).not.toContain('target');
   });
+
+  test('invokes rewrite preparers for every retarget/destroy referenceSites entry', async () => {
+    const targetId = 'target' as AccountId;
+    const sourceIds = ['source1'] as AccountId[];
+
+    const mockAccount = (id: string) => ({
+      id,
+      workplaceId,
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+
+    jest
+      .spyOn(accountRepository, 'find')
+      .mockImplementation(async (_wp, id) => mockAccount(id as string) as any);
+    jest
+      .spyOn(accountRepository, 'findAllByIds')
+      .mockImplementation(async (_wp, ids) => ids.map(id => mockAccount(id as string)) as any);
+    jest.spyOn(accountRepository, 'prepareMergeOperations').mockResolvedValue([]);
+    jest.spyOn(database, 'write').mockImplementation(async (fn: any) => fn());
+    jest.spyOn(database, 'batch').mockResolvedValue(undefined);
+
+    await mergeAccounts(workplaceId, targetId, sourceIds);
+
+    expect(transactionRepository.findAllByAccountIds).toHaveBeenCalled();
+    expect(plannedPaymentService.prepareMergeOperations).toHaveBeenCalled();
+    expect(transactionAutoPostRuleRepository.prepareMergeOperations).toHaveBeenCalled();
+    expect(budgetWriteService.prepareMergeOperations).toHaveBeenCalled();
+    expect(accountRepository.prepareMergeOperations).toHaveBeenCalled();
+    expect(balanceSnapshotRepository.prepareMergeOperations).toHaveBeenCalledWith(
+      workplaceId,
+      expect.arrayContaining(['source1', 'target']),
+    );
+  });
 });

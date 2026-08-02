@@ -1,7 +1,11 @@
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import {
+  assertWritable,
+  formatFundingAccountIds,
+  parseFundingAccountIds,
+} from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -94,9 +98,8 @@ export class BudgetWriteService {
     const budgetOps: Budget[] = [];
     for (const budget of budgets) {
       if (!budget.assetAccountIds) continue;
-      let ids = budget.assetAccountIds.split(',');
       let changed = false;
-      ids = ids.map(id => {
+      const ids = parseFundingAccountIds(budget.assetAccountIds).map(id => {
         if (sourceIdsSet.has(id as AccountId)) {
           changed = true;
           return targetAccountId;
@@ -104,10 +107,9 @@ export class BudgetWriteService {
         return id;
       });
       if (changed) {
-        ids = Array.from(new Set(ids));
         budgetOps.push(
           budget.prepareUpdate((r: Budget) => {
-            r.assetAccountIds = ids.join(',');
+            r.assetAccountIds = formatFundingAccountIds([...new Set(ids)]);
             r.updatedAt = new Date();
           }),
         );

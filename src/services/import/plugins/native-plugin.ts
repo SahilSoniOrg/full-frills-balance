@@ -28,6 +28,7 @@ import {
   autoPostRulesFromData,
   buildPlaceholderAccountsForOrphans,
   remapAutoPostRulesForImport,
+  remapFundingAccountIdsCsv,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
 import {
@@ -179,7 +180,7 @@ export const nativePlugin: ImportPlugin = {
 
       // Recover orphaned account FKs by synthesizing placeholder accounts so restore
       // can succeed without data loss (SMS rules are sanitized separately).
-      const placeholderAccounts = buildPlaceholderAccountsForOrphans({
+      const { placeholderAccounts, plan } = buildPlaceholderAccountsForOrphans({
         data,
         accountMap,
         accountCurrencyMap,
@@ -281,17 +282,13 @@ export const nativePlugin: ImportPlugin = {
           };
         }),
         budgets: (data.budgets || []).map(budget => {
-          let remappedAssetAccountIds = '';
-          if (budget.assetAccountIds) {
-            remappedAssetAccountIds = budget.assetAccountIds
-              .split(',')
-              .map(id => id.trim())
-              .filter(Boolean)
-              .map(id =>
-                requireMappedAccountId(accountMap, id, `budget "${budget.id}" asset account`),
+          const remappedAssetAccountIds = budget.assetAccountIds
+            ? remapFundingAccountIdsCsv(
+                budget.assetAccountIds,
+                accountMap,
+                `budget "${budget.id}" asset account`,
               )
-              .join(',');
-          }
+            : '';
           return {
             id: budgetMap.get(budget.id)!,
             name: budget.name,
@@ -395,6 +392,7 @@ export const nativePlugin: ImportPlugin = {
           accountMap,
           generateId,
           parseTimestamp,
+          plan,
         ),
         transactionInboxRecords: (
           data.transactionInboxRecords ||

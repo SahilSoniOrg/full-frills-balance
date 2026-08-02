@@ -7,10 +7,11 @@ import {
   assertWritable,
   deleteBlockers,
   formatFundingAccountIds,
+  importPlan,
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/AccountRepository', () => ({
   accountRepository: {
@@ -79,6 +80,14 @@ describe('Account reference graph', () => {
       expect(byKey['transaction.accountId'].mergeBehavior).toBe('retarget');
       expect(byKey['balanceSnapshot.accountId'].mergeBehavior).toBe('destroy');
       expect(byKey['accountMetadata.accountId'].mergeBehavior).toBe('none');
+    });
+
+    it('marks SMS dual sites as sanitize and other FK sites as salvage', () => {
+      const byKey = Object.fromEntries(referenceSites().map(site => [site.key, site]));
+      expect(byKey['transactionAutoPostRule.sourceAccountId'].importPolicy).toBe('sanitize');
+      expect(byKey['transactionAutoPostRule.categoryAccountId'].importPolicy).toBe('sanitize');
+      expect(byKey['transaction.accountId'].importPolicy).toBe('salvage');
+      expect(byKey['budget.assetAccountIds'].importPolicy).toBe('salvage');
     });
   });
 
@@ -210,6 +219,73 @@ describe('Account reference graph', () => {
       expect(referenceSites().find(s => s.key === 'balanceSnapshot.accountId')?.deletePolicy).toBe(
         'allow',
       );
+    });
+  });
+
+  describe('importPlan', () => {
+    it('lists missing salvage refs and clears rule refs that stay missing after salvage', () => {
+      const plan = importPlan({
+        accountIds: ['acc-live', 'acc-tombstone'],
+        refs: [
+          { siteKey: 'transaction.accountId', accountId: 'acc-live' },
+          { siteKey: 'transaction.accountId', accountId: 'orphan-tx' },
+          { siteKey: 'budget.assetAccountIds', accountId: 'orphan-funding' },
+          { siteKey: 'account.parentAccountId', accountId: 'acc-tombstone' },
+        ],
+        rules: [
+          {
+            ruleKey: 'rule-ok',
+            sourceAccountId: 'acc-live',
+            categoryAccountId: 'orphan-tx',
+          },
+          {
+            ruleKey: 'rule-stale',
+            sourceAccountId: 'ghost-source',
+            categoryAccountId: 'acc-live',
+          },
+        ],
+      });
+
+      expect(plan.missingAccountIds.sort()).toEqual(['orphan-funding', 'orphan-tx']);
+      expect(plan.rulePatches).toEqual([
+        { ruleKey: 'rule-stale', sourceAccountId: EMPTY_ACCOUNT_ID },
+      ]);
+    });
+
+    it('treats soft-deleted batch accounts as present (no salvage placeholder)', () => {
+      const plan = importPlan({
+        accountIds: ['soft-deleted-acc'],
+        refs: [{ siteKey: 'transaction.accountId', accountId: 'soft-deleted-acc' }],
+        rules: [
+          {
+            ruleKey: 'rule-1',
+            sourceAccountId: 'soft-deleted-acc',
+            categoryAccountId: 'soft-deleted-acc',
+          },
+        ],
+      });
+
+      expect(plan.missingAccountIds).toEqual([]);
+      expect(plan.rulePatches).toEqual([]);
+    });
+
+    it('does not salvage SMS rule-only orphans (sanitize via rulePatches)', () => {
+      const plan = importPlan({
+        accountIds: ['acc-1'],
+        refs: [],
+        rules: [
+          {
+            ruleKey: 'rule-only',
+            sourceAccountId: 'rule-orphan',
+            categoryAccountId: 'acc-1',
+          },
+        ],
+      });
+
+      expect(plan.missingAccountIds).toEqual([]);
+      expect(plan.rulePatches).toEqual([
+        { ruleKey: 'rule-only', sourceAccountId: EMPTY_ACCOUNT_ID },
+      ]);
     });
   });
 });

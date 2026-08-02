@@ -1,6 +1,11 @@
 import { BatchImportData, ImportedAccount } from '@/src/data/repositories/ImportRepository';
+import {
+  MissingImportedAccountRef,
+  missingImportedAccountRefs,
+} from '@/src/services/accounts/accountReferenceGraph';
 import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
+import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   const seen = new Set<string>();
@@ -12,7 +17,43 @@ function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   }
 }
 
-function validateReferences(data: BatchImportData): void {
+function formatMissingAccountError(missing: MissingImportedAccountRef): string {
+  const recordId = missing.recordId ?? '?';
+  switch (missing.siteKey) {
+    case 'account.parentAccountId':
+      return `Import validation failed: account "${recordId}" references missing parent account "${missing.accountId}"`;
+    case 'transaction.accountId':
+      return `Import validation failed: transaction "${recordId}" references missing account "${missing.accountId}"`;
+    case 'budgetScope.accountId':
+      return `Import validation failed: budget scope "${recordId}" references missing account "${missing.accountId}"`;
+    case 'budget.assetAccountIds':
+      return `Import validation failed: budget "${recordId}" references missing asset account "${missing.accountId}"`;
+    case 'accountMetadata.accountId':
+      return `Import validation failed: account metadata "${recordId}" references missing account "${missing.accountId}"`;
+    case 'accountMetadata.payFromAccountId':
+      return `Import validation failed: account metadata "${recordId}" references missing payment account "${missing.accountId}"`;
+    case 'plannedPayment.fromAccountId':
+    case 'plannedPayment.toAccountId':
+      return `Import validation failed: planned payment "${recordId}" references a missing account`;
+    case 'balanceSnapshot.accountId':
+      return `Import validation failed: balance snapshot "${recordId}" references a missing account or transaction`;
+    case 'transactionAutoPostRule.sourceAccountId':
+    case 'transactionAutoPostRule.categoryAccountId':
+      return `Import validation failed: auto-post rule "${recordId}" references missing account "${missing.accountId}"`;
+    default:
+      return `Import validation failed: missing account "${missing.accountId}"`;
+  }
+}
+
+function validateAccountReferences(data: BatchImportData): void {
+  // Soft-deleted txs are skipped inside accountImportBatchFromSources (import-only rule).
+  const missing = missingImportedAccountRefs(accountImportBatchFromSources(data));
+  if (missing.length > 0) {
+    throw new Error(formatMissingAccountError(missing[0]));
+  }
+}
+
+function validateStructuralRules(data: BatchImportData): void {
   assertUniqueIds('account', data.accounts);
   assertUniqueIds('journal', data.journals);
   assertUniqueIds('transaction', data.transactions);
@@ -25,7 +66,6 @@ function validateReferences(data: BatchImportData): void {
   assertUniqueIds('transaction auto-post rule', data.transactionAutoPostRules ?? []);
   assertUniqueIds('currency', data.currencies ?? []);
 
-  const accountIds = new Set(data.accounts.map(account => account.id));
   const journalIds = new Set(data.journals.map(journal => journal.id));
   const transactionIds = new Set(data.transactions.map(transaction => transaction.id));
   const budgetIds = new Set((data.budgets ?? []).map(budget => budget.id));
@@ -35,11 +75,6 @@ function validateReferences(data: BatchImportData): void {
   const currencyCodes = new Set((data.currencies ?? []).map(currency => currency.code));
 
   for (const account of data.accounts) {
-    if (account.parentAccountId && !accountIds.has(account.parentAccountId)) {
-      throw new Error(
-        `Import validation failed: account "${account.id}" references missing parent account "${account.parentAccountId}"`,
-      );
-    }
     if (account.parentAccountId && account.parentAccountId === account.id) {
       throw new Error(`Import validation failed: account "${account.id}" cannot be its own parent`);
     }
@@ -68,11 +103,6 @@ function validateReferences(data: BatchImportData): void {
         `Import validation failed: transaction "${transaction.id}" references missing journal "${transaction.journalId}"`,
       );
     }
-    if (!accountIds.has(transaction.accountId)) {
-      throw new Error(
-        `Import validation failed: transaction "${transaction.id}" references missing account "${transaction.accountId}"`,
-      );
-    }
   }
 
   for (const budgetScope of data.budgetScopes ?? []) {
@@ -81,43 +111,12 @@ function validateReferences(data: BatchImportData): void {
         `Import validation failed: budget scope "${budgetScope.id}" references missing budget "${budgetScope.budgetId}"`,
       );
     }
-    if (!accountIds.has(budgetScope.accountId)) {
-      throw new Error(
-        `Import validation failed: budget scope "${budgetScope.id}" references missing account "${budgetScope.accountId}"`,
-      );
-    }
   }
 
-  for (const budget of data.budgets ?? []) {
-    if (!budget.assetAccountIds) continue;
-    for (const rawId of budget.assetAccountIds.split(',')) {
-      const assetAccountId = rawId.trim();
-      if (!assetAccountId) continue;
-      if (!accountIds.has(assetAccountId)) {
-        throw new Error(
-          `Import validation failed: budget "${budget.id}" references missing asset account "${assetAccountId}"`,
-        );
-      }
-    }
-  }
-
-  for (const metadata of data.accountMetadata ?? []) {
-    if (!accountIds.has(metadata.accountId)) {
+  for (const snapshot of data.balanceSnapshots ?? []) {
+    if (!transactionIds.has(snapshot.transactionId)) {
       throw new Error(
-        `Import validation failed: account metadata "${metadata.id}" references missing account "${metadata.accountId}"`,
-      );
-    }
-    if (metadata.payFromAccountId && !accountIds.has(metadata.payFromAccountId)) {
-      throw new Error(
-        `Import validation failed: account metadata "${metadata.id}" references missing payment account "${metadata.payFromAccountId}"`,
-      );
-    }
-  }
-
-  for (const payment of data.plannedPayments ?? []) {
-    if (!accountIds.has(payment.fromAccountId) || !accountIds.has(payment.toAccountId)) {
-      throw new Error(
-        `Import validation failed: planned payment "${payment.id}" references a missing account`,
+        `Import validation failed: balance snapshot "${snapshot.id}" references a missing account or transaction`,
       );
     }
   }
@@ -126,28 +125,6 @@ function validateReferences(data: BatchImportData): void {
     if (!journalIds.has(metadata.journalId)) {
       throw new Error(
         `Import validation failed: journal metadata "${metadata.id}" references missing journal "${metadata.journalId}"`,
-      );
-    }
-  }
-
-  for (const snapshot of data.balanceSnapshots ?? []) {
-    if (!accountIds.has(snapshot.accountId) || !transactionIds.has(snapshot.transactionId)) {
-      throw new Error(
-        `Import validation failed: balance snapshot "${snapshot.id}" references a missing account or transaction`,
-      );
-    }
-  }
-
-  for (const rule of data.transactionAutoPostRules ?? []) {
-    // Review/ignore rules may leave source or category empty (EMPTY_ACCOUNT_ID).
-    if (rule.sourceAccountId && !accountIds.has(rule.sourceAccountId)) {
-      throw new Error(
-        `Import validation failed: auto-post rule "${rule.id}" references missing account "${rule.sourceAccountId}"`,
-      );
-    }
-    if (rule.categoryAccountId && !accountIds.has(rule.categoryAccountId)) {
-      throw new Error(
-        `Import validation failed: auto-post rule "${rule.id}" references missing account "${rule.categoryAccountId}"`,
       );
     }
   }
@@ -198,8 +175,12 @@ export function validateCanonicalImport(canonical: CanonicalImport): void {
 
 /**
  * Ensures imported graphs hang together (IDs, FKs, hierarchy).
+ * Account FK presence walks the shared Account reference graph inventory;
+ * import-only structural rules (cycles, empty review legs, soft-deleted tx skip)
+ * stay local in this adapter.
  * Does not re-check historical debit≡credit / FX math — trust the backup as written.
  */
 export function validateImportedData(data: BatchImportData): void {
-  validateReferences(data);
+  validateStructuralRules(data);
+  validateAccountReferences(data);
 }

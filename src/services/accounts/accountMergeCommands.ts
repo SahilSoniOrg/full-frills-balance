@@ -7,6 +7,10 @@ import { transactionAutoPostRuleRepository } from '@/src/data/repositories/Trans
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import {
+  AccountReferenceSiteKey,
+  referenceSites,
+} from '@/src/services/accounts/accountReferenceGraph';
+import {
   assertMergeAccountsCompatible,
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
@@ -16,6 +20,48 @@ import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { Model } from '@nozbe/watermelondb';
+
+/**
+ * Merge rewrite/destroy preparers keyed by Account reference site.
+ * Multiple sites may share one preparer; iteration of `referenceSites` decides
+ * which run — rewrite ops stay here, not in the graph.
+ */
+type MergePrepareKind =
+  | 'transactions'
+  | 'plannedPayments'
+  | 'smsRules'
+  | 'budgets'
+  | 'accounts'
+  | 'snapshots';
+
+const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepareKind>> = {
+  'account.parentAccountId': 'accounts',
+  'transaction.accountId': 'transactions',
+  'budgetScope.accountId': 'budgets',
+  'budget.assetAccountIds': 'budgets',
+  'accountMetadata.payFromAccountId': 'accounts',
+  'plannedPayment.fromAccountId': 'plannedPayments',
+  'plannedPayment.toAccountId': 'plannedPayments',
+  'balanceSnapshot.accountId': 'snapshots',
+  'transactionAutoPostRule.sourceAccountId': 'smsRules',
+  'transactionAutoPostRule.categoryAccountId': 'smsRules',
+};
+
+function mergePrepareKindsFromSites(): Set<MergePrepareKind> {
+  const kinds = new Set<MergePrepareKind>();
+  for (const site of referenceSites()) {
+    if (site.mergeBehavior === 'none') continue;
+    const kind = MERGE_PREPARE_BY_SITE[site.key];
+    if (!kind) {
+      throw new Error(
+        `Account merge is missing a rewrite preparer for reference site "${site.key}"`,
+      );
+    }
+    kinds.add(kind);
+  }
+  return kinds;
+}
 
 async function validateMergeEligibility(
   workplaceId: WorkplaceId,
@@ -41,6 +87,8 @@ async function validateMergeEligibility(
  * Merge command: moves transactions, planned payments, rules, budgets, and
  * snapshots from source accounts into a target account atomically, then queues
  * a rebuild. Owns merge eligibility and dependent-record migration policy.
+ * Sites to retarget/destroy come from `referenceSites`; Watermelon prepareUpdate
+ * ops stay in this command / existing preparers.
  */
 export async function mergeAccounts(
   workplaceId: WorkplaceId,
@@ -72,9 +120,13 @@ export async function mergeAccounts(
     sourceAccounts,
   );
 
+  const prepareKinds = mergePrepareKindsFromSites();
+
   await database.write(async () => {
-    const [transactionOps, plannedOps, smsOps, budgetOps, accountOps, snapshotOps] =
-      await Promise.all([
+    const prepareTasks: Array<Promise<Model[]>> = [];
+
+    if (prepareKinds.has('transactions')) {
+      prepareTasks.push(
         (async () => {
           const transactions = await transactionRepository.findAllByAccountIds(
             workplaceId,
@@ -88,32 +140,55 @@ export async function mergeAccounts(
             }),
           );
         })(),
+      );
+    }
+    if (prepareKinds.has('plannedPayments')) {
+      prepareTasks.push(
         plannedPaymentService.prepareMergeOperations(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
-        ),
+        ) as Promise<Model[]>,
+      );
+    }
+    if (prepareKinds.has('smsRules')) {
+      prepareTasks.push(
         transactionAutoPostRuleRepository.prepareMergeOperations(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
-        ),
-        budgetWriteService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
-        accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        ) as Promise<Model[]>,
+      );
+    }
+    if (prepareKinds.has('budgets')) {
+      prepareTasks.push(
+        budgetWriteService.prepareMergeOperations(
+          workplaceId,
+          filteredSourceIds,
+          targetAccountId,
+        ) as Promise<Model[]>,
+      );
+    }
+    if (prepareKinds.has('accounts')) {
+      prepareTasks.push(
+        accountRepository.prepareMergeOperations(
+          workplaceId,
+          filteredSourceIds,
+          targetAccountId,
+        ) as Promise<Model[]>,
+      );
+    }
+    if (prepareKinds.has('snapshots')) {
+      prepareTasks.push(
         balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
           ...filteredSourceIds,
           targetAccountId,
-        ]),
-      ]);
+        ]) as Promise<Model[]>,
+      );
+    }
 
-    await database.batch([
-      ...transactionOps,
-      ...plannedOps,
-      ...smsOps,
-      ...budgetOps,
-      ...accountOps,
-      ...snapshotOps,
-    ]);
+    const opGroups = await Promise.all(prepareTasks);
+    await database.batch(opGroups.flat());
   });
 
   rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);

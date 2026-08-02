@@ -1,7 +1,7 @@
 /**
  * Account reference graph — owns which persisted fields reference Accounts
  * and the policies for those refs (write assert, delete block, CSV funding lists,
- * site enumeration). Import plan / merge iteration deepen in later tickets.
+ * import salvage/sanitize planning, site enumeration for merge).
  *
  * Complements ADR-0008: stays under account command modules; no AccountService.
  */
@@ -12,7 +12,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 
 export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
 
@@ -26,6 +26,13 @@ export type AccountReferenceMergeBehavior = 'retarget' | 'destroy' | 'none';
  * - owned: row belongs to the account being deleted (not a blocker)
  */
 export type AccountReferenceDeletePolicy = 'block' | 'allow' | 'owned';
+
+/**
+ * Import policy for the site.
+ * - salvage: missing ids become placeholder Accounts (`missingAccountIds`)
+ * - sanitize: missing ids are cleared on rules (`rulePatches`); not salvaged
+ */
+export type AccountReferenceImportPolicy = 'salvage' | 'sanitize';
 
 export type AccountReferenceSiteKey =
   | 'account.parentAccountId'
@@ -51,6 +58,45 @@ export type AccountReferenceSite = {
   cardinality: AccountReferenceCardinality;
   mergeBehavior: AccountReferenceMergeBehavior;
   deletePolicy: AccountReferenceDeletePolicy;
+  importPolicy: AccountReferenceImportPolicy;
+};
+
+/** Narrow batch DTO for import planning / inventory-backed validate. */
+export type AccountImportBatchDto = {
+  /** Account ids in the batch — soft-deleted still count as present. */
+  accountIds: readonly string[];
+  /** Account FK occurrences from salvage sites (adapter walks inventory). */
+  refs: readonly AccountImportRef[];
+  /** SMS auto-post rules — sanitize path (not salvage). */
+  rules: readonly AccountImportRuleRef[];
+};
+
+export type AccountImportRef = {
+  siteKey: AccountReferenceSiteKey;
+  accountId: string;
+  /** Optional record id for validate error messages. */
+  recordId?: string;
+};
+
+export type AccountImportRuleRef = {
+  ruleKey: string;
+  sourceAccountId?: string | null;
+  categoryAccountId?: string | null;
+};
+
+export type ImportPlan = {
+  missingAccountIds: string[];
+  rulePatches: Array<{
+    ruleKey: string;
+    sourceAccountId?: string;
+    categoryAccountId?: string;
+  }>;
+};
+
+export type MissingImportedAccountRef = {
+  siteKey: AccountReferenceSiteKey;
+  accountId: string;
+  recordId?: string;
 };
 
 export type DeleteBlockerCode =
@@ -79,6 +125,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block', // delete walks children via parent FK
+    importPolicy: 'salvage',
   },
   {
     key: 'transaction.accountId',
@@ -88,6 +135,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'budgetScope.accountId',
@@ -97,6 +145,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'budget.assetAccountIds',
@@ -106,6 +155,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'csv',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'accountMetadata.accountId',
@@ -115,6 +165,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'none',
     deletePolicy: 'owned',
+    importPolicy: 'salvage',
   },
   {
     key: 'accountMetadata.payFromAccountId',
@@ -124,6 +175,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'plannedPayment.fromAccountId',
@@ -133,6 +185,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'plannedPayment.toAccountId',
@@ -142,6 +195,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'salvage',
   },
   {
     key: 'balanceSnapshot.accountId',
@@ -151,6 +205,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'scalar',
     mergeBehavior: 'destroy',
     deletePolicy: 'allow',
+    importPolicy: 'salvage',
   },
   {
     key: 'transactionAutoPostRule.sourceAccountId',
@@ -160,6 +215,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'dual',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'sanitize',
   },
   {
     key: 'transactionAutoPostRule.categoryAccountId',
@@ -169,8 +225,13 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     cardinality: 'dual',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
+    importPolicy: 'sanitize',
   },
 ];
+
+const SITES_BY_KEY: ReadonlyMap<AccountReferenceSiteKey, AccountReferenceSite> = new Map(
+  ACCOUNT_REFERENCE_SITES.map(site => [site.key, site]),
+);
 
 /**
  * Site list for merge/tests. Registry stays behind this interface — callers
@@ -192,6 +253,90 @@ export function parseFundingAccountIds(csv: string | null | undefined): string[]
 /** Join funding Account ids into the persisted CSV form. */
 export function formatFundingAccountIds(ids: readonly string[]): string {
   return ids.join(',');
+}
+
+function isNonEmptyAccountId(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Pure import plan: salvage missing non-rule Account refs; sanitize SMS rule
+ * fields that remain missing after salvage. Soft-deleted batch accounts are
+ * present (no placeholder). Adapter materializes placeholders + patches.
+ */
+export function importPlan(batch: AccountImportBatchDto): ImportPlan {
+  const present = new Set(batch.accountIds.filter(isNonEmptyAccountId));
+  const missing = new Set<string>();
+
+  for (const ref of batch.refs) {
+    if (!isNonEmptyAccountId(ref.accountId) || present.has(ref.accountId)) continue;
+    const site = SITES_BY_KEY.get(ref.siteKey);
+    if (!site || site.importPolicy !== 'salvage') continue;
+    missing.add(ref.accountId);
+  }
+
+  const afterSalvage = new Set([...present, ...missing]);
+  const rulePatches: ImportPlan['rulePatches'] = [];
+
+  for (const rule of batch.rules) {
+    const patch: ImportPlan['rulePatches'][number] = { ruleKey: rule.ruleKey };
+    let needed = false;
+
+    if (isNonEmptyAccountId(rule.sourceAccountId) && !afterSalvage.has(rule.sourceAccountId)) {
+      patch.sourceAccountId = EMPTY_ACCOUNT_ID;
+      needed = true;
+    }
+    if (isNonEmptyAccountId(rule.categoryAccountId) && !afterSalvage.has(rule.categoryAccountId)) {
+      patch.categoryAccountId = EMPTY_ACCOUNT_ID;
+      needed = true;
+    }
+
+    if (needed) rulePatches.push(patch);
+  }
+
+  return {
+    missingAccountIds: [...missing],
+    rulePatches,
+  };
+}
+
+/**
+ * Account FK occurrences in the batch that are not present. Used by import
+ * validate as a thin inventory walk — empty rule legs are omitted by the adapter.
+ */
+export function missingImportedAccountRefs(
+  batch: AccountImportBatchDto,
+): MissingImportedAccountRef[] {
+  const present = new Set(batch.accountIds.filter(isNonEmptyAccountId));
+  const missing: MissingImportedAccountRef[] = [];
+
+  for (const ref of batch.refs) {
+    if (!isNonEmptyAccountId(ref.accountId) || present.has(ref.accountId)) continue;
+    missing.push({
+      siteKey: ref.siteKey,
+      accountId: ref.accountId,
+      recordId: ref.recordId,
+    });
+  }
+
+  for (const rule of batch.rules) {
+    if (isNonEmptyAccountId(rule.sourceAccountId) && !present.has(rule.sourceAccountId)) {
+      missing.push({
+        siteKey: 'transactionAutoPostRule.sourceAccountId',
+        accountId: rule.sourceAccountId,
+        recordId: rule.ruleKey,
+      });
+    }
+    if (isNonEmptyAccountId(rule.categoryAccountId) && !present.has(rule.categoryAccountId)) {
+      missing.push({
+        siteKey: 'transactionAutoPostRule.categoryAccountId',
+        accountId: rule.categoryAccountId,
+        recordId: rule.ruleKey,
+      });
+    }
+  }
+
+  return missing;
 }
 
 /**
