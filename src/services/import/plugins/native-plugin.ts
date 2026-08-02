@@ -6,7 +6,6 @@
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { AccountType, AccountSubtype } from '@/src/data/models/Account';
 import { AuditEntityType } from '@/src/data/models/AuditLog';
 import {
   ImportedAccount,
@@ -26,13 +25,14 @@ import {
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
-  mapOptionalRuleAccountId,
-  sanitizeRuleActionsForImport,
-} from '@/src/services/sms/ruleActionsAccountIds';
+  autoPostRulesFromData,
+  buildPlaceholderAccountsForOrphans,
+  remapAutoPostRulesForImport,
+  requireMappedAccountId,
+} from '@/src/services/import/plugins/nativeImportAccountRemap';
 import {
   AccountId,
   BudgetId,
-  EMPTY_ACCOUNT_ID,
   JournalId,
   PlannedPaymentId,
   TransactionId,
@@ -80,67 +80,6 @@ function parseTimestamp(value?: number | string): number | undefined {
 
 function isPresentRecord(row: { deletedAt?: unknown }): boolean {
   return row.deletedAt == null || row.deletedAt === '';
-}
-
-function addAccountId(target: Set<string>, value?: string | null): void {
-  if (typeof value === 'string' && value.length > 0) {
-    target.add(value);
-  }
-}
-
-function autoPostRulesFromData(data: NativeImportData): ImportedTransactionAutoPostRule[] {
-  return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
-}
-
-/** Account IDs referenced by transactions/rules/etc that must exist after remap. */
-function collectReferencedAccountIds(data: NativeImportData): Set<string> {
-  const ids = new Set<string>();
-
-  for (const account of data.accounts) {
-    addAccountId(ids, account.parentAccountId);
-  }
-  for (const transaction of data.transactions) {
-    addAccountId(ids, transaction.accountId);
-  }
-  for (const scope of data.budgetScopes || []) {
-    addAccountId(ids, scope.accountId);
-  }
-  for (const metadata of data.accountMetadata || []) {
-    addAccountId(ids, metadata.accountId);
-    addAccountId(ids, metadata.payFromAccountId);
-  }
-  for (const payment of data.plannedPayments || []) {
-    addAccountId(ids, payment.fromAccountId);
-    addAccountId(ids, payment.toAccountId);
-  }
-  for (const snapshot of data.balanceSnapshots || []) {
-    addAccountId(ids, snapshot.accountId);
-  }
-  for (const budget of data.budgets || []) {
-    if (!budget.assetAccountIds) continue;
-    for (const id of budget.assetAccountIds.split(',')) {
-      addAccountId(ids, id.trim());
-    }
-  }
-  // SMS auto-post rules are sanitized separately: stale account refs are cleared,
-  // not recovered as placeholder accounts.
-
-  return ids;
-}
-
-function requireMappedAccountId(
-  accountMap: Map<string, AccountId>,
-  originalId: string | undefined,
-  context: string,
-): AccountId {
-  if (!originalId) {
-    throw new Error(`Import mapping failed: ${context} is missing an account id`);
-  }
-  const mapped = accountMap.get(originalId);
-  if (!mapped) {
-    throw new Error(`Import mapping failed: ${context} references missing account "${originalId}"`);
-  }
-  return mapped;
 }
 
 export const nativePlugin: ImportPlugin = {
@@ -238,32 +177,15 @@ export const nativePlugin: ImportPlugin = {
 
       const defaultCurrencyCode = currencyCode || fallbackCurrency; // Fallback if no preferences exist
 
-      // Recover orphaned account FKs (e.g. stale SMS rule actionsJson after a prior restore)
-      // by synthesizing placeholder accounts so restore can succeed without data loss.
-      const placeholderAccounts: ImportedAccount[] = [];
-      const recoveredOriginalIds: string[] = [];
-      for (const originalId of collectReferencedAccountIds(data)) {
-        if (accountMap.has(originalId)) continue;
-        const recoveredId = generateId() as AccountId;
-        accountMap.set(originalId, recoveredId);
-        accountCurrencyMap.set(originalId, defaultCurrencyCode);
-        recoveredOriginalIds.push(originalId);
-        placeholderAccounts.push({
-          id: recoveredId,
-          name: `Recovered account (${originalId.slice(0, 8)})`,
-          accountType: AccountType.ASSET,
-          accountSubtype: AccountSubtype.OTHER,
-          currencyCode: defaultCurrencyCode,
-          description:
-            'Placeholder created during import for transactions or rules that referenced a missing account.',
-        });
-      }
-      if (placeholderAccounts.length > 0) {
-        logger.warn(
-          `[NativePlugin] Created ${placeholderAccounts.length} placeholder account(s) for orphaned references`,
-          { originalIds: recoveredOriginalIds },
-        );
-      }
+      // Recover orphaned account FKs by synthesizing placeholder accounts so restore
+      // can succeed without data loss (SMS rules are sanitized separately).
+      const placeholderAccounts = buildPlaceholderAccountsForOrphans({
+        data,
+        accountMap,
+        accountCurrencyMap,
+        defaultCurrencyCode,
+        nextId: () => generateId() as AccountId,
+      });
 
       // 3. Map Data
       onProgress?.('Parsing data records...', 0.5);
@@ -363,7 +285,11 @@ export const nativePlugin: ImportPlugin = {
           if (budget.assetAccountIds) {
             remappedAssetAccountIds = budget.assetAccountIds
               .split(',')
-              .map(id => accountMap.get(id) || id)
+              .map(id => id.trim())
+              .filter(Boolean)
+              .map(id =>
+                requireMappedAccountId(accountMap, id, `budget "${budget.id}" asset account`),
+              )
               .join(',');
           }
           return {
@@ -386,13 +312,21 @@ export const nativePlugin: ImportPlugin = {
         budgetScopes: (data.budgetScopes || []).map(scope => ({
           id: generateId(),
           budgetId: budgetMap.get(scope.budgetId)!,
-          accountId: accountMap.get(scope.accountId)!,
+          accountId: requireMappedAccountId(
+            accountMap,
+            scope.accountId,
+            `budget scope for budget "${scope.budgetId}"`,
+          ),
           createdAt: parseTimestamp(scope.createdAt),
           updatedAt: parseTimestamp(scope.updatedAt),
         })),
         accountMetadata: (data.accountMetadata || []).map(metadata => ({
           id: generateId(),
-          accountId: accountMap.get(metadata.accountId)!,
+          accountId: requireMappedAccountId(
+            accountMap,
+            metadata.accountId,
+            `account metadata for "${metadata.accountId}"`,
+          ),
           statementDay: metadata.statementDay,
           dueDay: metadata.dueDay,
           minimumPaymentAmount: metadata.minimumPaymentAmount,
@@ -404,7 +338,11 @@ export const nativePlugin: ImportPlugin = {
           autopayEnabled: metadata.autopayEnabled,
           gracePeriodDays: metadata.gracePeriodDays,
           payFromAccountId: metadata.payFromAccountId
-            ? accountMap.get(metadata.payFromAccountId)
+            ? requireMappedAccountId(
+                accountMap,
+                metadata.payFromAccountId,
+                `account metadata pay-from for "${metadata.accountId}"`,
+              )
             : undefined,
           minPaymentOnly: metadata.minPaymentOnly,
           minimumPaymentPercent: metadata.minimumPaymentPercent,
@@ -418,8 +356,16 @@ export const nativePlugin: ImportPlugin = {
           description: pp.description,
           amount: pp.amount,
           currencyCode: pp.currencyCode,
-          fromAccountId: accountMap.get(pp.fromAccountId)!,
-          toAccountId: accountMap.get(pp.toAccountId)!,
+          fromAccountId: requireMappedAccountId(
+            accountMap,
+            pp.fromAccountId,
+            `planned payment "${pp.id}" from account`,
+          ),
+          toAccountId: requireMappedAccountId(
+            accountMap,
+            pp.toAccountId,
+            `planned payment "${pp.id}" to account`,
+          ),
           intervalN: pp.intervalN,
           intervalType: pp.intervalType,
           startDate: parseTimestamp(pp.startDate) ?? Date.now(),
@@ -444,41 +390,12 @@ export const nativePlugin: ImportPlugin = {
           createdAt: parseTimestamp(meta.createdAt),
           updatedAt: parseTimestamp(meta.updatedAt),
         })),
-        transactionAutoPostRules: autoPostRulesFromData(data).map(rule => {
-          const sourceAccountId = mapOptionalRuleAccountId(accountMap, rule.sourceAccountId);
-          const categoryAccountId = mapOptionalRuleAccountId(accountMap, rule.categoryAccountId);
-          const clearedBadRef =
-            (Boolean(rule.sourceAccountId) && sourceAccountId === EMPTY_ACCOUNT_ID) ||
-            (Boolean(rule.categoryAccountId) && categoryAccountId === EMPTY_ACCOUNT_ID);
-
-          if (clearedBadRef) {
-            logger.warn(
-              `[NativePlugin] Cleared missing account refs on auto-post rule "${rule.id}"`,
-              {
-                sourceAccountId: rule.sourceAccountId,
-                categoryAccountId: rule.categoryAccountId,
-              },
-            );
-          }
-
-          return {
-            id: generateId(),
-            channelsJson: rule.channelsJson,
-            senderMatch: rule.senderMatch,
-            bodyMatch: rule.bodyMatch,
-            conditionsJson: rule.conditionsJson,
-            actionsJson: sanitizeRuleActionsForImport(rule.actionsJson, {
-              sourceAccountId,
-              categoryAccountId,
-            }),
-            priority: rule.priority,
-            sourceAccountId,
-            categoryAccountId,
-            isActive: rule.isActive,
-            createdAt: parseTimestamp(rule.createdAt),
-            updatedAt: parseTimestamp(rule.updatedAt),
-          };
-        }),
+        transactionAutoPostRules: remapAutoPostRulesForImport(
+          autoPostRulesFromData(data),
+          accountMap,
+          generateId,
+          parseTimestamp,
+        ),
         transactionInboxRecords: (
           data.transactionInboxRecords ||
           data.smsInboxRecords ||

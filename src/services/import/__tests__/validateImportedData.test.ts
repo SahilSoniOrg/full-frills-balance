@@ -175,4 +175,23 @@ describe('validateImportedData', () => {
       /auto-post rule "rule-bad" references missing account "missing-account"/,
     );
   });
+
+  it('rejects budgets that reference a missing asset account id', () => {
+    const data = minimalImport();
+    data.budgets = [
+      {
+        id: 'budget-1',
+        name: 'Food',
+        amount: 100,
+        currencyCode: 'USD',
+        startMonth: '2024-01',
+        active: true,
+        assetAccountIds: 'acc-1,missing-asset',
+      },
+    ];
+
+    expect(() => validateImportedData(data)).toThrow(
+      /budget "budget-1" references missing asset account "missing-asset"/,
+    );
+  });
 });

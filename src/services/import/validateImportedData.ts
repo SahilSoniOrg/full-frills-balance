@@ -88,6 +88,19 @@ function validateReferences(data: BatchImportData): void {
     }
   }
 
+  for (const budget of data.budgets ?? []) {
+    if (!budget.assetAccountIds) continue;
+    for (const rawId of budget.assetAccountIds.split(',')) {
+      const assetAccountId = rawId.trim();
+      if (!assetAccountId) continue;
+      if (!accountIds.has(assetAccountId)) {
+        throw new Error(
+          `Import validation failed: budget "${budget.id}" references missing asset account "${assetAccountId}"`,
+        );
+      }
+    }
+  }
+
   for (const metadata of data.accountMetadata ?? []) {
     if (!accountIds.has(metadata.accountId)) {
       throw new Error(

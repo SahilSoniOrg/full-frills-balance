@@ -371,7 +371,7 @@ class ExportService {
         .map(snake => `${snake} AS ${snakeToCamel(snake)}`)
         .join(', ');
       const whereClauses: string[] = [];
-      const params: unknown[] = [];
+      const params: (string | number)[] = [];
       if (columnNames.includes('workplace_id')) {
         whereClauses.push('workplace_id = ?');
         params.push(workplaceId);
