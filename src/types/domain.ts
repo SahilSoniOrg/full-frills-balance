@@ -243,6 +243,8 @@ export interface EnrichedJournal {
     accountType: string;
     icon?: string;
     role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
+    /** Per-leg amount for this account; used by account-scoped ledger views. */
+    amount?: number;
   }[];
   semanticType?: SemanticType;
   semanticLabel?: string;

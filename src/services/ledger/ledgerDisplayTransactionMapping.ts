@@ -13,7 +13,7 @@ export function mapEnrichedJournalAccountToDisplayTransaction(
     id: `${journal.id}_${account.id}` as TransactionId,
     journalId: journal.id,
     accountId: account.id as AccountId,
-    amount: journal.totalAmount,
+    amount: account.amount ?? journal.totalAmount,
     currencyCode: journal.currencyCode,
     transactionType: account.role === 'SOURCE' ? TransactionType.CREDIT : TransactionType.DEBIT,
     transactionDate: journal.journalDate,

@@ -22,6 +22,47 @@ function makeJournal(accounts: EnrichedJournal['accounts']): EnrichedJournal {
 }
 
 describe('ledger display transaction mapping', () => {
+  it('uses the account-specific leg amount for multi-leg journals, not journal total', () => {
+    const cashId = 'cash-1' as AccountId;
+    const incomeId = 'income-1' as AccountId;
+    const expenseId = 'expense-leg-1' as AccountId;
+
+    // Journal total is sum of debits (1000). Cash leg is only 900.
+    const journal = makeJournal([
+      {
+        id: cashId,
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        role: 'DESTINATION',
+        amount: 900,
+      },
+      {
+        id: incomeId,
+        name: 'Salary',
+        accountType: AccountType.INCOME,
+        role: 'SOURCE',
+        amount: 1000,
+      },
+      {
+        id: expenseId,
+        name: 'Tax',
+        accountType: AccountType.EXPENSE,
+        role: 'DESTINATION',
+        amount: 100,
+      },
+    ]);
+    journal.totalAmount = 1000;
+
+    const cashRow = mapEnrichedJournalAccountToDisplayTransaction(journal, journal.accounts[0]);
+    const incomeRow = mapEnrichedJournalAccountToDisplayTransaction(journal, journal.accounts[1]);
+    const expenseRow = mapEnrichedJournalAccountToDisplayTransaction(journal, journal.accounts[2]);
+
+    expect(cashRow.amount).toBe(900);
+    expect(incomeRow.amount).toBe(1000);
+    expect(expenseRow.amount).toBe(100);
+    expect(cashRow.amount).not.toBe(journal.totalAmount);
+  });
+
   it('populates counterAccounts for multi-leg journals', () => {
     const assetId = 'asset-1' as AccountId;
     const equityId = 'equity-1' as AccountId;

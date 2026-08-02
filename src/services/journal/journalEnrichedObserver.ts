@@ -120,6 +120,7 @@ export function observeEnrichedJournals(
           role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as
             'SOURCE' | 'DESTINATION',
           icon: r.account_icon,
+          amount: r.amount,
         }));
 
         const txsForPresenter = rows.map(r => ({
