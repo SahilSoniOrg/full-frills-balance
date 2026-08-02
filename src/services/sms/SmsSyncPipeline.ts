@@ -11,7 +11,6 @@ import TransactionInboxRecord, {
 } from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -25,7 +24,7 @@ import {
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
@@ -389,27 +388,10 @@ export class SmsSyncPipeline {
           return { disposition: 'review', ruleId: rule.id };
         }
 
-        const sourceAccountId = definition.actions.sourceAccountId || rule.sourceAccountId;
-        const categoryAccountId = definition.actions.categoryAccountId || rule.categoryAccountId;
+        const sourceAccountId = definition.actions.sourceAccountId;
+        const categoryAccountId = definition.actions.categoryAccountId;
 
         if (sourceAccountId && categoryAccountId && parsed.amount) {
-          const [sourceAccount, categoryAccount] = await Promise.all([
-            accountRepository.find(workplaceId, sourceAccountId as AccountId),
-            accountRepository.find(workplaceId, categoryAccountId as AccountId),
-          ]);
-          if (!sourceAccount || !categoryAccount) {
-            logger.warn(
-              `[SmsSyncPipeline] Auto-post rule ${rule.id} references missing account(s); routing to review`,
-              {
-                sourceAccountId,
-                categoryAccountId,
-                sourceFound: !!sourceAccount,
-                categoryFound: !!categoryAccount,
-              },
-            );
-            return { disposition: 'review', ruleId: rule.id };
-          }
-
           const isExpense = parsed.type === 'debit';
           const journalData: CreateJournalData = {
             journalDate: message.date,

@@ -4,7 +4,7 @@ import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
 import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
-import { rewriteRuleActionsAccountIds } from '@/src/services/sms/ruleActionsAccountIds';
+import { syncRuleActionsFromColumns } from '@/src/services/sms/ruleActionsAccountIds';
 
 export interface SmsRuleDraftInput {
   id?: string;
@@ -59,12 +59,15 @@ export class TransactionAutoPostRuleRepository {
     const normalizedConditions = (data.conditions || []).filter(condition =>
       this.isMeaningfulCondition(condition),
     );
-    const normalizedActions: SmsRuleActions = {
-      disposition: data.actions.disposition,
-      sourceAccountId: data.actions.sourceAccountId || undefined,
-      categoryAccountId: data.actions.categoryAccountId || undefined,
-      journalDescription: data.actions.journalDescription || undefined,
-    };
+    const sourceAccountId = data.actions.sourceAccountId || undefined;
+    const categoryAccountId = data.actions.categoryAccountId || undefined;
+    const actionsJson = syncRuleActionsFromColumns(
+      JSON.stringify({
+        disposition: data.actions.disposition,
+        journalDescription: data.actions.journalDescription || undefined,
+      }),
+      { sourceAccountId, categoryAccountId },
+    );
     const senderFallback =
       data.mode === 'regex'
         ? data.senderMatch || ''
@@ -85,10 +88,10 @@ export class TransactionAutoPostRuleRepository {
           record.bodyMatch = bodyFallback;
           record.conditionsJson =
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
-          record.actionsJson = JSON.stringify(normalizedActions);
+          record.actionsJson = actionsJson;
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
-          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
+          record.sourceAccountId = sourceAccountId || EMPTY_ACCOUNT_ID;
+          record.categoryAccountId = categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
         return rule;
@@ -100,14 +103,40 @@ export class TransactionAutoPostRuleRepository {
           record.bodyMatch = bodyFallback;
           record.conditionsJson =
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
-          record.actionsJson = JSON.stringify(normalizedActions);
+          record.actionsJson = actionsJson;
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
-          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
+          record.sourceAccountId = sourceAccountId || EMPTY_ACCOUNT_ID;
+          record.categoryAccountId = categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
       }
     });
+  }
+
+  async findAllReferencingAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<TransactionAutoPostRule[]> {
+    if (accountIds.length === 0) return [];
+    const [asSource, asCategory] = await Promise.all([
+      this.rules
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('source_account_id', Q.oneOf(accountIds)),
+        )
+        .fetch(),
+      this.rules
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('category_account_id', Q.oneOf(accountIds)),
+        )
+        .fetch(),
+    ]);
+    const byId = new Map<string, TransactionAutoPostRule>();
+    for (const rule of [...asSource, ...asCategory]) {
+      byId.set(rule.id, rule);
+    }
+    return Array.from(byId.values());
   }
 
   async prepareMergeOperations(
@@ -115,48 +144,19 @@ export class TransactionAutoPostRuleRepository {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<TransactionAutoPostRule[]> {
-    const rulesSource = await this.rules
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('source_account_id', Q.oneOf(sourceAccountIds)),
-      )
-      .fetch();
-    const rulesCategory = await this.rules
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('category_account_id', Q.oneOf(sourceAccountIds)),
-      )
-      .fetch();
+    const sourceIds = new Set(sourceAccountIds);
+    const rules = await this.findAllReferencingAccountIds(workplaceId, sourceAccountIds);
 
-    const mutations = new Map<
-      string,
-      { source?: AccountId; category?: AccountId; record: TransactionAutoPostRule }
-    >();
-
-    rulesSource.forEach(rule => {
-      if (!mutations.has(rule.id)) {
-        mutations.set(rule.id, { record: rule });
-      }
-      mutations.get(rule.id)!.source = targetAccountId;
-    });
-
-    rulesCategory.forEach(rule => {
-      if (!mutations.has(rule.id)) {
-        mutations.set(rule.id, { record: rule });
-      }
-      mutations.get(rule.id)!.category = targetAccountId;
-    });
-
-    return Array.from(mutations.values()).map(({ record, source, category }) => {
+    return rules.map(record => {
+      const source = sourceIds.has(record.sourceAccountId) ? targetAccountId : undefined;
+      const category = sourceIds.has(record.categoryAccountId) ? targetAccountId : undefined;
       return record.prepareUpdate((r: TransactionAutoPostRule) => {
         if (source) r.sourceAccountId = source;
         if (category) r.categoryAccountId = category;
-        if (source || category) {
-          r.actionsJson = rewriteRuleActionsAccountIds(r.actionsJson, {
-            sourceAccountId: source,
-            categoryAccountId: category,
-          });
-        }
+        r.actionsJson = syncRuleActionsFromColumns(r.actionsJson, {
+          sourceAccountId: source ?? r.sourceAccountId,
+          categoryAccountId: category ?? r.categoryAccountId,
+        });
         r.updatedAt = new Date();
       });
     });

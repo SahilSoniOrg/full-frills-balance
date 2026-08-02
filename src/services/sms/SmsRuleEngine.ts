@@ -21,6 +21,7 @@ import {
   SmsRuleMode,
 } from '@/src/services/ledger/RuleMatcher';
 import { dispositionForRuleAccounts } from '@/src/services/sms/ruleActionsAccountIds';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
@@ -92,14 +93,19 @@ export class SmsRuleEngine {
             parsed.disposition === 'ignore' || parsed.disposition === 'review'
               ? parsed.disposition
               : 'auto_post',
-          // Column FKs are remapped on import/merge; actionsJson historically was not.
-          // Prefer columns so stale JSON cannot auto-post against missing accounts.
-          sourceAccountId: rule.sourceAccountId || parsed.sourceAccountId || undefined,
-          categoryAccountId: rule.categoryAccountId || parsed.categoryAccountId || undefined,
+          // Columns are canonical for account IDs; actionsJson may be stale.
+          sourceAccountId: rule.sourceAccountId || undefined,
+          categoryAccountId: rule.categoryAccountId || undefined,
           journalDescription:
             typeof parsed.journalDescription === 'string' ? parsed.journalDescription : undefined,
         };
       }
+    } else {
+      actions = {
+        ...actions,
+        sourceAccountId: rule.sourceAccountId || undefined,
+        categoryAccountId: rule.categoryAccountId || undefined,
+      };
     }
 
     actions = {
@@ -337,6 +343,11 @@ export class SmsRuleEngine {
   }
 
   async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
+    await assertAccountsExistInWorkplace(
+      workplaceId,
+      [data.actions.sourceAccountId, data.actions.categoryAccountId],
+      'SMS auto-post rule',
+    );
     await transactionAutoPostRuleRepository.save(data, workplaceId);
   }
 
