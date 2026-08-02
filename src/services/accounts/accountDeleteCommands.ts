@@ -3,6 +3,7 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import { database } from '@/src/data/database/Database';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { collectAccountDeleteBlockers } from '@/src/services/accounts/accountDeleteBlockers';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -21,6 +22,14 @@ export async function deleteAccount(
   if (hasTransactions) {
     throw new Error(
       `Account "${account.name}" has transactions and cannot be deleted. Merge transactions into another account first.`,
+    );
+  }
+
+  const blockers = await collectAccountDeleteBlockers(workplaceId, account.id as AccountId);
+  if (blockers.length > 0) {
+    throw new Error(
+      `Account "${account.name}" cannot be deleted while referenced by ${blockers.join(', ')}. ` +
+        'Remove or retarget those references first (or merge into another account).',
     );
   }
 

@@ -235,6 +235,19 @@ export class AccountRepository {
     return await this.metadata.query(...clauses).fetch();
   }
 
+  async findMetadataByPayFromAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<AccountMetadata[]> {
+    if (accountIds.length === 0) return [];
+    return this.metadata
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('pay_from_account_id', Q.oneOf(accountIds)),
+      )
+      .fetch();
+  }
+
   async findAllByIdsRaw(ids: AccountId[]): Promise<Account[]> {
     if (ids.length === 0) return [];
     const clauses: Q.Clause[] = [Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null))];

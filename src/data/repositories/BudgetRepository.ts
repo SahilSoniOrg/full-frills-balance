@@ -204,6 +204,19 @@ export class BudgetRepository {
       .query(Q.where('workplace_id', workplaceId), Q.where('asset_account_ids', Q.notEq(null)))
       .fetch();
   }
+
+  /** Budgets whose CSV funding list includes this account id. */
+  async findAllReferencingAssetAccountId(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+  ): Promise<Budget[]> {
+    return this.budgets
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('asset_account_ids', Q.like(`%${accountId}%`)),
+      )
+      .fetch();
+  }
 }
 
 export const budgetRepository = new BudgetRepository();
