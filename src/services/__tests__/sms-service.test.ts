@@ -77,8 +77,22 @@ describe('smsService.prepareMergeOperations', () => {
       id: 'rule-dual',
       sourceAccountId: 'acc-1',
       categoryAccountId: 'acc-2',
+      actionsJson: JSON.stringify({
+        disposition: 'auto_post',
+        sourceAccountId: 'acc-1',
+        categoryAccountId: 'acc-2',
+      }),
       prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-        const record = { id: 'rule-dual', sourceAccountId: 'acc-1', categoryAccountId: 'acc-2' };
+        const record = {
+          id: 'rule-dual',
+          sourceAccountId: 'acc-1',
+          categoryAccountId: 'acc-2',
+          actionsJson: JSON.stringify({
+            disposition: 'auto_post',
+            sourceAccountId: 'acc-1',
+            categoryAccountId: 'acc-2',
+          }),
+        };
         fn(record);
         return record;
       }),
@@ -105,6 +119,11 @@ describe('smsService.prepareMergeOperations', () => {
     expect(ops.length).toBe(1);
     expect((ops[0] as any).sourceAccountId).toBe(targetAccountId);
     expect((ops[0] as any).categoryAccountId).toBe(targetAccountId);
+    expect(JSON.parse((ops[0] as any).actionsJson)).toEqual({
+      disposition: 'auto_post',
+      sourceAccountId: targetAccountId,
+      categoryAccountId: targetAccountId,
+    });
 
     databaseSpy.mockRestore();
   });

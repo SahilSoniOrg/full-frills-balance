@@ -4,6 +4,7 @@ import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
 import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
+import { rewriteRuleActionsAccountIds } from '@/src/services/sms/ruleActionsAccountIds';
 
 export interface SmsRuleDraftInput {
   id?: string;
@@ -150,6 +151,12 @@ export class TransactionAutoPostRuleRepository {
       return record.prepareUpdate((r: TransactionAutoPostRule) => {
         if (source) r.sourceAccountId = source;
         if (category) r.categoryAccountId = category;
+        if (source || category) {
+          r.actionsJson = rewriteRuleActionsAccountIds(r.actionsJson, {
+            sourceAccountId: source,
+            categoryAccountId: category,
+          });
+        }
         r.updatedAt = new Date();
       });
     });

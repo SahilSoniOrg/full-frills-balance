@@ -61,6 +61,15 @@ jest.mock('@/src/services/ledger/prepareJournalData', () => ({
   prepareJournalData: jest.fn().mockResolvedValue({}),
 }));
 
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    find: jest.fn().mockImplementation(async (_workplaceId: string, id: string) => ({
+      id,
+      name: `Account ${id}`,
+    })),
+  },
+}));
+
 jest.mock('@/src/services/analytics-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/WorkplaceService', () => ({

@@ -20,6 +20,7 @@ import {
   SmsRuleCondition,
   SmsRuleMode,
 } from '@/src/services/ledger/RuleMatcher';
+import { dispositionForRuleAccounts } from '@/src/services/sms/ruleActionsAccountIds';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
@@ -91,11 +92,24 @@ export class SmsRuleEngine {
             parsed.disposition === 'ignore' || parsed.disposition === 'review'
               ? parsed.disposition
               : 'auto_post',
-          sourceAccountId: parsed.sourceAccountId || actions.sourceAccountId,
-          categoryAccountId: parsed.categoryAccountId || actions.categoryAccountId,
+          // Column FKs are remapped on import/merge; actionsJson historically was not.
+          // Prefer columns so stale JSON cannot auto-post against missing accounts.
+          sourceAccountId: rule.sourceAccountId || parsed.sourceAccountId || undefined,
+          categoryAccountId: rule.categoryAccountId || parsed.categoryAccountId || undefined,
+          journalDescription:
+            typeof parsed.journalDescription === 'string' ? parsed.journalDescription : undefined,
         };
       }
     }
+
+    actions = {
+      ...actions,
+      disposition: dispositionForRuleAccounts(
+        actions.disposition,
+        actions.sourceAccountId,
+        actions.categoryAccountId,
+      ),
+    };
 
     return {
       mode,
