@@ -20,6 +20,13 @@ function isWorkplaceNotFoundError(error: Error | null): boolean {
   return !!error && error.message.includes('Workplace not found');
 }
 
+/** Extract id from `Workplace not found: <id>`; null when the message has no id. */
+function workplaceIdFromNotFoundError(error: Error | null): string | null {
+  if (!error) return null;
+  const match = error.message.match(/Workplace not found:\s*(.+)$/);
+  return match?.[1]?.trim() || null;
+}
+
 export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
   const prevWorkplaceIdRef = useRef<WorkplaceId | null>(null);
 
@@ -41,6 +48,11 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isWorkplaceNotFoundError(error) || !activeWorkplaceId) return;
+    // Ignore stale errors from a different workplace id (e.g. prefs briefly restored
+    // an imported backup's activeWorkplaceId that does not exist in this DB).
+    const missingId = workplaceIdFromNotFoundError(error);
+    if (missingId && missingId !== activeWorkplaceId) return;
+
     // RECOVERY: Missing workplace → reset so the user can re-onboard.
     logger.error(
       `[WorkplaceProvider] Workplace ${activeWorkplaceId} not found in database. Resetting app state.`,

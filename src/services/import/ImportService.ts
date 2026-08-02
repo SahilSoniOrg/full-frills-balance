@@ -209,6 +209,10 @@ export class ImportService {
       if ('defaultCurrencyCode' in sanitizedPrefs) {
         delete (sanitizedPrefs as { defaultCurrencyCode?: string }).defaultCurrencyCode;
       }
+      // Import target workplace is authoritative; never adopt a backup's workplace id.
+      if ('activeWorkplaceId' in sanitizedPrefs) {
+        delete (sanitizedPrefs as { activeWorkplaceId?: string }).activeWorkplaceId;
+      }
       await preferences.restorePreferences(sanitizedPrefs);
     }
 

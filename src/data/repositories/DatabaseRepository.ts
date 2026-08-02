@@ -6,12 +6,64 @@ import { getRawAdapter } from '../database/DatabaseUtils';
 import { logger } from '@/src/utils/logger';
 import { WorkplaceId } from '@/src/types/domain';
 
+type WorkplaceScopedRaw = { workplace_id?: string };
+
+type CollectionCacheOps = {
+  _cache?: {
+    map: Map<string, Model>;
+    delete: (record: Model) => void;
+  };
+  _notify?: (operations: { record: Model; type: 'updated' | 'destroyed' }[]) => void;
+};
+
 export class DatabaseRepository {
   private getCollection<T extends Model = Model>(tableName: string): Collection<T> | undefined {
     try {
       return database.collections.get<T>(tableName);
     } catch {
       return undefined;
+    }
+  }
+
+  /**
+   * Raw SQL mutations bypass WatermelonDB's RecordCache. Keep JS models aligned so
+   * subsequent `find()` / workplace-scoped checks do not see stale workplace_id values.
+   */
+  private syncCachesAfterRawWorkplaceMutation(
+    tables: readonly string[],
+    options: {
+      reassignFrom?: WorkplaceId;
+      reassignTo?: WorkplaceId;
+      deletedWorkplaceId?: WorkplaceId;
+    },
+  ): void {
+    const { reassignFrom, reassignTo, deletedWorkplaceId } = options;
+
+    for (const table of tables) {
+      const collection = this.getCollection(table) as
+        (Collection<Model> & CollectionCacheOps) | undefined;
+      const cache = collection?._cache;
+      if (!cache?.map) continue;
+
+      const operations: { record: Model; type: 'updated' | 'destroyed' }[] = [];
+
+      for (const record of [...cache.map.values()]) {
+        const raw = record._raw as unknown as WorkplaceScopedRaw;
+        const workplaceId = raw.workplace_id;
+        if (deletedWorkplaceId && workplaceId === deletedWorkplaceId) {
+          cache.delete(record);
+          operations.push({ record, type: 'destroyed' });
+          continue;
+        }
+        if (reassignFrom && reassignTo && workplaceId === reassignFrom) {
+          raw.workplace_id = reassignTo;
+          operations.push({ record, type: 'updated' });
+        }
+      }
+
+      if (operations.length > 0 && typeof collection?._notify === 'function') {
+        collection._notify(operations);
+      }
     }
   }
 
@@ -81,6 +133,9 @@ export class DatabaseRepository {
             }
           }
         }
+        this.syncCachesAfterRawWorkplaceMutation(tables, {
+          deletedWorkplaceId: workplaceId,
+        });
         logger.info(
           `[DatabaseRepository] Purged ${tables.length} tables for workplace ${workplaceId} using raw SQL.`,
         );
@@ -152,6 +207,11 @@ export class DatabaseRepository {
             }
           }
         }
+        this.syncCachesAfterRawWorkplaceMutation(tables, {
+          deletedWorkplaceId: targetWorkplaceId,
+          reassignFrom: stagingWorkplaceId,
+          reassignTo: targetWorkplaceId,
+        });
         logger.info(
           `[DatabaseRepository] Swapped staged import ${stagingWorkplaceId} → ${targetWorkplaceId}.`,
         );

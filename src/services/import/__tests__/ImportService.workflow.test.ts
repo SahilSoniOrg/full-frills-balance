@@ -280,7 +280,11 @@ describe('ImportService import workflow (public executeImport contract)', () => 
       parse: jest.fn().mockResolvedValue({
         data: { accounts: [], journals: [], transactions: [] },
         stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-        preferences: { theme: 'dark', defaultCurrencyCode: 'USD' },
+        preferences: {
+          theme: 'dark',
+          defaultCurrencyCode: 'USD',
+          activeWorkplaceId: 'backup-workplace',
+        },
       }),
     });
 
