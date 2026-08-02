@@ -1,5 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
 import {
   buildCreatePersistenceInput,
@@ -12,6 +13,11 @@ export async function createPlannedPayment(
   workplaceId: WorkplaceId,
   input: PlannedPaymentCommandInput,
 ): Promise<PlannedPayment> {
+  await assertAccountsExistInWorkplace(
+    workplaceId,
+    [input.fromAccountId, input.toAccountId],
+    'Planned payment',
+  );
   const persistence = buildCreatePersistenceInput(input);
   const created = await plannedPaymentRepository.create(workplaceId, persistence);
   await processDuePlannedPayments(workplaceId);
@@ -28,6 +34,11 @@ export async function updatePlannedPayment(
     throw new Error('Planned payment not found');
   }
 
+  await assertAccountsExistInWorkplace(
+    workplaceId,
+    [input.fromAccountId, input.toAccountId],
+    'Planned payment',
+  );
   const updates = buildUpdatePersistenceInput(existing, input);
   return plannedPaymentRepository.update(workplaceId, existing, updates);
 }

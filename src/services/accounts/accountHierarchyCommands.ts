@@ -12,6 +12,7 @@ import {
   assertParentHasNoTransactions,
   assertParentMatchesChildType,
 } from '@/src/services/accounts/accountRules';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -124,6 +125,13 @@ export async function updateAccount(
   }
 
   if (updates.metadata !== undefined) {
+    if (updates.metadata.payFromAccountId) {
+      await assertAccountsExistInWorkplace(
+        workplaceId,
+        [updates.metadata.payFromAccountId],
+        'Account metadata pay-from',
+      );
+    }
     updatePayload.metadata = updates.metadata;
   }
 

@@ -6,6 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { CreateAccountCommandInput } from '@/src/services/accounts/accountCommandInputs';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import {
   assertParentHasNoTransactions,
   assertParentMatchesChildType,
@@ -41,6 +42,14 @@ export async function createAccount(
     if (hasTransactions) {
       assertParentHasNoTransactions(parent.name);
     }
+  }
+
+  if (input.metadata?.payFromAccountId) {
+    await assertAccountsExistInWorkplace(
+      workplaceId,
+      [input.metadata.payFromAccountId],
+      'Account metadata pay-from',
+    );
   }
 
   const account = await accountRepository.create({

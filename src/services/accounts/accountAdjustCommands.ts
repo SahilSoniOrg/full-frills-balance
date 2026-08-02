@@ -6,6 +6,7 @@ import {
   isBalanceAdjustmentNeeded,
   journalLegTypesForSignedAmount,
 } from '@/src/services/accounts/accountRules';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { findOrCreateBalanceCorrectionAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -43,6 +44,14 @@ export async function adjustAccountBalance(
     counterparty.kind === 'account'
       ? counterparty.accountId
       : await findOrCreateBalanceCorrectionAccount(account.currencyCode, workplaceId);
+
+  if (counterparty.kind === 'account') {
+    await assertAccountsExistInWorkplace(
+      workplaceId,
+      [counterparty.accountId],
+      'Balance change counterparty',
+    );
+  }
 
   if (balancingAccountId === (account.id as AccountId)) {
     throw new Error('Balance change counterparty cannot be the same account');

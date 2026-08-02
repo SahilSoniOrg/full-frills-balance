@@ -1,6 +1,7 @@
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -13,6 +14,11 @@ export class BudgetWriteService {
     data: BudgetInput,
     accountIds: AccountId[],
   ): Promise<Budget> {
+    await assertAccountsExistInWorkplace(
+      workplaceId,
+      [...accountIds, ...(data.assetAccountIds ?? [])],
+      'Budget',
+    );
     const budget = await budgetRepository.create(workplaceId, data, accountIds);
 
     // Track Analytics
@@ -35,6 +41,11 @@ export class BudgetWriteService {
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
+    await assertAccountsExistInWorkplace(
+      workplaceId,
+      [...accountIds, ...(data.assetAccountIds ?? [])],
+      'Budget',
+    );
     const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
 
     // Track Analytics

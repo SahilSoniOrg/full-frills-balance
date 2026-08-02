@@ -1,9 +1,9 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -22,7 +22,22 @@ export async function prepareJournalData(
   workplaceId: WorkplaceId,
 ): Promise<PreparedJournalData> {
   const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
-  const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
+
+  // Hard invariant: every leg must have a non-empty accountId. A null/empty id
+  // produces a journal that silently corrupts running_balance and is invisible
+  // to the integrity scanner (WHERE account_id = ? won't match NULL rows).
+  const blankLeg = data.transactions.find(t => !t.accountId);
+  if (blankLeg) {
+    throw new Error(
+      `[prepareJournalData] All journal transactions must have a valid accountId. Got: ${JSON.stringify(blankLeg)}`,
+    );
+  }
+
+  const accounts = await assertAccountsExistInWorkplace(
+    workplaceId,
+    accountIds,
+    '[prepareJournalData] Journal',
+  );
   const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
 
   const accountPrecisions = new Map<string, number>();
@@ -38,16 +53,6 @@ export async function prepareJournalData(
     ...t,
     amount: roundToPrecision(t.amount, accountPrecisions.get(t.accountId) ?? 2),
   }));
-
-  // Hard invariant: every leg must have a valid account. A null accountId produces
-  // a 1-legged journal that silently corrupts running_balance and is invisible to
-  // the integrity scanner (WHERE account_id = ? won't match NULL rows).
-  const missingAccount = roundedTransactions.find(t => !t.accountId);
-  if (missingAccount) {
-    throw new Error(
-      `[prepareJournalData] All journal transactions must have a valid accountId. Got: ${JSON.stringify(missingAccount)}`,
-    );
-  }
 
   const validation = checkJournal(
     roundedTransactions.map(t => ({
