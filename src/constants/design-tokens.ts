@@ -1,7 +1,7 @@
 /**
  * Design Tokens — Full Frills Balance design system
  * Default theme: Deep Space (mint on obsidian). Ivy, Editorial, and Gold Obsidian are alternates.
- * Clean, minimal, and opinionated. See DESIGN.md and UIContext defaults (themeId / fontId).
+ * Clean, minimal, and opinionated. See UIContext defaults (themeId / fontId).
  *
  * ========================================
  * DESIGN SYSTEM PRINCIPLES (BINDING)
@@ -54,7 +54,7 @@
  *
  * Purpose:
  * - Visual regression detection
- * - Taste alignment (does this match the active theme and DESIGN.md?)
+ * - Taste alignment (does this match the active theme?)
  * - Sanity check for future changes
  *
  * It is NOT:

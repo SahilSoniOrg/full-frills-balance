@@ -64,12 +64,9 @@ coverage/
 .idea
 google-services.json
 
-guides
-
 dist-analysis*
 .env.local
 artifacts/
 
-# Local agent / design consultation artifacts (not product source)
+# Local agent artifacts (not product source)
 .gstack/
-.context/

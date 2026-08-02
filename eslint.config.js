@@ -101,7 +101,7 @@ module.exports = defineConfig([
     },
   },
   ...featureRules,
-  // Command ownership: feature hooks must not call repository mutations (docs/CONVENTIONS.md).
+  // Command ownership: feature hooks must not call repository mutations.
   // Reactive observe/find reads remain allowed via import-only usage patterns.
   {
     files: ['src/features/**/hooks/**/*.{ts,tsx}'],
@@ -113,31 +113,31 @@ module.exports = defineConfig([
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="create"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
           message:
-            'Feature hooks must not call repository create(); use domain commands or write services (docs/CONVENTIONS.md).',
+            'Feature hooks must not call repository create(); use domain commands or write services.',
         },
         {
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="update"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
           message:
-            'Feature hooks must not call repository update(); use domain commands or write services (docs/CONVENTIONS.md).',
+            'Feature hooks must not call repository update(); use domain commands or write services.',
         },
         {
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="delete"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
           message:
-            'Feature hooks must not call repository delete(); use domain commands or write services (docs/CONVENTIONS.md).',
+            'Feature hooks must not call repository delete(); use domain commands or write services.',
         },
         {
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="batchInsert"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
           message:
-            'Feature hooks must not call repository batchInsert(); use domain commands or write services (docs/CONVENTIONS.md).',
+            'Feature hooks must not call repository batchInsert(); use domain commands or write services.',
         },
         {
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="createJournalWithTransactions"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
           message:
-            'Feature hooks must not call repository createJournalWithTransactions(); use journal write commands (docs/CONVENTIONS.md).',
+            'Feature hooks must not call repository createJournalWithTransactions(); use journal write commands.',
         },
       ],
     },
