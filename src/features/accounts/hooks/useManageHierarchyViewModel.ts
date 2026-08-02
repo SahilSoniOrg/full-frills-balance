@@ -6,11 +6,8 @@ import {
   getVisibleRootAccountsByCategory,
   groupAccountsByParent,
 } from '@/src/features/accounts/helpers/hierarchyHelpers';
-import {
-  useAccountActions,
-  useAccountBalances,
-  useAccounts,
-} from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
+import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountId } from '@/src/types/domain';

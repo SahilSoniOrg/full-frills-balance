@@ -6,11 +6,11 @@ import Account, {
   formatAccountSubtypeLabel,
   isAccountType,
 } from '@/src/data/models/Account';
-import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
-import { observeUnreconciledMetrics } from '@/src/services/accounts/accountReadService';
+import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
 import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

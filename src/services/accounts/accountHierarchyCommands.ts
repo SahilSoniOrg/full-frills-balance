@@ -6,7 +6,7 @@ import {
 } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { CreateAccountData } from '@/src/services/accounts/accountCommandInputs';
+import { CreateAccountData } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,
   assertParentHasNoTransactions,
@@ -89,11 +89,7 @@ export async function updateAccount(
   // Validate parent account if updated (existence via graph; circular/self stay here)
   if (updates.parentAccountId) {
     assertNotSelfParent(accountId, updates.parentAccountId);
-    const [parent] = await assertWritable(
-      workplaceId,
-      [updates.parentAccountId],
-      'Parent account',
-    );
+    const [parent] = await assertWritable(workplaceId, [updates.parentAccountId], 'Parent account');
 
     const isCircular = await isDescendant(updates.parentAccountId, accountId, workplaceId);
     if (isCircular) {

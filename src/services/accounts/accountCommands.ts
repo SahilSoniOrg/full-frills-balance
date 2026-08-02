@@ -1,11 +1,10 @@
-import Account from '@/src/data/models/Account';
+import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
-import { CreateAccountCommandInput } from '@/src/services/accounts/accountCommandInputs';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import {
   assertParentHasNoTransactions,
@@ -17,8 +16,27 @@ import {
 import { getOpeningBalancesAccountId } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, SerializedAccountMetadataPayload, WorkplaceId } from '@/src/types/domain';
+import { IconName } from '@/src/types/domainIcons';
 import { roundToPrecision } from '@/src/utils/money';
+
+/** Caller-owned fields for creating an account (form / onboarding data only). */
+export interface CreateAccountCommandInput {
+  name: string;
+  accountType: AccountType;
+  accountSubtype?: AccountSubtype;
+  currencyCode: string;
+  description?: string;
+  icon?: IconName;
+  initialBalance?: number;
+  orderNum?: number;
+  parentAccountId?: AccountId | null;
+  workplaceId: WorkplaceId;
+  metadata?: Partial<SerializedAccountMetadataPayload>;
+}
+
+/** @deprecated Use CreateAccountCommandInput; kept for existing service typings. */
+export type CreateAccountData = CreateAccountCommandInput;
 
 export async function createAccount(
   workplaceId: WorkplaceId,
@@ -32,11 +50,7 @@ export async function createAccount(
   }
 
   if (input.parentAccountId) {
-    const [parent] = await assertWritable(
-      workplaceId,
-      [input.parentAccountId],
-      'Parent account',
-    );
+    const [parent] = await assertWritable(workplaceId, [input.parentAccountId], 'Parent account');
     assertParentMatchesChildType(input.accountType, parent);
     const hasTransactions = await transactionRepository.hasTransactions(
       workplaceId,

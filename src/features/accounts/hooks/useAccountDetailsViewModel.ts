@@ -8,7 +8,7 @@ import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/use
 import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
 import { useAccountTransactionFeed } from '@/src/features/accounts/hooks/details/useAccountTransactionFeed';
-import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';

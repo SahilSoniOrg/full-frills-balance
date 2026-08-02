@@ -6,7 +6,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import {
   observeAccountChartTransactions,
   observeAccountPeriodMetrics,
-} from '@/src/services/accounts/accountReadService';
+} from '@/src/services/accounts/accountDerivedReads';
 import { buildAccountRollingBalanceSeries, RunningBalanceTx } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

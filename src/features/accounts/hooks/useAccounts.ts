@@ -1,37 +1,24 @@
 /**
- * Reactive Data Hooks for Accounts
+ * Reactive read hooks for accounts (entity observe + targeted balance).
+ * Mutations: `useAccountActions`. Details composite: `useAccountDashboard`.
  */
-import { IconName } from '@/src/components/core';
 import { Animation } from '@/src/constants';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import {
-  deleteAccount as deleteAccountCommand,
-  recoverAccount as recoverAccountCommand,
-} from '@/src/services/accounts/accountDeleteCommands';
-import { reconcileAccount as reconcileAccountCommand } from '@/src/services/accounts/accountReconcileCommands';
+import Account from '@/src/data/models/Account';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
-import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
-import { createAccount as createAccountCommand } from '@/src/services/accounts/accountCommands';
-import {
-  updateAccount as updateAccountCommand,
-  updateAccountOrder as updateAccountOrderCommand,
-} from '@/src/services/accounts/accountHierarchyCommands';
-import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
-import { findAccountByName as findAccountByNameQuery } from '@/src/services/accounts/accountSystemAccounts';
 import {
   observeAccountBalance,
   observeActiveTransactions,
-} from '@/src/services/accounts/accountReadService';
+} from '@/src/services/accounts/accountDerivedReads';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
-import { useCallback } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
+
+export { useAccountActions } from './useAccountActions';
+export { useAccountDashboard } from './useAccountDashboard';
 
 /**
  * Hook to reactively get all accounts
@@ -181,137 +168,4 @@ export function useAccountBalances(
   );
 
   return { balancesByAccountId, isLoading, version, error };
-}
-
-/**
- * Hook for account actions (mutations)
- * Consolidated: provides CRUD operations and management actions
- */
-export function useAccountActions(workplaceId: WorkplaceId) {
-  const createAccount = useCallback(
-    async (data: {
-      name: string;
-      accountType: AccountType;
-      accountSubtype?: AccountSubtype;
-      currencyCode: string;
-      icon?: IconName;
-      initialBalance?: number;
-      parentAccountId?: AccountId | null;
-      metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
-    }) => {
-      return createAccountCommand(workplaceId, { ...data, workplaceId });
-    },
-    [workplaceId],
-  );
-
-  const updateAccount = useCallback(
-    async (
-      account: Account,
-      data: {
-        name?: string;
-        accountType?: AccountType;
-        accountSubtype?: AccountSubtype;
-        currencyCode?: string;
-        description?: string;
-        icon?: IconName;
-        parentAccountId?: AccountId | null;
-        metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
-      },
-    ) => {
-      return updateAccountCommand(workplaceId, account.id as AccountId, data);
-    },
-    [workplaceId],
-  );
-
-  const deleteAccount = useCallback(
-    async (account: Account) => {
-      return deleteAccountCommand(account, workplaceId);
-    },
-    [workplaceId],
-  );
-
-  const recoverAccount = useCallback(
-    async (accountId: AccountId) => {
-      return recoverAccountCommand(accountId, workplaceId);
-    },
-    [workplaceId],
-  );
-
-  const updateAccountOrder = useCallback(
-    async (account: Account, newOrder: number) => {
-      return updateAccountOrderCommand(workplaceId, account, newOrder);
-    },
-    [workplaceId],
-  );
-
-  const findAccountByName = useCallback(
-    async (name: string) => {
-      return findAccountByNameQuery(workplaceId, name);
-    },
-    [workplaceId],
-  );
-
-  const adjustBalance = useCallback(
-    async (account: Account, targetBalance: number, counterparty?: BalanceChangeCounterparty) => {
-      return adjustAccountBalance(workplaceId, account, targetBalance, counterparty);
-    },
-    [workplaceId],
-  );
-
-  const reconcileAccount = useCallback(
-    async (accountId: AccountId, date: Date) => {
-      return reconcileAccountCommand(accountId, date, workplaceId);
-    },
-    [workplaceId],
-  );
-
-  const mergeAccounts = useCallback(
-    async (targetAccountId: AccountId, sourceAccountIds: AccountId[]) => {
-      return mergeAccountsCommand(workplaceId, targetAccountId, sourceAccountIds);
-    },
-    [workplaceId],
-  );
-
-  return {
-    createAccount,
-    updateAccount,
-    deleteAccount,
-    recoverAccount,
-    updateAccountOrder,
-    findAccountByName,
-    adjustBalance,
-    reconcileAccount,
-    mergeAccounts,
-  };
-}
-
-/**
- * Optimized hook for account details/dashboard.
- * Uses the high-performance raw SQL + consolidated optimization from ReactiveDataService.
- */
-export function useAccountDashboard(
-  workplaceId: WorkplaceId,
-  accountId: AccountId | null,
-  currencyCode: string,
-) {
-  const targetCurrency = currencyCode;
-
-  const { data, isLoading, version, error } = useObservable(
-    () =>
-      accountId && workplaceId
-        ? reactiveDataService.observeAccountDashboard(accountId, targetCurrency, workplaceId)
-        : of(null),
-    [accountId, targetCurrency, workplaceId],
-    null as AccountDashboardData | null,
-  );
-
-  return {
-    account: data?.account || null,
-    balanceData: data?.balance || null,
-    subAccounts: data?.subAccounts || [],
-    allAccounts: data?.allAccounts || [],
-    isLoading,
-    version,
-    error,
-  };
 }

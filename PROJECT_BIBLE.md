@@ -12,6 +12,7 @@ document disagree, **this file wins** — then fix the other document.
 | Document | Role |
 |---|---|
 | `docs/ARCHITECTURE.md` | Layer map and subsystem detail |
+| `docs/ACCOUNTS.md` | Accounts spine map (writes, reads, reference graph) |
 | `docs/adr/` | Architecture decision records (why things are the way they are) |
 | `docs/README.md` | Doc hierarchy and index |
 | `docs/IMPLEMENTATION_PLAN.md` | Active phased work queue |
