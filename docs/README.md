@@ -12,7 +12,9 @@ When documents disagree, follow this order:
 
 | Document | Use when |
 |----------|----------|
-| [ACCOUNTS.md](ACCOUNTS.md) | How accounts work — spine map + simplification playbook |
+| [ACCOUNTS.md](ACCOUNTS.md) | How accounts work — spine map |
+| [JOURNAL.md](JOURNAL.md) | How journals work — spine map (save, delete, activity list) |
+| [SIMPLIFICATION_PLAYBOOK.md](SIMPLIFICATION_PLAYBOOK.md) | Domain lane method (hop count, collapse, delete criteria) |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Phased engineering queue (check off here) |
 | [CONVENTIONS.md](CONVENTIONS.md) | Naming, boundaries, ratchets (includes architecture checks) |
 | [FEATURE_MATRIX.md](FEATURE_MATRIX.md) | UI/feature completeness snapshot |

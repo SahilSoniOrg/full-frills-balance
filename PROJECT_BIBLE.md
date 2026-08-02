@@ -13,6 +13,8 @@ document disagree, **this file wins** — then fix the other document.
 |---|---|
 | `docs/ARCHITECTURE.md` | Layer map and subsystem detail |
 | `docs/ACCOUNTS.md` | Accounts spine map (writes, reads, reference graph) |
+| `docs/JOURNAL.md` | Journal spine map (save, lifecycle, activity reads) |
+| `docs/SIMPLIFICATION_PLAYBOOK.md` | Domain simplification method (hop count + collapse) |
 | `docs/adr/` | Architecture decision records (why things are the way they are) |
 | `docs/README.md` | Doc hierarchy and index |
 | `docs/IMPLEMENTATION_PLAN.md` | Active phased work queue |

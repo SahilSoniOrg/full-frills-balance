@@ -23,7 +23,7 @@ This document describes the technical architecture of Full Frills Balance, a dou
 4. **Audit Trail**: Every mutation is logged with before/after state for accountability
 5. **Silent numerical mistakes are higher severity than crashes**
 
-**Domain spines:** Accounts writes/reads/reference graph → [ACCOUNTS.md](./ACCOUNTS.md).
+**Domain spines:** Accounts → [ACCOUNTS.md](./ACCOUNTS.md). Journals → [JOURNAL.md](./JOURNAL.md). Method → [SIMPLIFICATION_PLAYBOOK.md](./SIMPLIFICATION_PLAYBOOK.md).
 
 ---
 

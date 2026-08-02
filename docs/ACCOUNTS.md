@@ -100,17 +100,12 @@ One module owns which persisted fields reference Accounts and the policies for t
 | [ACCOUNT_TRANSACTION_REPOSITORY_INTENT_INVENTORY.md](ACCOUNT_TRANSACTION_REPOSITORY_INTENT_INVENTORY.md) | Repo intent carve |
 | [PROJECT_BIBLE.md](../PROJECT_BIBLE.md) | System overview |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Layer map |
+| [SIMPLIFICATION_PLAYBOOK.md](SIMPLIFICATION_PLAYBOOK.md) | Lane method |
+| [JOURNAL.md](JOURNAL.md) | Journal spine (next lane) |
 
 ---
 
-## Simplification playbook (≤15 lines)
+## Simplification playbook
 
-Reuse for journal / SMS / import later:
+Extracted to [SIMPLIFICATION_PLAYBOOK.md](SIMPLIFICATION_PLAYBOOK.md) (shared with journal / import / SMS lanes).
 
-1. Pick one domain lane and the user actions that overwhelm.  
-2. Record hop count before (date + SHA) from pinned entry files.  
-3. Write/update one spine doc with ≤6 layers + related-doc links.  
-4. Inventory callers (`rg` + find references); collapse parallel seams; delete only if zero production callers, tests retargeted, barrels updated, verify green.  
-5. Keep existing correctness spines (commands, graphs); no god façades.  
-6. Stop when a stranger can onboard from the spine and hop count dropped.  
-7. Next domain — do not boil the ocean.
