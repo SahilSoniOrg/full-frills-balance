@@ -6,7 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { CreateAccountCommandInput } from '@/src/services/accounts/accountCommandInputs';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import {
   assertParentHasNoTransactions,
   assertParentMatchesChildType,
@@ -32,8 +32,11 @@ export async function createAccount(
   }
 
   if (input.parentAccountId) {
-    const parent = await accountRepository.find(workplaceId, input.parentAccountId);
-    if (!parent) throw new Error('Parent account not found');
+    const [parent] = await assertWritable(
+      workplaceId,
+      [input.parentAccountId],
+      'Parent account',
+    );
     assertParentMatchesChildType(input.accountType, parent);
     const hasTransactions = await transactionRepository.hasTransactions(
       workplaceId,
@@ -45,7 +48,7 @@ export async function createAccount(
   }
 
   if (input.metadata?.payFromAccountId) {
-    await assertAccountsExistInWorkplace(
+    await assertWritable(
       workplaceId,
       [input.metadata.payFromAccountId],
       'Account metadata pay-from',

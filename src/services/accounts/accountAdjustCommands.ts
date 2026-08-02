@@ -6,7 +6,7 @@ import {
   isBalanceAdjustmentNeeded,
   journalLegTypesForSignedAmount,
 } from '@/src/services/accounts/accountRules';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { findOrCreateBalanceCorrectionAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -46,7 +46,7 @@ export async function adjustAccountBalance(
       : await findOrCreateBalanceCorrectionAccount(account.currencyCode, workplaceId);
 
   if (counterparty.kind === 'account') {
-    await assertAccountsExistInWorkplace(
+    await assertWritable(
       workplaceId,
       [counterparty.accountId],
       'Balance change counterparty',

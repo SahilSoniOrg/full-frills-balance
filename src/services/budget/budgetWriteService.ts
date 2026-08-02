@@ -1,7 +1,7 @@
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -14,7 +14,7 @@ export class BudgetWriteService {
     data: BudgetInput,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertAccountsExistInWorkplace(
+    await assertWritable(
       workplaceId,
       [...accountIds, ...(data.assetAccountIds ?? [])],
       'Budget',
@@ -41,7 +41,7 @@ export class BudgetWriteService {
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertAccountsExistInWorkplace(
+    await assertWritable(
       workplaceId,
       [...accountIds, ...(data.assetAccountIds ?? [])],
       'Budget',

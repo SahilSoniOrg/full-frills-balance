@@ -3,10 +3,25 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import { database } from '@/src/data/database/Database';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { collectAccountDeleteBlockers } from '@/src/services/accounts/accountDeleteBlockers';
+import {
+  deleteBlockers,
+  type DeleteBlocker,
+} from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
+
+/** Format structured graph blockers into the user-facing delete Error message. */
+export function formatAccountDeleteBlockersError(
+  accountName: string,
+  blockers: DeleteBlocker[],
+): Error {
+  const references = blockers.map(blocker => `${blocker.count} ${blocker.label}`).join(', ');
+  return new Error(
+    `Account "${accountName}" cannot be deleted while referenced by ${references}. ` +
+      'Remove or retarget those references first (or merge into another account).',
+  );
+}
 
 export async function deleteAccount(
   accountOrId: Account | AccountId,
@@ -18,19 +33,9 @@ export async function deleteAccount(
       : accountOrId;
   if (!account) return;
 
-  const hasTransactions = await transactionRepository.hasTransactions(workplaceId, account.id);
-  if (hasTransactions) {
-    throw new Error(
-      `Account "${account.name}" has transactions and cannot be deleted. Merge transactions into another account first.`,
-    );
-  }
-
-  const blockers = await collectAccountDeleteBlockers(workplaceId, account.id as AccountId);
+  const blockers = await deleteBlockers(workplaceId, account.id as AccountId);
   if (blockers.length > 0) {
-    throw new Error(
-      `Account "${account.name}" cannot be deleted while referenced by ${blockers.join(', ')}. ` +
-        'Remove or retarget those references first (or merge into another account).',
-    );
+    throw formatAccountDeleteBlockersError(account.name, blockers);
   }
 
   await accountRepository.delete(workplaceId, account);

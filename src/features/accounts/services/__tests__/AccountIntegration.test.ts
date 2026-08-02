@@ -313,7 +313,7 @@ describe('AccountRepository', () => {
       );
 
       await expect(deleteAccount(asset, workplaceId)).rejects.toThrow(
-        'has transactions and cannot be deleted',
+        'cannot be deleted while referenced by 1 transaction(s)',
       );
 
       const stillThere = await accountRepository.find(workplaceId, asset.id);

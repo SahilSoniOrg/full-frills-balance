@@ -3,7 +3,7 @@ import { JournalStatus } from '@/src/data/models/Journal';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -33,7 +33,7 @@ export async function prepareJournalData(
     );
   }
 
-  const accounts = await assertAccountsExistInWorkplace(
+  const accounts = await assertWritable(
     workplaceId,
     accountIds,
     '[prepareJournalData] Journal',

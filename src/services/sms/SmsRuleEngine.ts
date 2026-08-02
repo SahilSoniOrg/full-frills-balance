@@ -21,7 +21,7 @@ import {
   SmsRuleMode,
 } from '@/src/services/ledger/RuleMatcher';
 import { dispositionForRuleAccounts } from '@/src/services/sms/ruleActionsAccountIds';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
@@ -343,7 +343,7 @@ export class SmsRuleEngine {
   }
 
   async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
-    await assertAccountsExistInWorkplace(
+    await assertWritable(
       workplaceId,
       [data.actions.sourceAccountId, data.actions.categoryAccountId],
       'SMS auto-post rule',

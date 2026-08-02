@@ -12,7 +12,7 @@ import {
   assertParentHasNoTransactions,
   assertParentMatchesChildType,
 } from '@/src/services/accounts/accountRules';
-import { assertAccountsExistInWorkplace } from '@/src/services/accounts/assertAccountsExist';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -86,11 +86,14 @@ export async function updateAccount(
     description: account.description,
   };
 
-  // Validate parent account if updated
+  // Validate parent account if updated (existence via graph; circular/self stay here)
   if (updates.parentAccountId) {
     assertNotSelfParent(accountId, updates.parentAccountId);
-    const parent = await accountRepository.find(workplaceId, updates.parentAccountId);
-    if (!parent) throw new Error('Parent account not found');
+    const [parent] = await assertWritable(
+      workplaceId,
+      [updates.parentAccountId],
+      'Parent account',
+    );
 
     const isCircular = await isDescendant(updates.parentAccountId, accountId, workplaceId);
     if (isCircular) {
@@ -126,7 +129,7 @@ export async function updateAccount(
 
   if (updates.metadata !== undefined) {
     if (updates.metadata.payFromAccountId) {
-      await assertAccountsExistInWorkplace(
+      await assertWritable(
         workplaceId,
         [updates.metadata.payFromAccountId],
         'Account metadata pay-from',

@@ -1,8 +1,50 @@
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import {
+  assertWritable,
+  deleteBlockers,
   formatFundingAccountIds,
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
+
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    findAllByIds: jest.fn(),
+    queryByParentId: jest.fn(),
+    findMetadataByPayFromAccountIds: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/BudgetRepository', () => ({
+  budgetRepository: {
+    findAllScopesByAccountIds: jest.fn(),
+    findAllReferencingAssetAccountId: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/PlannedPaymentRepository', () => ({
+  plannedPaymentRepository: {
+    findAllByFromAccountIds: jest.fn(),
+    findAllByToAccountIds: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository', () => ({
+  transactionAutoPostRuleRepository: {
+    findAllReferencingAccountIds: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/TransactionRepository', () => ({
+  transactionRepository: {
+    findAllByAccountIds: jest.fn(),
+  },
+}));
 
 describe('Account reference graph', () => {
   describe('referenceSites', () => {
@@ -61,6 +103,113 @@ describe('Account reference graph', () => {
         'b',
         'c',
       ]);
+    });
+  });
+
+  describe('assertWritable', () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('no-ops when all ids are empty', async () => {
+      await expect(assertWritable(workplaceId, [undefined, null, ''])).resolves.toEqual([]);
+      expect(accountRepository.findAllByIds).not.toHaveBeenCalled();
+    });
+
+    it('throws when any id is missing or soft-deleted', async () => {
+      (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([{ id: 'acc-1' }]);
+
+      await expect(
+        assertWritable(
+          workplaceId,
+          ['acc-1' as AccountId, 'acc-gone' as AccountId],
+          'Budget',
+        ),
+      ).rejects.toThrow('Budget references missing or deleted account(s): acc-gone');
+    });
+
+    it('returns resolved accounts when every id is live', async () => {
+      (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
+        { id: 'acc-1' },
+        { id: 'acc-2' },
+      ]);
+
+      await expect(
+        assertWritable(workplaceId, ['acc-1' as AccountId, 'acc-2' as AccountId]),
+      ).resolves.toEqual([{ id: 'acc-1' }, { id: 'acc-2' }]);
+    });
+  });
+
+  describe('deleteBlockers', () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+    const accountId = 'acc-1' as AccountId;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (accountRepository.queryByParentId as jest.Mock).mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      });
+      (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([]);
+      (budgetRepository.findAllReferencingAssetAccountId as jest.Mock).mockResolvedValue([]);
+      (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([]);
+      (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([]);
+      (accountRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
+      (transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock).mockResolvedValue(
+        [],
+      );
+      (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
+    });
+
+    it('returns empty when nothing blocks delete', async () => {
+      await expect(deleteBlockers(workplaceId, accountId)).resolves.toEqual([]);
+    });
+
+    it('returns structured blockers including transactions with closed codes', async () => {
+      (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'tx1' },
+        { id: 'tx2' },
+      ]);
+      (accountRepository.queryByParentId as jest.Mock).mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([{ id: 'child' }]),
+      });
+      (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([{ id: 'scope' }]);
+      (budgetRepository.findAllReferencingAssetAccountId as jest.Mock).mockResolvedValue([
+        { id: 'b1', assetAccountIds: 'acc-1,acc-2' },
+      ]);
+      (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'pp1' },
+      ]);
+      (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'pp1' },
+      ]);
+      (accountRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'meta' },
+      ]);
+      (transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock).mockResolvedValue(
+        [{ id: 'rule' }],
+      );
+
+      const blockers = await deleteBlockers(workplaceId, accountId);
+      expect(blockers).toEqual([
+        { code: 'transactions', count: 2, label: 'transaction(s)' },
+        { code: 'child_accounts', count: 1, label: 'child account(s)' },
+        { code: 'budget_scopes', count: 1, label: 'budget scope(s)' },
+        { code: 'budget_funding_accounts', count: 1, label: 'budget funding account list(s)' },
+        { code: 'planned_payments', count: 1, label: 'planned payment(s)' },
+        { code: 'pay_from_metadata', count: 1, label: 'pay-from metadata reference(s)' },
+        { code: 'sms_auto_post_rules', count: 1, label: 'SMS auto-post rule(s)' },
+      ]);
+    });
+
+    it('does not treat balance snapshots as delete blockers', async () => {
+      // Snapshots are allow-delete; deleteBlockers must not invent a snapshot code.
+      const blockers = await deleteBlockers(workplaceId, accountId);
+      expect(blockers.map(b => b.code)).not.toContain('balance_snapshots');
+      expect(referenceSites().find(s => s.key === 'balanceSnapshot.accountId')?.deletePolicy).toBe(
+        'allow',
+      );
     });
   });
 });
