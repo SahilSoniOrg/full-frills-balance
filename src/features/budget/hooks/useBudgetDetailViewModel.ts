@@ -8,7 +8,7 @@ import {
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
 import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
@@ -28,7 +28,7 @@ import { combineLatest, of, switchMap } from 'rxjs';
 
 export function useBudgetDetailViewModel() {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { isPrivacyMode } = usePrivacyPrefs();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const params = useLocalSearchParams<{
     id: BudgetId;
     pName?: string;

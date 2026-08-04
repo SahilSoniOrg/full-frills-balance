@@ -1,5 +1,5 @@
 import { AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -24,6 +24,8 @@ export interface PlannedPaymentHistoryCardProps {
   };
 
   isOverdue?: boolean;
+  /** When true, amount fields render the privacy mask instead of currency. */
+  isPrivacyMode?: boolean;
 
   onPress?: () => void;
 }
@@ -42,6 +44,7 @@ export const PlannedPaymentHistoryCard = ({
   plannedTitle,
   presentation,
   isOverdue,
+  isPrivacyMode = false,
   onPress,
 }: PlannedPaymentHistoryCardProps) => {
   const { theme, themeMode } = useTheme();
@@ -51,7 +54,12 @@ export const PlannedPaymentHistoryCard = ({
   const isAmountDeviated = Math.abs(journalAmount - plannedAmount) > 0.01; // float safety
   const isTitleDeviated = journalTitle !== plannedTitle;
 
-  const formattedAmount = CurrencyFormatter.format(journalAmount, currencyCode);
+  const formattedAmount = isPrivacyMode
+    ? AppConfig.privacyMask
+    : CurrencyFormatter.format(journalAmount, currencyCode);
+  const formattedPlannedAmount = isPrivacyMode
+    ? AppConfig.privacyMask
+    : CurrencyFormatter.format(plannedAmount, currencyCode);
 
   const content = (
     <Column padding="lg">
@@ -109,7 +117,7 @@ export const PlannedPaymentHistoryCard = ({
                 marginTop={2}
                 style={{ fontSize: 10 }}
               >
-                Originally {CurrencyFormatter.format(plannedAmount, currencyCode)}
+                Originally {formattedPlannedAmount}
               </Text>
             )}
           </Column>

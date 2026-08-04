@@ -59,6 +59,8 @@ export interface ReportOverviewTabVm {
   expenseBarFlex: number;
   sankeyData: SankeyData;
   targetCurrency: string;
+  selectedBarIndex: number | undefined;
+  onSelectBarIndex: (index: number | undefined) => void;
   onViewTransactions: (start: number, end?: number) => void;
   onViewSelectedTransactions: () => void;
 }

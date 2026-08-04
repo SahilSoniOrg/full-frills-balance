@@ -3,8 +3,7 @@ import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 const BAR_CHART_HEIGHT = REPORT_CHART_LAYOUT.barChartHeight;
@@ -19,6 +18,8 @@ export interface IncomeExpenseTrendWidgetProps {
   }[];
   currencyCode: string;
   chartWidth: number;
+  selectedIndex: number | undefined;
+  onSelectIndex: (index: number | undefined) => void;
   onViewSelectedTransactions: () => void;
 }
 
@@ -26,17 +27,18 @@ export function IncomeExpenseTrendWidget({
   barChartData,
   currencyCode,
   chartWidth,
+  selectedIndex,
+  onSelectIndex,
   onViewSelectedTransactions,
 }: IncomeExpenseTrendWidgetProps) {
   const { theme } = useTheme();
-  const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
 
-  const onPointSelect = useCallback((index: number) => {
-    setSelectedIndex(prev => (prev === index ? undefined : index));
-    if (index !== undefined && index !== -1) {
-      analytics.logChartInteracted('income_expense', 'point_select');
-    }
-  }, []);
+  const onPointSelect = useCallback(
+    (index: number) => {
+      onSelectIndex(selectedIndex === index ? undefined : index);
+    },
+    [onSelectIndex, selectedIndex],
+  );
 
   const renderTooltip = useCallback(
     (index: number) => {

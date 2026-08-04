@@ -319,6 +319,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                     typeColor,
                   }}
                   isOverdue={isOverdue}
+                  isPrivacyMode={vm.isPrivacyMode}
                   onPress={() => AppNavigation.toTransactionDetails(journal.id)}
                 />
               );
