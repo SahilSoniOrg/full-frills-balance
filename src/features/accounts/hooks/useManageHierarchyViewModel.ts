@@ -22,19 +22,21 @@ export interface ManageHierarchyViewModel {
   balancesByAccountId: Map<string, { transactionCount?: number; directTransactionCount?: number }>;
   selectedAccountId: AccountId | null;
   selectedAccount: Account | undefined;
+  addChildParentId: AccountId | null;
   collapsedCategories: Set<string>;
   expandedAccountIds: Set<string>;
   accountsByParent: Map<AccountId | null, Account[]>;
   visibleRootAccountsByCategory: Record<string, Account[]>;
-  canSelectedAccountBeParent: boolean;
   addChildCandidates: Account[];
   parentCandidates: Account[];
   onCreateParent: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
+  onRequestAddChild: (parentId: AccountId) => void;
+  onCloseAddChild: () => void;
   onToggleExpand: (accountId: AccountId) => void;
   onToggleCategory: (category: string) => void;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
-  onAddChild: (parentId: AccountId, childId: AccountId) => Promise<void>;
+  onAddChild: (childId: AccountId) => Promise<void>;
 }
 
 export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
@@ -50,7 +52,8 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const initialFocusedId = params.accountId || null;
   const filterMode = params.filterMode || 'accounts';
 
-  const [selectedAccountId, setSelectedAccountId] = useState<AccountId | null>(initialFocusedId);
+  const [selectedAccountId, setSelectedAccountId] = useState<AccountId | null>(null);
+  const [addChildParentId, setAddChildParentId] = useState<AccountId | null>(null);
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -112,27 +115,31 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     [filteredAccounts, selectedAccountId],
   );
 
-  const canSelectedAccountBeParent = useMemo(() => {
-    if (!selectedAccountId) return false;
-    return (balancesByAccountId.get(selectedAccountId)?.directTransactionCount || 0) === 0;
-  }, [balancesByAccountId, selectedAccountId]);
+  const addChildParent = useMemo(
+    () => filteredAccounts.find(account => account.id === addChildParentId),
+    [filteredAccounts, addChildParentId],
+  );
 
-  const descendantIds = useMemo(() => {
+  const moveDescendantIds = useMemo(() => {
     return collectDescendantIds(accountsByParent, selectedAccountId);
   }, [accountsByParent, selectedAccountId]);
 
+  const addChildDescendantIds = useMemo(() => {
+    return collectDescendantIds(accountsByParent, addChildParentId);
+  }, [accountsByParent, addChildParentId]);
+
   const addChildCandidates = useMemo(() => {
-    return getAddChildCandidates(filteredAccounts, selectedAccount, descendantIds);
-  }, [filteredAccounts, selectedAccount, descendantIds]);
+    return getAddChildCandidates(filteredAccounts, addChildParent, addChildDescendantIds);
+  }, [filteredAccounts, addChildParent, addChildDescendantIds]);
 
   const parentCandidates = useMemo(() => {
     return getParentCandidates(
       filteredAccounts,
       selectedAccount,
-      descendantIds,
+      moveDescendantIds,
       balancesByAccountId,
     );
-  }, [filteredAccounts, balancesByAccountId, selectedAccount, descendantIds]);
+  }, [filteredAccounts, balancesByAccountId, selectedAccount, moveDescendantIds]);
 
   const onToggleExpand = useCallback((accountId: AccountId) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -157,37 +164,45 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const onAssignParent = useCallback(
     async (accountId: AccountId, parentId: AccountId | null) => {
       const account = filteredAccounts.find((candidate: Account) => candidate.id === accountId);
-      if (!account) return;
+      if (!account) {
+        toast.error('Account not found');
+        return;
+      }
 
       try {
         await updateAccount(account, { parentAccountId: parentId });
         if (parentId) {
           setExpandedAccountIds(prev => new Set([...prev, parentId]));
         }
+        setSelectedAccountId(null);
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : 'Move failed');
       }
-
-      setSelectedAccountId(null);
     },
     [filteredAccounts, updateAccount],
   );
 
   const onAddChild = useCallback(
-    async (parentId: AccountId, childId: AccountId) => {
+    async (childId: AccountId) => {
+      const parentId = addChildParentId;
+      if (!parentId) return;
+
       const childAccount = filteredAccounts.find((candidate: Account) => candidate.id === childId);
-      if (!childAccount) return;
+      if (!childAccount) {
+        toast.error('Account not found');
+        return;
+      }
+
+      setAddChildParentId(null);
 
       try {
         await updateAccount(childAccount, { parentAccountId: parentId });
         setExpandedAccountIds(prev => new Set([...prev, parentId]));
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : 'Move failed');
+        toast.error(error instanceof Error ? error.message : 'Failed to add child');
       }
-
-      setSelectedAccountId(null);
     },
-    [filteredAccounts, updateAccount],
+    [addChildParentId, filteredAccounts, updateAccount],
   );
 
   const onCreateParent = useCallback(() => {
@@ -199,7 +214,17 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, [filterMode]);
 
   const onSelectAccount = useCallback((accountId: AccountId | null) => {
+    setAddChildParentId(null);
     setSelectedAccountId(accountId);
+  }, []);
+
+  const onRequestAddChild = useCallback((parentId: AccountId) => {
+    setSelectedAccountId(null);
+    setAddChildParentId(parentId);
+  }, []);
+
+  const onCloseAddChild = useCallback(() => {
+    setAddChildParentId(null);
   }, []);
 
   return {
@@ -207,15 +232,17 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     balancesByAccountId,
     selectedAccountId,
     selectedAccount,
+    addChildParentId,
     collapsedCategories,
     expandedAccountIds,
     accountsByParent,
     visibleRootAccountsByCategory,
-    canSelectedAccountBeParent,
     addChildCandidates,
     parentCandidates,
     onCreateParent,
     onSelectAccount,
+    onRequestAddChild,
+    onCloseAddChild,
     onToggleExpand,
     onToggleCategory,
     onAssignParent,

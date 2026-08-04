@@ -18,6 +18,7 @@ interface HierarchyTreeProps {
   visibleRootAccountsByCategory: Record<string, Account[]>;
   onCreateParent: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
+  onRequestAddChild: (parentId: AccountId) => void;
   onToggleExpand: (accountId: AccountId) => void;
   onToggleCategory: (category: string) => void;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
@@ -33,6 +34,7 @@ export function HierarchyTree({
   visibleRootAccountsByCategory,
   onCreateParent,
   onSelectAccount,
+  onRequestAddChild,
   onToggleExpand,
   onToggleCategory,
   onAssignParent,
@@ -47,7 +49,7 @@ export function HierarchyTree({
     const children = accountsByParent.get(account.id) || [];
     const hasChildren = children.length > 0;
     const isExpanded = expandedAccountIds.has(account.id);
-    const canBeParent = (balance?.directTransactionCount || 0) === 0;
+    const canBeParent = balance != null && (balance.directTransactionCount || 0) === 0;
     const isExpandable = hasChildren || canBeParent;
     const isSelected = selectedAccountId === account.id;
     const categoryColor = theme[getAccountTypeColorKey(account.accountType)];
@@ -135,35 +137,35 @@ export function HierarchyTree({
                 )}
               </View>
             </View>
+          </TouchableOpacity>
 
-            <View style={styles.rowActions}>
+          <View style={styles.rowActions}>
+            <TouchableOpacity
+              style={[
+                styles.actionIconButton,
+                { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
+              ]}
+              onPress={() => onSelectAccount(account.id)}
+            >
+              <AppIcon name="reorder" size={Size.iconXs} color={theme.primary} />
+              <AppText variant="caption" color="primary" weight="bold">
+                MOVE
+              </AppText>
+            </TouchableOpacity>
+
+            {account.parentAccountId && (
               <TouchableOpacity
                 style={[
                   styles.actionIconButton,
-                  { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
+                  { backgroundColor: withOpacity(theme.error, Opacity.hover) },
                 ]}
-                onPress={() => onSelectAccount(account.id)}
+                onPress={() => void onAssignParent(account.id, null)}
+                accessibilityLabel="Move to top level"
               >
-                <AppIcon name="reorder" size={Size.iconXs} color={theme.primary} />
-                <AppText variant="caption" color="primary" weight="bold">
-                  MOVE
-                </AppText>
+                <AppIcon name="eject" size={Size.iconXs} color={theme.error} />
               </TouchableOpacity>
-
-              {account.parentAccountId && (
-                <TouchableOpacity
-                  style={[
-                    styles.actionIconButton,
-                    { backgroundColor: withOpacity(theme.error, Opacity.hover) },
-                  ]}
-                  onPress={() => void onAssignParent(account.id, null)}
-                  accessibilityLabel="Move to top level"
-                >
-                  <AppIcon name="eject" size={Size.iconXs} color={theme.error} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {isExpanded && (hasChildren || canBeParent) && (
@@ -191,7 +193,7 @@ export function HierarchyTree({
                 </View>
                 <TouchableOpacity
                   style={styles.accountRowContent}
-                  onPress={() => onSelectAccount(account.id)}
+                  onPress={() => onRequestAddChild(account.id)}
                 >
                   <View style={styles.expandPlaceholder} />
                   <View style={styles.iconWrapper}>
@@ -329,7 +331,9 @@ const styles = StyleSheet.create({
   rowActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
     gap: Spacing.sm,
+    paddingRight: Spacing.sm,
   },
   actionIconButton: {
     flexDirection: 'row',

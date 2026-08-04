@@ -125,7 +125,6 @@ export class TransactionRawRepository {
       afterTransactionCreatedAt?: number;
     }[],
     endDate: number,
-    minTransactionDate?: number,
   ): Promise<{
     balances: Map<string, number>;
     counts: Map<string, number>;
@@ -136,11 +135,17 @@ export class TransactionRawRepository {
         accountIdsWithBoundaries.map(b => b.accountId),
         endDate,
       ),
-      this.getAccountTransactionCountsRaw(accountIdsWithBoundaries, endDate, minTransactionDate),
+      this.getAccountTransactionCountsRaw(accountIdsWithBoundaries, endDate),
     ]);
     return { balances, counts };
   }
 
+  /**
+   * Counts transactions after each account's snapshot cursor (or all history when
+   * there is no snapshot). Lower-bound pruning is per-account via `last_date` —
+   * never a workplace-wide min snapshot date, which would hide older activity on
+   * accounts that lack their own snapshot.
+   */
   async getAccountTransactionCountsRaw(
     accountIdsWithBoundaries: {
       accountId: AccountId;
@@ -150,7 +155,6 @@ export class TransactionRawRepository {
       afterTransactionCreatedAt?: number;
     }[],
     endDate: number,
-    minTransactionDate?: number,
   ): Promise<Map<string, number>> {
     if (accountIdsWithBoundaries.length === 0) return new Map();
 
@@ -187,7 +191,7 @@ export class TransactionRawRepository {
           AND j.deleted_at IS NULL
           AND j.status IN (${placeholders})
           AND t.transaction_date <= ?
-          ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
+          AND t.transaction_date >= b.last_date
           AND (
             b.last_id = '' 
             OR t.transaction_date > b.last_date 
@@ -202,7 +206,6 @@ export class TransactionRawRepository {
         ...ACTIVE_JOURNAL_STATUSES,
         endDate,
       ];
-      if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
 
       const raws = await this.queryRaw<{ accountId: AccountId; count: number }>(sql, queryParams);
       if (raws !== null) {

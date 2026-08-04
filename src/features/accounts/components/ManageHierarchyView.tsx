@@ -1,3 +1,4 @@
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants/app-config';
 import { ManageHierarchyViewModel } from '@/src/features/accounts/hooks/useManageHierarchyViewModel';
@@ -17,20 +18,25 @@ export function ManageHierarchyView(vm: ManageHierarchyViewModel) {
         visibleRootAccountsByCategory={vm.visibleRootAccountsByCategory}
         onCreateParent={vm.onCreateParent}
         onSelectAccount={vm.onSelectAccount}
+        onRequestAddChild={vm.onRequestAddChild}
         onToggleExpand={vm.onToggleExpand}
         onToggleCategory={vm.onToggleCategory}
         onAssignParent={vm.onAssignParent}
       />
 
+      <AccountPickerModal
+        visible={!!vm.addChildParentId}
+        accounts={vm.addChildCandidates}
+        title={AppConfig.strings.accounts.hierarchy.addChild}
+        onClose={vm.onCloseAddChild}
+        onSelect={accountId => void vm.onAddChild(accountId)}
+      />
+
       <HierarchyMoveModal
         selectedAccountId={vm.selectedAccountId}
         selectedAccount={vm.selectedAccount}
-        canSelectedAccountBeParent={vm.canSelectedAccountBeParent}
-        addChildCandidates={vm.addChildCandidates}
         parentCandidates={vm.parentCandidates}
-        balancesByAccountId={vm.balancesByAccountId}
         onSelectAccount={vm.onSelectAccount}
-        onAddChild={vm.onAddChild}
         onAssignParent={vm.onAssignParent}
       />
     </Screen>

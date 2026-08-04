@@ -8,10 +8,10 @@ import { AccountId } from '@/src/types/domain';
 import {
   DimensionValue,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   ViewStyle,
 } from 'react-native';
@@ -19,127 +19,84 @@ import {
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
   selectedAccount: Account | undefined;
-  canSelectedAccountBeParent: boolean;
-  addChildCandidates: Account[];
   parentCandidates: Account[];
-  balancesByAccountId: Map<string, { transactionCount?: number; directTransactionCount?: number }>;
   onSelectAccount: (accountId: AccountId | null) => void;
-  onAddChild: (parentId: AccountId, childId: AccountId) => Promise<void>;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
 }
 
 export function HierarchyMoveModal({
   selectedAccountId,
   selectedAccount,
-  canSelectedAccountBeParent,
-  addChildCandidates,
   parentCandidates,
-  balancesByAccountId,
   onSelectAccount,
-  onAddChild,
   onAssignParent,
 }: HierarchyMoveModalProps) {
   const { theme } = useTheme();
+  const close = () => onSelectAccount(null);
 
   return (
     <Modal
       visible={!!selectedAccountId}
       transparent
-      animationType="fade"
-      onRequestClose={() => onSelectAccount(null)}
+      animationType="slide"
+      onRequestClose={close}
+      statusBarTranslucent
     >
-      <Pressable
-        style={[styles.modalOverlay, { backgroundColor: theme.overlay } as ViewStyle]}
-        onPress={() => onSelectAccount(null)}
-      >
-        <View style={[styles.modalContent, { backgroundColor: theme.surface } as ViewStyle]}>
-          <View style={styles.modalHeader}>
-            <AppText variant="subheading" weight="bold">
-              {AppConfig.strings.accounts.hierarchy.modalTitle}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {AppConfig.strings.accounts.hierarchy.modalDescription(selectedAccount?.name || '')}
-            </AppText>
-          </View>
-
-          <ScrollView style={styles.modalScroll}>
-            {canSelectedAccountBeParent && (
-              <View style={styles.destinationSection}>
-                <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
-                  {AppConfig.strings.accounts.hierarchy.addChildrenLabel}
+      <TouchableWithoutFeedback onPress={close}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay } as ViewStyle]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, { backgroundColor: theme.surface } as ViewStyle]}>
+              <View style={styles.modalHeader}>
+                <AppText variant="subheading" weight="bold">
+                  {AppConfig.strings.accounts.hierarchy.modalTitle}
                 </AppText>
-                {addChildCandidates.map(candidate => (
-                  <TouchableOpacity
-                    key={candidate.id}
-                    style={[
-                      styles.destinationItem,
-                      { borderBottomColor: theme.divider } as ViewStyle,
-                    ]}
-                    onPress={() =>
-                      selectedAccountId && void onAddChild(selectedAccountId, candidate.id)
-                    }
-                  >
-                    <AppIcon
-                      name={candidate.icon}
-                      fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
-                      size={Size.iconSm}
-                      color={theme.textSecondary}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <AppText variant="body">{candidate.name}</AppText>
-                      {(balancesByAccountId.get(candidate.id)?.transactionCount || 0) > 0 && (
-                        <AppText variant="caption" color="secondary">
-                          {AppConfig.strings.accounts.hierarchy.hasTransactions}
-                        </AppText>
-                      )}
-                    </View>
-                    <AppIcon name="add" size={Size.iconXs} color={theme.success} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.destinationSection}>
-              <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
-                {AppConfig.strings.accounts.hierarchy.moveParentLabel}
-              </AppText>
-              {parentCandidates.map(candidate => (
-                <TouchableOpacity
-                  key={candidate.id}
-                  style={[
-                    styles.destinationItem,
-                    { borderBottomColor: theme.divider } as ViewStyle,
-                  ]}
-                  onPress={() =>
-                    selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
-                  }
-                >
-                  <AppIcon
-                    name={candidate.icon}
-                    fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
-                    size={Size.iconSm}
-                    color={theme.textSecondary}
-                  />
-                  <AppText variant="body" style={{ flex: 1 }}>
-                    {candidate.name}
-                  </AppText>
-                  {selectedAccount?.parentAccountId === candidate.id && (
-                    <AppIcon name="check" size={Size.iconSm} color={theme.success} />
+                <AppText variant="caption" color="secondary">
+                  {AppConfig.strings.accounts.hierarchy.modalDescription(
+                    selectedAccount?.name || '',
                   )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+                </AppText>
+              </View>
 
-          <AppButton
-            onPress={() => onSelectAccount(null)}
-            variant="ghost"
-            style={styles.cancelButton}
-          >
-            {AppConfig.strings.common.cancel}
-          </AppButton>
+              <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                <View style={styles.destinationSection}>
+                  <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
+                    {AppConfig.strings.accounts.hierarchy.moveParentLabel}
+                  </AppText>
+                  {parentCandidates.map(candidate => (
+                    <TouchableOpacity
+                      key={candidate.id}
+                      style={[
+                        styles.destinationItem,
+                        { borderBottomColor: theme.divider } as ViewStyle,
+                      ]}
+                      onPress={() =>
+                        selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
+                      }
+                    >
+                      <AppIcon
+                        name={candidate.icon}
+                        fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
+                        size={Size.iconSm}
+                        color={theme.textSecondary}
+                      />
+                      <AppText variant="body" style={{ flex: 1 }}>
+                        {candidate.name}
+                      </AppText>
+                      {selectedAccount?.parentAccountId === candidate.id && (
+                        <AppIcon name="check" size={Size.iconSm} color={theme.success} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <AppButton onPress={close} variant="ghost" style={styles.cancelButton}>
+                {AppConfig.strings.common.cancel}
+              </AppButton>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </Pressable>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }

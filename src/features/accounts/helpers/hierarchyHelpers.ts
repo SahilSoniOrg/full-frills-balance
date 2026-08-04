@@ -46,7 +46,8 @@ export function getVisibleRootAccountsByCategory(
   rootAccounts.forEach(account => {
     const children = accountsByParent.get(account.id) || [];
     const balance = balancesByAccountId.get(account.id);
-    const hasDirectTransactions = (balance?.directTransactionCount || 0) > 0;
+    // Missing balance = unknown; only treat as activity-free when count is explicitly 0.
+    const hasDirectTransactions = balance == null || (balance.directTransactionCount || 0) > 0;
     if (children.length > 0 || !hasDirectTransactions) {
       groups[account.accountType].push(account);
     }
@@ -85,7 +86,7 @@ export function getParentCandidates(
     const isCurrentParent = account.id === selectedAccount.parentAccountId;
     const balance = balancesByAccountId.get(account.id);
     const isSameAccount = account.id === selectedAccount.id;
-    const canTakeChild = (balance?.directTransactionCount || 0) === 0;
+    const canTakeChild = balance != null && (balance.directTransactionCount || 0) === 0;
     const sameType = account.accountType === selectedAccount.accountType;
     return !isSameAccount && !isCurrentParent && !isDescendant && canTakeChild && sameType;
   });

@@ -385,6 +385,7 @@ export class BalanceService {
           accountId,
           startDate: snapshot?.transactionDate || 0,
           afterTransactionId: snapshot?.transactionId,
+          afterTransactionDate: snapshot?.transactionDate,
         },
       ],
       cutoffDate,
@@ -436,15 +437,8 @@ export class BalanceService {
       ]);
       trace.metric('fetchMetadata');
 
-      // Calculate minTransactionDate pruning hint for Phase 2
-      let minSnapshotDate: number | undefined;
       const countInput = accounts.map(a => {
         const snapshot = latestSnapshotsMap.get(a.id);
-        if (snapshot) {
-          if (minSnapshotDate === undefined || snapshot.transactionDate < minSnapshotDate) {
-            minSnapshotDate = snapshot.transactionDate;
-          }
-        }
         return {
           accountId: a.id,
           startDate: snapshot?.transactionDate || 0,
@@ -460,7 +454,6 @@ export class BalanceService {
           workplaceId,
           countInput,
           cutoffDate,
-          minSnapshotDate,
         );
       trace.metric('fetchData');
 

@@ -64,4 +64,17 @@ describe('hierarchyHelpers', () => {
       ASSET: [populatedRoot],
     });
   });
+
+  it('hides empty roots when balance is unknown and excludes them as parents', () => {
+    const unknownRoot = makeAccount('unknown');
+    const readyRoot = makeAccount('ready');
+    const accounts = [unknownRoot, readyRoot];
+    const groups = groupAccountsByParent(accounts);
+    const balances = new Map([[readyRoot.id, { directTransactionCount: 0 }]]);
+
+    expect(getVisibleRootAccountsByCategory(accounts, groups, balances)).toMatchObject({
+      ASSET: [readyRoot],
+    });
+    expect(getParentCandidates(accounts, readyRoot, new Set(), balances)).toEqual([]);
+  });
 });
