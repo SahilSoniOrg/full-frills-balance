@@ -1,9 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import {
-  FORMAT_AMOUNT_LOADING,
-  formatMoneyAmount,
-  formatStsAmount,
-} from '@/src/components/common/moneyFormat';
+import { FORMAT_AMOUNT_LOADING, formatMoneyAmount, formatStsAmount } from '@/src/utils/moneyFormat';
 
 describe('formatStsAmount / formatMoneyAmount', () => {
   it('masks when privacy is on', () => {

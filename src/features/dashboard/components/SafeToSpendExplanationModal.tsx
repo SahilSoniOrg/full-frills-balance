@@ -270,7 +270,7 @@ export const SafeToSpendExplanationModal = ({
                         </View>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
-                        +{formatSts(inc.amount, currencyCode)}
+                        {formatSts(inc.amount, currencyCode, { prefix: '+' })}
                       </AppText>
                     </TouchableOpacity>
                   ))
@@ -302,7 +302,7 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="warning" tabular>
-                –{formatSts(committedTotal, currencyCode)}
+                {formatSts(committedTotal, currencyCode, { prefix: '–' })}
               </AppText>
               <AppIcon
                 name={expandedSection === 'committed' ? 'chevronUp' : 'chevronDown'}
@@ -331,7 +331,7 @@ export const SafeToSpendExplanationModal = ({
                         {acc.accountName}
                       </AppText>
                       <AppText variant="caption" weight="bold" color="warning" tabular>
-                        –{formatSts(acc.amount, currencyCode)}
+                        {formatSts(acc.amount, currencyCode, { prefix: '–' })}
                       </AppText>
                     </View>
                     <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
@@ -441,7 +441,7 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="error" tabular>
-                –{formatSts(committedLiabilities, currencyCode)}
+                {formatSts(committedLiabilities, currencyCode, { prefix: '–' })}
               </AppText>
               <AppIcon
                 name={expandedSection === 'debts' ? 'chevronUp' : 'chevronDown'}
@@ -484,7 +484,7 @@ export const SafeToSpendExplanationModal = ({
                       </AppText>
                     </View>
                     <AppText variant="caption" weight="bold" color="error" tabular>
-                      –{formatSts(acc.amount, currencyCode)}
+                      {formatSts(acc.amount, currencyCode, { prefix: '–' })}
                     </AppText>
                   </View>
                 ))}

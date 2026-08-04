@@ -20,7 +20,7 @@ import Svg, {
 } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
-/** Axis / today labels use useMoneyFormat — host must be under PrivacyScopeProvider. */
+/** Axis / today labels: useMoneyFormat + SvgText (SVG children). Host under PrivacyScopeProvider. */
 export interface DataPoint {
   x: number; // timestamp
   y: number; // value

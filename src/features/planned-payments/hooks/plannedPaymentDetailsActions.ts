@@ -1,4 +1,4 @@
-import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
+import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { AppConfig } from '@/src/constants/app-config';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { confirm } from '@/src/utils/alerts';

@@ -1,6 +1,5 @@
 import { AppText, type AppTextProps } from '@/src/components/core/AppText';
-import { formatMoneyAmount, type MoneyFormatStyle } from '@/src/components/common/moneyFormat';
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
+import { useMoneyFormat, type MoneyFormatStyle } from '@/src/components/common/moneyFormat';
 
 type MoneyTextProps = Omit<AppTextProps, 'children'> & {
   amount: number;
@@ -13,7 +12,7 @@ type MoneyTextProps = Omit<AppTextProps, 'children'> & {
 
 /**
  * Privacy-aware amount label (RN Text). Must render under PrivacyScopeProvider.
- * For SVG labels use useMoneyFormat with SvgText.
+ * For SVG / string embeds use useMoneyFormat (with optional per-call prefix).
  */
 export function MoneyText({
   amount,
@@ -23,11 +22,6 @@ export function MoneyText({
   prefix,
   ...textProps
 }: MoneyTextProps) {
-  const { isPrivacyMode } = usePrivacyScope();
-  const text = formatMoneyAmount(amount, currencyCode, isPrivacyMode, {
-    style: formatStyle,
-    loading,
-    prefix,
-  });
-  return <AppText {...textProps}>{text}</AppText>;
+  const formatMoney = useMoneyFormat({ style: formatStyle, loading, prefix });
+  return <AppText {...textProps}>{formatMoney(amount, currencyCode)}</AppText>;
 }

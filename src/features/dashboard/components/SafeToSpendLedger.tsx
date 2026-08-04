@@ -261,7 +261,7 @@ export const SafeToSpendLedger = ({
                                 tabular
                                 style={{ fontSize: 9 }}
                               >
-                                -{formatSts(item.amount, currencyCode)}
+                                {formatSts(item.amount, currencyCode, { prefix: '-' })}
                               </AppText>
                             </View>
                           );
@@ -317,7 +317,7 @@ export const SafeToSpendLedger = ({
                               tabular
                               style={{ fontSize: 9 }}
                             >
-                              +{formatSts(item.amount, currencyCode)}
+                              {formatSts(item.amount, currencyCode, { prefix: '+' })}
                             </AppText>
                           </View>
                         ))}
