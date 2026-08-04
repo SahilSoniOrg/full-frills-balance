@@ -12,7 +12,7 @@ export type AppSurfaceBaseProps = BoxBaseProps & {
 export type AppSurfaceProps = AppSurfaceBaseProps;
 
 export const AppSurface = forwardRef<View, AppSurfaceProps>((props, ref) => {
-  const { elevation = 'sm', radius = 'r2', background, children, ...boxProps } = props;
+  const { elevation = 'sm', radius = 'r2', background = 'surface', children, ...boxProps } = props;
 
   return (
     <Box ref={ref} background={background} borderRadius={radius} shadow={elevation} {...boxProps}>

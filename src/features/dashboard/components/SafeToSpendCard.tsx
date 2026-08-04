@@ -95,7 +95,12 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     );
 
   return (
-    <AppSurface elevation="none" paddingHorizontal="none" paddingVertical="sm">
+    <AppSurface
+      elevation="none"
+      background="transparent"
+      paddingHorizontal="none"
+      paddingVertical="sm"
+    >
       <Column gap="lg">
         {header}
         {body}
