@@ -11,12 +11,12 @@ interface ReportOverviewSectionProps {
 
 export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionProps) {
   const {
-    displayedNetWorthText,
+    currentNetWorth,
     netWorthSeries,
     onViewTransactions,
     barChartData,
-    displayedIncomeText,
-    displayedExpenseText,
+    displayedIncome,
+    displayedExpense,
     incomeBarFlex,
     expenseBarFlex,
     sankeyData,
@@ -30,7 +30,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     <>
       <NetWorthTrendWidget
         series={netWorthSeries}
-        displayedNetWorthText={displayedNetWorthText}
+        currentNetWorth={currentNetWorth}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
         onViewTransactions={onViewTransactions}
@@ -48,8 +48,9 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
       <IncomeExpenseBalanceWidget
         incomeBarFlex={incomeBarFlex}
         expenseBarFlex={expenseBarFlex}
-        displayedIncomeText={displayedIncomeText}
-        displayedExpenseText={displayedExpenseText}
+        income={displayedIncome}
+        expense={displayedExpense}
+        currencyCode={targetCurrency}
       />
 
       <MoneyFlowWidget

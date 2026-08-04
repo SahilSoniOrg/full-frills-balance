@@ -1,6 +1,6 @@
-import { AppConfig } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountType } from '@/src/data/models/Account';
+import { AppConfig } from '@/src/constants';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
@@ -9,7 +9,6 @@ import {
 } from '@/src/services/accounts/accountDerivedReads';
 import { buildAccountRollingBalanceSeries, RunningBalanceTx } from '@/src/services/projections';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
@@ -30,28 +29,10 @@ export interface UseAccountDetailsMetricsOptions {
   balanceCurrency: string;
   dateRange: DateRange | null;
   balanceData: AccountBalance | null;
-  isPrivacyMode: boolean;
-}
-
-function formatSensitiveAmount(
-  amount: number,
-  currencyCode: string,
-  isPrivacyMode: boolean,
-): string {
-  if (isPrivacyMode) return AppConfig.privacyMask;
-  return CurrencyFormatter.format(amount, currencyCode);
 }
 
 export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOptions) {
-  const {
-    accountId,
-    workplaceId,
-    accountType,
-    balanceCurrency,
-    dateRange,
-    balanceData,
-    isPrivacyMode,
-  } = options;
+  const { accountId, workplaceId, accountType, balanceCurrency, dateRange, balanceData } = options;
 
   const { precision } = useCurrencyPrecision(balanceCurrency);
 
@@ -59,9 +40,9 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     if (!balanceData?.childBalances) return [];
     return balanceData.childBalances.map((cb: { currencyCode: string; balance: number }) => ({
       currencyCode: cb.currencyCode,
-      amountText: formatSensitiveAmount(cb.balance, cb.currencyCode, isPrivacyMode),
+      amount: cb.balance,
     }));
-  }, [balanceData, isPrivacyMode]);
+  }, [balanceData]);
 
   const { data: periodMetricsResult, isLoading: metricsLoading } = useObservable<PeriodMetrics>(
     () => {
@@ -110,28 +91,6 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     [periodMetricsResult, metricsLoading],
   );
 
-  const periodMetricsFormatted = useMemo(
-    () => ({
-      totalIncreaseText: formatSensitiveAmount(
-        periodMetrics.totalIncrease,
-        balanceCurrency,
-        isPrivacyMode,
-      ),
-      totalDecreaseText: formatSensitiveAmount(
-        periodMetrics.totalDecrease,
-        balanceCurrency,
-        isPrivacyMode,
-      ),
-      netChangeText: formatSensitiveAmount(periodMetrics.netChange, balanceCurrency, isPrivacyMode),
-      dailyAverageText:
-        periodMetrics.dailyAverage !== null
-          ? formatSensitiveAmount(periodMetrics.dailyAverage, balanceCurrency, isPrivacyMode)
-          : null,
-      isLoading: periodMetrics.isLoading,
-    }),
-    [periodMetrics, balanceCurrency, isPrivacyMode],
-  );
-
   const { data: chartTransactions } = useObservable<Transaction[]>(
     () => {
       const MS_PER_DAY = AppConfig.time.msPerDay;
@@ -163,7 +122,6 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     precision,
     secondaryBalances,
     periodMetrics,
-    periodMetricsFormatted,
     chartData,
     rollingAverageData,
     xTicks,

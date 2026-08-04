@@ -128,7 +128,7 @@ export function AccountsListView({
                     <MoneyText
                       amount={section.total}
                       currencyCode={currencyCode}
-                      short
+                      formatStyle="short"
                       variant="body"
                       weight="bold"
                       style={{ color: section.totalColor }}

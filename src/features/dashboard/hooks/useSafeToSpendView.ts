@@ -13,8 +13,6 @@ export interface SafeToSpendViewProps extends SafeToSpendDashboard {
     setExpandedSection?: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
     selectedLegendItem?: 'safe' | 'committed' | 'debts' | null;
     setSelectedLegendItem?: (i: 'safe' | 'committed' | 'debts' | null) => void;
-    /** Screen/VM privacy flag from usePrivacyScope — required for masking. */
-    isPrivacyMode?: boolean;
   };
 }
 
@@ -27,8 +25,6 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   setSelectedLegendItem: (i: 'safe' | 'committed' | 'debts' | null) => void;
 } {
   const { currencyCode, isLoading: propsIsLoading } = props;
-
-  const isPrivacyMode = props.uiState?.isPrivacyMode ?? false;
 
   // UI State management
   const [internalInfoVisible, setInternalInfoVisible] = React.useState(false);
@@ -69,7 +65,6 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         safeToSpendDays,
       },
       {
-        isPrivacyMode,
         isLoading: !!propsIsLoading,
         currencyCode,
       },
@@ -81,7 +76,6 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     accountSummaries,
     liquidAssetSubtypes,
     accountMap,
-    isPrivacyMode,
     propsIsLoading,
     currencyCode,
     safeToSpendDays,

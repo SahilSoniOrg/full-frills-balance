@@ -2,7 +2,6 @@ import { AppConfig } from '@/src/constants';
 import type { Theme } from '@/src/constants/design-tokens';
 import type { IconName } from '@/src/components/core';
 import { resolveThemeColor } from '@/src/design-system/utils';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 
 export type InsightDetailsRouteParams = {
   id?: string;
@@ -20,7 +19,9 @@ export type InsightDetailsHeaderModel = {
   severityLabel: string;
   iconName: IconName;
   message: string;
-  amountText: string | null;
+  /** Parsed amount for MoneyText; null when absent/invalid. */
+  amount: number | null;
+  currencyCode: string;
   description: string | null;
   suggestion: string;
   impactLabel: string;
@@ -33,7 +34,6 @@ export type InsightDetailsHeaderModel = {
 export function buildInsightDetailsHeader(
   params: InsightDetailsRouteParams,
   theme: Theme,
-  isPrivacyMode: boolean,
 ): InsightDetailsHeaderModel {
   const strings = AppConfig.strings.dashboard.insightDetails;
 
@@ -49,13 +49,11 @@ export function buildInsightDetailsHeader(
 
   const severityColor = resolveThemeColor(theme, baseColor) as string;
 
-  let amountText: string | null = null;
+  let amount: number | null = null;
   if (params.amount) {
     const parsed = Number(params.amount);
     if (Number.isFinite(parsed)) {
-      amountText = isPrivacyMode
-        ? AppConfig.privacyMask
-        : CurrencyFormatter.format(parsed, params.currencyCode ?? '');
+      amount = parsed;
     }
   }
 
@@ -64,7 +62,8 @@ export function buildInsightDetailsHeader(
     severityLabel,
     iconName: params.id?.startsWith('sub_') ? 'refresh' : 'trendingUp',
     message: params.message ?? '',
-    amountText,
+    amount,
+    currencyCode: params.currencyCode ?? '',
     description: params.description ?? null,
     suggestion: params.suggestion ?? '',
     impactLabel: strings.impact,

@@ -5,8 +5,6 @@ type MoneyTextProps = Omit<AppTextProps, 'children'> & {
   amount: number;
   currencyCode: string;
   formatStyle?: MoneyFormatStyle;
-  /** Short form (1.5K / 2.6L). Alias for `formatStyle: 'short'`. */
-  short?: boolean;
   loading?: boolean;
 };
 
@@ -18,10 +16,9 @@ export function MoneyText({
   amount,
   currencyCode,
   formatStyle,
-  short = false,
   loading,
   ...textProps
 }: MoneyTextProps) {
-  const formatMoney = useMoneyFormat({ style: formatStyle, short, loading });
+  const formatMoney = useMoneyFormat({ style: formatStyle, loading });
   return <AppText {...textProps}>{formatMoney(amount, currencyCode)}</AppText>;
 }

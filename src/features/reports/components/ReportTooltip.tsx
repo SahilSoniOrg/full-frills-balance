@@ -175,7 +175,7 @@ export const NetWorthTooltipContent = ({
           <MoneyText
             amount={income}
             currencyCode={currencyCode}
-            short
+            formatStyle="short"
             variant="caption"
             weight="bold"
             style={{ color: successColor }}
@@ -188,7 +188,7 @@ export const NetWorthTooltipContent = ({
           <MoneyText
             amount={expense}
             currencyCode={currencyCode}
-            short
+            formatStyle="short"
             variant="caption"
             weight="bold"
             style={{ color: errorColor }}
@@ -305,7 +305,7 @@ export const IncomeExpenseTooltipContent = ({
           <MoneyText
             amount={income}
             currencyCode={currencyCode}
-            short
+            formatStyle="short"
             variant="caption"
             weight="bold"
             style={{ color: successColor }}
@@ -318,7 +318,7 @@ export const IncomeExpenseTooltipContent = ({
           <MoneyText
             amount={expense}
             currencyCode={currencyCode}
-            short
+            formatStyle="short"
             variant="caption"
             weight="bold"
             style={{ color: errorColor }}

@@ -1,6 +1,5 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useUI } from '@/src/contexts/UIContext';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
@@ -29,8 +28,6 @@ import { EMPTY } from 'rxjs';
 
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
-  /** Screen-level privacy from PrivacyScope — pass to STS / feed leaves. */
-  isPrivacyMode: boolean;
   showSafeToSpendChart: boolean;
   recentTransactions: RecentTransactions;
   plannedOccurrences: PlannedOccurrencesResult;
@@ -71,7 +68,6 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { userName } = useProfilePrefs();
   const { isSmsImportEnabled } = useSmsPrefs();
   const { showSafeToSpendChart } = useDashboardPreferences();
-  const { isPrivacyMode: isLocalPrivacyMode } = usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -223,7 +219,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => ({
       isInitialized,
       hasCompletedOnboarding,
-      isPrivacyMode: isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
       plannedOccurrences,
@@ -237,7 +232,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     [
       isInitialized,
       hasCompletedOnboarding,
-      isLocalPrivacyMode,
       showSafeToSpendChart,
       recentTransactions,
       plannedOccurrences,

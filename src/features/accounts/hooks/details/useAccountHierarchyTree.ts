@@ -1,18 +1,17 @@
 import { IconName } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface SubAccountViewModel {
   id: string;
   name: string;
   icon: IconName;
-  balanceText: string;
+  balanceAmount: number;
+  currencyCode: string;
   color: string;
   level: number;
   isGroup: boolean;
@@ -25,19 +24,11 @@ export interface UseAccountHierarchyTreeOptions {
   rawSubBalances: AccountBalance[];
   workplaceCurrency: string;
   dashboardLoading: boolean;
-  isPrivacyMode: boolean;
 }
 
 export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions) {
-  const {
-    accountId,
-    account,
-    accounts,
-    rawSubBalances,
-    workplaceCurrency,
-    dashboardLoading,
-    isPrivacyMode,
-  } = options;
+  const { accountId, account, accounts, rawSubBalances, workplaceCurrency, dashboardLoading } =
+    options;
   const { theme } = useTheme();
 
   const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
@@ -87,15 +78,14 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
         id: child.id,
         name: child.name,
         icon: getAccountIcon(child),
-        balanceText: isPrivacyMode
-          ? AppConfig.privacyMask
-          : CurrencyFormatter.format(subBalance?.balance ?? 0, currencyCode),
+        balanceAmount: subBalance?.balance ?? 0,
+        currencyCode,
         color,
         level,
         isGroup,
       };
     });
-  }, [descendants, subBalances, workplaceCurrency, theme, accounts, isPrivacyMode]);
+  }, [descendants, subBalances, workplaceCurrency, theme, accounts]);
 
   const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
   const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);

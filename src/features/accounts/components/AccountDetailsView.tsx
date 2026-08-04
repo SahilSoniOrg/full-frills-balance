@@ -26,7 +26,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     accountIcon,
     accountTypeColorKey,
     isDeleted,
-    balanceText,
+    balanceAmount,
     transactionCountText,
     headerActions,
     onBack,
@@ -43,7 +43,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     chartData,
     rollingAverageData,
     xTicks,
-    periodMetricsFormatted,
+    periodMetrics,
     transactionsLoading,
     transactionsLoadingMore,
     transactionItems,
@@ -211,7 +211,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
               isDeleted={isDeleted}
               subAccountCount={subAccountCount}
               onShowSubAccounts={onShowSubAccounts}
-              balanceText={balanceText}
+              balanceAmount={balanceAmount}
               currencyCode={vm.currencyCode}
               secondaryBalances={secondaryBalances}
               transactionCountText={transactionCountText}
@@ -223,7 +223,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
               chartData={chartData}
               rollingAverageData={rollingAverageData}
               xTicks={xTicks}
-              periodMetricsFormatted={periodMetricsFormatted}
+              periodMetrics={periodMetrics}
             />
           }
           ListFooterComponent={
@@ -279,7 +279,8 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         visible={vm.isReconcileModalVisible}
         onClose={() => vm.setIsReconcileModalVisible(false)}
         onConfirm={vm.onConfirmReconcile}
-        balanceText={vm.balanceText}
+        balanceAmount={vm.balanceAmount ?? 0}
+        currencyCode={vm.currencyCode}
         unreconciledCount={vm.unreconciledCount}
       />
 

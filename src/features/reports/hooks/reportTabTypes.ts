@@ -50,11 +50,11 @@ export type ReportDailyPoint = {
 };
 
 export interface ReportOverviewTabVm {
-  displayedNetWorthText: string;
+  currentNetWorth: number;
   netWorthSeries: ReportNetWorthPoint[];
   barChartData: ReportBarChartDatum[];
-  displayedIncomeText: string;
-  displayedExpenseText: string;
+  displayedIncome: number;
+  displayedExpense: number;
   incomeBarFlex: number;
   expenseBarFlex: number;
   sankeyData: SankeyData;

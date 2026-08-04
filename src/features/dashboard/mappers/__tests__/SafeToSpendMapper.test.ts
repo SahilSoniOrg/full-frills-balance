@@ -1,15 +1,7 @@
-import { AppConfig } from '@/src/constants';
-import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
-
-jest.mock('@/src/utils/currencyFormatter', () => ({
-  CurrencyFormatter: {
-    format: jest.fn(val => `$${val}`),
-  },
-}));
 
 describe('SafeToSpendMapper', () => {
   const mockResult: SafeToSpendDashboard = {
@@ -88,7 +80,6 @@ describe('SafeToSpendMapper', () => {
   };
 
   const mockOptions = {
-    isPrivacyMode: false,
     isLoading: false,
     currencyCode: 'USD',
   };
@@ -106,7 +97,6 @@ describe('SafeToSpendMapper', () => {
     const vm = SafeToSpendMapper.mapToViewModel({} as any, mockOptions);
     expect(vm.safeToSpend).toBe(0);
     expect(vm.isLoading).toBe(true);
-    expect(vm.isPrivacyMode).toBe(false);
   });
 
   it('correctly calculates effectiveTotal for bar chart scale', () => {
@@ -128,16 +118,11 @@ describe('SafeToSpendMapper', () => {
     expect(vm.effectiveTotal).toBe(2000);
   });
 
-  it('keeps raw amounts and privacy flag; leaves formatting to formatAmount', () => {
-    const privacyOptions = { ...mockOptions, isPrivacyMode: true };
-    const vm = mapToVM(mockResult, privacyOptions);
+  it('keeps raw amounts; leaves formatting to MoneyText / formatMoneyAmount', () => {
+    const vm = mapToVM();
 
     expect(vm.safeToSpend).toBe(1000);
     expect(vm.totalLiquidAssets).toBe(1500);
-    expect(vm.isPrivacyMode).toBe(true);
-    expect(
-      formatMoneyAmount(vm.safeToSpend, vm.currencyCode, vm.isPrivacyMode, { style: 'sts' }),
-    ).toBe(AppConfig.privacyMask);
 
     // Raw list amounts preserved
     expect(vm.income[0].amount).not.toBe(0);

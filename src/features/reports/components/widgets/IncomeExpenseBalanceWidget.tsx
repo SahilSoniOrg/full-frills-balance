@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
@@ -10,15 +11,17 @@ const BALANCE_BAR_HEIGHT = Spacing.sm;
 export interface IncomeExpenseBalanceWidgetProps {
   incomeBarFlex: number;
   expenseBarFlex: number;
-  displayedIncomeText: string;
-  displayedExpenseText: string;
+  income: number;
+  expense: number;
+  currencyCode: string;
 }
 
 export function IncomeExpenseBalanceWidget({
   incomeBarFlex,
   expenseBarFlex,
-  displayedIncomeText,
-  displayedExpenseText,
+  income,
+  expense,
+  currencyCode,
 }: IncomeExpenseBalanceWidgetProps) {
   const { theme } = useTheme();
 
@@ -29,18 +32,24 @@ export function IncomeExpenseBalanceWidget({
           <AppText variant="caption" color="secondary">
             {AppConfig.strings.reports.totalIncome}
           </AppText>
-          <AppText variant="subheading" style={{ color: theme.success }}>
-            {displayedIncomeText}
-          </AppText>
+          <MoneyText
+            amount={income}
+            currencyCode={currencyCode}
+            variant="subheading"
+            style={{ color: theme.success }}
+          />
         </View>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
         <View style={styles.balanceItem}>
           <AppText variant="caption" color="secondary">
             {AppConfig.strings.reports.totalExpense}
           </AppText>
-          <AppText variant="subheading" style={{ color: theme.error }}>
-            {displayedExpenseText}
-          </AppText>
+          <MoneyText
+            amount={expense}
+            currencyCode={currencyCode}
+            variant="subheading"
+            style={{ color: theme.error }}
+          />
         </View>
       </View>
       <View style={styles.barContainer}>

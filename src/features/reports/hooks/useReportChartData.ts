@@ -1,7 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { Theme } from '@/src/constants/design-tokens';
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useMemo } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -26,11 +25,11 @@ interface UseReportChartDataProps {
   calendarHeatmap: HeatmapPoint[];
   theme: Theme;
   workplaceId: WorkplaceId;
-  isPrivacyMode: boolean;
 }
 
 /**
  * Hook to manage report chart data and selection states.
+ * Amounts stay numeric — display masking via MoneyText under PrivacyScope.
  */
 export function useReportChartData({
   netWorthHistory,
@@ -42,20 +41,12 @@ export function useReportChartData({
   calendarHeatmap,
   theme,
   workplaceId: _workplaceId,
-  isPrivacyMode,
 }: UseReportChartDataProps) {
   const { defaultCurrencyCode } = useWorkplace();
-  const displayedIncome = incomeVsExpense.income;
-  const displayedExpense = incomeVsExpense.expense;
 
   const currentNetWorth = useMemo(() => {
     return netWorthHistory.length > 0 ? netWorthHistory[netWorthHistory.length - 1].netWorth : 0;
   }, [netWorthHistory]);
-
-  const displayedNetWorthText = useMemo(
-    () => CurrencyFormatter.formatOrMask(currentNetWorth, defaultCurrencyCode, isPrivacyMode),
-    [currentNetWorth, defaultCurrencyCode, isPrivacyMode],
-  );
 
   const dailyData = useMemo(() => {
     const incomeMap = new Map(dailyIncomeVsExpense.map(d => [d.date, d]));
@@ -101,17 +92,10 @@ export function useReportChartData({
   }, [incomeVsExpenseHistory, theme.success, theme.error]);
 
   return {
-    displayedNetWorthText,
-    displayedIncomeText: CurrencyFormatter.formatOrMask(
-      displayedIncome,
-      defaultCurrencyCode,
-      isPrivacyMode,
-    ),
-    displayedExpenseText: CurrencyFormatter.formatOrMask(
-      displayedExpense,
-      defaultCurrencyCode,
-      isPrivacyMode,
-    ),
+    currentNetWorth,
+    displayedIncome: incomeVsExpense.income,
+    displayedExpense: incomeVsExpense.expense,
+    defaultCurrencyCode,
     netWorthSeries,
     wealthAreaSeries,
     dailyData,

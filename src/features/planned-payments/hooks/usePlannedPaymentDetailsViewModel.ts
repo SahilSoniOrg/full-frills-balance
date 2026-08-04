@@ -11,7 +11,6 @@ import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/ho
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,7 +23,8 @@ export interface PlannedPaymentDetailsViewModel {
   onBack: () => void;
 
   title?: string;
-  amountText?: string;
+  amount?: number | null;
+  currencyCode?: string;
   nameText?: string;
   statusLabel?: string;
   statusVariant?: 'success' | 'default';
@@ -92,17 +92,15 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     if (!item) {
       // Show preview skeleton while loading
       if (pDesc && isLoading) {
+        const previewAmount = pAmount ? parseFloat(pAmount) : null;
         return {
           theme,
           isLoading: isLoadingVisible,
           isMissing: false,
           onBack: () => AppNavigation.back(),
           title: AppConfig.strings.plannedPayments.details.screenTitle,
-          amountText: pAmount
-            ? isPrivacyMode
-              ? AppConfig.privacyMask
-              : CurrencyFormatter.format(parseFloat(pAmount), pCurrency)
-            : '...',
+          amount: previewAmount !== null && Number.isFinite(previewAmount) ? previewAmount : null,
+          currencyCode: pCurrency,
           nameText: pDesc,
           statusLabel: '',
           typeLabel: '',
@@ -115,7 +113,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           fromAccountColorKey: 'textSecondary',
           toAccountColorKey: 'primary',
           history: [],
-          rawAmount: pAmount ? parseFloat(pAmount) : 0,
+          rawAmount: previewAmount ?? 0,
           rawName: pDesc,
           isPrivacyMode,
           headerActions: { onEdit: handleEdit, onDelete: () => {} },
@@ -171,9 +169,8 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
       // Core Details
       title: AppConfig.strings.plannedPayments.details.screenTitle,
-      amountText: isPrivacyMode
-        ? AppConfig.privacyMask
-        : CurrencyFormatter.format(item.amount, item.currencyCode),
+      amount: item.amount,
+      currencyCode: item.currencyCode,
       nameText: item.name,
       statusLabel: item.status,
       statusVariant: item.status === 'ACTIVE' ? 'success' : 'default',

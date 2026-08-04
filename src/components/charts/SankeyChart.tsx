@@ -23,7 +23,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   width: customWidth,
 }) => {
   const { theme } = useTheme();
-  const formatMoneyShort = useMoneyFormat({ short: true });
+  const formatMoneyShort = useMoneyFormat({ style: 'short' });
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
 
