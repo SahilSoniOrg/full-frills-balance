@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -19,7 +19,7 @@ interface HeatmapChartProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  isPrivacyMode?: boolean;
+  hideLabels?: boolean;
 }
 
 export const HeatmapChart: React.FC<HeatmapChartProps> = ({
@@ -30,7 +30,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
-  isPrivacyMode = false,
+  hideLabels,
 }) => {
   const { theme, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -247,8 +247,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {isPrivacyMode
-                        ? '••••'
+                      {hideLabels
+                        ? AppConfig.privacyMask
                         : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
                     </AppText>
                   </View>

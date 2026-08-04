@@ -1,4 +1,4 @@
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -22,6 +22,8 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
+  /** Screen/VM privacy flag — Views pass this down; leaves do not read privacy hooks. */
+  isPrivacyMode: boolean;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
   wealth: ReportWealthTabVm;
@@ -30,7 +32,7 @@ export interface ReportsViewModel {
 export function useReportsViewModel(): ReportsViewModel {
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const isPrivacyMode = useEffectivePrivacyMode();
+  const { isPrivacyMode } = usePrivacyScope();
 
   const {
     accounts,
@@ -119,7 +121,6 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseBarFlex: incomeVsExpense.expense || 1,
     sankeyData: chartData.sankeyData,
     targetCurrency,
-    isPrivacyMode,
     selectedBarIndex,
     onSelectBarIndex,
     onViewTransactions: actions.onViewTransactions,
@@ -141,7 +142,6 @@ export function useReportsViewModel(): ReportsViewModel {
     onLegendRowPress: actions.onLegendRowPress,
     onCategoryPress: actions.onCategoryPress,
     targetCurrency,
-    isPrivacyMode,
   };
 
   const wealth: ReportWealthTabVm = {
@@ -149,7 +149,6 @@ export function useReportsViewModel(): ReportsViewModel {
     barChartData: chartData.barChartData,
     dailyData: chartData.dailyData,
     targetCurrency,
-    isPrivacyMode,
     onViewTransactions: actions.onViewTransactions,
   };
 
@@ -161,6 +160,7 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
     loading,
+    isPrivacyMode,
     overview,
     spending,
     wealth,

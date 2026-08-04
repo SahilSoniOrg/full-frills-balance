@@ -110,6 +110,19 @@ describe('CurrencyFormatter', () => {
     });
   });
 
+  describe('formatOrMask / formatShortOrMask', () => {
+    it('returns privacy mask when private', () => {
+      const { AppConfig } = require('@/src/constants');
+      expect(CurrencyFormatter.formatOrMask(1234, 'USD', true)).toBe(AppConfig.privacyMask);
+      expect(CurrencyFormatter.formatShortOrMask(1500, 'USD', true)).toBe(AppConfig.privacyMask);
+    });
+
+    it('formats normally when not private', () => {
+      expect(CurrencyFormatter.formatOrMask(1234.56, 'USD', false)).toMatch(/\$1,234\.56/);
+      expect(CurrencyFormatter.formatShortOrMask(1500, 'USD', false)).toBe('1.5K');
+    });
+  });
+
   describe('getPrecisionFallback', () => {
     it('should return 2 for undefined or unknown code', () => {
       expect(CurrencyFormatter.getPrecisionFallback(undefined)).toBe(2);

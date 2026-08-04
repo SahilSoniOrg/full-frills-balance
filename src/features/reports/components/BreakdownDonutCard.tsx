@@ -29,7 +29,8 @@ interface BreakdownDonutCardProps {
   currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
-  isPrivacyMode?: boolean;
+  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
+  isPrivacyMode: boolean;
 }
 
 const DEFAULT_DONUT_SIZE = REPORT_CHART_LAYOUT.donutSize;
@@ -46,7 +47,7 @@ export function BreakdownDonutCard({
   currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
-  isPrivacyMode = false,
+  isPrivacyMode,
 }: BreakdownDonutCardProps) {
   const { theme } = useTheme();
 
@@ -72,9 +73,7 @@ export function BreakdownDonutCard({
                 {row.percentage}%
               </AppText>
               <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {isPrivacyMode
-                  ? AppConfig.privacyMask
-                  : CurrencyFormatter.format(row.amount, currencyCode)}
+                {CurrencyFormatter.formatOrMask(row.amount, currencyCode, isPrivacyMode)}
               </AppText>
             </View>
           </TouchableOpacity>

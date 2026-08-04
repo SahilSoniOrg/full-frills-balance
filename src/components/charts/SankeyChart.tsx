@@ -1,4 +1,4 @@
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
@@ -13,7 +13,7 @@ interface SankeyChartProps {
   currencyCode: string;
   height?: number;
   width?: number;
-  isPrivacyMode?: boolean;
+  hideLabels?: boolean;
 }
 
 export const SankeyChart: React.FC<SankeyChartProps> = ({
@@ -22,7 +22,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   currencyCode,
   height = REPORT_CHART_LAYOUT.sankeyDefaultHeight,
   width: customWidth,
-  isPrivacyMode = false,
+  hideLabels,
 }) => {
   const { theme } = useTheme();
   const windowWidth = Dimensions.get('window').width;
@@ -208,8 +208,8 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
               >
                 {n.name}{' '}
                 {h > 12
-                  ? isPrivacyMode
-                    ? '••••'
+                  ? hideLabels
+                    ? AppConfig.privacyMask
                     : CurrencyFormatter.formatShort(val, currencyCode)
                   : ''}
               </SvgText>

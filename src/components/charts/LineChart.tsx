@@ -367,7 +367,9 @@ export const LineChart = <T extends DataPoint>({
                       fill={theme.textSecondary}
                       textAnchor="end"
                     >
-                      {hideLabels ? '••••' : CurrencyFormatter.formatShort(val, currencyCode)}
+                      {hideLabels
+                        ? AppConfig.privacyMask
+                        : CurrencyFormatter.formatShort(val, currencyCode)}
                     </SvgText>
                   </React.Fragment>
                 );

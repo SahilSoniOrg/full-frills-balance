@@ -11,9 +11,14 @@ import { StyleSheet } from 'react-native';
 interface ReportSpendingSectionProps {
   vm: ReportSpendingTabVm;
   chartWidth: number;
+  isPrivacyMode: boolean;
 }
 
-export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionProps) {
+export function ReportSpendingSection({
+  vm,
+  chartWidth,
+  isPrivacyMode,
+}: ReportSpendingSectionProps) {
   const {
     expenseViewState,
     expenseCategoryViewState,
@@ -29,7 +34,6 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
     toggleIncomeCategoryExpansion,
     onCategoryPress,
     targetCurrency,
-    isPrivacyMode,
   } = vm;
 
   return (
@@ -93,7 +97,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
           data={spendingHeatmap}
           width={chartWidth}
           currency={targetCurrency}
-          isPrivacyMode={isPrivacyMode}
+          hideLabels={isPrivacyMode}
         />
         <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
           {AppConfig.strings.reports.heatmapSubtitle}
@@ -105,7 +109,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
           data={calendarHeatmap}
           width={chartWidth}
           currency={targetCurrency}
-          isPrivacyMode={isPrivacyMode}
+          hideLabels={isPrivacyMode}
         />
       </ReportChartCard>
     </>
