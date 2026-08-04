@@ -24,6 +24,7 @@ export interface NetWorthTrendWidgetProps {
   displayedNetWorthText: string;
   currencyCode: string;
   chartWidth: number;
+  isPrivacyMode: boolean;
   onViewTransactions: (date: number) => void;
 }
 
@@ -32,6 +33,7 @@ export function NetWorthTrendWidget({
   displayedNetWorthText,
   currencyCode,
   chartWidth,
+  isPrivacyMode,
   onViewTransactions,
 }: NetWorthTrendWidgetProps) {
   const { theme } = useTheme();
@@ -66,10 +68,11 @@ export function NetWorthTrendWidget({
           incomeLabel={AppConfig.strings.reports.incomeShort}
           expenseLabel={AppConfig.strings.reports.expenseShort}
           backgroundColor={theme.surface}
+          isPrivacyMode={isPrivacyMode}
         />
       );
     },
-    [theme, onViewTransactions, series, currencyCode],
+    [theme, onViewTransactions, series, currencyCode, isPrivacyMode],
   );
 
   return (
@@ -94,6 +97,7 @@ export function NetWorthTrendWidget({
           onPress={onPointSelect}
           selectedIndex={selectedIndex}
           renderTooltipContent={renderTooltip}
+          hideLabels={isPrivacyMode}
         />
       </View>
     </ReportChartCard>

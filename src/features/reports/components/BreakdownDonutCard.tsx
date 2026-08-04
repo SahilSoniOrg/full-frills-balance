@@ -29,6 +29,7 @@ interface BreakdownDonutCardProps {
   currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
+  isPrivacyMode?: boolean;
 }
 
 const DEFAULT_DONUT_SIZE = REPORT_CHART_LAYOUT.donutSize;
@@ -45,6 +46,7 @@ export function BreakdownDonutCard({
   currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
+  isPrivacyMode = false,
 }: BreakdownDonutCardProps) {
   const { theme } = useTheme();
 
@@ -70,7 +72,9 @@ export function BreakdownDonutCard({
                 {row.percentage}%
               </AppText>
               <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {CurrencyFormatter.format(row.amount, currencyCode)}
+                {isPrivacyMode
+                  ? AppConfig.privacyMask
+                  : CurrencyFormatter.format(row.amount, currencyCode)}
               </AppText>
             </View>
           </TouchableOpacity>

@@ -93,6 +93,7 @@ interface NetWorthTooltipContentProps {
   expenseLabel: string;
   onViewTransactions: () => void;
   backgroundColor: string;
+  isPrivacyMode?: boolean;
 }
 
 export const NetWorthTooltip = ({
@@ -148,10 +149,12 @@ export const NetWorthTooltipContent = ({
   expenseLabel,
   onViewTransactions,
   backgroundColor,
+  isPrivacyMode = false,
 }: NetWorthTooltipContentProps) => {
   const { onContrast } = useTheme();
 
   const contrastColor = onContrast(backgroundColor);
+  const mask = AppConfig.privacyMask;
 
   return (
     <View style={styles.contentContainer}>
@@ -160,7 +163,7 @@ export const NetWorthTooltipContent = ({
       </AppText>
 
       <AppText variant="body" weight="bold" style={styles.tooltipNetWorth}>
-        {CurrencyFormatter.format(netWorth, currencyCode)}
+        {isPrivacyMode ? mask : CurrencyFormatter.format(netWorth, currencyCode)}
       </AppText>
 
       <View style={[styles.tooltipRow, { borderTopColor: borderColor }]}>
@@ -169,7 +172,7 @@ export const NetWorthTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShort(income, currencyCode)}
+            {isPrivacyMode ? mask : CurrencyFormatter.formatShort(income, currencyCode)}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -177,7 +180,7 @@ export const NetWorthTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShort(expense, currencyCode)}
+            {isPrivacyMode ? mask : CurrencyFormatter.formatShort(expense, currencyCode)}
           </AppText>
         </View>
       </View>
@@ -222,6 +225,7 @@ interface IncomeExpenseTooltipContentProps {
   expenseLabel: string;
   onViewTransactions: () => void;
   backgroundColor: string;
+  isPrivacyMode?: boolean;
 }
 
 export const IncomeExpenseTooltip = ({
@@ -272,10 +276,12 @@ export const IncomeExpenseTooltipContent = ({
   expenseLabel,
   onViewTransactions,
   backgroundColor,
+  isPrivacyMode = false,
 }: IncomeExpenseTooltipContentProps) => {
   const { onContrast } = useTheme();
 
   const contrastColor = onContrast(backgroundColor);
+  const mask = AppConfig.privacyMask;
 
   return (
     <View style={styles.contentContainer}>
@@ -289,7 +295,7 @@ export const IncomeExpenseTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShort(income, currencyCode)}
+            {isPrivacyMode ? mask : CurrencyFormatter.formatShort(income, currencyCode)}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -297,7 +303,7 @@ export const IncomeExpenseTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShort(expense, currencyCode)}
+            {isPrivacyMode ? mask : CurrencyFormatter.formatShort(expense, currencyCode)}
           </AppText>
         </View>
       </View>

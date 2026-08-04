@@ -1,3 +1,4 @@
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -29,6 +30,7 @@ export interface ReportsViewModel {
 export function useReportsViewModel(): ReportsViewModel {
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const isPrivacyMode = useEffectivePrivacyMode();
 
   const {
     accounts,
@@ -64,6 +66,7 @@ export function useReportsViewModel(): ReportsViewModel {
     calendarHeatmap,
     theme,
     workplaceId: workplaceId,
+    isPrivacyMode,
   });
 
   const breakdownDetails = useReportBreakdownDetails({
@@ -116,6 +119,7 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseBarFlex: incomeVsExpense.expense || 1,
     sankeyData: chartData.sankeyData,
     targetCurrency,
+    isPrivacyMode,
     selectedBarIndex,
     onSelectBarIndex,
     onViewTransactions: actions.onViewTransactions,
@@ -137,6 +141,7 @@ export function useReportsViewModel(): ReportsViewModel {
     onLegendRowPress: actions.onLegendRowPress,
     onCategoryPress: actions.onCategoryPress,
     targetCurrency,
+    isPrivacyMode,
   };
 
   const wealth: ReportWealthTabVm = {
@@ -144,6 +149,7 @@ export function useReportsViewModel(): ReportsViewModel {
     barChartData: chartData.barChartData,
     dailyData: chartData.dailyData,
     targetCurrency,
+    isPrivacyMode,
     onViewTransactions: actions.onViewTransactions,
   };
 

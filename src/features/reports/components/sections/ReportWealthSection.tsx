@@ -18,7 +18,14 @@ interface ReportWealthSectionProps {
 
 export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps) {
   const { theme } = useTheme();
-  const { wealthAreaSeries, barChartData, dailyData, targetCurrency, onViewTransactions } = vm;
+  const {
+    wealthAreaSeries,
+    barChartData,
+    dailyData,
+    targetCurrency,
+    isPrivacyMode,
+    onViewTransactions,
+  } = vm;
 
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | undefined>(undefined);
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>(undefined);
@@ -44,10 +51,11 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
           incomeLabel={AppConfig.strings.reports.assets}
           expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
+          isPrivacyMode={isPrivacyMode}
         />
       );
     },
-    [dailyData, theme, targetCurrency, onViewTransactions],
+    [dailyData, theme, targetCurrency, onViewTransactions, isPrivacyMode],
   );
 
   return (
@@ -93,6 +101,7 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
             onPress={setSelectedBarIndex}
             selectedIndex={selectedBarIndex}
             renderTooltipContent={renderAreaTooltip}
+            hideLabels={isPrivacyMode}
           />
         </View>
       </ReportChartCard>

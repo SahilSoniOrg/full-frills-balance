@@ -21,6 +21,7 @@ export interface IncomeExpenseTrendWidgetProps {
   selectedIndex: number | undefined;
   onSelectIndex: (index: number | undefined) => void;
   onViewSelectedTransactions: () => void;
+  isPrivacyMode: boolean;
 }
 
 export function IncomeExpenseTrendWidget({
@@ -30,6 +31,7 @@ export function IncomeExpenseTrendWidget({
   selectedIndex,
   onSelectIndex,
   onViewSelectedTransactions,
+  isPrivacyMode,
 }: IncomeExpenseTrendWidgetProps) {
   const { theme } = useTheme();
 
@@ -57,10 +59,11 @@ export function IncomeExpenseTrendWidget({
           incomeLabel={AppConfig.strings.reports.incomeShort}
           expenseLabel={AppConfig.strings.reports.expenseShort}
           backgroundColor={theme.surface}
+          isPrivacyMode={isPrivacyMode}
         />
       );
     },
-    [barChartData, theme, onViewSelectedTransactions, currencyCode],
+    [barChartData, theme, onViewSelectedTransactions, currencyCode, isPrivacyMode],
   );
 
   return (
@@ -77,6 +80,7 @@ export function IncomeExpenseTrendWidget({
           onPress={onPointSelect}
           selectedIndex={selectedIndex}
           renderTooltipContent={renderTooltip}
+          hideLabels={isPrivacyMode}
         />
       </View>
     </ReportChartCard>

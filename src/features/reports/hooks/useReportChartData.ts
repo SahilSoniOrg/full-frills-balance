@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { Theme } from '@/src/constants/design-tokens';
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
@@ -26,6 +27,7 @@ interface UseReportChartDataProps {
   calendarHeatmap: HeatmapPoint[];
   theme: Theme;
   workplaceId: WorkplaceId;
+  isPrivacyMode: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export function useReportChartData({
   calendarHeatmap,
   theme,
   workplaceId: _workplaceId,
+  isPrivacyMode,
 }: UseReportChartDataProps) {
   const { defaultCurrencyCode } = useWorkplace();
   const displayedIncome = incomeVsExpense.income;
@@ -51,8 +54,9 @@ export function useReportChartData({
   }, [netWorthHistory]);
 
   const displayedNetWorthText = useMemo(() => {
+    if (isPrivacyMode) return AppConfig.privacyMask;
     return CurrencyFormatter.format(currentNetWorth, defaultCurrencyCode);
-  }, [currentNetWorth, defaultCurrencyCode]);
+  }, [currentNetWorth, defaultCurrencyCode, isPrivacyMode]);
 
   const dailyData = useMemo(() => {
     const incomeMap = new Map(dailyIncomeVsExpense.map(d => [d.date, d]));
@@ -99,8 +103,12 @@ export function useReportChartData({
 
   return {
     displayedNetWorthText,
-    displayedIncomeText: CurrencyFormatter.format(displayedIncome, defaultCurrencyCode),
-    displayedExpenseText: CurrencyFormatter.format(displayedExpense, defaultCurrencyCode),
+    displayedIncomeText: isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(displayedIncome, defaultCurrencyCode),
+    displayedExpenseText: isPrivacyMode
+      ? AppConfig.privacyMask
+      : CurrencyFormatter.format(displayedExpense, defaultCurrencyCode),
     netWorthSeries,
     wealthAreaSeries,
     dailyData,

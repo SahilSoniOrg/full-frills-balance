@@ -21,6 +21,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     expenseBarFlex,
     sankeyData,
     targetCurrency,
+    isPrivacyMode,
     onViewSelectedTransactions,
     selectedBarIndex,
     onSelectBarIndex,
@@ -33,6 +34,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         displayedNetWorthText={displayedNetWorthText}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
+        isPrivacyMode={isPrivacyMode}
         onViewTransactions={onViewTransactions}
       />
 
@@ -42,6 +44,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         chartWidth={chartWidth}
         selectedIndex={selectedBarIndex}
         onSelectIndex={onSelectBarIndex}
+        isPrivacyMode={isPrivacyMode}
         onViewSelectedTransactions={onViewSelectedTransactions}
       />
 
@@ -56,6 +59,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         sankeyData={sankeyData}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
+        isPrivacyMode={isPrivacyMode}
       />
     </>
   );

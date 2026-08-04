@@ -19,6 +19,7 @@ interface HeatmapChartProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
+  isPrivacyMode?: boolean;
 }
 
 export const HeatmapChart: React.FC<HeatmapChartProps> = ({
@@ -29,6 +30,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
+  isPrivacyMode = false,
 }) => {
   const { theme, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -245,7 +247,9 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
+                      {isPrivacyMode
+                        ? '••••'
+                        : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
                     </AppText>
                   </View>
                 )}

@@ -22,6 +22,7 @@ interface CalendarHeatmapProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
+  isPrivacyMode?: boolean;
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -36,6 +37,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
+  isPrivacyMode = false,
 }) => {
   const { theme, onContrast, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -304,7 +306,9 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
+                      {isPrivacyMode
+                        ? '••••'
+                        : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
                     </AppText>
                   </View>
                 )}
