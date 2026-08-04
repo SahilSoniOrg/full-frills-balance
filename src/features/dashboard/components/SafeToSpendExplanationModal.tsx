@@ -1,5 +1,5 @@
 import { InfoSheet } from '@/src/components/common/InfoSheet';
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
@@ -60,7 +60,7 @@ export const SafeToSpendExplanationModal = ({
   const formulaDays = viewModel.safeToSpendDays;
 
   const { theme } = useTheme();
-  const formatSts = useMoneyFormat({ style: 'sts', loading: isLoading });
+  const formatSts = useStsMoneyFormat(isLoading);
   const styles = React.useMemo(
     () =>
       StyleSheet.create({

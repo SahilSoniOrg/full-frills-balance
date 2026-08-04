@@ -1,5 +1,5 @@
 import { LineChart } from '@/src/components/charts/LineChart';
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
@@ -30,7 +30,7 @@ export const SafeToSpendChart = ({
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
-  const formatSts = useMoneyFormat({ style: 'sts', loading: isLoading });
+  const formatSts = useStsMoneyFormat(isLoading);
 
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 

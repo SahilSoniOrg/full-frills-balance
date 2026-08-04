@@ -38,7 +38,9 @@ export interface TransactionDetailsViewModel {
     onDelete: () => void;
   };
   onBack: () => void;
-  amountText: string;
+  amount: number;
+  currencyCode: string;
+  amountPrefix: '+' | '-' | '';
   amountColor: ColorKey;
   descriptionText: string;
   notesText?: string;
@@ -51,7 +53,8 @@ export interface TransactionDetailsViewModel {
   smsInfo?: {
     sender?: string;
     rawBody?: string;
-    amountText?: string;
+    amount?: number;
+    currencyCode?: string;
     referenceNumber?: string;
     accountSource?: string;
     parseReason?: string;
@@ -133,7 +136,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
 
   const isLoading = (isLoadingTransactions || isLoadingJournal) && !journalInfo;
 
-  const { amountText, amountColor, isExpense } = useMemo(
+  const { amount, currencyCode, amountPrefix, amountColor, isExpense } = useMemo(
     () =>
       resolveTransactionAmountPresentation({
         journalInfo,
@@ -164,7 +167,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     useTransactionDetailsActions({
       workplaceId,
       journalId,
-      amountText,
+      amount,
+      currencyCode,
       status: journalInfo?.status,
       plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
       journalDate: journalInfo?.journalDate,
@@ -190,7 +194,9 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
       onDelete: handleDelete,
     },
     onBack,
-    amountText,
+    amount,
+    currencyCode,
+    amountPrefix,
     amountColor,
     descriptionText,
     notesText: journalInfo?.notes || undefined,

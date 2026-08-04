@@ -1,6 +1,5 @@
 import { ColorKey } from '@/src/constants';
 import { JournalDisplayType } from '@/src/types/domain';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { safeParseJSON } from '@/src/utils/serialization';
 
@@ -95,7 +94,13 @@ export function resolveTransactionAmountPresentation(input: {
   journalInfo: JournalDetailsInfo | null;
   paramTypeColor?: string;
   journalLoaded: boolean;
-}): { amountText: string; amountColor: ColorKey; isExpense: boolean } {
+}): {
+  amount: number;
+  currencyCode: string;
+  amountPrefix: '+' | '-' | '';
+  amountColor: ColorKey;
+  isExpense: boolean;
+} {
   const journalDisplayType = input.journalInfo?.displayType;
   const isIncome = journalDisplayType === JournalDisplayType.INCOME;
   const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
@@ -107,12 +112,15 @@ export function resolveTransactionAmountPresentation(input: {
     amountColor = isIncome ? 'income' : isExpense ? 'error' : 'primary';
   }
 
-  const amountPrefix = isIncome ? '+' : isExpense ? '-' : '';
-  const amountText = input.journalInfo
-    ? `${amountPrefix}${CurrencyFormatter.format(input.journalInfo.totalAmount, input.journalInfo.currency)}`
-    : '';
+  const amountPrefix: '+' | '-' | '' = isIncome ? '+' : isExpense ? '-' : '';
 
-  return { amountText, amountColor, isExpense };
+  return {
+    amount: input.journalInfo?.totalAmount ?? 0,
+    currencyCode: input.journalInfo?.currency ?? '',
+    amountPrefix,
+    amountColor,
+    isExpense,
+  };
 }
 
 export type JournalStatusChipVariant = 'income' | 'expense' | 'primary' | 'default';
@@ -129,7 +137,9 @@ export function resolveJournalStatusChipVariant(
 
 export interface TransactionSplitLinePresentation {
   transactionTypeLabel: string;
-  amountText: string;
+  amount: number;
+  currencyCode: string;
+  amountPrefix: '+' | '-';
   amountColor: ColorKey;
   iconColor: ColorKey;
   iconBackground: ColorKey;
@@ -147,7 +157,9 @@ export function mapDisplayTransactionSplitPresentation(item: {
 
   return {
     transactionTypeLabel: `${flowLabel} • ${item.transactionType}`,
-    amountText: `${isDebit ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,
+    amount: item.amount,
+    currencyCode: item.currencyCode,
+    amountPrefix: isDebit ? '+' : '-',
     amountColor: color,
     iconColor: color,
     iconBackground: color,
@@ -157,7 +169,8 @@ export function mapDisplayTransactionSplitPresentation(item: {
 export interface SmsJournalInfoDisplay {
   sender?: string;
   rawBody?: string;
-  amountText?: string;
+  amount?: number;
+  currencyCode?: string;
   referenceNumber?: string;
   accountSource?: string;
   parseReason?: string;
@@ -188,13 +201,9 @@ export function mapSmsJournalMetadataDisplay(input: {
   return {
     sender: input.originalSmsSender || undefined,
     rawBody: input.originalSmsBody || undefined,
-    amountText:
-      typeof parsedMetadata.parsedAmount === 'number'
-        ? CurrencyFormatter.format(
-            parsedMetadata.parsedAmount,
-            parsedMetadata.parsedCurrencyCode ?? '',
-          )
-        : undefined,
+    amount:
+      typeof parsedMetadata.parsedAmount === 'number' ? parsedMetadata.parsedAmount : undefined,
+    currencyCode: parsedMetadata.parsedCurrencyCode,
     referenceNumber: parsedMetadata.referenceNumber || input.inboxRecord?.referenceNumber,
     accountSource: parsedMetadata.accountSource || input.inboxRecord?.parsedAccountSource,
     parseReason: input.inboxRecord?.parseReason,

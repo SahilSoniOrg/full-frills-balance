@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { Section } from '@/src/components/common/Section';
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Size, Typography } from '@/src/constants';
@@ -19,7 +20,9 @@ export const TransactionBreakdownList = React.memo(
         id: item.id,
         title: item.accountName,
         subtitle: item.transactionType,
-        amountText: item.amountText,
+        amount: item.amount,
+        currencyCode: item.currencyCode,
+        amountPrefix: item.amountPrefix,
         amountColor: item.amountColor,
         iconName: item.iconName,
         fallbackIcon: item.fallbackIcon,
@@ -59,9 +62,17 @@ export const TransactionBreakdownList = React.memo(
             }
             trailing={
               <Inline space="xs" alignItems="center">
-                <AppText variant="subheading" color={item.amountColor as any}>
-                  {item.amountText}
-                </AppText>
+                <Inline space={0} alignItems="center">
+                  <AppText variant="subheading" color={item.amountColor as any}>
+                    {item.amountPrefix}
+                  </AppText>
+                  <MoneyText
+                    amount={item.amount}
+                    currencyCode={item.currencyCode}
+                    variant="subheading"
+                    color={item.amountColor as any}
+                  />
+                </Inline>
                 <AppIcon
                   name="chevronRight"
                   size={Typography.sizes.sm}

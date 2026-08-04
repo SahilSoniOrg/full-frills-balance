@@ -1,4 +1,4 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
@@ -27,7 +27,7 @@ export const SafeToSpendLedger = ({
   accountSummaries,
 }: SafeToSpendLedgerProps) => {
   const { theme } = useTheme();
-  const formatSts = useMoneyFormat({ style: 'sts', loading: isLoading });
+  const formatSts = useStsMoneyFormat(isLoading);
 
   return (
     <Stack gap="md">

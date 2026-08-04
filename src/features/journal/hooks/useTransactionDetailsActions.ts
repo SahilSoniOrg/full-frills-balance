@@ -1,3 +1,5 @@
+import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
@@ -11,7 +13,8 @@ import { resolveRevertPlannedActionLabels } from '@/src/services/journal/transac
 interface UseTransactionDetailsActionsProps {
   workplaceId: WorkplaceId;
   journalId: JournalId;
-  amountText: string;
+  amount: number;
+  currencyCode: string;
   status?: string;
   plannedPaymentId?: string;
   journalDate?: number;
@@ -20,13 +23,16 @@ interface UseTransactionDetailsActionsProps {
 export function useTransactionDetailsActions({
   workplaceId,
   journalId,
-  amountText,
+  amount,
+  currencyCode,
   status,
   plannedPaymentId,
   journalDate,
 }: UseTransactionDetailsActionsProps) {
   const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
     useJournalActions(workplaceId);
+  const isPrivacyMode = useEffectivePrivacyMode();
+  const displayAmount = formatMoneyAmount(amount, currencyCode, isPrivacyMode);
 
   const handleDelete = useCallback(() => {
     showConfirmationAlert(
@@ -69,7 +75,7 @@ export function useTransactionDetailsActions({
 
     showConfirmationAlert(
       'Post Transaction',
-      `Are you sure you want to mark this planned transaction for ${amountText} as posted?`,
+      `Are you sure you want to mark this planned transaction for ${displayAmount} as posted?`,
       async () => {
         try {
           await postJournal(journalId);
@@ -82,7 +88,7 @@ export function useTransactionDetailsActions({
         }
       },
     );
-  }, [amountText, journalId, postJournal, status]);
+  }, [displayAmount, journalId, postJournal, status]);
 
   const handleRevertToScheduled = useCallback(async () => {
     const { actionLabel, statusLabel } = resolveRevertPlannedActionLabels(status || '');
@@ -90,7 +96,7 @@ export function useTransactionDetailsActions({
 
     showConfirmationAlert(
       `${actionLabel} Transaction`,
-      `Are you sure you want to revert this ${statusLabel} transaction for ${amountText} back to scheduled status?`,
+      `Are you sure you want to revert this ${statusLabel} transaction for ${displayAmount} back to scheduled status?`,
       async () => {
         try {
           await revertToPlanned(journalId);
@@ -103,14 +109,14 @@ export function useTransactionDetailsActions({
         }
       },
     );
-  }, [amountText, journalId, revertToPlanned, status]);
+  }, [displayAmount, journalId, revertToPlanned, status]);
 
   const handleSkip = useCallback(async () => {
     if (status !== 'PLANNED' || !plannedPaymentId || journalDate === undefined) return;
 
     showConfirmationAlert(
       'Skip Transaction',
-      `Are you sure you want to skip this planned transaction for ${amountText}? The schedule will advance to the next occurrence.`,
+      `Are you sure you want to skip this planned transaction for ${displayAmount}? The schedule will advance to the next occurrence.`,
       async () => {
         try {
           const plannedPayment = await plannedPaymentReadService.find(
@@ -128,7 +134,7 @@ export function useTransactionDetailsActions({
         }
       },
     );
-  }, [amountText, journalDate, plannedPaymentId, status, workplaceId]);
+  }, [displayAmount, journalDate, plannedPaymentId, status, workplaceId]);
 
   return { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip };
 }
