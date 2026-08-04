@@ -1,5 +1,6 @@
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { Screen } from '@/src/components/layout';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Inset, Stack } from '@/src/design-system';
 import { ReportFilterBar } from '@/src/features/reports/components/ReportFilterBar';
 import { ReportTabs } from '@/src/features/reports/components/ReportTabs';
@@ -26,7 +27,12 @@ export function ReportsView({ vm }: ReportsViewProps) {
   const CHART_WIDTH = width - (Spacing.md * 2 + Spacing.lg * 2);
 
   return (
-    <Screen title={AppConfig.strings.reports.title} showBack={false} scrollable={false}>
+    <Screen
+      title={AppConfig.strings.reports.title}
+      showBack={false}
+      scrollable={false}
+      headerActions={<PrivacyToggleButton />}
+    >
       <Inset space="md" vertical="md" flex={1}>
         <Stack space="xl" flex={1}>
           <View style={{ marginTop: Spacing.sm }}>

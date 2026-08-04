@@ -13,6 +13,7 @@ interface SankeyChartProps {
   currencyCode: string;
   height?: number;
   width?: number;
+  isPrivacyMode?: boolean;
 }
 
 export const SankeyChart: React.FC<SankeyChartProps> = ({
@@ -21,6 +22,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   currencyCode,
   height = REPORT_CHART_LAYOUT.sankeyDefaultHeight,
   width: customWidth,
+  isPrivacyMode = false,
 }) => {
   const { theme } = useTheme();
   const windowWidth = Dimensions.get('window').width;
@@ -204,7 +206,12 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
                 textAnchor={isRightSide ? 'end' : 'start'}
                 opacity={h < 8 ? 0.7 : 1}
               >
-                {n.name} {h > 12 ? CurrencyFormatter.formatShort(val, currencyCode) : ''}
+                {n.name}{' '}
+                {h > 12
+                  ? isPrivacyMode
+                    ? '••••'
+                    : CurrencyFormatter.formatShort(val, currencyCode)
+                  : ''}
               </SvgText>
             </React.Fragment>
           );

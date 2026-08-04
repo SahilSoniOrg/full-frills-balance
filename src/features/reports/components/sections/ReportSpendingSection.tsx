@@ -29,6 +29,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
     toggleIncomeCategoryExpansion,
     onCategoryPress,
     targetCurrency,
+    isPrivacyMode,
   } = vm;
 
   return (
@@ -44,6 +45,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             onToggleExpansion={toggleExpenseExpansion}
             onLegendRowPress={onLegendRowPress}
             currencyCode={targetCurrency}
+            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -61,6 +63,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             onToggleExpansion={toggleExpenseCategoryExpansion}
             onLegendRowPress={onCategoryPress}
             currencyCode={targetCurrency}
+            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -78,6 +81,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             onToggleExpansion={toggleIncomeCategoryExpansion}
             onLegendRowPress={onCategoryPress}
             currencyCode={targetCurrency}
+            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -85,14 +89,24 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
       </ReportChartCard>
 
       <ReportChartCard title={AppConfig.strings.reports.spendingHeatmap}>
-        <HeatmapChart data={spendingHeatmap} width={chartWidth} currency={targetCurrency} />
+        <HeatmapChart
+          data={spendingHeatmap}
+          width={chartWidth}
+          currency={targetCurrency}
+          isPrivacyMode={isPrivacyMode}
+        />
         <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
           {AppConfig.strings.reports.heatmapSubtitle}
         </AppText>
       </ReportChartCard>
 
       <ReportChartCard title={AppConfig.strings.reports.activityCalendar}>
-        <CalendarHeatmap data={calendarHeatmap} width={chartWidth} currency={targetCurrency} />
+        <CalendarHeatmap
+          data={calendarHeatmap}
+          width={chartWidth}
+          currency={targetCurrency}
+          isPrivacyMode={isPrivacyMode}
+        />
       </ReportChartCard>
     </>
   );
