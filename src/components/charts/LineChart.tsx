@@ -119,6 +119,8 @@ export const LineChart = <T extends DataPoint>({
   const PADDING_LEFT = Spacing.xl * 2; // More space for scale (approx 40px)
   const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
   const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
+  const formatLabel =
+    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   // Dynamic height calculation
   const height = propHeight ?? REPORT_CHART_LAYOUT.lineChartDefaultHeight;
@@ -368,9 +370,7 @@ export const LineChart = <T extends DataPoint>({
                       fill={theme.textSecondary}
                       textAnchor="end"
                     >
-                      {formatValue
-                        ? formatValue(val)
-                        : CurrencyFormatter.formatShort(val, currencyCode)}
+                      {formatLabel(val)}
                     </SvgText>
                   </React.Fragment>
                 );
@@ -462,9 +462,7 @@ export const LineChart = <T extends DataPoint>({
                               fill={chartColor}
                               textAnchor="start"
                             >
-                              {formatValue
-                                ? formatValue(todayPoint.y)
-                                : CurrencyFormatter.formatShort(todayPoint.y, currencyCode)}
+                              {formatLabel(todayPoint.y)}
                             </SvgText>
                           </React.Fragment>
                         );

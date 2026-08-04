@@ -28,6 +28,8 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   const { theme } = useTheme();
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
+  const formatLabel =
+    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   const NODE_WIDTH = REPORT_CHART_LAYOUT.sankeyNodeWidth;
   const NODE_SPACING = REPORT_CHART_LAYOUT.sankeyNodeSpacing;
@@ -207,12 +209,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
                 textAnchor={isRightSide ? 'end' : 'start'}
                 opacity={h < 8 ? 0.7 : 1}
               >
-                {n.name}{' '}
-                {h > 12
-                  ? formatValue
-                    ? formatValue(val)
-                    : CurrencyFormatter.formatShort(val, currencyCode)
-                  : ''}
+                {n.name} {h > 12 ? formatLabel(val) : ''}
               </SvgText>
             </React.Fragment>
           );
