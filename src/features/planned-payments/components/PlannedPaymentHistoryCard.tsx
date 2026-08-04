@@ -1,8 +1,8 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { TouchableOpacity } from 'react-native';
 
@@ -24,8 +24,6 @@ export interface PlannedPaymentHistoryCardProps {
   };
 
   isOverdue?: boolean;
-  /** When true, amount fields render the privacy mask instead of currency. */
-  isPrivacyMode?: boolean;
 
   onPress?: () => void;
 }
@@ -44,22 +42,15 @@ export const PlannedPaymentHistoryCard = ({
   plannedTitle,
   presentation,
   isOverdue,
-  isPrivacyMode = false,
   onPress,
 }: PlannedPaymentHistoryCardProps) => {
   const { theme, themeMode } = useTheme();
+  const formatMoney = useMoneyFormat();
   const formattedDate = formatDate(journalDate, { includeTime: true });
 
   // Check for deviations from the base rule configuration
   const isAmountDeviated = Math.abs(journalAmount - plannedAmount) > 0.01; // float safety
   const isTitleDeviated = journalTitle !== plannedTitle;
-
-  const formattedAmount = isPrivacyMode
-    ? AppConfig.privacyMask
-    : CurrencyFormatter.format(journalAmount, currencyCode);
-  const formattedPlannedAmount = isPrivacyMode
-    ? AppConfig.privacyMask
-    : CurrencyFormatter.format(plannedAmount, currencyCode);
 
   const content = (
     <Column padding="lg">
@@ -97,7 +88,7 @@ export const PlannedPaymentHistoryCard = ({
                 weight="bold"
                 style={{ color: theme[presentation.typeColor as keyof typeof theme] as string }}
               >
-                {formattedAmount}
+                {formatMoney(journalAmount, currencyCode)}
               </Text>
               {isAmountDeviated && (
                 <Box
@@ -117,7 +108,7 @@ export const PlannedPaymentHistoryCard = ({
                 marginTop={2}
                 style={{ fontSize: 10 }}
               >
-                Originally {formattedPlannedAmount}
+                Originally {formatMoney(plannedAmount, currencyCode)}
               </Text>
             )}
           </Column>

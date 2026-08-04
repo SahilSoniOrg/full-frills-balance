@@ -1,8 +1,8 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
-import { formatCurrency } from '@/src/utils/money';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface JournalDayHeaderProps {
@@ -13,8 +13,6 @@ export interface JournalDayHeaderProps {
   netAmount?: number;
   currencyCode?: string;
   reconciledAt?: number | null;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode?: boolean;
 }
 
 export function JournalDayHeader({
@@ -25,9 +23,9 @@ export function JournalDayHeader({
   netAmount,
   currencyCode,
   reconciledAt,
-  isPrivacyMode = false,
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
@@ -66,7 +64,7 @@ export function JournalDayHeader({
         </View>
 
         <View style={styles.rightContent}>
-          {hasStats && netAmount !== undefined && netAmount !== 0 && (
+          {hasStats && netAmount !== undefined && netAmount !== 0 && currencyCode && (
             <AppText
               variant="caption"
               style={[
@@ -81,7 +79,7 @@ export function JournalDayHeader({
               ]}
             >
               {isPositive ? '+' : ''}
-              {isPrivacyMode ? AppConfig.privacyMask : formatCurrency(netAmount, currencyCode)}
+              {formatMoney(netAmount, currencyCode)}
             </AppText>
           )}
           <AppIcon

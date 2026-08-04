@@ -1,7 +1,7 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
-import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
+import { Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { StyleSheet, View } from 'react-native';
 
 interface CashFlowCardProps {
@@ -11,8 +11,6 @@ interface CashFlowCardProps {
   onChangePeriod: (period: 'overall' | 'month' | '30days') => void;
   currencyCode: string;
   isLoading?: boolean;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
 }
 
 export const CashFlowCard = ({
@@ -22,18 +20,8 @@ export const CashFlowCard = ({
   onChangePeriod,
   currencyCode,
   isLoading = false,
-  isPrivacyMode,
 }: CashFlowCardProps) => {
   const { theme, fonts } = useTheme();
-
-  const formatCurrency = (amount: number) => {
-    if (isLoading) return '...';
-    if (isPrivacyMode) return AppConfig.privacyMask;
-    return CurrencyFormatter.format(amount, currencyCode, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
 
   const netCashFlow = totalIncome - totalExpense;
 
@@ -50,15 +38,17 @@ export const CashFlowCard = ({
         </AppText>
       </View>
 
-      <AppText
+      <MoneyText
+        amount={netCashFlow}
+        currencyCode={currencyCode}
+        formatStyle="compact"
+        loading={isLoading}
         variant="title"
         style={[
           styles.netAmount,
           { fontFamily: fonts.bold, color: netCashFlow >= 0 ? theme.income : theme.expense },
         ]}
-      >
-        {formatCurrency(netCashFlow)}
-      </AppText>
+      />
 
       <View style={styles.periodToggleContainer}>
         <AppSegmentedControl<'overall' | 'month' | '30days'>
@@ -81,9 +71,14 @@ export const CashFlowCard = ({
             <AppText variant="caption" color="secondary">
               Total Income
             </AppText>
-            <AppText variant="heading" color="income">
-              {formatCurrency(totalIncome)}
-            </AppText>
+            <MoneyText
+              amount={totalIncome}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              loading={isLoading}
+              variant="heading"
+              color="income"
+            />
           </View>
         </View>
 
@@ -95,9 +90,14 @@ export const CashFlowCard = ({
             <AppText variant="caption" color="secondary">
               Total Expenses
             </AppText>
-            <AppText variant="heading" color="expense">
-              {formatCurrency(totalExpense)}
-            </AppText>
+            <MoneyText
+              amount={totalExpense}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              loading={isLoading}
+              variant="heading"
+              color="expense"
+            />
           </View>
         </View>
       </View>

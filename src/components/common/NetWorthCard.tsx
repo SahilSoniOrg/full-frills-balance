@@ -1,7 +1,7 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
+import { Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { StyleSheet, View } from 'react-native';
 
 interface NetWorthCardProps {
@@ -10,8 +10,6 @@ interface NetWorthCardProps {
   totalLiabilities: number;
   currencyCode: string;
   isLoading?: boolean;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
 }
 
 export const NetWorthCard = ({
@@ -20,18 +18,8 @@ export const NetWorthCard = ({
   totalLiabilities,
   currencyCode,
   isLoading = false,
-  isPrivacyMode,
 }: NetWorthCardProps) => {
   const { theme, fonts } = useTheme();
-
-  const formatCurrency = (amount: number) => {
-    if (isLoading) return '...';
-    if (isPrivacyMode) return AppConfig.privacyMask;
-    return CurrencyFormatter.format(amount, currencyCode, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
 
   return (
     <AppCard
@@ -46,9 +34,14 @@ export const NetWorthCard = ({
         </AppText>
       </View>
 
-      <AppText variant="title" style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}>
-        {formatCurrency(netWorth)}
-      </AppText>
+      <MoneyText
+        amount={netWorth}
+        currencyCode={currencyCode}
+        formatStyle="compact"
+        loading={isLoading}
+        variant="title"
+        style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}
+      />
 
       <View style={styles.breakdownContainer}>
         <View style={styles.breakdownItem}>
@@ -57,9 +50,14 @@ export const NetWorthCard = ({
             <AppText variant="caption" color="secondary">
               Assets
             </AppText>
-            <AppText variant="heading" color="asset">
-              {formatCurrency(totalAssets)}
-            </AppText>
+            <MoneyText
+              amount={totalAssets}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              loading={isLoading}
+              variant="heading"
+              color="asset"
+            />
           </View>
         </View>
 
@@ -71,9 +69,14 @@ export const NetWorthCard = ({
             <AppText variant="caption" color="secondary">
               Liabilities
             </AppText>
-            <AppText variant="heading" color="liability">
-              {formatCurrency(totalLiabilities)}
-            </AppText>
+            <MoneyText
+              amount={totalLiabilities}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              loading={isLoading}
+              variant="heading"
+              color="liability"
+            />
           </View>
         </View>
       </View>

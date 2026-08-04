@@ -142,7 +142,6 @@ export function DashboardScreenView({
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}
           onEndReached={onEndReached}
-          isPrivacyMode={isPrivacyMode}
           selectedIds={selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={onLongPressItem as (id: string) => void}
           isSelectionModeActive={isSelectionModeActive}
@@ -165,7 +164,6 @@ export function DashboardScreenView({
                 <PlannedPaymentsSection
                   items={plannedOccurrences.items}
                   onItemPress={plannedOccurrences.onItemPress}
-                  isPrivacyMode={isPrivacyMode}
                 />
               </View>
               <Inset horizontal="lg" vertical="lg">

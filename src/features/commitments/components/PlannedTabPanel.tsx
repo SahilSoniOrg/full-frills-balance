@@ -1,4 +1,3 @@
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 
@@ -6,8 +5,5 @@ import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/plann
 export function PlannedTabPanel() {
   const { workplaceId } = useWorkplace();
   const { items, isLoading } = usePlannedPayments(workplaceId);
-  const isPrivacyMode = useEffectivePrivacyMode();
-  return (
-    <PlannedPaymentListView items={items} isLoading={isLoading} isPrivacyMode={isPrivacyMode} />
-  );
+  return <PlannedPaymentListView items={items} isLoading={isLoading} />;
 }

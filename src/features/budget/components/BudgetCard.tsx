@@ -1,8 +1,8 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppSurface } from '@/src/components/core';
-import { AppConfig, ColorKey, Opacity, Spacing } from '@/src/constants';
+import { ColorKey, Opacity, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import { TouchableOpacity } from 'react-native';
 import { BudgetItem } from '../types';
@@ -11,19 +11,12 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 interface BudgetCardProps {
   item: BudgetItem;
   onPress: (item: BudgetItem) => void;
-  isPrivacyMode?: boolean;
 }
 
-export function BudgetCard({ item, onPress, isPrivacyMode = false }: BudgetCardProps) {
+export function BudgetCard({ item, onPress }: BudgetCardProps) {
   const { theme } = useTheme();
   const { budget, usage, previousUsage } = item;
-
-  const formatAmount = (value: number) =>
-    isPrivacyMode
-      ? AppConfig.privacyMask
-      : CurrencyFormatter.format(value, budget.currencyCode, {
-          maximumFractionDigits: 0,
-        });
+  const formatMoney = useMoneyFormat({ style: 'compact' });
 
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
   const isOver = usage.remaining < 0;
@@ -81,7 +74,7 @@ export function BudgetCard({ item, onPress, isPrivacyMode = false }: BudgetCardP
             </Row>
             <Column align="flex-end">
               <Text variant="xl" weight="bold">
-                {formatAmount(budget.amount)}
+                {formatMoney(budget.amount, budget.currencyCode)}
               </Text>
               {previousUsage && (
                 <Row align="center" gap="xs">
@@ -116,7 +109,7 @@ export function BudgetCard({ item, onPress, isPrivacyMode = false }: BudgetCardP
                   SPENT
                 </Text>
                 <Text variant="lg" weight="bold">
-                  {formatAmount(usage.spent)}
+                  {formatMoney(usage.spent, budget.currencyCode)}
                 </Text>
               </Column>
 
@@ -130,7 +123,8 @@ export function BudgetCard({ item, onPress, isPrivacyMode = false }: BudgetCardP
                 <Row align="center" gap="xs">
                   {isOver && <AppIcon name="alert" size={12} color={theme.error} />}
                   <Text variant="xs" weight="bold" color={isOver ? 'error' : 'success'}>
-                    {isOver ? 'OVER' : 'REMAINING'}: {formatAmount(Math.abs(usage.remaining))}
+                    {isOver ? 'OVER' : 'REMAINING'}:{' '}
+                    {formatMoney(Math.abs(usage.remaining), budget.currencyCode)}
                   </Text>
                 </Row>
               </Box>

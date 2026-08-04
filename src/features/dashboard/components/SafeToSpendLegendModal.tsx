@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
@@ -5,7 +6,6 @@ import { analytics } from '@/src/services/analytics-service';
 import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
-import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendLegendModalProps {
   visible: boolean;
@@ -29,12 +29,8 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
     debt: debtBreakdown,
     safeToSpendDays,
     currencyCode,
-    isPrivacyMode,
     isLoading,
   } = viewModel;
-
-  const formatValue = (raw: number) =>
-    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   const { firstMajorInflowDay, committedLiabilitiesCC, committedLiabilitiesOther } = insights;
 
@@ -65,9 +61,15 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
 
           <View style={[styles.breakdownRow, { marginBottom: Spacing.lg }]}>
             <AppText variant="subheading">{legendStrings.safeTitle}</AppText>
-            <AppText variant="subheading" color="primary" tabular>
-              {formatValue(safeToSpend)}
-            </AppText>
+            <MoneyText
+              amount={safeToSpend}
+              currencyCode={currencyCode}
+              formatStyle="sts"
+              loading={isLoading}
+              variant="subheading"
+              color="primary"
+              tabular
+            />
           </View>
 
           {incomeBreakdown.length > 0 && (
@@ -95,7 +97,17 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                         </AppText>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
-                        +{formatValue(inc.amount)}
+                        +{' '}
+                        <MoneyText
+                          amount={inc.amount}
+                          currencyCode={currencyCode}
+                          formatStyle="sts"
+                          loading={isLoading}
+                          variant="caption"
+                          weight="bold"
+                          color="success"
+                          tabular
+                        />
                       </AppText>
                     </View>
                   ))}
@@ -157,9 +169,15 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                       >
                         {title}
                       </AppText>
-                      <AppText variant="caption" weight="bold" color="warning">
-                        {formatValue(total)}
-                      </AppText>
+                      <MoneyText
+                        amount={total}
+                        currencyCode={currencyCode}
+                        formatStyle="sts"
+                        loading={isLoading}
+                        variant="caption"
+                        weight="bold"
+                        color="warning"
+                      />
                     </View>
                     <View style={{ gap: Spacing.md }}>
                       {items.map(item => (
@@ -177,9 +195,15 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                               • {item.accountName}
                             </AppText>
                           </View>
-                          <AppText variant="body" weight="bold" color="warning">
-                            {formatValue(item.amount)}
-                          </AppText>
+                          <MoneyText
+                            amount={item.amount}
+                            currencyCode={currencyCode}
+                            formatStyle="sts"
+                            loading={isLoading}
+                            variant="body"
+                            weight="bold"
+                            color="warning"
+                          />
                         </View>
                       ))}
                     </View>
@@ -201,14 +225,16 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>
                 {labels.totalCommitted}
               </AppText>
-              <AppText
+              <MoneyText
+                amount={committedTotal}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
                 variant="body"
                 weight="bold"
                 color="warning"
                 style={{ fontSize: Typography.sizes.lg }}
-              >
-                {formatValue(committedTotal)}
-              </AppText>
+              />
             </View>
           </View>
         </View>
@@ -225,17 +251,27 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               <AppText variant="body" weight="medium">
                 {labels.creditCardStatements}
               </AppText>
-              <AppText variant="body" weight="bold">
-                {formatValue(committedLiabilitiesCC)}
-              </AppText>
+              <MoneyText
+                amount={committedLiabilitiesCC}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
+                variant="body"
+                weight="bold"
+              />
             </View>
             <View style={styles.breakdownRow}>
               <AppText variant="body" weight="medium">
                 {labels.otherLiquidLiabilities}
               </AppText>
-              <AppText variant="body" weight="bold">
-                {formatValue(committedLiabilitiesOther)}
-              </AppText>
+              <MoneyText
+                amount={committedLiabilitiesOther}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
+                variant="body"
+                weight="bold"
+              />
             </View>
 
             <Separator marginVertical="xl" opacity={Opacity.muted} />
@@ -263,9 +299,15 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                       >
                         {title}
                       </AppText>
-                      <AppText variant="caption" weight="bold" color="error">
-                        {formatValue(total)}
-                      </AppText>
+                      <MoneyText
+                        amount={total}
+                        currencyCode={currencyCode}
+                        formatStyle="sts"
+                        loading={isLoading}
+                        variant="caption"
+                        weight="bold"
+                        color="error"
+                      />
                     </View>
                     <View style={{ gap: Spacing.md }}>
                       {items.map(item => (
@@ -281,9 +323,15 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                               • Day {item.dayOffset}
                             </AppText>
                           </View>
-                          <AppText variant="body" weight="bold" color="error">
-                            {formatValue(item.amount)}
-                          </AppText>
+                          <MoneyText
+                            amount={item.amount}
+                            currencyCode={currencyCode}
+                            formatStyle="sts"
+                            loading={isLoading}
+                            variant="body"
+                            weight="bold"
+                            color="error"
+                          />
                         </View>
                       ))}
                     </View>
@@ -306,23 +354,31 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>
                 {labels.debtsBucket}
               </AppText>
-              <AppText
+              <MoneyText
+                amount={committedLiabilities}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
                 variant="body"
                 weight="bold"
                 color="error"
                 style={{ fontSize: Typography.sizes.lg }}
-              >
-                {formatValue(committedLiabilities)}
-              </AppText>
+              />
             </View>
             <Separator marginVertical="md" opacity={Opacity.muted} />
             <View style={styles.breakdownRow}>
               <AppText variant="caption" color="secondary" weight="bold">
                 {labels.totalBalanceInfo.toUpperCase()}
               </AppText>
-              <AppText variant="body" color="secondary" weight="bold">
-                {formatValue(totalLiabilities)}
-              </AppText>
+              <MoneyText
+                amount={totalLiabilities}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
+                variant="body"
+                color="secondary"
+                weight="bold"
+              />
             </View>
           </View>
         </View>

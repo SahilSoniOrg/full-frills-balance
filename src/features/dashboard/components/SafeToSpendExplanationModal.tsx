@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
@@ -9,7 +10,6 @@ import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
-import { formatAmountOrLoading } from '../utils/formatAmount';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
 
 function parseFormulaItem(
@@ -54,12 +54,8 @@ export const SafeToSpendExplanationModal = ({
     committed,
     debt,
     currencyCode,
-    isPrivacyMode,
     isLoading,
   } = viewModel;
-
-  const formatValue = (raw: number) =>
-    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   const formulaDays = viewModel.safeToSpendDays;
 
@@ -177,9 +173,15 @@ export const SafeToSpendExplanationModal = ({
                   {parseFormulaItem(info.formulaItems[0], formulaDays).detail}
                 </AppText>
               </View>
-              <AppText variant="subheading" color="primary" tabular>
-                {formatValue(totalLiquidAssets)}
-              </AppText>
+              <MoneyText
+                amount={totalLiquidAssets}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
+                variant="subheading"
+                color="primary"
+                tabular
+              />
               <AppIcon
                 name={expandedSection === 'assets' ? 'chevronUp' : 'chevronDown'}
                 size={Size.sm}
@@ -193,7 +195,6 @@ export const SafeToSpendExplanationModal = ({
             <SafeToSpendLedger
               labels={labels}
               currencyCode={currencyCode}
-              isPrivacyMode={isPrivacyMode}
               isLoading={isLoading}
               liquidAssetSubtypes={liquidAssetSubtypes}
               accountSummaries={accountSummaries}
@@ -218,9 +219,15 @@ export const SafeToSpendExplanationModal = ({
                   {parseFormulaItem(info.formulaItems[1], formulaDays).detail}
                 </AppText>
               </View>
-              <AppText variant="subheading" color="primary" tabular>
-                {formatValue(totalFutureInflow)}
-              </AppText>
+              <MoneyText
+                amount={totalFutureInflow}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={isLoading}
+                variant="subheading"
+                color="primary"
+                tabular
+              />
               <AppIcon
                 name={expandedSection === 'income' ? 'chevronUp' : 'chevronDown'}
                 size={Size.sm}
@@ -274,7 +281,17 @@ export const SafeToSpendExplanationModal = ({
                         </View>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
-                        +{formatValue(inc.amount)}
+                        +{' '}
+                        <MoneyText
+                          amount={inc.amount}
+                          currencyCode={currencyCode}
+                          formatStyle="sts"
+                          loading={isLoading}
+                          variant="caption"
+                          weight="bold"
+                          color="success"
+                          tabular
+                        />
                       </AppText>
                     </TouchableOpacity>
                   ))
@@ -306,7 +323,16 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="warning" tabular>
-                –{formatValue(committedTotal)}
+                –{' '}
+                <MoneyText
+                  amount={committedTotal}
+                  currencyCode={currencyCode}
+                  formatStyle="sts"
+                  loading={isLoading}
+                  variant="subheading"
+                  color="warning"
+                  tabular
+                />
               </AppText>
               <AppIcon
                 name={expandedSection === 'committed' ? 'chevronUp' : 'chevronDown'}
@@ -335,7 +361,17 @@ export const SafeToSpendExplanationModal = ({
                         {acc.accountName}
                       </AppText>
                       <AppText variant="caption" weight="bold" color="warning" tabular>
-                        –{formatValue(acc.amount)}
+                        –{' '}
+                        <MoneyText
+                          amount={acc.amount}
+                          currencyCode={currencyCode}
+                          formatStyle="sts"
+                          loading={isLoading}
+                          variant="caption"
+                          weight="bold"
+                          color="warning"
+                          tabular
+                        />
                       </AppText>
                     </View>
                     <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
@@ -413,9 +449,15 @@ export const SafeToSpendExplanationModal = ({
                                   )}
                                 </View>
                               </View>
-                              <AppText variant="caption" color="secondary" tabular>
-                                {formatValue(det.amount)}
-                              </AppText>
+                              <MoneyText
+                                amount={det.amount}
+                                currencyCode={currencyCode}
+                                formatStyle="sts"
+                                loading={isLoading}
+                                variant="caption"
+                                color="secondary"
+                                tabular
+                              />
                             </TouchableOpacity>
                           );
                         })}
@@ -445,7 +487,16 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="error" tabular>
-                –{formatValue(committedLiabilities)}
+                –{' '}
+                <MoneyText
+                  amount={committedLiabilities}
+                  currencyCode={currencyCode}
+                  formatStyle="sts"
+                  loading={isLoading}
+                  variant="subheading"
+                  color="error"
+                  tabular
+                />
               </AppText>
               <AppIcon
                 name={expandedSection === 'debts' ? 'chevronUp' : 'chevronDown'}
@@ -488,7 +539,17 @@ export const SafeToSpendExplanationModal = ({
                       </AppText>
                     </View>
                     <AppText variant="caption" weight="bold" color="error" tabular>
-                      –{formatValue(acc.amount)}
+                      –{' '}
+                      <MoneyText
+                        amount={acc.amount}
+                        currencyCode={currencyCode}
+                        formatStyle="sts"
+                        loading={isLoading}
+                        variant="caption"
+                        weight="bold"
+                        color="error"
+                        tabular
+                      />
                     </AppText>
                   </View>
                 ))}
@@ -497,9 +558,15 @@ export const SafeToSpendExplanationModal = ({
             {totalLiabilities > committedLiabilities && (
               <View style={styles.liabilityCallout}>
                 <AppText variant="caption" color="secondary" style={{ lineHeight: 16 }}>
-                  <AppText variant="caption" weight="bold" tabular>
-                    {formatValue(totalLiabilities - committedLiabilities)}{' '}
-                  </AppText>
+                  <MoneyText
+                    amount={totalLiabilities - committedLiabilities}
+                    currencyCode={currencyCode}
+                    formatStyle="sts"
+                    loading={isLoading}
+                    variant="caption"
+                    weight="bold"
+                    tabular
+                  />{' '}
                   {labels.debtsCallout}
                 </AppText>
               </View>
@@ -517,9 +584,15 @@ export const SafeToSpendExplanationModal = ({
               {labels.remainingCashBuffer}
             </AppText>
           </View>
-          <AppText variant="title" color="primary" tabular>
-            {formatValue(safeToSpend)}
-          </AppText>
+          <MoneyText
+            amount={safeToSpend}
+            currencyCode={currencyCode}
+            formatStyle="sts"
+            loading={isLoading}
+            variant="title"
+            color="primary"
+            tabular
+          />
         </View>
       </AppCard>
 

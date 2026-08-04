@@ -22,8 +22,6 @@ interface TransactionListViewProps {
   ListFooterComponent?: React.ReactElement | null;
   onEndReached?: () => void;
   contentContainerStyle?: StyleProp<ViewStyle>;
-  /** Screen/VM privacy flag forwarded to day headers and transaction cards. */
-  isPrivacyMode?: boolean;
   selectedIds?: Set<TransactionId>;
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
@@ -32,13 +30,11 @@ interface TransactionListViewProps {
 
 function renderListItem({
   item,
-  isPrivacyMode,
   selectedIds,
   onLongPressItem,
   isSelectionModeActive,
 }: {
   item: TransactionListItem;
-  isPrivacyMode?: boolean;
   selectedIds?: Set<TransactionId>;
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
@@ -57,7 +53,6 @@ function renderListItem({
         netAmount={item.netAmount}
         currencyCode={item.currencyCode}
         reconciledAt={item.reconciledAt}
-        isPrivacyMode={isPrivacyMode}
       />
     );
   }
@@ -69,7 +64,6 @@ function renderListItem({
       onLongPress={onLongPressItem ? () => onLongPressItem(item.id) : undefined}
       isSelected={selectedIds?.has(item.id)}
       isSelectionModeActive={isSelectionModeActive}
-      isPrivacyMode={isPrivacyMode}
     />
   );
 }
@@ -85,7 +79,6 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
     ListHeaderComponent,
     onEndReached,
     contentContainerStyle,
-    isPrivacyMode,
     selectedIds,
     onLongPressItem,
     isSelectionModeActive,
@@ -125,7 +118,6 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
       renderItem={({ item }: { item: TransactionListItem }) =>
         renderListItem({
           item,
-          isPrivacyMode,
           selectedIds,
           onLongPressItem,
           isSelectionModeActive,

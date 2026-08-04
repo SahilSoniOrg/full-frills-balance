@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
+import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
-import { formatAmount } from '@/src/features/dashboard/utils/formatAmount';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
@@ -135,9 +135,9 @@ describe('SafeToSpendMapper', () => {
     expect(vm.safeToSpend).toBe(1000);
     expect(vm.totalLiquidAssets).toBe(1500);
     expect(vm.isPrivacyMode).toBe(true);
-    expect(formatAmount(vm.safeToSpend, vm.currencyCode, vm.isPrivacyMode)).toBe(
-      AppConfig.privacyMask,
-    );
+    expect(
+      formatMoneyAmount(vm.safeToSpend, vm.currencyCode, vm.isPrivacyMode, { style: 'sts' }),
+    ).toBe(AppConfig.privacyMask);
 
     // Raw list amounts preserved
     expect(vm.income[0].amount).not.toBe(0);

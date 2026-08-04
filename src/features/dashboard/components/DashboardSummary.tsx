@@ -1,33 +1,18 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
+import { Opacity, Size, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { StyleSheet } from 'react-native';
 
 interface DashboardSummaryProps {
   income: number;
   expense: number;
   currencyCode: string;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode?: boolean;
 }
 
-export const DashboardSummary = ({
-  income,
-  expense,
-  currencyCode,
-  isPrivacyMode = false,
-}: DashboardSummaryProps) => {
+export const DashboardSummary = ({ income, expense, currencyCode }: DashboardSummaryProps) => {
   const { theme, fonts } = useTheme();
-
-  const formatValue = (val: number) => {
-    if (isPrivacyMode) return AppConfig.privacyMask;
-    return CurrencyFormatter.format(val, currencyCode, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
 
   return (
     <Inline space="md" marginBottom="lg">
@@ -50,9 +35,13 @@ export const DashboardSummary = ({
                 INCOME
               </AppText>
             </Inline>
-            <AppText variant="subheading" style={{ color: theme.income, fontFamily: fonts.bold }}>
-              {formatValue(income)}
-            </AppText>
+            <MoneyText
+              amount={income}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              variant="subheading"
+              style={{ color: theme.income, fontFamily: fonts.bold }}
+            />
           </Stack>
         </Inset>
       </AppCard>
@@ -76,9 +65,13 @@ export const DashboardSummary = ({
                 EXPENSE
               </AppText>
             </Inline>
-            <AppText variant="subheading" style={{ color: theme.expense, fontFamily: fonts.bold }}>
-              {formatValue(expense)}
-            </AppText>
+            <MoneyText
+              amount={expense}
+              currencyCode={currencyCode}
+              formatStyle="compact"
+              variant="subheading"
+              style={{ color: theme.expense, fontFamily: fonts.bold }}
+            />
           </Stack>
         </Inset>
       </AppCard>

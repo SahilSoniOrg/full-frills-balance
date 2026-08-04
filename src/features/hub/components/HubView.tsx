@@ -18,7 +18,6 @@ export function HubView({
   dismissedInsights,
   unreadSmsCount,
   currencyCode,
-  isPrivacyMode,
   strings,
   dismissInsight,
   restoreInsight,
@@ -59,7 +58,6 @@ export function HubView({
               currencyCode={currencyCode}
               onDismiss={dismissInsight}
               hideManageDismissed
-              isPrivacyMode={isPrivacyMode}
             />
           ) : unreadSmsCount === 0 ? (
             <EmptyStateView icon="info" title={strings.emptyState} style={{ marginTop: 60 }} />

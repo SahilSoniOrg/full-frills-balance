@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
@@ -8,13 +9,11 @@ import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { PlannedPaymentId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { formatAmountOrLoading } from '../utils/formatAmount';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
 
 interface SafeToSpendLedgerProps {
   labels: SafeToSpendLabels;
   currencyCode: string;
-  isPrivacyMode: boolean;
   isLoading?: boolean;
   liquidAssetSubtypes: AccountSubtype[];
   accountSummaries?: AccountSimulationSummary[];
@@ -23,14 +22,11 @@ interface SafeToSpendLedgerProps {
 export const SafeToSpendLedger = ({
   labels,
   currencyCode,
-  isPrivacyMode,
   isLoading = false,
   liquidAssetSubtypes,
   accountSummaries,
 }: SafeToSpendLedgerProps) => {
   const { theme } = useTheme();
-  const formatValue = (raw: number) =>
-    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
 
   return (
     <Stack gap="md">
@@ -133,7 +129,16 @@ export const SafeToSpendLedger = ({
                       </View>
                       <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                         <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
-                          Current: {formatValue(acc.startingBalance)}
+                          Current:{' '}
+                          <MoneyText
+                            amount={acc.startingBalance}
+                            currencyCode={currencyCode}
+                            formatStyle="sts"
+                            loading={isLoading}
+                            variant="caption"
+                            color="secondary"
+                            style={{ fontSize: 9 }}
+                          />
                         </AppText>
                         <AppText
                           variant="caption"
@@ -143,7 +148,16 @@ export const SafeToSpendLedger = ({
                           •
                         </AppText>
                         <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
-                          Floor: {formatValue(acc.minBalance)}
+                          Floor:{' '}
+                          <MoneyText
+                            amount={acc.minBalance}
+                            currencyCode={currencyCode}
+                            formatStyle="sts"
+                            loading={isLoading}
+                            variant="caption"
+                            color="secondary"
+                            style={{ fontSize: 9 }}
+                          />
                         </AppText>
                       </View>
                     </TouchableOpacity>
@@ -155,7 +169,16 @@ export const SafeToSpendLedger = ({
                         tabular
                       >
                         {isShortfall ? '-' : ''}
-                        {formatValue(displayAmount)}
+                        <MoneyText
+                          amount={displayAmount}
+                          currencyCode={currencyCode}
+                          formatStyle="sts"
+                          loading={isLoading}
+                          variant="caption"
+                          weight="bold"
+                          color={isShortfall ? 'error' : 'primary'}
+                          tabular
+                        />
                       </AppText>
                       <AppText
                         variant="caption"
@@ -264,7 +287,17 @@ export const SafeToSpendLedger = ({
                                 tabular
                                 style={{ fontSize: 9 }}
                               >
-                                -{formatValue(item.amount)}
+                                -{' '}
+                                <MoneyText
+                                  amount={item.amount}
+                                  currencyCode={currencyCode}
+                                  formatStyle="sts"
+                                  loading={isLoading}
+                                  variant="caption"
+                                  color="secondary"
+                                  style={{ fontSize: 9 }}
+                                  tabular
+                                />
                               </AppText>
                             </View>
                           );
@@ -320,7 +353,17 @@ export const SafeToSpendLedger = ({
                               tabular
                               style={{ fontSize: 9 }}
                             >
-                              +{formatValue(item.amount)}
+                              +{' '}
+                              <MoneyText
+                                amount={item.amount}
+                                currencyCode={currencyCode}
+                                formatStyle="sts"
+                                loading={isLoading}
+                                variant="caption"
+                                color="secondary"
+                                style={{ fontSize: 9 }}
+                                tabular
+                              />
                             </AppText>
                           </View>
                         ))}

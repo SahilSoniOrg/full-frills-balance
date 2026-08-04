@@ -1,25 +1,29 @@
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
   isPositiveSafeToSpend: boolean;
-  displayValue: string | React.ReactNode;
+  amount: number;
+  currencyCode: string;
+  loading?: boolean;
   onInfoPress: () => void;
-  isLoading?: boolean;
 }
 
 export const SafeToSpendHeader = ({
   isOverCommitted,
   isPositiveSafeToSpend,
-  displayValue,
+  amount,
+  currencyCode,
+  loading = false,
   onInfoPress,
 }: SafeToSpendHeaderProps) => {
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
+  const formatSts = useMoneyFormat({ style: 'sts', loading });
 
   return (
     <Column gap="xs">
@@ -53,7 +57,7 @@ export const SafeToSpendHeader = ({
         minimumFontScale={0.55}
         ellipsizeMode="tail"
       >
-        {displayValue}
+        {formatSts(amount, currencyCode)}
       </Text>
 
       <Text

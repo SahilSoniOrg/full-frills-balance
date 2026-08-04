@@ -1,8 +1,8 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { MotiView } from 'moti';
@@ -38,8 +38,6 @@ export interface TransactionCardProps {
   };
   badges: TransactionBadge[];
   notes?: string;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
   /** Optional chrome rendered inside the card (e.g. selection indicator). */
@@ -58,7 +56,6 @@ const TransactionCardComponent = ({
   presentation,
   badges = [],
   notes,
-  isPrivacyMode = false,
   onPress,
   onLongPress,
   overlay,
@@ -66,6 +63,7 @@ const TransactionCardComponent = ({
   contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
+  const formatMoney = useMoneyFormat();
 
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
 
@@ -75,8 +73,8 @@ const TransactionCardComponent = ({
   );
 
   const formattedAmount = useMemo(
-    () => (isPrivacyMode ? AppConfig.privacyMask : CurrencyFormatter.format(amount, currencyCode)),
-    [isPrivacyMode, amount, currencyCode],
+    () => formatMoney(amount, currencyCode),
+    [formatMoney, amount, currencyCode],
   );
 
   const Wrapper = onPress || onLongPress ? TouchableOpacity : View;

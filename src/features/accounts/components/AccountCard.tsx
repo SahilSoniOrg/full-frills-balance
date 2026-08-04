@@ -1,19 +1,18 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppCard, AppIcon, IvyIcon } from '@/src/components/core';
-import { AppConfig, Opacity, Size } from '@/src/constants';
+import { Opacity, Size } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountType } from '@/src/data/models/Account';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface AccountCardProps {
   account: AccountCardViewModel;
-  isPrivacyMode: boolean;
   isLoading?: boolean;
   onPress: () => void;
   onCollapse?: () => void;
@@ -21,65 +20,53 @@ interface AccountCardProps {
   surfaceColor: ColorKey;
 }
 
-function formatAmount(
-  amount: number,
-  currencyCode: string,
-  isPrivacyMode: boolean,
-  isLoading: boolean,
-) {
-  if (isLoading) return '...';
-  if (isPrivacyMode) return AppConfig.privacyMask;
-  return CurrencyFormatter.format(amount, currencyCode);
-}
-
 function getAccountStatsConfig(
   accountType: AccountType | undefined,
-  monthlyIncomeText: string,
-  monthlyExpenseText: string,
+  monthlyIncome: number,
+  monthlyExpense: number,
 ) {
   switch (accountType) {
     case AccountType.EXPENSE:
       return {
         leftLabel: 'MONTH SPENT',
-        leftValue: monthlyExpenseText,
+        leftAmount: monthlyExpense,
         rightLabel: 'REFUNDS / CREDITS',
-        rightValue: monthlyIncomeText,
+        rightAmount: monthlyIncome,
       };
     case AccountType.INCOME:
       return {
         leftLabel: 'MONTH EARNED',
-        leftValue: monthlyIncomeText,
+        leftAmount: monthlyIncome,
         rightLabel: 'ADJUSTMENTS',
-        rightValue: monthlyExpenseText,
+        rightAmount: monthlyExpense,
       };
     case AccountType.LIABILITY:
       return {
         leftLabel: 'PAYMENTS MADE',
-        leftValue: monthlyExpenseText,
+        leftAmount: monthlyExpense,
         rightLabel: 'NEW CHARGES',
-        rightValue: monthlyIncomeText,
+        rightAmount: monthlyIncome,
       };
     case AccountType.EQUITY:
       return {
         leftLabel: 'ADDITIONS',
-        leftValue: monthlyIncomeText,
+        leftAmount: monthlyIncome,
         rightLabel: 'REDUCTIONS',
-        rightValue: monthlyExpenseText,
+        rightAmount: monthlyExpense,
       };
     case AccountType.ASSET:
     default:
       return {
         leftLabel: 'MONEY IN',
-        leftValue: monthlyIncomeText,
+        leftAmount: monthlyIncome,
         rightLabel: 'MONEY OUT',
-        rightValue: monthlyExpenseText,
+        rightAmount: monthlyExpense,
       };
   }
 }
 
 export function AccountCardBase({
   account,
-  isPrivacyMode,
   isLoading = false,
   onPress,
   onCollapse,
@@ -87,22 +74,14 @@ export function AccountCardBase({
   surfaceColor,
 }: AccountCardProps) {
   const { theme, fonts } = useTheme();
+  const formatMoney = useMoneyFormat({ loading: isLoading });
   const resolvedTextColor = resolveThemeColor(theme, account.textColor);
 
-  const balanceText = useMemo(
-    () => formatAmount(account.balance, account.currencyCode, isPrivacyMode, isLoading),
-    [account.balance, account.currencyCode, isPrivacyMode, isLoading],
+  const stats = getAccountStatsConfig(
+    account.accountType,
+    account.monthlyIncome,
+    account.monthlyExpenses,
   );
-  const monthlyIncomeText = useMemo(
-    () => formatAmount(account.monthlyIncome, account.currencyCode, isPrivacyMode, isLoading),
-    [account.monthlyIncome, account.currencyCode, isPrivacyMode, isLoading],
-  );
-  const monthlyExpenseText = useMemo(
-    () => formatAmount(account.monthlyExpenses, account.currencyCode, isPrivacyMode, isLoading),
-    [account.monthlyExpenses, account.currencyCode, isPrivacyMode, isLoading],
-  );
-
-  const stats = getAccountStatsConfig(account.accountType, monthlyIncomeText, monthlyExpenseText);
 
   return (
     <AppCard
@@ -188,7 +167,7 @@ export function AccountCardBase({
                   fontFamily: fonts.bold,
                 }}
               >
-                {balanceText}
+                {formatMoney(account.balance, account.currencyCode)}
               </Text>
             </Column>
           </Column>
@@ -207,7 +186,7 @@ export function AccountCardBase({
                 {stats.leftLabel}
               </Text>
               <Text variant="sm" weight="bold">
-                {stats.leftValue}
+                {formatMoney(stats.leftAmount, account.currencyCode)}
               </Text>
             </Column>
 
@@ -224,7 +203,7 @@ export function AccountCardBase({
                 {stats.rightLabel}
               </Text>
               <Text variant="sm" weight="bold">
-                {stats.rightValue}
+                {formatMoney(stats.rightAmount, account.currencyCode)}
               </Text>
             </Column>
           </Row>

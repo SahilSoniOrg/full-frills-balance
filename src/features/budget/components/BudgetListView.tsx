@@ -9,10 +9,9 @@ import { BudgetCard } from './BudgetCard';
 
 export type BudgetListViewProps = {
   items: BudgetItem[];
-  isPrivacyMode?: boolean;
 };
 
-export function BudgetListView({ items, isPrivacyMode = false }: BudgetListViewProps) {
+export function BudgetListView({ items }: BudgetListViewProps) {
   const { theme } = useTheme();
 
   const handlePress = (item: BudgetItem) => {
@@ -24,7 +23,7 @@ export function BudgetListView({ items, isPrivacyMode = false }: BudgetListViewP
   };
 
   const renderItem = ({ item }: { item: BudgetItem }) => {
-    return <BudgetCard item={item} onPress={handlePress} isPrivacyMode={isPrivacyMode} />;
+    return <BudgetCard item={item} onPress={handlePress} />;
   };
 
   return (

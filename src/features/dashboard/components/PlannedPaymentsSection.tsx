@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
@@ -5,7 +6,6 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { journalDisplayTypeChrome } from '@/src/services/accounting/journalTimelineMapper';
 import { JournalDisplayType } from '@/src/types/domain';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -13,8 +13,6 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 export interface PlannedPaymentsSectionProps {
   items: PlannedOccurrenceViewModel[];
   onItemPress?: (item: PlannedOccurrenceViewModel) => void;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode?: boolean;
 }
 
 function resolveDisplayType(displayType: string): JournalDisplayType {
@@ -29,11 +27,7 @@ function resolveDisplayType(displayType: string): JournalDisplayType {
   return JournalDisplayType.EXPENSE;
 }
 
-export function PlannedPaymentsSection({
-  items,
-  onItemPress,
-  isPrivacyMode = false,
-}: PlannedPaymentsSectionProps) {
+export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -114,12 +108,6 @@ export function PlannedPaymentsSection({
             if (isOverdue) dateColor = theme.error;
             else if (isDueSoon) dateColor = theme.warning;
 
-            const amountStr = isPrivacyMode
-              ? AppConfig.privacyMask
-              : CurrencyFormatter.format(item.amount, item.currencyCode, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                });
             const typeColor = theme[presentation.colorKey as keyof typeof theme] as
               string | undefined;
 
@@ -149,7 +137,14 @@ export function PlannedPaymentsSection({
                 </View>
                 <AppText variant="body" weight="medium" style={{ color: typeColor || theme.text }}>
                   {chrome.amountPrefix || ''}
-                  {amountStr}
+                  <MoneyText
+                    amount={item.amount}
+                    currencyCode={item.currencyCode}
+                    formatStyle="compact"
+                    variant="body"
+                    weight="medium"
+                    style={{ color: typeColor || theme.text }}
+                  />
                 </AppText>
               </TouchableOpacity>
             );
@@ -171,7 +166,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   title: {
-    // override previous bottom margin because the container now handles spacing
     marginBottom: 0,
   },
   list: {

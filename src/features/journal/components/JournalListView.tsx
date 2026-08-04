@@ -100,7 +100,6 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           ListHeaderComponent={list.listHeader}
           onEndReached={list.onEndReached}
           contentContainerStyle={[styles.listContent, list.listContentStyle]}
-          isPrivacyMode={list.isPrivacyMode}
           selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={selection?.onLongPressItem as (id: string) => void}
           isSelectionModeActive={selection?.isSelectionModeActive}
