@@ -178,7 +178,9 @@ export const BarChart = ({
                 style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
               >
                 <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                  {hideLabels ? '••••' : CurrencyFormatter.formatShort(tickValue, currencyCode)}
+                  {hideLabels
+                    ? AppConfig.privacyMask
+                    : CurrencyFormatter.formatShort(tickValue, currencyCode)}
                 </AppText>
               </View>
             );

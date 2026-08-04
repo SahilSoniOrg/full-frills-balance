@@ -7,9 +7,14 @@ import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/Money
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
   chartWidth: number;
+  isPrivacyMode: boolean;
 }
 
-export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionProps) {
+export function ReportOverviewSection({
+  vm,
+  chartWidth,
+  isPrivacyMode,
+}: ReportOverviewSectionProps) {
   const {
     displayedNetWorthText,
     netWorthSeries,
@@ -21,7 +26,6 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     expenseBarFlex,
     sankeyData,
     targetCurrency,
-    isPrivacyMode,
     onViewSelectedTransactions,
     selectedBarIndex,
     onSelectBarIndex,

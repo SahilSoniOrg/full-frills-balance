@@ -59,7 +59,6 @@ export interface ReportOverviewTabVm {
   expenseBarFlex: number;
   sankeyData: SankeyData;
   targetCurrency: string;
-  isPrivacyMode: boolean;
   selectedBarIndex: number | undefined;
   onSelectBarIndex: (index: number | undefined) => void;
   onViewTransactions: (start: number, end?: number) => void;
@@ -82,7 +81,6 @@ export interface ReportSpendingTabVm {
   onLegendRowPress: (accountId: AccountId) => void;
   onCategoryPress: (category: string) => void;
   targetCurrency: string;
-  isPrivacyMode: boolean;
 }
 
 export interface ReportWealthTabVm {
@@ -90,6 +88,5 @@ export interface ReportWealthTabVm {
   barChartData: ReportBarChartDatum[];
   dailyData: ReportDailyPoint[];
   targetCurrency: string;
-  isPrivacyMode: boolean;
   onViewTransactions: (start: number, end?: number) => void;
 }

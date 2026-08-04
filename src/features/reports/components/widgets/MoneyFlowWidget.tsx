@@ -23,7 +23,7 @@ export function MoneyFlowWidget({
         links={sankeyData.links}
         currencyCode={currencyCode}
         width={chartWidth}
-        isPrivacyMode={isPrivacyMode}
+        hideLabels={isPrivacyMode}
       />
     </ReportChartCard>
   );

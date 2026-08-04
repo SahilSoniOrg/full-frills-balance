@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -22,7 +22,7 @@ interface CalendarHeatmapProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  isPrivacyMode?: boolean;
+  hideLabels?: boolean;
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -37,7 +37,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
-  isPrivacyMode = false,
+  hideLabels,
 }) => {
   const { theme, onContrast, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -306,8 +306,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {isPrivacyMode
-                        ? '••••'
+                      {hideLabels
+                        ? AppConfig.privacyMask
                         : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
                     </AppText>
                   </View>

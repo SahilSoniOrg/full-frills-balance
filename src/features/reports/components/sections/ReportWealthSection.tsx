@@ -14,18 +14,12 @@ const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 interface ReportWealthSectionProps {
   vm: ReportWealthTabVm;
   chartWidth: number;
+  isPrivacyMode: boolean;
 }
 
-export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps) {
+export function ReportWealthSection({ vm, chartWidth, isPrivacyMode }: ReportWealthSectionProps) {
   const { theme } = useTheme();
-  const {
-    wealthAreaSeries,
-    barChartData,
-    dailyData,
-    targetCurrency,
-    isPrivacyMode,
-    onViewTransactions,
-  } = vm;
+  const { wealthAreaSeries, barChartData, dailyData, targetCurrency, onViewTransactions } = vm;
 
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | undefined>(undefined);
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>(undefined);
