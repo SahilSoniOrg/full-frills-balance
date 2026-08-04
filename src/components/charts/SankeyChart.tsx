@@ -1,8 +1,8 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useMemo } from 'react';
 import { Dimensions, View } from 'react-native';
 import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
@@ -13,8 +13,6 @@ interface SankeyChartProps {
   currencyCode: string;
   height?: number;
   width?: number;
-  /** Formats node amount labels. Defaults to CurrencyFormatter.formatShort. */
-  formatValue?: (value: number) => string;
 }
 
 export const SankeyChart: React.FC<SankeyChartProps> = ({
@@ -23,13 +21,11 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   currencyCode,
   height = REPORT_CHART_LAYOUT.sankeyDefaultHeight,
   width: customWidth,
-  formatValue,
 }) => {
   const { theme } = useTheme();
+  const formatMoneyShort = useMoneyFormat({ short: true });
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
-  const formatLabel =
-    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   const NODE_WIDTH = REPORT_CHART_LAYOUT.sankeyNodeWidth;
   const NODE_SPACING = REPORT_CHART_LAYOUT.sankeyNodeSpacing;
@@ -209,7 +205,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
                 textAnchor={isRightSide ? 'end' : 'start'}
                 opacity={h < 8 ? 0.7 : 1}
               >
-                {n.name} {h > 12 ? formatLabel(val) : ''}
+                {n.name} {h > 12 ? formatMoneyShort(val, currencyCode) : ''}
               </SvgText>
             </React.Fragment>
           );

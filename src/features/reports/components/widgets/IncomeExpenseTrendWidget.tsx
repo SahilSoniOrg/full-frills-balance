@@ -21,7 +21,6 @@ export interface IncomeExpenseTrendWidgetProps {
   selectedIndex: number | undefined;
   onSelectIndex: (index: number | undefined) => void;
   onViewSelectedTransactions: () => void;
-  formatMoneyShort: (amount: number) => string;
 }
 
 export function IncomeExpenseTrendWidget({
@@ -31,7 +30,6 @@ export function IncomeExpenseTrendWidget({
   selectedIndex,
   onSelectIndex,
   onViewSelectedTransactions,
-  formatMoneyShort,
 }: IncomeExpenseTrendWidgetProps) {
   const { theme } = useTheme();
 
@@ -79,7 +77,6 @@ export function IncomeExpenseTrendWidget({
           onPress={onPointSelect}
           selectedIndex={selectedIndex}
           renderTooltipContent={renderTooltip}
-          formatValue={formatMoneyShort}
         />
       </View>
     </ReportChartCard>

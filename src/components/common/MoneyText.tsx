@@ -1,6 +1,5 @@
 import { AppText, type AppTextProps } from '@/src/components/core/AppText';
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 
 type MoneyTextProps = Omit<AppTextProps, 'children'> & {
   amount: number;
@@ -10,14 +9,10 @@ type MoneyTextProps = Omit<AppTextProps, 'children'> & {
 };
 
 /**
- * Privacy-aware amount label. Must render under PrivacyScopeProvider.
- * Charts (SVG) cannot use this — pass formatValue instead.
+ * Privacy-aware amount label (RN Text). Must render under PrivacyScopeProvider.
+ * For SVG labels use SvgMoneyText; for string concat in SVG use useMoneyFormat.
  */
 export function MoneyText({ amount, currencyCode, short = false, ...textProps }: MoneyTextProps) {
-  const { isPrivacyMode } = usePrivacyScope();
-  const text = short
-    ? CurrencyFormatter.formatShortOrMask(amount, currencyCode, isPrivacyMode)
-    : CurrencyFormatter.formatOrMask(amount, currencyCode, isPrivacyMode);
-
-  return <AppText {...textProps}>{text}</AppText>;
+  const formatMoney = useMoneyFormat({ short });
+  return <AppText {...textProps}>{formatMoney(amount, currencyCode)}</AppText>;
 }

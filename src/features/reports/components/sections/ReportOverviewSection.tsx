@@ -7,14 +7,9 @@ import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/Money
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
   chartWidth: number;
-  formatMoneyShort: (amount: number) => string;
 }
 
-export function ReportOverviewSection({
-  vm,
-  chartWidth,
-  formatMoneyShort,
-}: ReportOverviewSectionProps) {
+export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionProps) {
   const {
     displayedNetWorthText,
     netWorthSeries,
@@ -38,7 +33,6 @@ export function ReportOverviewSection({
         displayedNetWorthText={displayedNetWorthText}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
-        formatMoneyShort={formatMoneyShort}
         onViewTransactions={onViewTransactions}
       />
 
@@ -48,7 +42,6 @@ export function ReportOverviewSection({
         chartWidth={chartWidth}
         selectedIndex={selectedBarIndex}
         onSelectIndex={onSelectBarIndex}
-        formatMoneyShort={formatMoneyShort}
         onViewSelectedTransactions={onViewSelectedTransactions}
       />
 
@@ -63,7 +56,6 @@ export function ReportOverviewSection({
         sankeyData={sankeyData}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
-        formatMoneyShort={formatMoneyShort}
       />
     </>
   );

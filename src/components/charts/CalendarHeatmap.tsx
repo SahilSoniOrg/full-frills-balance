@@ -1,10 +1,10 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
 import { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -22,8 +22,6 @@ interface CalendarHeatmapProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  /** Formats selected-cell amounts. Defaults to CurrencyFormatter.formatAmount. */
-  formatValue?: (value: number) => string;
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -38,15 +36,12 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
-  formatValue,
 }) => {
   const { theme, onContrast, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
 
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
-  const formatLabel =
-    formatValue ?? ((value: number) => CurrencyFormatter.formatAmount(value, currency));
 
   const PADDING_LEFT = REPORT_CHART_LAYOUT.calendarPaddingLeft; // Increased for month labels
   const PADDING_TOP = REPORT_CHART_LAYOUT.calendarPaddingTop;
@@ -305,12 +300,12 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       )}
                     </View>
 
-                    <AppText
+                    <MoneyText
+                      amount={selectedPoint.value}
+                      currencyCode={currency}
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
-                    >
-                      {formatLabel(selectedPoint.value)}
-                    </AppText>
+                    />
                   </View>
                 )}
               </ChartTooltip>

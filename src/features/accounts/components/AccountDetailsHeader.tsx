@@ -168,9 +168,6 @@ export function AccountDetailsHeader({
           xTicks={xTicks}
           formatXTick={formatShortDate}
           avoidPointVertical={true}
-          formatValue={value =>
-            CurrencyFormatter.formatShortOrMask(value, currencyCode, isPrivacyMode)
-          }
           renderTooltipContent={index => {
             const point = chartData[index];
             const rollingPoint = rollingAverageData[index];

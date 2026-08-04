@@ -18,17 +18,7 @@ interface ReportsViewProps {
 
 export function ReportsView({ vm }: ReportsViewProps) {
   const { theme } = useTheme();
-  const {
-    filters,
-    activeTab,
-    setActiveTab,
-    loading,
-    formatMoney,
-    formatMoneyShort,
-    overview,
-    spending,
-    wealth,
-  } = vm;
+  const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
 
   const { width } = useWindowDimensions();
   // Screen has Spacing.md (12) inset on each side when using Inset space="md".
@@ -61,26 +51,12 @@ export function ReportsView({ vm }: ReportsViewProps) {
             }
           >
             {activeTab === 'OVERVIEW' && (
-              <ReportOverviewSection
-                vm={overview}
-                chartWidth={CHART_WIDTH}
-                formatMoneyShort={formatMoneyShort}
-              />
+              <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
             )}
             {activeTab === 'SPENDING' && (
-              <ReportSpendingSection
-                vm={spending}
-                chartWidth={CHART_WIDTH}
-                formatMoney={formatMoney}
-              />
+              <ReportSpendingSection vm={spending} chartWidth={CHART_WIDTH} />
             )}
-            {activeTab === 'WEALTH' && (
-              <ReportWealthSection
-                vm={wealth}
-                chartWidth={CHART_WIDTH}
-                formatMoneyShort={formatMoneyShort}
-              />
-            )}
+            {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
           </ScrollView>
         </Stack>
       </Inset>

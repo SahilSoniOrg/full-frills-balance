@@ -8,11 +8,10 @@ import {
   SafeToSpendDataPoint,
   SafeToSpendProjection,
 } from '@/src/services/simulation/SafeToSpendReadModel';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { FORMAT_AMOUNT_LOADING, formatAmountOrLoading } from '../utils/formatAmount';
+import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
@@ -36,11 +35,6 @@ export const SafeToSpendChart = ({
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
   const formatValue = (raw: number) =>
     formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
-  /** Axis / today marker — keep short so Y labels fit chart padding. */
-  const formatChartValue = (raw: number) => {
-    if (isLoading) return FORMAT_AMOUNT_LOADING;
-    return CurrencyFormatter.formatShortOrMask(raw, currencyCode, isPrivacyMode);
-  };
 
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -163,7 +157,6 @@ export const SafeToSpendChart = ({
           xTicks={xTicks}
           formatXTick={x => dayjs(x).format('MMM D')}
           todayX={dayjs().endOf('day').valueOf()}
-          formatValue={formatChartValue}
           extraHorizontalLines={extraHorizontalLines}
           avoidPointVertical={true}
           onPress={index => {
