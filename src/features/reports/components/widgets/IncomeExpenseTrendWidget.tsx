@@ -50,8 +50,9 @@ export function IncomeExpenseTrendWidget({
       return (
         <IncomeExpenseTooltipContent
           label={data.label}
-          incomeText={formatMoneyShort(data.values[0])}
-          expenseText={formatMoneyShort(data.values[1])}
+          income={data.values[0]}
+          expense={data.values[1]}
+          currencyCode={currencyCode}
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={onViewSelectedTransactions}
@@ -61,7 +62,7 @@ export function IncomeExpenseTrendWidget({
         />
       );
     },
-    [barChartData, theme, onViewSelectedTransactions, formatMoneyShort],
+    [barChartData, theme, onViewSelectedTransactions, currencyCode],
   );
 
   return (

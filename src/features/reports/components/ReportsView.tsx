@@ -64,7 +64,6 @@ export function ReportsView({ vm }: ReportsViewProps) {
               <ReportOverviewSection
                 vm={overview}
                 chartWidth={CHART_WIDTH}
-                formatMoney={formatMoney}
                 formatMoneyShort={formatMoneyShort}
               />
             )}

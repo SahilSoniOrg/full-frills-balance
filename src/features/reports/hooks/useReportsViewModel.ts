@@ -4,10 +4,8 @@ import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  ReportBreakdownViewState,
-  ReportLegendRow,
   ReportOverviewTabVm,
   ReportSpendingTabVm,
   ReportTab,
@@ -25,28 +23,13 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
-  /** Full currency format, privacy-aware. Owned by VM — Views pass this down. */
+  /** Privacy-aware full format for chart formatValue (SVG cannot use MoneyText). */
   formatMoney: (amount: number) => string;
-  /** Short currency format, privacy-aware. Owned by VM — Views pass this down. */
+  /** Privacy-aware short format for chart formatValue (SVG cannot use MoneyText). */
   formatMoneyShort: (amount: number) => string;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
   wealth: ReportWealthTabVm;
-}
-
-function withLegendAmountText(
-  state: Omit<ReportBreakdownViewState, 'legendRows'> & {
-    legendRows: Omit<ReportLegendRow, 'amountText'>[];
-  },
-  formatMoney: (amount: number) => string,
-): ReportBreakdownViewState {
-  return {
-    ...state,
-    legendRows: state.legendRows.map(row => ({
-      ...row,
-      amountText: formatMoney(row.amount),
-    })),
-  };
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -157,47 +140,22 @@ export function useReportsViewModel(): ReportsViewModel {
     onViewSelectedTransactions: actions.onViewSelectedTransactions,
   };
 
-  const spending: ReportSpendingTabVm = useMemo(
-    () => ({
-      expenseViewState: withLegendAmountText(breakdownDetails.expenseViewState, formatMoney),
-      expenseCategoryViewState: withLegendAmountText(
-        breakdownDetails.expenseCategoryViewState,
-        formatMoney,
-      ),
-      incomeCategoryViewState: withLegendAmountText(
-        breakdownDetails.incomeCategoryViewState,
-        formatMoney,
-      ),
-      expandedExpenses: breakdownDetails.expandedExpenses,
-      toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
-      expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
-      toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
-      expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
-      toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
-      spendingHeatmap: chartData.spendingHeatmap,
-      calendarHeatmap: chartData.calendarHeatmap,
-      onLegendRowPress: actions.onLegendRowPress,
-      onCategoryPress: actions.onCategoryPress,
-      targetCurrency,
-    }),
-    [
-      breakdownDetails.expenseViewState,
-      breakdownDetails.expenseCategoryViewState,
-      breakdownDetails.incomeCategoryViewState,
-      breakdownDetails.expandedExpenses,
-      breakdownDetails.toggleExpenseExpansion,
-      breakdownDetails.expandedExpenseCategories,
-      breakdownDetails.toggleExpenseCategoryExpansion,
-      breakdownDetails.expandedIncomeCategories,
-      breakdownDetails.toggleIncomeCategoryExpansion,
-      chartData.spendingHeatmap,
-      chartData.calendarHeatmap,
-      actions.onLegendRowPress,
-      actions.onCategoryPress,
-      targetCurrency,
-      formatMoney,
-    ],
-  );
+  const spending: ReportSpendingTabVm = {
+    expenseViewState: breakdownDetails.expenseViewState,
+    expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
+    incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
+    expandedExpenses: breakdownDetails.expandedExpenses,
+    toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
+    expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
+    toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
+    expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
+    toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
+    spendingHeatmap: chartData.spendingHeatmap,
+    calendarHeatmap: chartData.calendarHeatmap,
+    onLegendRowPress: actions.onLegendRowPress,
+    onCategoryPress: actions.onCategoryPress,
+    targetCurrency,
+  };
 
   const wealth: ReportWealthTabVm = {
     wealthAreaSeries: chartData.wealthAreaSeries,

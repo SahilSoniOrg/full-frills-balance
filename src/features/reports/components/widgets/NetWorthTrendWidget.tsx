@@ -24,7 +24,6 @@ export interface NetWorthTrendWidgetProps {
   displayedNetWorthText: string;
   currencyCode: string;
   chartWidth: number;
-  formatMoney: (amount: number) => string;
   formatMoneyShort: (amount: number) => string;
   onViewTransactions: (date: number) => void;
 }
@@ -34,7 +33,6 @@ export function NetWorthTrendWidget({
   displayedNetWorthText,
   currencyCode,
   chartWidth,
-  formatMoney,
   formatMoneyShort,
   onViewTransactions,
 }: NetWorthTrendWidgetProps) {
@@ -59,9 +57,10 @@ export function NetWorthTrendWidget({
       return (
         <NetWorthTooltipContent
           date={point.date}
-          netWorthText={formatMoney(point.netWorth)}
-          incomeText={formatMoneyShort(point.income)}
-          expenseText={formatMoneyShort(point.expense)}
+          netWorth={point.netWorth}
+          income={point.income}
+          expense={point.expense}
+          currencyCode={currencyCode}
           successColor={theme.success}
           errorColor={theme.error}
           borderColor={theme.border}
@@ -72,7 +71,7 @@ export function NetWorthTrendWidget({
         />
       );
     },
-    [theme, onViewTransactions, series, formatMoney, formatMoneyShort],
+    [theme, onViewTransactions, series, currencyCode],
   );
 
   return (

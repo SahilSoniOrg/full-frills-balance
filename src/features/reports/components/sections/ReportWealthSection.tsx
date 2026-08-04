@@ -40,8 +40,9 @@ export function ReportWealthSection({
             day: 'numeric',
             year: 'numeric',
           })}
-          incomeText={formatMoneyShort(data.assets)}
-          expenseText={formatMoneyShort(data.liabilities)}
+          income={data.assets}
+          expense={data.liabilities}
+          currencyCode={targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={() => onViewTransactions(data.date)}
@@ -51,7 +52,7 @@ export function ReportWealthSection({
         />
       );
     },
-    [dailyData, theme, onViewTransactions, formatMoneyShort],
+    [dailyData, theme, targetCurrency, onViewTransactions],
   );
 
   return (

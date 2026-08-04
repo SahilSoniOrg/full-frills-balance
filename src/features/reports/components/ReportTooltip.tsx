@@ -1,4 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
@@ -68,9 +69,10 @@ interface NetWorthTooltipProps {
   backgroundColor: string;
   borderColor: string;
   date: number | Date;
-  netWorthText: string;
-  incomeText: string;
-  expenseText: string;
+  netWorth: number;
+  income: number;
+  expense: number;
+  currencyCode: string;
   successColor: string;
   errorColor: string;
   onViewTransactions: () => void;
@@ -80,9 +82,10 @@ interface NetWorthTooltipProps {
 
 interface NetWorthTooltipContentProps {
   date: number | Date;
-  netWorthText: string;
-  incomeText: string;
-  expenseText: string;
+  netWorth: number;
+  income: number;
+  expense: number;
+  currencyCode: string;
   successColor: string;
   errorColor: string;
   borderColor: string;
@@ -98,9 +101,10 @@ export const NetWorthTooltip = ({
   backgroundColor,
   borderColor,
   date,
-  netWorthText,
-  incomeText,
-  expenseText,
+  netWorth,
+  income,
+  expense,
+  currencyCode,
   successColor,
   errorColor,
   onViewTransactions,
@@ -116,9 +120,10 @@ export const NetWorthTooltip = ({
   >
     <NetWorthTooltipContent
       date={date}
-      netWorthText={netWorthText}
-      incomeText={incomeText}
-      expenseText={expenseText}
+      netWorth={netWorth}
+      income={income}
+      expense={expense}
+      currencyCode={currencyCode}
       successColor={successColor}
       errorColor={errorColor}
       borderColor={borderColor}
@@ -132,9 +137,10 @@ export const NetWorthTooltip = ({
 
 export const NetWorthTooltipContent = ({
   date,
-  netWorthText,
-  incomeText,
-  expenseText,
+  netWorth,
+  income,
+  expense,
+  currencyCode,
   successColor,
   errorColor,
   borderColor,
@@ -153,26 +159,40 @@ export const NetWorthTooltipContent = ({
         {formatDate(date)}
       </AppText>
 
-      <AppText variant="body" weight="bold" style={styles.tooltipNetWorth}>
-        {netWorthText}
-      </AppText>
+      <MoneyText
+        amount={netWorth}
+        currencyCode={currencyCode}
+        variant="body"
+        weight="bold"
+        style={styles.tooltipNetWorth}
+      />
 
       <View style={[styles.tooltipRow, { borderTopColor: borderColor }]}>
         <View style={styles.tooltipItem}>
           <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>
             {incomeLabel}
           </AppText>
-          <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {incomeText}
-          </AppText>
+          <MoneyText
+            amount={income}
+            currencyCode={currencyCode}
+            short
+            variant="caption"
+            weight="bold"
+            style={{ color: successColor }}
+          />
         </View>
         <View style={styles.tooltipItem}>
           <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>
             {expenseLabel}
           </AppText>
-          <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {expenseText}
-          </AppText>
+          <MoneyText
+            amount={expense}
+            currencyCode={currencyCode}
+            short
+            variant="caption"
+            weight="bold"
+            style={{ color: errorColor }}
+          />
         </View>
       </View>
 
@@ -195,8 +215,9 @@ interface IncomeExpenseTooltipProps {
   backgroundColor: string;
   borderColor: string;
   label: string;
-  incomeText: string;
-  expenseText: string;
+  income: number;
+  expense: number;
+  currencyCode: string;
   successColor: string;
   errorColor: string;
   onViewTransactions: () => void;
@@ -206,8 +227,9 @@ interface IncomeExpenseTooltipProps {
 
 interface IncomeExpenseTooltipContentProps {
   label: string;
-  incomeText: string;
-  expenseText: string;
+  income: number;
+  expense: number;
+  currencyCode: string;
   successColor: string;
   errorColor: string;
   incomeLabel: string;
@@ -222,8 +244,9 @@ export const IncomeExpenseTooltip = ({
   backgroundColor,
   borderColor,
   label,
-  incomeText,
-  expenseText,
+  income,
+  expense,
+  currencyCode,
   successColor,
   errorColor,
   onViewTransactions,
@@ -239,8 +262,9 @@ export const IncomeExpenseTooltip = ({
   >
     <IncomeExpenseTooltipContent
       label={label}
-      incomeText={incomeText}
-      expenseText={expenseText}
+      income={income}
+      expense={expense}
+      currencyCode={currencyCode}
       successColor={successColor}
       errorColor={errorColor}
       incomeLabel={incomeLabel}
@@ -253,8 +277,9 @@ export const IncomeExpenseTooltip = ({
 
 export const IncomeExpenseTooltipContent = ({
   label,
-  incomeText,
-  expenseText,
+  income,
+  expense,
+  currencyCode,
   successColor,
   errorColor,
   incomeLabel,
@@ -277,17 +302,27 @@ export const IncomeExpenseTooltipContent = ({
           <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>
             {incomeLabel}
           </AppText>
-          <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {incomeText}
-          </AppText>
+          <MoneyText
+            amount={income}
+            currencyCode={currencyCode}
+            short
+            variant="caption"
+            weight="bold"
+            style={{ color: successColor }}
+          />
         </View>
         <View style={styles.tooltipItem}>
           <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>
             {expenseLabel}
           </AppText>
-          <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {expenseText}
-          </AppText>
+          <MoneyText
+            amount={expense}
+            currencyCode={currencyCode}
+            short
+            variant="caption"
+            weight="bold"
+            style={{ color: errorColor }}
+          />
         </View>
       </View>
 
