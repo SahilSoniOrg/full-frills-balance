@@ -63,7 +63,7 @@ const TransactionCardComponent = ({
   contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ prefix: presentation.amountPrefix });
 
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
 
@@ -174,7 +174,6 @@ const TransactionCardComponent = ({
                   </Box>
 
                   <AppText variant="xl" weight="bold" tabular style={{ color: typeColor }}>
-                    {presentation.amountPrefix || ''}
                     {formattedAmount}
                   </AppText>
                 </Inline>

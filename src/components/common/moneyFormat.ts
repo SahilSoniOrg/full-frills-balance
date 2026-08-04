@@ -8,12 +8,11 @@ export const FORMAT_AMOUNT_LOADING = '---';
 /** Display styles for money amounts. `sts` = Safe-to-Spend (<0.5 thresholds). */
 export type MoneyFormatStyle = 'default' | 'short' | 'compact' | 'sts';
 
-type FormatMoneyOptions = {
+export type FormatMoneyOptions = {
   style?: MoneyFormatStyle;
   loading?: boolean;
+  prefix?: string;
 };
-
-export type UseMoneyFormatOptions = FormatMoneyOptions;
 
 /**
  * Safe-to-spend amount formatting with small-value handling (< 0.5).
@@ -42,37 +41,42 @@ export function formatMoneyAmount(
   isPrivacyMode: boolean,
   options: FormatMoneyOptions = {},
 ): string {
-  const { loading = false, style = 'default' } = options;
+  const { loading = false, style = 'default', prefix = '' } = options;
   if (loading) return FORMAT_AMOUNT_LOADING;
   if (isPrivacyMode) return AppConfig.privacyMask;
 
+  let formatted: string;
   switch (style) {
     case 'short':
-      return CurrencyFormatter.formatShort(amount, currencyCode);
+      formatted = CurrencyFormatter.formatShort(amount, currencyCode);
+      break;
     case 'compact':
-      return CurrencyFormatter.format(amount, currencyCode, {
+      formatted = CurrencyFormatter.format(amount, currencyCode, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       });
+      break;
     case 'sts':
-      return formatStsAmount(amount, currencyCode);
+      formatted = formatStsAmount(amount, currencyCode);
+      break;
     default:
-      return CurrencyFormatter.format(amount, currencyCode);
+      formatted = CurrencyFormatter.format(amount, currencyCode);
   }
+  return prefix ? `${prefix}${formatted}` : formatted;
 }
 
 /**
  * Privacy-aware number→string for surfaces that cannot host MoneyText
  * (e.g. SVG label concatenated with other text). Must run under PrivacyScopeProvider.
  */
-export function useMoneyFormat(options: UseMoneyFormatOptions = {}) {
+export function useMoneyFormat(options: FormatMoneyOptions = {}) {
   const { isPrivacyMode } = usePrivacyScope();
-  const { style, loading } = options;
+  const { style, loading, prefix } = options;
 
   return useCallback(
     (amount: number, currencyCode: string) =>
-      formatMoneyAmount(amount, currencyCode, isPrivacyMode, { style, loading }),
-    [isPrivacyMode, style, loading],
+      formatMoneyAmount(amount, currencyCode, isPrivacyMode, { style, loading, prefix }),
+    [isPrivacyMode, style, loading, prefix],
   );
 }
 
