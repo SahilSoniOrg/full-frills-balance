@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { ColorKey, Size, Spacing } from '@/src/constants';
-import { Box, Inline, Row } from '@/src/design-system';
+import { Box, Inline } from '@/src/design-system';
 import { JournalStatusChipVariant } from '@/src/services/journal/transactionDetailsHelpers';
 import React from 'react';
 
@@ -44,24 +44,14 @@ export const TransactionHero = React.memo(
           <AppIcon name={displayIcon as any} size={Size.xxl} color={amountColor} />
         </Box>
 
-        <Row alignItems="center" style={{ marginBottom: Spacing.xs }}>
-          {amountPrefix ? (
-            <AppText
-              variant="title"
-              color={amountColor as any}
-              style={{ fontSize: 32, fontWeight: '700' }}
-            >
-              {amountPrefix}
-            </AppText>
-          ) : null}
-          <MoneyText
-            amount={amount}
-            currencyCode={currencyCode}
-            variant="title"
-            color={amountColor as any}
-            style={{ fontSize: 32, fontWeight: '700' }}
-          />
-        </Row>
+        <MoneyText
+          amount={amount}
+          currencyCode={currencyCode}
+          prefix={amountPrefix || undefined}
+          variant="title"
+          color={amountColor as any}
+          style={{ fontSize: 32, fontWeight: '700', marginBottom: Spacing.xs }}
+        />
 
         <AppText
           variant="body"

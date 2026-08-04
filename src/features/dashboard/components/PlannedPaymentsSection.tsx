@@ -135,17 +135,15 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
                     </AppText>
                   </View>
                 </View>
-                <AppText variant="body" weight="medium" style={{ color: typeColor || theme.text }}>
-                  {chrome.amountPrefix || ''}
-                  <MoneyText
-                    amount={item.amount}
-                    currencyCode={item.currencyCode}
-                    formatStyle="compact"
-                    variant="body"
-                    weight="medium"
-                    style={{ color: typeColor || theme.text }}
-                  />
-                </AppText>
+                <MoneyText
+                  amount={item.amount}
+                  currencyCode={item.currencyCode}
+                  prefix={chrome.amountPrefix || undefined}
+                  formatStyle="compact"
+                  variant="body"
+                  weight="medium"
+                  style={{ color: typeColor || theme.text }}
+                />
               </TouchableOpacity>
             );
           })}

@@ -31,4 +31,16 @@ describe('formatStsAmount / formatMoneyAmount', () => {
   it('formats sts when not loading', () => {
     expect(formatMoneyAmount(100, 'USD', false, { style: 'sts', loading: false })).toBe('$100');
   });
+
+  it('prepends prefix when not in privacy mode', () => {
+    expect(formatMoneyAmount(100, 'USD', false, { prefix: '+' })).toBe('+$100.00');
+  });
+
+  it('masks prefix along with amount in privacy mode', () => {
+    expect(formatMoneyAmount(100, 'USD', true, { prefix: '-' })).toBe(AppConfig.privacyMask);
+  });
+
+  it('omits prefix when empty string', () => {
+    expect(formatMoneyAmount(100, 'USD', false, { prefix: '' })).toBe('$100.00');
+  });
 });

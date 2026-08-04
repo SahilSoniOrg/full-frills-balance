@@ -1,4 +1,4 @@
-import { SvgMoneyText } from '@/src/components/common/SvgMoneyText';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -20,7 +20,7 @@ import Svg, {
 } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
-/** Axis / today labels use SvgMoneyText — host must be under PrivacyScopeProvider. */
+/** Axis / today labels use useMoneyFormat — host must be under PrivacyScopeProvider. */
 export interface DataPoint {
   x: number; // timestamp
   y: number; // value
@@ -109,6 +109,7 @@ export const LineChart = <T extends DataPoint>({
   currencyCode,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
+  const formatMoneyShort = useMoneyFormat({ style: 'short' });
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
   const resolvedSecondaryColor = resolveThemeColor(theme, secondaryColor);
   const { width: windowWidth } = Dimensions.get('window');
@@ -359,16 +360,15 @@ export const LineChart = <T extends DataPoint>({
                       strokeDasharray="4,4"
                       opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
                     />
-                    <SvgMoneyText
-                      amount={val}
-                      currencyCode={currencyCode}
-                      formatStyle="short"
+                    <SvgText
                       x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
                       y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
                       fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
                       fill={theme.textSecondary}
                       textAnchor="end"
-                    />
+                    >
+                      {formatMoneyShort(val, currencyCode)}
+                    </SvgText>
                   </React.Fragment>
                 );
               })}
@@ -451,17 +451,16 @@ export const LineChart = <T extends DataPoint>({
                               stroke={theme.surface}
                               strokeWidth={1}
                             />
-                            <SvgMoneyText
-                              amount={todayPoint.y}
-                              currencyCode={currencyCode}
-                              formatStyle="short"
+                            <SvgText
                               x={x + 4}
                               y={y - 8}
                               fontSize={11}
                               fontWeight="bold"
                               fill={chartColor}
                               textAnchor="start"
-                            />
+                            >
+                              {formatMoneyShort(todayPoint.y, currencyCode)}
+                            </SvgText>
                           </React.Fragment>
                         );
                       })()}

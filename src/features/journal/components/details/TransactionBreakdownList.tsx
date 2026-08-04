@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { Section } from '@/src/components/common/Section';
-import { AppIcon, AppText, ListRow } from '@/src/components/core';
+import { AppIcon, ListRow } from '@/src/components/core';
 import { Size, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { TransactionSplitItemViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
@@ -62,17 +62,13 @@ export const TransactionBreakdownList = React.memo(
             }
             trailing={
               <Inline space="xs" alignItems="center">
-                <Inline space={0} alignItems="center">
-                  <AppText variant="subheading" color={item.amountColor as any}>
-                    {item.amountPrefix}
-                  </AppText>
-                  <MoneyText
-                    amount={item.amount}
-                    currencyCode={item.currencyCode}
-                    variant="subheading"
-                    color={item.amountColor as any}
-                  />
-                </Inline>
+                <MoneyText
+                  amount={item.amount}
+                  currencyCode={item.currencyCode}
+                  prefix={item.amountPrefix}
+                  variant="subheading"
+                  color={item.amountColor as any}
+                />
                 <AppIcon
                   name="chevronRight"
                   size={Typography.sizes.sm}
