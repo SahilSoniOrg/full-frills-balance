@@ -11,6 +11,7 @@ export type ReportLegendRow = {
   accountName: string;
   percentage: number;
   amount: number;
+  amountText: string;
 };
 
 export type ReportBreakdownViewState = {

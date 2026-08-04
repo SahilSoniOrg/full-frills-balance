@@ -16,6 +16,13 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   }),
 }));
 
+jest.mock('@/src/contexts/PrivacyScope', () => ({
+  usePrivacyScope: () => ({
+    isPrivacyMode: false,
+    togglePrivacyMode: jest.fn(),
+  }),
+}));
+
 // Mock dependencies
 jest.mock('@/src/hooks/use-theme', () => {
   const theme = {
@@ -34,6 +41,8 @@ jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
     format: (val: number) => `$${val}`,
     formatWithPreference: (val: number) => `$${val}`,
+    formatOrMask: (val: number) => `$${val}`,
+    formatShortOrMask: (val: number) => `$${val}`,
   },
 }));
 

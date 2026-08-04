@@ -131,7 +131,9 @@ export function BudgetDetailHeader({
                 domainX={chartData.domainX}
                 width={chartWidth}
                 color={stripColor}
-                hideLabels={isPrivacyMode}
+                formatValue={value =>
+                  CurrencyFormatter.formatShortOrMask(value, budget.currencyCode, isPrivacyMode)
+                }
                 renderTooltipContent={index => {
                   const point = chartData.data[index];
                   if (!point) return null;

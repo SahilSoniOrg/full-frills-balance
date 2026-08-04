@@ -6,7 +6,6 @@ import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface LegendRow {
@@ -14,7 +13,7 @@ interface LegendRow {
   color: string;
   accountName: string;
   percentage: number;
-  amount: number;
+  amountText: string;
 }
 
 interface BreakdownDonutCardProps {
@@ -26,11 +25,8 @@ interface BreakdownDonutCardProps {
   expanded: boolean;
   onToggleExpansion: () => void;
   onLegendRowPress: (accountId: AccountId) => void;
-  currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
 }
 
 const DEFAULT_DONUT_SIZE = REPORT_CHART_LAYOUT.donutSize;
@@ -44,10 +40,8 @@ export function BreakdownDonutCard({
   expanded,
   onToggleExpansion,
   onLegendRowPress,
-  currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
-  isPrivacyMode,
 }: BreakdownDonutCardProps) {
   const { theme } = useTheme();
 
@@ -73,7 +67,7 @@ export function BreakdownDonutCard({
                 {row.percentage}%
               </AppText>
               <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {CurrencyFormatter.formatOrMask(row.amount, currencyCode, isPrivacyMode)}
+                {row.amountText}
               </AppText>
             </View>
           </TouchableOpacity>

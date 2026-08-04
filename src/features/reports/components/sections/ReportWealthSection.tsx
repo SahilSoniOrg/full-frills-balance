@@ -14,10 +14,14 @@ const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 interface ReportWealthSectionProps {
   vm: ReportWealthTabVm;
   chartWidth: number;
-  isPrivacyMode: boolean;
+  formatMoneyShort: (amount: number) => string;
 }
 
-export function ReportWealthSection({ vm, chartWidth, isPrivacyMode }: ReportWealthSectionProps) {
+export function ReportWealthSection({
+  vm,
+  chartWidth,
+  formatMoneyShort,
+}: ReportWealthSectionProps) {
   const { theme } = useTheme();
   const { wealthAreaSeries, barChartData, dailyData, targetCurrency, onViewTransactions } = vm;
 
@@ -36,20 +40,18 @@ export function ReportWealthSection({ vm, chartWidth, isPrivacyMode }: ReportWea
             day: 'numeric',
             year: 'numeric',
           })}
-          income={data.assets}
-          expense={data.liabilities}
-          currencyCode={targetCurrency}
+          incomeText={formatMoneyShort(data.assets)}
+          expenseText={formatMoneyShort(data.liabilities)}
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={() => onViewTransactions(data.date)}
           incomeLabel={AppConfig.strings.reports.assets}
           expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
-          isPrivacyMode={isPrivacyMode}
         />
       );
     },
-    [dailyData, theme, targetCurrency, onViewTransactions, isPrivacyMode],
+    [dailyData, theme, onViewTransactions, formatMoneyShort],
   );
 
   return (
@@ -95,7 +97,7 @@ export function ReportWealthSection({ vm, chartWidth, isPrivacyMode }: ReportWea
             onPress={setSelectedBarIndex}
             selectedIndex={selectedBarIndex}
             renderTooltipContent={renderAreaTooltip}
-            hideLabels={isPrivacyMode}
+            formatValue={formatMoneyShort}
           />
         </View>
       </ReportChartCard>

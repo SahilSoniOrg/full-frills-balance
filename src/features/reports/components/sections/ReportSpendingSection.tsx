@@ -11,14 +11,10 @@ import { StyleSheet } from 'react-native';
 interface ReportSpendingSectionProps {
   vm: ReportSpendingTabVm;
   chartWidth: number;
-  isPrivacyMode: boolean;
+  formatMoney: (amount: number) => string;
 }
 
-export function ReportSpendingSection({
-  vm,
-  chartWidth,
-  isPrivacyMode,
-}: ReportSpendingSectionProps) {
+export function ReportSpendingSection({ vm, chartWidth, formatMoney }: ReportSpendingSectionProps) {
   const {
     expenseViewState,
     expenseCategoryViewState,
@@ -48,8 +44,6 @@ export function ReportSpendingSection({
             expanded={expandedExpenses}
             onToggleExpansion={toggleExpenseExpansion}
             onLegendRowPress={onLegendRowPress}
-            currencyCode={targetCurrency}
-            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -66,8 +60,6 @@ export function ReportSpendingSection({
             expanded={expandedExpenseCategories}
             onToggleExpansion={toggleExpenseCategoryExpansion}
             onLegendRowPress={onCategoryPress}
-            currencyCode={targetCurrency}
-            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -84,8 +76,6 @@ export function ReportSpendingSection({
             expanded={expandedIncomeCategories}
             onToggleExpansion={toggleIncomeCategoryExpansion}
             onLegendRowPress={onCategoryPress}
-            currencyCode={targetCurrency}
-            isPrivacyMode={isPrivacyMode}
           />
         ) : (
           <ReportNoData />
@@ -97,7 +87,7 @@ export function ReportSpendingSection({
           data={spendingHeatmap}
           width={chartWidth}
           currency={targetCurrency}
-          hideLabels={isPrivacyMode}
+          formatValue={formatMoney}
         />
         <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
           {AppConfig.strings.reports.heatmapSubtitle}
@@ -109,7 +99,7 @@ export function ReportSpendingSection({
           data={calendarHeatmap}
           width={chartWidth}
           currency={targetCurrency}
-          hideLabels={isPrivacyMode}
+          formatValue={formatMoney}
         />
       </ReportChartCard>
     </>

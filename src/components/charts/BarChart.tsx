@@ -28,7 +28,8 @@ interface BarChartProps {
   renderTooltipContent?: (index: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  hideLabels?: boolean;
+  /** Formats Y-axis tick values. Defaults to CurrencyFormatter.formatShort. */
+  formatValue?: (value: number) => string;
 }
 
 export const BarChart = ({
@@ -42,7 +43,7 @@ export const BarChart = ({
   tooltipWidth,
   tooltipHeight,
   currencyCode,
-  hideLabels,
+  formatValue,
 }: BarChartProps) => {
   const { theme } = useTheme();
   const { width: windowWidth } = Dimensions.get('window');
@@ -178,8 +179,8 @@ export const BarChart = ({
                 style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
               >
                 <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                  {hideLabels
-                    ? AppConfig.privacyMask
+                  {formatValue
+                    ? formatValue(tickValue)
                     : CurrencyFormatter.formatShort(tickValue, currencyCode)}
                 </AppText>
               </View>
