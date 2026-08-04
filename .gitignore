@@ -70,3 +70,4 @@ artifacts/
 
 # Local agent artifacts (not product source)
 .gstack/
+.scratch/
