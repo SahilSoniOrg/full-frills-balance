@@ -1,6 +1,6 @@
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useScreenPrivacyMode } from '@/src/hooks/useScreenPrivacyMode';
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, type ComponentType } from 'react';
 
 export type PrivacyScopeValue = {
   isPrivacyMode: boolean;
@@ -26,6 +26,20 @@ export function PrivacyScopeProvider({ children }: { children: React.ReactNode }
   );
 
   return <PrivacyScopeContext.Provider value={value}>{children}</PrivacyScopeContext.Provider>;
+}
+
+/** Wrap a screen so its hooks run under PrivacyScopeProvider (no Content split). */
+export function withPrivacyScope<P extends object>(Component: ComponentType<P>): ComponentType<P> {
+  function Wrapped(props: P) {
+    return (
+      <PrivacyScopeProvider>
+        <Component {...props} />
+      </PrivacyScopeProvider>
+    );
+  }
+  const name = Component.displayName ?? Component.name ?? 'Component';
+  Wrapped.displayName = `withPrivacyScope(${name})`;
+  return Wrapped;
 }
 
 /**

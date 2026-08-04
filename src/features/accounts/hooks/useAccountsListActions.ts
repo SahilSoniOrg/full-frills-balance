@@ -6,7 +6,6 @@ import {
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
-import { traceService } from '@/src/utils/TraceService';
 import { Dispatch, SetStateAction, useCallback } from 'react';
 
 type AccountListItem = Account | PlainAccount;
@@ -17,7 +16,6 @@ interface UseAccountsListActionsInput {
   expandedAccountIds: Set<AccountId>;
   setExpandedAccountIds: Dispatch<SetStateAction<Set<AccountId>>>;
   activeTab: AccountsListTab;
-  togglePrivacyMode: () => void;
 }
 
 export function useAccountsListActions({
@@ -26,7 +24,6 @@ export function useAccountsListActions({
   expandedAccountIds,
   setExpandedAccountIds,
   activeTab,
-  togglePrivacyMode,
 }: UseAccountsListActionsInput) {
   const onAccountPress = useCallback(
     (accountId: AccountId) => {
@@ -72,16 +69,10 @@ export function useAccountsListActions({
     AppNavigation.toManageHierarchy({ filterMode: activeTab });
   }, [activeTab]);
 
-  const onTogglePrivacy = useCallback(() => {
-    traceService.startTrace('Toggle Privacy Mode');
-    togglePrivacyMode();
-  }, [togglePrivacyMode]);
-
   return {
     onAccountPress,
     onCreateAccount,
     onReorderPress,
     onManageHierarchy,
-    onTogglePrivacy,
   };
 }

@@ -3,7 +3,6 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccountsListActions } from '../useAccountsListActions';
 import { AccountBalance, AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
-import { traceService } from '@/src/utils/TraceService';
 
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
@@ -13,10 +12,6 @@ jest.mock('@/src/utils/navigation', () => ({
     toAccountReorder: jest.fn(),
     toManageHierarchy: jest.fn(),
   },
-}));
-
-jest.mock('@/src/utils/TraceService', () => ({
-  traceService: { startTrace: jest.fn() },
 }));
 
 describe('useAccountsListActions', () => {
@@ -51,7 +46,6 @@ describe('useAccountsListActions', () => {
         expandedAccountIds: new Set(),
         setExpandedAccountIds,
         activeTab: 'accounts',
-        togglePrivacyMode: jest.fn(),
       }),
     );
 
@@ -73,7 +67,6 @@ describe('useAccountsListActions', () => {
         expandedAccountIds: new Set([parentId]),
         setExpandedAccountIds: jest.fn(),
         activeTab: 'accounts',
-        togglePrivacyMode: jest.fn(),
       }),
     );
 
@@ -97,7 +90,6 @@ describe('useAccountsListActions', () => {
       expandedAccountIds: new Set<AccountId>(),
       setExpandedAccountIds: jest.fn(),
       activeTab: 'categories' as const,
-      togglePrivacyMode: jest.fn(),
     };
     const { result } = renderHook(() => useAccountsListActions(input));
 
@@ -105,12 +97,10 @@ describe('useAccountsListActions', () => {
       result.current.onCreateAccount();
       result.current.onReorderPress();
       result.current.onManageHierarchy();
-      result.current.onTogglePrivacy();
     });
 
     expect(AppNavigation.toCategoryCreation).toHaveBeenCalled();
     expect(AppNavigation.toAccountReorder).toHaveBeenCalledWith('categories');
     expect(AppNavigation.toManageHierarchy).toHaveBeenCalledWith({ filterMode: 'categories' });
-    expect(traceService.startTrace).toHaveBeenCalledWith('Toggle Privacy Mode');
   });
 });

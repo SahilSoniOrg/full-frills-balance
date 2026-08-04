@@ -1,5 +1,6 @@
 import { CashFlowCard } from '@/src/components/common/CashFlowCard';
 import { NetWorthCard } from '@/src/components/common/NetWorthCard';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import {
   AppIcon,
   AppTabs,
@@ -33,7 +34,6 @@ export function AccountsListView({
   onCreateAccount,
   onReorderPress,
   onManageHierarchy,
-  onTogglePrivacy,
   isPrivacyMode,
   isLoading,
   netWorth,
@@ -58,13 +58,7 @@ export function AccountsListView({
     <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
       {!isSearching ? (
         <>
-          <IconButton
-            name={isPrivacyMode ? 'eyeOff' : 'eye'}
-            size={Size.iconSm}
-            variant="surface"
-            onPress={onTogglePrivacy}
-            accessibilityLabel={isPrivacyMode ? 'Show balances' : 'Hide balances'}
-          />
+          <PrivacyToggleButton />
           <IconButton
             name="reorder"
             size={Size.iconSm}
@@ -177,7 +171,6 @@ export function AccountsListView({
                   currencyCode={currencyCode}
                   isLoading={isLoading}
                   isPrivacyMode={isPrivacyMode}
-                  onTogglePrivacy={onTogglePrivacy}
                 />
               </View>
             ) : (
@@ -190,7 +183,6 @@ export function AccountsListView({
                   currencyCode={currencyCode}
                   isLoading={isLoading || isPeriodLoading}
                   isPrivacyMode={isPrivacyMode}
-                  onTogglePrivacy={onTogglePrivacy}
                 />
               </View>
             )

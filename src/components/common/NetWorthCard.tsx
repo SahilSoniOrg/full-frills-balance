@@ -1,8 +1,8 @@
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppCard, AppText } from '@/src/components/core';
+import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface NetWorthCardProps {
   netWorth: number;
@@ -12,7 +12,6 @@ interface NetWorthCardProps {
   isLoading?: boolean;
   /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
   isPrivacyMode: boolean;
-  onTogglePrivacy?: () => void;
 }
 
 export const NetWorthCard = ({
@@ -22,7 +21,6 @@ export const NetWorthCard = ({
   currencyCode,
   isLoading = false,
   isPrivacyMode,
-  onTogglePrivacy,
 }: NetWorthCardProps) => {
   const { theme, fonts } = useTheme();
 
@@ -46,18 +44,6 @@ export const NetWorthCard = ({
         <AppText variant="subheading" color="secondary">
           Net Worth
         </AppText>
-        {onTogglePrivacy ? (
-          <TouchableOpacity
-            onPress={onTogglePrivacy}
-            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-          >
-            <AppIcon
-              name={isPrivacyMode ? 'eyeOff' : 'eye'}
-              size={Size.sm}
-              color={theme.textTertiary}
-            />
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       <AppText variant="title" style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}>

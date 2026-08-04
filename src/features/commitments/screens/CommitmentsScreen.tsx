@@ -2,7 +2,7 @@ import { AppTabs, FloatingActionButton } from '@/src/components/core';
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { Screen } from '@/src/components/layout';
-import { PrivacyScopeProvider, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
@@ -12,15 +12,7 @@ import { useMemo, useState } from 'react';
 
 type Tab = 'budgets' | 'planned';
 
-export default function CommitmentsScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <CommitmentsScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function CommitmentsScreenContent() {
+function CommitmentsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
   const { workplaceId } = useWorkplace();
   const { items: budgetItems } = useBudgetListViewModel(workplaceId);
@@ -93,3 +85,5 @@ function CommitmentsScreenContent() {
     </Screen>
   );
 }
+
+export default withPrivacyScope(CommitmentsScreen);

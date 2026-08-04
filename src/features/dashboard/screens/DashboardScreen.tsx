@@ -1,4 +1,4 @@
-import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
+import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { DashboardScreenView } from '@/src/features/dashboard/components/DashboardScreenView';
 import { useDashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { analytics } from '@/src/services/analytics-service';
@@ -7,15 +7,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useScrollToTop } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef } from 'react';
 
-export default function DashboardScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <DashboardScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function DashboardScreenContent() {
+function DashboardScreen() {
   const vm = useDashboardViewModel();
   const listRef = useRef(null);
 
@@ -72,3 +64,5 @@ function DashboardScreenContent() {
     />
   );
 }
+
+export default withPrivacyScope(DashboardScreen);

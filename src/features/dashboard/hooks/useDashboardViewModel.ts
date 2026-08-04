@@ -37,8 +37,6 @@ export interface DashboardViewModel {
   headerProps: {
     greeting: string;
     notificationCount: number;
-    isPrivacyMode: boolean;
-    onTogglePrivacy: () => void;
     onNotificationsPress: () => void;
     unreadSmsCount?: number;
     onSmsPress?: () => void;
@@ -73,8 +71,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { userName } = useProfilePrefs();
   const { isSmsImportEnabled } = useSmsPrefs();
   const { showSafeToSpendChart } = useDashboardPreferences();
-  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode: onTogglePrivacy } =
-    usePrivacyScope();
+  const { isPrivacyMode: isLocalPrivacyMode } = usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -203,8 +200,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => ({
       greeting,
       notificationCount: totalNotifications,
-      isPrivacyMode: isLocalPrivacyMode,
-      onTogglePrivacy,
       onNotificationsPress: AppNavigation.toHub,
       unreadSmsCount: unreadSmsCount || 0,
       onSmsPress:
@@ -213,14 +208,7 @@ export function useDashboardViewModel(): DashboardViewModel {
           : undefined,
       onSearchPress: AppNavigation.toJournalSearch,
     }),
-    [
-      greeting,
-      totalNotifications,
-      isLocalPrivacyMode,
-      onTogglePrivacy,
-      unreadSmsCount,
-      isSmsImportEnabled,
-    ],
+    [greeting, totalNotifications, unreadSmsCount, isSmsImportEnabled],
   );
 
   // Memoize fab object to prevent re-renders

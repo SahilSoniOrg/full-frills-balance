@@ -2,7 +2,7 @@ import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
+import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
@@ -13,15 +13,7 @@ import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-export default function JournalScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <JournalScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function JournalScreenContent() {
+function JournalScreen() {
   const { workplaceId } = useWorkplace();
   const initialDateRange = useJournalRouteDateRange();
   const canGoBack = router.canGoBack();
@@ -110,3 +102,5 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
 });
+
+export default withPrivacyScope(JournalScreen);

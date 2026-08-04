@@ -1,3 +1,4 @@
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { AppText, IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
@@ -10,8 +11,6 @@ interface DashboardHeaderProps {
   onNotificationsPress?: () => void;
   unreadSmsCount?: number;
   onSmsPress?: () => void;
-  isPrivacyMode: boolean;
-  onTogglePrivacy: () => void;
   onSearchPress?: () => void;
 }
 
@@ -21,8 +20,6 @@ export function DashboardHeader({
   onNotificationsPress,
   unreadSmsCount = 0,
   onSmsPress,
-  isPrivacyMode,
-  onTogglePrivacy,
   onSearchPress,
 }: DashboardHeaderProps) {
   const { theme } = useTheme();
@@ -37,14 +34,7 @@ export function DashboardHeader({
         </Box>
 
         <Inline align="center" space="xs">
-          <IconButton
-            name={isPrivacyMode ? 'eyeOff' : 'eye'}
-            size={Size.iconSm}
-            variant="clear"
-            onPress={onTogglePrivacy}
-            accessibilityLabel={isPrivacyMode ? 'Show balances' : 'Hide balances'}
-            iconColor={theme.text}
-          />
+          <PrivacyToggleButton variant="clear" />
           {onSearchPress && (
             <IconButton
               name="search"

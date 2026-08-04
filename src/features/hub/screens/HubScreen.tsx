@@ -2,7 +2,7 @@ import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Size } from '@/src/constants';
-import { PrivacyScopeProvider, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
@@ -14,15 +14,7 @@ import { useMemo, useState } from 'react';
 
 type Tab = 'active' | 'dismissed';
 
-export default function HubScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <HubScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function HubScreenContent() {
+function HubScreen() {
   const { strings } = AppConfig;
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
@@ -141,3 +133,5 @@ function HubScreenContent() {
     </Screen>
   );
 }
+
+export default withPrivacyScope(HubScreen);
