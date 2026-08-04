@@ -1,4 +1,5 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -13,7 +14,7 @@ interface LegendRow {
   color: string;
   accountName: string;
   percentage: number;
-  amountText: string;
+  amount: number;
 }
 
 interface BreakdownDonutCardProps {
@@ -25,6 +26,7 @@ interface BreakdownDonutCardProps {
   expanded: boolean;
   onToggleExpansion: () => void;
   onLegendRowPress: (accountId: AccountId) => void;
+  currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
 }
@@ -40,6 +42,7 @@ export function BreakdownDonutCard({
   expanded,
   onToggleExpansion,
   onLegendRowPress,
+  currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
 }: BreakdownDonutCardProps) {
@@ -66,9 +69,13 @@ export function BreakdownDonutCard({
               <AppText variant="body" weight="bold">
                 {row.percentage}%
               </AppText>
-              <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {row.amountText}
-              </AppText>
+              <MoneyText
+                amount={row.amount}
+                currencyCode={currencyCode}
+                variant="caption"
+                color="secondary"
+                style={styles.amountText}
+              />
             </View>
           </TouchableOpacity>
         ))}
