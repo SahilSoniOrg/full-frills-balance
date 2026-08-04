@@ -37,6 +37,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
+  const formatLabel =
+    formatValue ?? ((value: number) => CurrencyFormatter.formatAmount(value, currency));
 
   const HOURS_DETAILED = [
     '12a',
@@ -248,9 +250,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {formatValue
-                        ? formatValue(selectedPoint.value)
-                        : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
+                      {formatLabel(selectedPoint.value)}
                     </AppText>
                   </View>
                 )}

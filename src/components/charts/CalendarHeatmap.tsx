@@ -45,6 +45,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
 
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
+  const formatLabel =
+    formatValue ?? ((value: number) => CurrencyFormatter.formatAmount(value, currency));
 
   const PADDING_LEFT = REPORT_CHART_LAYOUT.calendarPaddingLeft; // Increased for month labels
   const PADDING_TOP = REPORT_CHART_LAYOUT.calendarPaddingTop;
@@ -307,9 +309,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
                     >
-                      {formatValue
-                        ? formatValue(selectedPoint.value)
-                        : CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
+                      {formatLabel(selectedPoint.value)}
                     </AppText>
                   </View>
                 )}

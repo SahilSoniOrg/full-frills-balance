@@ -48,6 +48,8 @@ export const BarChart = ({
   const { theme } = useTheme();
   const { width: windowWidth } = Dimensions.get('window');
   const [scrollX, setScrollX] = useState(0);
+  const formatLabel =
+    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   const containerWidth = customWidth || windowWidth - Spacing.lg * 2;
   const Y_AXIS_WIDTH = Spacing.xl * 2;
@@ -179,9 +181,7 @@ export const BarChart = ({
                 style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
               >
                 <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                  {formatValue
-                    ? formatValue(tickValue)
-                    : CurrencyFormatter.formatShort(tickValue, currencyCode)}
+                  {formatLabel(tickValue)}
                 </AppText>
               </View>
             );
