@@ -1,5 +1,4 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
@@ -23,9 +22,9 @@ interface AccountDetailsHeaderProps {
   isDeleted: boolean;
   subAccountCount: number;
   onShowSubAccounts: () => void;
-  balanceText: string;
+  balanceAmount: number | null;
   currencyCode: string;
-  secondaryBalances: { amountText: string }[];
+  secondaryBalances: { currencyCode: string; amount: number }[];
   transactionCountText: string;
   reconciledAt: Date | null;
   dateRange: DateRange | null;
@@ -35,10 +34,10 @@ interface AccountDetailsHeaderProps {
   chartData: { x: number; y: number }[];
   rollingAverageData: { x: number; y: number }[];
   xTicks: number[];
-  periodMetricsFormatted: {
-    totalIncreaseText: string;
-    totalDecreaseText: string;
-    dailyAverageText: string | null;
+  periodMetrics: {
+    totalIncrease: number;
+    totalDecrease: number;
+    dailyAverage: number | null;
     isLoading: boolean;
   };
 }
@@ -54,7 +53,7 @@ export function AccountDetailsHeader({
   isDeleted,
   subAccountCount,
   onShowSubAccounts,
-  balanceText,
+  balanceAmount,
   secondaryBalances,
   transactionCountText,
   reconciledAt,
@@ -65,11 +64,10 @@ export function AccountDetailsHeader({
   chartData,
   rollingAverageData,
   xTicks,
-  periodMetricsFormatted,
+  periodMetrics,
   currencyCode,
 }: AccountDetailsHeaderProps) {
   const { theme } = useTheme();
-  const { isPrivacyMode } = usePrivacyScope();
 
   return (
     <View style={styles.headerListRegion}>
@@ -115,12 +113,22 @@ export function AccountDetailsHeader({
             <AppText variant="caption" color="secondary">
               Current Balance
             </AppText>
-            <AppText variant="heading">{balanceText}</AppText>
+            {balanceAmount === null ? (
+              <AppText variant="heading">...</AppText>
+            ) : (
+              <MoneyText amount={balanceAmount} currencyCode={currencyCode} variant="heading" />
+            )}
             {secondaryBalances.length > 0 ? (
               <View style={styles.secondaryBalances}>
                 {secondaryBalances.map((balance, index) => (
                   <AppText key={index} variant="caption" color="secondary">
-                    + {balance.amountText}
+                    +{' '}
+                    <MoneyText
+                      amount={balance.amount}
+                      currencyCode={balance.currencyCode}
+                      variant="caption"
+                      color="secondary"
+                    />
                   </AppText>
                 ))}
               </View>
@@ -236,9 +244,13 @@ export function AccountDetailsHeader({
                 ? 'Total Spent'
                 : 'Total In'}
           </AppText>
-          <AppText variant="heading" color="income">
-            {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalIncreaseText}
-          </AppText>
+          <MoneyText
+            amount={periodMetrics.totalIncrease}
+            currencyCode={currencyCode}
+            variant="heading"
+            color="income"
+            loading={periodMetrics.isLoading}
+          />
         </View>
         <View style={styles.metricItem}>
           <AppText variant="caption" color="secondary">
@@ -248,25 +260,26 @@ export function AccountDetailsHeader({
                 ? 'Total Paid'
                 : 'Total Out'}
           </AppText>
-          <AppText variant="heading" color="expense">
-            {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalDecreaseText}
-          </AppText>
+          <MoneyText
+            amount={periodMetrics.totalDecrease}
+            currencyCode={currencyCode}
+            variant="heading"
+            color="expense"
+            loading={periodMetrics.isLoading}
+          />
         </View>
-        {periodMetricsFormatted.dailyAverageText ? (
+        {periodMetrics.dailyAverage !== null ? (
           <View style={styles.metricItem}>
             <AppText variant="caption" color="secondary">
               Daily Avg
             </AppText>
-            <AppText
+            <MoneyText
+              amount={periodMetrics.dailyAverage}
+              currencyCode={currencyCode}
               variant="heading"
-              color={
-                !isPrivacyMode && periodMetricsFormatted.dailyAverageText.startsWith('-')
-                  ? 'expense'
-                  : 'income'
-              }
-            >
-              {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.dailyAverageText}
-            </AppText>
+              color={periodMetrics.dailyAverage < 0 ? 'expense' : 'income'}
+              loading={periodMetrics.isLoading}
+            />
           </View>
         ) : null}
       </View>

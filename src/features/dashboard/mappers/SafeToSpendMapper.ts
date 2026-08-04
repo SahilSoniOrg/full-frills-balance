@@ -7,7 +7,6 @@ import { selectIncomeEntries } from '@/src/services/simulation/selectors/income'
 import { ResolvedCopy, SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface MapperOptions {
-  isPrivacyMode: boolean;
   isLoading: boolean;
   currencyCode: string;
 }
@@ -25,13 +24,13 @@ export interface SafeToSpendMapperInput {
 export class SafeToSpendMapper {
   /**
    * Maps a raw SafeToSpendDashboard into a UI-ready ViewModel.
-   * Raw numeric fields + privacy/loading flags only — leaves format in components.
+   * Raw numeric fields + loading flag — display masking via MoneyText / useMoneyFormat.
    */
   static mapToViewModel(
     result: SafeToSpendMapperInput,
     options: MapperOptions,
   ): SafeToSpendViewModel {
-    const { isPrivacyMode, isLoading, currencyCode } = options;
+    const { isLoading, currencyCode } = options;
 
     if (!result.report) {
       // Fallback for missing report (prevents component crash)
@@ -57,7 +56,6 @@ export class SafeToSpendMapper {
         liquidAssetSubtypes: result.liquidAssetSubtypes || [],
         isOverCommitted: false,
         isPositiveSafeToSpend: false,
-        isPrivacyMode,
         isLoading: true,
         safeToSpendDays: result.safeToSpendDays || 60,
         labels: SafeToSpendMapper.resolveLabels(
@@ -125,7 +123,6 @@ export class SafeToSpendMapper {
 
       isOverCommitted,
       isPositiveSafeToSpend,
-      isPrivacyMode,
       isLoading,
       safeToSpendDays: result.safeToSpendDays,
       labels: SafeToSpendMapper.resolveLabels(
@@ -137,7 +134,7 @@ export class SafeToSpendMapper {
         result.safeToSpendDays,
       ),
 
-      // Derived UI Groupings — raw amounts; display masking via isPrivacyMode + formatAmount
+      // Derived UI Groupings — raw amounts; display via MoneyText / useMoneyFormat
       income: selectIncomeEntries(report.allFlows),
       committed: selectCommittedEntries(report.allFlows, accountMap, firstMajorInflowDay),
       debt: selectDebtEntries(report.allFlows, accountMap),

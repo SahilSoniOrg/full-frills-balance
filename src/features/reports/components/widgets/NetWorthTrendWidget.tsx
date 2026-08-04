@@ -1,4 +1,5 @@
 import { LineChart } from '@/src/components/charts/LineChart';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
@@ -21,7 +22,7 @@ export interface NetWorthTrendWidgetProps {
     assets: number;
     liabilities: number;
   }[];
-  displayedNetWorthText: string;
+  currentNetWorth: number;
   currencyCode: string;
   chartWidth: number;
   onViewTransactions: (date: number) => void;
@@ -29,7 +30,7 @@ export interface NetWorthTrendWidgetProps {
 
 export function NetWorthTrendWidget({
   series,
-  displayedNetWorthText,
+  currentNetWorth,
   currencyCode,
   chartWidth,
   onViewTransactions,
@@ -80,7 +81,7 @@ export function NetWorthTrendWidget({
           <AppText variant="caption" color="secondary">
             {AppConfig.strings.reports.netWorthChange}
           </AppText>
-          <AppText variant="heading">{displayedNetWorthText}</AppText>
+          <MoneyText amount={currentNetWorth} currencyCode={currencyCode} variant="heading" />
         </View>
       }
     >

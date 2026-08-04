@@ -19,7 +19,6 @@ import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
 export function DashboardScreenView({
   hasCompletedOnboarding,
-  isPrivacyMode,
   recentTransactions,
   plannedOccurrences,
   headerProps,
@@ -39,7 +38,6 @@ export function DashboardScreenView({
       setExpandedSection: explanationModalState.setExpandedSection,
       selectedLegendItem: legendModalState.selectedItem,
       setSelectedLegendItem: legendModalState.setSelectedItem,
-      isPrivacyMode,
     }),
     [
       explanationModalState.visible,
@@ -48,7 +46,6 @@ export function DashboardScreenView({
       explanationModalState.setExpandedSection,
       legendModalState.selectedItem,
       legendModalState.setSelectedItem,
-      isPrivacyMode,
     ],
   );
 

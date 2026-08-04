@@ -5,21 +5,15 @@ import { useCallback } from 'react';
 
 export const FORMAT_AMOUNT_LOADING = '---';
 
+/** Display styles for money amounts. `sts` = Safe-to-Spend (<0.5 thresholds). */
 export type MoneyFormatStyle = 'default' | 'short' | 'compact' | 'sts';
 
 type FormatMoneyOptions = {
   style?: MoneyFormatStyle;
   loading?: boolean;
-  /** Alias for `style: 'short'`. */
-  short?: boolean;
 };
 
 export type UseMoneyFormatOptions = FormatMoneyOptions;
-
-function resolveStyle(options: FormatMoneyOptions): MoneyFormatStyle {
-  if (options.short) return 'short';
-  return options.style ?? 'default';
-}
 
 /**
  * Safe-to-spend amount formatting with small-value handling (< 0.5).
@@ -41,18 +35,17 @@ export function formatStsAmount(raw: number, currency: string): string {
   });
 }
 
-/** Privacy-aware number→string. Use when not under a React tree (tests, mappers). */
+/** Privacy-aware number→string. Use when not under a React tree (tests, alerts). */
 export function formatMoneyAmount(
   amount: number,
   currencyCode: string,
   isPrivacyMode: boolean,
   options: FormatMoneyOptions = {},
 ): string {
-  const { loading = false } = options;
+  const { loading = false, style = 'default' } = options;
   if (loading) return FORMAT_AMOUNT_LOADING;
   if (isPrivacyMode) return AppConfig.privacyMask;
 
-  const style = resolveStyle(options);
   switch (style) {
     case 'short':
       return CurrencyFormatter.formatShort(amount, currencyCode);
@@ -68,27 +61,17 @@ export function formatMoneyAmount(
   }
 }
 
-/** STS-style format with loading placeholder. */
-export function formatStsAmountOrLoading(
-  raw: number,
-  currency: string,
-  isPrivacyMode: boolean,
-  isLoading: boolean,
-): string {
-  return formatMoneyAmount(raw, currency, isPrivacyMode, { style: 'sts', loading: isLoading });
-}
-
 /**
  * Privacy-aware number→string for surfaces that cannot host MoneyText
  * (e.g. SVG label concatenated with other text). Must run under PrivacyScopeProvider.
  */
 export function useMoneyFormat(options: UseMoneyFormatOptions = {}) {
   const { isPrivacyMode } = usePrivacyScope();
-  const { style, short, loading } = options;
+  const { style, loading } = options;
 
   return useCallback(
     (amount: number, currencyCode: string) =>
-      formatMoneyAmount(amount, currencyCode, isPrivacyMode, { style, short, loading }),
-    [isPrivacyMode, style, short, loading],
+      formatMoneyAmount(amount, currencyCode, isPrivacyMode, { style, loading }),
+    [isPrivacyMode, style, loading],
   );
 }

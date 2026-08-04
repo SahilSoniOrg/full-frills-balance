@@ -20,6 +20,7 @@ import Svg, {
 } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
+/** Axis / today labels use SvgMoneyText — host must be under PrivacyScopeProvider. */
 export interface DataPoint {
   x: number; // timestamp
   y: number; // value
@@ -361,7 +362,7 @@ export const LineChart = <T extends DataPoint>({
                     <SvgMoneyText
                       amount={val}
                       currencyCode={currencyCode}
-                      short
+                      formatStyle="short"
                       x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
                       y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
                       fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
@@ -453,7 +454,7 @@ export const LineChart = <T extends DataPoint>({
                             <SvgMoneyText
                               amount={todayPoint.y}
                               currencyCode={currencyCode}
-                              short
+                              formatStyle="short"
                               x={x + 4}
                               y={y - 8}
                               fontSize={11}

@@ -20,7 +20,7 @@ export interface AccountDetailsViewModel {
   accountTypeColorKey: string;
   isDeleted: boolean;
   currencyCode: string;
-  balanceText: string;
+  balanceAmount: number | null;
   transactionCountText: string;
   headerActions: {
     canRecover: boolean;
@@ -51,20 +51,11 @@ export interface AccountDetailsViewModel {
   rollingAverageData: { x: number; y: number }[];
   xTicks: number[];
   periodMetrics: PeriodMetrics;
-  periodMetricsFormatted: {
-    totalIncreaseText: string;
-    totalDecreaseText: string;
-    netChangeText: string;
-    dailyAverageText: string | null;
-    isLoading: boolean;
-  };
   transactionsLoading: boolean;
   transactionsLoadingMore: boolean;
   transactionItems: TransactionListItem[];
-  /** Screen/VM privacy flag for amount masking (transactions, metrics, chart). */
-  isPrivacyMode: boolean;
   onLoadMore?: () => void;
-  secondaryBalances: { currencyCode: string; amountText: string }[];
+  secondaryBalances: { currencyCode: string; amount: number }[];
   isParent: boolean;
   subAccountCount: number;
   subAccounts: SubAccountViewModel[];
@@ -73,7 +64,7 @@ export interface AccountDetailsViewModel {
   onShowSubAccounts: () => void;
   onHideSubAccounts: () => void;
   unreconciledCount: number;
-  unreconciledAmountText: string;
+  unreconciledAmount: number;
   selectedIds: Set<TransactionId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: TransactionId) => void;

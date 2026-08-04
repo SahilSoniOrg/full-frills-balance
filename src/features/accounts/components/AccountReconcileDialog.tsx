@@ -1,4 +1,5 @@
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -8,7 +9,8 @@ interface AccountReconcileDialogProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  balanceText: string;
+  balanceAmount: number;
+  currencyCode: string;
   unreconciledCount: number;
 }
 
@@ -16,10 +18,13 @@ export function AccountReconcileDialog({
   visible,
   onClose,
   onConfirm,
-  balanceText,
+  balanceAmount,
+  currencyCode,
   unreconciledCount,
 }: AccountReconcileDialogProps) {
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
+  const balanceText = formatMoney(balanceAmount, currencyCode);
 
   return (
     <ConfirmDialog

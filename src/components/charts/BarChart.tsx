@@ -178,7 +178,7 @@ export const BarChart = ({
                 <MoneyText
                   amount={tickValue}
                   currencyCode={currencyCode}
-                  short
+                  formatStyle="short"
                   variant="caption"
                   color="secondary"
                   style={styles.yAxisLabel}

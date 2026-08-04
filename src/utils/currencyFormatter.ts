@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { CURRENCY_PRECISIONS, CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 
 /**
@@ -95,23 +94,6 @@ export const CurrencyFormatter = {
   format(amount: number, currencyCode: string, options?: CurrencyFormatOptions): string {
     const code = currencyCode;
     return this.formatAmount(amount, code, options);
-  },
-
-  /** Currency format, or AppConfig.privacyMask when privacy mode is on. */
-  formatOrMask(
-    amount: number,
-    currencyCode: string,
-    isPrivacyMode: boolean,
-    options?: CurrencyFormatOptions,
-  ): string {
-    if (isPrivacyMode) return AppConfig.privacyMask;
-    return this.format(amount, currencyCode, options);
-  },
-
-  /** Short currency format, or AppConfig.privacyMask when privacy mode is on. */
-  formatShortOrMask(amount: number, currencyCode: string, isPrivacyMode: boolean): string {
-    if (isPrivacyMode) return AppConfig.privacyMask;
-    return this.formatShort(amount, currencyCode);
   },
 
   /**

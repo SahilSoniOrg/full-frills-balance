@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
@@ -130,9 +131,12 @@ export function SubAccountListModal({
                       </Badge>
                     )}
                   </View>
-                  <AppText variant="body" weight="bold">
-                    {account.balanceText}
-                  </AppText>
+                  <MoneyText
+                    amount={account.balanceAmount}
+                    currencyCode={account.currencyCode}
+                    variant="body"
+                    weight="bold"
+                  />
                 </View>
               ))
             )}

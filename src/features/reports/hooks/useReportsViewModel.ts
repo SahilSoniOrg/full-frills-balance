@@ -1,4 +1,3 @@
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -30,7 +29,6 @@ export interface ReportsViewModel {
 export function useReportsViewModel(): ReportsViewModel {
   const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { isPrivacyMode } = usePrivacyScope();
 
   const {
     accounts,
@@ -66,7 +64,6 @@ export function useReportsViewModel(): ReportsViewModel {
     calendarHeatmap,
     theme,
     workplaceId: workplaceId,
-    isPrivacyMode,
   });
 
   const breakdownDetails = useReportBreakdownDetails({
@@ -112,9 +109,9 @@ export function useReportsViewModel(): ReportsViewModel {
   const overview: ReportOverviewTabVm = {
     netWorthSeries: chartData.netWorthSeries,
     barChartData: chartData.barChartData,
-    displayedNetWorthText: chartData.displayedNetWorthText,
-    displayedIncomeText: chartData.displayedIncomeText,
-    displayedExpenseText: chartData.displayedExpenseText,
+    currentNetWorth: chartData.currentNetWorth,
+    displayedIncome: chartData.displayedIncome,
+    displayedExpense: chartData.displayedExpense,
     incomeBarFlex: incomeVsExpense.income || 1,
     expenseBarFlex: incomeVsExpense.expense || 1,
     sankeyData: chartData.sankeyData,

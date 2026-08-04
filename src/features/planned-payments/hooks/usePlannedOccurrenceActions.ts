@@ -1,11 +1,10 @@
-import { AppConfig } from '@/src/constants/app-config';
+import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
@@ -33,9 +32,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           'expense' | 'income' | 'transfer';
       }
 
-      const displayAmount = isPrivacyMode
-        ? AppConfig.privacyMask
-        : CurrencyFormatter.format(item.amount, item.currencyCode);
+      const displayAmount = formatMoneyAmount(item.amount, item.currencyCode, isPrivacyMode);
       const displayTitle = item.title;
       const isSimulated = item.origin === 'SIMULATED_LIABILITY';
 

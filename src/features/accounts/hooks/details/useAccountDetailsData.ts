@@ -1,5 +1,4 @@
 import { IconName } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, {
   AccountType,
@@ -13,7 +12,6 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
 import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
@@ -37,7 +35,8 @@ export interface AccountDetailsData {
   accountTypeColorKey: string;
   isDeleted: boolean;
   balanceCurrency: string;
-  balanceText: string;
+  /** Raw balance for MoneyText; null while account not yet resolved. */
+  balanceAmount: number | null;
   transactionCount: number;
   transactionCountText: string;
   reconciledAt: Date | null;
@@ -50,17 +49,10 @@ export interface AccountDetailsData {
   navigateNext?: () => void;
   onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
   unreconciledCount: number;
-  unreconciledAmountText: string;
+  unreconciledAmount: number;
 }
 
-export interface UseAccountDetailsDataOptions {
-  isPrivacyMode: boolean;
-}
-
-export function useAccountDetailsData(
-  options: UseAccountDetailsDataOptions = { isPrivacyMode: false },
-): AccountDetailsData {
-  const { isPrivacyMode } = options;
+export function useAccountDetailsData(): AccountDetailsData {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams<{
     accountId: AccountId;
@@ -169,11 +161,7 @@ export function useAccountDetailsData(
     : '';
   const accountTypeVariant = getAccountTypeVariant(accountType);
   const accountTypeColorKey = getAccountTypeColorKey(accountType);
-  const balanceText = !account
-    ? '...'
-    : isPrivacyMode
-      ? AppConfig.privacyMask
-      : CurrencyFormatter.format(balance, balanceCurrency);
+  const balanceAmount = account ? balance : null;
   const transactionCountText = String(transactionCount);
 
   const onDateSelect = useCallback(
@@ -215,7 +203,7 @@ export function useAccountDetailsData(
     accountTypeColorKey,
     isDeleted,
     balanceCurrency,
-    balanceText,
+    balanceAmount,
     transactionCount,
     transactionCountText,
     reconciledAt,
@@ -228,8 +216,6 @@ export function useAccountDetailsData(
     navigateNext,
     onDateSelect,
     unreconciledCount: unreconciledMetrics.count,
-    unreconciledAmountText: isPrivacyMode
-      ? AppConfig.privacyMask
-      : CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
+    unreconciledAmount: unreconciledMetrics.total,
   };
 }

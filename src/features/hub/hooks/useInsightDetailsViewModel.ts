@@ -96,10 +96,7 @@ export function useInsightDetailsViewModel(
 
   const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 
-  const header = useMemo(
-    () => buildInsightDetailsHeader(params, theme, isPrivacyMode),
-    [params, theme, isPrivacyMode],
-  );
+  const header = useMemo(() => buildInsightDetailsHeader(params, theme), [params, theme]);
 
   return {
     items,

@@ -1,4 +1,5 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppIcon, AppText } from '@/src/components/core';
@@ -51,7 +52,7 @@ export function InsightDetailsView({
         <AppText variant="title" style={{ fontFamily: fonts.bold, marginTop: Spacing.md }}>
           {header.message}
         </AppText>
-        {header.amountText !== null ? (
+        {header.amount !== null ? (
           <View
             style={[
               styles.amountCard,
@@ -61,12 +62,12 @@ export function InsightDetailsView({
             <AppText variant="caption" weight="medium" style={{ color: header.severityColor }}>
               {header.impactLabel}
             </AppText>
-            <AppText
+            <MoneyText
+              amount={header.amount}
+              currencyCode={header.currencyCode}
               variant="title"
               style={{ color: header.severityColor, fontFamily: fonts.bold }}
-            >
-              {header.amountText}
-            </AppText>
+            />
           </View>
         ) : null}
         {header.description ? (

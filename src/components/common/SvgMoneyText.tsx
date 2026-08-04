@@ -5,8 +5,6 @@ type SvgMoneyTextProps = Omit<SvgTextProps, 'children'> & {
   amount: number;
   currencyCode: string;
   formatStyle?: MoneyFormatStyle;
-  /** Short form (1.5K / 2.6L). Alias for `formatStyle: 'short'`. */
-  short?: boolean;
   loading?: boolean;
 };
 
@@ -18,10 +16,9 @@ export function SvgMoneyText({
   amount,
   currencyCode,
   formatStyle,
-  short = false,
   loading,
   ...textProps
 }: SvgMoneyTextProps) {
-  const formatMoney = useMoneyFormat({ style: formatStyle, short, loading });
+  const formatMoney = useMoneyFormat({ style: formatStyle, loading });
   return <SvgText {...textProps}>{formatMoney(amount, currencyCode)}</SvgText>;
 }

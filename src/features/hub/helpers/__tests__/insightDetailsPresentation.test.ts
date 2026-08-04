@@ -9,26 +9,22 @@ const theme = {
 } as Theme;
 
 describe('buildInsightDetailsHeader', () => {
-  it('masks amount when privacy is on', () => {
+  it('parses amount for MoneyText when present', () => {
     const header = buildInsightDetailsHeader(
       { amount: '42.5', currencyCode: 'USD', severity: 'high', message: 'Spike' },
       theme,
-      true,
     );
-    expect(header.amountText).toBe(AppConfig.privacyMask);
+    expect(header.amount).toBe(42.5);
+    expect(header.currencyCode).toBe('USD');
     expect(header.severityLabel).toBe(
       AppConfig.strings.dashboard.insightDetails.severityLabel.high,
     );
     expect(header.message).toBe('Spike');
   });
 
-  it('formats amount when privacy is off', () => {
-    const header = buildInsightDetailsHeader(
-      { amount: '10', currencyCode: 'USD', severity: 'low' },
-      theme,
-      false,
-    );
-    expect(header.amountText).toContain('10');
+  it('returns null amount when missing', () => {
+    const header = buildInsightDetailsHeader({ severity: 'low' }, theme);
+    expect(header.amount).toBeNull();
     expect(header.severityLabel).toBe(AppConfig.strings.dashboard.insightDetails.severityLabel.low);
   });
 });

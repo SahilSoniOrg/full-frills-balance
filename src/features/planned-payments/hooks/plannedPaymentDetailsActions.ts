@@ -1,7 +1,7 @@
+import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
 import { AppConfig } from '@/src/constants/app-config';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { confirm } from '@/src/utils/alerts';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 
 interface PlannedPaymentDetailsActionHandlers {
   handleEdit: () => void;
@@ -15,9 +15,11 @@ export function buildPlannedPaymentDetailsActions(
   handlers: PlannedPaymentDetailsActionHandlers,
   options: { isPrivacyMode?: boolean } = {},
 ) {
-  const displayAmount = options.isPrivacyMode
-    ? AppConfig.privacyMask
-    : CurrencyFormatter.format(item.amount, item.currencyCode);
+  const displayAmount = formatMoneyAmount(
+    item.amount,
+    item.currencyCode,
+    options.isPrivacyMode ?? false,
+  );
 
   const headerActions = {
     onEdit: handlers.handleEdit,

@@ -1,4 +1,5 @@
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
@@ -17,7 +18,8 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
     isMissing,
     onBack,
     title,
-    amountText,
+    amount,
+    currencyCode,
     nameText,
     statusLabel,
     statusVariant,
@@ -135,9 +137,13 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
               <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
                 AMOUNT NEXT
               </Text>
-              <Text variant="xxl" weight="bold">
-                {amountText}
-              </Text>
+              {amount != null && currencyCode ? (
+                <MoneyText amount={amount} currencyCode={currencyCode} variant="xl" weight="bold" />
+              ) : (
+                <Text variant="xxl" weight="bold">
+                  ...
+                </Text>
+              )}
             </Column>
             <Column flex={1}>
               <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>

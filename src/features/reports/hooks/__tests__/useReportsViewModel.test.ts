@@ -37,15 +37,6 @@ jest.mock('@/src/hooks/use-theme', () => {
   };
 });
 
-jest.mock('@/src/utils/currencyFormatter', () => ({
-  CurrencyFormatter: {
-    format: (val: number) => `$${val}`,
-    formatWithPreference: (val: number) => `$${val}`,
-    formatOrMask: (val: number) => `$${val}`,
-    formatShortOrMask: (val: number) => `$${val}`,
-  },
-}));
-
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
     toJournalSearch: jest.fn(),
