@@ -1,8 +1,10 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -13,6 +15,14 @@ import { StyleSheet, View } from 'react-native';
 import { useInsightDetailsViewModel } from '../hooks/useInsightDetailsViewModel';
 
 export default function InsightDetailsScreen() {
+  return (
+    <PrivacyScopeProvider>
+      <InsightDetailsScreenContent />
+    </PrivacyScopeProvider>
+  );
+}
+
+function InsightDetailsScreenContent() {
   const { theme, fonts } = useTheme();
   const params = useLocalSearchParams<any>();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
@@ -133,7 +143,7 @@ export default function InsightDetailsScreen() {
   );
 
   return (
-    <Screen title={strings.title} withPadding={false}>
+    <Screen title={strings.title} withPadding={false} headerActions={<PrivacyToggleButton />}>
       <TransactionListView
         items={items}
         isLoading={isLoading}
