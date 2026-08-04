@@ -73,7 +73,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
 
       const headerActionsNode = (
         <ScreenHeaderActions
-          leading={<PrivacyToggleButton />}
+          leading={<PrivacyToggleButton variant="clear" size={Typography.sizes.xl} />}
           actions={[
             {
               name: 'copy',
