@@ -3,7 +3,6 @@ import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -69,24 +68,21 @@ interface NetWorthTooltipProps {
   backgroundColor: string;
   borderColor: string;
   date: number | Date;
-  netWorth: number;
-  income: number;
-  expense: number;
-  currencyCode: string;
+  netWorthText: string;
+  incomeText: string;
+  expenseText: string;
   successColor: string;
   errorColor: string;
   onViewTransactions: () => void;
   incomeLabel: string;
   expenseLabel: string;
-  isPrivacyMode: boolean;
 }
 
 interface NetWorthTooltipContentProps {
   date: number | Date;
-  netWorth: number;
-  income: number;
-  expense: number;
-  currencyCode: string;
+  netWorthText: string;
+  incomeText: string;
+  expenseText: string;
   successColor: string;
   errorColor: string;
   borderColor: string;
@@ -94,8 +90,6 @@ interface NetWorthTooltipContentProps {
   expenseLabel: string;
   onViewTransactions: () => void;
   backgroundColor: string;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
 }
 
 export const NetWorthTooltip = ({
@@ -104,16 +98,14 @@ export const NetWorthTooltip = ({
   backgroundColor,
   borderColor,
   date,
-  netWorth,
-  income,
-  expense,
-  currencyCode,
+  netWorthText,
+  incomeText,
+  expenseText,
   successColor,
   errorColor,
   onViewTransactions,
   incomeLabel,
   expenseLabel,
-  isPrivacyMode,
 }: NetWorthTooltipProps) => (
   <TooltipBase
     left={left}
@@ -124,10 +116,9 @@ export const NetWorthTooltip = ({
   >
     <NetWorthTooltipContent
       date={date}
-      netWorth={netWorth}
-      income={income}
-      expense={expense}
-      currencyCode={currencyCode}
+      netWorthText={netWorthText}
+      incomeText={incomeText}
+      expenseText={expenseText}
       successColor={successColor}
       errorColor={errorColor}
       borderColor={borderColor}
@@ -135,17 +126,15 @@ export const NetWorthTooltip = ({
       expenseLabel={expenseLabel}
       onViewTransactions={onViewTransactions}
       backgroundColor={backgroundColor}
-      isPrivacyMode={isPrivacyMode}
     />
   </TooltipBase>
 );
 
 export const NetWorthTooltipContent = ({
   date,
-  netWorth,
-  income,
-  expense,
-  currencyCode,
+  netWorthText,
+  incomeText,
+  expenseText,
   successColor,
   errorColor,
   borderColor,
@@ -153,7 +142,6 @@ export const NetWorthTooltipContent = ({
   expenseLabel,
   onViewTransactions,
   backgroundColor,
-  isPrivacyMode,
 }: NetWorthTooltipContentProps) => {
   const { onContrast } = useTheme();
 
@@ -166,7 +154,7 @@ export const NetWorthTooltipContent = ({
       </AppText>
 
       <AppText variant="body" weight="bold" style={styles.tooltipNetWorth}>
-        {CurrencyFormatter.formatOrMask(netWorth, currencyCode, isPrivacyMode)}
+        {netWorthText}
       </AppText>
 
       <View style={[styles.tooltipRow, { borderTopColor: borderColor }]}>
@@ -175,7 +163,7 @@ export const NetWorthTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShortOrMask(income, currencyCode, isPrivacyMode)}
+            {incomeText}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -183,7 +171,7 @@ export const NetWorthTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShortOrMask(expense, currencyCode, isPrivacyMode)}
+            {expenseText}
           </AppText>
         </View>
       </View>
@@ -207,30 +195,25 @@ interface IncomeExpenseTooltipProps {
   backgroundColor: string;
   borderColor: string;
   label: string;
-  income: number;
-  expense: number;
-  currencyCode: string;
+  incomeText: string;
+  expenseText: string;
   successColor: string;
   errorColor: string;
   onViewTransactions: () => void;
   incomeLabel: string;
   expenseLabel: string;
-  isPrivacyMode: boolean;
 }
 
 interface IncomeExpenseTooltipContentProps {
   label: string;
-  income: number;
-  expense: number;
-  currencyCode: string;
+  incomeText: string;
+  expenseText: string;
   successColor: string;
   errorColor: string;
   incomeLabel: string;
   expenseLabel: string;
   onViewTransactions: () => void;
   backgroundColor: string;
-  /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
 }
 
 export const IncomeExpenseTooltip = ({
@@ -239,15 +222,13 @@ export const IncomeExpenseTooltip = ({
   backgroundColor,
   borderColor,
   label,
-  income,
-  expense,
-  currencyCode,
+  incomeText,
+  expenseText,
   successColor,
   errorColor,
   onViewTransactions,
   incomeLabel,
   expenseLabel,
-  isPrivacyMode,
 }: IncomeExpenseTooltipProps) => (
   <TooltipBase
     left={left}
@@ -258,32 +239,28 @@ export const IncomeExpenseTooltip = ({
   >
     <IncomeExpenseTooltipContent
       label={label}
-      income={income}
-      expense={expense}
-      currencyCode={currencyCode}
+      incomeText={incomeText}
+      expenseText={expenseText}
       successColor={successColor}
       errorColor={errorColor}
       incomeLabel={incomeLabel}
       expenseLabel={expenseLabel}
       onViewTransactions={onViewTransactions}
       backgroundColor={backgroundColor}
-      isPrivacyMode={isPrivacyMode}
     />
   </TooltipBase>
 );
 
 export const IncomeExpenseTooltipContent = ({
   label,
-  income,
-  expense,
-  currencyCode,
+  incomeText,
+  expenseText,
   successColor,
   errorColor,
   incomeLabel,
   expenseLabel,
   onViewTransactions,
   backgroundColor,
-  isPrivacyMode,
 }: IncomeExpenseTooltipContentProps) => {
   const { onContrast } = useTheme();
 
@@ -301,7 +278,7 @@ export const IncomeExpenseTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShortOrMask(income, currencyCode, isPrivacyMode)}
+            {incomeText}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -309,7 +286,7 @@ export const IncomeExpenseTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShortOrMask(expense, currencyCode, isPrivacyMode)}
+            {expenseText}
           </AppText>
         </View>
       </View>

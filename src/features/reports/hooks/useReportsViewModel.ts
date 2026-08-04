@@ -3,8 +3,11 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
-import { useCallback, useState } from 'react';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { useCallback, useMemo, useState } from 'react';
 import {
+  ReportBreakdownViewState,
+  ReportLegendRow,
   ReportOverviewTabVm,
   ReportSpendingTabVm,
   ReportTab,
@@ -22,11 +25,28 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
-  /** Screen/VM privacy flag — Views pass this down; leaves do not read privacy hooks. */
-  isPrivacyMode: boolean;
+  /** Full currency format, privacy-aware. Owned by VM — Views pass this down. */
+  formatMoney: (amount: number) => string;
+  /** Short currency format, privacy-aware. Owned by VM — Views pass this down. */
+  formatMoneyShort: (amount: number) => string;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
   wealth: ReportWealthTabVm;
+}
+
+function withLegendAmountText(
+  state: Omit<ReportBreakdownViewState, 'legendRows'> & {
+    legendRows: Omit<ReportLegendRow, 'amountText'>[];
+  },
+  formatMoney: (amount: number) => string,
+): ReportBreakdownViewState {
+  return {
+    ...state,
+    legendRows: state.legendRows.map(row => ({
+      ...row,
+      amountText: formatMoney(row.amount),
+    })),
+  };
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -57,6 +77,16 @@ export function useReportsViewModel(): ReportsViewModel {
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>();
+
+  const formatMoney = useCallback(
+    (amount: number) => CurrencyFormatter.formatOrMask(amount, targetCurrency, isPrivacyMode),
+    [targetCurrency, isPrivacyMode],
+  );
+
+  const formatMoneyShort = useCallback(
+    (amount: number) => CurrencyFormatter.formatShortOrMask(amount, targetCurrency, isPrivacyMode),
+    [targetCurrency, isPrivacyMode],
+  );
 
   const chartData = useReportChartData({
     netWorthHistory,
@@ -127,22 +157,47 @@ export function useReportsViewModel(): ReportsViewModel {
     onViewSelectedTransactions: actions.onViewSelectedTransactions,
   };
 
-  const spending: ReportSpendingTabVm = {
-    expenseViewState: breakdownDetails.expenseViewState,
-    expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
-    incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
-    expandedExpenses: breakdownDetails.expandedExpenses,
-    toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
-    expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
-    toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
-    expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
-    toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
-    spendingHeatmap: chartData.spendingHeatmap,
-    calendarHeatmap: chartData.calendarHeatmap,
-    onLegendRowPress: actions.onLegendRowPress,
-    onCategoryPress: actions.onCategoryPress,
-    targetCurrency,
-  };
+  const spending: ReportSpendingTabVm = useMemo(
+    () => ({
+      expenseViewState: withLegendAmountText(breakdownDetails.expenseViewState, formatMoney),
+      expenseCategoryViewState: withLegendAmountText(
+        breakdownDetails.expenseCategoryViewState,
+        formatMoney,
+      ),
+      incomeCategoryViewState: withLegendAmountText(
+        breakdownDetails.incomeCategoryViewState,
+        formatMoney,
+      ),
+      expandedExpenses: breakdownDetails.expandedExpenses,
+      toggleExpenseExpansion: breakdownDetails.toggleExpenseExpansion,
+      expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
+      toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
+      expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
+      toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
+      spendingHeatmap: chartData.spendingHeatmap,
+      calendarHeatmap: chartData.calendarHeatmap,
+      onLegendRowPress: actions.onLegendRowPress,
+      onCategoryPress: actions.onCategoryPress,
+      targetCurrency,
+    }),
+    [
+      breakdownDetails.expenseViewState,
+      breakdownDetails.expenseCategoryViewState,
+      breakdownDetails.incomeCategoryViewState,
+      breakdownDetails.expandedExpenses,
+      breakdownDetails.toggleExpenseExpansion,
+      breakdownDetails.expandedExpenseCategories,
+      breakdownDetails.toggleExpenseCategoryExpansion,
+      breakdownDetails.expandedIncomeCategories,
+      breakdownDetails.toggleIncomeCategoryExpansion,
+      chartData.spendingHeatmap,
+      chartData.calendarHeatmap,
+      actions.onLegendRowPress,
+      actions.onCategoryPress,
+      targetCurrency,
+      formatMoney,
+    ],
+  );
 
   const wealth: ReportWealthTabVm = {
     wealthAreaSeries: chartData.wealthAreaSeries,
@@ -160,7 +215,8 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
     loading,
-    isPrivacyMode,
+    formatMoney,
+    formatMoneyShort,
     overview,
     spending,
     wealth,

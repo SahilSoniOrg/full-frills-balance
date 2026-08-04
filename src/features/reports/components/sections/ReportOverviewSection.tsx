@@ -7,13 +7,15 @@ import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/Money
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
   chartWidth: number;
-  isPrivacyMode: boolean;
+  formatMoney: (amount: number) => string;
+  formatMoneyShort: (amount: number) => string;
 }
 
 export function ReportOverviewSection({
   vm,
   chartWidth,
-  isPrivacyMode,
+  formatMoney,
+  formatMoneyShort,
 }: ReportOverviewSectionProps) {
   const {
     displayedNetWorthText,
@@ -38,7 +40,8 @@ export function ReportOverviewSection({
         displayedNetWorthText={displayedNetWorthText}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
-        isPrivacyMode={isPrivacyMode}
+        formatMoney={formatMoney}
+        formatMoneyShort={formatMoneyShort}
         onViewTransactions={onViewTransactions}
       />
 
@@ -48,7 +51,7 @@ export function ReportOverviewSection({
         chartWidth={chartWidth}
         selectedIndex={selectedBarIndex}
         onSelectIndex={onSelectBarIndex}
-        isPrivacyMode={isPrivacyMode}
+        formatMoneyShort={formatMoneyShort}
         onViewSelectedTransactions={onViewSelectedTransactions}
       />
 
@@ -63,7 +66,7 @@ export function ReportOverviewSection({
         sankeyData={sankeyData}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
-        isPrivacyMode={isPrivacyMode}
+        formatMoneyShort={formatMoneyShort}
       />
     </>
   );

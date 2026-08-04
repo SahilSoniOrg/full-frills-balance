@@ -157,7 +157,7 @@ export const SafeToSpendChart = ({
           xTicks={xTicks}
           formatXTick={x => dayjs(x).format('MMM D')}
           todayX={dayjs().endOf('day').valueOf()}
-          hideLabels={isPrivacyMode}
+          formatValue={formatValue}
           extraHorizontalLines={extraHorizontalLines}
           avoidPointVertical={true}
           onPress={index => {

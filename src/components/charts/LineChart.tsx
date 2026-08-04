@@ -51,7 +51,8 @@ interface LineChartProps<T extends DataPoint = DataPoint> {
   secondaryData?: T[]; // Optional secondary line data
   secondaryColor?: string; // Color for the secondary line
   todayX?: number; // Timestamp for the 'Today' vertical marker
-  hideLabels?: boolean; // Whether to hide axis labels (Privacy Mode)
+  /** Formats Y-axis / today marker values. Defaults to CurrencyFormatter.formatShort. */
+  formatValue?: (value: number) => string;
   extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
   avoidPointVertical?: boolean; // Whether to place tooltip above/below point instead of centered
   offset?: number; // Distance from point to tooltip
@@ -101,7 +102,7 @@ export const LineChart = <T extends DataPoint>({
   secondaryData,
   secondaryColor,
   todayX,
-  hideLabels,
+  formatValue,
   extraHorizontalLines,
   avoidPointVertical = false,
   offset = 15,
@@ -367,8 +368,8 @@ export const LineChart = <T extends DataPoint>({
                       fill={theme.textSecondary}
                       textAnchor="end"
                     >
-                      {hideLabels
-                        ? AppConfig.privacyMask
+                      {formatValue
+                        ? formatValue(val)
                         : CurrencyFormatter.formatShort(val, currencyCode)}
                     </SvgText>
                   </React.Fragment>
@@ -436,7 +437,7 @@ export const LineChart = <T extends DataPoint>({
                       </SvgText>
                       {(() => {
                         const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000);
-                        if (!todayPoint || hideLabels) return null;
+                        if (!todayPoint) return null;
                         const y =
                           height -
                           PADDING_VERTICAL -
@@ -461,7 +462,9 @@ export const LineChart = <T extends DataPoint>({
                               fill={chartColor}
                               textAnchor="start"
                             >
-                              {CurrencyFormatter.formatShort(todayPoint.y, currencyCode)}
+                              {formatValue
+                                ? formatValue(todayPoint.y)
+                                : CurrencyFormatter.formatShort(todayPoint.y, currencyCode)}
                             </SvgText>
                           </React.Fragment>
                         );
@@ -492,7 +495,7 @@ export const LineChart = <T extends DataPoint>({
                       strokeDasharray={line.strokeDasharray || '4,4'}
                       opacity={0.8}
                     />
-                    {line.label && !hideLabels && (
+                    {line.label && (
                       <SvgText
                         x={CHART_WIDTH - PADDING_RIGHT - 4}
                         y={y - 6}
