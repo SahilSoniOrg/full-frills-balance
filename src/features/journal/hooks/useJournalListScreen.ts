@@ -3,7 +3,7 @@ import {
   type JournalListBundle,
   type JournalSelectionBundle,
 } from '@/src/features/journal/components/JournalListView';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
@@ -23,8 +23,9 @@ export function useJournalListScreen(
   workplaceId: WorkplaceId,
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
-  // Effective mode respects nearest PrivacyScopeProvider (#32 Wave A).
-  const isPrivacyMode = useEffectivePrivacyMode();
+  // Global prefs baseline — Activity has no screen-local eye toggle.
+  // Screens with PrivacyScopeProvider + toggle use usePrivacyScope / Effective instead.
+  const { isPrivacyMode } = usePrivacyPrefs();
 
   const list = useMemo(
     (): JournalListRenderBundle['list'] => ({
