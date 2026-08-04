@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
@@ -15,6 +16,7 @@ export interface JournalSearchViewModel {
   isLoading: boolean;
   isLoadingMore: boolean;
   onEndReached?: () => void;
+  isPrivacyMode: boolean;
 
   // Filters
   searchQuery: string;
@@ -57,6 +59,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
   const { workplaceId } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
+  const isPrivacyMode = useEffectivePrivacyMode();
 
   // Route Params
   const filters = useJournalSearchFilters({
@@ -84,6 +87,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     isLoading: core.isLoading,
     isLoadingMore: core.isLoadingMore,
     onEndReached: core.onEndReached,
+    isPrivacyMode,
     ...filters,
     hasMore: core.hasMore,
     accounts,

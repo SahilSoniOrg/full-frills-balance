@@ -10,7 +10,6 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -19,7 +18,6 @@ import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 export function JournalSearchView(vm: JournalSearchViewModel) {
-  const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -132,7 +130,7 @@ export function JournalSearchView(vm: JournalSearchViewModel) {
           emptySubtitle: 'Try adjusting your filters',
           onEndReached: vm.onEndReached,
           listHeader: filterHeader,
-          isPrivacyMode,
+          isPrivacyMode: vm.isPrivacyMode,
         }}
         chrome={{
           screenTitle: 'Search',
