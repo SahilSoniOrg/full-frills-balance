@@ -6,7 +6,7 @@ import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { AccountDetailsHeader } from '@/src/features/accounts/components/AccountDetailsHeader';
 import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
@@ -94,7 +94,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
 
   const headerActionsNode = (
     <ScreenHeaderActions
-      leading={<PrivacyToggleButton />}
+      leading={<PrivacyToggleButton size={Size.md} />}
       actions={
         headerActions.canRecover
           ? [
