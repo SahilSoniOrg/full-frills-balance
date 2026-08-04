@@ -1,26 +1,31 @@
 import { AppTabs, FloatingActionButton } from '@/src/components/core';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { Screen } from '@/src/components/layout';
+import { PrivacyScopeProvider, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { AppNavigation } from '@/src/utils/navigation';
-import { logger } from '@/src/utils/logger';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 type Tab = 'budgets' | 'planned';
 
 export default function CommitmentsScreen() {
+  return (
+    <PrivacyScopeProvider>
+      <CommitmentsScreenContent />
+    </PrivacyScopeProvider>
+  );
+}
+
+function CommitmentsScreenContent() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
   const { workplaceId } = useWorkplace();
-  const { items: budgetItems, isPrivacyMode } = useBudgetListViewModel(workplaceId);
+  const { items: budgetItems } = useBudgetListViewModel(workplaceId);
   const { items: plannedItems, isLoading: plannedLoading } = usePlannedPayments(workplaceId);
-
-  // Log UI Mount
-  useEffect(() => {
-    logger.info('[Commitments] Screen Mounted');
-  }, []);
+  const isPrivacyMode = useEffectivePrivacyMode();
 
   const tabOptions = useMemo(
     () => [
@@ -39,7 +44,12 @@ export default function CommitmentsScreen() {
   };
 
   return (
-    <Screen title="Commitments" showBack={false} scrollable={false}>
+    <Screen
+      title="Commitments"
+      showBack={false}
+      scrollable={false}
+      headerActions={<PrivacyToggleButton />}
+    >
       <Stack gap="lg">
         <Box marginTop="md">
           <AppTabs

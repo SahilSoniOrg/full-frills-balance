@@ -1,4 +1,4 @@
-import { getNow } from '@/src/utils/dateHelpers';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
@@ -8,6 +8,8 @@ import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/compo
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { AppNavigation } from '@/src/utils/navigation';
+import { getNow } from '@/src/utils/dateHelpers';
+import { View } from 'react-native';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   const {
@@ -62,24 +64,27 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   }
 
   const headerActionsNode = (
-    <ScreenHeaderActions
-      actions={[
-        {
-          name: 'edit',
-          onPress: headerActions?.onEdit,
-          iconColor: theme.text,
-          size: Typography.sizes.xl,
-          testID: 'edit-button',
-        },
-        {
-          name: 'delete',
-          onPress: headerActions?.onDelete,
-          iconColor: theme.error,
-          size: Typography.sizes.xl,
-          testID: 'delete-button',
-        },
-      ]}
-    />
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <PrivacyToggleButton variant="clear" size={Typography.sizes.xl} />
+      <ScreenHeaderActions
+        actions={[
+          {
+            name: 'edit',
+            onPress: headerActions?.onEdit,
+            iconColor: theme.text,
+            size: Typography.sizes.xl,
+            testID: 'edit-button',
+          },
+          {
+            name: 'delete',
+            onPress: headerActions?.onDelete,
+            iconColor: theme.error,
+            size: Typography.sizes.xl,
+            testID: 'delete-button',
+          },
+        ]}
+      />
+    </View>
   );
 
   const accentColor = theme[typeColorKey as keyof typeof theme] as string;

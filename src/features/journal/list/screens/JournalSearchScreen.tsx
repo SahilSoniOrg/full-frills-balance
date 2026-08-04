@@ -1,6 +1,7 @@
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import {
   AppInput,
   AppSegmentedControl,
@@ -9,8 +10,8 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
+import { PrivacyScopeProvider, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
@@ -18,8 +19,16 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useJournalSearchViewModel } from '../hooks/useJournalSearchViewModel';
 
 export default function JournalSearchScreen() {
+  return (
+    <PrivacyScopeProvider>
+      <JournalSearchScreenContent />
+    </PrivacyScopeProvider>
+  );
+}
+
+function JournalSearchScreenContent() {
   const vm = useJournalSearchViewModel();
-  const { isPrivacyMode } = usePrivacyPrefs();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -137,6 +146,7 @@ export default function JournalSearchScreen() {
         chrome={{
           screenTitle: 'Search',
           showBack: true,
+          headerActions: <PrivacyToggleButton />,
         }}
         datePicker={{
           visible: false,

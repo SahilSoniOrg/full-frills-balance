@@ -1,5 +1,6 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
@@ -93,72 +94,75 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
   const isCategory = accountType === 'INCOME' || accountType === 'EXPENSE';
 
   const headerActionsNode = (
-    <ScreenHeaderActions
-      actions={
-        headerActions.canRecover
-          ? [
-              {
-                name: 'history',
-                onPress: onAuditPress,
-                variant: 'surface',
-                iconColor: theme.textSecondary,
-              },
-              {
-                name: 'refresh',
-                onPress: headerActions.onRecover,
-                variant: 'surface',
-                iconColor: theme.income,
-              },
-            ]
-          : ([
-              {
-                name: 'history',
-                onPress: onAuditPress,
-                variant: 'surface',
-                iconColor: theme.textSecondary,
-              },
-              {
-                name: 'edit',
-                onPress: headerActions.onEdit,
-                variant: 'surface',
-                iconColor: theme.text,
-                testID: 'edit-button',
-              },
-              !isCategory
-                ? {
-                    name: 'checkCircle',
-                    onPress: headerActions.onReconcile,
-                    variant: 'surface',
-                    iconColor:
-                      vm.unreconciledCount > 0
-                        ? theme.warning
-                        : vm.reconciledAt
-                          ? theme.success
-                          : theme.textSecondary,
-                    testID: 'reconcile-button',
-                  }
-                : null,
-              headerActions.canDelete
-                ? {
-                    name: 'delete',
-                    onPress: headerActions.onDelete,
-                    variant: 'surface',
-                    iconColor: theme.error,
-                    testID: 'delete-button',
-                  }
-                : null,
-              headerActions.canMerge
-                ? {
-                    name: 'merge',
-                    onPress: headerActions.onMerge,
-                    variant: 'surface',
-                    iconColor: theme.error,
-                    testID: 'merge-button',
-                  }
-                : null,
-            ].filter(Boolean) as any)
-      }
-    />
+    <View style={styles.headerActions}>
+      <PrivacyToggleButton />
+      <ScreenHeaderActions
+        actions={
+          headerActions.canRecover
+            ? [
+                {
+                  name: 'history',
+                  onPress: onAuditPress,
+                  variant: 'surface',
+                  iconColor: theme.textSecondary,
+                },
+                {
+                  name: 'refresh',
+                  onPress: headerActions.onRecover,
+                  variant: 'surface',
+                  iconColor: theme.income,
+                },
+              ]
+            : ([
+                {
+                  name: 'history',
+                  onPress: onAuditPress,
+                  variant: 'surface',
+                  iconColor: theme.textSecondary,
+                },
+                {
+                  name: 'edit',
+                  onPress: headerActions.onEdit,
+                  variant: 'surface',
+                  iconColor: theme.text,
+                  testID: 'edit-button',
+                },
+                !isCategory
+                  ? {
+                      name: 'checkCircle',
+                      onPress: headerActions.onReconcile,
+                      variant: 'surface',
+                      iconColor:
+                        vm.unreconciledCount > 0
+                          ? theme.warning
+                          : vm.reconciledAt
+                            ? theme.success
+                            : theme.textSecondary,
+                      testID: 'reconcile-button',
+                    }
+                  : null,
+                headerActions.canDelete
+                  ? {
+                      name: 'delete',
+                      onPress: headerActions.onDelete,
+                      variant: 'surface',
+                      iconColor: theme.error,
+                      testID: 'delete-button',
+                    }
+                  : null,
+                headerActions.canMerge
+                  ? {
+                      name: 'merge',
+                      onPress: headerActions.onMerge,
+                      variant: 'surface',
+                      iconColor: theme.error,
+                      testID: 'merge-button',
+                    }
+                  : null,
+              ].filter(Boolean) as any)
+        }
+      />
+    </View>
   );
 
   const screenTitle = isParent
@@ -296,6 +300,10 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
