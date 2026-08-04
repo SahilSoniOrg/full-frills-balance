@@ -1,4 +1,4 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -25,7 +25,6 @@ export function JournalDayHeader({
   reconciledAt,
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
-  const formatMoney = useMoneyFormat();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
@@ -65,7 +64,10 @@ export function JournalDayHeader({
 
         <View style={styles.rightContent}>
           {hasStats && netAmount !== undefined && netAmount !== 0 && currencyCode && (
-            <AppText
+            <MoneyText
+              amount={netAmount}
+              currencyCode={currencyCode}
+              prefix={isPositive ? '+' : undefined}
               variant="caption"
               style={[
                 styles.netAmount,
@@ -77,10 +79,7 @@ export function JournalDayHeader({
                       : theme.textSecondary,
                 },
               ]}
-            >
-              {isPositive ? '+' : ''}
-              {formatMoney(netAmount, currencyCode)}
-            </AppText>
+            />
           )}
           <AppIcon
             name={isCollapsed ? 'chevronRight' : 'chevronDown'}

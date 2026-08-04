@@ -11,7 +11,7 @@ import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
-/** Axis labels use MoneyText — host must be under PrivacyScopeProvider. */
+/** Axis labels: MoneyText (RN overlay). Host under PrivacyScopeProvider. */
 export interface BarChartDataPoint {
   label: string;
   values: number[]; // Array of values for multiple series (e.g. [Income, Expense])

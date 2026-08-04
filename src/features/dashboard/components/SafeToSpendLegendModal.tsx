@@ -92,7 +92,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                         </AppText>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
-                        +{formatSts(inc.amount, currencyCode)}
+                        {formatSts(inc.amount, currencyCode, { prefix: '+' })}
                       </AppText>
                     </View>
                   ))}

@@ -1,4 +1,4 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
@@ -63,18 +63,12 @@ const TransactionCardComponent = ({
   contentScale = 1,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
-  const formatMoney = useMoneyFormat({ prefix: presentation.amountPrefix });
 
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
 
   const formattedDate = useMemo(
     () => formatDate(transactionDate, { includeTime: true }),
     [transactionDate],
-  );
-
-  const formattedAmount = useMemo(
-    () => formatMoney(amount, currencyCode),
-    [formatMoney, amount, currencyCode],
   );
 
   const Wrapper = onPress || onLongPress ? TouchableOpacity : View;
@@ -173,9 +167,15 @@ const TransactionCardComponent = ({
                     <AppIcon name={presentation.typeIcon} size={Size.iconXs} color={typeColor} />
                   </Box>
 
-                  <AppText variant="xl" weight="bold" tabular style={{ color: typeColor }}>
-                    {formattedAmount}
-                  </AppText>
+                  <MoneyText
+                    amount={amount}
+                    currencyCode={currencyCode}
+                    prefix={presentation.amountPrefix}
+                    variant="xl"
+                    weight="bold"
+                    tabular
+                    style={{ color: typeColor }}
+                  />
                 </Inline>
 
                 <AppText variant="caption" color="tertiary" style={styles.date}>

@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import { Dimensions, View } from 'react-native';
 import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
 
-/** Node amount labels use useMoneyFormat — host must be under PrivacyScopeProvider. */
+/** Node amount labels: useMoneyFormat + SvgText (SVG children). Host under PrivacyScopeProvider. */
 interface SankeyChartProps {
   nodes: SankeyNode[];
   links: SankeyLink[];

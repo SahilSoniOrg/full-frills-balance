@@ -12,7 +12,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
-/** Selection tooltips use MoneyText — host must be under PrivacyScopeProvider. */
+/** Selection tooltips: MoneyText (RN overlay). Host under PrivacyScopeProvider. */
 interface CalendarHeatmapProps {
   data: HeatmapPoint[];
   height?: number;

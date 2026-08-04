@@ -270,7 +270,8 @@ export const SafeToSpendChart = ({
                               color="success"
                               style={{ fontSize: 10 }}
                             >
-                              Planned Inflow: +{formatSts(plannedInflowTotal, currencyCode)}
+                              Planned Inflow:{' '}
+                              {formatSts(plannedInflowTotal, currencyCode, { prefix: '+' })}
                             </AppText>
                           </Inline>
                         )}
@@ -283,7 +284,8 @@ export const SafeToSpendChart = ({
                               color="error"
                               style={{ fontSize: 10 }}
                             >
-                              To Be Spent: -{formatSts(toBeSpentTotal, currencyCode)}
+                              To Be Spent:{' '}
+                              {formatSts(toBeSpentTotal, currencyCode, { prefix: '-' })}
                             </AppText>
                           </Inline>
                         )}
@@ -346,8 +348,9 @@ export const SafeToSpendChart = ({
                                 color={isInflow ? 'success' : 'error'}
                                 style={{ fontSize: 10 }}
                               >
-                                {isInflow ? '+' : '-'}
-                                {formatSts(Math.abs(detail.amount), currencyCode)}
+                                {formatSts(Math.abs(detail.amount), currencyCode, {
+                                  prefix: isInflow ? '+' : '-',
+                                })}
                               </AppText>
                             )}
                           </Inline>
