@@ -1,5 +1,6 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { LoadingView } from '@/src/components/common/LoadingView';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { NavigationBar } from '@/src/components/layout/NavigationBar';
 import { Typography } from '@/src/constants';
@@ -13,9 +14,7 @@ import { TransactionMetadata } from './details/TransactionMetadata';
 import { TransactionSMSDetails } from './details/TransactionSMSDetails';
 
 type ScreenState =
-  | { type: 'loading' }
-  | { type: 'missing' }
-  | { type: 'ready'; data: TransactionDetailsViewModel };
+  { type: 'loading' } | { type: 'missing' } | { type: 'ready'; data: TransactionDetailsViewModel };
 
 export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
   const { isLoading, isMissing, theme, onBack } = vm;
@@ -52,7 +51,9 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         title,
         backIcon,
         headerActions,
-        amountText,
+        amount,
+        currencyCode,
+        amountPrefix,
         amountColor,
         descriptionText,
         statusLabel,
@@ -72,6 +73,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
 
       const headerActionsNode = (
         <ScreenHeaderActions
+          leading={<PrivacyToggleButton />}
           actions={[
             {
               name: 'copy',
@@ -115,7 +117,9 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
               <TransactionHero
                 displayIcon={displayIcon}
                 amountColor={amountColor}
-                amountText={amountText}
+                amount={amount}
+                currencyCode={currencyCode}
+                amountPrefix={amountPrefix}
                 descriptionText={descriptionText}
                 statusLabel={statusLabel}
                 statusVariant={statusVariant}

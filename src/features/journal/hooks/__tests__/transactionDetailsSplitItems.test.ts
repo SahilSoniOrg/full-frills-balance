@@ -25,7 +25,9 @@ describe('transactionDetailsSplitItems', () => {
       accountId,
       accountName: 'Unknown Account',
       transactionType: 'To • DEBIT',
-      amountText: '+$25.00',
+      amount: 25,
+      currencyCode: 'USD',
+      amountPrefix: '+',
       fallbackIcon: 'wallet',
       iconColor: 'income',
     });

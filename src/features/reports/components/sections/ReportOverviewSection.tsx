@@ -15,8 +15,8 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     netWorthSeries,
     onViewTransactions,
     barChartData,
-    displayedIncome,
-    displayedExpense,
+    income,
+    expense,
     incomeBarFlex,
     expenseBarFlex,
     sankeyData,
@@ -48,8 +48,8 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
       <IncomeExpenseBalanceWidget
         incomeBarFlex={incomeBarFlex}
         expenseBarFlex={expenseBarFlex}
-        income={displayedIncome}
-        expense={displayedExpense}
+        income={income}
+        expense={expense}
         currencyCode={targetCurrency}
       />
 

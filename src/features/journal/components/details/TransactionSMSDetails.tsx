@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { Section } from '@/src/components/common/Section';
 import { AppButton, AppText, ListRow } from '@/src/components/core';
 import { Box, Inset, Stack } from '@/src/design-system';
@@ -6,7 +7,8 @@ import React, { useMemo } from 'react';
 export interface SmsInfo {
   sender?: string;
   smsDate?: string;
-  amountText?: string;
+  amount?: number;
+  currencyCode?: string;
   referenceNumber?: string;
   accountSource?: string;
   parseReason?: string;
@@ -18,24 +20,31 @@ interface TransactionSMSDetailsProps {
   onOpenSmsInbox?: () => void;
 }
 
-interface SmsField {
-  label: string;
-  value: string;
-}
+type SmsField =
+  | { kind: 'text'; label: string; value: string }
+  | { kind: 'money'; label: string; amount: number; currencyCode: string };
 
 export const TransactionSMSDetails = React.memo(
   ({ smsInfo, onOpenSmsInbox }: TransactionSMSDetailsProps) => {
     const fields = useMemo(() => {
       const list: SmsField[] = [];
 
-      if (smsInfo.sender) list.push({ label: 'Sender', value: smsInfo.sender });
-      if (smsInfo.smsDate) list.push({ label: 'SMS Date', value: smsInfo.smsDate });
-      if (smsInfo.amountText) list.push({ label: 'Parsed Amount', value: smsInfo.amountText });
+      if (smsInfo.sender) list.push({ kind: 'text', label: 'Sender', value: smsInfo.sender });
+      if (smsInfo.smsDate) list.push({ kind: 'text', label: 'SMS Date', value: smsInfo.smsDate });
+      if (typeof smsInfo.amount === 'number') {
+        list.push({
+          kind: 'money',
+          label: 'Parsed Amount',
+          amount: smsInfo.amount,
+          currencyCode: smsInfo.currencyCode ?? '',
+        });
+      }
       if (smsInfo.referenceNumber)
-        list.push({ label: 'Reference', value: smsInfo.referenceNumber });
+        list.push({ kind: 'text', label: 'Reference', value: smsInfo.referenceNumber });
       if (smsInfo.accountSource)
-        list.push({ label: 'Account Source', value: smsInfo.accountSource });
-      if (smsInfo.parseReason) list.push({ label: 'Parse Note', value: smsInfo.parseReason });
+        list.push({ kind: 'text', label: 'Account Source', value: smsInfo.accountSource });
+      if (smsInfo.parseReason)
+        list.push({ kind: 'text', label: 'Parse Note', value: smsInfo.parseReason });
 
       return list;
     }, [smsInfo]);
@@ -51,9 +60,18 @@ export const TransactionSMSDetails = React.memo(
             <ListRow
               title={item.label}
               trailing={
-                <AppText variant="body" color="secondary">
-                  {item.value}
-                </AppText>
+                item.kind === 'money' ? (
+                  <MoneyText
+                    amount={item.amount}
+                    currencyCode={item.currencyCode}
+                    variant="body"
+                    color="secondary"
+                  />
+                ) : (
+                  <AppText variant="body" color="secondary">
+                    {item.value}
+                  </AppText>
+                )
               }
               padding="md"
             />

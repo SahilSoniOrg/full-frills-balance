@@ -1,4 +1,4 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
@@ -26,7 +26,7 @@ export const SafeToSpendBreakdownBar = ({
 }: SafeToSpendBreakdownBarProps) => {
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
-  const formatSts = useMoneyFormat({ style: 'sts', loading });
+  const formatSts = useStsMoneyFormat(loading);
 
   if (effectiveTotal <= 0) {
     return (

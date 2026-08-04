@@ -48,7 +48,9 @@ describe('transactionDetailsHelpers', () => {
       },
       journalLoaded: true,
     });
-    expect(expense.amountText).toContain('-');
+    expect(expense.amount).toBe(10);
+    expect(expense.currencyCode).toBe('USD');
+    expect(expense.amountPrefix).toBe('-');
     expect(expense.amountColor).toBe('error');
     expect(expense.isExpense).toBe(true);
   });
@@ -65,7 +67,8 @@ describe('transactionDetailsHelpers', () => {
       currencyCode: 'USD',
     });
     expect(debit.transactionTypeLabel).toContain('To');
-    expect(debit.amountText.startsWith('+')).toBe(true);
+    expect(debit.amountPrefix).toBe('+');
+    expect(debit.amount).toBe(5);
   });
 
   it('mapSmsJournalMetadataDisplay parses metadata json', () => {
@@ -73,7 +76,8 @@ describe('transactionDetailsHelpers', () => {
       metadataJson: JSON.stringify({ parsedAmount: 42, parsedCurrencyCode: 'USD' }),
       inboxRecord: { id: 'sms-1', inputDate: 1_700_000_000_000 },
     });
-    expect(info.amountText).toBeTruthy();
+    expect(info.amount).toBe(42);
+    expect(info.currencyCode).toBe('USD');
     expect(info.inboxRecordId).toBe('sms-1');
   });
 
@@ -83,6 +87,6 @@ describe('transactionDetailsHelpers', () => {
       originalSmsSender: 'BANK',
     });
     expect(info.sender).toBe('BANK');
-    expect(info.amountText).toBeUndefined();
+    expect(info.amount).toBeUndefined();
   });
 });

@@ -121,15 +121,17 @@ export function AccountDetailsHeader({
             {secondaryBalances.length > 0 ? (
               <View style={styles.secondaryBalances}>
                 {secondaryBalances.map((balance, index) => (
-                  <AppText key={index} variant="caption" color="secondary">
-                    +{' '}
+                  <View key={index} style={styles.secondaryBalanceRow}>
+                    <AppText variant="caption" color="secondary">
+                      +{' '}
+                    </AppText>
                     <MoneyText
                       amount={balance.amount}
                       currencyCode={balance.currencyCode}
                       variant="caption"
                       color="secondary"
                     />
-                  </AppText>
+                  </View>
                 ))}
               </View>
             ) : null}
@@ -200,12 +202,12 @@ export function AccountDetailsHeader({
                   <AppText variant="caption" color="secondary">
                     Change
                   </AppText>
-                  <AppText
-                    variant="body"
-                    weight="bold"
-                    style={{ color: isPositive ? theme.income : theme.expense }}
-                  >
-                    {isPositive ? '+' : ''}
+                  <View style={styles.tooltipAmountRow}>
+                    {isPositive ? (
+                      <AppText variant="body" weight="bold" style={{ color: theme.income }}>
+                        +
+                      </AppText>
+                    ) : null}
                     <MoneyText
                       amount={changeFromStart}
                       currencyCode={currencyCode}
@@ -213,7 +215,7 @@ export function AccountDetailsHeader({
                       weight="bold"
                       style={{ color: isPositive ? theme.income : theme.expense }}
                     />
-                  </AppText>
+                  </View>
                 </View>
                 {rollingPoint && (
                   <View style={[styles.tooltipRow, { marginTop: 2 }]}>
@@ -326,6 +328,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     gap: 2,
   },
+  secondaryBalanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   sectionHeader: {
     marginBottom: Spacing.sm,
   },
@@ -344,6 +350,10 @@ const styles = StyleSheet.create({
   tooltipRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tooltipAmountRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
 });

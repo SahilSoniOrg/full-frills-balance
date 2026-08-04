@@ -9,7 +9,9 @@ export interface TransactionSplitItemViewModel {
   accountId: AccountId;
   accountName: string;
   transactionType: string;
-  amountText: string;
+  amount: number;
+  currencyCode: string;
+  amountPrefix: '+' | '-';
   amountColor: ColorKey;
   iconName: IconName | string | null;
   fallbackIcon?: IconName;
@@ -30,7 +32,9 @@ export function buildTransactionSplitItems(
       accountId: item.accountId,
       accountName: item.accountName || 'Unknown Account',
       transactionType: presentation.transactionTypeLabel,
-      amountText: presentation.amountText,
+      amount: presentation.amount,
+      currencyCode: presentation.currencyCode,
+      amountPrefix: presentation.amountPrefix,
       amountColor: presentation.amountColor,
       iconName: item.icon || null,
       fallbackIcon: getAccountFallbackIcon(item.accountType),

@@ -17,7 +17,7 @@ export type UseMoneyFormatOptions = FormatMoneyOptions;
 
 /**
  * Safe-to-spend amount formatting with small-value handling (< 0.5).
- * Caller must apply privacy masking separately when needed.
+ * Prefer formatMoneyAmount / useMoneyFormat / useStsMoneyFormat so privacy is applied.
  */
 export function formatStsAmount(raw: number, currency: string): string {
   const isVerySmall = Math.abs(raw) > 0 && Math.abs(raw) < 0.5;
@@ -74,4 +74,9 @@ export function useMoneyFormat(options: UseMoneyFormatOptions = {}) {
       formatMoneyAmount(amount, currencyCode, isPrivacyMode, { style, loading }),
     [isPrivacyMode, style, loading],
   );
+}
+
+/** STS display style under PrivacyScope (dense Safe-to-Spend surfaces). */
+export function useStsMoneyFormat(loading = false) {
+  return useMoneyFormat({ style: 'sts', loading });
 }

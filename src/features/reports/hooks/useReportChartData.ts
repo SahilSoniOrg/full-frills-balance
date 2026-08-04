@@ -87,8 +87,8 @@ export function useReportChartData({
 
   return {
     currentNetWorth,
-    displayedIncome: incomeVsExpense.income,
-    displayedExpense: incomeVsExpense.expense,
+    income: incomeVsExpense.income,
+    expense: incomeVsExpense.expense,
     netWorthSeries,
     wealthAreaSeries,
     dailyData,

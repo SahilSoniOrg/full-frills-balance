@@ -53,8 +53,8 @@ export interface ReportOverviewTabVm {
   currentNetWorth: number;
   netWorthSeries: ReportNetWorthPoint[];
   barChartData: ReportBarChartDatum[];
-  displayedIncome: number;
-  displayedExpense: number;
+  income: number;
+  expense: number;
   incomeBarFlex: number;
   expenseBarFlex: number;
   sankeyData: SankeyData;

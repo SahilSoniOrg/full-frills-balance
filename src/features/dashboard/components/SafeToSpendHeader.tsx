@@ -1,7 +1,7 @@
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
 
 interface SafeToSpendHeaderProps {
@@ -23,7 +23,7 @@ export const SafeToSpendHeader = ({
 }: SafeToSpendHeaderProps) => {
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
-  const formatSts = useMoneyFormat({ style: 'sts', loading });
+  const formatSts = useStsMoneyFormat(loading);
 
   return (
     <Column gap="xs">
