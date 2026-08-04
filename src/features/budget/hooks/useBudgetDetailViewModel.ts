@@ -203,6 +203,15 @@ export function useBudgetDetailViewModel() {
     });
   }, [budget, workplaceId]);
 
+  const handleEdit = useCallback(() => {
+    if (!budget) return;
+    AppNavigation.toBudgetForm(budget.id, {
+      name: budget.name,
+      amount: budget.amount,
+      currency: budget.currencyCode,
+    });
+  }, [budget]);
+
   return {
     budget,
     usage,
@@ -217,5 +226,6 @@ export function useBudgetDetailViewModel() {
     chartData,
     periodLabel: budget ? BudgetPeriodUtils.getPeriodLabel(budget, refTimestamp) : '',
     handleDelete,
+    handleEdit,
   };
 }

@@ -12,7 +12,6 @@ export function CommitmentsView({
   setActiveTab,
   tabOptions,
   subtitle,
-  isPrivacyMode,
   fab,
 }: CommitmentsViewModel) {
   return (
@@ -37,11 +36,7 @@ export function CommitmentsView({
       </Stack>
 
       <Box flex={1} marginTop="md">
-        {activeTab === 'budgets' ? (
-          <BudgetsTabPanel isPrivacyMode={isPrivacyMode} />
-        ) : (
-          <PlannedTabPanel isPrivacyMode={isPrivacyMode} />
-        )}
+        {activeTab === 'budgets' ? <BudgetsTabPanel /> : <PlannedTabPanel />}
       </Box>
 
       <FloatingActionButton

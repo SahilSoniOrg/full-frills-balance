@@ -1,55 +1,59 @@
 import { getNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { mapJournalToCardProps } from '@/src/adapters/transactionCardAdapter';
+import {
+  buildInsightDetailsHeader,
+  type InsightDetailsHeaderModel,
+  type InsightDetailsRouteParams,
+} from '@/src/features/hub/helpers/insightDetailsPresentation';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { EnrichedJournal, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { EnrichedJournal, TransactionId } from '@/src/types/domain';
+import type { TransactionListItem } from '@/src/types/ui';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
 
-interface UseInsightDetailsViewModelParams {
-  workplaceId: WorkplaceId;
-  workplaceCurrency: string;
-  journalIds: string[];
-  baseCurrency?: string;
+export interface InsightDetailsViewModel {
+  items: TransactionListItem[];
+  isLoading: boolean;
+  isPrivacyMode: boolean;
+  header: InsightDetailsHeaderModel;
+  title: string;
+  emptyTitle: string;
+  emptySubtitle: string;
 }
 
-export function useInsightDetailsViewModel({
-  workplaceId,
-  workplaceCurrency,
-  journalIds,
-  baseCurrency: manualBaseCurrency,
-}: UseInsightDetailsViewModelParams) {
+export function useInsightDetailsViewModel(
+  params: InsightDetailsRouteParams,
+): InsightDetailsViewModel {
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { theme } = useTheme();
   const isPrivacyMode = useEffectivePrivacyMode();
-  const baseCurrency = manualBaseCurrency || workplaceCurrency;
+  const strings = AppConfig.strings.dashboard.insightDetails;
+
+  const journalIds = useMemo(
+    () => (params.journalIds ? params.journalIds.split(',') : []),
+    [params.journalIds],
+  );
+  const baseCurrency = params.currencyCode || workplaceCurrency;
+
   const journals$ = useMemo(() => {
     if (journalIds.length === 0) return of([]);
 
     return observeEnrichedJournals(workplaceId, AppConfig.defaults.insightDetailsFetchLimit, {
       startDate: 0,
       endDate: getNow() + AppConfig.time.msPerDay,
-      journalIds: journalIds,
+      journalIds,
     });
   }, [journalIds, workplaceId]);
 
-  // Re-filtering journals locally to match the IDs
-  const { data: allJournals, isLoading } = useObservable(() => journals$, [journals$], []);
-
-  // We need a way to filter journals who HAVE the transactions in our list.
-  // This is a bit inefficient if we have many journals, but for insights it's usually small.
-  // Better: Modify journalService or create a focused one.
-  // For now, let's just use the IDs we have.
-
-  const enrichedJournals = useMemo(() => {
-    // This is a placeholder for real filtering if needed,
-    // but observeEnrichedJournals already returns specific journals if we use accountId etc.
-    // For now, let's assume we want to show transactions.
-    return allJournals;
-  }, [allJournals]);
+  const { data: enrichedJournals, isLoading } = useObservable(() => journals$, [journals$], []);
 
   useCurrencyPrecision(baseCurrency);
 
@@ -58,13 +62,11 @@ export function useInsightDetailsViewModel({
       items: enrichedJournals,
       getDate: (j: EnrichedJournal) => j.journalDate,
       sortByDate: 'desc' as const,
-      getStats: (journalsForDay: EnrichedJournal[]) => {
-        return {
-          count: journalsForDay.length,
-          netAmount: 0, // Not needed for insight details
-          currencyCode: baseCurrency,
-        };
-      },
+      getStats: (journalsForDay: EnrichedJournal[]) => ({
+        count: journalsForDay.length,
+        netAmount: 0,
+        currencyCode: baseCurrency,
+      }),
       renderItem: (journal: EnrichedJournal) => {
         const cardProps = mapJournalToCardProps(journal);
 
@@ -94,9 +96,18 @@ export function useInsightDetailsViewModel({
 
   const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 
+  const header = useMemo(
+    () => buildInsightDetailsHeader(params, theme, isPrivacyMode),
+    [params, theme, isPrivacyMode],
+  );
+
   return {
     items,
     isLoading,
     isPrivacyMode,
+    header,
+    title: strings.title,
+    emptyTitle: strings.emptyTitle,
+    emptySubtitle: strings.emptySubtitle,
   };
 }

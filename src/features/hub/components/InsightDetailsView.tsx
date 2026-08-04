@@ -3,63 +3,21 @@ import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
-import { resolveThemeColor } from '@/src/design-system/utils';
+import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import type { InsightDetailsViewModel } from '@/src/features/hub/hooks/useInsightDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import type { TransactionListItem } from '@/src/types/ui';
-import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-
-type InsightDetailsParams = {
-  id?: string;
-  message?: string;
-  description?: string;
-  suggestion?: string;
-  severity?: string;
-  amount?: string;
-  currencyCode?: string;
-};
-
-export type InsightDetailsViewProps = {
-  items: TransactionListItem[];
-  isLoading: boolean;
-  isPrivacyMode: boolean;
-  params: InsightDetailsParams;
-};
 
 export function InsightDetailsView({
   items,
   isLoading,
   isPrivacyMode,
-  params,
-}: InsightDetailsViewProps) {
+  header,
+  title,
+  emptyTitle,
+  emptySubtitle,
+}: InsightDetailsViewModel) {
   const { theme, fonts } = useTheme();
-  const { insightDetails: strings } = AppConfig.strings.dashboard;
-
-  const amount = useMemo(() => {
-    if (!params.amount) return null;
-    const parsed = Number(params.amount);
-    return Number.isFinite(parsed) ? parsed : null;
-  }, [params.amount]);
-
-  const severityMeta = useMemo(() => {
-    let baseColor = theme.primary;
-    let label: string = strings.severityLabel.low;
-
-    if (params.severity === 'high') {
-      baseColor = theme.error;
-      label = strings.severityLabel.high;
-    } else if (params.severity === 'medium') {
-      baseColor = theme.warning;
-      label = strings.severityLabel.medium;
-    }
-
-    return {
-      color: resolveThemeColor(theme, baseColor) as string,
-      label,
-    };
-  }, [params.severity, theme, strings.severityLabel]);
 
   const listHeader = (
     <View style={styles.headerContainer}>
@@ -67,58 +25,55 @@ export function InsightDetailsView({
         style={[
           styles.hero,
           {
-            backgroundColor: withOpacity(severityMeta.color, Opacity.soft),
-            borderColor: severityMeta.color,
+            backgroundColor: withOpacity(header.severityColor, Opacity.soft),
+            borderColor: header.severityColor,
           },
         ]}
       >
         <View
           style={[
             styles.severityChip,
-            { backgroundColor: withOpacity(severityMeta.color, Opacity.hover) },
+            { backgroundColor: withOpacity(header.severityColor, Opacity.hover) },
           ]}
         >
-          <AppIcon name="alert" size={12} color={severityMeta.color} />
-          <AppText variant="caption" weight="medium" style={{ color: severityMeta.color }}>
-            {severityMeta.label}
+          <AppIcon name="alert" size={12} color={header.severityColor} />
+          <AppText variant="caption" weight="medium" style={{ color: header.severityColor }}>
+            {header.severityLabel}
           </AppText>
         </View>
         <View
           style={[
             styles.iconCircle,
-            { backgroundColor: withOpacity(severityMeta.color, Opacity.hover) },
+            { backgroundColor: withOpacity(header.severityColor, Opacity.hover) },
           ]}
         >
-          <AppIcon
-            name={params.id?.startsWith('sub_') ? 'refresh' : 'trendingUp'}
-            size={Size.md}
-            color={severityMeta.color}
-          />
+          <AppIcon name={header.iconName} size={Size.md} color={header.severityColor} />
         </View>
         <AppText variant="title" style={{ fontFamily: fonts.bold, marginTop: Spacing.md }}>
-          {params.message}
+          {header.message}
         </AppText>
-        {amount !== null ? (
+        {header.amountText !== null ? (
           <View
             style={[
               styles.amountCard,
-              { backgroundColor: withOpacity(severityMeta.color, Opacity.hover) },
+              { backgroundColor: withOpacity(header.severityColor, Opacity.hover) },
             ]}
           >
-            <AppText variant="caption" weight="medium" style={{ color: severityMeta.color }}>
-              {strings.impact}
+            <AppText variant="caption" weight="medium" style={{ color: header.severityColor }}>
+              {header.impactLabel}
             </AppText>
-            <AppText variant="title" style={{ color: severityMeta.color, fontFamily: fonts.bold }}>
-              {isPrivacyMode
-                ? AppConfig.privacyMask
-                : CurrencyFormatter.format(amount, params.currencyCode ?? '')}
+            <AppText
+              variant="title"
+              style={{ color: header.severityColor, fontFamily: fonts.bold }}
+            >
+              {header.amountText}
             </AppText>
           </View>
         ) : null}
-        {params.description ? (
+        {header.description ? (
           <AppText variant="body" color="secondary" style={styles.description}>
-            {strings.whyThisAppeared}
-            {params.description}
+            {header.whyThisAppeared}
+            {header.description}
           </AppText>
         ) : null}
         <View
@@ -127,34 +82,31 @@ export function InsightDetailsView({
           <View style={styles.actionHeader}>
             <AppIcon name="checkCircle" size={16} color={theme.textSecondary} />
             <AppText variant="caption" color="secondary" weight="semibold">
-              {strings.recommendedAction}
+              {header.recommendedActionLabel}
             </AppText>
           </View>
           <AppText variant="body" color="secondary" style={styles.suggestion}>
-            {params.suggestion}
+            {header.suggestion}
           </AppText>
         </View>
         <AppText variant="caption" color="secondary" style={styles.basisText}>
-          {strings.basisText(AppConfig.insights.lookbackDays)}
+          {header.basisText}
         </AppText>
       </View>
-      <ScreenSectionHeader
-        title={AppConfig.strings.dashboard.triggeringTransactionsTitle}
-        style={styles.listTitle}
-      />
+      <ScreenSectionHeader title={header.transactionsTitle} style={styles.listTitle} />
     </View>
   );
 
   return (
-    <Screen title={strings.title} withPadding={false} headerActions={<PrivacyToggleButton />}>
+    <Screen title={title} withPadding={false} headerActions={<PrivacyToggleButton />}>
       <TransactionListView
         items={items}
         isLoading={isLoading}
         isPrivacyMode={isPrivacyMode}
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
-        emptyTitle={strings.emptyTitle}
-        emptySubtitle={strings.emptySubtitle}
+        emptyTitle={emptyTitle}
+        emptySubtitle={emptySubtitle}
       />
     </Screen>
   );

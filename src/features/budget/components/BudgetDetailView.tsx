@@ -5,7 +5,6 @@ import { LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from '../components/BudgetDetailHeader';
 import type { useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
@@ -36,12 +35,7 @@ export function BudgetDetailView(vm: BudgetDetailViewModel) {
           actions={[
             {
               name: 'edit',
-              onPress: () =>
-                AppNavigation.toBudgetForm(budget.id, {
-                  name: budget.name,
-                  amount: budget.amount,
-                  currency: budget.currencyCode,
-                }),
+              onPress: vm.handleEdit,
               iconColor: theme.text,
               size: Typography.sizes.xl,
               testID: 'edit-button',
