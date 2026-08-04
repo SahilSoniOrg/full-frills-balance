@@ -450,13 +450,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the Planned Payments List screen.
-   */
-  toPlannedPayments: () => {
-    router.push('/planned-payments' as Href);
-  },
-
-  /**
    * Navigate to the Planned Payment Details screen.
    */
   toPlannedPaymentDetails: (

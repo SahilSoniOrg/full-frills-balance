@@ -1,6 +1,7 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
+import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
@@ -12,6 +13,14 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
+  return (
+    <PrivacyScopeProvider>
+      <JournalScreenContent />
+    </PrivacyScopeProvider>
+  );
+}
+
+function JournalScreenContent() {
   const { workplaceId } = useWorkplace();
   const initialDateRange = useJournalRouteDateRange();
   const canGoBack = router.canGoBack();

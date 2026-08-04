@@ -52,6 +52,7 @@ export function useReportsViewModel(): ReportsViewModel {
   } = useReports(workplaceId, defaultCurrencyCode);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>();
 
   const chartData = useReportChartData({
     netWorthHistory,
@@ -71,6 +72,7 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseCategories,
     incomeCategories,
     incomeVsExpenseHistory,
+    selectedIncomeExpenseIndex: selectedBarIndex,
     targetCurrency,
     theme,
     workplaceId: workplaceId,
@@ -79,6 +81,7 @@ export function useReportsViewModel(): ReportsViewModel {
   const resetSelections = useCallback(() => {
     breakdownDetails.setExpandedExpenses(false);
     breakdownDetails.setExpandedIncome(false);
+    setSelectedBarIndex(undefined);
   }, [breakdownDetails]);
 
   const filters = useReportFilters({
@@ -96,6 +99,13 @@ export function useReportsViewModel(): ReportsViewModel {
     dateRange,
   });
 
+  const onSelectBarIndex = useCallback((index: number | undefined) => {
+    setSelectedBarIndex(index);
+    if (index !== undefined && index !== -1) {
+      analytics.logChartInteracted('income_expense', 'point_select');
+    }
+  }, []);
+
   const overview: ReportOverviewTabVm = {
     netWorthSeries: chartData.netWorthSeries,
     barChartData: chartData.barChartData,
@@ -106,6 +116,8 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseBarFlex: incomeVsExpense.expense || 1,
     sankeyData: chartData.sankeyData,
     targetCurrency,
+    selectedBarIndex,
+    onSelectBarIndex,
     onViewTransactions: actions.onViewTransactions,
     onViewSelectedTransactions: actions.onViewSelectedTransactions,
   };

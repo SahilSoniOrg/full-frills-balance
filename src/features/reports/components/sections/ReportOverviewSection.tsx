@@ -22,6 +22,8 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     sankeyData,
     targetCurrency,
     onViewSelectedTransactions,
+    selectedBarIndex,
+    onSelectBarIndex,
   } = vm;
 
   return (
@@ -38,6 +40,8 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         barChartData={barChartData}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
+        selectedIndex={selectedBarIndex}
+        onSelectIndex={onSelectBarIndex}
         onViewSelectedTransactions={onViewSelectedTransactions}
       />
 

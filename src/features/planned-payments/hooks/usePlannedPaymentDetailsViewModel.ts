@@ -46,6 +46,7 @@ export interface PlannedPaymentDetailsViewModel {
 
   rawAmount?: number;
   rawName?: string;
+  isPrivacyMode: boolean;
 
   headerActions?: {
     onEdit: () => void;
@@ -116,6 +117,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           history: [],
           rawAmount: pAmount ? parseFloat(pAmount) : 0,
           rawName: pDesc,
+          isPrivacyMode,
           headerActions: { onEdit: handleEdit, onDelete: () => {} },
           onPost: () => {},
           onSkip: () => {},
@@ -126,6 +128,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         theme,
         isLoading,
         isMissing: true,
+        isPrivacyMode,
         onBack: () => AppNavigation.back(),
       };
     }
@@ -202,6 +205,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
       rawAmount: item.amount,
       rawName: item.name,
+      isPrivacyMode,
 
       // Actions
       headerActions,
