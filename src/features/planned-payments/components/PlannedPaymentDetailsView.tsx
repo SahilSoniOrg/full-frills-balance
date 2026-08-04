@@ -2,7 +2,7 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
@@ -87,7 +87,15 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   return (
     <Screen title={title} showBack={true} headerActions={headerActionsNode} scrollable withPadding>
       <Column paddingVertical="lg">
-        <AppSurface elevation="sm" padding="lg" radius="r2" style={{ marginBottom: Spacing.lg }}>
+        <AppSurface
+          elevation="sm"
+          padding="lg"
+          radius="r2"
+          background="surface"
+          borderWidth={1}
+          borderColor="surfaceSecondary"
+          style={{ marginBottom: Spacing.lg }}
+        >
           <Row align="center" gap="md" marginBottom="lg">
             <Box
               width={Size.avatarLg}
@@ -237,13 +245,15 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
         </Box>
         {history?.length === 0 ? (
           <AppSurface
+            elevation="none"
             padding="lg"
             radius="r2"
             marginBottom="lg"
+            background="surface"
+            borderWidth={1}
+            borderColor="border"
             style={{
               borderStyle: 'dashed',
-              borderWidth: 1,
-              borderColor: withOpacity(theme.text, Opacity.hover),
             }}
           >
             <Text color="secondary" align="center">
