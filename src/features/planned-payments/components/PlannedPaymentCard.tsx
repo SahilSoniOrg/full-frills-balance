@@ -1,3 +1,4 @@
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppSurface, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
@@ -7,7 +8,6 @@ import PlannedPayment, {
 } from '@/src/data/models/PlannedPayment';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { TouchableOpacity } from 'react-native';
@@ -15,12 +15,12 @@ import { TouchableOpacity } from 'react-native';
 export interface PlannedPaymentCardProps {
   item: PlannedPayment;
   onPress: () => void;
-  isPrivacyMode?: boolean;
 }
 
 export interface PlannedPaymentCardViewModel {
   name: string;
-  amountText: string;
+  amount: number;
+  currencyCode: string;
   amountColor: 'error' | 'success';
   intervalLabel: string;
   statusBadge: {
@@ -37,7 +37,6 @@ export interface PlannedPaymentCardViewModel {
 export function presentPlannedPaymentCard(
   item: PlannedPayment,
   theme: Theme,
-  isPrivacyMode = false,
 ): PlannedPaymentCardViewModel {
   const getIntervalLabel = () => {
     const n = item.intervalN;
@@ -97,9 +96,8 @@ export function presentPlannedPaymentCard(
 
   return {
     name: item.name,
-    amountText: isPrivacyMode
-      ? AppConfig.privacyMask
-      : CurrencyFormatter.format(item.amount, item.currencyCode),
+    amount: item.amount,
+    currencyCode: item.currencyCode,
     amountColor: item.amount < 0 ? 'error' : 'success',
     intervalLabel: getIntervalLabel(),
     statusBadge,
@@ -110,13 +108,10 @@ export function presentPlannedPaymentCard(
   };
 }
 
-function PlannedPaymentCardComponent({
-  item,
-  onPress,
-  isPrivacyMode = false,
-}: PlannedPaymentCardProps) {
+function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps) {
   const { theme } = useTheme();
-  const vm = presentPlannedPaymentCard(item, theme, isPrivacyMode);
+  const formatMoney = useMoneyFormat();
+  const vm = presentPlannedPaymentCard(item, theme);
 
   return (
     <TouchableOpacity
@@ -163,7 +158,7 @@ function PlannedPaymentCardComponent({
 
             <Column align="flex-end">
               <Text variant="lg" weight="bold" color={vm.amountColor}>
-                {vm.amountText}
+                {formatMoney(vm.amount, vm.currencyCode)}
               </Text>
             </Column>
           </Row>

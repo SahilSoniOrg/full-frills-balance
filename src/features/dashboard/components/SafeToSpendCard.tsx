@@ -2,7 +2,6 @@ import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
-import { formatAmountOrLoading } from '../utils/formatAmount';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';
@@ -34,12 +33,10 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     shortfall,
     committedLiabilities,
     currencyCode,
-    isPrivacyMode,
     isLoading: vmLoading,
   } = viewModel;
 
   const loading = isLoading ?? vmLoading;
-  const fmt = (raw: number) => formatAmountOrLoading(raw, currencyCode, isPrivacyMode, loading);
 
   const breakdown = (
     <SafeToSpendBreakdownBar
@@ -47,9 +44,8 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       committedTotal={committedTotal}
       committedLiabilities={committedLiabilities}
       safeToSpend={safeToSpend}
-      displaySafe={fmt(safeToSpend)}
-      displayCommitted={fmt(committedTotal)}
-      displayDebts={fmt(committedLiabilities)}
+      currencyCode={currencyCode}
+      loading={loading}
       onLegendPress={onLegendPress}
     />
   );
@@ -59,7 +55,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       projection={projection}
       safeToSpend={safeToSpend}
       isOverCommitted={isOverCommitted}
-      isPrivacyMode={isPrivacyMode}
       currencyCode={currencyCode}
       isLoading={loading}
     />
@@ -69,9 +64,10 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     <SafeToSpendHeader
       isOverCommitted={isOverCommitted}
       isPositiveSafeToSpend={isPositiveSafeToSpend}
-      displayValue={fmt(isOverCommitted ? shortfall : safeToSpend)}
+      amount={isOverCommitted ? shortfall : safeToSpend}
+      currencyCode={currencyCode}
+      loading={loading}
       onInfoPress={onInfoPress}
-      isLoading={loading}
     />
   );
 

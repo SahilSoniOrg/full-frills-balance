@@ -56,7 +56,6 @@ export function BudgetDetailView(vm: BudgetDetailViewModel) {
           items={vm.items}
           isLoading={vm.isLoading}
           isLoadingMore={false}
-          isPrivacyMode={vm.isPrivacyMode}
           emptyTitle="No activity"
           emptySubtitle="No transactions found for this budget in the selected month."
           ListHeaderComponent={
@@ -65,7 +64,6 @@ export function BudgetDetailView(vm: BudgetDetailViewModel) {
               usage={usage}
               periodLabel={vm.periodLabel}
               isCurrentMonth={vm.isCurrentMonth}
-              isPrivacyMode={vm.isPrivacyMode}
               chartData={vm.chartData}
               prevMonth={vm.prevMonth}
               nextMonth={vm.nextMonth}

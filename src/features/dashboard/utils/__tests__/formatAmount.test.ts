@@ -4,6 +4,7 @@ import {
   formatAmountOrLoading,
   FORMAT_AMOUNT_LOADING,
 } from '@/src/features/dashboard/utils/formatAmount';
+import { formatMoneyAmount } from '@/src/components/common/moneyFormat';
 
 jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
@@ -13,19 +14,19 @@ jest.mock('@/src/utils/currencyFormatter', () => ({
 
 describe('formatAmount', () => {
   it('masks when privacy mode is on', () => {
-    expect(formatAmount(1234, 'USD', true)).toBe(AppConfig.privacyMask);
+    expect(formatMoneyAmount(1234, 'USD', true, { style: 'sts' })).toBe(AppConfig.privacyMask);
   });
 
   it('handles small positive values', () => {
-    expect(formatAmount(0.2, 'USD', false)).toBe('< $1');
+    expect(formatAmount(0.2, 'USD')).toBe('< $1');
   });
 
   it('handles small negative values', () => {
-    expect(formatAmount(-0.2, 'USD', false)).toBe('> -$1');
+    expect(formatAmount(-0.2, 'USD')).toBe('> -$1');
   });
 
   it('formats normal amounts', () => {
-    expect(formatAmount(1500, 'USD', false)).toBe('$1500');
+    expect(formatAmount(1500, 'USD')).toBe('$1500');
   });
 
   it('formatAmountOrLoading returns placeholder while loading', () => {

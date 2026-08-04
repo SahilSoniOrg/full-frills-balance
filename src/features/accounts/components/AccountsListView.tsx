@@ -1,3 +1,4 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { CashFlowCard } from '@/src/components/common/CashFlowCard';
 import { NetWorthCard } from '@/src/components/common/NetWorthCard';
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
@@ -10,7 +11,7 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
@@ -18,7 +19,6 @@ import {
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const TAB_OPTIONS = [
@@ -34,7 +34,6 @@ export function AccountsListView({
   onCreateAccount,
   onReorderPress,
   onManageHierarchy,
-  isPrivacyMode,
   isLoading,
   netWorth,
   totalAssets,
@@ -126,11 +125,14 @@ export function AccountsListView({
                     </View>
                   </View>
                   <View style={styles.flexRowGapMd}>
-                    <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
-                      {isPrivacyMode
-                        ? AppConfig.privacyMask
-                        : CurrencyFormatter.formatShort(section.total, currencyCode)}
-                    </AppText>
+                    <MoneyText
+                      amount={section.total}
+                      currencyCode={currencyCode}
+                      short
+                      variant="body"
+                      weight="bold"
+                      style={{ color: section.totalColor }}
+                    />
                     <AppIcon
                       name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
                       size={Size.iconSm}
@@ -152,7 +154,6 @@ export function AccountsListView({
             return (
               <AccountCard
                 account={item}
-                isPrivacyMode={isPrivacyMode}
                 isLoading={isLoading}
                 onPress={() => onAccountPress(item.id)}
                 onCollapse={() => onCollapseAccount(item.id)}
@@ -170,7 +171,6 @@ export function AccountsListView({
                   totalLiabilities={totalLiabilities}
                   currencyCode={currencyCode}
                   isLoading={isLoading}
-                  isPrivacyMode={isPrivacyMode}
                 />
               </View>
             ) : (
@@ -182,7 +182,6 @@ export function AccountsListView({
                   onChangePeriod={setInflowPeriod}
                   currencyCode={currencyCode}
                   isLoading={isLoading || isPeriodLoading}
-                  isPrivacyMode={isPrivacyMode}
                 />
               </View>
             )

@@ -1,12 +1,13 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
+import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, formatRelativeReconciledDate, formatShortDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -40,17 +41,6 @@ interface AccountDetailsHeaderProps {
     dailyAverageText: string | null;
     isLoading: boolean;
   };
-  /** Screen/VM privacy flag — mask chart tooltip amounts. */
-  isPrivacyMode: boolean;
-}
-
-function formatSensitiveAmount(
-  amount: number,
-  currencyCode: string,
-  isPrivacyMode: boolean,
-): string {
-  if (isPrivacyMode) return AppConfig.privacyMask;
-  return CurrencyFormatter.format(amount, currencyCode);
 }
 
 export function AccountDetailsHeader({
@@ -77,9 +67,9 @@ export function AccountDetailsHeader({
   xTicks,
   periodMetricsFormatted,
   currencyCode,
-  isPrivacyMode,
 }: AccountDetailsHeaderProps) {
   const { theme } = useTheme();
+  const { isPrivacyMode } = usePrivacyScope();
 
   return (
     <View style={styles.headerListRegion}>
@@ -191,9 +181,12 @@ export function AccountDetailsHeader({
                   <AppText variant="caption" color="secondary">
                     Balance
                   </AppText>
-                  <AppText variant="body" weight="bold">
-                    {formatSensitiveAmount(point.y, currencyCode, isPrivacyMode)}
-                  </AppText>
+                  <MoneyText
+                    amount={point.y}
+                    currencyCode={currencyCode}
+                    variant="body"
+                    weight="bold"
+                  />
                 </View>
                 <View style={[styles.tooltipRow, { marginTop: 2 }]}>
                   <AppText variant="caption" color="secondary">
@@ -204,9 +197,14 @@ export function AccountDetailsHeader({
                     weight="bold"
                     style={{ color: isPositive ? theme.income : theme.expense }}
                   >
-                    {isPrivacyMode
-                      ? AppConfig.privacyMask
-                      : `${isPositive ? '+' : ''}${CurrencyFormatter.format(changeFromStart, currencyCode)}`}
+                    {isPositive ? '+' : ''}
+                    <MoneyText
+                      amount={changeFromStart}
+                      currencyCode={currencyCode}
+                      variant="body"
+                      weight="bold"
+                      style={{ color: isPositive ? theme.income : theme.expense }}
+                    />
                   </AppText>
                 </View>
                 {rollingPoint && (
@@ -214,9 +212,13 @@ export function AccountDetailsHeader({
                     <AppText variant="caption" color="secondary">
                       7d Avg
                     </AppText>
-                    <AppText variant="body" weight="bold" style={{ color: theme.warning }}>
-                      {formatSensitiveAmount(rollingPoint.y, currencyCode, isPrivacyMode)}
-                    </AppText>
+                    <MoneyText
+                      amount={rollingPoint.y}
+                      currencyCode={currencyCode}
+                      variant="body"
+                      weight="bold"
+                      style={{ color: theme.warning }}
+                    />
                   </View>
                 )}
               </View>

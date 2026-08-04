@@ -11,7 +11,6 @@ import { StyleSheet, View } from 'react-native';
 export function InsightDetailsView({
   items,
   isLoading,
-  isPrivacyMode,
   header,
   title,
   emptyTitle,
@@ -102,7 +101,6 @@ export function InsightDetailsView({
       <TransactionListView
         items={items}
         isLoading={isLoading}
-        isPrivacyMode={isPrivacyMode}
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         emptyTitle={emptyTitle}

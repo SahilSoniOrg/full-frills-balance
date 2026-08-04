@@ -1,9 +1,9 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -14,7 +14,6 @@ interface HubWidgetProps {
   currencyCode: string;
   onDismiss: (id: string) => void;
   hideManageDismissed?: boolean;
-  isPrivacyMode?: boolean;
 }
 
 export const HubWidget = ({
@@ -22,7 +21,6 @@ export const HubWidget = ({
   currencyCode,
   onDismiss,
   hideManageDismissed = false,
-  isPrivacyMode = false,
 }: HubWidgetProps) => {
   const { theme, fonts } = useTheme();
 
@@ -199,20 +197,15 @@ export const HubWidget = ({
                       <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
                         {AppConfig.strings.dashboard.notifications.impact}
                       </AppText>
-                      <AppText
+                      <MoneyText
+                        amount={insight.amount}
+                        currencyCode={insight.currencyCode || currencyCode}
                         variant="subheading"
                         style={[
                           styles.amountValue,
                           { color: severity.color, fontFamily: fonts.bold },
                         ]}
-                      >
-                        {isPrivacyMode
-                          ? AppConfig.privacyMask
-                          : CurrencyFormatter.format(
-                              insight.amount,
-                              insight.currencyCode || currencyCode,
-                            )}
-                      </AppText>
+                      />
                     </View>
                   ) : null}
 

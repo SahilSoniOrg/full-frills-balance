@@ -1,8 +1,8 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface SafeToSpendBreakdownBarProps {
@@ -10,9 +10,8 @@ interface SafeToSpendBreakdownBarProps {
   committedTotal: number;
   committedLiabilities: number;
   safeToSpend: number;
-  displaySafe: string | React.ReactNode;
-  displayCommitted: string | React.ReactNode;
-  displayDebts: string | React.ReactNode;
+  currencyCode: string;
+  loading?: boolean;
   onLegendPress: (item: 'safe' | 'committed' | 'debts') => void;
 }
 
@@ -21,9 +20,8 @@ export const SafeToSpendBreakdownBar = ({
   committedTotal,
   committedLiabilities,
   safeToSpend,
-  displaySafe,
-  displayCommitted,
-  displayDebts,
+  currencyCode,
+  loading = false,
   onLegendPress,
 }: SafeToSpendBreakdownBarProps) => {
   const { theme } = useTheme();
@@ -69,9 +67,16 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.safePrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="primary" numberOfLines={1}>
-                {displaySafe}
-              </AppText>
+              <MoneyText
+                amount={safeToSpend}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={loading}
+                variant="caption"
+                weight="bold"
+                color="primary"
+                numberOfLines={1}
+              />
             </Row>
           </Row>
         </TouchableOpacity>
@@ -83,9 +88,16 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.committedPrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="warning" numberOfLines={1}>
-                {displayCommitted}
-              </AppText>
+              <MoneyText
+                amount={committedTotal}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={loading}
+                variant="caption"
+                weight="bold"
+                color="warning"
+                numberOfLines={1}
+              />
             </Row>
           </Row>
         </TouchableOpacity>
@@ -97,9 +109,16 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.debtsPrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="error" numberOfLines={1}>
-                {displayDebts}
-              </AppText>
+              <MoneyText
+                amount={committedLiabilities}
+                currencyCode={currencyCode}
+                formatStyle="sts"
+                loading={loading}
+                variant="caption"
+                weight="bold"
+                color="error"
+                numberOfLines={1}
+              />
             </Row>
           </Row>
         </TouchableOpacity>

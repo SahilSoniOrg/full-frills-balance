@@ -1,4 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
+import { MoneyText } from '@/src/components/common/MoneyText';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
@@ -11,14 +13,11 @@ import {
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { formatAmountOrLoading } from '../utils/formatAmount';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
   safeToSpend: number;
   isOverCommitted: boolean;
-  /** From STS view model — do not read privacy hooks in this leaf. */
-  isPrivacyMode: boolean;
   currencyCode: string;
   isLoading?: boolean;
 }
@@ -27,14 +26,12 @@ export const SafeToSpendChart = ({
   projection,
   safeToSpend,
   isOverCommitted,
-  isPrivacyMode,
   currencyCode,
   isLoading = false,
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
-  const formatValue = (raw: number) =>
-    formatAmountOrLoading(raw, currencyCode, isPrivacyMode, isLoading);
+  const formatSts = useMoneyFormat({ style: 'sts', loading: isLoading });
 
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -72,7 +69,7 @@ export const SafeToSpendChart = ({
     { value: 0, label: '0', color: theme.error, strokeDasharray: '2,2' },
     {
       value: safeToSpend,
-      label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatValue(safeToSpend)}`,
+      label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatSts(safeToSpend, currencyCode)}`,
       color: theme.primary,
       strokeDasharray: '4,4',
     },
@@ -222,9 +219,15 @@ export const SafeToSpendChart = ({
                   )}
                 </Inline>
 
-                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
-                  {formatValue(point.y)}
-                </AppText>
+                <MoneyText
+                  amount={point.y}
+                  currencyCode={currencyCode}
+                  formatStyle="sts"
+                  loading={isLoading}
+                  variant="body"
+                  weight="bold"
+                  color={point.y < 0 ? 'error' : 'primary'}
+                />
 
                 {((point.dailyBurn ?? 0) > 0 || (point.details?.length ?? 0) > 0) && (
                   <>
@@ -248,7 +251,17 @@ export const SafeToSpendChart = ({
                             color="error"
                             style={{ fontSize: 10 }}
                           >
-                            Daily Burn: {formatValue(point.dailyBurn!)}
+                            Daily Burn:{' '}
+                            <MoneyText
+                              amount={point.dailyBurn!}
+                              currencyCode={currencyCode}
+                              formatStyle="sts"
+                              loading={isLoading}
+                              variant="caption"
+                              weight="bold"
+                              color="error"
+                              style={{ fontSize: 10 }}
+                            />
                           </AppText>
                         </Inline>
                       </View>
@@ -274,7 +287,17 @@ export const SafeToSpendChart = ({
                               color="success"
                               style={{ fontSize: 10 }}
                             >
-                              Planned Inflow: +{formatValue(plannedInflowTotal)}
+                              Planned Inflow: +{' '}
+                              <MoneyText
+                                amount={plannedInflowTotal}
+                                currencyCode={currencyCode}
+                                formatStyle="sts"
+                                loading={isLoading}
+                                variant="caption"
+                                weight="bold"
+                                color="success"
+                                style={{ fontSize: 10 }}
+                              />
                             </AppText>
                           </Inline>
                         )}
@@ -287,7 +310,17 @@ export const SafeToSpendChart = ({
                               color="error"
                               style={{ fontSize: 10 }}
                             >
-                              To Be Spent: -{formatValue(toBeSpentTotal)}
+                              To Be Spent: -{' '}
+                              <MoneyText
+                                amount={toBeSpentTotal}
+                                currencyCode={currencyCode}
+                                formatStyle="sts"
+                                loading={isLoading}
+                                variant="caption"
+                                weight="bold"
+                                color="error"
+                                style={{ fontSize: 10 }}
+                              />
                             </AppText>
                           </Inline>
                         )}
@@ -351,7 +384,16 @@ export const SafeToSpendChart = ({
                                 style={{ fontSize: 10 }}
                               >
                                 {isInflow ? '+' : '-'}
-                                {formatValue(Math.abs(detail.amount))}
+                                <MoneyText
+                                  amount={Math.abs(detail.amount)}
+                                  currencyCode={currencyCode}
+                                  formatStyle="sts"
+                                  loading={isLoading}
+                                  variant="caption"
+                                  weight="bold"
+                                  color={isInflow ? 'success' : 'error'}
+                                  style={{ fontSize: 10 }}
+                                />
                               </AppText>
                             )}
                           </Inline>
