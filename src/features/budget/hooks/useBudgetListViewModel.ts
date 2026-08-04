@@ -1,4 +1,3 @@
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
@@ -8,7 +7,6 @@ import { BudgetItem } from '../types';
 import { WorkplaceId } from '@/src/types/domain';
 
 export function useBudgetListViewModel(workplaceId: WorkplaceId) {
-  const isPrivacyMode = useEffectivePrivacyMode();
   const budgetsObservable = budgetReadService.observeAllActive(workplaceId).pipe(
     switchMap(budgets => {
       if (budgets.length === 0) return of([]);
@@ -32,5 +30,5 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
     [],
   );
 
-  return { items, isPrivacyMode };
+  return { items };
 }

@@ -63,7 +63,6 @@ export function useReportsViewModel(): ReportsViewModel {
     spendingHeatmap,
     calendarHeatmap,
     theme,
-    workplaceId: workplaceId,
   });
 
   const breakdownDetails = useReportBreakdownDetails({

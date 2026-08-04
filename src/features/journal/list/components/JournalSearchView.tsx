@@ -130,7 +130,6 @@ export function JournalSearchView(vm: JournalSearchViewModel) {
           emptySubtitle: 'Try adjusting your filters',
           onEndReached: vm.onEndReached,
           listHeader: filterHeader,
-          isPrivacyMode: vm.isPrivacyMode,
         }}
         chrome={{
           screenTitle: 'Search',

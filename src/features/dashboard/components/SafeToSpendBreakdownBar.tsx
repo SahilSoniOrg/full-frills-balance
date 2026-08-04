@@ -1,4 +1,4 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
@@ -26,6 +26,7 @@ export const SafeToSpendBreakdownBar = ({
 }: SafeToSpendBreakdownBarProps) => {
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
+  const formatSts = useMoneyFormat({ style: 'sts', loading });
 
   if (effectiveTotal <= 0) {
     return (
@@ -67,16 +68,9 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.safePrefix}
               </AppText>
-              <MoneyText
-                amount={safeToSpend}
-                currencyCode={currencyCode}
-                formatStyle="sts"
-                loading={loading}
-                variant="caption"
-                weight="bold"
-                color="primary"
-                numberOfLines={1}
-              />
+              <AppText variant="caption" weight="bold" color="primary" numberOfLines={1}>
+                {formatSts(safeToSpend, currencyCode)}
+              </AppText>
             </Row>
           </Row>
         </TouchableOpacity>
@@ -88,16 +82,9 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.committedPrefix}
               </AppText>
-              <MoneyText
-                amount={committedTotal}
-                currencyCode={currencyCode}
-                formatStyle="sts"
-                loading={loading}
-                variant="caption"
-                weight="bold"
-                color="warning"
-                numberOfLines={1}
-              />
+              <AppText variant="caption" weight="bold" color="warning" numberOfLines={1}>
+                {formatSts(committedTotal, currencyCode)}
+              </AppText>
             </Row>
           </Row>
         </TouchableOpacity>
@@ -109,16 +96,9 @@ export const SafeToSpendBreakdownBar = ({
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.debtsPrefix}
               </AppText>
-              <MoneyText
-                amount={committedLiabilities}
-                currencyCode={currencyCode}
-                formatStyle="sts"
-                loading={loading}
-                variant="caption"
-                weight="bold"
-                color="error"
-                numberOfLines={1}
-              />
+              <AppText variant="caption" weight="bold" color="error" numberOfLines={1}>
+                {formatSts(committedLiabilities, currencyCode)}
+              </AppText>
             </Row>
           </Row>
         </TouchableOpacity>

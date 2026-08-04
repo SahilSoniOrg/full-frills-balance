@@ -1,5 +1,4 @@
 import { LineChart } from '@/src/components/charts/LineChart';
-import { MoneyText } from '@/src/components/common/MoneyText';
 import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
@@ -219,15 +218,9 @@ export const SafeToSpendChart = ({
                   )}
                 </Inline>
 
-                <MoneyText
-                  amount={point.y}
-                  currencyCode={currencyCode}
-                  formatStyle="sts"
-                  loading={isLoading}
-                  variant="body"
-                  weight="bold"
-                  color={point.y < 0 ? 'error' : 'primary'}
-                />
+                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                  {formatSts(point.y, currencyCode)}
+                </AppText>
 
                 {((point.dailyBurn ?? 0) > 0 || (point.details?.length ?? 0) > 0) && (
                   <>
@@ -251,17 +244,7 @@ export const SafeToSpendChart = ({
                             color="error"
                             style={{ fontSize: 10 }}
                           >
-                            Daily Burn:{' '}
-                            <MoneyText
-                              amount={point.dailyBurn!}
-                              currencyCode={currencyCode}
-                              formatStyle="sts"
-                              loading={isLoading}
-                              variant="caption"
-                              weight="bold"
-                              color="error"
-                              style={{ fontSize: 10 }}
-                            />
+                            Daily Burn: {formatSts(point.dailyBurn!, currencyCode)}
                           </AppText>
                         </Inline>
                       </View>
@@ -287,17 +270,7 @@ export const SafeToSpendChart = ({
                               color="success"
                               style={{ fontSize: 10 }}
                             >
-                              Planned Inflow: +{' '}
-                              <MoneyText
-                                amount={plannedInflowTotal}
-                                currencyCode={currencyCode}
-                                formatStyle="sts"
-                                loading={isLoading}
-                                variant="caption"
-                                weight="bold"
-                                color="success"
-                                style={{ fontSize: 10 }}
-                              />
+                              Planned Inflow: +{formatSts(plannedInflowTotal, currencyCode)}
                             </AppText>
                           </Inline>
                         )}
@@ -310,17 +283,7 @@ export const SafeToSpendChart = ({
                               color="error"
                               style={{ fontSize: 10 }}
                             >
-                              To Be Spent: -{' '}
-                              <MoneyText
-                                amount={toBeSpentTotal}
-                                currencyCode={currencyCode}
-                                formatStyle="sts"
-                                loading={isLoading}
-                                variant="caption"
-                                weight="bold"
-                                color="error"
-                                style={{ fontSize: 10 }}
-                              />
+                              To Be Spent: -{formatSts(toBeSpentTotal, currencyCode)}
                             </AppText>
                           </Inline>
                         )}
@@ -384,16 +347,7 @@ export const SafeToSpendChart = ({
                                 style={{ fontSize: 10 }}
                               >
                                 {isInflow ? '+' : '-'}
-                                <MoneyText
-                                  amount={Math.abs(detail.amount)}
-                                  currencyCode={currencyCode}
-                                  formatStyle="sts"
-                                  loading={isLoading}
-                                  variant="caption"
-                                  weight="bold"
-                                  color={isInflow ? 'success' : 'error'}
-                                  style={{ fontSize: 10 }}
-                                />
+                                {formatSts(Math.abs(detail.amount), currencyCode)}
                               </AppText>
                             )}
                           </Inline>
