@@ -1,10 +1,10 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
 import { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -19,8 +19,6 @@ interface HeatmapChartProps {
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  /** Formats selected-cell amounts. Defaults to CurrencyFormatter.formatAmount. */
-  formatValue?: (value: number) => string;
 }
 
 export const HeatmapChart: React.FC<HeatmapChartProps> = ({
@@ -31,14 +29,11 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
-  formatValue,
 }) => {
   const { theme, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
-  const formatLabel =
-    formatValue ?? ((value: number) => CurrencyFormatter.formatAmount(value, currency));
 
   const HOURS_DETAILED = [
     '12a',
@@ -246,12 +241,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                         {DAYS_SHORT[selectedPoint.x]} • {selectedPoint.y}:00
                       </AppText>
                     </View>
-                    <AppText
+                    <MoneyText
+                      amount={selectedPoint.value}
+                      currencyCode={currency}
                       variant="title"
                       style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
-                    >
-                      {formatLabel(selectedPoint.value)}
-                    </AppText>
+                    />
                   </View>
                 )}
               </ChartTooltip>

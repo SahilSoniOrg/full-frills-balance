@@ -3,7 +3,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useCallback, useState } from 'react';
 import {
   ReportOverviewTabVm,
@@ -23,10 +22,6 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
-  /** Privacy-aware full format for chart formatValue (SVG cannot use MoneyText). */
-  formatMoney: (amount: number) => string;
-  /** Privacy-aware short format for chart formatValue (SVG cannot use MoneyText). */
-  formatMoneyShort: (amount: number) => string;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
   wealth: ReportWealthTabVm;
@@ -60,16 +55,6 @@ export function useReportsViewModel(): ReportsViewModel {
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>();
-
-  const formatMoney = useCallback(
-    (amount: number) => CurrencyFormatter.formatOrMask(amount, targetCurrency, isPrivacyMode),
-    [targetCurrency, isPrivacyMode],
-  );
-
-  const formatMoneyShort = useCallback(
-    (amount: number) => CurrencyFormatter.formatShortOrMask(amount, targetCurrency, isPrivacyMode),
-    [targetCurrency, isPrivacyMode],
-  );
 
   const chartData = useReportChartData({
     netWorthHistory,
@@ -173,8 +158,6 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
     loading,
-    formatMoney,
-    formatMoneyShort,
     overview,
     spending,
     wealth,

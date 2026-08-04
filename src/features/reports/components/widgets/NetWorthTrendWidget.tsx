@@ -24,7 +24,6 @@ export interface NetWorthTrendWidgetProps {
   displayedNetWorthText: string;
   currencyCode: string;
   chartWidth: number;
-  formatMoneyShort: (amount: number) => string;
   onViewTransactions: (date: number) => void;
 }
 
@@ -33,7 +32,6 @@ export function NetWorthTrendWidget({
   displayedNetWorthText,
   currencyCode,
   chartWidth,
-  formatMoneyShort,
   onViewTransactions,
 }: NetWorthTrendWidgetProps) {
   const { theme } = useTheme();
@@ -96,7 +94,6 @@ export function NetWorthTrendWidget({
           onPress={onPointSelect}
           selectedIndex={selectedIndex}
           renderTooltipContent={renderTooltip}
-          formatValue={formatMoneyShort}
         />
       </View>
     </ReportChartCard>

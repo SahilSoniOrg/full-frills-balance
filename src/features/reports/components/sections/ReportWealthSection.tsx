@@ -14,14 +14,9 @@ const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 interface ReportWealthSectionProps {
   vm: ReportWealthTabVm;
   chartWidth: number;
-  formatMoneyShort: (amount: number) => string;
 }
 
-export function ReportWealthSection({
-  vm,
-  chartWidth,
-  formatMoneyShort,
-}: ReportWealthSectionProps) {
+export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps) {
   const { theme } = useTheme();
   const { wealthAreaSeries, barChartData, dailyData, targetCurrency, onViewTransactions } = vm;
 
@@ -98,7 +93,6 @@ export function ReportWealthSection({
             onPress={setSelectedBarIndex}
             selectedIndex={selectedBarIndex}
             renderTooltipContent={renderAreaTooltip}
-            formatValue={formatMoneyShort}
           />
         </View>
       </ReportChartCard>

@@ -7,15 +7,9 @@ export interface MoneyFlowWidgetProps {
   sankeyData: SankeyData;
   currencyCode: string;
   chartWidth: number;
-  formatMoneyShort: (amount: number) => string;
 }
 
-export function MoneyFlowWidget({
-  sankeyData,
-  currencyCode,
-  chartWidth,
-  formatMoneyShort,
-}: MoneyFlowWidgetProps) {
+export function MoneyFlowWidget({ sankeyData, currencyCode, chartWidth }: MoneyFlowWidgetProps) {
   return (
     <ReportChartCard title={AppConfig.strings.reports.moneyFlowTitle} zIndex={20}>
       <SankeyChart
@@ -23,7 +17,6 @@ export function MoneyFlowWidget({
         links={sankeyData.links}
         currencyCode={currencyCode}
         width={chartWidth}
-        formatValue={formatMoneyShort}
       />
     </ReportChartCard>
   );

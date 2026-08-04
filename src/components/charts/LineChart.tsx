@@ -1,3 +1,4 @@
+import { SvgMoneyText } from '@/src/components/common/SvgMoneyText';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -5,7 +6,6 @@ import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -51,8 +51,6 @@ interface LineChartProps<T extends DataPoint = DataPoint> {
   secondaryData?: T[]; // Optional secondary line data
   secondaryColor?: string; // Color for the secondary line
   todayX?: number; // Timestamp for the 'Today' vertical marker
-  /** Formats Y-axis / today marker values. Defaults to CurrencyFormatter.formatShort. */
-  formatValue?: (value: number) => string;
   extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
   avoidPointVertical?: boolean; // Whether to place tooltip above/below point instead of centered
   offset?: number; // Distance from point to tooltip
@@ -102,7 +100,6 @@ export const LineChart = <T extends DataPoint>({
   secondaryData,
   secondaryColor,
   todayX,
-  formatValue,
   extraHorizontalLines,
   avoidPointVertical = false,
   offset = 15,
@@ -119,8 +116,6 @@ export const LineChart = <T extends DataPoint>({
   const PADDING_LEFT = Spacing.xl * 2; // More space for scale (approx 40px)
   const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
   const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
-  const formatLabel =
-    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   // Dynamic height calculation
   const height = propHeight ?? REPORT_CHART_LAYOUT.lineChartDefaultHeight;
@@ -363,15 +358,16 @@ export const LineChart = <T extends DataPoint>({
                       strokeDasharray="4,4"
                       opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
                     />
-                    <SvgText
+                    <SvgMoneyText
+                      amount={val}
+                      currencyCode={currencyCode}
+                      short
                       x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
                       y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
                       fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
                       fill={theme.textSecondary}
                       textAnchor="end"
-                    >
-                      {formatLabel(val)}
-                    </SvgText>
+                    />
                   </React.Fragment>
                 );
               })}
@@ -454,16 +450,17 @@ export const LineChart = <T extends DataPoint>({
                               stroke={theme.surface}
                               strokeWidth={1}
                             />
-                            <SvgText
+                            <SvgMoneyText
+                              amount={todayPoint.y}
+                              currencyCode={currencyCode}
+                              short
                               x={x + 4}
                               y={y - 8}
                               fontSize={11}
                               fontWeight="bold"
                               fill={chartColor}
                               textAnchor="start"
-                            >
-                              {formatLabel(todayPoint.y)}
-                            </SvgText>
+                            />
                           </React.Fragment>
                         );
                       })()}

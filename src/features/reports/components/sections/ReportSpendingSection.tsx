@@ -11,10 +11,9 @@ import { StyleSheet } from 'react-native';
 interface ReportSpendingSectionProps {
   vm: ReportSpendingTabVm;
   chartWidth: number;
-  formatMoney: (amount: number) => string;
 }
 
-export function ReportSpendingSection({ vm, chartWidth, formatMoney }: ReportSpendingSectionProps) {
+export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionProps) {
   const {
     expenseViewState,
     expenseCategoryViewState,
@@ -86,24 +85,14 @@ export function ReportSpendingSection({ vm, chartWidth, formatMoney }: ReportSpe
       </ReportChartCard>
 
       <ReportChartCard title={AppConfig.strings.reports.spendingHeatmap}>
-        <HeatmapChart
-          data={spendingHeatmap}
-          width={chartWidth}
-          currency={targetCurrency}
-          formatValue={formatMoney}
-        />
+        <HeatmapChart data={spendingHeatmap} width={chartWidth} currency={targetCurrency} />
         <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
           {AppConfig.strings.reports.heatmapSubtitle}
         </AppText>
       </ReportChartCard>
 
       <ReportChartCard title={AppConfig.strings.reports.activityCalendar}>
-        <CalendarHeatmap
-          data={calendarHeatmap}
-          width={chartWidth}
-          currency={targetCurrency}
-          formatValue={formatMoney}
-        />
+        <CalendarHeatmap data={calendarHeatmap} width={chartWidth} currency={targetCurrency} />
       </ReportChartCard>
     </>
   );

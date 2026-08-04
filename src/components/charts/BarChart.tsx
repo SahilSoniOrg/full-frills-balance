@@ -1,10 +1,10 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
@@ -28,8 +28,6 @@ interface BarChartProps {
   renderTooltipContent?: (index: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
-  /** Formats Y-axis tick values. Defaults to CurrencyFormatter.formatShort. */
-  formatValue?: (value: number) => string;
 }
 
 export const BarChart = ({
@@ -43,13 +41,10 @@ export const BarChart = ({
   tooltipWidth,
   tooltipHeight,
   currencyCode,
-  formatValue,
 }: BarChartProps) => {
   const { theme } = useTheme();
   const { width: windowWidth } = Dimensions.get('window');
   const [scrollX, setScrollX] = useState(0);
-  const formatLabel =
-    formatValue ?? ((value: number) => CurrencyFormatter.formatShort(value, currencyCode));
 
   const containerWidth = customWidth || windowWidth - Spacing.lg * 2;
   const Y_AXIS_WIDTH = Spacing.xl * 2;
@@ -180,9 +175,14 @@ export const BarChart = ({
                 key={t}
                 style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
               >
-                <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                  {formatLabel(tickValue)}
-                </AppText>
+                <MoneyText
+                  amount={tickValue}
+                  currencyCode={currencyCode}
+                  short
+                  variant="caption"
+                  color="secondary"
+                  style={styles.yAxisLabel}
+                />
               </View>
             );
           })}
