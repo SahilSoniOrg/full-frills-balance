@@ -1,8 +1,6 @@
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { Theme } from '@/src/constants/design-tokens';
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
 import { useMemo } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportChartDataProps {
   netWorthHistory: {
@@ -24,7 +22,6 @@ interface UseReportChartDataProps {
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
   theme: Theme;
-  workplaceId: WorkplaceId;
 }
 
 /**
@@ -40,10 +37,7 @@ export function useReportChartData({
   spendingHeatmap,
   calendarHeatmap,
   theme,
-  workplaceId: _workplaceId,
 }: UseReportChartDataProps) {
-  const { defaultCurrencyCode } = useWorkplace();
-
   const currentNetWorth = useMemo(() => {
     return netWorthHistory.length > 0 ? netWorthHistory[netWorthHistory.length - 1].netWorth : 0;
   }, [netWorthHistory]);
@@ -95,7 +89,6 @@ export function useReportChartData({
     currentNetWorth,
     displayedIncome: incomeVsExpense.income,
     displayedExpense: incomeVsExpense.expense,
-    defaultCurrencyCode,
     netWorthSeries,
     wealthAreaSeries,
     dailyData,

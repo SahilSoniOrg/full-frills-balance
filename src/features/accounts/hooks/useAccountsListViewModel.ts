@@ -1,5 +1,4 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
-import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -39,7 +38,6 @@ export interface AccountsListViewModel {
   onCreateAccount: () => void;
   onReorderPress: () => void;
   onManageHierarchy: () => void;
-  isPrivacyMode: boolean;
   isLoading: boolean;
   version: number;
   netWorth: number;
@@ -68,7 +66,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { isPrivacyMode: isLocalPrivacyMode } = usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -226,7 +223,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onCreateAccount,
     onReorderPress,
     onManageHierarchy,
-    isPrivacyMode: isLocalPrivacyMode,
     isLoading,
     version,
     netWorth,

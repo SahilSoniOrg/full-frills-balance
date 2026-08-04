@@ -3,7 +3,6 @@ import {
   type JournalListBundle,
   type JournalSelectionBundle,
 } from '@/src/features/journal/components/JournalListView';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
 import { useJournalListViewModel } from './useJournalListViewModel';
@@ -23,8 +22,6 @@ export function useJournalListScreen(
   workplaceId: WorkplaceId,
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
-  // Respect nearest PrivacyScopeProvider (screen-local eye); else global prefs.
-  const isPrivacyMode = useEffectivePrivacyMode();
 
   const list = useMemo(
     (): JournalListRenderBundle['list'] => ({
@@ -36,7 +33,6 @@ export function useJournalListScreen(
       emptyTitle: vm.emptyState.title,
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
-      isPrivacyMode,
     }),
     [
       vm.items,
@@ -47,7 +43,6 @@ export function useJournalListScreen(
       vm.emptyState.title,
       vm.emptyState.subtitle,
       vm.onEndReached,
-      isPrivacyMode,
     ],
   );
 

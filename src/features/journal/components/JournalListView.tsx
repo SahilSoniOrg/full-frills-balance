@@ -25,7 +25,6 @@ export type JournalListBundle = {
   onEndReached?: () => void;
   listHeader: React.ReactElement | null;
   listContentStyle?: StyleProp<ViewStyle>;
-  isPrivacyMode?: boolean;
 };
 
 export type JournalChromeBundle = {

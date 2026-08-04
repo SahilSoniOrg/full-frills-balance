@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
@@ -17,7 +16,6 @@ export interface HubViewModel {
   dismissedInsights: Insight[];
   unreadSmsCount: number;
   currencyCode: string;
-  isPrivacyMode: boolean;
   strings: typeof AppConfig.strings.dashboard.hub;
   dismissInsight: (id: string) => Promise<void>;
   restoreInsight: (id: string) => Promise<void>;
@@ -26,7 +24,6 @@ export interface HubViewModel {
 export function useHubViewModel(): HubViewModel {
   const hubStrings = AppConfig.strings.dashboard.hub;
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const [activeTab, setActiveTab] = useState<HubTab>('active');
 
   const { data: activeInsights } = useInsightPatterns(workplaceId);
@@ -66,7 +63,6 @@ export function useHubViewModel(): HubViewModel {
     dismissedInsights: dismissedInsights ?? [],
     unreadSmsCount: unreadSmsCount ?? 0,
     currencyCode: defaultCurrencyCode,
-    isPrivacyMode,
     strings: hubStrings,
     dismissInsight,
     restoreInsight,

@@ -7,7 +7,6 @@ import {
 } from '@/src/features/budget/helpers/budgetDetailPresentation';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
@@ -28,7 +27,6 @@ import { combineLatest, of, switchMap } from 'rxjs';
 
 export function useBudgetDetailViewModel() {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const params = useLocalSearchParams<{
     id: BudgetId;
     pName?: string;
@@ -217,7 +215,6 @@ export function useBudgetDetailViewModel() {
     usage,
     items,
     isLoading,
-    isPrivacyMode,
     targetMonth: dayjs(refTimestamp).format('YYYY-MM'),
     nextMonth,
     prevMonth,

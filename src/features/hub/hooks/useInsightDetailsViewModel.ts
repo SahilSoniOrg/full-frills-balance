@@ -1,4 +1,6 @@
-import { getNow } from '@/src/utils/dateHelpers';
+import { useObservable } from '@/src/hooks/useObservable';
+import { useTheme } from '@/src/hooks/use-theme';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppConfig } from '@/src/constants';
 import { mapJournalToCardProps } from '@/src/adapters/transactionCardAdapter';
 import {
@@ -8,21 +10,17 @@ import {
 } from '@/src/features/hub/helpers/insightDetailsPresentation';
 import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { useObservable } from '@/src/hooks/useObservable';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { EnrichedJournal, TransactionId } from '@/src/types/domain';
 import type { TransactionListItem } from '@/src/types/ui';
 import { AppNavigation } from '@/src/utils/navigation';
+import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
 
 export interface InsightDetailsViewModel {
   items: TransactionListItem[];
   isLoading: boolean;
-  isPrivacyMode: boolean;
   header: InsightDetailsHeaderModel;
   title: string;
   emptyTitle: string;
@@ -34,7 +32,6 @@ export function useInsightDetailsViewModel(
 ): InsightDetailsViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { theme } = useTheme();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const strings = AppConfig.strings.dashboard.insightDetails;
 
   const journalIds = useMemo(
@@ -101,7 +98,6 @@ export function useInsightDetailsViewModel(
   return {
     items,
     isLoading,
-    isPrivacyMode,
     header,
     title: strings.title,
     emptyTitle: strings.emptyTitle,

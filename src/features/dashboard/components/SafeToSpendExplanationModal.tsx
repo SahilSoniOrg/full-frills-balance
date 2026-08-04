@@ -1,5 +1,5 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
+import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
@@ -60,6 +60,7 @@ export const SafeToSpendExplanationModal = ({
   const formulaDays = viewModel.safeToSpendDays;
 
   const { theme } = useTheme();
+  const formatSts = useMoneyFormat({ style: 'sts', loading: isLoading });
   const styles = React.useMemo(
     () =>
       StyleSheet.create({
@@ -173,15 +174,9 @@ export const SafeToSpendExplanationModal = ({
                   {parseFormulaItem(info.formulaItems[0], formulaDays).detail}
                 </AppText>
               </View>
-              <MoneyText
-                amount={totalLiquidAssets}
-                currencyCode={currencyCode}
-                formatStyle="sts"
-                loading={isLoading}
-                variant="subheading"
-                color="primary"
-                tabular
-              />
+              <AppText variant="subheading" color="primary" tabular>
+                {formatSts(totalLiquidAssets, currencyCode)}
+              </AppText>
               <AppIcon
                 name={expandedSection === 'assets' ? 'chevronUp' : 'chevronDown'}
                 size={Size.sm}
@@ -219,15 +214,9 @@ export const SafeToSpendExplanationModal = ({
                   {parseFormulaItem(info.formulaItems[1], formulaDays).detail}
                 </AppText>
               </View>
-              <MoneyText
-                amount={totalFutureInflow}
-                currencyCode={currencyCode}
-                formatStyle="sts"
-                loading={isLoading}
-                variant="subheading"
-                color="primary"
-                tabular
-              />
+              <AppText variant="subheading" color="primary" tabular>
+                {formatSts(totalFutureInflow, currencyCode)}
+              </AppText>
               <AppIcon
                 name={expandedSection === 'income' ? 'chevronUp' : 'chevronDown'}
                 size={Size.sm}
@@ -281,17 +270,7 @@ export const SafeToSpendExplanationModal = ({
                         </View>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
-                        +{' '}
-                        <MoneyText
-                          amount={inc.amount}
-                          currencyCode={currencyCode}
-                          formatStyle="sts"
-                          loading={isLoading}
-                          variant="caption"
-                          weight="bold"
-                          color="success"
-                          tabular
-                        />
+                        +{formatSts(inc.amount, currencyCode)}
                       </AppText>
                     </TouchableOpacity>
                   ))
@@ -323,16 +302,7 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="warning" tabular>
-                –{' '}
-                <MoneyText
-                  amount={committedTotal}
-                  currencyCode={currencyCode}
-                  formatStyle="sts"
-                  loading={isLoading}
-                  variant="subheading"
-                  color="warning"
-                  tabular
-                />
+                –{formatSts(committedTotal, currencyCode)}
               </AppText>
               <AppIcon
                 name={expandedSection === 'committed' ? 'chevronUp' : 'chevronDown'}
@@ -361,17 +331,7 @@ export const SafeToSpendExplanationModal = ({
                         {acc.accountName}
                       </AppText>
                       <AppText variant="caption" weight="bold" color="warning" tabular>
-                        –{' '}
-                        <MoneyText
-                          amount={acc.amount}
-                          currencyCode={currencyCode}
-                          formatStyle="sts"
-                          loading={isLoading}
-                          variant="caption"
-                          weight="bold"
-                          color="warning"
-                          tabular
-                        />
+                        –{formatSts(acc.amount, currencyCode)}
                       </AppText>
                     </View>
                     <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
@@ -449,15 +409,9 @@ export const SafeToSpendExplanationModal = ({
                                   )}
                                 </View>
                               </View>
-                              <MoneyText
-                                amount={det.amount}
-                                currencyCode={currencyCode}
-                                formatStyle="sts"
-                                loading={isLoading}
-                                variant="caption"
-                                color="secondary"
-                                tabular
-                              />
+                              <AppText variant="caption" color="secondary" tabular>
+                                {formatSts(det.amount, currencyCode)}
+                              </AppText>
                             </TouchableOpacity>
                           );
                         })}
@@ -487,16 +441,7 @@ export const SafeToSpendExplanationModal = ({
                 </AppText>
               </View>
               <AppText variant="subheading" color="error" tabular>
-                –{' '}
-                <MoneyText
-                  amount={committedLiabilities}
-                  currencyCode={currencyCode}
-                  formatStyle="sts"
-                  loading={isLoading}
-                  variant="subheading"
-                  color="error"
-                  tabular
-                />
+                –{formatSts(committedLiabilities, currencyCode)}
               </AppText>
               <AppIcon
                 name={expandedSection === 'debts' ? 'chevronUp' : 'chevronDown'}
@@ -539,17 +484,7 @@ export const SafeToSpendExplanationModal = ({
                       </AppText>
                     </View>
                     <AppText variant="caption" weight="bold" color="error" tabular>
-                      –{' '}
-                      <MoneyText
-                        amount={acc.amount}
-                        currencyCode={currencyCode}
-                        formatStyle="sts"
-                        loading={isLoading}
-                        variant="caption"
-                        weight="bold"
-                        color="error"
-                        tabular
-                      />
+                      –{formatSts(acc.amount, currencyCode)}
                     </AppText>
                   </View>
                 ))}
@@ -558,15 +493,9 @@ export const SafeToSpendExplanationModal = ({
             {totalLiabilities > committedLiabilities && (
               <View style={styles.liabilityCallout}>
                 <AppText variant="caption" color="secondary" style={{ lineHeight: 16 }}>
-                  <MoneyText
-                    amount={totalLiabilities - committedLiabilities}
-                    currencyCode={currencyCode}
-                    formatStyle="sts"
-                    loading={isLoading}
-                    variant="caption"
-                    weight="bold"
-                    tabular
-                  />{' '}
+                  <AppText variant="caption" weight="bold" tabular>
+                    {formatSts(totalLiabilities - committedLiabilities, currencyCode)}
+                  </AppText>{' '}
                   {labels.debtsCallout}
                 </AppText>
               </View>
@@ -584,15 +513,9 @@ export const SafeToSpendExplanationModal = ({
               {labels.remainingCashBuffer}
             </AppText>
           </View>
-          <MoneyText
-            amount={safeToSpend}
-            currencyCode={currencyCode}
-            formatStyle="sts"
-            loading={isLoading}
-            variant="title"
-            color="primary"
-            tabular
-          />
+          <AppText variant="title" color="primary" tabular>
+            {formatSts(safeToSpend, currencyCode)}
+          </AppText>
         </View>
       </AppCard>
 
