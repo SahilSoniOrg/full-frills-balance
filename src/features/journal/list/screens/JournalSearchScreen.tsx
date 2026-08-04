@@ -10,7 +10,7 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { PrivacyScopeProvider, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
@@ -18,15 +18,7 @@ import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useJournalSearchViewModel } from '../hooks/useJournalSearchViewModel';
 
-export default function JournalSearchScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <JournalSearchScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function JournalSearchScreenContent() {
+function JournalSearchScreen() {
   const vm = useJournalSearchViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
@@ -217,3 +209,5 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
 });
+
+export default withPrivacyScope(JournalSearchScreen);

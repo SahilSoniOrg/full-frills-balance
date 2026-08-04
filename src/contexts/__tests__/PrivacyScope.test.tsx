@@ -1,7 +1,12 @@
 import { preferences } from '@/src/utils/preferences';
 import { act, renderHook } from '@testing-library/react-native';
 import React from 'react';
-import { PrivacyScopeProvider, useEffectivePrivacyMode, usePrivacyScope } from '../PrivacyScope';
+import {
+  PrivacyScopeProvider,
+  useEffectivePrivacyMode,
+  usePrivacyScope,
+  withPrivacyScope,
+} from '../PrivacyScope';
 
 function wrap(globalPrivacyMode: boolean) {
   preferences.privacy.setIsPrivacyMode(globalPrivacyMode);
@@ -72,5 +77,31 @@ describe('PrivacyScopeProvider', () => {
 
   it('throws when usePrivacyScope is used outside a provider', () => {
     expect(() => renderHook(() => usePrivacyScope())).toThrow(/PrivacyScopeProvider/);
+  });
+});
+
+describe('withPrivacyScope', () => {
+  beforeEach(() => {
+    preferences.privacy.setIsPrivacyMode(false);
+  });
+
+  it('provides privacy scope to the wrapped component tree', () => {
+    const ScopeHost = withPrivacyScope(function ScopeHost({
+      children,
+    }: {
+      children?: React.ReactNode;
+    }) {
+      return <>{children}</>;
+    });
+
+    const { result } = renderHook(() => usePrivacyScope(), {
+      wrapper: ({ children }) => <ScopeHost>{children}</ScopeHost>,
+    });
+
+    expect(result.current.isPrivacyMode).toBe(false);
+    act(() => {
+      result.current.togglePrivacyMode();
+    });
+    expect(result.current.isPrivacyMode).toBe(true);
   });
 });

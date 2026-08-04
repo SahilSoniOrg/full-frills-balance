@@ -1,8 +1,8 @@
-import { AppCard, AppIcon, AppText, AppSegmentedControl } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
+import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface CashFlowCardProps {
   totalIncome: number;
@@ -13,7 +13,6 @@ interface CashFlowCardProps {
   isLoading?: boolean;
   /** Screen/VM privacy flag — do not read privacy hooks in this leaf. */
   isPrivacyMode: boolean;
-  onTogglePrivacy?: () => void;
 }
 
 export const CashFlowCard = ({
@@ -24,7 +23,6 @@ export const CashFlowCard = ({
   currencyCode,
   isLoading = false,
   isPrivacyMode,
-  onTogglePrivacy,
 }: CashFlowCardProps) => {
   const { theme, fonts } = useTheme();
 
@@ -50,18 +48,6 @@ export const CashFlowCard = ({
         <AppText variant="subheading" color="secondary">
           Net Inflow
         </AppText>
-        {onTogglePrivacy ? (
-          <TouchableOpacity
-            onPress={onTogglePrivacy}
-            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-          >
-            <AppIcon
-              name={isPrivacyMode ? 'eyeOff' : 'eye'}
-              size={Size.sm}
-              color={theme.textTertiary}
-            />
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       <AppText

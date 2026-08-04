@@ -2,6 +2,7 @@ import { IconButton } from '@/src/components/core';
 import type { IconName } from '@/src/components/core';
 import type { IconButtonVariant } from '@/src/components/core/IconButton';
 import { Spacing } from '@/src/constants';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export interface ScreenHeaderActionItem {
@@ -16,11 +17,14 @@ export interface ScreenHeaderActionItem {
 
 interface ScreenHeaderActionsProps {
   actions: ScreenHeaderActionItem[];
+  /** Rendered before action icons (e.g. PrivacyToggleButton). */
+  leading?: ReactNode;
 }
 
-export function ScreenHeaderActions({ actions }: ScreenHeaderActionsProps) {
+export function ScreenHeaderActions({ actions, leading }: ScreenHeaderActionsProps) {
   return (
     <View style={styles.container}>
+      {leading}
       {actions.map((action, index) => (
         <IconButton
           key={`${action.name}-${index}`}

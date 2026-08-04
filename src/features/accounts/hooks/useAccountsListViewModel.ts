@@ -39,7 +39,6 @@ export interface AccountsListViewModel {
   onCreateAccount: () => void;
   onReorderPress: () => void;
   onManageHierarchy: () => void;
-  onTogglePrivacy: () => void;
   isPrivacyMode: boolean;
   isLoading: boolean;
   version: number;
@@ -69,7 +68,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { isPrivacyMode: isLocalPrivacyMode, togglePrivacyMode } = usePrivacyScope();
+  const { isPrivacyMode: isLocalPrivacyMode } = usePrivacyScope();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -164,14 +163,13 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       dataVersion: version,
     });
 
-  const { onAccountPress, onCreateAccount, onReorderPress, onManageHierarchy, onTogglePrivacy } =
+  const { onAccountPress, onCreateAccount, onReorderPress, onManageHierarchy } =
     useAccountsListActions({
       accounts,
       balancesByAccountId,
       expandedAccountIds,
       setExpandedAccountIds,
       activeTab,
-      togglePrivacyMode,
     });
 
   const filteredAccounts = useMemo(
@@ -228,7 +226,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onCreateAccount,
     onReorderPress,
     onManageHierarchy,
-    onTogglePrivacy,
     isPrivacyMode: isLocalPrivacyMode,
     isLoading,
     version,

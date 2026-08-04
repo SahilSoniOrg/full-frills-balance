@@ -4,22 +4,14 @@ import { TransactionListView } from '@/src/components/common/TransactionListView
 import { LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing, Typography } from '@/src/constants';
-import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
+import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from '../components/BudgetDetailHeader';
 import { useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
 
-export function BudgetDetailScreen() {
-  return (
-    <PrivacyScopeProvider>
-      <BudgetDetailScreenContent />
-    </PrivacyScopeProvider>
-  );
-}
-
-function BudgetDetailScreenContent() {
+function BudgetDetailScreenInner() {
   const vm = useBudgetDetailViewModel();
   const { theme } = useTheme();
 
@@ -39,32 +31,30 @@ function BudgetDetailScreenContent() {
       backIcon="back"
       title="Budget Details"
       headerActions={
-        <View style={styles.headerActions}>
-          <PrivacyToggleButton variant="clear" size={Typography.sizes.xl} />
-          <ScreenHeaderActions
-            actions={[
-              {
-                name: 'edit',
-                onPress: () =>
-                  AppNavigation.toBudgetForm(budget.id, {
-                    name: budget.name,
-                    amount: budget.amount,
-                    currency: budget.currencyCode,
-                  }),
-                iconColor: theme.text,
-                size: Typography.sizes.xl,
-                testID: 'edit-button',
-              },
-              {
-                name: 'delete',
-                onPress: vm.handleDelete,
-                iconColor: theme.error,
-                size: Typography.sizes.xl,
-                testID: 'delete-button',
-              },
-            ]}
-          />
-        </View>
+        <ScreenHeaderActions
+          leading={<PrivacyToggleButton variant="clear" size={Typography.sizes.xl} />}
+          actions={[
+            {
+              name: 'edit',
+              onPress: () =>
+                AppNavigation.toBudgetForm(budget.id, {
+                  name: budget.name,
+                  amount: budget.amount,
+                  currency: budget.currencyCode,
+                }),
+              iconColor: theme.text,
+              size: Typography.sizes.xl,
+              testID: 'edit-button',
+            },
+            {
+              name: 'delete',
+              onPress: vm.handleDelete,
+              iconColor: theme.error,
+              size: Typography.sizes.xl,
+              testID: 'delete-button',
+            },
+          ]}
+        />
       }
     >
       <View style={styles.container}>
@@ -103,8 +93,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
 });
+
+export const BudgetDetailScreen = withPrivacyScope(BudgetDetailScreenInner);
