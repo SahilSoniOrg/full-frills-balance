@@ -1,6 +1,6 @@
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
-import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
@@ -21,7 +21,7 @@ export function HubView({
   dismissInsight,
   restoreInsight,
   chrome,
-}: HubViewModel & { chrome: TabScreenChrome }) {
+}: HubViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
 
   return (
