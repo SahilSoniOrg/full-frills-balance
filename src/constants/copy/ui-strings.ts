@@ -162,8 +162,7 @@ export const UI_STRINGS = {
       },
       subscriptionAmnesia: {
         message: 'Recurring Charge',
-        description: (amount: string, desc: string, acc: string) =>
-          `${amount} for "${desc}" in "${acc}" appears repeatedly.`,
+        description: (desc: string, acc: string) => `"${desc}" in "${acc}" appears repeatedly.`,
         suggestion: 'This appears because similar charges were found more than once.',
       },
       spendingSpike: {

@@ -1,4 +1,3 @@
-import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { ScreenWithChrome } from '@/src/components/layout';
@@ -8,8 +7,8 @@ import { Inset } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { TransactionId } from '@/src/types/domain';
-import React from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
 import { SafeToSpendCard } from './SafeToSpendCard';
@@ -96,6 +95,21 @@ export function DashboardScreenView({
     isLoading: !safeToSpendData,
   });
 
+  const selectionChrome = useMemo(
+    () => ({
+      exitSelectionMode: recentTransactions.exitSelectionMode,
+      selectAll: recentTransactions.selectAll,
+      clearItems: recentTransactions.clearItems,
+      onShareSelected: recentTransactions.onShareSelected,
+    }),
+    [
+      recentTransactions.exitSelectionMode,
+      recentTransactions.selectAll,
+      recentTransactions.clearItems,
+      recentTransactions.onShareSelected,
+    ],
+  );
+
   if (!hasCompletedOnboarding) {
     return null;
   }
@@ -112,21 +126,11 @@ export function DashboardScreenView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
-    selectAll,
-    clearItems,
-    exitSelectionMode,
-    onShareSelected,
   } = recentTransactions;
-
-  const transactionCount = items.filter(i => i.type === 'transaction').length;
 
   return (
     <ScreenWithChrome testID="dashboard-screen" edges={['top']} chrome={chrome}>
       <View style={styles.container}>
-        {isSelectionModeActive && (
-          <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
-        )}
-
         <TransactionListView
           ref={listRef}
           items={items}
@@ -140,6 +144,7 @@ export function DashboardScreenView({
           selectedIds={selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={onLongPressItem as (id: string) => void}
           isSelectionModeActive={isSelectionModeActive}
+          selectionChrome={selectionChrome}
           contentContainerStyle={styles.listContent}
           style={styles.feed}
           ListHeaderComponent={
@@ -165,21 +170,6 @@ export function DashboardScreenView({
               </Inset>
             </View>
           }
-          ListFooterComponent={
-            isSelectionModeActive ? (
-              <Pressable style={{ height: 500 }} onPress={exitSelectionMode} />
-            ) : undefined
-          }
-        />
-
-        <SelectionActionBar
-          selectedCount={selectedIds.size}
-          totalCount={transactionCount}
-          onClear={exitSelectionMode}
-          onSelectAll={selectAll}
-          onDeselectAll={clearItems}
-          onShare={onShareSelected}
-          isVisible={isSelectionModeActive}
         />
 
         <SafeToSpendExplanationModal

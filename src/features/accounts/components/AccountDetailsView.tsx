@@ -1,6 +1,5 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
@@ -11,6 +10,7 @@ import { AccountReconcileDialog } from '@/src/features/accounts/components/Accou
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView({
@@ -64,6 +64,16 @@ export function AccountDetailsView({
     exitSelectionMode,
   } = vm;
 
+  const selectionChrome = useMemo(
+    () => ({
+      exitSelectionMode,
+      selectAll,
+      clearItems,
+      onShareSelected,
+    }),
+    [exitSelectionMode, selectAll, clearItems, onShareSelected],
+  );
+
   return (
     <ScreenWithChrome chrome={chrome}>
       {accountLoading ? (
@@ -81,76 +91,46 @@ export function AccountDetailsView({
         </View>
       ) : (
         <>
-          <View style={StyleSheet.absoluteFill}>
-            {/* Backdrop (Back) - catches taps that miss the list entirely */}
-            {isSelectionModeActive && (
-              <View
-                style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
-                onStartShouldSetResponder={() => {
-                  exitSelectionMode();
-                  return true;
-                }}
+          <TransactionListView
+            items={transactionItems}
+            isLoading={transactionsLoading}
+            isLoadingMore={transactionsLoadingMore}
+            onEndReached={onLoadMore}
+            emptyTitle="No transactions yet"
+            emptySubtitle="Transactions for this account will appear here."
+            selectedIds={selectedIds}
+            onLongPressItem={onLongPressItem}
+            isSelectionModeActive={isSelectionModeActive}
+            selectionChrome={selectionChrome}
+            ListHeaderComponent={
+              <AccountDetailsHeader
+                accountName={accountName}
+                accountIcon={accountIcon}
+                accountType={accountType}
+                accountSubtypeLabel={accountSubtypeLabel}
+                accountTypeVariant={accountTypeVariant}
+                accountTypeColorKey={accountTypeColorKey}
+                isParent={isParent}
+                isDeleted={isDeleted}
+                subAccountCount={subAccountCount}
+                onShowSubAccounts={onShowSubAccounts}
+                balanceAmount={balanceAmount}
+                currencyCode={vm.currencyCode}
+                secondaryBalances={secondaryBalances}
+                transactionCountText={transactionCountText}
+                reconciledAt={vm.reconciledAt}
+                dateRange={dateRange}
+                onShowDatePicker={showDatePicker}
+                onPreviousPeriod={navigatePrevious}
+                onNextPeriod={navigateNext}
+                chartData={chartData}
+                rollingAverageData={rollingAverageData}
+                xTicks={xTicks}
+                periodMetrics={periodMetrics}
               />
-            )}
-            <TransactionListView
-              items={transactionItems}
-              isLoading={transactionsLoading}
-              isLoadingMore={transactionsLoadingMore}
-              onEndReached={onLoadMore}
-              emptyTitle="No transactions yet"
-              emptySubtitle="Transactions for this account will appear here."
-              selectedIds={selectedIds}
-              onLongPressItem={onLongPressItem}
-              isSelectionModeActive={isSelectionModeActive}
-              ListHeaderComponent={
-                <AccountDetailsHeader
-                  accountName={accountName}
-                  accountIcon={accountIcon}
-                  accountType={accountType}
-                  accountSubtypeLabel={accountSubtypeLabel}
-                  accountTypeVariant={accountTypeVariant}
-                  accountTypeColorKey={accountTypeColorKey}
-                  isParent={isParent}
-                  isDeleted={isDeleted}
-                  subAccountCount={subAccountCount}
-                  onShowSubAccounts={onShowSubAccounts}
-                  balanceAmount={balanceAmount}
-                  currencyCode={vm.currencyCode}
-                  secondaryBalances={secondaryBalances}
-                  transactionCountText={transactionCountText}
-                  reconciledAt={vm.reconciledAt}
-                  dateRange={dateRange}
-                  onShowDatePicker={showDatePicker}
-                  onPreviousPeriod={navigatePrevious}
-                  onNextPeriod={navigateNext}
-                  chartData={chartData}
-                  rollingAverageData={rollingAverageData}
-                  xTicks={xTicks}
-                  periodMetrics={periodMetrics}
-                />
-              }
-              ListFooterComponent={
-                <View
-                  onStartShouldSetResponder={() => {
-                    if (isSelectionModeActive) exitSelectionMode();
-                    return false;
-                  }}
-                  style={{ height: Spacing.xxxxl * 2 }}
-                />
-              }
-              contentContainerStyle={styles.listContainer}
-              style={{ flex: 1 }}
-            />
-          </View>
-
-          <SelectionActionBar
-            isVisible={isSelectionModeActive}
-            selectedCount={selectedIds.size}
-            totalCount={transactionItems.filter(i => i.type === 'transaction').length}
-            onClear={exitSelectionMode}
-            onSelectAll={selectAll}
-            onDeselectAll={clearItems}
-            onShare={onShareSelected}
+            }
+            contentContainerStyle={styles.listContainer}
+            style={styles.list}
           />
 
           <DateRangePicker
@@ -202,6 +182,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.lg,
     padding: Spacing.lg,
+  },
+  list: {
+    flex: 1,
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,

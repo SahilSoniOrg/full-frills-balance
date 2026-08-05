@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { CalculationInput, Insight } from './insightTypes';
 
 /**
@@ -46,7 +45,6 @@ export function calculateInsights(input: CalculationInput): Insight[] {
       const amount = Math.abs(candidate.amount);
       const description = candidate.description || 'Unknown';
       const accountName = acc.name || 'Unknown Spending';
-      const formattedAmount = CurrencyFormatter.format(amount, candidate.currencyCode);
 
       patterns.push({
         id: `sub_${amount}_${candidate.accountId}_${description.replace(/\s+/g, '_')}`,
@@ -54,7 +52,6 @@ export function calculateInsights(input: CalculationInput): Insight[] {
         severity: amount > insightsConfig.spendingSpikeSeverityThreshold ? 'high' : 'medium',
         message: AppConfig.strings.dashboard.hub.subscriptionAmnesia.message,
         description: AppConfig.strings.dashboard.hub.subscriptionAmnesia.description(
-          formattedAmount,
           description,
           accountName,
         ),

@@ -30,7 +30,7 @@ export interface SelectionActionBarProps {
 }
 
 /**
- * SelectionActionBar - Radical simplification of the command mode bar.
+ * SelectionActionBar — bulk actions while Selection mode is active.
  * No words. Only signal.
  */
 export const SelectionActionBar = ({

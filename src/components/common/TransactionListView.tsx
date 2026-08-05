@@ -1,14 +1,24 @@
 import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
+import { Spacing } from '@/src/constants';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
 import { TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import { ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
 import { SelectableTransactionCard } from './SelectableTransactionCard';
+import { SelectionActionBar, type SelectionAction } from './SelectionActionBar';
+
+export type TransactionListSelectionChrome = {
+  exitSelectionMode: () => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  onShareSelected?: () => void;
+  actions?: SelectionAction[];
+};
 
 interface TransactionListViewProps {
   items: TransactionListItem[];
@@ -25,6 +35,8 @@ interface TransactionListViewProps {
   selectedIds?: Set<TransactionId>;
   onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
+  /** Selection-mode secondary chrome (action bar + dismiss). Owned by this list. */
+  selectionChrome?: TransactionListSelectionChrome;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -82,7 +94,13 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
     selectedIds,
     onLongPressItem,
     isSelectionModeActive,
+    selectionChrome,
+    style,
   } = props;
+
+  const selectionActive = !!isSelectionModeActive && !!selectionChrome;
+  const transactionCount = items.filter(i => i.type === 'transaction').length;
+
   const listEmpty =
     isLoading && items.length === 0 ? (
       <Stack gap="md">
@@ -97,6 +115,16 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
       <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
+  const dismissFooter = selectionActive ? (
+    <View
+      onStartShouldSetResponder={() => {
+        selectionChrome.exitSelectionMode();
+        return false;
+      }}
+      style={styles.dismissFooter}
+    />
+  ) : null;
+
   const listFooter = (
     <Stack>
       {isLoadingMore && (
@@ -107,33 +135,58 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
           </AppText>
         </Inline>
       )}
+      {dismissFooter}
       {props.ListFooterComponent}
     </Stack>
   );
 
   return (
-    <FlashList
-      ref={ref}
-      data={items}
-      renderItem={({ item }: { item: TransactionListItem }) =>
-        renderListItem({
-          item,
-          selectedIds,
-          onLongPressItem,
-          isSelectionModeActive,
-        })
-      }
-      keyExtractor={(item: TransactionListItem) => item.id}
-      getItemType={(item: TransactionListItem) => item.type}
-      contentContainerStyle={contentContainerStyle}
-      ListHeaderComponent={ListHeaderComponent}
-      ListEmptyComponent={listEmpty}
-      ListFooterComponent={listFooter}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-      keyboardShouldPersistTaps="always"
-    />
+    <View style={[styles.container, style]}>
+      <FlashList
+        ref={ref}
+        data={items}
+        renderItem={({ item }: { item: TransactionListItem }) =>
+          renderListItem({
+            item,
+            selectedIds,
+            onLongPressItem,
+            isSelectionModeActive,
+          })
+        }
+        keyExtractor={(item: TransactionListItem) => item.id}
+        getItemType={(item: TransactionListItem) => item.type}
+        contentContainerStyle={contentContainerStyle}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        keyboardShouldPersistTaps="always"
+      />
+
+      {selectionChrome ? (
+        <SelectionActionBar
+          selectedCount={selectedIds?.size ?? 0}
+          totalCount={transactionCount}
+          onClear={selectionChrome.exitSelectionMode}
+          onSelectAll={selectionChrome.selectAll}
+          onDeselectAll={selectionChrome.clearItems}
+          onShare={selectionChrome.onShareSelected}
+          actions={selectionChrome.actions}
+          isVisible={selectionActive}
+        />
+      ) : null}
+    </View>
   );
 });
 
 TransactionListView.displayName = 'TransactionListView';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  dismissFooter: {
+    height: Spacing.xxxxl * 2,
+  },
+});
