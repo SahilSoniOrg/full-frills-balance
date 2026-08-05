@@ -4,14 +4,14 @@ import { TransactionListView } from '@/src/components/common/TransactionListView
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
-import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { JournalId, TransactionId } from '@/src/types/domain';
+import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type JournalListBundle = {
-  items: JournalListViewModel['items'];
+  items: TransactionListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
   loadingText: string;

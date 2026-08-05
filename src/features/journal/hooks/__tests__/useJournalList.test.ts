@@ -1,6 +1,6 @@
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
-import { act, renderHook } from '@testing-library/react-native';
-import { useJournalListViewModel } from '../useJournalListViewModel';
+import { renderHook } from '@testing-library/react-native';
+import { useJournalList } from '../useJournalList';
 import { JournalDisplayType, WorkplaceId, AccountId, JournalId } from '@/src/types/domain';
 
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
@@ -106,7 +106,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
   },
 ];
 
-describe('useJournalListViewModel adapter', () => {
+describe('useJournalList', () => {
   const useJournalsMock = useJournals as jest.MockedFunction<typeof useJournals>;
 
   beforeEach(() => {
@@ -122,62 +122,56 @@ describe('useJournalListViewModel adapter', () => {
     });
   });
 
-  it('preserves JournalListViewModel public shape for dashboard/list consumers', () => {
+  it('returns render bundles for JournalListView', () => {
     const { result } = renderHook(() =>
-      useJournalListViewModel(
+      useJournalList(
         { emptyState: { title: 'Empty', subtitle: 'None' } },
         'test-wp' as WorkplaceId,
       ),
     );
 
-    expect(result.current).toEqual(
+    expect(result.current.list).toEqual(
       expect.objectContaining({
         items: expect.any(Array),
         isLoading: false,
-        searchQuery: '',
-        isSearchGlobal: true,
-        emptyState: { title: 'Empty', subtitle: 'None' },
+        emptyTitle: 'Empty',
+        emptySubtitle: 'None',
+      }),
+    );
+    expect(result.current.datePicker).toEqual(
+      expect.objectContaining({
+        visible: false,
+        currentFilter: { type: 'MONTH' },
+        onSelect: expect.any(Function),
+      }),
+    );
+    expect(result.current.selection).toEqual(
+      expect.objectContaining({
         selectedIds: expect.any(Set),
-        onSearchChange: expect.any(Function),
-        toggleSearchGlobal: expect.any(Function),
-        onDateSelect: expect.any(Function),
+        isSelectionModeActive: false,
+        exitSelectionMode: expect.any(Function),
+      }),
+    );
+    expect(result.current.periodBar).toEqual(
+      expect.objectContaining({
+        range: mockDateRange,
+        onPress: expect.any(Function),
       }),
     );
   });
 
-  it('clears effective date range for the core while global search is active', () => {
-    const { result } = renderHook(() =>
-      useJournalListViewModel(
+  it('passes date range through to the shared pipeline', () => {
+    renderHook(() =>
+      useJournalList(
         { emptyState: { title: 'Empty', subtitle: 'None' } },
         'test-wp' as WorkplaceId,
       ),
     );
 
-    act(() => {
-      result.current.onSearchChange('rent');
-    });
-
-    // Core journals fetch: pageSize 20, no statuses.
     const coreCalls = useJournalsMock.mock.calls.filter(
       call => call[1] === 20 && call[4] === undefined,
     );
     const latestCoreCall = coreCalls[coreCalls.length - 1];
-    expect(latestCoreCall?.[2]).toBeUndefined();
-    expect(latestCoreCall?.[3]).toBe('rent');
-  });
-
-  it('disables onEndReached when adapter searchQuery is set', () => {
-    const { result } = renderHook(() =>
-      useJournalListViewModel(
-        { emptyState: { title: 'Empty', subtitle: 'None' } },
-        'test-wp' as WorkplaceId,
-      ),
-    );
-
-    act(() => {
-      result.current.onSearchChange('rent');
-    });
-
-    expect(result.current.onEndReached).toBeUndefined();
+    expect(latestCoreCall?.[2]).toEqual(mockDateRange);
   });
 });
