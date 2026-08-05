@@ -17,7 +17,7 @@ type ScreenChromeShared = {
   isSearchActive?: boolean;
   /** Dim / style nav (e.g. selection mode). Owned by Screen. */
   headerStyle?: ViewStyle;
-  /** Override back (e.g. exit selection). Owned by Screen. */
+  /** Override back (e.g. exit selection). Owned by Screen — not a ScreenWithChrome prop. */
   onBack?: () => void;
 };
 
@@ -25,13 +25,19 @@ type ScreenChromeShared = {
  * Screen-owned chrome contract (#29).
  *
  * - **Screen** builds and passes `chrome` (`withPrivacyScope` on money routes).
- * - **View** renders via `ScreenWithChrome` — no `PrivacyToggleButton` imports.
- * - Header actions live in Screen (or feature `*HeaderActions` built by Screen).
+ * - **View** renders via `ScreenWithChrome` — no chrome props other than `chrome`.
+ * - Back / headerStyle / FAB live only on `chrome` (see `applySelectionChrome`).
  * - Privacy eye is always the trailing (rightmost) header action when present.
+ *
+ * Header actions:
+ * - Simple icon rows → `ScreenHeaderActions` (+ `MoneyDetailHeaderActions` for privacy).
+ * - Badges, inline search, text buttons → feature `*HeaderActions` (still trailing privacy).
  *
  * Title alignment is derived in NavigationBar (not set here):
  * - `showBack: true` → centered (stack / pushed)
  * - no back → left (tab roots)
+ *
+ * Settings exception: `SettingsLayout` builds chrome from `title` (shell).
  */
 export type TabScreenChrome = ScreenChromeShared & {
   screenTitle: string;

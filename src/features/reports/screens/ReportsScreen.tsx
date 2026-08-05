@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { ReportsView } from '@/src/features/reports/components/ReportsView';
@@ -10,12 +10,7 @@ function ReportsScreen() {
   const vm = useReportsViewModel();
 
   const chrome = useMemo<ScreenNavChrome>(
-    () => ({
-      screenTitle: AppConfig.strings.reports.title,
-      showBack: true,
-      backIcon: 'back',
-      headerActions: <PrivacyToggleButton />,
-    }),
+    () => privacyNavChrome(AppConfig.strings.reports.title),
     [],
   );
 

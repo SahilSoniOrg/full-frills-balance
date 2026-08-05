@@ -14,13 +14,12 @@ export function AccountReorderView({
   accounts,
   isLoading,
   onMove,
-  onBack,
   chrome,
 }: AccountReorderViewModel & { chrome: ScreenNavChrome }) {
   if (isLoading) return null;
 
   return (
-    <ScreenWithChrome chrome={chrome} onBack={onBack}>
+    <ScreenWithChrome chrome={chrome}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <AppText variant="caption" color="secondary" style={styles.tipText}>
           Manual ordering affects all lists. Accounts are grouped by category but follow this

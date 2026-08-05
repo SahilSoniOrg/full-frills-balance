@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { InsightDetailsView } from '@/src/features/hub/components/InsightDetailsView';
@@ -13,12 +13,7 @@ function InsightDetailsScreen() {
   const vm = useInsightDetailsViewModel(params);
 
   const chrome = useMemo<ScreenNavChrome>(
-    () => ({
-      screenTitle: AppConfig.strings.dashboard.insightDetails.title,
-      showBack: true,
-      backIcon: 'back',
-      headerActions: <PrivacyToggleButton />,
-    }),
+    () => privacyNavChrome(AppConfig.strings.dashboard.insightDetails.title),
     [],
   );
 

@@ -1,5 +1,6 @@
+import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Opacity } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
@@ -31,25 +32,25 @@ function JournalScreen() {
     AppNavigation.toJournalEntry();
   }, []);
 
-  const selectionActive = !!render.selection?.isSelectionModeActive;
-
   const chrome = useMemo<TabScreenChrome>(
-    () => ({
-      screenTitle: AppConfig.strings.journal.transactions,
-      showBack: false,
-      headerActions: <JournalListHeaderActions />,
-      headerStyle: selectionActive ? { opacity: Opacity.medium } : undefined,
-      fab: selectionActive
-        ? undefined
-        : {
+    () =>
+      applySelectionChrome(
+        {
+          screenTitle: AppConfig.strings.journal.transactions,
+          showBack: false,
+          headerActions: <JournalListHeaderActions />,
+        },
+        {
+          active: !!render.selection?.isSelectionModeActive,
+          fab: {
             onPress: handleFabPress,
             label: 'New Entry',
             placement: 'end',
             accessibilityLabel: 'Open new entry options',
           },
-      isSearchActive: false,
-    }),
-    [handleFabPress, selectionActive],
+        },
+      ),
+    [handleFabPress, render.selection?.isSelectionModeActive],
   );
 
   const periodBar = useMemo(
