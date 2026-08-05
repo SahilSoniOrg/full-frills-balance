@@ -1,18 +1,14 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { JournalId, TransactionId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import React from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-
-import {
-  SelectionActionBar,
-  type SelectionAction,
-} from '@/src/components/common/SelectionActionBar';
+import React, { useMemo } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type JournalListBundle = {
   items: JournalListViewModel['items'];
@@ -65,13 +61,24 @@ export interface JournalListViewProps {
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
   const { list, chrome, datePicker, periodBar, selection } = props;
+
+  const selectionChrome = useMemo(
+    () =>
+      selection
+        ? {
+            exitSelectionMode: selection.exitSelectionMode,
+            selectAll: selection.selectAll,
+            clearItems: selection.clearItems,
+            onShareSelected: selection.onShareSelected,
+            actions: selection.actions,
+          }
+        : undefined,
+    [selection],
+  );
+
   return (
     <ScreenWithChrome chrome={chrome}>
       <View style={styles.container}>
-        {selection?.isSelectionModeActive && (
-          <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
-        )}
-
         {periodBar ? (
           <View style={styles.periodBar}>
             <DateRangeFilter
@@ -100,22 +107,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={selection?.onLongPressItem as (id: string) => void}
           isSelectionModeActive={selection?.isSelectionModeActive}
-          ListFooterComponent={
-            selection?.isSelectionModeActive ? (
-              <Pressable style={{ height: 500 }} onPress={selection.exitSelectionMode} />
-            ) : undefined
-          }
-        />
-
-        <SelectionActionBar
-          selectedCount={selection?.selectedIds.size || 0}
-          totalCount={journalsCount(list.items)}
-          onClear={selection?.exitSelectionMode || (() => {})}
-          onSelectAll={selection?.selectAll || (() => {})}
-          onDeselectAll={selection?.clearItems || (() => {})}
-          onShare={selection?.onShareSelected}
-          actions={selection?.actions}
-          isVisible={!!selection?.isSelectionModeActive}
+          selectionChrome={selectionChrome}
         />
 
         {datePicker ? (
@@ -130,9 +122,6 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
     </ScreenWithChrome>
   );
 });
-
-const journalsCount = (items: JournalListViewModel['items']) =>
-  items.filter(i => i.type === 'transaction').length;
 
 JournalListView.displayName = 'JournalListView';
 
