@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
+import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
 import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -13,7 +13,7 @@ import { useCallback, useMemo } from 'react';
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
 
-  const { render, vm } = useJournalListScreen(
+  const journalList = useJournalList(
     {
       pageSize: AppConfig.pagination.dashboardPageSize,
       emptyState: {
@@ -41,7 +41,8 @@ function JournalScreen() {
           headerActions: <JournalListHeaderActions />,
         },
         {
-          active: !!render.selection?.isSelectionModeActive,
+          active: journalList.isSelectionModeActive,
+          onExit: journalList.exitSelectionMode,
           fab: {
             onPress: handleFabPress,
             label: 'New Entry',
@@ -50,26 +51,16 @@ function JournalScreen() {
           },
         },
       ),
-    [handleFabPress, render.selection?.isSelectionModeActive],
-  );
-
-  const periodBar = useMemo(
-    () => ({
-      range: vm.dateRange,
-      onPress: vm.showDatePicker,
-      onPrevious: vm.navigatePrevious,
-      onNext: vm.navigateNext,
-    }),
-    [vm.dateRange, vm.navigateNext, vm.navigatePrevious, vm.showDatePicker],
+    [handleFabPress, journalList.exitSelectionMode, journalList.isSelectionModeActive],
   );
 
   return (
     <JournalListView
-      list={{ ...render.list, listHeader: null }}
+      list={{ ...journalList.list, listHeader: null }}
       chrome={chrome}
-      datePicker={render.datePicker}
-      periodBar={periodBar}
-      selection={render.selection}
+      datePicker={journalList.datePicker}
+      periodBar={journalList.periodBar}
+      selection={journalList.selection}
     />
   );
 }

@@ -14,6 +14,12 @@ _Avoid_: Command mode, selection chrome (as the name of the mode itself — chro
 The coordinated presentation of Selection mode: nav (dim, back→exit, FAB mute), bulk action bar, and dismiss-to-exit affordances.
 _Avoid_: applySelectionChrome (implementation helper name); command mode bar
 
+### Journal list
+
+**Journal list**:
+The Activity tab’s journal feed: date-scoped transactions with Selection mode, period bar, and share. One presentation module over the shared journal transaction pipeline.
+_Avoid_: Journal list screen helper / reshape adapter as a separate concept; search-global on the Activity tab (search is its own screen)
+
 ### Insights
 
 **Insight**:

@@ -17,8 +17,8 @@ export type {
   JournalListViewProps,
   JournalSelectionBundle,
 } from './components/JournalListView';
-export { useJournalListScreen } from './hooks/useJournalListScreen';
-export type { JournalListRenderBundle } from './hooks/useJournalListScreen';
+export { useJournalList } from './hooks/useJournalList';
+export type { JournalListModel, UseJournalListParams } from './hooks/useJournalList';
 export { useJournalTransactionList } from './list/hooks/useJournalTransactionList';
 export type {
   JournalTransactionListCore,
