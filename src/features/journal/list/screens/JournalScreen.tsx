@@ -1,5 +1,5 @@
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Opacity } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
@@ -31,12 +31,15 @@ function JournalScreen() {
     AppNavigation.toJournalEntry();
   }, []);
 
+  const selectionActive = !!render.selection?.isSelectionModeActive;
+
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: AppConfig.strings.journal.transactions,
       showBack: false,
       headerActions: <JournalListHeaderActions />,
-      fab: render.selection?.isSelectionModeActive
+      headerStyle: selectionActive ? { opacity: Opacity.medium } : undefined,
+      fab: selectionActive
         ? undefined
         : {
             onPress: handleFabPress,
@@ -46,7 +49,7 @@ function JournalScreen() {
           },
       isSearchActive: false,
     }),
-    [handleFabPress, render.selection?.isSelectionModeActive],
+    [handleFabPress, selectionActive],
   );
 
   const periodBar = useMemo(

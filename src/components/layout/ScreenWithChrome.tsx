@@ -10,17 +10,25 @@ type ScreenWithChromeProps = Omit<
   chrome: ScreenChrome;
 };
 
-export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChromeProps) {
+export function ScreenWithChrome({
+  chrome,
+  children,
+  onBack,
+  headerStyle,
+  ...rest
+}: ScreenWithChromeProps) {
   const fab = chrome.fab;
 
   return (
     <Screen
+      {...rest}
       title={chrome.screenTitle}
       showBack={chrome.showBack ?? false}
       backIcon={chrome.backIcon}
       headerActions={chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
-      {...rest}
+      onBack={chrome.onBack ?? onBack}
+      headerStyle={chrome.headerStyle ?? headerStyle}
     >
       {children}
       {fab ? (

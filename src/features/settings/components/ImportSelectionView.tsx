@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { ImportPlugin } from '@/src/services/import/types';
@@ -49,7 +48,6 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
 };
 
 interface ImportSelectionViewProps {
-  chrome: ScreenNavChrome;
   plugins: ImportPlugin[];
   isImporting: boolean;
   progress: number;
@@ -58,7 +56,6 @@ interface ImportSelectionViewProps {
 }
 
 export function ImportSelectionView({
-  chrome,
   plugins,
   isImporting,
   progress,
@@ -66,7 +63,7 @@ export function ImportSelectionView({
   onSelect,
 }: ImportSelectionViewProps) {
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.importTitle}>
       <View style={styles.container}>
         <AppText variant="body" style={styles.intro}>
           {AppConfig.strings.settings.importIntro}

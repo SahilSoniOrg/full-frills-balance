@@ -7,6 +7,7 @@ export type { NavigationBarProps } from './NavigationBar';
 export { ScreenWithChrome } from './ScreenWithChrome';
 export { buildDetailNavChrome } from './buildDetailNavChrome';
 export type {
+  NavBackIcon,
   ScreenChrome,
   ScreenFabChrome,
   ScreenNavChrome,

@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -7,13 +6,12 @@ import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMen
 import type { PrivacySettingsViewModel } from '@/src/features/settings/hooks/usePrivacySettingsViewModel';
 
 interface PrivacySecuritySettingsViewProps {
-  chrome: ScreenNavChrome;
   vm: PrivacySettingsViewModel;
 }
 
-export function PrivacySecuritySettingsView({ vm, chrome }: PrivacySecuritySettingsViewProps) {
+export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewProps) {
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.sections.privacyAndSecurity}>
       <SettingsMenu header={AppConfig.strings.settings.sections.protectFinancialDetails}>
         <SettingsMenuItem
           leftIcon="shield"

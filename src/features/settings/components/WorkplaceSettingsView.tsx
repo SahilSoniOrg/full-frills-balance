@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { AppIcon } from '@/src/components/core';
 import { isValidIconName } from '@/src/components/core/AppIcon';
@@ -12,18 +11,19 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { CreateWorkplaceDialog } from './CreateWorkplaceDialog';
 import { Opacity } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/constants';
+import type { ReactNode } from 'react';
 
 interface WorkplaceSettingsViewProps {
   vm: WorkplaceSettingsViewModel;
-  chrome: ScreenNavChrome;
+  headerActions?: ReactNode;
 }
 
-export function WorkplaceSettingsView({ vm, chrome }: WorkplaceSettingsViewProps) {
+export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsViewProps) {
   const { theme } = useTheme();
 
   return (
     <>
-      <SettingsLayout chrome={chrome}>
+      <SettingsLayout title="Workplaces" headerActions={headerActions}>
         <Stack space="xl">
           {vm.workplaces.length > 0 ? (
             <SettingsMenu header="Available Workplaces">

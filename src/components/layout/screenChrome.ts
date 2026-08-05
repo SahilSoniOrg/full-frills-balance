@@ -1,6 +1,8 @@
 import type { IconName } from '@/src/components/core';
-import type { Screen } from '@/src/components/layout/Screen';
 import type { ReactNode } from 'react';
+import type { ViewStyle } from 'react-native';
+
+export type NavBackIcon = 'back' | 'close';
 
 export type ScreenFabChrome = {
   onPress: () => void;
@@ -13,6 +15,10 @@ export type ScreenFabChrome = {
 type ScreenChromeShared = {
   fab?: ScreenFabChrome;
   isSearchActive?: boolean;
+  /** Dim / style nav (e.g. selection mode). Owned by Screen. */
+  headerStyle?: ViewStyle;
+  /** Override back (e.g. exit selection). Owned by Screen. */
+  onBack?: () => void;
 };
 
 /**
@@ -29,16 +35,16 @@ type ScreenChromeShared = {
  */
 export type TabScreenChrome = ScreenChromeShared & {
   screenTitle: string;
-  headerActions: ReactNode;
+  headerActions?: ReactNode;
   showBack?: boolean;
-  backIcon?: React.ComponentProps<typeof Screen>['backIcon'];
+  backIcon?: NavBackIcon;
 };
 
 /** Detail / nav screens: back is always shown; title and back icon are required. */
 export type ScreenNavChrome = ScreenChromeShared & {
   screenTitle: string;
   showBack: true;
-  backIcon: NonNullable<TabScreenChrome['backIcon']>;
+  backIcon: NavBackIcon;
   headerActions?: ReactNode;
 };
 

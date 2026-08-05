@@ -1,5 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig } from '@/src/constants';
 import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import { ImportSelectionView } from '@/src/features/settings/components/ImportSelectionView';
 import { useImportPlugins } from '@/src/features/settings/hooks/useImportPlugins';
@@ -19,15 +17,8 @@ export default function ImportSelectionScreen() {
     [handleImport, workplaceId],
   );
 
-  const chrome: ScreenNavChrome = {
-    screenTitle: AppConfig.strings.settings.importTitle,
-    showBack: true,
-    backIcon: 'back',
-  };
-
   return (
     <ImportSelectionView
-      chrome={chrome}
       plugins={plugins}
       isImporting={isImporting}
       progress={progress}

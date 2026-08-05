@@ -65,11 +65,7 @@ export function AccountDetailsView({
   } = vm;
 
   return (
-    <ScreenWithChrome
-      chrome={chrome}
-      onBack={isSelectionModeActive ? exitSelectionMode : onBack}
-      headerStyle={{ opacity: isSelectionModeActive ? 0.3 : 1 }}
-    >
+    <ScreenWithChrome chrome={chrome}>
       {accountLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />

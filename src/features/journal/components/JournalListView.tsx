@@ -2,7 +2,7 @@ import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
-import { Opacity, Size, Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { JournalId, TransactionId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -57,7 +57,8 @@ export type JournalSelectionBundle = {
 export interface JournalListViewProps {
   list: JournalListBundle;
   chrome: ScreenChrome;
-  datePicker: JournalDatePickerBundle;
+  /** Omit when the screen owns its own DateRangePicker (e.g. search filters). */
+  datePicker?: JournalDatePickerBundle;
   periodBar?: JournalPeriodBarBundle;
   selection?: JournalSelectionBundle;
 }
@@ -65,10 +66,7 @@ export interface JournalListViewProps {
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
   const { list, chrome, datePicker, periodBar, selection } = props;
   return (
-    <ScreenWithChrome
-      chrome={chrome}
-      headerStyle={{ opacity: selection?.isSelectionModeActive ? Opacity.medium : 1 }}
-    >
+    <ScreenWithChrome chrome={chrome}>
       <View style={styles.container}>
         {selection?.isSelectionModeActive && (
           <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
@@ -120,12 +118,14 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           isVisible={!!selection?.isSelectionModeActive}
         />
 
-        <DateRangePicker
-          visible={datePicker.visible}
-          onClose={datePicker.onClose}
-          currentFilter={datePicker.currentFilter}
-          onSelect={datePicker.onSelect}
-        />
+        {datePicker ? (
+          <DateRangePicker
+            visible={datePicker.visible}
+            onClose={datePicker.onClose}
+            currentFilter={datePicker.currentFilter}
+            onSelect={datePicker.onSelect}
+          />
+        ) : null}
       </View>
     </ScreenWithChrome>
   );
