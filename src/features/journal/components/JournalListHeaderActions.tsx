@@ -1,27 +1,13 @@
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { IconButton } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { AppNavigation } from '@/src/utils/navigation';
-import type { DateRange } from '@/src/utils/dateUtils';
 import { StyleSheet, View } from 'react-native';
 
-export type JournalListHeaderActionsProps = {
-  dateRange: DateRange | null;
-  showDatePicker: () => void;
-  navigatePrevious?: () => void;
-  navigateNext?: () => void;
-};
-
-export function JournalListHeaderActions({
-  dateRange,
-  showDatePicker,
-  navigatePrevious,
-  navigateNext,
-}: JournalListHeaderActionsProps) {
+/** Primary nav actions only — period lives in the secondary filter bar. */
+export function JournalListHeaderActions() {
   return (
     <View style={styles.headerActions}>
-      <PrivacyToggleButton />
       <IconButton
         name="reports"
         size={Size.iconSm}
@@ -36,13 +22,7 @@ export function JournalListHeaderActions({
         onPress={() => AppNavigation.toJournalSearch()}
         accessibilityLabel="Search and Filter"
       />
-      <DateRangeFilter
-        range={dateRange}
-        onPress={showDatePicker}
-        onPrevious={navigatePrevious}
-        onNext={navigateNext}
-        showNavigationArrows={false}
-      />
+      <PrivacyToggleButton />
     </View>
   );
 }

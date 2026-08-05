@@ -16,7 +16,6 @@ export type ScreenProps = ViewProps & {
   backIcon?: NavigationBarProps['backIcon'];
   headerActions?: React.ReactNode;
   isSearchActive?: boolean;
-  alignTitle?: NavigationBarProps['alignTitle'];
   // Layout
   scrollable?: boolean;
   withPadding?: boolean;
@@ -36,7 +35,6 @@ export function Screen({
   backIcon,
   headerActions,
   isSearchActive = false,
-  alignTitle,
   scrollable = false,
   withPadding = false,
   edges = ['top'],
@@ -73,7 +71,6 @@ export function Screen({
           backIcon={backIcon}
           rightActions={headerActions}
           isSearchActive={isSearchActive}
-          alignTitle={alignTitle}
           style={headerStyle}
         />
       )}

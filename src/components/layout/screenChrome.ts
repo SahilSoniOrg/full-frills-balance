@@ -13,7 +13,6 @@ export type ScreenFabChrome = {
 type ScreenChromeShared = {
   fab?: ScreenFabChrome;
   isSearchActive?: boolean;
-  alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
 };
 
 /**
@@ -22,6 +21,11 @@ type ScreenChromeShared = {
  * - **Screen** builds and passes `chrome` (`withPrivacyScope` on money routes).
  * - **View** renders via `ScreenWithChrome` — no `PrivacyToggleButton` imports.
  * - Header actions live in Screen (or feature `*HeaderActions` built by Screen).
+ * - Privacy eye is always the trailing (rightmost) header action when present.
+ *
+ * Title alignment is derived in NavigationBar (not set here):
+ * - `showBack: true` → centered (stack / pushed)
+ * - no back → left (tab roots)
  */
 export type TabScreenChrome = ScreenChromeShared & {
   screenTitle: string;

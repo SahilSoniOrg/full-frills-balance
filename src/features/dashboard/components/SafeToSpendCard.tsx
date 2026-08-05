@@ -95,7 +95,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       elevation="none"
       background="transparent"
       paddingHorizontal="none"
-      paddingVertical="sm"
+      paddingVertical="none"
     >
       <Column gap="lg">
         {header}

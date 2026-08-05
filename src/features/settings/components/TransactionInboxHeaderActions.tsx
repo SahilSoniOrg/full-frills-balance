@@ -17,7 +17,6 @@ export function TransactionInboxHeaderActions({
 
   return (
     <View style={styles.headerActions}>
-      <PrivacyToggleButton />
       <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>
         Rules
       </AppButton>
@@ -26,6 +25,7 @@ export function TransactionInboxHeaderActions({
           Refresh SMS
         </AppButton>
       ) : null}
+      <PrivacyToggleButton />
     </View>
   );
 }

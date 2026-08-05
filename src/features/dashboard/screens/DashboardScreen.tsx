@@ -50,7 +50,6 @@ function DashboardScreen() {
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: headerChrome.greeting,
-      alignTitle: 'left',
       headerActions: (
         <DashboardHeaderActions
           onSearchPress={headerChrome.onSearchPress}

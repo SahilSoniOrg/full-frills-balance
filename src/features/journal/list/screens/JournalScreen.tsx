@@ -35,15 +35,7 @@ function JournalScreen() {
     () => ({
       screenTitle: AppConfig.strings.journal.transactions,
       showBack: false,
-      alignTitle: 'left',
-      headerActions: (
-        <JournalListHeaderActions
-          dateRange={vm.dateRange}
-          showDatePicker={vm.showDatePicker}
-          navigatePrevious={vm.navigatePrevious}
-          navigateNext={vm.navigateNext}
-        />
-      ),
+      headerActions: <JournalListHeaderActions />,
       fab: render.selection?.isSelectionModeActive
         ? undefined
         : {
@@ -54,14 +46,17 @@ function JournalScreen() {
           },
       isSearchActive: false,
     }),
-    [
-      handleFabPress,
-      render.selection?.isSelectionModeActive,
-      vm.dateRange,
-      vm.navigateNext,
-      vm.navigatePrevious,
-      vm.showDatePicker,
-    ],
+    [handleFabPress, render.selection?.isSelectionModeActive],
+  );
+
+  const periodBar = useMemo(
+    () => ({
+      range: vm.dateRange,
+      onPress: vm.showDatePicker,
+      onPrevious: vm.navigatePrevious,
+      onNext: vm.navigateNext,
+    }),
+    [vm.dateRange, vm.navigateNext, vm.navigatePrevious, vm.showDatePicker],
   );
 
   return (
@@ -69,6 +64,7 @@ function JournalScreen() {
       list={{ ...render.list, listHeader: null }}
       chrome={chrome}
       datePicker={render.datePicker}
+      periodBar={periodBar}
       selection={render.selection}
     />
   );
