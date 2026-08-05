@@ -1,19 +1,19 @@
 import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import type { ReactNode } from 'react';
 import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
 
 interface TransactionInboxViewProps {
   vm: TransactionInboxViewModel;
-  chrome: ScreenNavChrome;
+  headerActions?: ReactNode;
 }
 
-export function TransactionInboxView({ vm, chrome }: TransactionInboxViewProps) {
+export function TransactionInboxView({ vm, headerActions }: TransactionInboxViewProps) {
   const { theme } = useTheme();
   const {
     filter,
@@ -36,7 +36,12 @@ export function TransactionInboxView({ vm, chrome }: TransactionInboxViewProps) 
   const isAndroid = Platform.OS === 'android';
 
   return (
-    <SettingsLayout chrome={chrome} scrollable={false} hideFooter>
+    <SettingsLayout
+      title="Transaction Inbox"
+      headerActions={headerActions}
+      scrollable={false}
+      hideFooter
+    >
       <View style={styles.container}>
         {!isAndroid && filter === 'pending' ? (
           <View

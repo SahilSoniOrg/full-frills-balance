@@ -1,6 +1,6 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, EmptyStateView } from '@/src/components/core';
-import type { ScreenNavChrome } from '@/src/components/layout';
+import type { ScreenFabChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Spacing } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -11,13 +11,13 @@ import { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRulesViewProps {
-  chrome: ScreenNavChrome;
   rules: TransactionAutoPostRule[];
   suggestions: SmsRuleSuggestion[];
   accountMap: Map<string, string>;
+  fab?: ScreenFabChrome;
 }
 
-export function SmsRulesView({ chrome, rules, suggestions, accountMap }: SmsRulesViewProps) {
+export function SmsRulesView({ rules, suggestions, accountMap, fab }: SmsRulesViewProps) {
   const handleRulePress = useCallback((item: TransactionAutoPostRule) => {
     AppNavigation.toSmsRuleForm(item.id);
   }, []);
@@ -55,7 +55,7 @@ export function SmsRulesView({ chrome, rules, suggestions, accountMap }: SmsRule
   };
 
   return (
-    <SettingsLayout chrome={chrome} scrollable={false} hideFooter>
+    <SettingsLayout title="SMS Rules" fab={fab} scrollable={false} hideFooter>
       <FlatList
         data={rules}
         keyExtractor={r => r.id}

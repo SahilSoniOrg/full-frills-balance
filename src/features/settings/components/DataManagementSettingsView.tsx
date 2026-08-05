@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -11,11 +10,10 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, StyleSheet, View } from 'react-native';
 
 interface DataManagementSettingsViewProps {
-  chrome: ScreenNavChrome;
   vm: DataManagementViewModel;
 }
 
-export function DataManagementSettingsView({ vm, chrome }: DataManagementSettingsViewProps) {
+export function DataManagementSettingsView({ vm }: DataManagementSettingsViewProps) {
   const { theme } = useTheme();
   const {
     isExporting,
@@ -35,7 +33,7 @@ export function DataManagementSettingsView({ vm, chrome }: DataManagementSetting
   } = vm;
 
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.sections.dataManagement}>
       <SettingsMenu header={AppConfig.strings.settings.data.backupRestoreHeader}>
         <SettingsMenuItem
           leftIcon="document"

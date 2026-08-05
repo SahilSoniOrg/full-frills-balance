@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { SelectionPickerSheet } from '@/src/components/common/SelectionPickerSheet';
 import { AppSegmentedControl, AppText, AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
@@ -13,11 +12,10 @@ import { useState } from 'react';
 import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
-  chrome: ScreenNavChrome;
   vm: NotificationSettingsViewModel;
 }
 
-export function AutomationSettingsView({ vm, chrome }: AutomationSettingsViewProps) {
+export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
   const [isModelPickerVisible, setIsModelPickerVisible] = useState(false);
 
   const modelOptions = vm.downloadedModels.map(m => ({
@@ -32,7 +30,7 @@ export function AutomationSettingsView({ vm, chrome }: AutomationSettingsViewPro
     vm.downloadedModels[0];
 
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.sections.remindersAndAutomation}>
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.notifications.title} hideSeparator>
           <SettingsMenuItem

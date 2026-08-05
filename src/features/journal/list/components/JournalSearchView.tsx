@@ -136,12 +136,6 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           listHeader: filterHeader,
         }}
         chrome={chrome}
-        datePicker={{
-          visible: false,
-          onClose: () => {},
-          currentFilter: vm.periodFilter,
-          onSelect: () => {},
-        }}
         selection={{
           selectedIds: vm.selectedIds,
           isSelectionModeActive: vm.isSelectionModeActive,

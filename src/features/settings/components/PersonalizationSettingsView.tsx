@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppInput, AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -13,11 +12,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 interface PersonalizationSettingsViewProps {
-  chrome: ScreenNavChrome;
   vm: PersonalizationViewModel;
 }
 
-export function PersonalizationSettingsView({ vm, chrome }: PersonalizationSettingsViewProps) {
+export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewProps) {
   const [localName, setLocalName] = useState(vm.userName);
 
   const handleNameSave = () => {
@@ -27,7 +25,7 @@ export function PersonalizationSettingsView({ vm, chrome }: PersonalizationSetti
   };
 
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.sections.personalization}>
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.sections.profile}>
           <SettingsMenuItem

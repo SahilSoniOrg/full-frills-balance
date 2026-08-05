@@ -1,4 +1,5 @@
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { Opacity } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { DashboardHeaderActions } from '@/src/features/dashboard/components/DashboardHeaderActions';
 import { DashboardScreenView } from '@/src/features/dashboard/components/DashboardScreenView';
@@ -12,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 function DashboardScreen() {
   const vm = useDashboardViewModel();
-  const headerChrome = useDashboardHeaderChrome();
+  const header = useDashboardHeaderChrome();
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -47,19 +48,22 @@ function DashboardScreen() {
     AppNavigation.toJournalEntry();
   }, []);
 
+  const selectionActive = vm.recentTransactions.isSelectionModeActive;
+
   const chrome = useMemo<TabScreenChrome>(
     () => ({
-      screenTitle: headerChrome.greeting,
+      screenTitle: header.screenTitle,
       headerActions: (
         <DashboardHeaderActions
-          onSearchPress={headerChrome.onSearchPress}
-          onNotificationsPress={headerChrome.onNotificationsPress}
-          notificationCount={headerChrome.notificationCount}
-          onSmsPress={headerChrome.onSmsPress}
-          unreadSmsCount={headerChrome.unreadSmsCount}
+          onSearchPress={header.onSearchPress}
+          onNotificationsPress={header.onNotificationsPress}
+          notificationCount={header.notificationCount}
+          onSmsPress={header.onSmsPress}
+          unreadSmsCount={header.unreadSmsCount}
         />
       ),
-      fab: vm.recentTransactions.isSelectionModeActive
+      headerStyle: selectionActive ? { opacity: Opacity.medium } : undefined,
+      fab: selectionActive
         ? undefined
         : {
             onPress: handleNewEntryPress,
@@ -68,7 +72,7 @@ function DashboardScreen() {
             accessibilityLabel: 'Open new entry options',
           },
     }),
-    [handleNewEntryPress, headerChrome, vm.recentTransactions.isSelectionModeActive],
+    [handleNewEntryPress, header, selectionActive],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

@@ -1,4 +1,3 @@
-import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -11,13 +10,12 @@ import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelec
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
 
 interface AppearanceSettingsViewProps {
-  chrome: ScreenNavChrome;
   vm: AppearanceSettingsViewModel;
 }
 
-export function AppearanceSettingsView({ vm, chrome }: AppearanceSettingsViewProps) {
+export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
   return (
-    <SettingsLayout chrome={chrome}>
+    <SettingsLayout title={AppConfig.strings.settings.sections.appearance}>
       <Stack space="xl">
         <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
 
