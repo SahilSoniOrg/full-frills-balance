@@ -58,9 +58,6 @@ export interface JournalEntryShell {
   workplaceId: WorkplaceId;
 }
 
-/** @deprecated Use JournalEntryShell */
-export type JournalEntryViewModel = JournalEntryShell;
-
 /**
  * Journal entry shell: screen mode SSOT, shared editor, account picker.
  * Mode panels own their draft and account application through the active mode handle.
@@ -180,6 +177,3 @@ export function useJournalEntryShell(): JournalEntryShell {
     workplaceId,
   };
 }
-
-/** @deprecated Use useJournalEntryShell */
-export const useJournalEntryViewModel = useJournalEntryShell;

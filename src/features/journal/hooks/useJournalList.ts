@@ -11,7 +11,7 @@ import { getPerfNow } from '@/src/utils/dateHelpers';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useJournalTransactionList } from '../list/hooks/useJournalTransactionList';
+import { useJournalEntryList } from '../list/hooks/useJournalEntryList';
 
 export type JournalListEmptyState = {
   title: string;
@@ -67,7 +67,7 @@ export function useJournalList(
     navigateNext,
   } = useDateRangeFilter({ defaultToCurrentMonth, initialDateRange });
 
-  const core = useJournalTransactionList({
+  const core = useJournalEntryList({
     workplaceId,
     pageSize,
     dateRange: dateRange || undefined,

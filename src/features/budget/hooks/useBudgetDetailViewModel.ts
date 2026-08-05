@@ -5,24 +5,22 @@ import {
   buildBudgetDetailPreview,
   buildBudgetUsagePreview,
 } from '@/src/features/budget/helpers/budgetDetailPresentation';
+import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
+import { useJournalEntryList } from '@/src/features/journal';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
-import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger';
-import { mapAccountLedgerTransactionToListItem } from '@/src/services/ledger/accountLedgerListItems';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections';
-import { BudgetId, DisplayTransaction, PlainBudget } from '@/src/types/domain';
+import { AccountId, BudgetId, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
 
 export function useBudgetDetailViewModel() {
@@ -37,16 +35,10 @@ export function useBudgetDetailViewModel() {
   const budgetId = params.id;
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
-  const missingCurrenciesCache = useRef(new Set<string>());
   const baseCurrency = workplaceCurrency;
 
   const { rateMap: ratesMap = {} } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);
-
-  const handleJournalPress = useCallback((journalId?: string) => {
-    if (!journalId) return;
-    AppNavigation.toTransactionDetails(journalId);
-  }, []);
 
   const budgetData$ = useMemo(() => {
     return budgetReadService.observeById(workplaceId, budgetId).pipe(
@@ -55,7 +47,6 @@ export function useBudgetDetailViewModel() {
         return combineLatest([
           of(budget),
           budgetReadService.observeBudgetUsage(workplaceId, budget, refTimestamp),
-          budgetReadService.observeBudgetDisplayTransactions(workplaceId, budget, refTimestamp),
         ]);
       }),
     );
@@ -67,7 +58,12 @@ export function useBudgetDetailViewModel() {
     null,
   );
 
-  // Initial Data Injection: Extract preview data from params
+  const { data: scopeRecords = [] } = useObservable(
+    () => (budgetId ? budgetReadService.observeScopes(workplaceId, budgetId) : of([])),
+    [workplaceId, budgetId],
+    [],
+  );
+
   const pName = params.pName as string;
   const pAmount = params.pAmount as string;
   const pCurrency = params.pCurrency as string;
@@ -91,67 +87,51 @@ export function useBudgetDetailViewModel() {
 
   const usage = dbBudgetData ? dbBudgetData[1] : buildBudgetUsagePreview(previewInput);
 
-  const transactions = useMemo(() => (dbBudgetData ? dbBudgetData[2] : []), [dbBudgetData]);
-
   const isLoading = dbLoading && !pName;
 
-  const transactionGroupingOptions = useMemo(
-    () => ({
-      items: transactions,
-      getDate: (t: DisplayTransaction) => t.transactionDate,
-      sortByDate: 'desc' as const,
-      getStats: (txsForDay: DisplayTransaction[]) =>
-        buildDayNetStats(txsForDay, baseCurrency, precision, tx => {
-          const amount = amountInBaseCurrency(tx.amount, tx.currencyCode, baseCurrency, ratesMap);
-          // Budget view: debits increase spent net, credits decrease.
-          if (tx.transactionType === 'DEBIT') return amount;
-          if (tx.transactionType === 'CREDIT') return -amount;
-          return 0;
-        }),
-      renderItem: (tx: DisplayTransaction) =>
-        mapAccountLedgerTransactionToListItem(tx, () => handleJournalPress(tx.journalId)),
-    }),
-    [transactions, baseCurrency, ratesMap, handleJournalPress, precision],
+  const scopeAccountIds = useMemo(
+    () => scopeRecords.map(scope => scope.account.id as AccountId),
+    [scopeRecords],
   );
 
-  const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
+  const budgetDateRange = useMemo(() => {
+    if (!budget) return undefined;
+    const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    return { startDate, endDate };
+  }, [budget, refTimestamp]);
 
-  useEffect(() => {
-    const toFetch = new Set<string>();
-    transactions.forEach((tx: DisplayTransaction) => {
-      if (tx.currencyCode !== baseCurrency) {
-        const rate = ratesMap[tx.currencyCode];
-        if (!rate || rate <= 0) {
-          if (!missingCurrenciesCache.current.has(tx.currencyCode)) {
-            toFetch.add(tx.currencyCode);
-            missingCurrenciesCache.current.add(tx.currencyCode);
-          }
-        }
-      }
-    });
-
-    toFetch.forEach(currencyCode => {
-      exchangeRateService
-        .getRate(baseCurrency, currencyCode)
-        .catch(e =>
-          logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e),
-        );
-    });
-  }, [transactions, baseCurrency, ratesMap]);
+  const journalList = useJournalEntryList({
+    workplaceId,
+    pageSize: AppConfig.pagination.budgetDetailsTransactionsPageSize,
+    dateRange: budgetDateRange,
+    queryOptions: { accountIds: scopeAccountIds },
+    expandScopedLegs: scopeAccountIds.length > 0 ? scopeAccountIds : undefined,
+    paginationPolicy: 'always',
+  });
 
   const chartData = useMemo(() => {
     if (!budget) return null;
 
     const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    const chartTransactions = journalsToBudgetChartTxs(journalList.journals, scopeAccountIds);
+
     return buildBudgetCumulativeSeries({
-      transactions,
+      transactions: chartTransactions,
       periodStart: startDate,
       periodEnd: endDate,
       baseCurrency,
       rateMap: ratesMap,
       precision,
     });
-  }, [transactions, refTimestamp, budget, baseCurrency, ratesMap, precision]);
+  }, [
+    journalList.journals,
+    refTimestamp,
+    budget,
+    baseCurrency,
+    ratesMap,
+    precision,
+    scopeAccountIds,
+  ]);
 
   const nextMonth = useCallback(() => {
     if (!budget) return;
@@ -213,8 +193,8 @@ export function useBudgetDetailViewModel() {
   return {
     budget,
     usage,
-    items,
-    isLoading,
+    items: journalList.items,
+    isLoading: isLoading || journalList.isLoading,
     targetMonth: dayjs(refTimestamp).format('YYYY-MM'),
     nextMonth,
     prevMonth,

@@ -1,6 +1,6 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -99,7 +99,7 @@ export function InsightDetailsView({
 
   return (
     <ScreenWithChrome chrome={chrome} withPadding={false}>
-      <TransactionListView
+      <JournalEntryListView
         items={items}
         isLoading={isLoading}
         ListHeaderComponent={listHeader}

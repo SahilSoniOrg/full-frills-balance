@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
@@ -8,8 +7,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
-import { observeDisplayTransactionsForAccounts } from '@/src/services/ledger/ledgerEnrichedDisplay';
-import { AccountId, BudgetId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -177,44 +175,6 @@ export class BudgetReadService {
               };
             }),
           );
-      }),
-    );
-  }
-
-  /**
-   * Resolves scopes to leaf expense accounts and queries the ledger for enriched
-   * transactions within the budget's targeted month bounds.
-   */
-  observeBudgetDisplayTransactions(
-    workplaceId: WorkplaceId,
-    budget: Budget,
-    referenceDate?: number | string,
-  ): Observable<DisplayTransaction[]> {
-    return budgetRepository.observeScopes(workplaceId, budget.id).pipe(
-      switchMap(scopes => {
-        if (scopes.length === 0) return of([]);
-
-        // Just extract the raw IDs mapped to the budget; display observer resolves the leaves
-        const rootAccountIds = scopes.map(s => s.account.id);
-
-        let ref: number;
-        if (typeof referenceDate === 'string') {
-          const isCurrent = referenceDate === dayjs().format('YYYY-MM');
-          ref = isCurrent ? Date.now() : dayjs(`${referenceDate}-15`).valueOf();
-        } else {
-          ref = referenceDate || Date.now();
-        }
-        const { startDate: startOfMonth, endDate: endOfMonth } = BudgetPeriodUtils.getCurrentPeriod(
-          budget,
-          ref,
-        );
-
-        return observeDisplayTransactionsForAccounts(
-          rootAccountIds,
-          workplaceId,
-          AppConfig.pagination.budgetDetailsTransactionsPageSize,
-          { startDate: startOfMonth, endDate: endOfMonth },
-        );
       }),
     );
   }

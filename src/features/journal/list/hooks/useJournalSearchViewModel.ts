@@ -3,15 +3,15 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { AccountId, JournalId } from '@/src/types/domain';
-import { TransactionListItem } from '@/src/types/ui';
+import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import type { Dispatch, SetStateAction } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
-import { useJournalTransactionList } from './useJournalTransactionList';
+import { useJournalEntryList } from './useJournalEntryList';
 
 export interface JournalSearchViewModel {
-  items: TransactionListItem[];
+  items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
   onEndReached?: () => void;
@@ -69,7 +69,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     displayType: params.displayType as string,
   });
 
-  const core = useJournalTransactionList({
+  const core = useJournalEntryList({
     workplaceId,
     pageSize: AppConfig.defaults.journalPageSize,
     dateRange: filters.queryDateRange,

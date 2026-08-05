@@ -132,7 +132,7 @@ test.describe('Transaction Management', () => {
     await journalEntryPage.enterDescription('Coffee Edit');
     await journalEntryPage.save();
 
-    await expect(page.getByText('Transaction Details')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Journal details')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Coffee Edit', { exact: true }).nth(1)).toBeVisible({
       timeout: 15000,
     });

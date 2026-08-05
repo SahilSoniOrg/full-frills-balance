@@ -197,13 +197,15 @@ export class AccountsPage extends BasePage {
     await expect(this.page.getByText(amount)).toBeVisible();
   }
 
-  getTransactionCard(description: string) {
-    const title = this.page.getByTestId('transaction-card-title').filter({ hasText: description });
-    return this.page.getByTestId('transaction-card').filter({ has: title });
+  getJournalEntryCard(description: string) {
+    const title = this.page
+      .getByTestId('journal-entry-card-title')
+      .filter({ hasText: description });
+    return this.page.getByTestId('journal-entry-card').filter({ has: title });
   }
 
   async assertTransactionAccountBadges(description: string, expectedBadgeTexts: string[]) {
-    const card = this.getTransactionCard(description);
+    const card = this.getJournalEntryCard(description);
     await expect.poll(async () => await card.count(), { timeout: 30000 }).toBeGreaterThan(0);
     await expect(card).toBeVisible();
     for (const text of expectedBadgeTexts) {

@@ -304,7 +304,7 @@ export function PlannedPaymentDetailsView({
                         typeColor,
                       }}
                       isOverdue={isOverdue}
-                      onPress={() => AppNavigation.toTransactionDetails(journal.id)}
+                      onPress={() => AppNavigation.toJournalDetails(journal.id)}
                     />
                   );
                 })}

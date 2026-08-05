@@ -1,6 +1,6 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { AppButton, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -43,9 +43,9 @@ export function AccountDetailsView({
     rollingAverageData,
     xTicks,
     periodMetrics,
-    transactionsLoading,
-    transactionsLoadingMore,
-    transactionItems,
+    journalsLoading,
+    journalsLoadingMore,
+    journalItems,
     onLoadMore,
     secondaryBalances,
     isParent,
@@ -91,13 +91,13 @@ export function AccountDetailsView({
         </View>
       ) : (
         <>
-          <TransactionListView
-            items={transactionItems}
-            isLoading={transactionsLoading}
-            isLoadingMore={transactionsLoadingMore}
+          <JournalEntryListView
+            items={journalItems}
+            isLoading={journalsLoading}
+            isLoadingMore={journalsLoadingMore}
             onEndReached={onLoadMore}
-            emptyTitle="No transactions yet"
-            emptySubtitle="Transactions for this account will appear here."
+            emptyTitle="No journal entries yet"
+            emptySubtitle="Journal entries for this account will appear here."
             selectedIds={selectedIds}
             onLongPressItem={onLongPressItem}
             isSelectionModeActive={isSelectionModeActive}

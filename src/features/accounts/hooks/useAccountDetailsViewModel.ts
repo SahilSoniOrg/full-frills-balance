@@ -7,10 +7,11 @@ import { useAccountDetailsActions } from '@/src/features/accounts/hooks/details/
 import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
 import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { useAccountTransactionFeed } from '@/src/features/accounts/hooks/details/useAccountTransactionFeed';
+import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
+import { useJournalEntryList } from '@/src/features/journal';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
@@ -58,16 +59,21 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dashboardLoading,
   });
 
-  const { transactions: _transactions, ...feedVm } = useAccountTransactionFeed({
-    accountId,
+  const viewer = useMemo(() => ({ accountId }), [accountId]);
+
+  const journalList = useJournalEntryList({
     workplaceId,
-    dateRange,
-    balanceCurrency,
-    precision,
-    reconciledAt,
-    accountName: account?.name,
-    workplaceCurrency,
+    dateRange: dateRange ?? undefined,
+    queryOptions: { accountIds: [accountId] },
+    viewer,
+    shareTitle: `Journal entries for ${account?.name || 'Account'}`,
+    paginationPolicy: 'default',
   });
+
+  const journalItems = useMemo(
+    () => injectReconciledMarkersIntoJournalList(journalList.items, reconciledAt),
+    [journalList.items, reconciledAt],
+  );
 
   const actionsVm = useAccountDetailsActions({
     accountId,
@@ -104,7 +110,19 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     ...dataVm,
     ...metricsVm,
     ...hierarchyVm,
-    ...feedVm,
+    journalItems,
+    journalsLoading: journalList.isLoading,
+    journalsLoadingMore: journalList.isLoadingMore,
+    onLoadMore: journalList.onEndReached,
+    selectedIds: journalList.selectedIds,
+    isSelectionModeActive: journalList.isSelectionModeActive,
+    onLongPressItem: journalList.onLongPressItem,
+    toggleSelection: journalList.toggleSelection,
+    selectAll: journalList.selectAll,
+    clearItems: journalList.clearItems,
+    exitSelectionMode: journalList.exitSelectionMode,
+    onShareSelected: journalList.onShareSelected,
+    setSelectedIds: journalList.setSelectedIds,
     ...actionsVm,
   };
 }

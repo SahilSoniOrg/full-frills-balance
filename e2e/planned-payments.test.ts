@@ -36,7 +36,7 @@ test.describe('Planned Payments & Commitments', () => {
 
     await dashboardPage.switchToActivity();
     await expect(
-      page.getByTestId('transaction-card-title').filter({ hasText: 'Utilities Due' }),
+      page.getByTestId('journal-entry-card-title').filter({ hasText: 'Utilities Due' }),
     ).toBeVisible({
       timeout: 20000,
     });

@@ -4,9 +4,9 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import {
-  RecentTransactions,
-  useRecentTransactions,
-} from '@/src/features/dashboard/hooks/useRecentTransactions';
+  RecentJournalEntries,
+  useRecentJournalEntries,
+} from '@/src/features/dashboard/hooks/useRecentJournalEntries';
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
 import { analytics } from '@/src/services/analytics-service';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -23,9 +23,9 @@ import { EMPTY } from 'rxjs';
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
   showSafeToSpendChart: boolean;
-  recentTransactions: RecentTransactions;
+  recentJournalEntries: RecentJournalEntries;
   plannedOccurrences: PlannedOccurrencesResult;
-  transactionSectionTitle: string;
+  journalSectionTitle: string;
   safeToSpendData: SafeToSpendDashboard | null;
   explanationModalState: {
     visible: boolean;
@@ -105,7 +105,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const { strings } = AppConfig;
 
-  const recentTransactions = useRecentTransactions({
+  const recentJournalEntries = useRecentJournalEntries({
     workplaceId,
     pageSize: AppConfig.pagination.dashboardPageSize,
     emptyTitle: strings.dashboard.emptyTitle,
@@ -126,7 +126,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     currencyCode: safeToSpendData?.currencyCode,
   });
 
-  const hasJournalItems = recentTransactions.items.length > 0;
+  const hasJournalItems = recentJournalEntries.items.length > 0;
   // Log Journal List arrival
   useEffect(() => {
     if (hasJournalItems) {
@@ -144,15 +144,15 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [isInitialized, hasSafeToSpendData, hasJournalItems]);
 
-  const sectionTitle = strings.dashboard.recentTransactions;
+  const sectionTitle = strings.dashboard.recentJournalEntries;
 
   return useMemo(
     () => ({
       hasCompletedOnboarding,
       showSafeToSpendChart,
-      recentTransactions,
+      recentJournalEntries,
       plannedOccurrences,
-      transactionSectionTitle: sectionTitle,
+      journalSectionTitle: sectionTitle,
       safeToSpendData,
       explanationModalState,
       legendModalState,
@@ -160,7 +160,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     [
       hasCompletedOnboarding,
       showSafeToSpendChart,
-      recentTransactions,
+      recentJournalEntries,
       plannedOccurrences,
       sectionTitle,
       safeToSpendData,

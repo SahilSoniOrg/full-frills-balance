@@ -1,17 +1,13 @@
 import { AppConfig } from '@/src/constants';
-import { buildCounterAccountChips } from '@/src/services/accounting/displayTransactionCounterAccounts';
+import { counterAccountsFromJournalPeers } from '@/src/services/accounting/displayTransactionCounterAccounts';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildTimelineAccountBadges } from '@/src/services/accounting/timelineAccountBadges';
-import {
-  DisplayTransaction,
-  EnrichedJournal,
-  JournalDisplayType,
-  SemanticType,
-} from '@/src/types/domain';
+import { EnrichedJournal, JournalDisplayType, SemanticType } from '@/src/types/domain';
 import {
   JournalTimelineIconKey,
   JournalTimelineItem,
   JournalTimelinePresentation,
+  JournalTimelineViewer,
 } from '@/src/types/journalTimeline';
 
 export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
@@ -59,8 +55,40 @@ function toTimelinePresentation(
   };
 }
 
-export function mapJournalToTimelineItem(journal: EnrichedJournal): JournalTimelineItem {
+export function mapJournalToTimelineItem(
+  journal: EnrichedJournal,
+  viewer?: JournalTimelineViewer,
+): JournalTimelineItem {
   const displayType = journal.displayType as JournalDisplayType;
+  const defaultTitle =
+    displayType === JournalDisplayType.TRANSFER
+      ? AppConfig.strings.journal.transfer
+      : AppConfig.strings.journal.transaction;
+
+  if (viewer) {
+    const viewerAccount = journal.accounts.find(a => a.id === viewer.accountId);
+    const isIncrease = viewerAccount?.role === 'DESTINATION';
+    const chrome = ledgerLineChrome(isIncrease);
+    const presentation = toTimelinePresentation(
+      displayType,
+      journal.semanticLabel,
+      journal.semanticType,
+      chrome,
+    );
+    const counterAccounts = counterAccountsFromJournalPeers(journal.accounts, viewer.accountId);
+    const badges = buildTimelineAccountBadges(counterAccounts);
+
+    return {
+      title: journal.description || defaultTitle,
+      amount: viewerAccount?.amount ?? journal.totalAmount,
+      currencyCode: journal.currencyCode,
+      transactionDate: journal.journalDate,
+      presentation,
+      badges,
+      notes: journal.notes,
+    };
+  }
+
   const chrome = journalDisplayTypeChrome(displayType);
   const presentation = toTimelinePresentation(
     displayType,
@@ -70,11 +98,6 @@ export function mapJournalToTimelineItem(journal: EnrichedJournal): JournalTimel
   );
   const badges = buildTimelineAccountBadges(journal.accounts, { withFromToPrefixes: true });
 
-  const defaultTitle =
-    displayType === JournalDisplayType.TRANSFER
-      ? AppConfig.strings.journal.transfer
-      : AppConfig.strings.journal.transaction;
-
   return {
     title: journal.description || defaultTitle,
     amount: journal.totalAmount,
@@ -83,29 +106,5 @@ export function mapJournalToTimelineItem(journal: EnrichedJournal): JournalTimel
     presentation,
     badges,
     notes: journal.notes,
-  };
-}
-
-export function mapLedgerTransactionToTimelineItem(
-  transaction: DisplayTransaction,
-): JournalTimelineItem {
-  const displayType = transaction.displayType as JournalDisplayType;
-  const chrome = ledgerLineChrome(transaction.isIncrease);
-  const presentation = toTimelinePresentation(
-    displayType,
-    transaction.semanticLabel,
-    transaction.semanticType as SemanticType | undefined,
-    chrome,
-  );
-  const counterChips = buildCounterAccountChips(transaction);
-
-  return {
-    title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
-    amount: transaction.amount,
-    currencyCode: transaction.currencyCode,
-    transactionDate: transaction.transactionDate,
-    presentation,
-    badges: buildTimelineAccountBadges(counterChips),
-    notes: transaction.notes,
   };
 }

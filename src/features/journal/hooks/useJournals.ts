@@ -1,19 +1,19 @@
 import { AppConfig } from '@/src/constants';
-import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
-import { transactionService } from '@/src/services/transaction-ingestion';
+import { JournalStatus } from '@/src/data/models/Journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
+import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
+import { transactionService } from '@/src/services/transaction-ingestion';
 import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
-
-import { JournalStatus } from '@/src/data/models/Journal';
 
 export interface JournalFilterRange {
   startDate?: number;
   endDate?: number;
   plannedPaymentId?: string;
   accountIds?: string[];
+  journalIds?: JournalId[];
   minAmount?: number;
   maxAmount?: number;
   displayType?: string;
@@ -34,54 +34,89 @@ export function useJournals(
     maxAmount?: number;
     displayType?: string;
     accountIds?: string[];
+    journalIds?: JournalId[];
     initialItems?: EnrichedJournal[] | (() => EnrichedJournal[]);
   },
 ) {
-  // Destructure for stable dependency tracking
   const { startDate, endDate } = dateRange || {};
-  const { minAmount, maxAmount, displayType, accountIds, initialItems } = options || {};
+  const { minAmount, maxAmount, displayType, accountIds, journalIds, initialItems } = options || {};
 
-  // Stabilize composite dependencies using content-based keys
-  // This prevents 'invisible gremlins' where array literals cause cascading re-renders
   const statusKey = useMemo(() => status?.join('|') ?? 'none', [status]);
   const stableStatus = useMemo(
     () => (statusKey === 'none' ? undefined : (statusKey.split('|') as JournalStatus[])),
     [statusKey],
   );
 
-  const accountIdsKey = useMemo(() => accountIds?.join('|') ?? 'none', [accountIds]);
+  const accountIdsKey = useMemo(() => {
+    if (accountIds === undefined) return 'none';
+    if (accountIds.length === 0) return 'empty';
+    return accountIds.join('|');
+  }, [accountIds]);
   const stableAccountIds = useMemo(
-    () => (accountIdsKey === 'none' ? undefined : accountIdsKey.split('|')),
+    () =>
+      accountIdsKey === 'none'
+        ? undefined
+        : accountIdsKey === 'empty'
+          ? ([] as string[])
+          : accountIdsKey.split('|'),
     [accountIdsKey],
   );
 
-  // Memoize the effective date range object passed to usePaginatedObservable
-  // This prevents 'structuralKey' changes in usePaginatedObservable.
+  const journalIdsKey = useMemo(() => {
+    if (journalIds === undefined) return 'none';
+    if (journalIds.length === 0) return 'empty';
+    return journalIds.join('|');
+  }, [journalIds]);
+  const stableJournalIds = useMemo(
+    () =>
+      journalIdsKey === 'none'
+        ? undefined
+        : journalIdsKey === 'empty'
+          ? ([] as JournalId[])
+          : (journalIdsKey.split('|') as JournalId[]),
+    [journalIdsKey],
+  );
+
   const effectiveRange: JournalFilterRange | undefined = useMemo(() => {
     if (
       startDate == null &&
       endDate == null &&
       !plannedPaymentId &&
       !stableAccountIds &&
+      !stableJournalIds &&
       minAmount === undefined &&
       maxAmount === undefined &&
       displayType === undefined
-    )
+    ) {
       return undefined;
+    }
 
     return {
       startDate,
       endDate,
       plannedPaymentId,
       accountIds: stableAccountIds,
+      journalIds: stableJournalIds,
       minAmount,
       maxAmount,
       displayType,
     };
-  }, [startDate, endDate, plannedPaymentId, stableAccountIds, minAmount, maxAmount, displayType]);
+  }, [
+    startDate,
+    endDate,
+    plannedPaymentId,
+    stableAccountIds,
+    stableJournalIds,
+    minAmount,
+    maxAmount,
+    displayType,
+  ]);
 
   const observe = useCallback(
     (limit: number, range?: JournalFilterRange, query?: string) => {
+      if (range?.accountIds?.length === 0 || range?.journalIds?.length === 0) {
+        return of([]);
+      }
       const effectiveOptions = {
         minAmount: range?.minAmount,
         maxAmount: range?.maxAmount,
@@ -114,7 +149,7 @@ export function useJournals(
     suppressResetOnSearch: true,
     getFilterKey: f => {
       if (!f) return 'none';
-      return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}`;
+      return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}-${f.journalIds?.join(',')}`;
     },
     initialItems,
   });
@@ -122,7 +157,7 @@ export function useJournals(
   return { journals, isLoading, isLoadingMore, hasMore, loadMore, version };
 }
 
-export function useJournalTransactions(
+export function useJournalLegs(
   workplaceId: WorkplaceId,
   journalId: JournalId | null,
   includeDeleted: boolean = false,

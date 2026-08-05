@@ -31,9 +31,11 @@ export class DashboardPage extends BasePage {
     await this.page.getByText(description).first().click();
   }
 
-  getTransactionCard(description: string) {
-    const title = this.page.getByTestId('transaction-card-title').filter({ hasText: description });
-    return this.page.getByTestId('transaction-card').filter({ has: title });
+  getJournalEntryCard(description: string) {
+    const title = this.page
+      .getByTestId('journal-entry-card-title')
+      .filter({ hasText: description });
+    return this.page.getByTestId('journal-entry-card').filter({ has: title });
   }
 
   async assertTransactionAccountBadges(description: string, expectedBadgeTexts: string[]) {
@@ -41,7 +43,7 @@ export class DashboardPage extends BasePage {
     await expect
       .poll(
         async () => {
-          const card = this.getTransactionCard(description);
+          const card = this.getJournalEntryCard(description);
           const count = await card.count();
           if (count === 0) {
             await this.page
@@ -55,7 +57,7 @@ export class DashboardPage extends BasePage {
       )
       .toBeGreaterThan(0);
 
-    const card = this.getTransactionCard(description);
+    const card = this.getJournalEntryCard(description);
     await expect(card).toBeVisible();
     for (const text of expectedBadgeTexts) {
       await expect(

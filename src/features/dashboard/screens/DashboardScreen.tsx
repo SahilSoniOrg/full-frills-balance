@@ -64,7 +64,7 @@ function DashboardScreen() {
           ),
         },
         {
-          active: vm.recentTransactions.isSelectionModeActive,
+          active: vm.recentJournalEntries.isSelectionModeActive,
           fab: {
             onPress: handleNewEntryPress,
             label: 'New Entry',
@@ -73,7 +73,7 @@ function DashboardScreen() {
           },
         },
       ),
-    [handleNewEntryPress, header, vm.recentTransactions.isSelectionModeActive],
+    [handleNewEntryPress, header, vm.recentJournalEntries.isSelectionModeActive],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

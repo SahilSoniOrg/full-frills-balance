@@ -152,10 +152,10 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the Transaction Details screen.
+   * Navigate to the Journal Details screen.
    * Supports optional preview data for immediate rendering while the full record loads.
    */
-  toTransactionDetails: (
+  toJournalDetails: (
     journalId: string,
     preview?: {
       title?: string;
@@ -180,7 +180,7 @@ export const AppNavigation = {
       if (preview.displayType) queryParams.append('displayType', preview.displayType);
     }
 
-    router.push(`/transaction-details?${queryParams.toString()}` as Href);
+    router.push(`/journal-details?${queryParams.toString()}` as Href);
   },
 
   /**

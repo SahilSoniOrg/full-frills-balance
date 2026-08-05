@@ -1,5 +1,8 @@
 import { AccountType } from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 import { ComponentVariant } from '@/src/utils/style-helpers';
+
+export type JournalTimelineViewer = { accountId: AccountId };
 
 /** Icon keys align with AppIcon names; kept as strings so services avoid UI imports. */
 export type JournalTimelineIconKey = 'document' | 'arrowUp' | 'arrowDown' | 'swapHorizontal';

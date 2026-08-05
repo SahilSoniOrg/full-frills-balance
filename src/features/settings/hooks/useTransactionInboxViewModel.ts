@@ -129,7 +129,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const handleCompareDuplicate = useCallback(
     (item: TransactionInboxItem) => {
       if (!item.duplicateCandidate) return;
-      AppNavigation.toTransactionDetails(item.duplicateCandidate.journalId, {
+      AppNavigation.toJournalDetails(item.duplicateCandidate.journalId, {
         title:
           item.duplicateCandidate.description || item.parsedMerchant || item.senderAddress || '',
         amount: item.parsedAmount || 0,
@@ -144,7 +144,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const handleOpenJournal = useCallback(
     (item: TransactionInboxItem) => {
       if (!item.linkedJournal) return;
-      AppNavigation.toTransactionDetails(item.linkedJournal.journalId, {
+      AppNavigation.toJournalDetails(item.linkedJournal.journalId, {
         title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress || '',
         amount: item.parsedAmount || 0,
         currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,

@@ -29,7 +29,7 @@ jest.mock('@/src/hooks/useDateRangeFilter', () => ({
 }));
 
 jest.mock('@/src/utils/navigation', () => ({
-  AppNavigation: { toTransactionDetails: jest.fn() },
+  AppNavigation: { toJournalDetails: jest.fn() },
 }));
 
 jest.mock('@/src/contexts/UIContext', () => ({

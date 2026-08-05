@@ -1,12 +1,11 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
-import { TransactionId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
@@ -17,10 +16,10 @@ import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
 export function DashboardScreenView({
   hasCompletedOnboarding,
-  recentTransactions,
+  recentJournalEntries,
   plannedOccurrences,
   safeToSpendData,
-  transactionSectionTitle,
+  journalSectionTitle,
   listRef,
   explanationModalState,
   legendModalState,
@@ -97,16 +96,16 @@ export function DashboardScreenView({
 
   const selectionChrome = useMemo(
     () => ({
-      exitSelectionMode: recentTransactions.exitSelectionMode,
-      selectAll: recentTransactions.selectAll,
-      clearItems: recentTransactions.clearItems,
-      onShareSelected: recentTransactions.onShareSelected,
+      exitSelectionMode: recentJournalEntries.exitSelectionMode,
+      selectAll: recentJournalEntries.selectAll,
+      clearItems: recentJournalEntries.clearItems,
+      onShareSelected: recentJournalEntries.onShareSelected,
     }),
     [
-      recentTransactions.exitSelectionMode,
-      recentTransactions.selectAll,
-      recentTransactions.clearItems,
-      recentTransactions.onShareSelected,
+      recentJournalEntries.exitSelectionMode,
+      recentJournalEntries.selectAll,
+      recentJournalEntries.clearItems,
+      recentJournalEntries.onShareSelected,
     ],
   );
 
@@ -126,12 +125,12 @@ export function DashboardScreenView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
-  } = recentTransactions;
+  } = recentJournalEntries;
 
   return (
     <ScreenWithChrome testID="dashboard-screen" edges={['top']} chrome={chrome}>
       <View style={styles.container}>
-        <TransactionListView
+        <JournalEntryListView
           ref={listRef}
           items={items}
           isLoading={isLoading}
@@ -141,8 +140,8 @@ export function DashboardScreenView({
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}
           onEndReached={onEndReached}
-          selectedIds={selectedIds as Set<string> as Set<TransactionId>}
-          onLongPressItem={onLongPressItem as (id: string) => void}
+          selectedIds={selectedIds}
+          onLongPressItem={onLongPressItem}
           isSelectionModeActive={isSelectionModeActive}
           selectionChrome={selectionChrome}
           contentContainerStyle={styles.listContent}
@@ -166,7 +165,7 @@ export function DashboardScreenView({
                 />
               </View>
               <Inset horizontal="lg" vertical="lg">
-                <ScreenSectionHeader title={transactionSectionTitle} />
+                <ScreenSectionHeader title={journalSectionTitle} />
               </Inset>
             </View>
           }

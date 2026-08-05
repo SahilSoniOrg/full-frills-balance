@@ -27,7 +27,7 @@ type ScreenChromeShared = {
  * - **Screen** builds and passes `chrome` (`withPrivacyScope` on money routes).
  * - **View** renders via `ScreenWithChrome` — no chrome props other than `chrome`.
  * - Back / headerStyle / FAB live only on `chrome` (see `applySelectionChrome` for Selection mode nav patch).
- * - Selection-mode secondary chrome (action bar + dismiss) lives on `TransactionListView`.
+ * - Selection-mode secondary chrome (action bar + dismiss) lives on `JournalEntryListView`.
  * - Privacy eye is always the trailing (rightmost) header action when present.
  *
  * Header actions:

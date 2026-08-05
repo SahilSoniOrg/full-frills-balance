@@ -1,17 +1,17 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
-import { JournalId, TransactionId } from '@/src/types/domain';
-import { TransactionListItem } from '@/src/types/ui';
+import { JournalId } from '@/src/types/domain';
+import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type JournalListBundle = {
-  items: TransactionListItem[];
+  items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
   loadingText: string;
@@ -92,7 +92,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           </View>
         ) : null}
 
-        <TransactionListView
+        <JournalEntryListView
           ref={ref}
           items={list.items}
           isLoading={list.isLoading}
@@ -104,8 +104,8 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           ListHeaderComponent={list.listHeader}
           onEndReached={list.onEndReached}
           contentContainerStyle={[styles.listContent, list.listContentStyle]}
-          selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
-          onLongPressItem={selection?.onLongPressItem as (id: string) => void}
+          selectedIds={selection?.selectedIds}
+          onLongPressItem={selection?.onLongPressItem}
           isSelectionModeActive={selection?.isSelectionModeActive}
           selectionChrome={selectionChrome}
         />

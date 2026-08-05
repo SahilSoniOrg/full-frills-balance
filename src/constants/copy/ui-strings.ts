@@ -18,7 +18,7 @@ export const UI_STRINGS = {
   dashboard: {
     emptyTitle: 'Everything is ready.',
     emptySubtitle: 'Add your first entry to see how much you can spend with confidence.',
-    recentTransactions: 'Activity',
+    recentJournalEntries: 'Activity',
     searchResults: 'Results',
     greeting: (name: string) => `Hi, ${name || 'there'}`,
     notificationsTitle: 'Notifications',

@@ -1,13 +1,18 @@
-import { TransactionCardProps } from '@/src/components/common/TransactionCard';
-import { TransactionId } from './domain';
+import { JournalEntryCardProps } from '@/src/components/common/JournalEntryCard';
+import { JournalId } from './domain';
 
-export type TransactionListItemType = 'transaction' | 'separator' | 'reconciledMarker';
+export type JournalListItemType = 'journal' | 'separator' | 'reconciledMarker';
 
-export interface TransactionListItem {
-  id: TransactionId;
-  type: TransactionListItemType;
+export type JournalListRowId = JournalId | string;
+
+export interface JournalListItem {
+  /** FlashList key. */
+  id: JournalListRowId;
+  /** Journal identity for selection and share; set on journal entry rows. */
+  selectionId?: JournalId;
+  type: JournalListItemType;
   date: number;
-  cardProps?: TransactionCardProps;
+  cardProps?: JournalEntryCardProps;
   onPress?: () => void;
   isCollapsed?: boolean;
   onToggle?: () => void;

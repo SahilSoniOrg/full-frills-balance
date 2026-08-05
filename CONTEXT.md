@@ -17,10 +17,25 @@ _Avoid_: applySelectionChrome (implementation helper name); command mode bar
 ### Journal list
 
 **Journal list**:
-The Activity tab’s journal feed: date-scoped transactions with Selection mode, period bar, and share. One presentation module over the shared journal transaction pipeline.
+The Activity tab’s journal feed: date-scoped journal entries with Selection mode, period bar, and share. One presentation module over the shared journal pipeline (`useJournalEntryList`).
 _Avoid_: Journal list screen helper / reshape adapter as a separate concept; search-global on the Activity tab (search is its own screen)
 
-### Insights
+**Journal entry row**:
+A single row in a journal list representing one whole journal entry (`EnrichedJournal`). Identity is always `JournalId`. Shown on Activity, Dashboard, Search, and Insights.
+_Avoid_: Calling it a "transaction" in list/UI code
+
+**Journal entry card**:
+Shared card UI for journal list rows (`JournalEntryCard`). Same component for Activity and account-filtered views; account perspective is a viewer lens on the mapper, not a separate card type.
+_Avoid_: Separate ledger card component
+
+**Viewer lens**:
+Optional `{ accountId }` passed to the journal timeline mapper. When set, card amount/badges/chrome reflect that account’s leg on the journal. Details screen still loads the full journal.
+
+**Journal details**:
+Screen opened from any journal entry card. Loads by `journalId`; shows full journal including all split lines. Route: `/journal-details`.
+
+**Insight detail list**:
+Journal entries linked to an insight. Uses the same `useJournalEntryList` pipeline with a `journalIds` filter.
 
 **Insight**:
 A detected financial pattern surfaced in Hub (e.g. recurring charge, spending spike, missing emergency fund). Carries severity, short message, explanatory description, suggestion, and optional linked journals.

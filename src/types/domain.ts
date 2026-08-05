@@ -144,7 +144,8 @@ export interface DisplayCounterAccount {
 }
 
 /**
- * DisplayTransaction - Unified read model for transactions in the UI.
+ * DisplayTransaction - Leg-level read model for journal details and ingestion.
+ * List cards use EnrichedJournal via the journal timeline mapper instead.
  */
 export interface DisplayTransaction {
   id: TransactionId;
@@ -312,11 +313,6 @@ export interface JournalMetadata {
   externalId?: string;
   metadataJson?: string; // Fallback for unstructured historical data
 }
-
-/**
- * @deprecated Use JournalMetadata instead
- */
-export type JournalSmsMetadata = JournalMetadata;
 
 /**
  * JournalEntryLine - UI-specific model for a single line in the journal editor.

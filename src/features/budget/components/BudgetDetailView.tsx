@@ -1,4 +1,4 @@
-import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -21,12 +21,12 @@ export function BudgetDetailView({
         <LoadingView loading={true} text="Loading budget..." size="large" />
       ) : (
         <View style={styles.container}>
-          <TransactionListView
+          <JournalEntryListView
             items={vm.items}
             isLoading={vm.isLoading}
             isLoadingMore={false}
             emptyTitle="No activity"
-            emptySubtitle="No transactions found for this budget in the selected month."
+            emptySubtitle="No journal entries found for this budget in the selected month."
             ListHeaderComponent={
               <BudgetDetailHeader
                 budget={vm.budget!}

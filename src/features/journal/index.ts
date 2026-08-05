@@ -6,7 +6,7 @@ export * from './hooks/useJournalActions';
 export * from './hooks/useJournals';
 export { default as JournalScreen } from './list/screens/JournalScreen';
 export { default as JournalSearchScreen } from './list/screens/JournalSearchScreen';
-export { default as TransactionDetailsScreen } from './screens/TransactionDetailsScreen';
+export { default as JournalDetailsScreen } from './screens/JournalDetailsScreen';
 export { default as AiBenchmarkScreen } from './screens/AiBenchmarkScreen';
 export { default as AiExampleScreen } from './screens/AiExampleScreen';
 
@@ -19,11 +19,16 @@ export type {
 } from './components/JournalListView';
 export { useJournalList } from './hooks/useJournalList';
 export type { JournalListModel, UseJournalListParams } from './hooks/useJournalList';
-export { useJournalTransactionList } from './list/hooks/useJournalTransactionList';
+export { useJournalEntryList } from './list/hooks/useJournalEntryList';
 export type {
-  JournalTransactionListCore,
-  UseJournalTransactionListParams,
-} from './list/hooks/useJournalTransactionList';
+  JournalEntryListCore,
+  UseJournalEntryListParams,
+} from './list/hooks/useJournalEntryList';
+export {
+  journalsToTimelineRows,
+  type JournalTimelineRow,
+  type JournalTimelineRowsOptions,
+} from './list/journalTimelineRows';
 export { AiBenchmarkView } from './components/AiBenchmarkView';
 export { AiExampleView } from './components/AiExampleView';
 export { BulkEntryGrid } from './entry/components/BulkEntryGrid';

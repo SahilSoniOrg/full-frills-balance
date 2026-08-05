@@ -86,7 +86,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     if (type === 'account') {
       AppNavigation.toAccountDetails(id as AccountId, { preview: { name } });
     } else if (type === 'journal') {
-      AppNavigation.toTransactionDetails(id as JournalId, { title: name });
+      AppNavigation.toJournalDetails(id as JournalId, { title: name });
     }
   }, []);
 

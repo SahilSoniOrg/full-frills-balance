@@ -2,10 +2,6 @@
 import './SmsExtractor';
 import './VoiceExtractor';
 
-export {
-  observeDisplayTransactionsForAccount,
-  observeDisplayTransactionsForAccounts,
-} from './ledgerEnrichedDisplay';
 export { ledgerWriteService, LedgerWriteService } from './ledgerWriteService';
 export { amountInBaseCurrency, buildDayNetStats } from './buildDayNetStats';
 export type { DayNetStats } from './buildDayNetStats';

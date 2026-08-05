@@ -1,8 +1,8 @@
 import { sharingService, ShareFormat } from '../../services/SharingService';
 import {
-  TransactionShareProvider,
-  ShareableTransaction,
-} from '../../services/sharing/TransactionShareProvider';
+  JournalShareProvider,
+  ShareableJournalEntry,
+} from '../../services/sharing/JournalShareProvider';
 import { JournalDisplayType } from '../../types/domain';
 
 // Mock native modules for Jest environment
@@ -39,7 +39,7 @@ jest.mock('../../utils/preferences', () => ({
 }));
 
 describe('SharingService', () => {
-  const mockTransactions: ShareableTransaction[] = [
+  const mockTransactions: ShareableJournalEntry[] = [
     {
       id: '1',
       date: new Date('2023-01-01').getTime(),
@@ -58,8 +58,8 @@ describe('SharingService', () => {
     },
   ];
 
-  it('can format content through TransactionShareProvider', () => {
-    const provider = new TransactionShareProvider(mockTransactions, { title: 'Test Report' });
+  it('can format content through JournalShareProvider', () => {
+    const provider = new JournalShareProvider(mockTransactions, { title: 'Test Report' });
     const content = provider.getContent(ShareFormat.TEXT);
 
     expect(content).toContain('TEST REPORT');
@@ -69,20 +69,20 @@ describe('SharingService', () => {
   });
 
   it('respects showEmojis: false', () => {
-    const provider = new TransactionShareProvider(mockTransactions, { showEmojis: false });
+    const provider = new JournalShareProvider(mockTransactions, { showEmojis: false });
     const content = provider.getContent(ShareFormat.TEXT);
     expect(content).not.toContain('🟢');
     expect(content).not.toContain('🔴');
   });
 
   it('automatically disables emojis for CSV', () => {
-    const provider = new TransactionShareProvider(mockTransactions, { showEmojis: true });
+    const provider = new JournalShareProvider(mockTransactions, { showEmojis: true });
     const content = provider.getContent(ShareFormat.CSV);
     expect(content).not.toContain('🟢');
   });
 
   it('escapes CSV content correctly', () => {
-    const complexTx: ShareableTransaction = {
+    const complexTx: ShareableJournalEntry = {
       id: '3',
       date: Date.now(),
       description: 'Business, "Cool" Corp',
@@ -90,13 +90,13 @@ describe('SharingService', () => {
       currencyCode: 'USD',
       displayType: JournalDisplayType.EXPENSE,
     };
-    const provider = new TransactionShareProvider([complexTx]);
+    const provider = new JournalShareProvider([complexTx]);
     const content = provider.getContent(ShareFormat.CSV);
     expect(content).toContain('"Business, ""Cool"" Corp"');
   });
 
   it('respects sorting', () => {
-    const provider = new TransactionShareProvider(mockTransactions, { sort: 'asc' });
+    const provider = new JournalShareProvider(mockTransactions, { sort: 'asc' });
     const content = provider.getContent(ShareFormat.TEXT);
     const pos1 = content.indexOf('Income test');
     const pos2 = content.indexOf('Expense test');
@@ -104,7 +104,7 @@ describe('SharingService', () => {
   });
 
   it('escapes pipes in markdown description', () => {
-    const pipeTx: ShareableTransaction = {
+    const pipeTx: ShareableJournalEntry = {
       id: '4',
       date: Date.now(),
       description: 'Pipe | Test',
@@ -112,20 +112,20 @@ describe('SharingService', () => {
       currencyCode: 'USD',
       displayType: JournalDisplayType.EXPENSE,
     };
-    const provider = new TransactionShareProvider([pipeTx]);
+    const provider = new JournalShareProvider([pipeTx]);
     const content = provider.getContent(ShareFormat.MARKDOWN);
     expect(content).toContain('Pipe \\| Test');
   });
 
   it('normalizes line endings to Windows-compatible \\r\\n', () => {
-    const provider = new TransactionShareProvider(mockTransactions);
+    const provider = new JournalShareProvider(mockTransactions);
     const content = provider.getContent(ShareFormat.TEXT);
     expect(content).toContain('\r\n');
     expect(content).not.toMatch(/[^\r]\n/); // No lone \n
   });
 
   it('protects against CSV injection', () => {
-    const injectionTx: ShareableTransaction = {
+    const injectionTx: ShareableJournalEntry = {
       id: '5',
       date: Date.now(),
       description: '=SUM(A1:A10)',
@@ -133,7 +133,7 @@ describe('SharingService', () => {
       currencyCode: 'USD',
       displayType: JournalDisplayType.EXPENSE,
     };
-    const provider = new TransactionShareProvider([injectionTx]);
+    const provider = new JournalShareProvider([injectionTx]);
     const csvContent = provider.getContent(ShareFormat.CSV);
     const mdContent = provider.getContent(ShareFormat.MARKDOWN);
 
@@ -142,7 +142,7 @@ describe('SharingService', () => {
   });
 
   it('escapes backticks and newlines in markdown', () => {
-    const complexMdTx: ShareableTransaction = {
+    const complexMdTx: ShareableJournalEntry = {
       id: '6',
       date: Date.now(),
       description: 'Backtick ` test\nNewline test',
@@ -150,7 +150,7 @@ describe('SharingService', () => {
       currencyCode: 'USD',
       displayType: JournalDisplayType.EXPENSE,
     };
-    const provider = new TransactionShareProvider([complexMdTx]);
+    const provider = new JournalShareProvider([complexMdTx]);
     const content = provider.getContent(ShareFormat.MARKDOWN);
 
     expect(content).toContain('Backtick \\` test');
@@ -159,7 +159,7 @@ describe('SharingService', () => {
   });
 
   it('groups summaries by mixed currencies correctly', () => {
-    const mixedCurrencies: ShareableTransaction[] = [
+    const mixedCurrencies: ShareableJournalEntry[] = [
       {
         id: '1',
         date: Date.now(),
@@ -177,7 +177,7 @@ describe('SharingService', () => {
         displayType: JournalDisplayType.EXPENSE,
       },
     ];
-    const provider = new TransactionShareProvider(mixedCurrencies);
+    const provider = new JournalShareProvider(mixedCurrencies);
     const content = provider.getContent(ShareFormat.TEXT);
 
     expect(content).toContain('Multiple currencies detected');
@@ -188,10 +188,10 @@ describe('SharingService', () => {
   });
 
   it('uses a stable base filename by default', () => {
-    const provider1 = new TransactionShareProvider(mockTransactions);
-    const provider2 = new TransactionShareProvider(mockTransactions);
+    const provider1 = new JournalShareProvider(mockTransactions);
+    const provider2 = new JournalShareProvider(mockTransactions);
     expect(provider1.filename).toBe(provider2.filename);
-    expect(provider1.filename).toBe('transactions-report');
+    expect(provider1.filename).toBe('journal-report');
   });
 
   it('is defined', () => {
