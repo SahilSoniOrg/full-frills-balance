@@ -23,7 +23,6 @@ type SecondaryAction = {
 
 type EntityFormScreenProps = {
   chrome: ScreenChrome;
-  onBack?: () => void;
   edges?: Edge[];
   contentContainerStyle?: StyleProp<ViewStyle>;
   scrollProps?: Omit<
@@ -38,7 +37,6 @@ type EntityFormScreenProps = {
 
 export function EntityFormScreen({
   chrome,
-  onBack,
   edges,
   contentContainerStyle,
   scrollProps,
@@ -50,7 +48,6 @@ export function EntityFormScreen({
   return (
     <ScreenWithChrome
       chrome={chrome}
-      onBack={onBack}
       edges={edges}
       scrollable
       keyboardAvoiding

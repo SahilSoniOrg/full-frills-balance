@@ -47,7 +47,6 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     onInitialBalanceChange,
     formError,
     onSave,
-    onBack,
     saveLabel,
     isSaveDisabled,
     parentAccountId,
@@ -71,7 +70,6 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
   return (
     <EntityFormScreen
       chrome={chrome}
-      onBack={onBack}
       contentContainerStyle={{ paddingBottom: Spacing.xxxxl }}
       submitAction={{
         onPress: onSave,

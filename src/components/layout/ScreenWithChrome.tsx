@@ -5,18 +5,13 @@ import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
-  'title' | 'showBack' | 'backIcon' | 'headerActions' | 'isSearchActive'
+  'title' | 'showBack' | 'backIcon' | 'headerActions' | 'isSearchActive' | 'onBack' | 'headerStyle'
 > & {
   chrome: ScreenChrome;
 };
 
-export function ScreenWithChrome({
-  chrome,
-  children,
-  onBack,
-  headerStyle,
-  ...rest
-}: ScreenWithChromeProps) {
+/** Renders Screen chrome. Back / header style / FAB come only from `chrome`. */
+export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChromeProps) {
   const fab = chrome.fab;
 
   return (
@@ -27,8 +22,8 @@ export function ScreenWithChrome({
       backIcon={chrome.backIcon}
       headerActions={chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
-      onBack={chrome.onBack ?? onBack}
-      headerStyle={chrome.headerStyle ?? headerStyle}
+      onBack={chrome.onBack}
+      headerStyle={chrome.headerStyle}
     >
       {children}
       {fab ? (

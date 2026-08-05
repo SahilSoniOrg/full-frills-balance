@@ -1,7 +1,7 @@
+import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { MoneyDetailHeaderActions } from '@/src/components/common/MoneyDetailHeaderActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Opacity } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountDetailsView } from '@/src/features/accounts/components/AccountDetailsView';
 import {
@@ -18,10 +18,9 @@ function AccountDetailsScreen() {
 
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = vm.accountLoading ? 'loading' : vm.accountMissing ? 'missing' : 'ready';
-    const selectionActive = vm.isSelectionModeActive;
 
-    return {
-      ...buildDetailNavChrome({
+    return applySelectionChrome(
+      buildDetailNavChrome({
         phase,
         readyTitle: accountDetailsScreenTitle(vm),
         loadingTitle: 'Account Details',
@@ -31,20 +30,21 @@ function AccountDetailsScreen() {
             actions={buildAccountDetailsHeaderActions(vm, theme)}
           />
         ),
-        fab:
-          vm.isDeleted || selectionActive
-            ? undefined
-            : {
-                onPress: vm.onAddPress,
-                label: 'Add Transaction',
-                icon: 'plusCircle',
-                placement: 'end',
-                accessibilityLabel: 'Add transaction for this account',
-              },
+        fab: vm.isDeleted
+          ? undefined
+          : {
+              onPress: vm.onAddPress,
+              label: 'Add Transaction',
+              icon: 'plusCircle',
+              placement: 'end',
+              accessibilityLabel: 'Add transaction for this account',
+            },
       }),
-      headerStyle: selectionActive ? { opacity: Opacity.medium } : undefined,
-      onBack: selectionActive ? vm.exitSelectionMode : vm.onBack,
-    };
+      {
+        active: vm.isSelectionModeActive,
+        onExit: vm.exitSelectionMode,
+      },
+    );
   }, [
     theme,
     vm.accountLoading,
@@ -57,7 +57,6 @@ function AccountDetailsScreen() {
     vm.isSelectionModeActive,
     vm.onAddPress,
     vm.onAuditPress,
-    vm.onBack,
     vm.reconciledAt,
     vm.unreconciledCount,
   ]);

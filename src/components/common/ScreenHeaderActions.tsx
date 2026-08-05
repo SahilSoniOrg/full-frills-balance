@@ -13,6 +13,7 @@ export interface ScreenHeaderActionItem {
   size?: number;
   testID?: string;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 interface ScreenHeaderActionsProps {
@@ -34,6 +35,7 @@ export function ScreenHeaderActions({ actions, trailing }: ScreenHeaderActionsPr
           size={action.size}
           testID={action.testID}
           disabled={action.disabled}
+          accessibilityLabel={action.accessibilityLabel}
         />
       ))}
       {trailing}

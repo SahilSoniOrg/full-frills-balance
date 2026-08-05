@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { HubView } from '@/src/features/hub/components/HubView';
@@ -10,12 +10,7 @@ function HubScreen() {
   const vm = useHubViewModel();
 
   const chrome = useMemo<ScreenNavChrome>(
-    () => ({
-      screenTitle: AppConfig.strings.dashboard.hub.title,
-      showBack: true,
-      backIcon: 'back',
-      headerActions: <PrivacyToggleButton />,
-    }),
+    () => privacyNavChrome(AppConfig.strings.dashboard.hub.title),
     [],
   );
 

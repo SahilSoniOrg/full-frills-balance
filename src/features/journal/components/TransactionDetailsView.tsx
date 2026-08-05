@@ -94,7 +94,7 @@ export function TransactionDetailsView({
   }
 
   return (
-    <ScreenWithChrome chrome={chrome} onBack={onBack} scrollable={state.type === 'ready'}>
+    <ScreenWithChrome chrome={chrome} scrollable={state.type === 'ready'}>
       {body}
     </ScreenWithChrome>
   );
