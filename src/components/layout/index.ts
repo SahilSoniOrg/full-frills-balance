@@ -1,15 +1,14 @@
-/**
- * Layout Components - App-specific layout primitives
- *
- * These are NOT part of the design system.
- * They exist only to reduce duplication in app screens.
- * No theming logic, no variants explosion.
- *
- * Use only when touching a screen for feature/bug work.
- */
-
 export { Screen } from './Screen';
 export type { ScreenProps } from './Screen';
 
 export { NavigationBar } from './NavigationBar';
 export type { NavigationBarProps } from './NavigationBar';
+
+export { ScreenWithChrome } from './ScreenWithChrome';
+export { buildDetailNavChrome } from './buildDetailNavChrome';
+export type {
+  ScreenChrome,
+  ScreenFabChrome,
+  ScreenNavChrome,
+  TabScreenChrome,
+} from './screenChrome';

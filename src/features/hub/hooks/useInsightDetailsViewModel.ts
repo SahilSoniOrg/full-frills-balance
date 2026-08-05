@@ -22,7 +22,6 @@ export interface InsightDetailsViewModel {
   items: TransactionListItem[];
   isLoading: boolean;
   header: InsightDetailsHeaderModel;
-  title: string;
   emptyTitle: string;
   emptySubtitle: string;
 }
@@ -99,7 +98,6 @@ export function useInsightDetailsViewModel(
     items,
     isLoading,
     header,
-    title: strings.title,
     emptyTitle: strings.emptyTitle,
     emptySubtitle: strings.emptySubtitle,
   };

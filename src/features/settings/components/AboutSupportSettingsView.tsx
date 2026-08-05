@@ -1,3 +1,4 @@
+import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppIcon } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
@@ -9,14 +10,15 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { TouchableOpacity } from 'react-native';
 
 interface AboutSupportSettingsViewProps {
+  chrome: ScreenNavChrome;
   vm: AboutSupportViewModel;
 }
 
-export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) {
+export function AboutSupportSettingsView({ vm, chrome }: AboutSupportSettingsViewProps) {
   const { theme } = useTheme();
 
   return (
-    <SettingsLayout title={AppConfig.strings.settings.sections.aboutAndSupport}>
+    <SettingsLayout chrome={chrome}>
       <SettingsMenu header={AppConfig.strings.settings.sections.communitySupport}>
         <SettingsMenuItem
           leftIcon="messageCircle"

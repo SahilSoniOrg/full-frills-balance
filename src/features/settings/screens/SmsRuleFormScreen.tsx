@@ -1,7 +1,11 @@
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { SmsRuleFormView } from '@/src/features/settings/components/SmsRuleFormView';
 import { useSmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 
 export default function SmsRuleFormScreen() {
   const params = useLocalSearchParams<{
@@ -17,5 +21,30 @@ export default function SmsRuleFormScreen() {
     sourceAccountId: params.sourceAccountId,
     categoryAccountId: params.categoryAccountId,
   });
-  return <SmsRuleFormView {...vm} />;
+  const { theme } = useTheme();
+
+  const chrome = useMemo<ScreenNavChrome>(
+    () => ({
+      screenTitle: params.id ? 'Edit SMS Rule' : 'New SMS Rule',
+      showBack: true,
+      backIcon: 'back',
+      headerActions: params.id ? (
+        <ScreenHeaderActions
+          actions={[
+            {
+              name: 'delete',
+              onPress: vm.handleDelete,
+              iconColor: theme.error,
+              variant: 'surface',
+              disabled: vm.isSubmitting,
+              testID: 'delete-rule-button',
+            },
+          ]}
+        />
+      ) : undefined,
+    }),
+    [params.id, theme.error, vm.handleDelete, vm.isSubmitting],
+  );
+
+  return <SmsRuleFormView {...vm} chrome={chrome} />;
 }

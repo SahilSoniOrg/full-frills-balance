@@ -8,7 +8,6 @@ import { useCallback, useMemo, useState } from 'react';
 export type HubTab = 'active' | 'dismissed';
 
 export interface HubViewModel {
-  title: string;
   activeTab: HubTab;
   setActiveTab: (tab: HubTab) => void;
   tabOptions: { id: HubTab; label: string; badge: number }[];
@@ -55,7 +54,6 @@ export function useHubViewModel(): HubViewModel {
   );
 
   return {
-    title: hubStrings.title,
     activeTab,
     setActiveTab,
     tabOptions,

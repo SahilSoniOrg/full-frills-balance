@@ -1,16 +1,9 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { CashFlowCard } from '@/src/components/common/CashFlowCard';
 import { NetWorthCard } from '@/src/components/common/NetWorthCard';
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
-import {
-  AppIcon,
-  AppTabs,
-  AppText,
-  InlineSearchField,
-  FloatingActionButton,
-  IconButton,
-} from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { AppIcon, AppTabs, AppText } from '@/src/components/core';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
@@ -31,9 +24,6 @@ export function AccountsListView({
   onToggleSection,
   onAccountPress,
   onCollapseAccount,
-  onCreateAccount,
-  onReorderPress,
-  onManageHierarchy,
   isLoading,
   netWorth,
   totalAssets,
@@ -44,53 +34,14 @@ export function AccountsListView({
   inflowExpense,
   isPeriodLoading,
   currencyCode,
-  searchQuery,
-  isSearching,
-  onSearchChange,
-  setIsSearching,
   activeTab,
   setActiveTab,
-}: AccountsListViewModel) {
+  chrome,
+}: AccountsListViewModel & { chrome: TabScreenChrome }) {
   const { theme } = useTheme();
 
-  const headerActions = (
-    <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
-      {!isSearching ? (
-        <>
-          <PrivacyToggleButton />
-          <IconButton
-            name="reorder"
-            size={Size.iconSm}
-            variant="surface"
-            onPress={onReorderPress}
-            accessibilityLabel="Reorder accounts"
-          />
-          <IconButton
-            name="hierarchy"
-            size={Size.iconSm}
-            variant="surface"
-            onPress={onManageHierarchy}
-            accessibilityLabel="Manage hierarchy"
-          />
-        </>
-      ) : null}
-      <InlineSearchField
-        value={searchQuery}
-        onChangeText={onSearchChange}
-        onExpandChange={setIsSearching}
-        placeholder="Search accounts..."
-      />
-    </View>
-  );
-
   return (
-    <Screen
-      title="Accounts"
-      showBack={false}
-      alignTitle="left"
-      isSearchActive={isSearching}
-      headerActions={headerActions}
-    >
+    <ScreenWithChrome chrome={chrome} scrollable={false}>
       <View style={styles.container}>
         <View style={styles.tabContainer}>
           <AppTabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
@@ -204,19 +155,8 @@ export function AccountsListView({
           contentContainerStyle={styles.listContainer}
           stickySectionHeadersEnabled={false}
         />
-
-        {!isSearching ? (
-          <FloatingActionButton
-            onPress={onCreateAccount}
-            label={activeTab === 'categories' ? 'New Category' : 'New Account'}
-            placement="end"
-            accessibilityLabel={
-              activeTab === 'categories' ? 'Create a new category' : 'Create a new account'
-            }
-          />
-        ) : null}
       </View>
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 
@@ -249,14 +189,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  headerActionsSearchActive: {
-    flex: 1,
   },
   sectionHeaderContainer: {
     marginTop: Spacing.xl,

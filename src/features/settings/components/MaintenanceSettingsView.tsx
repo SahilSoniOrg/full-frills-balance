@@ -1,3 +1,4 @@
+import type { ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
@@ -6,12 +7,13 @@ import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/S
 import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
 
 interface MaintenanceSettingsViewProps {
+  chrome: ScreenNavChrome;
   vm: DataManagementViewModel;
 }
 
-export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
+export function MaintenanceSettingsView({ vm, chrome }: MaintenanceSettingsViewProps) {
   return (
-    <SettingsLayout title={AppConfig.strings.settings.sections.maintenanceAndReset}>
+    <SettingsLayout chrome={chrome}>
       <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
         <SettingsMenuItem
           leftIcon="search"

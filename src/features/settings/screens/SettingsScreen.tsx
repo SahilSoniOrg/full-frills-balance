@@ -1,12 +1,12 @@
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { SettingsView } from '@/src/features/settings/components/SettingsView';
-import { logger } from '@/src/utils/logger';
-import { useEffect } from 'react';
+
+const chrome: TabScreenChrome = {
+  screenTitle: 'Settings',
+  showBack: false,
+  headerActions: null,
+};
 
 export default function SettingsScreen() {
-  // Log UI Mount
-  useEffect(() => {
-    logger.info('[Settings] Screen Mounted');
-  }, []);
-
-  return <SettingsView />;
+  return <SettingsView chrome={chrome} />;
 }

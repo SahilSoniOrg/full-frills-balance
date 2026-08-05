@@ -1,21 +1,19 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
-import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import type { ScreenNavChrome } from '@/src/components/layout';
+import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from '@/src/hooks/use-theme';
-import { Spacing } from '@/src/constants';
 
-import { RuleFlowPreview } from './RuleFlowPreview';
-import { MatchModeSection } from './MatchModeSection';
 import { ActionSettingsSection } from './ActionSettingsSection';
+import { MatchModeSection } from './MatchModeSection';
 import { RecentMatchesSection } from './RecentMatchesSection';
+import { RuleFlowPreview } from './RuleFlowPreview';
 
-export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
-  const { theme } = useTheme();
+export function SmsRuleFormView(vm: SmsRuleFormViewModel & { chrome: ScreenNavChrome }) {
   const {
-    id,
+    chrome,
     sourceAccountId,
     setSourceAccountId,
     categoryAccountId,
@@ -25,30 +23,13 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
     isSubmitting,
     isValid,
     handleSave,
-    handleDelete,
     accounts,
   } = vm;
 
   return (
     <>
       <EntityFormScreen
-        title={id ? 'Edit SMS Rule' : 'New SMS Rule'}
-        headerActions={
-          id ? (
-            <ScreenHeaderActions
-              actions={[
-                {
-                  name: 'delete',
-                  onPress: handleDelete,
-                  iconColor: theme.error,
-                  variant: 'surface',
-                  disabled: isSubmitting,
-                  testID: 'delete-rule-button',
-                },
-              ]}
-            />
-          ) : undefined
-        }
+        chrome={chrome}
         submitAction={{
           label: isSubmitting ? 'Saving...' : 'Save Rule',
           onPress: handleSave,
@@ -56,16 +37,9 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
         }}
       >
         <View style={styles.formSection}>
-          {/* 1. Live Rule Visualizer */}
           <RuleFlowPreview vm={vm} />
-
-          {/* 2. Match Criteria Builder */}
           <MatchModeSection vm={vm} />
-
-          {/* 3. Ingestion Action & Account Mapping */}
           <ActionSettingsSection vm={vm} />
-
-          {/* 4. Match preview log */}
           <RecentMatchesSection vm={vm} />
         </View>
       </EntityFormScreen>

@@ -1,9 +1,9 @@
+import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxItem } from '@/src/types/domain';
 import { alert } from '@/src/utils/alerts';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -55,17 +55,17 @@ export function TransactionInboxItemCardView({
           </AppText>
         </View>
         <View style={styles.amountColumn}>
-          <AppText
-            variant="subheading"
-            style={{ color: item.direction === 'credit' ? theme.success : theme.text }}
-          >
-            {item.parsedAmount != null
-              ? `${item.direction === 'credit' ? '+' : '-'} ${CurrencyFormatter.format(
-                  item.parsedAmount,
-                  item.parsedCurrencyCode || currencyCode,
-                )}`
-              : 'No amount'}
-          </AppText>
+          {item.parsedAmount != null ? (
+            <MoneyText
+              amount={item.parsedAmount}
+              currencyCode={item.parsedCurrencyCode || currencyCode}
+              prefix={item.direction === 'credit' ? '+ ' : '- '}
+              variant="subheading"
+              style={{ color: item.direction === 'credit' ? theme.success : theme.text }}
+            />
+          ) : (
+            <AppText variant="subheading">No amount</AppText>
+          )}
           {item.parsedCurrencyCode && (
             <AppText variant="caption" color="secondary">
               {item.parsedCurrencyCode}

@@ -1,18 +1,17 @@
 import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
-import { FloatingActionButton } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
-import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
 import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
 import { TransactionId } from '@/src/types/domain';
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
+import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
@@ -21,15 +20,14 @@ export function DashboardScreenView({
   hasCompletedOnboarding,
   recentTransactions,
   plannedOccurrences,
-  headerProps,
-  fab,
   safeToSpendData,
   transactionSectionTitle,
   listRef,
   explanationModalState,
   legendModalState,
   showSafeToSpendChart,
-}: DashboardViewModel & { listRef?: React.RefObject<FlatList | null> }) {
+  chrome,
+}: DashboardViewModel & { listRef?: React.RefObject<FlatList | null>; chrome: TabScreenChrome }) {
   const uiState = React.useMemo(
     () => ({
       isInfoVisible: explanationModalState.visible,
@@ -123,7 +121,7 @@ export function DashboardScreenView({
   const transactionCount = items.filter(i => i.type === 'transaction').length;
 
   return (
-    <Screen testID="dashboard-screen" edges={['top']}>
+    <ScreenWithChrome testID="dashboard-screen" edges={['top']} chrome={chrome}>
       <View style={styles.container}>
         {isSelectionModeActive && (
           <Pressable style={StyleSheet.absoluteFill} onPress={exitSelectionMode} />
@@ -146,7 +144,6 @@ export function DashboardScreenView({
           style={styles.feed}
           ListHeaderComponent={
             <View style={{ zIndex: 10 }}>
-              <DashboardHeader {...headerProps} />
               <View style={{ zIndex: 10 }}>
                 <SafeToSpendCard
                   {...(safeToSpendData || ({} as unknown as SafeToSpendDashboard))}
@@ -174,15 +171,6 @@ export function DashboardScreenView({
             ) : undefined
           }
         />
-
-        {fab && !isSelectionModeActive && (
-          <FloatingActionButton
-            onPress={fab.onPress}
-            label={fab.label}
-            placement={fab.placement}
-            accessibilityLabel={fab.accessibilityLabel}
-          />
-        )}
 
         <SelectionActionBar
           selectedCount={selectedIds.size}
@@ -213,7 +201,7 @@ export function DashboardScreenView({
           }}
         />
       </View>
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

@@ -1,10 +1,24 @@
-import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
+import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { AppConfig } from '@/src/constants';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { ReportsView } from '@/src/features/reports/components/ReportsView';
 import { useReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
+import { useMemo } from 'react';
 
 function ReportsScreen() {
   const vm = useReportsViewModel();
-  return <ReportsView vm={vm} />;
+
+  const chrome = useMemo<TabScreenChrome>(
+    () => ({
+      screenTitle: AppConfig.strings.reports.title,
+      showBack: false,
+      headerActions: <PrivacyToggleButton />,
+    }),
+    [],
+  );
+
+  return <ReportsView vm={vm} chrome={chrome} />;
 }
 
 export default withPrivacyScope(ReportsScreen);
