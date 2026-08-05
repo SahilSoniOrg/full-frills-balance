@@ -1,3 +1,4 @@
+import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
@@ -33,6 +34,14 @@ export type JournalDatePickerBundle = {
   onSelect: (range: DateRange | null, filter: PeriodFilter) => void;
 };
 
+/** Sticky period control under nav (secondary chrome layer). */
+export type JournalPeriodBarBundle = {
+  range: DateRange | null;
+  onPress: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+};
+
 export type JournalSelectionBundle = {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
@@ -49,11 +58,12 @@ export interface JournalListViewProps {
   list: JournalListBundle;
   chrome: ScreenChrome;
   datePicker: JournalDatePickerBundle;
+  periodBar?: JournalPeriodBarBundle;
   selection?: JournalSelectionBundle;
 }
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
-  const { list, chrome, datePicker, selection } = props;
+  const { list, chrome, datePicker, periodBar, selection } = props;
   return (
     <ScreenWithChrome
       chrome={chrome}
@@ -63,6 +73,19 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
         {selection?.isSelectionModeActive && (
           <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
         )}
+
+        {periodBar ? (
+          <View style={styles.periodBar}>
+            <DateRangeFilter
+              range={periodBar.range}
+              onPress={periodBar.onPress}
+              onPrevious={periodBar.onPrevious}
+              onNext={periodBar.onNext}
+              fullWidth
+              showNavigationArrows
+            />
+          </View>
+        ) : null}
 
         <TransactionListView
           ref={ref}
@@ -116,6 +139,10 @@ JournalListView.displayName = 'JournalListView';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  periodBar: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
   listContent: {
     padding: Spacing.lg,

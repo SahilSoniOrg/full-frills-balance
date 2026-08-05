@@ -5,7 +5,7 @@ import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
-  'title' | 'showBack' | 'backIcon' | 'headerActions' | 'isSearchActive' | 'alignTitle'
+  'title' | 'showBack' | 'backIcon' | 'headerActions' | 'isSearchActive'
 > & {
   chrome: ScreenChrome;
 };
@@ -20,7 +20,6 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
       backIcon={chrome.backIcon}
       headerActions={chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
-      alignTitle={chrome.alignTitle}
       {...rest}
     >
       {children}

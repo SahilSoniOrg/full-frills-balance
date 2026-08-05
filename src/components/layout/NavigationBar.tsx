@@ -1,6 +1,10 @@
 /**
  * NavigationBar - App-specific navigation header
  * Provides consistent title, back button and actions across screens
+ *
+ * Title alignment is derived, not chosen per screen:
+ * - showBack → centered (stack / pushed routes)
+ * - no back → left (tab roots)
  */
 
 import { AppText, IconButton } from '@/src/components/core';
@@ -17,7 +21,6 @@ export type NavigationBarProps = {
   backIcon?: 'back' | 'close';
   rightActions?: React.ReactNode;
   isSearchActive?: boolean;
-  alignTitle?: 'center' | 'left';
   style?: ViewStyle;
 };
 
@@ -29,9 +32,10 @@ export function NavigationBar({
   backIcon = 'back',
   rightActions,
   isSearchActive = false,
-  alignTitle = 'center',
   style,
 }: NavigationBarProps) {
+  const alignTitle = showBack ? 'center' : 'left';
+
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -40,13 +44,11 @@ export function NavigationBar({
     }
   };
 
-  const showLeftSlot = showBack || alignTitle === 'center';
-
   return (
     <View style={[styles.container, style]}>
-      {showLeftSlot ? (
-        <View style={[styles.side, styles.left, !showBack && styles.sideSpacer]}>
-          {showBack && !isSearchActive ? (
+      {showBack ? (
+        <View style={[styles.side, styles.left]}>
+          {!isSearchActive ? (
             <IconButton
               name={backIcon}
               onPress={handleBack}
@@ -87,7 +89,7 @@ export function NavigationBar({
           styles.side,
           styles.right,
           isSearchActive && styles.rightSearchActive,
-          !rightActions && alignTitle === 'center' && styles.sideSpacer,
+          showBack && !rightActions && styles.sideSpacer,
         ]}
       >
         {rightActions}

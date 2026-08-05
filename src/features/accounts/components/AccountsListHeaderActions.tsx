@@ -24,7 +24,6 @@ export function AccountsListHeaderActions({
     <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
       {!isSearching ? (
         <>
-          <PrivacyToggleButton />
           <IconButton
             name="reorder"
             size={Size.iconSm}
@@ -47,6 +46,7 @@ export function AccountsListHeaderActions({
         onExpandChange={setIsSearching}
         placeholder="Search accounts..."
       />
+      {!isSearching ? <PrivacyToggleButton /> : null}
     </View>
   );
 }

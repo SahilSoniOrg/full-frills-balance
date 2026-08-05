@@ -12,7 +12,6 @@ function AccountsScreen() {
     () => ({
       screenTitle: 'Accounts',
       showBack: false,
-      alignTitle: 'left',
       isSearchActive: vm.isSearching,
       headerActions: (
         <AccountsListHeaderActions

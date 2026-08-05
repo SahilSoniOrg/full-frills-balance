@@ -15,7 +15,10 @@ export type MoneyDetailHeaderActionsProps = {
   privacySize?: PrivacyToggleProps['size'];
 };
 
-/** Privacy eye + route actions for money detail screens. */
+/**
+ * Route actions + privacy eye.
+ * Privacy is always trailing (rightmost) — same slot as privacy-only screens.
+ */
 export function MoneyDetailHeaderActions({
   actions,
   privacyVariant = 'clear',
@@ -23,8 +26,8 @@ export function MoneyDetailHeaderActions({
 }: MoneyDetailHeaderActionsProps) {
   return (
     <ScreenHeaderActions
-      leading={<PrivacyToggleButton variant={privacyVariant} size={privacySize} />}
       actions={actions}
+      trailing={<PrivacyToggleButton variant={privacyVariant} size={privacySize} />}
     />
   );
 }

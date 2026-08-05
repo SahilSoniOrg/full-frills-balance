@@ -23,7 +23,6 @@ export function DashboardHeaderActions({
 
   return (
     <View style={styles.headerActions}>
-      <PrivacyToggleButton variant="clear" />
       <IconButton
         name="search"
         size={Size.iconSm}
@@ -63,6 +62,7 @@ export function DashboardHeaderActions({
           <View style={[styles.badge, { backgroundColor: theme.error }]} />
         ) : null}
       </View>
+      <PrivacyToggleButton variant="clear" />
     </View>
   );
 }
