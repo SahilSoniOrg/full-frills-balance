@@ -1,5 +1,5 @@
 import { ScreenWithChrome } from '@/src/components/layout';
-import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset, Stack } from '@/src/design-system';
 import { ReportFilterBar } from '@/src/features/reports/components/ReportFilterBar';
@@ -14,7 +14,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 interface ReportsViewProps {
   vm: ReportsViewModel;
-  chrome: TabScreenChrome;
+  chrome: ScreenNavChrome;
 }
 
 export function ReportsView({ vm, chrome }: ReportsViewProps) {

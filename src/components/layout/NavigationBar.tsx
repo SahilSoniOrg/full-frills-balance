@@ -40,11 +40,13 @@ export function NavigationBar({
     }
   };
 
+  const showLeftSlot = showBack || alignTitle === 'center';
+
   return (
     <View style={[styles.container, style]}>
-      {(showBack || alignTitle === 'center') && (
-        <View style={[styles.left, !showBack && alignTitle !== 'center' && styles.noWidth]}>
-          {showBack && !isSearchActive && (
+      {showLeftSlot ? (
+        <View style={[styles.side, styles.left, !showBack && styles.sideSpacer]}>
+          {showBack && !isSearchActive ? (
             <IconButton
               name={backIcon}
               onPress={handleBack}
@@ -52,11 +54,11 @@ export function NavigationBar({
               style={styles.backButton}
               testID="nav-back-button"
             />
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
 
-      {!isSearchActive && (
+      {!isSearchActive ? (
         <View style={[styles.center, alignTitle === 'left' && styles.centerLeft]}>
           <AppText
             variant="subheading"
@@ -66,15 +68,30 @@ export function NavigationBar({
           >
             {title}
           </AppText>
-          {subtitle && (
-            <AppText variant="caption" color="secondary" numberOfLines={1} ellipsizeMode="tail">
+          {subtitle ? (
+            <AppText
+              variant="caption"
+              color="secondary"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={styles.subtitle}
+            >
               {subtitle}
             </AppText>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
 
-      <View style={[styles.right, isSearchActive && styles.rightSearchActive]}>{rightActions}</View>
+      <View
+        style={[
+          styles.side,
+          styles.right,
+          isSearchActive && styles.rightSearchActive,
+          !rightActions && alignTitle === 'center' && styles.sideSpacer,
+        ]}
+      >
+        {rightActions}
+      </View>
     </View>
   );
 }
@@ -83,29 +100,32 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    height: 64, // Standard header height
+    height: 64,
   },
-  noWidth: {
-    width: 0,
+  side: {
+    flexShrink: 0,
+    justifyContent: 'center',
+  },
+  /** Optical balance for centered titles (matches back-button / actions column). */
+  sideSpacer: {
+    width: 48,
   },
   left: {
-    width: 48,
     alignItems: 'flex-start',
+    minWidth: 48,
   },
   center: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 0,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
   },
   centerLeft: {
-    alignItems: 'flex-start',
     paddingLeft: 0,
   },
   right: {
-    minWidth: 48,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -113,14 +133,19 @@ const styles = StyleSheet.create({
   },
   rightSearchActive: {
     flex: 1,
+    minWidth: 0,
   },
   backButton: {
     // IconButton defaults are good
   },
   title: {
+    alignSelf: 'stretch',
     textAlign: 'center',
   },
   titleLeft: {
     textAlign: 'left',
+  },
+  subtitle: {
+    alignSelf: 'stretch',
   },
 });

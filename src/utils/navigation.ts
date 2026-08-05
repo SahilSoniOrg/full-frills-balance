@@ -152,19 +152,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the Journal list filtered by a date range.
-   */
-  toJournalWithDateRange: (startDate: number, endDate: number) => {
-    router.push({
-      pathname: '/journal',
-      params: {
-        startDate: startDate.toString(),
-        endDate: endDate.toString(),
-      },
-    } as Href);
-  },
-
-  /**
    * Navigate to the Transaction Details screen.
    * Supports optional preview data for immediate rendering while the full record loads.
    */

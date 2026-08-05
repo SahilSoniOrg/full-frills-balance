@@ -4,17 +4,13 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
-import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
 import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
-import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useCallback, useMemo } from 'react';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
-  const initialDateRange = useJournalRouteDateRange();
-  const canGoBack = router.canGoBack();
 
   const { render, vm } = useJournalListScreen(
     {
@@ -25,7 +21,6 @@ function JournalScreen() {
       },
       loadingText: AppConfig.strings.common.loading,
       loadingMoreText: AppConfig.strings.common.loading,
-      initialDateRange: initialDateRange ?? null,
     },
     workplaceId,
   );
@@ -39,6 +34,8 @@ function JournalScreen() {
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: AppConfig.strings.journal.transactions,
+      showBack: false,
+      alignTitle: 'left',
       headerActions: (
         <JournalListHeaderActions
           dateRange={vm.dateRange}
@@ -55,12 +52,9 @@ function JournalScreen() {
             placement: 'end',
             accessibilityLabel: 'Open new entry options',
           },
-      showBack: canGoBack && !render.selection?.isSelectionModeActive,
       isSearchActive: false,
-      alignTitle: canGoBack ? 'center' : 'left',
     }),
     [
-      canGoBack,
       handleFabPress,
       render.selection?.isSelectionModeActive,
       vm.dateRange,

@@ -17,7 +17,7 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
       ? new Date(end).setHours(23, 59, 59, 999)
       : new Date(start).setHours(23, 59, 59, 999);
 
-    AppNavigation.toJournalWithDateRange(startDate, endDate);
+    AppNavigation.toJournalSearch({ startDate, endDate });
   }, []);
 
   const onViewSelectedTransactions = useCallback(() => {
