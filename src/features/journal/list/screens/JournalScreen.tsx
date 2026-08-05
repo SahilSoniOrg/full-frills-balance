@@ -1,9 +1,7 @@
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
-import { IconButton } from '@/src/components/core';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
@@ -11,7 +9,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
@@ -38,51 +36,38 @@ function JournalScreen() {
     AppNavigation.toJournalEntry();
   }, []);
 
-  const headerActions = useMemo(
-    () => (
-      <View style={styles.headerActions}>
-        <PrivacyToggleButton />
-        <IconButton
-          name="reports"
-          size={Size.iconSm}
-          variant="surface"
-          onPress={AppNavigation.toReports}
-          accessibilityLabel="View Analytics"
-        />
-        <IconButton
-          name="search"
-          size={Size.iconSm}
-          variant="surface"
-          onPress={() => AppNavigation.toJournalSearch()}
-          accessibilityLabel="Search and Filter"
-        />
-        <DateRangeFilter
-          range={vm.dateRange}
-          onPress={vm.showDatePicker}
-          onPrevious={vm.navigatePrevious}
-          onNext={vm.navigateNext}
-          showNavigationArrows={false}
-        />
-      </View>
-    ),
-    [vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext],
-  );
-
-  const chrome = useMemo(
+  const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: AppConfig.strings.journal.transactions,
-      headerActions,
-      fab: {
-        onPress: handleFabPress,
-        label: 'New Entry',
-        placement: 'end' as const,
-        accessibilityLabel: 'Open new entry options',
-      },
-      showBack: canGoBack,
+      headerActions: (
+        <JournalListHeaderActions
+          dateRange={vm.dateRange}
+          showDatePicker={vm.showDatePicker}
+          navigatePrevious={vm.navigatePrevious}
+          navigateNext={vm.navigateNext}
+        />
+      ),
+      fab: render.selection?.isSelectionModeActive
+        ? undefined
+        : {
+            onPress: handleFabPress,
+            label: 'New Entry',
+            placement: 'end',
+            accessibilityLabel: 'Open new entry options',
+          },
+      showBack: canGoBack && !render.selection?.isSelectionModeActive,
       isSearchActive: false,
-      alignTitle: (canGoBack ? 'center' : 'left') as 'center' | 'left',
+      alignTitle: canGoBack ? 'center' : 'left',
     }),
-    [headerActions, handleFabPress, canGoBack],
+    [
+      canGoBack,
+      handleFabPress,
+      render.selection?.isSelectionModeActive,
+      vm.dateRange,
+      vm.navigateNext,
+      vm.navigatePrevious,
+      vm.showDatePicker,
+    ],
   );
 
   return (
@@ -94,13 +79,5 @@ function JournalScreen() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-});
 
 export default withPrivacyScope(JournalScreen);

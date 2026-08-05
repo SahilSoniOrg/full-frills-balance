@@ -1,6 +1,7 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
+import type { ScreenNavChrome } from '@/src/components/layout';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { IconPickerModal } from '@/src/components/common/IconPickerModal';
@@ -22,11 +23,11 @@ import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
-export function AccountFormView(vm: AccountFormViewModel) {
+export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
   const [isCurrencyInfoVisible, setIsCurrencyInfoVisible] = useState(false);
   const {
-    heroTitle,
+    chrome,
     isEditMode,
     isCategory,
     accountName,
@@ -69,7 +70,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
 
   return (
     <EntityFormScreen
-      title={heroTitle}
+      chrome={chrome}
       onBack={onBack}
       contentContainerStyle={{ paddingBottom: Spacing.xxxxl }}
       submitAction={{

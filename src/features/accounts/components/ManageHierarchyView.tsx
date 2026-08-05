@@ -1,13 +1,13 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants/app-config';
 import { ManageHierarchyViewModel } from '@/src/features/accounts/hooks/useManageHierarchyViewModel';
 import { HierarchyMoveModal } from './hierarchy/HierarchyMoveModal';
 import { HierarchyTree } from './hierarchy/HierarchyTree';
 
-export function ManageHierarchyView(vm: ManageHierarchyViewModel) {
+export function ManageHierarchyView(vm: ManageHierarchyViewModel & { chrome: ScreenNavChrome }) {
   return (
-    <Screen title={AppConfig.strings.accounts.hierarchy.title}>
+    <ScreenWithChrome chrome={vm.chrome}>
       <HierarchyTree
         accounts={vm.accounts}
         balancesByAccountId={vm.balancesByAccountId}
@@ -39,6 +39,6 @@ export function ManageHierarchyView(vm: ManageHierarchyViewModel) {
         onSelectAccount={vm.onSelectAccount}
         onAssignParent={vm.onAssignParent}
       />
-    </Screen>
+    </ScreenWithChrome>
   );
 }

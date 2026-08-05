@@ -5,12 +5,14 @@ import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormField } from '@/src/components/common/FormField';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
 import { FadeIn, Stack } from '@/src/design-system';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 export default function PlannedPaymentFormScreen() {
@@ -18,14 +20,21 @@ export default function PlannedPaymentFormScreen() {
   const vm = usePlannedPaymentFormScreen(id);
   const { theme } = useTheme();
 
+  const chrome = useMemo<ScreenNavChrome>(
+    () => ({
+      screenTitle: id
+        ? AppConfig.strings.plannedPayments.formTitleEdit
+        : AppConfig.strings.plannedPayments.formTitleNew,
+      showBack: true,
+      backIcon: 'back',
+    }),
+    [id],
+  );
+
   return (
     <>
       <EntityFormScreen
-        title={
-          id
-            ? AppConfig.strings.plannedPayments.formTitleEdit
-            : AppConfig.strings.plannedPayments.formTitleNew
-        }
+        chrome={chrome}
         submitAction={{
           label: vm.isSubmitting
             ? AppConfig.strings.plannedPayments.savingLabel

@@ -7,7 +7,7 @@ import {
   AppText,
   IconButton,
 } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { Shape, Spacing } from '@/src/constants';
 import { useAiBenchmarkViewModel } from '@/src/features/journal/hooks/useAiBenchmarkViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -15,13 +15,13 @@ import { MotiView } from 'moti';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-export function AiBenchmarkView() {
+export function AiBenchmarkView({ chrome }: { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
   const vm = useAiBenchmarkViewModel();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <Screen title="AI Benchmarking" scrollable withPadding>
+    <ScreenWithChrome chrome={chrome} scrollable withPadding>
       <View style={styles.header}>
         <AppText variant="body" color="secondary">
           Test on-device LLM performance for transaction parsing.
@@ -329,7 +329,7 @@ export function AiBenchmarkView() {
           ))}
         </View>
       )}
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

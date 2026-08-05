@@ -1,18 +1,19 @@
 import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
+import type { ScreenNavChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
 
 interface TransactionInboxViewProps {
   vm: TransactionInboxViewModel;
+  chrome: ScreenNavChrome;
 }
 
-export function TransactionInboxView({ vm }: TransactionInboxViewProps) {
+export function TransactionInboxView({ vm, chrome }: TransactionInboxViewProps) {
   const { theme } = useTheme();
   const {
     filter,
@@ -21,9 +22,7 @@ export function TransactionInboxView({ vm }: TransactionInboxViewProps) {
     isLoading,
     isLoadingMore,
     hasMore,
-    isRefreshing,
     isScanningOlder,
-    handleRefresh,
     handleLoadOlder,
     handleDismiss,
     handleUndismiss,
@@ -37,25 +36,9 @@ export function TransactionInboxView({ vm }: TransactionInboxViewProps) {
   const isAndroid = Platform.OS === 'android';
 
   return (
-    <SettingsLayout
-      title="Transaction Inbox"
-      scrollable={false}
-      hideFooter={true}
-      headerActions={
-        <View style={styles.headerActions}>
-          <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>
-            Rules
-          </AppButton>
-          {isAndroid && (
-            <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={handleRefresh}>
-              Refresh SMS
-            </AppButton>
-          )}
-        </View>
-      }
-    >
+    <SettingsLayout chrome={chrome} scrollable={false} hideFooter>
       <View style={styles.container}>
-        {!isAndroid && filter === 'pending' && (
+        {!isAndroid && filter === 'pending' ? (
           <View
             style={[
               styles.platformNotice,
@@ -67,7 +50,7 @@ export function TransactionInboxView({ vm }: TransactionInboxViewProps) {
               drafts are fully supported.
             </AppText>
           </View>
-        )}
+        ) : null}
 
         <FlatList
           data={items}
@@ -168,11 +151,6 @@ const styles = StyleSheet.create({
   filterButton: {
     marginRight: Spacing.xs,
     marginBottom: Spacing.xs,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
   },
   center: {
     paddingVertical: Spacing.xl,

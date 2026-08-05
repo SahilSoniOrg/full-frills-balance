@@ -1,3 +1,4 @@
+import type { ScreenNavChrome } from '@/src/components/layout';
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { AppIcon } from '@/src/components/core';
 import { isValidIconName } from '@/src/components/core/AppIcon';
@@ -8,28 +9,21 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TouchableOpacity } from 'react-native';
 import { CreateWorkplaceDialog } from './CreateWorkplaceDialog';
 import { Opacity } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/constants';
 
 interface WorkplaceSettingsViewProps {
   vm: WorkplaceSettingsViewModel;
+  chrome: ScreenNavChrome;
 }
 
-export function WorkplaceSettingsView({ vm }: WorkplaceSettingsViewProps) {
+export function WorkplaceSettingsView({ vm, chrome }: WorkplaceSettingsViewProps) {
   const { theme } = useTheme();
 
   return (
     <>
-      <SettingsLayout
-        title="Workplaces"
-        headerActions={
-          <TouchableOpacity onPress={vm.startCreateWorkplace} style={{ padding: 8 }}>
-            <AppIcon name="plus" size={24} color={theme.text} />
-          </TouchableOpacity>
-        }
-      >
+      <SettingsLayout chrome={chrome}>
         <Stack space="xl">
           {vm.workplaces.length > 0 ? (
             <SettingsMenu header="Available Workplaces">

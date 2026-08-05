@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountReorderViewModel } from '@/src/features/accounts/hooks/useAccountReorderViewModel';
 import {
@@ -15,12 +15,12 @@ export function AccountReorderView({
   isLoading,
   onMove,
   onBack,
-  title,
-}: AccountReorderViewModel) {
+  chrome,
+}: AccountReorderViewModel & { chrome: ScreenNavChrome }) {
   if (isLoading) return null;
 
   return (
-    <Screen title={title} showBack backIcon="close" onBack={onBack}>
+    <ScreenWithChrome chrome={chrome} onBack={onBack}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <AppText variant="caption" color="secondary" style={styles.tipText}>
           Manual ordering affects all lists. Accounts are grouped by category but follow this
@@ -96,7 +96,7 @@ export function AccountReorderView({
           })}
         </View>
       </ScrollView>
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

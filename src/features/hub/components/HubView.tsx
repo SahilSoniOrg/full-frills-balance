@@ -1,6 +1,6 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
@@ -10,7 +10,6 @@ import { Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
 
 export function HubView({
-  title,
   activeTab,
   setActiveTab,
   tabOptions,
@@ -21,16 +20,12 @@ export function HubView({
   strings,
   dismissInsight,
   restoreInsight,
-}: HubViewModel) {
+  chrome,
+}: HubViewModel & { chrome: TabScreenChrome }) {
   const { theme } = useTheme();
 
   return (
-    <Screen
-      title={title}
-      withPadding={false}
-      scrollable={true}
-      headerActions={<PrivacyToggleButton />}
-    >
+    <ScreenWithChrome chrome={chrome} withPadding={false} scrollable>
       <Box marginTop="md">
         <AppTabs options={tabOptions} value={activeTab} onChange={setActiveTab} />
       </Box>
@@ -96,6 +91,6 @@ export function HubView({
           <EmptyStateView icon="info" title={strings.noDismissed} style={{ marginTop: 60 }} />
         )}
       </Box>
-    </Screen>
+    </ScreenWithChrome>
   );
 }

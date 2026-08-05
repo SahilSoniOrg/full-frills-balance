@@ -1,5 +1,5 @@
 import { AppIcon, EmptyStateView, LoadingView } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
@@ -7,15 +7,15 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 
-export function AuditLogView(vm: AuditLogViewModel) {
+export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
   const {
+    chrome,
     logs,
     accountMap,
     entityStatusMap,
     workplaceCurrency,
     isLoading,
-    isFiltered,
     expandedIds,
     onToggleExpanded,
     onView,
@@ -23,9 +23,7 @@ export function AuditLogView(vm: AuditLogViewModel) {
   } = vm;
 
   return (
-    <Screen
-      title={isFiltered ? AppConfig.strings.audit.editHistory : AppConfig.strings.audit.logTitle}
-    >
+    <ScreenWithChrome chrome={chrome}>
       <View style={styles.viewContent}>
         {isLoading ? (
           <LoadingView loading={isLoading} />
@@ -58,7 +56,7 @@ export function AuditLogView(vm: AuditLogViewModel) {
           />
         )}
       </View>
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

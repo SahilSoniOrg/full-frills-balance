@@ -1,6 +1,6 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
-import { Screen } from '@/src/components/layout';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { Size, Spacing } from '@/src/constants';
 import { Inset, Stack } from '@/src/design-system';
 import { ReportFilterBar } from '@/src/features/reports/components/ReportFilterBar';
 import { ReportTabs } from '@/src/features/reports/components/ReportTabs';
@@ -14,9 +14,10 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 interface ReportsViewProps {
   vm: ReportsViewModel;
+  chrome: TabScreenChrome;
 }
 
-export function ReportsView({ vm }: ReportsViewProps) {
+export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const { theme } = useTheme();
   const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
 
@@ -27,12 +28,7 @@ export function ReportsView({ vm }: ReportsViewProps) {
   const CHART_WIDTH = width - (Spacing.md * 2 + Spacing.lg * 2);
 
   return (
-    <Screen
-      title={AppConfig.strings.reports.title}
-      showBack={false}
-      scrollable={false}
-      headerActions={<PrivacyToggleButton />}
-    >
+    <ScreenWithChrome chrome={chrome} scrollable={false}>
       <Inset space="md" vertical="md" flex={1}>
         <Stack space="xl" flex={1}>
           <View style={{ marginTop: Spacing.sm }}>
@@ -60,7 +56,7 @@ export function ReportsView({ vm }: ReportsViewProps) {
           </ScrollView>
         </Stack>
       </Inset>
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

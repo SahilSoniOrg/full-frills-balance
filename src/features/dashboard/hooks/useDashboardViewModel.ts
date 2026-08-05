@@ -1,8 +1,6 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
-import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import {
@@ -10,20 +8,16 @@ import {
   useRecentTransactions,
 } from '@/src/features/dashboard/hooks/useRecentTransactions';
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
-import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { analytics } from '@/src/services/analytics-service';
 import { useObservable } from '@/src/hooks/useObservable';
-import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import {
   safeToSpendReadModel,
   SafeToSpendDashboard,
 } from '@/src/services/simulation/SafeToSpendReadModel';
 import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY } from 'rxjs';
 
 export interface DashboardViewModel {
@@ -31,21 +25,7 @@ export interface DashboardViewModel {
   showSafeToSpendChart: boolean;
   recentTransactions: RecentTransactions;
   plannedOccurrences: PlannedOccurrencesResult;
-  headerProps: {
-    greeting: string;
-    notificationCount: number;
-    onNotificationsPress: () => void;
-    unreadSmsCount?: number;
-    onSmsPress?: () => void;
-    onSearchPress?: () => void;
-  };
   transactionSectionTitle: string;
-  fab: {
-    onPress: () => void;
-    label?: string;
-    placement?: 'end' | 'center';
-    accessibilityLabel?: string;
-  };
   safeToSpendData: SafeToSpendDashboard | null;
   explanationModalState: {
     visible: boolean;
@@ -65,8 +45,6 @@ type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId } = useWorkplace();
   const { hasCompletedOnboarding, isInitialized, isAppReady } = useUI();
-  const { userName } = useProfilePrefs();
-  const { isSmsImportEnabled } = useSmsPrefs();
   const { showSafeToSpendChart } = useDashboardPreferences();
 
   const mountTimeRef = useRef<number>(0);
@@ -97,19 +75,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [hasSafeToSpendData]);
 
-  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
-
-  const hasInsights = !!(insights && insights.length > 0);
-  // Log Insights arrival
-  useEffect(() => {
-    if (hasInsights) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
-      appLogger.info(`[Dashboard] Insights Loaded in ${duration}ms`);
-    }
-  }, [hasInsights]);
-
-  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
-
   const [isExplanationVisible, setExplanationVisible] = useState(false);
   const [expandedSection, setExpandedSection] = useState<DashboardExplanationSection | null>(null);
   const [selectedLegendItem, setSelectedLegendItem] = useState<DashboardLegendItem | null>(null);
@@ -137,8 +102,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     }),
     [selectedLegendItem],
   );
-
-  const totalNotifications = insights?.length || 0;
 
   const { strings } = AppConfig;
 
@@ -181,63 +144,25 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [isInitialized, hasSafeToSpendData, hasJournalItems]);
 
-  const onAddPress = useCallback(() => {
-    AppNavigation.toJournalEntry();
-  }, []);
-
-  const greeting = useMemo(
-    () => strings.dashboard.greeting(userName),
-    [userName, strings.dashboard],
-  );
   const sectionTitle = strings.dashboard.recentTransactions;
-
-  // Memoize headerProps to prevent re-renders when observables fire
-  const headerProps = useMemo(
-    () => ({
-      greeting,
-      notificationCount: totalNotifications,
-      onNotificationsPress: AppNavigation.toHub,
-      unreadSmsCount: unreadSmsCount || 0,
-      onSmsPress:
-        Platform.OS === 'android' && (isSmsImportEnabled || (unreadSmsCount || 0) > 0)
-          ? AppNavigation.toTransactionInbox
-          : undefined,
-      onSearchPress: AppNavigation.toJournalSearch,
-    }),
-    [greeting, totalNotifications, unreadSmsCount, isSmsImportEnabled],
-  );
-
-  // Memoize fab object to prevent re-renders
-  const fab = useMemo(
-    () => ({
-      onPress: onAddPress,
-    }),
-    [onAddPress],
-  );
 
   return useMemo(
     () => ({
-      isInitialized,
       hasCompletedOnboarding,
       showSafeToSpendChart,
       recentTransactions,
       plannedOccurrences,
-      headerProps,
       transactionSectionTitle: sectionTitle,
-      fab,
       safeToSpendData,
       explanationModalState,
       legendModalState,
     }),
     [
-      isInitialized,
       hasCompletedOnboarding,
       showSafeToSpendChart,
       recentTransactions,
       plannedOccurrences,
-      headerProps,
       sectionTitle,
-      fab,
       safeToSpendData,
       explanationModalState,
       legendModalState,

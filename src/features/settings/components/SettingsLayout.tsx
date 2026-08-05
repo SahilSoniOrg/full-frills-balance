@@ -1,45 +1,36 @@
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
+import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 import { Inset, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
 import React from 'react';
+import type { Edge } from 'react-native-safe-area-context';
 
 interface SettingsLayoutProps {
-  title: string;
-  showBack?: boolean;
+  chrome: ScreenChrome;
   scrollable?: boolean;
   children: React.ReactNode;
-  headerActions?: React.ReactNode;
-  edges?: ('top' | 'bottom' | 'left' | 'right')[];
+  edges?: Edge[];
   hideFooter?: boolean;
 }
 
 /**
- * SettingsLayout - A shared layout for all settings screens to ensure consistent
- * spacing, padding, and footer placement.
+ * Settings shell: Screen-owned chrome + consistent inset/footer.
  */
 export function SettingsLayout({
-  title,
-  showBack = true,
+  chrome,
   scrollable = true,
   children,
-  headerActions,
   edges,
   hideFooter = false,
 }: SettingsLayoutProps) {
   return (
-    <Screen
-      title={title}
-      showBack={showBack}
-      scrollable={scrollable}
-      headerActions={headerActions}
-      edges={edges}
-    >
+    <ScreenWithChrome chrome={chrome} scrollable={scrollable} edges={edges}>
       <Inset space="md" vertical="md" flex={scrollable ? undefined : 1}>
         <Stack space="xl" flex={scrollable ? undefined : 1}>
           {children}
           {!hideFooter && <SettingsFooter />}
         </Stack>
       </Inset>
-    </Screen>
+    </ScreenWithChrome>
   );
 }

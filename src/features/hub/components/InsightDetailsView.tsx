@@ -1,9 +1,9 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppIcon, AppText } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import type { InsightDetailsViewModel } from '@/src/features/hub/hooks/useInsightDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -13,10 +13,10 @@ export function InsightDetailsView({
   items,
   isLoading,
   header,
-  title,
   emptyTitle,
   emptySubtitle,
-}: InsightDetailsViewModel) {
+  chrome,
+}: InsightDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { theme, fonts } = useTheme();
 
   const listHeader = (
@@ -98,7 +98,7 @@ export function InsightDetailsView({
   );
 
   return (
-    <Screen title={title} withPadding={false} headerActions={<PrivacyToggleButton />}>
+    <ScreenWithChrome chrome={chrome} withPadding={false}>
       <TransactionListView
         items={items}
         isLoading={isLoading}
@@ -107,7 +107,7 @@ export function InsightDetailsView({
         emptyTitle={emptyTitle}
         emptySubtitle={emptySubtitle}
       />
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

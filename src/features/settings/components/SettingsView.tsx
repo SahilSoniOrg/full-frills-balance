@@ -1,3 +1,4 @@
+import type { TabScreenChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -5,9 +6,9 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { AppNavigation } from '@/src/utils/navigation';
 
-export function SettingsView() {
+export function SettingsView({ chrome }: { chrome: TabScreenChrome }) {
   return (
-    <SettingsLayout title="Settings" showBack={false}>
+    <SettingsLayout chrome={chrome}>
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.sections.moneySetup}>
           <SettingsMenuItem

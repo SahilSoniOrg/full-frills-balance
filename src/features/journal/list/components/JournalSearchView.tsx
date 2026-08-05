@@ -1,7 +1,6 @@
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import {
   AppInput,
   AppSegmentedControl,
@@ -11,13 +10,18 @@ import {
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
+import type { ScreenChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-export function JournalSearchView(vm: JournalSearchViewModel) {
+type JournalSearchViewProps = JournalSearchViewModel & {
+  chrome: ScreenChrome;
+};
+
+export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
   const { theme } = useTheme();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -131,11 +135,7 @@ export function JournalSearchView(vm: JournalSearchViewModel) {
           onEndReached: vm.onEndReached,
           listHeader: filterHeader,
         }}
-        chrome={{
-          screenTitle: 'Search',
-          showBack: true,
-          headerActions: <PrivacyToggleButton />,
-        }}
+        chrome={chrome}
         datePicker={{
           visible: false,
           onClose: () => {},

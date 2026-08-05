@@ -6,7 +6,7 @@
  * No SmallModelProvider, no NativeAIProvider, no service layer.
  */
 
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -72,7 +72,7 @@ function tryParseJSON(text: string): any {
   }
 }
 
-export function AiExampleView() {
+export function AiExampleView({ chrome }: { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
   const T = useMemo(
     () => ({
@@ -267,7 +267,7 @@ export function AiExampleView() {
   }, [benchResults]);
 
   return (
-    <Screen style={s.root} edges={['top', 'bottom']} showBack>
+    <ScreenWithChrome chrome={chrome} style={s.root} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>
@@ -555,7 +555,7 @@ export function AiExampleView() {
           )}
         </ScrollView>
       )}
-    </Screen>
+    </ScreenWithChrome>
   );
 }
 

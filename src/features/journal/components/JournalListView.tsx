@@ -1,7 +1,6 @@
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
-import { FloatingActionButton } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { JournalId, TransactionId } from '@/src/types/domain';
@@ -27,22 +26,6 @@ export type JournalListBundle = {
   listContentStyle?: StyleProp<ViewStyle>;
 };
 
-export type JournalChromeBundle = {
-  screenTitle?: string;
-  showBack?: boolean;
-  backIcon?: React.ComponentProps<typeof Screen>['backIcon'];
-  headerActions?: React.ReactNode;
-  fab?: {
-    onPress: () => void;
-    label?: string;
-    placement?: 'end' | 'center';
-    accessibilityLabel?: string;
-  };
-  isSearchActive?: boolean;
-  alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
-  containerStyle?: StyleProp<ViewStyle>;
-};
-
 export type JournalDatePickerBundle = {
   visible: boolean;
   onClose: () => void;
@@ -64,7 +47,7 @@ export type JournalSelectionBundle = {
 
 export interface JournalListViewProps {
   list: JournalListBundle;
-  chrome?: JournalChromeBundle;
+  chrome: ScreenChrome;
   datePicker: JournalDatePickerBundle;
   selection?: JournalSelectionBundle;
 }
@@ -72,17 +55,11 @@ export interface JournalListViewProps {
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
   const { list, chrome, datePicker, selection } = props;
   return (
-    <Screen
-      title={chrome?.screenTitle}
-      showBack={chrome?.showBack && !selection?.isSelectionModeActive}
-      backIcon={chrome?.backIcon}
-      headerActions={chrome?.headerActions}
-      isSearchActive={chrome?.isSearchActive}
-      alignTitle={chrome?.alignTitle}
+    <ScreenWithChrome
+      chrome={chrome}
       headerStyle={{ opacity: selection?.isSelectionModeActive ? Opacity.medium : 1 }}
     >
-      <View style={[styles.container, chrome?.containerStyle]}>
-        {/* Backdrop (Back) - catches taps that miss the list entirely */}
+      <View style={styles.container}>
         {selection?.isSelectionModeActive && (
           <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
         )}
@@ -102,22 +79,12 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
           onLongPressItem={selection?.onLongPressItem as (id: string) => void}
           isSelectionModeActive={selection?.isSelectionModeActive}
-          // Wrap footer in Pressable to catch taps on empty list area
           ListFooterComponent={
             selection?.isSelectionModeActive ? (
               <Pressable style={{ height: 500 }} onPress={selection.exitSelectionMode} />
             ) : undefined
           }
         />
-
-        {chrome?.fab && !selection?.isSelectionModeActive && (
-          <FloatingActionButton
-            onPress={chrome.fab.onPress}
-            label={chrome.fab.label}
-            placement={chrome.fab.placement}
-            accessibilityLabel={chrome.fab.accessibilityLabel}
-          />
-        )}
 
         <SelectionActionBar
           selectedCount={selection?.selectedIds.size || 0}
@@ -137,7 +104,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           onSelect={datePicker.onSelect}
         />
       </View>
-    </Screen>
+    </ScreenWithChrome>
   );
 });
 

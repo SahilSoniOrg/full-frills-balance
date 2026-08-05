@@ -1,10 +1,8 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { LoadingView } from '@/src/components/common/LoadingView';
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
-import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
-import { NavigationBar } from '@/src/components/layout/NavigationBar';
-import { Typography } from '@/src/constants';
-import { Inset, Page, Separator, Stack } from '@/src/design-system';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { Inset, Separator, Stack } from '@/src/design-system';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
 import React from 'react';
 import { TransactionActions } from './details/TransactionActions';
@@ -16,8 +14,11 @@ import { TransactionSMSDetails } from './details/TransactionSMSDetails';
 type ScreenState =
   { type: 'loading' } | { type: 'missing' } | { type: 'ready'; data: TransactionDetailsViewModel };
 
-export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
-  const { isLoading, isMissing, theme, onBack } = vm;
+export function TransactionDetailsView({
+  chrome,
+  ...vm
+}: TransactionDetailsViewModel & { chrome: ScreenNavChrome }) {
+  const { isLoading, isMissing, onBack } = vm;
 
   const state: ScreenState = React.useMemo(() => {
     if (isLoading) return { type: 'loading' };
@@ -25,136 +26,76 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     return { type: 'ready', data: vm };
   }, [isLoading, isMissing, vm]);
 
+  let body: React.ReactNode;
   switch (state.type) {
     case 'loading':
-      return (
-        <Page header={<NavigationBar title="Details" onBack={onBack} />}>
-          <LoadingView loading={true} />
-        </Page>
-      );
-
+      body = <LoadingView loading={true} />;
+      break;
     case 'missing':
-      return (
-        <Page header={<NavigationBar title="Details" backIcon="close" onBack={onBack} />}>
-          <EmptyStateView
-            title="Transaction not found"
-            icon="error"
-            primaryActionLabel="Go Back"
-            onPrimaryAction={onBack}
-          />
-        </Page>
-      );
-
-    case 'ready': {
-      const readyVm = state.data;
-      const {
-        title,
-        backIcon,
-        headerActions,
-        amount,
-        currencyCode,
-        amountPrefix,
-        amountColor,
-        descriptionText,
-        statusLabel,
-        statusVariant,
-        displayTypeLabel,
-        formattedDate,
-        onHistoryPress,
-        smsInfo,
-        onOpenSmsInbox,
-        splitItems,
-        displayIcon,
-        onPost,
-        onSkip,
-        onRevertToScheduled,
-        revertButtonLabel,
-      } = readyVm;
-
-      const headerActionsNode = (
-        <ScreenHeaderActions
-          leading={<PrivacyToggleButton variant="clear" size={Typography.sizes.xl} />}
-          actions={[
-            {
-              name: 'copy',
-              onPress: headerActions.onCopy,
-              iconColor: theme.text,
-              size: Typography.sizes.xl,
-              testID: 'copy-button',
-            },
-            {
-              name: 'edit',
-              onPress: headerActions.onEdit,
-              iconColor: theme.text,
-              size: Typography.sizes.xl,
-              testID: 'edit-button',
-            },
-            {
-              name: 'delete',
-              onPress: headerActions.onDelete,
-              iconColor: theme.error,
-              size: Typography.sizes.xl,
-              testID: 'delete-button',
-            },
-          ]}
+      body = (
+        <EmptyStateView
+          title="Transaction not found"
+          icon="error"
+          primaryActionLabel="Go Back"
+          onPrimaryAction={onBack}
         />
       );
-
-      return (
-        <Page
-          scrollable
-          header={
-            <NavigationBar
-              title={title}
-              backIcon={backIcon}
-              rightActions={headerActionsNode}
-              onBack={onBack}
+      break;
+    case 'ready': {
+      const readyVm = state.data;
+      body = (
+        <Inset space="md" vertical="md">
+          <Stack space="xl">
+            <TransactionHero
+              displayIcon={readyVm.displayIcon}
+              amountColor={readyVm.amountColor}
+              amount={readyVm.amount}
+              currencyCode={readyVm.currencyCode}
+              amountPrefix={readyVm.amountPrefix}
+              descriptionText={readyVm.descriptionText}
+              statusLabel={readyVm.statusLabel}
+              statusVariant={readyVm.statusVariant}
+              displayTypeLabel={readyVm.displayTypeLabel}
             />
-          }
-        >
-          <Inset space="md" vertical="md">
-            <Stack space="xl">
-              <TransactionHero
-                displayIcon={displayIcon}
-                amountColor={amountColor}
-                amount={amount}
-                currencyCode={currencyCode}
-                amountPrefix={amountPrefix}
-                descriptionText={descriptionText}
-                statusLabel={statusLabel}
-                statusVariant={statusVariant}
-                displayTypeLabel={displayTypeLabel}
-              />
 
-              <Separator />
+            <Separator />
 
-              <TransactionBreakdownList splitItems={splitItems} />
+            <TransactionBreakdownList splitItems={readyVm.splitItems} />
 
-              <Separator />
+            <Separator />
 
-              <TransactionMetadata
-                formattedDate={formattedDate}
-                notesText={readyVm.notesText}
-                onHistoryPress={onHistoryPress}
-              />
+            <TransactionMetadata
+              formattedDate={readyVm.formattedDate}
+              notesText={readyVm.notesText}
+              onHistoryPress={readyVm.onHistoryPress}
+            />
 
-              {smsInfo && (
-                <>
-                  <Separator />
-                  <TransactionSMSDetails smsInfo={smsInfo} onOpenSmsInbox={onOpenSmsInbox} />
-                </>
-              )}
+            {readyVm.smsInfo && (
+              <>
+                <Separator />
+                <TransactionSMSDetails
+                  smsInfo={readyVm.smsInfo}
+                  onOpenSmsInbox={readyVm.onOpenSmsInbox}
+                />
+              </>
+            )}
 
-              <TransactionActions
-                onPost={onPost}
-                onSkip={onSkip}
-                onRevertToScheduled={onRevertToScheduled}
-                revertButtonLabel={revertButtonLabel}
-              />
-            </Stack>
-          </Inset>
-        </Page>
+            <TransactionActions
+              onPost={readyVm.onPost}
+              onSkip={readyVm.onSkip}
+              onRevertToScheduled={readyVm.onRevertToScheduled}
+              revertButtonLabel={readyVm.revertButtonLabel}
+            />
+          </Stack>
+        </Inset>
       );
+      break;
     }
   }
+
+  return (
+    <ScreenWithChrome chrome={chrome} onBack={onBack} scrollable={state.type === 'ready'}>
+      {body}
+    </ScreenWithChrome>
+  );
 }

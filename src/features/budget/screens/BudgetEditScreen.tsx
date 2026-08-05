@@ -5,14 +5,15 @@ import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { FormField } from '@/src/components/common/FormField';
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { ScreenWithChrome } from '@/src/components/layout';
+import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { FadeIn, Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useBudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
 export default function BudgetEditScreen() {
@@ -46,18 +47,36 @@ export default function BudgetEditScreen() {
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);
 
+  const loadingChrome = useMemo<ScreenNavChrome>(
+    () => ({
+      screenTitle: AppConfig.strings.common.loading,
+      showBack: true,
+      backIcon: 'back',
+      headerActions: (
+        <AppButton variant="ghost" onPress={AppNavigation.back}>
+          {AppConfig.strings.common.cancel}
+        </AppButton>
+      ),
+    }),
+    [],
+  );
+
+  const formChrome = useMemo<ScreenNavChrome>(
+    () => ({
+      screenTitle: budget
+        ? AppConfig.strings.budget.formTitleEdit
+        : AppConfig.strings.budget.formTitleNew,
+      showBack: true,
+      backIcon: 'back',
+    }),
+    [budget],
+  );
+
   if (loading) {
     return (
-      <Screen
-        title={AppConfig.strings.common.loading}
-        headerActions={
-          <AppButton variant="ghost" onPress={AppNavigation.back}>
-            {AppConfig.strings.common.cancel}
-          </AppButton>
-        }
-      >
+      <ScreenWithChrome chrome={loadingChrome}>
         <LoadingView loading={true} text="Loading budget..." />
-      </Screen>
+      </ScreenWithChrome>
     );
   }
 
@@ -73,9 +92,7 @@ export default function BudgetEditScreen() {
   return (
     <>
       <EntityFormScreen
-        title={
-          budget ? AppConfig.strings.budget.formTitleEdit : AppConfig.strings.budget.formTitleNew
-        }
+        chrome={formChrome}
         edges={['top', 'bottom']}
         submitAction={{
           onPress: handleSave,
