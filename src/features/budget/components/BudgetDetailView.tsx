@@ -2,47 +2,49 @@ import { JournalEntryListView } from '@/src/components/common/JournalEntryListVi
 import { LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from '../components/BudgetDetailHeader';
-import type { useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
-
-type BudgetDetailViewModel = ReturnType<typeof useBudgetDetailViewModel>;
+import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
 
 export function BudgetDetailView({
   chrome,
   ...vm
 }: BudgetDetailViewModel & { chrome: ScreenNavChrome }) {
-  const isLoading = vm.isLoading || !vm.budget || !vm.usage;
+  const { budget, usage } = vm;
+
+  if (vm.isLoading || !budget || !usage) {
+    return (
+      <ScreenWithChrome chrome={chrome}>
+        <LoadingView loading={true} text={AppConfig.strings.budget.loading} size="large" />
+      </ScreenWithChrome>
+    );
+  }
 
   return (
     <ScreenWithChrome chrome={chrome}>
-      {isLoading ? (
-        <LoadingView loading={true} text="Loading budget..." size="large" />
-      ) : (
-        <View style={styles.container}>
-          <JournalEntryListView
-            items={vm.items}
-            isLoading={vm.isLoading}
-            isLoadingMore={false}
-            emptyTitle="No activity"
-            emptySubtitle="No journal entries found for this budget in the selected month."
-            ListHeaderComponent={
-              <BudgetDetailHeader
-                budget={vm.budget!}
-                usage={vm.usage!}
-                periodLabel={vm.periodLabel}
-                isCurrentMonth={vm.isCurrentMonth}
-                chartData={vm.chartData}
-                prevMonth={vm.prevMonth}
-                nextMonth={vm.nextMonth}
-                resetToToday={vm.resetToToday}
-              />
-            }
-            contentContainerStyle={styles.listContent}
-          />
-        </View>
-      )}
+      <View style={styles.container}>
+        <JournalEntryListView
+          items={vm.items}
+          isLoading={vm.isLoading}
+          isLoadingMore={false}
+          emptyTitle={AppConfig.strings.budget.activityEmptyTitle}
+          emptySubtitle={AppConfig.strings.budget.activityEmptySubtitle}
+          ListHeaderComponent={
+            <BudgetDetailHeader
+              budget={budget}
+              usage={usage}
+              periodLabel={vm.periodLabel}
+              isCurrentMonth={vm.isCurrentMonth}
+              chartData={vm.chartData}
+              prevMonth={vm.prevMonth}
+              nextMonth={vm.nextMonth}
+              resetToToday={vm.resetToToday}
+            />
+          }
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
     </ScreenWithChrome>
   );
 }
@@ -52,6 +54,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },

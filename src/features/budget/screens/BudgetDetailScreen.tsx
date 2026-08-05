@@ -4,6 +4,7 @@ import {
 } from '@/src/components/common/MoneyDetailHeaderActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { BudgetDetailView } from '@/src/features/budget/components/BudgetDetailView';
 import { useBudgetDetailViewModel } from '@/src/features/budget/hooks/useBudgetDetailViewModel';
@@ -19,8 +20,8 @@ function BudgetDetailScreenInner() {
 
     return buildDetailNavChrome({
       phase,
-      readyTitle: 'Budget Details',
-      loadingTitle: 'Budget Details',
+      readyTitle: AppConfig.strings.budget.details.screenTitle,
+      loadingTitle: AppConfig.strings.budget.details.screenTitle,
       headerActions: (
         <MoneyDetailHeaderActions
           actions={moneyDetailEditDeleteActions(vm.handleEdit, vm.handleDelete, theme)}

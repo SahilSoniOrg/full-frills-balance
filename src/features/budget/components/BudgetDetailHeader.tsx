@@ -1,9 +1,12 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { AppButton, AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
+import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
+import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
 import Budget from '@/src/data/models/Budget';
+import { BudgetPeriodStepper } from '@/src/features/budget/components/BudgetPeriodStepper';
+import { BudgetUsageSummary } from '@/src/features/budget/components/BudgetUsageSummary';
+import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
@@ -34,37 +37,13 @@ export function BudgetDetailHeader({
   resetToToday,
 }: BudgetDetailHeaderProps) {
   const { theme } = useTheme();
-  const [chartWidth, setChartWidth] = React.useState<number>(0);
+  const [chartWidth, setChartWidth] = React.useState(0);
 
-  const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
-  let stripColorBase = theme.primary;
-  if (usage.usagePercent >= 1) {
-    stripColorBase = theme.error;
-  } else if (usage.usagePercent >= 0.8) {
-    stripColorBase = theme.warning;
-  }
-  const stripColor = resolveThemeColor(theme, stripColorBase) as string;
-
-  const isOver = usage.remaining < 0;
+  const usageVm = presentBudgetUsage(usage);
+  const stripColor = resolveThemeColor(theme, usageVm.statusColor) as string;
 
   return (
     <View style={styles.headerContainer}>
-      <View style={styles.monthSelector}>
-        <AppButton variant="ghost" onPress={prevMonth} size="sm">
-          <AppIcon name="chevronLeft" size={24} color={theme.text} />
-        </AppButton>
-        <AppText variant="heading" style={{ minWidth: 120, textAlign: 'center' }}>
-          {periodLabel}
-        </AppText>
-        <AppButton variant="ghost" onPress={nextMonth} size="sm" disabled={isCurrentMonth}>
-          <AppIcon
-            name="chevronRight"
-            size={24}
-            color={isCurrentMonth ? theme.border : theme.text}
-          />
-        </AppButton>
-      </View>
-
       <AppCard elevation="sm" style={styles.heroCard} overflow="visible">
         <View style={styles.cardHeader}>
           <IvyIcon
@@ -82,51 +61,18 @@ export function BudgetDetailHeader({
               formatStyle="compact"
               variant="heading"
             />
+            <Badge variant={usageVm.statusBadge.variant} size="sm" icon={usageVm.statusBadge.icon}>
+              {usageVm.statusBadge.text}
+            </Badge>
           </View>
         </View>
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <AppText variant="caption" color="secondary">
-              Spent
-            </AppText>
-            <MoneyText
-              amount={usage.spent}
-              currencyCode={budget.currencyCode}
-              formatStyle="compact"
-              variant="subheading"
-              style={{ marginTop: 4 }}
-            />
-          </View>
-          <View style={styles.statItem}>
-            <AppText variant="caption" color="secondary">
-              {isOver ? 'Over Limit' : 'Left'}
-            </AppText>
-            <View style={styles.remainingRow}>
-              {isOver && (
-                <AppIcon name="alert" size={14} color={theme.error} style={{ marginRight: 4 }} />
-              )}
-              <MoneyText
-                amount={Math.abs(usage.remaining)}
-                currencyCode={budget.currencyCode}
-                formatStyle="compact"
-                variant="subheading"
-                color={isOver ? 'error' : 'success'}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
-          <View
-            style={[styles.progressFill, { width: `${progress}%`, backgroundColor: stripColor }]}
-          />
-        </View>
+        <BudgetUsageSummary usage={usage} currencyCode={budget.currencyCode} variant="detail" />
 
         {chartData && chartData.data.length > 0 && (
           <View
             style={styles.chartContainer}
-            onLayout={e => setChartWidth(e.nativeEvent.layout.width)}
+            onLayout={event => setChartWidth(event.nativeEvent.layout.width)}
           >
             {chartWidth > 0 && (
               <LineChart
@@ -161,48 +107,37 @@ export function BudgetDetailHeader({
             )}
           </View>
         )}
-
-        {!isCurrentMonth && (
-          <AppButton
-            variant="ghost"
-            onPress={resetToToday}
-            size="sm"
-            style={styles.cardTodayButton}
-          >
-            <AppText variant="caption" color="primary" weight="bold">
-              BACK TO TODAY
-            </AppText>
-          </AppButton>
-        )}
       </AppCard>
 
-      <ScreenSectionHeader title="Activity" style={styles.activityTitle} />
+      <ScreenSectionHeader
+        title={AppConfig.strings.budget.activityTitle}
+        style={styles.activityTitle}
+        action={
+          <BudgetPeriodStepper
+            label={periodLabel}
+            onPrevious={prevMonth}
+            onNext={nextMonth}
+            canGoNext={!isCurrentMonth}
+            showBackToToday={!isCurrentMonth}
+            onBackToToday={resetToToday}
+          />
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   headerContainer: {
-    marginBottom: Spacing.xl,
-  },
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  cardTodayButton: {
-    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
   },
   heroCard: {
-    marginBottom: Spacing.xl,
-    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
     padding: Spacing.lg,
     borderRadius: Shape.radius.xl,
   },
   chartContainer: {
-    marginTop: Spacing.xl,
+    marginTop: Spacing.lg,
     marginLeft: -Spacing.lg,
     marginRight: -Spacing.lg,
   },
@@ -216,31 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.xs,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: Spacing.xl,
-    marginBottom: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  statItem: {
-    flex: 1,
-  },
-  remainingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.xs,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: Shape.radius.sm,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-  },
   activityTitle: {
-    paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.sm,
-    marginTop: Spacing.sm,
   },
 });

@@ -1,18 +1,24 @@
-import { AppIcon } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
-import { Column, Text } from '@/src/design-system';
-import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
+import { EmptyStateView, LoadingView } from '@/src/components/core';
+import { AppConfig, Spacing } from '@/src/constants';
 import { FlashList } from '@shopify/flash-list';
+import { StyleSheet, View } from 'react-native';
 import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';
+import { AppNavigation } from '@/src/utils/navigation';
 
 export type BudgetListViewProps = {
   items: BudgetItem[];
+  isLoading: boolean;
 };
 
-export function BudgetListView({ items }: BudgetListViewProps) {
-  const { theme } = useTheme();
+export function BudgetListView({ items, isLoading }: BudgetListViewProps) {
+  if (isLoading && items.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <LoadingView loading={true} text={AppConfig.strings.common.loading} />
+      </View>
+    );
+  }
 
   const handlePress = (item: BudgetItem) => {
     AppNavigation.toBudgetDetail(item.budget.id, {
@@ -22,29 +28,37 @@ export function BudgetListView({ items }: BudgetListViewProps) {
     });
   };
 
-  const renderItem = ({ item }: { item: BudgetItem }) => {
-    return <BudgetCard item={item} onPress={handlePress} />;
-  };
-
   return (
     <FlashList
       data={items}
       keyExtractor={item => item.budget.id}
-      renderItem={renderItem}
+      renderItem={({ item }) => <BudgetCard item={item} onPress={handlePress} />}
       showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.listContent}
       ListEmptyComponent={
-        <Column flex={1} align="center" justify="center" marginTop="xxxl">
-          <AppIcon name="pieChart" size={64} color={theme.border} />
-          <Text variant="subheading" color="secondary" marginTop="md">
-            No budgets yet
-          </Text>
-        </Column>
+        <EmptyStateView
+          title={AppConfig.strings.budget.emptyTitle}
+          subtitle={AppConfig.strings.budget.emptySubtitle}
+          icon="pieChart"
+          style={styles.emptyState}
+        />
       }
-      contentContainerStyle={{
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.lg,
-        paddingBottom: Spacing.xxxl,
-      }}
     />
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  emptyState: {
+    marginTop: Spacing.xxxl,
+  },
+});

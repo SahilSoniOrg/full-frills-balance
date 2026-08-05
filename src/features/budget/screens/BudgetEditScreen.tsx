@@ -75,7 +75,7 @@ export default function BudgetEditScreen() {
   if (loading) {
     return (
       <ScreenWithChrome chrome={loadingChrome}>
-        <LoadingView loading={true} text="Loading budget..." />
+        <LoadingView loading={true} text={AppConfig.strings.budget.loading} />
       </ScreenWithChrome>
     );
   }

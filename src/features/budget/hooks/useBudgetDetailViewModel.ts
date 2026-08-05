@@ -11,7 +11,7 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
-import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections';
 import { AccountId, BudgetId, PlainBudget } from '@/src/types/domain';
@@ -22,8 +22,25 @@ import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
+import { JournalListItem } from '@/src/types/ui';
 
-export function useBudgetDetailViewModel() {
+export interface BudgetDetailViewModel {
+  budget: Budget | PlainBudget | null;
+  usage: BudgetUsage | null;
+  items: JournalListItem[];
+  isLoading: boolean;
+  targetMonth: string;
+  nextMonth: () => void;
+  prevMonth: () => void;
+  resetToToday: () => void;
+  isCurrentMonth: boolean;
+  chartData: { data: { x: number; y: number }[]; domainX: [number, number] } | null;
+  periodLabel: string;
+  handleDelete: () => void;
+  handleEdit: () => void;
+}
+
+export function useBudgetDetailViewModel(): BudgetDetailViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams<{
     id: BudgetId;
@@ -135,6 +152,10 @@ export function useBudgetDetailViewModel() {
 
   const nextMonth = useCallback(() => {
     if (!budget) return;
+    const { startDate: nowStart } = BudgetPeriodUtils.getCurrentPeriod(budget);
+    const { startDate: refStart } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    if (nowStart === refStart) return;
+
     const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
     setRefTimestamp(endDate + 1);
   }, [budget, refTimestamp]);

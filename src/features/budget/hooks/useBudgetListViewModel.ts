@@ -24,11 +24,11 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
     }),
   );
 
-  const { data: items = [] } = useObservable<BudgetItem[]>(
+  const { data: items = [], isLoading } = useObservable<BudgetItem[]>(
     () => budgetsObservable,
     [workplaceId],
     [],
   );
 
-  return { items };
+  return { items, isLoading };
 }
