@@ -16,6 +16,14 @@ Follow these steps to analyze git history and generate user-centric release note
 - **Translate to Value**: Frame every change in terms of user benefits.
   - *Dev-centric*: "Resolved caching issue in transformAccounts."
   - *User-centric*: "Instant updates for reconciliation timestamps."
+- **Match the Release Size**: A cleanup/privacy/bugfix release should read lean. Don't inflate every commit into a feature bullet. Pick 1 theme for the headline, a short "Also in this update" list (often 2–4 items), and only the differences users will actually feel. Big features earn space; streamlining and fixes get one line each, not their own marketing section.
+- **Sound Human, Not AI**: Write like a person shipping a changelog, not a product brochure.
+  - Prefer plain sentences over parallel marketing cadence ("Stronger X, clearer Y, plus Z").
+  - Avoid title-case feature names that feel invented for the notes (`Privacy That Stays Sealed`). Use short, ordinary labels (`Privacy eye per screen`).
+  - Cut filler and restatement. Don't rephrase the same bullet in "Big difference you'll notice."
+  - Skip stock phrases: "real upgrade", "alongside the way", "more solid", "shoulder-surfing", "you'll love", em-dash triads.
+  - Contractions and direct verbs are fine. Uneven bullet lengths are fine.
+  - When in doubt, read it out loud — if it sounds like marketing copy, rewrite shorter and plainer.
 
 ## 3. Structure & Format
 Generate a text file at `release-notes/android/abv_<version>_<DD_MM_YYYY>.txt` using the template below:
@@ -23,23 +31,22 @@ Generate a text file at `release-notes/android/abv_<version>_<DD_MM_YYYY>.txt` u
 ```text
 New release 🚀
 
-[Brief 1-2 sentence headline highlighting the theme or main features of this release]
+[1–2 plain sentences: what's actually new this release. Name the theme; don't sell it.]
 
 ---
 
 Also in this update:
 
-* [Feature Name]: [User-friendly description focusing on utility/benefit]
-* [Feature Name]: [User-friendly description focusing on utility/benefit]
+* [Short label]: [What changed, in everyday words]
+* [Short label]: [What changed, in everyday words]
 
 ---
 
 Big difference you’ll notice:
 
-* [Bullet describing how the app feels different or easier to use]
-* [Bullet describing how the app feels different or easier to use]
+* [Only what someone would feel using the app — skip if nothing new beyond the list above]
 
 ---
 
-Under the hood, we [brief description of developer-facing upgrades, tests, or internal routing changes].
+Under the hood, [one short sentence on internals/streamlining if relevant; skip fluff].
 ```
