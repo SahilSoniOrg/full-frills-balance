@@ -4,7 +4,6 @@ import { useReportsViewModel } from '../useReportsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { AccountId } from '@/src/types/domain';
 
-// Mock useReports
 jest.mock('../useReports');
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
@@ -23,7 +22,6 @@ jest.mock('@/src/contexts/PrivacyScope', () => ({
   }),
 }));
 
-// Mock dependencies
 jest.mock('@/src/hooks/use-theme', () => {
   const theme = {
     primary: 'blue',
@@ -31,6 +29,7 @@ jest.mock('@/src/hooks/use-theme', () => {
     error: 'red',
     surface: 'white',
     border: 'grey',
+    textSecondary: 'grey',
   };
   return {
     useTheme: () => ({ theme }),
@@ -103,6 +102,7 @@ describe('useReportsViewModel', () => {
 
   beforeEach(() => {
     mockUseReports.mockReturnValue(mockReportsData);
+    jest.clearAllMocks();
   });
 
   it('should expose focused tab view-models instead of a flat facade', () => {
@@ -168,6 +168,27 @@ describe('useReportsViewModel', () => {
     });
   });
 
+  it('should navigate to journal search with category account ids on legend row press', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      expenseCategories: [
+        { category: 'FOOD', amount: 500, percentage: 100, accountIds: ['food-1', 'food-2'] },
+      ],
+    });
+
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => {
+      result.current.spending.onLegendRowPress(['food-1' as AccountId, 'food-2' as AccountId]);
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['food-1', 'food-2'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+    });
+  });
+
   it('should expose category account ids on spending category legend rows', () => {
     mockUseReports.mockReturnValue({
       ...mockReportsData,
@@ -184,25 +205,18 @@ describe('useReportsViewModel', () => {
     ]);
   });
 
-  it('should navigate to journal search with category account ids on category legend press', () => {
-    mockUseReports.mockReturnValue({
-      ...mockReportsData,
-      expenseCategories: [
-        { category: 'FOOD', amount: 500, percentage: 100, accountIds: ['food-1', 'food-2'] },
-      ],
-    });
-
+  it('should clear sub-period selection via subPeriod callback', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
     act(() => {
-      result.current.spending.onLegendRowPress(['food-1', 'food-2'] as AccountId[]);
+      result.current.overview.onSelectBarIndex(0);
     });
+    expect(result.current.subPeriod.label).toBe('Jan');
 
-    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
-      accountIds: ['food-1', 'food-2'],
-      startDate: 1704067200000,
-      endDate: 1706745599999,
+    act(() => {
+      result.current.subPeriod.onClear();
     });
+    expect(result.current.subPeriod.label).toBeNull();
   });
 
   it('should not navigate to journal search when legend row has no account ids', () => {

@@ -13,11 +13,18 @@ import { ReportFilters, useReportFilters } from './useReportFilters';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
+import { useSelectedReportPeriod } from './useSelectedReportPeriod';
 
 export type { ReportTab } from './reportTabTypes';
 
+export interface ReportSubPeriod {
+  label: string | null;
+  onClear: () => void;
+}
+
 export interface ReportsViewModel {
   filters: ReportFilters;
+  subPeriod: ReportSubPeriod;
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
@@ -34,7 +41,6 @@ export function useReportsViewModel(): ReportsViewModel {
     accounts,
     netWorthHistory,
     expenses: globalExpenses,
-    incomeBreakdown: globalIncomeBreakdown,
     expenseCategories,
     incomeCategories,
     incomeVsExpenseHistory,
@@ -54,6 +60,15 @@ export function useReportsViewModel(): ReportsViewModel {
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>();
 
+  const selectedPeriod = useSelectedReportPeriod({
+    workplaceId,
+    accountIds,
+    targetCurrency,
+    incomeVsExpenseHistory,
+    selectedBarIndex,
+    theme,
+  });
+
   const chartData = useReportChartData({
     netWorthHistory,
     incomeVsExpenseHistory,
@@ -67,21 +82,20 @@ export function useReportsViewModel(): ReportsViewModel {
 
   const breakdownDetails = useReportBreakdownDetails({
     globalExpenses,
-    globalIncomeBreakdown,
     expenseCategories,
     incomeCategories,
-    incomeVsExpenseHistory,
-    selectedIncomeExpenseIndex: selectedBarIndex,
-    targetCurrency,
+    periodSnapshot: selectedPeriod.isActive ? selectedPeriod.snapshot : null,
     theme,
-    workplaceId: workplaceId,
   });
+
+  const clearSubPeriod = useCallback(() => {
+    setSelectedBarIndex(undefined);
+  }, []);
 
   const resetSelections = useCallback(() => {
     breakdownDetails.setExpandedExpenses(false);
-    breakdownDetails.setExpandedIncome(false);
-    setSelectedBarIndex(undefined);
-  }, [breakdownDetails]);
+    clearSubPeriod();
+  }, [breakdownDetails.setExpandedExpenses, clearSubPeriod]);
 
   const filters = useReportFilters({
     accounts,
@@ -94,7 +108,7 @@ export function useReportsViewModel(): ReportsViewModel {
   });
 
   const actions = useReportActions({
-    selectedPeriod: breakdownDetails.selectedPeriod,
+    selectedPeriod: selectedPeriod.range,
     dateRange,
   });
 
@@ -105,15 +119,19 @@ export function useReportsViewModel(): ReportsViewModel {
     }
   }, []);
 
+  const scopedIncomeExpense = selectedPeriod.isActive
+    ? selectedPeriod.snapshot.incomeVsExpense
+    : incomeVsExpense;
+
   const overview: ReportOverviewTabVm = {
     netWorthSeries: chartData.netWorthSeries,
     barChartData: chartData.barChartData,
     currentNetWorth: chartData.currentNetWorth,
-    income: chartData.income,
-    expense: chartData.expense,
-    incomeBarFlex: incomeVsExpense.income || 1,
-    expenseBarFlex: incomeVsExpense.expense || 1,
-    sankeyData: chartData.sankeyData,
+    income: scopedIncomeExpense.income,
+    expense: scopedIncomeExpense.expense,
+    incomeBarFlex: scopedIncomeExpense.income || 1,
+    expenseBarFlex: scopedIncomeExpense.expense || 1,
+    sankeyData: selectedPeriod.isActive ? selectedPeriod.snapshot.sankeyData : chartData.sankeyData,
     targetCurrency,
     selectedBarIndex,
     onSelectBarIndex,
@@ -147,6 +165,10 @@ export function useReportsViewModel(): ReportsViewModel {
 
   return {
     filters,
+    subPeriod: {
+      label: selectedPeriod.label,
+      onClear: clearSubPeriod,
+    },
     activeTab,
     setActiveTab: (tab: ReportTab) => {
       setActiveTab(tab);

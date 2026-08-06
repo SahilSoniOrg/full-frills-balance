@@ -115,8 +115,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
   },
-  placeholderText: {
-    textAlign: 'center',
-    paddingVertical: Spacing.xl,
-  },
 });

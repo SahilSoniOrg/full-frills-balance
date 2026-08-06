@@ -67,7 +67,6 @@ export interface ReportOverviewTabVm {
 }
 
 export interface ReportSpendingTabVm {
-  /** By-account expense breakdown (donut + legend). */
   expenseViewState: ReportBreakdownViewState;
   expenseCategoryViewState: ReportBreakdownViewState;
   incomeCategoryViewState: ReportBreakdownViewState;

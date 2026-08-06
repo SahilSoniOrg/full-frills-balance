@@ -27,6 +27,8 @@ export function ReportTabs({ activeTab, onTabChange }: ReportTabsProps) {
             key={tab.id}
             style={[styles.tab, isActive && { borderBottomColor: theme.primary }]}
             onPress={() => onTabChange(tab.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
             <AppText
               variant="caption"

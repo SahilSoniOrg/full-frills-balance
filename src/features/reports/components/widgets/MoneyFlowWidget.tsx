@@ -9,6 +9,7 @@ import {
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { useTheme } from '@/src/hooks/use-theme';
 import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -26,6 +27,7 @@ function formatPercentLabel(percent?: number): string {
 }
 
 export function MoneyFlowWidget({ sankeyData, currencyCode, chartWidth }: MoneyFlowWidgetProps) {
+  const { theme } = useTheme();
   const { summary, nodes, links } = sankeyData;
   const hasData = nodes.length > 0 && links.length > 0;
   const formatMoneyShort = useMoneyFormat({ style: 'short' });
@@ -55,7 +57,7 @@ export function MoneyFlowWidget({ sankeyData, currencyCode, chartWidth }: MoneyF
             />
           </View>
 
-          <View style={styles.summaryRow}>
+          <View style={[styles.summaryRow, { borderTopColor: theme.border }]}>
             <SummaryItem
               label={AppConfig.strings.reports.incomeShort}
               amount={summary.totalIncome}
@@ -192,7 +194,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingTop: Spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(128,128,128,0.35)',
   },
   summaryItem: {
     minWidth: '28%',
