@@ -190,7 +190,8 @@ export function observeEnrichedJournals(
             pa.name !== ca.name ||
             pa.accountType !== ca.accountType ||
             pa.role !== ca.role ||
-            pa.icon !== ca.icon
+            pa.icon !== ca.icon ||
+            pa.amount !== ca.amount
           ) {
             return false;
           }
