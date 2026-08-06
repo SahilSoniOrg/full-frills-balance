@@ -17,7 +17,7 @@ import { distinctUntilChanged, Observable, switchMap } from 'rxjs';
 
 /**
  * Journal timeline read model: observe journals, enrich once, emit EnrichedJournal[].
- * Presentation mapping (timeline rows, entry cards) stays in feature adapters.
+ * Row expansion and card presentation live in journalTimelineRows and journalTimelinePresentation.
  */
 export function observeEnrichedJournals(
   workplaceId: WorkplaceId,

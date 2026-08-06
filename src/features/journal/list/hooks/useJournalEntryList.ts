@@ -7,15 +7,15 @@ import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/
 import {
   JournalTimelineRow,
   journalsToTimelineRows,
-} from '@/src/features/journal/list/journalTimelineRows';
+} from '@/src/services/journal/journalTimelineRows';
+import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
-import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
-import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { sharingService } from '@/src/services/SharingService';
 import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
@@ -139,7 +139,7 @@ export function useJournalEntryList({
         return;
       }
 
-      const cardProps = mapJournalToEntryCardProps(row.journal, row.viewer);
+      const cardProps = mapTimelineRowToEntryCardProps(row);
       AppNavigation.toJournalDetails(row.journal.id, {
         title: cardProps.title,
         amount: cardProps.amount,

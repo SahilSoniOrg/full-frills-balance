@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
-import { JournalTimelineRow } from '@/src/features/journal/list/journalTimelineRows';
+import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
+import { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import type { GroupingOptions } from '@/src/hooks/useJournalListGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger/buildDayNetStats';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
@@ -86,7 +86,7 @@ export function buildTimelineGroupingOptions(
       type: 'journal' as const,
       date: row.journal.journalDate,
       onPress: () => onPress(row),
-      cardProps: mapJournalToEntryCardProps(row.journal, row.viewer),
+      cardProps: mapTimelineRowToEntryCardProps(row),
     }),
   };
 }
