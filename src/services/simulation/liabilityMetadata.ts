@@ -1,8 +1,18 @@
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import type { LiabilityMetadata } from '@/src/services/simulation/types';
 
-/** Account metadata plus runtime-only fields used by import fixtures and tests. */
-export type LiabilityMetadataSource = AccountMetadata & Pick<LiabilityMetadata, 'emiAmount'>;
+/** Fields read by `toLiabilityMetadata` — persisted metadata plus runtime-only `emiAmount`. */
+export type LiabilityMetadataSource = Pick<
+  AccountMetadata,
+  | 'statementDay'
+  | 'dueDay'
+  | 'minimumPaymentAmount'
+  | 'emiDay'
+  | 'payFromAccountId'
+  | 'minPaymentOnly'
+  | 'minimumPaymentPercent'
+> &
+  Pick<LiabilityMetadata, 'emiAmount'>;
 
 /** Maps persisted account metadata into simulation liability settings. */
 export function toLiabilityMetadata(metadata: LiabilityMetadataSource): LiabilityMetadata {
