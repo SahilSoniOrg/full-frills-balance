@@ -1,14 +1,20 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
+
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 const workplaceId = 'wp-1' as WorkplaceId;
 

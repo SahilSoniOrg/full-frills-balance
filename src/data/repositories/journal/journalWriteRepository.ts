@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import {
@@ -9,6 +9,7 @@ import {
   JournalDisplayType,
   JournalId,
   PlannedPaymentId,
+  TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';

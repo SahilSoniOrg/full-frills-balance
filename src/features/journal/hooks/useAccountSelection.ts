@@ -1,6 +1,7 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { getAccountSections, isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
+import { AccountType } from '@/src/types/domain';
 
 export interface UseAccountSelectionOptions {
   accounts: Account[];

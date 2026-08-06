@@ -5,7 +5,7 @@ import { getAccountSections } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 
 /**
- * useAccountPickerList - Logic hook for the account picker.
+ * useAccountPickerList - Logic for the account picker.
  * Handles searching, grouping, and section collapse state.
  */
 export function useAccountPickerList({

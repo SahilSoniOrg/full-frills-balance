@@ -1,10 +1,7 @@
 import { IconName } from '@/src/components/core';
-import Account, {
-  AccountSubtype,
-  AccountType,
-  getDefaultSubtypeForType,
-} from '@/src/data/models/Account';
+import Account, { getDefaultSubtypeForType } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import {
   AccountFormDefaults,
   AccountFormRouteContext,
@@ -15,7 +12,6 @@ import {
   AccountMetadataValues,
   createDefaultAccountMetadataValues,
 } from '@/src/features/accounts/services/accountMetadataDomain';
-import { AccountId } from '@/src/types/domain';
 
 /** Core editable fields on the account create/edit form. */
 export interface AccountFormCoreDraft {

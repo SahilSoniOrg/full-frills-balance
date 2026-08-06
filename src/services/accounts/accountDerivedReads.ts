@@ -1,3 +1,4 @@
+import { AccountType, AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 /**
  * Account derived reads — balance, unreconciled, period metrics, chart feeds.
  * Not a pass-through of `accountQueries` (entity observe/find). See docs/ACCOUNTS.md.
@@ -8,13 +9,12 @@
  */
 import { Animation } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountType } from '@/src/data/models/Account';
+
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceService } from '@/src/services/BalanceService';
-import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 

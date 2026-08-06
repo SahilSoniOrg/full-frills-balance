@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
@@ -7,7 +7,6 @@ import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/services/currencyConversion');

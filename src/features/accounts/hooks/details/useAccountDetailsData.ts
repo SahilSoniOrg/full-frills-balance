@@ -1,16 +1,18 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, {
-  AccountType,
-  formatAccountSubtypeLabel,
-  isAccountType,
-} from '@/src/data/models/Account';
+import Account, { formatAccountSubtypeLabel, isAccountType } from '@/src/data/models/Account';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
-import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountBalance,
+  AccountId,
+  PlainAccount,
+  WorkplaceId,
+  AccountType,
+} from '@/src/types/domain';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';

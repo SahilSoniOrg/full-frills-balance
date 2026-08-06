@@ -1,6 +1,11 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId, JournalDisplayType, SemanticType } from '@/src/types/domain';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalDisplayType,
+  SemanticType,
+} from '@/src/types/domain';
+
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 
 describe('JournalPresenter', () => {

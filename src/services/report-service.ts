@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, WorkplaceId, AccountId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import {
@@ -24,7 +25,6 @@ import type {
 import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
 import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId, AccountId } from '@/src/types/domain';
 import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,

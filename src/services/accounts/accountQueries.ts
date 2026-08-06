@@ -1,6 +1,6 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 /**
  * Curated reactive/read entry points for feature hooks.

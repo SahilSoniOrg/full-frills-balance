@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType } from '@/src/types/domain';
+
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 

@@ -1,7 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import {
   getAccountAccentColor,
   getAccountSections,

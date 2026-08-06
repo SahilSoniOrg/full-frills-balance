@@ -1,7 +1,5 @@
 import { database } from '@/src/data/database/Database';
 import Account, {
-  AccountSubtype,
-  AccountType,
   getDefaultSubtypeForTypeLike,
   isAccountSubtype,
   isAccountType,
@@ -17,15 +15,11 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord, {
-  InboxParseStatus,
-  InboxProcessingStatus,
-  TransactionChannel,
-  TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+import Transaction from '@/src/data/models/Transaction';
 import {
+  AccountSubtype,
+  AccountType,
+  TransactionType,
   AccountId,
   BudgetId,
   JournalDisplayType,
@@ -34,6 +28,13 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord, {
+  InboxParseStatus,
+  InboxProcessingStatus,
+  TransactionChannel,
+  TransactionDirection,
+} from '@/src/data/models/TransactionInboxRecord';
 import { IconName } from '@/src/types/domainIcons';
 import { logger } from '@/src/utils/logger';
 import {

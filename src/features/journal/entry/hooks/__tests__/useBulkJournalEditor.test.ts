@@ -1,6 +1,6 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
+
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
-import { WorkplaceId } from '@/src/types/domain';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { act, renderHook } from '@testing-library/react-native';
 

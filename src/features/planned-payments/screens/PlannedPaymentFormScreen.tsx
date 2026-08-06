@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountPickerModal } from '@/src/features/accounts';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';

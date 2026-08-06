@@ -1,5 +1,5 @@
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountSubtype, AccountType, AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+
 import {
   buildAccountSavePayload,
   resolveAccountFormDefaults,

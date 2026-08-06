@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import { AccountType, AccountId } from '@/src/types/domain';
+
 import {
   accountFormDraftReducer,
   createAccountFormDraft,

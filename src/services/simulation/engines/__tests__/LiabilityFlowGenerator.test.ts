@@ -1,5 +1,6 @@
 import { LiabilityFlowGenerator } from '../LiabilityFlowGenerator';
-import { AccountSubtype } from '@/src/data/models/Account';
+import { AccountSubtype } from '@/src/types/domain';
+
 import dayjs from 'dayjs';
 
 // Minimal mock for Account

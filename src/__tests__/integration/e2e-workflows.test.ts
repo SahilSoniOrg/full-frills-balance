@@ -1,11 +1,17 @@
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
 /**
  * End-to-End Workflow Tests
  * Tests complete user workflows across multiple repositories
  */
 
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -15,7 +21,6 @@ import { balanceService } from '@/src/services/BalanceService';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('E2E Workflows', () => {
   let integrityService: IntegrityService;

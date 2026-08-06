@@ -1,6 +1,15 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  AccountRole,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TabType,
+} from '@/src/types/domain';
+
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
@@ -10,13 +19,6 @@ import {
   computeSimpleConvertedAmount,
   parseSimpleAmountInput,
 } from '@/src/services/journal/simpleJournalHelpers';
-import {
-  AccountId,
-  AccountRole,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TabType,
-} from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';

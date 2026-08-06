@@ -1,8 +1,14 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  EnrichedJournal,
+  JournalDisplayType,
+  JournalId,
+} from '@/src/types/domain';
+
 import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
 import { journalsToTimelineRows } from '@/src/features/journal';
-import { AccountId, EnrichedJournal, JournalDisplayType, JournalId } from '@/src/types/domain';
 
 describe('journalsToTimelineRows', () => {
   const journal: EnrichedJournal = {

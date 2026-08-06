@@ -1,14 +1,18 @@
 import { database } from '@/src/data/database/Database';
 import Account, {
-  AccountSubtype,
-  AccountType,
   getDefaultSubtypeForType,
   isSubtypeAllowedForType,
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { accountMergeOperations } from '@/src/data/repositories/account/AccountMergeOperations';
-import { AccountId, WorkplaceId, SerializedAccountMetadataPayload } from '@/src/types/domain';
+import {
+  AccountId,
+  WorkplaceId,
+  SerializedAccountMetadataPayload,
+  AccountSubtype,
+  AccountType,
+} from '@/src/types/domain';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';

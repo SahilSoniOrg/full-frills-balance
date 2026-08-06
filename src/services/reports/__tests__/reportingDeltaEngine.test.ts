@@ -1,12 +1,11 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
+
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
   convertReportTransactions,
   normalizeDeltas,
 } from '@/src/services/reports/reportingDeltaEngine';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';
-import { AccountId } from '@/src/types/domain';
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {

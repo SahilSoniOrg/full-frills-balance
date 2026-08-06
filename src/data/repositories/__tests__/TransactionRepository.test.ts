@@ -1,6 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
+
 import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
@@ -8,7 +14,6 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionRepository', () => {
   let accountId: string;

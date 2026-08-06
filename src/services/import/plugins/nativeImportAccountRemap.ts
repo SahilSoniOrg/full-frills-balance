@@ -1,4 +1,5 @@
-import { AccountType, AccountSubtype } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType, AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+
 import {
   BatchImportData,
   ImportedAccount,
@@ -24,7 +25,6 @@ import {
   mapOptionalRuleAccountId,
   syncRuleActionsFromColumns,
 } from '@/src/services/sms/ruleActionsAccountIds';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
 export type NativeImportAccountSources = {

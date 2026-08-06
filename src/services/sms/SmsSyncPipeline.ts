@@ -2,7 +2,8 @@ import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType, JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   InboxParseStatus,
@@ -24,7 +25,6 @@ import {
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import { JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';

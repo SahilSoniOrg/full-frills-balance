@@ -1,19 +1,20 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
-  journalObserveQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import {
+  AccountType,
   AccountId,
   DisplayCounterAccount,
   DisplayTransaction,
   JournalId,
   WorkplaceId,
 } from '@/src/types/domain';
+import {
+  journalObserveQueries,
+  journalQueryRepository,
+} from '@/src/data/repositories/journal/journalTimelineModule';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { effect } from '@/src/services/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 

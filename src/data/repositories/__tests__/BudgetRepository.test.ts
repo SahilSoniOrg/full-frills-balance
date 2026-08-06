@@ -1,8 +1,8 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 
 describe('BudgetRepository', () => {
   let accountId1: string;

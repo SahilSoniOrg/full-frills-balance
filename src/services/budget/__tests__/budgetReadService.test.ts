@@ -1,12 +1,11 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('budgetReadService', () => {
   let expenseParentId: string;

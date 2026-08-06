@@ -1,12 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 
 jest.mock('@/src/data/repositories/TransactionRepository');

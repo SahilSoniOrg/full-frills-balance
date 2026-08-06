@@ -1,4 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { renderHook } from '@testing-library/react-native';
 

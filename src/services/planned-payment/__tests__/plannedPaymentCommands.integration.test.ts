@@ -1,9 +1,10 @@
+import { AccountType, AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 /**
  * Planned-payment command lifecycle (integration).
  */
 
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+
 import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -15,7 +16,6 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
 

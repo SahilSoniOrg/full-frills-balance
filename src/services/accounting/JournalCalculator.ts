@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType } from '@/src/types/domain';
+
 import { checkJournal, JournalLineForCheck } from '@/src/services/accounting/BalanceEffects';
 import { sanitizeAmount } from '@/src/utils/validation';
 

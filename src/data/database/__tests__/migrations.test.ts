@@ -1,3 +1,4 @@
+import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
 /**
  * Migration regression harness (Phase 3.3).
  *
@@ -23,15 +24,13 @@
 import type { AppSchema } from '@nozbe/watermelondb';
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/services/accounting/BalanceEffects';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
 const EXPECTED_SCHEMA_VERSION = 28;

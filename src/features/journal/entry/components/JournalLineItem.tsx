@@ -1,9 +1,9 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType, JournalEntryLine } from '@/src/types/domain';
+
 import { useTheme } from '@/src/hooks/use-theme';
-import { JournalEntryLine } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';

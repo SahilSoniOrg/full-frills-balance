@@ -1,13 +1,12 @@
+import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
 /**
  * Accounting aggregates that are not mere BalanceEffects wrappers.
  * Prefer `effect` / `checkJournal` / `foldBalances` / `periodFlowSQL` from BalanceEffects for signs.
  */
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { effect } from '@/src/services/accounting/BalanceEffects';
 import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
-import { AccountId } from '@/src/types/domain';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
 

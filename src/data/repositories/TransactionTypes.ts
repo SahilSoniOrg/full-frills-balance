@@ -1,5 +1,10 @@
-import { AccountId, AccountType, JournalId, TransactionId } from '@/src/types/domain';
-import { TransactionType } from '../models/Transaction';
+import {
+  AccountId,
+  AccountType,
+  JournalId,
+  TransactionId,
+  TransactionType,
+} from '@/src/types/domain';
 
 /**
  * Valid primitive types for raw SQL query arguments.

@@ -1,10 +1,10 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
+
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, preferencesMigration } from '@/src/utils/preferences';
 import { distinctUntilChanged, map, Observable } from 'rxjs';

@@ -1,5 +1,13 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import {
+  AccountSubtype,
+  AccountType,
+  AccountId,
+  BudgetId,
+  PlannedPaymentId,
+  WorkplaceId,
+} from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -7,7 +15,6 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
-import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {

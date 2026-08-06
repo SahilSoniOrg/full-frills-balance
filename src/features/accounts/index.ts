@@ -1,4 +1,10 @@
 export { AccountPickerList, type CreateAccountIntent } from './components/AccountPickerList';
+export {
+  AccountPickerModal,
+  MultiAccountPickerModal,
+  type AccountPickerModalProps,
+  type MultiAccountPickerModalProps,
+} from './components/AccountPickerModal';
 export { CurrencySelector } from './components/CurrencySelector';
 export { ReconciledMarker } from '@/src/components/common/ReconciledMarker';
 export { useAccountPickerList } from './hooks/useAccountPickerList';

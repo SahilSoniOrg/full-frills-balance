@@ -1,5 +1,5 @@
-import Account, { AccountSubtype } from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountSubtype } from '@/src/types/domain';
 
 export enum FlowCategory {
   INCOME = 'INCOME',
@@ -39,6 +39,19 @@ export type FlowMeta = {
   tags?: string[];
   allowCascade?: boolean;
 };
+
+/** Typed liability settings consumed by the projection engines. */
+export interface LiabilityMetadata {
+  statementDay?: number;
+  dueDay?: number;
+  minimumPaymentAmount?: number;
+  emiDay?: number;
+  payFromAccountId?: AccountId;
+  minPaymentOnly?: boolean;
+  minimumPaymentPercent?: number;
+  /** Optional runtime-only override used by import fixtures and legacy records. */
+  emiAmount?: number;
+}
 
 export type FlowKind = 'INFLOW' | 'OUTFLOW' | 'TRANSFER';
 

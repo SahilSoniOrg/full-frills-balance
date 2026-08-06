@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { CalculationInput, Insight } from './insightTypes';
 
 /**

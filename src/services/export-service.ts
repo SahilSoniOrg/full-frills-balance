@@ -25,6 +25,7 @@ import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTab
 import { compression } from '../utils/compression';
 import Workplace from '@/src/data/models/Workplace';
 import Collection from '@nozbe/watermelondb/Collection';
+import { serializeExportPayload } from '@/src/services/export/exportSerialization';
 
 export interface AccountExport {
   id: string;
@@ -541,73 +542,42 @@ class ExportService {
         database.collections.get<Workplace>('workplaces').find(workplaceId),
       ]);
 
-      onProgress?.('Optimizing data structure...', 0.54);
-      // Yield before heavy serialization
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      onProgress?.('Serializing metadata...', 0.55);
-      await new Promise(resolve => setTimeout(resolve, 16));
-
-      // 1. Serialize top-level metadata
-      const metadataPart = JSON.stringify({
-        exportDate: new Date().toISOString(),
-        version: '1.4.0',
-        schemaVersion: schema.version,
-        preferences: userPreferences,
-        workplace: workplace
-          ? {
-              id: workplace.id,
-              name: workplace.name,
-              icon: workplace.icon,
-              defaultCurrencyCode: workplace.defaultCurrencyCode,
-              createdAt: workplace.createdAt.toISOString(),
-              updatedAt: workplace.updatedAt.toISOString(),
-            }
-          : undefined,
-      });
-      // Remove trailing '}' from metadata to start stitching
-      let finalJson = metadataPart.slice(0, -1);
-
-      // 2. Serialize and stitch each major table with yields
-      const tablesToStitch = [
-        { key: 'accounts', data: accounts },
-        { key: 'journals', data: journals },
-        { key: 'transactions', data: transactions },
-        { key: 'auditLogs', data: auditLogs },
-        { key: 'budgets', data: budgets },
-        { key: 'budgetScopes', data: budgetScopes },
-        { key: 'accountMetadata', data: accountMetadata },
-        { key: 'plannedPayments', data: plannedPayments },
-        { key: 'journalMetadata', data: journalMetadataActive },
-        { key: 'transactionAutoPostRules', data: transactionAutoPostRules },
-        { key: 'transactionInboxRecords', data: transactionInboxRecords },
-        { key: 'currencies', data: currencies },
-        { key: 'exchange_rates', data: exchangeRates },
-        { key: 'balance_snapshots', data: balanceSnapshots },
-      ];
-
-      let currentProgress = 0.55;
-      const progressStep = 0.2 / tablesToStitch.length; // Serialization takes 20% total
-
-      for (const table of tablesToStitch) {
-        onProgress?.(`Serializing ${table.key}...`, currentProgress);
-        await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
-
-        const chunk = JSON.stringify(table.data, (key, value) => {
-          if (key === 'runningBalance' || key === 'originalSmsBody') {
-            return undefined;
-          }
-          return value;
-        });
-
-        finalJson += `,"${table.key}":${chunk}`;
-        currentProgress += progressStep;
-      }
-
-      // Close the JSON object
-      finalJson += '}';
-      //yield here
-      await new Promise(resolve => setTimeout(resolve, 10));
+      const finalJson = await serializeExportPayload(
+        {
+          exportDate: new Date().toISOString(),
+          version: '1.4.0',
+          schemaVersion: schema.version,
+          preferences: userPreferences,
+          workplace: workplace
+            ? {
+                id: workplace.id,
+                name: workplace.name,
+                icon: workplace.icon,
+                defaultCurrencyCode: workplace.defaultCurrencyCode,
+                createdAt: workplace.createdAt.toISOString(),
+                updatedAt: workplace.updatedAt.toISOString(),
+              }
+            : undefined,
+        },
+        [
+          ['accounts', accounts],
+          ['journals', journals],
+          ['transactions', transactions],
+          ['auditLogs', auditLogs],
+          ['budgets', budgets],
+          ['budgetScopes', budgetScopes],
+          ['accountMetadata', accountMetadata],
+          ['plannedPayments', plannedPayments],
+          ['journalMetadata', journalMetadataActive],
+          ['transactionAutoPostRules', transactionAutoPostRules],
+          ['transactionInboxRecords', transactionInboxRecords],
+          ['currencies', currencies],
+          ['exchange_rates', exchangeRates],
+          ['balance_snapshots', balanceSnapshots],
+        ],
+        (message, serializationProgress) =>
+          onProgress?.(message, 0.54 + serializationProgress * 0.21),
+      );
       onProgress?.('Preparing ZIP archive...', 0.6);
       analytics.logExportCompleted('ZIP');
 

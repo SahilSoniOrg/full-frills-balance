@@ -1,6 +1,6 @@
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType, AccountId, EnrichedJournal } from '@/src/types/domain';
+
 import { BudgetCumulativeTx } from '@/src/services/projections/buildBudgetCumulativeSeries';
-import { AccountId, EnrichedJournal } from '@/src/types/domain';
 
 /** Expands scoped journal legs into chart rows (debit/credit per budget account leg). */
 export function journalsToBudgetChartTxs(

@@ -1,14 +1,7 @@
 import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
-  JournalEditorHydration,
-  useJournalEditorLoader,
-} from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
-import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
-import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
-import {
+  TransactionType,
   AccountId,
   AccountRole,
   JournalEntryLine,
@@ -16,6 +9,14 @@ import {
   TabType,
   WorkplaceId,
 } from '@/src/types/domain';
+
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
+import {
+  JournalEditorHydration,
+  useJournalEditorLoader,
+} from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
+import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
+import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';

@@ -1,14 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { AuditAction } from '@/src/data/models/AuditLog';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { auditService } from '@/src/services/audit-service';
 import { Q } from '@nozbe/watermelondb';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/audit-service', () => ({
   auditService: {

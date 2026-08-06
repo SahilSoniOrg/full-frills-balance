@@ -1,12 +1,12 @@
 import Account from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType, AccountId, JournalEntryLine, TabType } from '@/src/types/domain';
+
 import {
   filterGuidedLegAccounts,
   filterToLeafAccounts,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
-import { AccountId, JournalEntryLine, TabType } from '@/src/types/domain';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
 

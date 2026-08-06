@@ -1,6 +1,5 @@
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId } from '@/src/types/domain';
+import { AccountSubtype, AccountType, TransactionType, AccountId } from '@/src/types/domain';
+
 import {
   assertNotSelfParent,
   assertParentMatchesChildType,

@@ -1,6 +1,10 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId, JournalDisplayType, SemanticType } from '@/src/types/domain';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalDisplayType,
+  SemanticType,
+} from '@/src/types/domain';
 
 const SEMANTIC_MATRIX: Record<AccountType, Record<AccountType, SemanticType>> = {
   [AccountType.ASSET]: {

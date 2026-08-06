@@ -1,10 +1,10 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+
 import { JournalStatus } from '@/src/data/models/Journal';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
@@ -33,11 +33,7 @@ export async function prepareJournalData(
     );
   }
 
-  const accounts = await assertWritable(
-    workplaceId,
-    accountIds,
-    '[prepareJournalData] Journal',
-  );
+  const accounts = await assertWritable(workplaceId, accountIds, '[prepareJournalData] Journal');
   const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
 
   const accountPrecisions = new Map<string, number>();

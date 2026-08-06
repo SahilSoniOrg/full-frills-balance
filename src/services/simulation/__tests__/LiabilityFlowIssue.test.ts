@@ -1,9 +1,9 @@
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {

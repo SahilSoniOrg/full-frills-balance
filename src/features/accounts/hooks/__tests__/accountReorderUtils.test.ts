@@ -1,11 +1,10 @@
+import { AccountId, AccountType } from '@/src/types/domain';
 import {
   accountIdsMatch,
   applyPendingOrder,
   buildSortedAccounts,
   computeReorderMove,
 } from '../accountReorderUtils';
-import { AccountType } from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
 
 function makeAccount(partial: {
   id: string;

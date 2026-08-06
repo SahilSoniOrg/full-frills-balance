@@ -1,9 +1,12 @@
 import { IconName } from '@/src/components/core';
-import Account, {
+import Account, { getDefaultSubtypeForType } from '@/src/data/models/Account';
+import {
+  AccountId,
   AccountSubtype,
   AccountType,
-  getDefaultSubtypeForType,
-} from '@/src/data/models/Account';
+  EMPTY_ACCOUNT_ID,
+  SerializedAccountMetadataPayload,
+} from '@/src/types/domain';
 import {
   isCategoryAccountType,
   resolveInitialAccountType,
@@ -14,7 +17,6 @@ import {
   serializeAccountMetadata,
   validateAccountMetadata,
 } from '@/src/features/accounts/services/accountMetadataDomain';
-import { AccountId, EMPTY_ACCOUNT_ID, SerializedAccountMetadataPayload } from '@/src/types/domain';
 
 export interface AccountFormRouteContext {
   pathname: string;

@@ -1,8 +1,12 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { AccountId, EMPTY_ACCOUNT_ID, SerializedAccountMetadataPayload } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountType,
+  EMPTY_ACCOUNT_ID,
+  SerializedAccountMetadataPayload,
+} from '@/src/types/domain';
 
 export interface AccountMetadataValues {
   statementDay: string;

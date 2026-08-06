@@ -1,4 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { getAccountFallbackIcon, getAccountIcon } from '../accountIcon';
 
 describe('getAccountFallbackIcon', () => {

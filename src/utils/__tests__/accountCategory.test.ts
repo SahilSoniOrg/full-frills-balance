@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/domain';
+
 import { getAllowedAccountTypes, isBalanceSheetAccount } from '../accountCategory';
 
 describe('accountCategory', () => {

@@ -1,7 +1,13 @@
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import {
+  TransactionType,
+  AccountId,
+  JournalEntryLine,
+  TabType,
+  AccountType,
+} from '@/src/types/domain';
+
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
-import { AccountId, JournalEntryLine, TabType } from '@/src/types/domain';
 import { preferences } from '@/src/utils/preferences';
 import { useEffect } from 'react';
 import { useJournalEditor } from './useJournalEditor';

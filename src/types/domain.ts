@@ -1,6 +1,61 @@
-import { IconName } from '@/src/components/core/AppIcon';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { IconName } from '@/src/types/domainIcons';
+
+export enum AccountType {
+  ASSET = 'ASSET',
+  LIABILITY = 'LIABILITY',
+  EQUITY = 'EQUITY',
+  INCOME = 'INCOME',
+  EXPENSE = 'EXPENSE',
+}
+
+export enum AccountSubtype {
+  CASH = 'CASH',
+  WALLET = 'WALLET',
+  BANK_CHECKING = 'BANK_CHECKING',
+  BANK_SAVINGS = 'BANK_SAVINGS',
+  FIXED_DEPOSIT = 'FIXED_DEPOSIT',
+  MONEY_MARKET = 'MONEY_MARKET',
+  BROKERAGE = 'BROKERAGE',
+  RETIREMENT = 'RETIREMENT',
+  EMERGENCY_FUND = 'EMERGENCY_FUND',
+  CREDIT_CARD = 'CREDIT_CARD',
+  LINE_OF_CREDIT = 'LINE_OF_CREDIT',
+  OVERDRAFT = 'OVERDRAFT',
+  MORTGAGE = 'MORTGAGE',
+  STUDENT_LOAN = 'STUDENT_LOAN',
+  AUTO_LOAN = 'AUTO_LOAN',
+  PERSONAL_LOAN = 'PERSONAL_LOAN',
+  LOAN = 'LOAN',
+  INVESTMENT = 'INVESTMENT',
+  RECEIVABLE = 'RECEIVABLE',
+  TAX_RECEIVABLE = 'TAX_RECEIVABLE',
+  PAYABLE = 'PAYABLE',
+  TAX_PAYABLE = 'TAX_PAYABLE',
+  OPENING_BALANCE = 'OPENING_BALANCE',
+  NET_WORTH_ADJUSTMENT = 'NET_WORTH_ADJUSTMENT',
+  TRANSFER_CLEARING = 'TRANSFER_CLEARING',
+  SALARY = 'SALARY',
+  BUSINESS_INCOME = 'BUSINESS_INCOME',
+  INTEREST_INCOME = 'INTEREST_INCOME',
+  DIVIDEND_INCOME = 'DIVIDEND_INCOME',
+  RENT_INCOME = 'RENT_INCOME',
+  FOOD = 'FOOD',
+  HOUSING = 'HOUSING',
+  TRANSPORT = 'TRANSPORT',
+  UTILITIES = 'UTILITIES',
+  HEALTHCARE = 'HEALTHCARE',
+  EDUCATION = 'EDUCATION',
+  ENTERTAINMENT = 'ENTERTAINMENT',
+  SHOPPING = 'SHOPPING',
+  TAX = 'TAX',
+  TRANSFER = 'TRANSFER',
+  OTHER = 'OTHER',
+}
+
+export enum TransactionType {
+  DEBIT = 'DEBIT',
+  CREDIT = 'CREDIT',
+}
 
 export declare const __brand: unique symbol;
 export type Brand<T, B> = T & { readonly [__brand]: B };
@@ -98,8 +153,6 @@ export enum SemanticType {
 
   UNKNOWN = 'UNKNOWN',
 }
-
-export { AccountType, TransactionType };
 
 /**
  * Money - Standard value object for currency amounts.

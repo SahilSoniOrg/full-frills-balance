@@ -1,4 +1,5 @@
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType } from '@/src/types/domain';
+
 import dayjs from 'dayjs';
 import { ConvertedReportTransaction } from './reportTypes';
 

@@ -1,3 +1,14 @@
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  BudgetId,
+  EMPTY_ACCOUNT_ID,
+  JournalDisplayType,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+} from '@/src/types/domain';
 /**
  * Ivy Wallet Import Plugin
  *
@@ -7,10 +18,10 @@
 
 import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { AccountType } from '@/src/data/models/Account';
+
 import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import {
   ImportedAccount,
   ImportedBudget,
@@ -21,15 +32,6 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
-import {
-  AccountId,
-  BudgetId,
-  EMPTY_ACCOUNT_ID,
-  JournalDisplayType,
-  JournalId,
-  PlannedPaymentId,
-  TransactionId,
-} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
 // Ivy Wallet Interfaces

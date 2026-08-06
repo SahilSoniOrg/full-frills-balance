@@ -1,11 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
+import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import {
   AccountReferenceSiteKey,
   referenceSites,
@@ -18,7 +19,6 @@ import { auditService } from '@/src/services/audit-service';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
 
@@ -28,12 +28,7 @@ import { Model } from '@nozbe/watermelondb';
  * which run — rewrite ops stay here, not in the graph.
  */
 type MergePrepareKind =
-  | 'transactions'
-  | 'plannedPayments'
-  | 'smsRules'
-  | 'budgets'
-  | 'accounts'
-  | 'snapshots';
+  'transactions' | 'plannedPayments' | 'smsRules' | 'budgets' | 'accounts' | 'snapshots';
 
 const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepareKind>> = {
   'account.parentAccountId': 'accounts',
@@ -123,7 +118,7 @@ export async function mergeAccounts(
   const prepareKinds = mergePrepareKindsFromSites();
 
   await database.write(async () => {
-    const prepareTasks: Array<Promise<Model[]>> = [];
+    const prepareTasks: Promise<Model[]>[] = [];
 
     if (prepareKinds.has('transactions')) {
       prepareTasks.push(

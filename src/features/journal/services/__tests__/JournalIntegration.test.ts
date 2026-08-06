@@ -1,12 +1,19 @@
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
 /**
  * Integration tests for journal write/read modules (ledger + journal query repositories).
  * Tests double-entry accounting, precision handling, and balance integrity.
  */
 
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+
 import Journal from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { balanceService } from '@/src/services/BalanceService';
@@ -15,7 +22,6 @@ import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedO
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { transactionService } from '@/src/services/transaction-ingestion';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('Journal ledger integration', () => {
   let cashAccountId: string;

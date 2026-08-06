@@ -1,12 +1,17 @@
 import {
+  AccountId,
+  AccountType,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TransactionId,
+  TransactionType,
+} from '@/src/types/domain';
+import {
   isGuidedDisabledForMode,
   JournalModeTransitionInput,
   modeOwnsEditorLines,
   resolveJournalModeTransition,
 } from '@/src/features/journal/entry/journalModeTransition';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId, EMPTY_ACCOUNT_ID, JournalEntryLine, TransactionId } from '@/src/types/domain';
 
 function line(
   id: string,

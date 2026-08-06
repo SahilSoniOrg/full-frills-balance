@@ -1,8 +1,16 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountSubtype } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import dayjs from 'dayjs';
-import { Flow, FlowCategory, FlowSource, Obligation, SimulationContext } from '../types';
+import { AccountSubtype } from '@/src/types/domain';
+import {
+  Flow,
+  FlowCategory,
+  FlowSource,
+  LiabilityMetadata,
+  Obligation,
+  SimulationContext,
+} from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
 import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 
@@ -17,7 +25,7 @@ export class LiabilityFlowGenerator {
     context: SimulationContext,
     previousFlows: Flow[],
     liabilityBalances: { account: Account; balance: number }[],
-    metadataMap: Map<string, any>,
+    metadataMap: Map<string, LiabilityMetadata>,
     statementBalances: Map<string, number>,
     settledSinceStatement: Map<string, number>,
   ): Flow[] {
@@ -124,7 +132,7 @@ export class LiabilityFlowGenerator {
   private static generateObligations(
     acc: Account,
     currentBalance: number,
-    metadata: Record<string, any> | undefined,
+    metadata: LiabilityMetadata | undefined,
     statementBalance: number,
     settledSinceStatement: number,
     startOfToday: dayjs.Dayjs,
@@ -136,8 +144,7 @@ export class LiabilityFlowGenerator {
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
     const statementDay = metadata?.statementDay;
 
-    // Use metadata.paymentMode or fallback to configured defaults
-    const isMinMode = metadata?.minPaymentOnly || metadata?.paymentMode === 'MIN';
+    const isMinMode = metadata?.minPaymentOnly === true;
     const paymentModeLabel = isMinMode ? ' (Min)' : '';
 
     if (acc.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {

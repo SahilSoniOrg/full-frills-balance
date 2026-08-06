@@ -1,11 +1,17 @@
-import { AccountType } from '@/src/data/models/Account';
+import {
+  AccountType,
+  AccountId,
+  JournalDisplayType,
+  JournalId,
+  SemanticType,
+} from '@/src/types/domain';
+
 import {
   journalDisplayTypeChrome,
   ledgerLineChrome,
   mapJournalToTimelineItem,
 } from '@/src/services/accounting/journalTimelineMapper';
 import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
-import { AccountId, JournalDisplayType, JournalId, SemanticType } from '@/src/types/domain';
 
 describe('journalTimelineMapper', () => {
   it('journalDisplayTypeChrome maps expense to down arrow', () => {

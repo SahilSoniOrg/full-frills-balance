@@ -1,7 +1,13 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TransactionId,
+} from '@/src/types/domain';
+
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { AccountId, EMPTY_ACCOUNT_ID, JournalEntryLine, TransactionId } from '@/src/types/domain';
 import { useCallback, useState } from 'react';
 
 interface UseJournalEditorLineStateProps {

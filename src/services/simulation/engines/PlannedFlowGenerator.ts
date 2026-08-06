@@ -1,7 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Journal from '@/src/data/models/Journal';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import dayjs from 'dayjs';
+import { TransactionType } from '@/src/types/domain';
 import {
   Flow,
   FlowCategory,

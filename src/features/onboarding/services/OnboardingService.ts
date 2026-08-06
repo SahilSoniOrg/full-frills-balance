@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
+
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import {
@@ -8,7 +9,6 @@ import {
 } from '@/src/services/accounts/accountSystemAccounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
-import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';

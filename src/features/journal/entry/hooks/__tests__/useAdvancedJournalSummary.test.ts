@@ -1,4 +1,5 @@
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType } from '@/src/types/domain';
+
 import { act, renderHook } from '@testing-library/react-native';
 import { AdvancedJournalLineLike, useAdvancedJournalSummary } from '../useAdvancedJournalSummary';
 

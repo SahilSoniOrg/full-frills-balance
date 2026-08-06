@@ -1,12 +1,12 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, TransactionType, EnrichedJournal, WorkplaceId } from '@/src/types/domain';
+
 import { JournalStatus } from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import {
   journalEnrichmentQueries,
   journalsQuery,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import { JournalObserveFilter } from '@/src/types/journalTimeline';
-import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';

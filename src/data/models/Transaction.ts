@@ -1,14 +1,9 @@
 import Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import { AccountId, JournalId, TransactionId } from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId, TransactionType } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
-
-export enum TransactionType {
-  DEBIT = 'DEBIT',
-  CREDIT = 'CREDIT',
-}
 
 export default class Transaction extends BaseScopedModel<TransactionId> {
   static table = 'transactions';

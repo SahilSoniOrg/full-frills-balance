@@ -1,5 +1,4 @@
-import { AccountType } from '@/src/data/models/Account';
-import { AccountId, DisplayCounterAccount, EnrichedJournal } from '@/src/types/domain';
+import { AccountType, AccountId, DisplayCounterAccount, EnrichedJournal } from '@/src/types/domain';
 
 /** Counterparty accounts on a journal row, excluding the ledger line account. */
 export function counterAccountsFromJournalPeers(

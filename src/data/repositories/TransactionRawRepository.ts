@@ -1,11 +1,16 @@
-import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountType,
+  JournalId,
+  TransactionId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { from, Observable } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
-import { TransactionType } from '../models/Transaction';
-import { AccountType } from '../models/Account';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
 import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries';
 import { transactionRawRebuildQueries } from './raw/TransactionRawRebuildQueries';

@@ -1,11 +1,10 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
+
 import {
   calculateAccountPeriodFlows,
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
-import { AccountId } from '@/src/types/domain';
 
 describe('accountingHelpers aggregates', () => {
   describe('calculateAccountPeriodFlows', () => {

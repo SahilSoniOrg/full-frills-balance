@@ -1,14 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import {
+  TransactionType,
   AccountId,
   AccountRole,
   EMPTY_ACCOUNT_ID,
   JournalEntryLine,
   TabType,
 } from '@/src/types/domain';
+
+import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 
 export function deriveCrossCurrencyDisplayRate(
   sourceToBaseRate: number,

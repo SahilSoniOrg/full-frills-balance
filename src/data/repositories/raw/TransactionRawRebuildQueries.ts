@@ -1,10 +1,15 @@
 import { database } from '@/src/data/database/Database';
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountType,
+  TransactionId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { effect } from '@/src/services/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
-import { AccountType } from '../../models/Account';
-import Transaction, { TransactionType } from '../../models/Transaction';
+import Transaction from '../../models/Transaction';
 import { RawSQLArg, RebuildTransaction } from '../TransactionTypes';
 import { transactionRawMetricsQueries } from './TransactionRawMetricsQueries';
 

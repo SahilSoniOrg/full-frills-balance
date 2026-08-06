@@ -1,15 +1,21 @@
+import {
+  AccountSubtype,
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalDisplayType,
+  WorkplaceId,
+} from '@/src/types/domain';
 /**
  * Integration tests for AccountRepository
  * Tests account creation, balance calculations, and precision handling
  */
 
 import { database } from '@/src/data/database/Database';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { balanceService } from '@/src/services/BalanceService';
-import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 

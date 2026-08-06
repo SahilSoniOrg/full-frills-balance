@@ -1,21 +1,56 @@
 import Account from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  AccountPickerList,
-  CreateAccountIntent,
-} from '@/src/features/accounts/components/AccountPickerList';
+import { AccountId, PlainAccount } from '@/src/types/domain';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 
-export interface MultiAccountPickerModalProps {
+export type { CreateAccountIntent };
+
+type AccountPickerModalBaseProps = {
   visible: boolean;
-  accounts: Account[];
-  selectedIds: AccountId[];
+  accounts: (Account | PlainAccount)[];
   title?: string;
   onClose: () => void;
-  onSelect: (accountIds: AccountId[]) => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
+};
+
+export type AccountPickerModalProps = AccountPickerModalBaseProps & {
+  selectedId?: AccountId;
+  onSelect: (accountId: AccountId) => void;
+};
+
+export type MultiAccountPickerModalProps = AccountPickerModalBaseProps & {
+  accounts: Account[];
+  selectedIds: AccountId[];
+  onSelect: (accountIds: AccountId[]) => void;
+};
+
+export function AccountPickerModal({
+  visible,
+  accounts,
+  selectedId,
+  title = 'Select Account',
+  onClose,
+  onSelect,
+  onCreateRequest,
+  excludeParentAccounts = false,
+}: AccountPickerModalProps) {
+  const selectedIds = useMemo(() => new Set(selectedId ? [selectedId] : []), [selectedId]);
+
+  return (
+    <BaseAccountPickerModal visible={visible} onClose={onClose} title={title}>
+      <AccountPickerList
+        accounts={accounts}
+        selectedIds={selectedIds}
+        onSelect={onSelect}
+        onCreateRequest={onCreateRequest}
+        onClose={onClose}
+        isMultiple={false}
+        excludeParentAccounts={excludeParentAccounts}
+      />
+    </BaseAccountPickerModal>
+  );
 }
 
 export function MultiAccountPickerModal({
@@ -31,7 +66,6 @@ export function MultiAccountPickerModal({
   const [draftSelected, setDraftSelected] = useState<Set<AccountId>>(() => new Set(selectedIds));
   const wasVisibleRef = useRef(false);
 
-  // Seed draft from committed selection when the modal opens.
   useEffect(() => {
     if (visible && !wasVisibleRef.current) {
       setDraftSelected(new Set(selectedIds));
@@ -65,7 +99,7 @@ export function MultiAccountPickerModal({
         onApply={handleApply}
         onCreateRequest={onCreateRequest}
         onClose={onClose}
-        isMultiple={true}
+        isMultiple
         excludeParentAccounts={excludeParentAccounts}
       />
     </BaseAccountPickerModal>

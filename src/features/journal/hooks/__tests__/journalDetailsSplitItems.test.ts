@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { AccountId, DisplayTransaction } from '@/src/types/domain';
+import { AccountType, AccountId, DisplayTransaction } from '@/src/types/domain';
+
 import { buildJournalSplitItems } from '../journalDetailsSplitItems';
 
 describe('journalDetailsSplitItems', () => {

@@ -1,13 +1,13 @@
-import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
-import Account, { AccountType } from '@/src/data/models/Account';
+import { CreateAccountIntent } from '@/src/features/accounts';
+import Account from '@/src/data/models/Account';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { AccountId, AccountType } from '@/src/types/domain';
 import {
   resolveJournalEntrySelectableAccounts,
   resolveJournalEntrySelectedAccountId,
 } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
-import { AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 

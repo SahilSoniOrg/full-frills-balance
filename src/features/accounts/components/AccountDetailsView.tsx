@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountPickerModal } from '@/src/features/accounts';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { AppButton, AppText } from '@/src/components/core';

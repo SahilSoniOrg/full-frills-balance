@@ -3,7 +3,8 @@ import { AppCard, AppIcon, IvyIcon } from '@/src/components/core';
 import { Opacity, Size } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';

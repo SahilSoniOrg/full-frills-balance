@@ -1,11 +1,10 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountType, EMPTY_ACCOUNT_ID, TransactionType } from '@/src/types/domain';
 import {
   filterGuidedLegAccounts,
   filterToLeafAccounts,
   resolveGuidedAccountsAfterTabChange,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 
 function acct(partial: Partial<Account> & Pick<Account, 'id' | 'name' | 'accountType'>): Account {
   return {

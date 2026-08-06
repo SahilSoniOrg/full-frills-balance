@@ -1,5 +1,6 @@
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountType, TransactionType } from '@/src/types/domain';
+
 import {
   buildJournalLinesFromSplitState,
   computeSplitTotals,
@@ -7,7 +8,6 @@ import {
   SPLIT_SOURCE_LINE_ID,
   validateSplitState,
 } from '@/src/services/journal/splitJournalHelpers';
-import { AccountId } from '@/src/types/domain';
 
 const accounts = [
   {

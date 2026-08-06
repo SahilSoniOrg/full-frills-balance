@@ -1,9 +1,10 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Currency from '@/src/data/models/Currency';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
@@ -29,7 +30,6 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
-import { AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { useMemo } from 'react';

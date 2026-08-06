@@ -3,7 +3,6 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
-import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
@@ -96,7 +95,6 @@ export class PlannedPaymentRepository {
         pp.workplaceId = workplaceId;
       });
     });
-    analytics.logPlannedPaymentCreated(data.intervalType, data.isAutoPost ? 'auto' : 'manual');
     return result;
   }
 

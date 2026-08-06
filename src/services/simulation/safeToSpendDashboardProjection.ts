@@ -1,5 +1,6 @@
-import Account, { AccountSubtype } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
+import { AccountId, AccountSubtype } from '@/src/types/domain';
 import {
   FlowSource,
   FlowType,
@@ -7,7 +8,6 @@ import {
   SimulationResult,
   SimulationRunResult,
 } from '@/src/services/simulation/types';
-import { AccountId } from '@/src/types/domain';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { logger } from '@/src/utils/logger';

@@ -1,20 +1,19 @@
-import { AccountType, AccountSubtype } from '@/src/data/models/Account';
 import {
-  importPlan,
-  referenceSites,
-} from '@/src/services/accounts/accountReferenceGraph';
-import {
-  accountImportBatchFromSources,
-  buildPlaceholderAccountsForOrphans,
-  NativeImportAccountSources,
-} from '@/src/services/import/plugins/nativeImportAccountRemap';
-import {
+  AccountSubtype,
+  AccountType,
   AccountId,
   BudgetId,
   EMPTY_ACCOUNT_ID,
   JournalId,
   TransactionId,
 } from '@/src/types/domain';
+
+import { importPlan, referenceSites } from '@/src/services/accounts/accountReferenceGraph';
+import {
+  accountImportBatchFromSources,
+  buildPlaceholderAccountsForOrphans,
+  NativeImportAccountSources,
+} from '@/src/services/import/plugins/nativeImportAccountRemap';
 
 describe('native import Account reference adapter', () => {
   const baseData = (): NativeImportAccountSources => ({

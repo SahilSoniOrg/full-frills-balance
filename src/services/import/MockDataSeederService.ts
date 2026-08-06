@@ -1,8 +1,19 @@
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { AccountType } from '@/src/data/models/Account';
+import {
+  AccountType,
+  TransactionType,
+  WorkplaceId,
+  AccountId,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+  BudgetId,
+  JournalDisplayType,
+} from '@/src/types/domain';
+
 import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import {
   BatchImportData,
   importRepository,
@@ -19,15 +30,6 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { preferences } from '@/src/utils/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
-import {
-  WorkplaceId,
-  AccountId,
-  JournalId,
-  PlannedPaymentId,
-  TransactionId,
-  BudgetId,
-  JournalDisplayType,
-} from '@/src/types/domain';
 import { ImportStats } from './types';
 
 export class MockDataSeederService {

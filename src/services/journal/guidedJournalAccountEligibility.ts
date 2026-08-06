@@ -1,7 +1,13 @@
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import {
+  TransactionType,
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  TabType,
+  AccountType,
+} from '@/src/types/domain';
+
 import { getAllowedAccountTypes, isBalanceSheetAccount } from '@/src/utils/accountCategory';
-import { AccountId, EMPTY_ACCOUNT_ID, TabType } from '@/src/types/domain';
 
 /** Postable accounts only — excludes parents that have child accounts. */
 export function filterToLeafAccounts(accounts: Account[]): Account[] {

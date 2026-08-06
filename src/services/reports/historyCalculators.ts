@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { IncomeVsExpense } from '@/src/services/reports/reportSnapshot';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { Money } from '@/src/utils/money';

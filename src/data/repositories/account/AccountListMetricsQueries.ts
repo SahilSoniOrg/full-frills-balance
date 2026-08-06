@@ -1,10 +1,10 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, isAccountSubtype, isAccountType } from '@/src/data/models/Account';
+import { isAccountSubtype, isAccountType } from '@/src/data/models/Account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import type { AccountListItemRaw } from '@/src/data/repositories/AccountRepository';
 import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId, AccountType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { supportsRawSql } from '@/src/data/database/DatabaseUtils';

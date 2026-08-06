@@ -1,16 +1,16 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { AccountFormBalanceClassifyDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormCoreApi } from '@/src/features/accounts/hooks/form/useAccountFormCore';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { AccountPersistenceSaveInput } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { buildAccountSavePayload } from '@/src/features/accounts/services/accountFormService';
 import { AccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
+import { AccountId, AccountType } from '@/src/types/domain';
 import {
   BalanceChangeCounterparty,
   isBalanceChangedBeyondEpsilon,
   needsBalanceChangeClassification,
 } from '@/src/services/accounts/balanceChangeClassification';
-import { AccountId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ValidationError } from '@/src/utils/errors';

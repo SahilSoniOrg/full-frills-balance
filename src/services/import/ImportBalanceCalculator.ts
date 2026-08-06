@@ -1,7 +1,8 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, isAccountType } from '@/src/data/models/Account';
+import { isAccountType } from '@/src/data/models/Account';
 import Currency from '@/src/data/models/Currency';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType } from '@/src/types/domain';
+
 import type {
   BatchImportData,
   ImportedTransaction,

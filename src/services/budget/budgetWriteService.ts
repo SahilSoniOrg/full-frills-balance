@@ -18,14 +18,10 @@ export class BudgetWriteService {
     data: BudgetInput,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertWritable(
-      workplaceId,
-      [...accountIds, ...(data.assetAccountIds ?? [])],
-      'Budget',
-    );
+    await assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget');
     const budget = await budgetRepository.create(workplaceId, data, accountIds);
 
-    // Track Analytics
+    analytics.logBudgetCreated(data.amount, data.currencyCode);
     analytics.trackFeatureUsage('budget', 'create', {
       amount: data.amount,
       currency: data.currencyCode,
@@ -45,11 +41,7 @@ export class BudgetWriteService {
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertWritable(
-      workplaceId,
-      [...accountIds, ...(data.assetAccountIds ?? [])],
-      'Budget',
-    );
+    await assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget');
     const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
 
     // Track Analytics

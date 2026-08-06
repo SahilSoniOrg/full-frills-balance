@@ -1,7 +1,14 @@
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import {
+  TransactionType,
+  JournalEntryLine,
+  WorkplaceId,
+  EMPTY_ACCOUNT_ID,
+  TransactionId,
+  AccountType,
+} from '@/src/types/domain';
+
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { JournalEntryLine, WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/domain';
 import { sanitizeAmount } from '@/src/utils/validation';
 import type { BulkJournalRow } from './useBulkJournalEditor';
 

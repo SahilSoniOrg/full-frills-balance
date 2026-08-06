@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountType } from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
+import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Journal from '@/src/data/models/Journal';
@@ -13,7 +12,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
@@ -25,7 +24,14 @@ import { FlowResolver } from './FlowResolver';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
-import { AccountSimulationSummary, Flow, SimulationContext, SimulationRunResult } from './types';
+import { toLiabilityMetadata } from './liabilityMetadata';
+import {
+  AccountSimulationSummary,
+  Flow,
+  LiabilityMetadata,
+  SimulationContext,
+  SimulationRunResult,
+} from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
 export type SimulationInput = {
@@ -462,14 +468,14 @@ export class CashFlowSimulationService {
   // --- Normalization Helpers ---
 
   private async fetchMetadata(lbs: { account: Account }[], workplaceId: WorkplaceId) {
-    const map = new Map<string, any>();
+    const map = new Map<string, LiabilityMetadata>();
     if (lbs.length === 0) return map;
 
     const ids = lbs.map(lb => lb.account.id);
     const metadataRecords = await accountRepository.findMetadataByAccountIds(workplaceId, ids);
 
     metadataRecords.forEach(meta => {
-      map.set(meta.accountId, meta);
+      map.set(meta.accountId, toLiabilityMetadata(meta));
     });
 
     return map;
@@ -477,7 +483,7 @@ export class CashFlowSimulationService {
 
   private async fetchStatementValues(
     lbs: { account: Account }[],
-    metadataMap: Map<string, AccountMetadata>,
+    metadataMap: Map<string, LiabilityMetadata>,
     time: TimeContext,
     toCurrency: string,
     rateMap: Map<string, number>,

@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
   journalObserveQueries,
@@ -11,7 +12,6 @@ import { insightService as patternService, Insight } from '@/src/services/insigh
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { of } from 'rxjs';
 import { take } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');

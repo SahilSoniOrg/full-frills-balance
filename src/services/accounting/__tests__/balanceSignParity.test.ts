@@ -1,5 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType } from '@/src/types/domain';
+
 import { effect, periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
 
 /**

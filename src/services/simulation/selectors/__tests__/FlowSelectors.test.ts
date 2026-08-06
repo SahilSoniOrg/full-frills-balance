@@ -2,8 +2,8 @@ import { selectIncomeEntries } from '../income';
 import { selectDebtEntries } from '../debt';
 import { selectCommittedEntries } from '../committed';
 import { Flow, FlowCategory, FlowSource } from '../../types';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 
 describe('Flow Selectors', () => {
   const resultCurrency = 'USD';

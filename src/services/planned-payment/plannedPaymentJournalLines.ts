@@ -1,6 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId } from '@/src/types/domain';
+import { TransactionType, AccountId } from '@/src/types/domain';
+
 import { Money } from '@/src/utils/money';
 
 export interface PlannedPaymentJournalLine {

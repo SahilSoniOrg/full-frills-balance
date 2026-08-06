@@ -1,5 +1,6 @@
 import Transaction from '@/src/data/models/Transaction';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { AppConfig } from '@/src/constants';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -8,7 +9,6 @@ import {
   observeAccountPeriodMetrics,
 } from '@/src/services/accounts/accountDerivedReads';
 import { buildAccountRollingBalanceSeries, RunningBalanceTx } from '@/src/services/projections';
-import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { DateRange } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';

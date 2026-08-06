@@ -1,12 +1,12 @@
 import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
-import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
+import { formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
-import { PlannedPaymentId } from '@/src/types/domain';
+import { PlannedPaymentId, AccountSubtype } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';

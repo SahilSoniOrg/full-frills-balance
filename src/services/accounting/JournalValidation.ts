@@ -1,5 +1,4 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType } from '@/src/types/domain';
 
 /**
  * Non-sign journal scaffolding helpers (distinct accounts, simple 2-line construction).

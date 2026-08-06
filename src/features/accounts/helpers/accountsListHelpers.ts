@@ -1,6 +1,6 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountBalance, AccountId } from '@/src/types/domain';
+import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { roundToPrecision } from '@/src/utils/money';
 import { AppConfig } from '@/src/constants/app-config';

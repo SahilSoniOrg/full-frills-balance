@@ -1,6 +1,6 @@
 import { Theme } from '@/src/constants/design-tokens';
-import { AccountType } from '@/src/data/models/Account';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountType, AccountId, PlainAccount } from '@/src/types/domain';
+
 import { transformAccountsToSections } from '../transformAccounts';
 
 describe('transformAccountsToSections', () => {

@@ -1,12 +1,11 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('Account Hierarchy Integration', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;

@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { AccountSubtype } from '@/src/data/models/Account';
+import { AccountSubtype } from '@/src/types/domain';
+
 import {
   AccountCommitment,
   AccountSimulationSummary,

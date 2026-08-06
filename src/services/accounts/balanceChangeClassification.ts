@@ -1,8 +1,7 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
+
 import { journalPresenter, SEMANTIC_TYPE_LABELS } from '@/src/services/accounting/journalPresenter';
 import { journalLegTypesForSignedAmount } from '@/src/services/accounts/accountRules';
-import { AccountId } from '@/src/types/domain';
 
 export type BalanceChangeCounterparty =
   { kind: 'adjustment' } | { kind: 'account'; accountId: AccountId };

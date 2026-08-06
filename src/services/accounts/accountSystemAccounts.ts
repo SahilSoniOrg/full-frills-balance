@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import { AccountSubtype, AccountType, getDefaultSubtypeForType } from '@/src/data/models/Account';
+import { getDefaultSubtypeForType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
 
 export async function findAccountByName(

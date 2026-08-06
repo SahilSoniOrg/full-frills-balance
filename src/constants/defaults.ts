@@ -1,5 +1,5 @@
 import { IconMap, IconName } from '@/src/components/core/AppIcon';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
 
 export interface AccountSuggestion {
   id: string;

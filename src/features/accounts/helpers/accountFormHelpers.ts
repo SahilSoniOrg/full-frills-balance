@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { AccountId, AccountType } from '@/src/types/domain';
 
 export function isCategoryAccountType(accountType: AccountType): boolean {
   return accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;

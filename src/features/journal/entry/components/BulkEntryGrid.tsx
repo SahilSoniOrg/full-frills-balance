@@ -6,7 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
 import { BulkEntryRow } from './BulkEntryRow';
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountPickerModal } from '@/src/features/accounts';
 import Account from '@/src/data/models/Account';
 import dayjs from 'dayjs';
 

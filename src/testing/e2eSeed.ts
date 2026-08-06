@@ -1,12 +1,12 @@
 import { IconName } from '@/src/components/core/AppIcon';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
+
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { onboardingService } from '@/src/features/onboarding/services/OnboardingService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { storage } from '@/src/utils/storage';
-import { WorkplaceId } from '@/src/types/domain';
 import { E2eSeedProfile } from './e2eConstants';
 
 const DEFAULT_SEED = {

@@ -1,11 +1,19 @@
+import {
+  AccountSubtype,
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalDisplayType,
+  WorkplaceId,
+} from '@/src/types/domain';
 /**
  * Account command lifecycle (integration).
  */
 
 import { database } from '@/src/data/database/Database';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+
 import { AuditAction } from '@/src/data/models/AuditLog';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
@@ -15,7 +23,6 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
 import { balanceService } from '@/src/services/BalanceService';
-import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 
 const WP = 'wp-acct-cmd' as WorkplaceId;
 

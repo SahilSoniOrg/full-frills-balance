@@ -1,6 +1,6 @@
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
-import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
+import { MultiAccountPickerModal } from '@/src/features/accounts';
 import { AppIcon, AppText, FilterChipButton } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportFilters } from '@/src/features/reports/hooks/useReportFilters';

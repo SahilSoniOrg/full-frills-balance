@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { PlainAccount, TabType } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { TransactionType, PlainAccount, TabType, AccountType } from '@/src/types/domain';
+
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
 export type AccountTypeColorKey = 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'text';

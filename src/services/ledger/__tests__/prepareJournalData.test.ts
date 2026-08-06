@@ -1,9 +1,9 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import { JournalStatus } from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/AccountRepository', () => ({
   accountRepository: {

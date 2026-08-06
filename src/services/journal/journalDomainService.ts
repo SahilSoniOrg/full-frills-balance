@@ -1,5 +1,6 @@
 import Journal from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { TransactionType, JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
+
 import {
   journalEnrichmentQueries,
   journalQueryRepository,
@@ -14,7 +15,6 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
 export interface SubmitJournalResult {

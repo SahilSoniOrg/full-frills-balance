@@ -1,10 +1,15 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { transactionService } from '@/src/services/transaction-ingestion';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionService', () => {
   let accountId: string;

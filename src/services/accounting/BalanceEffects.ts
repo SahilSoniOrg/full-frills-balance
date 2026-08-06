@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType } from '@/src/types/domain';
+
 import { roundToPrecision } from '@/src/utils/money';
 
 export type BalanceSign = -1 | 0 | 1;

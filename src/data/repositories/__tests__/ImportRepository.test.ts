@@ -1,9 +1,9 @@
 import { database } from '@/src/data/database/Database';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('ImportRepository', () => {
   beforeEach(async () => {

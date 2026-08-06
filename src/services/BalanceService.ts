@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance, AccountId, WorkplaceId, AccountType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
 import { Money } from '../utils/money';

@@ -1,9 +1,9 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId } from '@/src/types/domain';
+
 import {
   buildCounterAccountChips,
   counterAccountsFromJournalPeers,
 } from '@/src/services/accounting/displayTransactionCounterAccounts';
-import { AccountId } from '@/src/types/domain';
 
 describe('displayTransactionCounterAccounts', () => {
   const assetId = 'asset-a' as AccountId;

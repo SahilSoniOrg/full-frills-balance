@@ -1,7 +1,8 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
 import React, { useMemo } from 'react';

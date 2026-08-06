@@ -1,4 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { analytics } from '@/src/services/analytics-service';
 import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
 import { logger } from '@/src/utils/logger';

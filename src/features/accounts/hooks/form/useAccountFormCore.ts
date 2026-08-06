@@ -1,9 +1,9 @@
 import { IconName } from '@/src/components/core';
-import { AccountSubtype, AccountType, getAccountSubtypesForType } from '@/src/data/models/Account';
+import { getAccountSubtypesForType } from '@/src/data/models/Account';
 import { AccountFormCoreDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 
 export interface AccountFormCoreApi {

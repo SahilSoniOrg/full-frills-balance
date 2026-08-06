@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -12,7 +13,6 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
-import { WorkplaceId } from '@/src/types/domain';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { BehaviorSubject, of } from 'rxjs';
 

@@ -1,7 +1,7 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import Account, { AccountType } from '@/src/data/models/Account';
-import { PlainAccount } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
+import { PlainAccount, AccountType } from '@/src/types/domain';
 import { toAccountType } from '@/src/utils/accountCategory';
 
 /**

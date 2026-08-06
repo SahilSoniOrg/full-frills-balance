@@ -1,9 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountSubtype } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import dayjs from 'dayjs';
 import { Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay, getLiquidImpact, isCommitmentFlow } from './utils/FlowPolicy';
 import { assertGlobalIntegrity } from './utils/SimulationIntegrity';
+import { AccountSubtype } from '@/src/types/domain';
 
 export class SimulationReportGenerator {
   static generate(

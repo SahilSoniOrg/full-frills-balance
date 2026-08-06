@@ -1,5 +1,5 @@
 import { Animation, AppConfig } from '@/src/constants';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -11,12 +11,12 @@ import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceActiveTransactionCount,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { preferences } from '@/src/utils/preferences';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';

@@ -1,4 +1,4 @@
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -6,6 +6,13 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import {
+  AccountId,
+  AccountSubtype,
+  AccountType,
+  SerializedAccountMetadataPayload,
+  WorkplaceId,
+} from '@/src/types/domain';
 import {
   assertParentHasNoTransactions,
   assertParentMatchesChildType,
@@ -16,7 +23,6 @@ import {
 import { getOpeningBalancesAccountId } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, SerializedAccountMetadataPayload, WorkplaceId } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
 import { roundToPrecision } from '@/src/utils/money';
 

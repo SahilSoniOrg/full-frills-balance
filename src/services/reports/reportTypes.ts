@@ -1,6 +1,4 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { AccountId } from '@/src/types/domain';
+import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
 
 export interface ConvertedReportTransaction {
   accountId: AccountId;

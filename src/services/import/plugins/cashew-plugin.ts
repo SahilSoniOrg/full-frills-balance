@@ -1,16 +1,18 @@
 import { IconName } from '@/src/types/domainIcons';
 import { generator } from '@/src/data/database/idGenerator';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { BatchImportData } from '@/src/data/repositories/ImportRepository';
-import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
-import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
+  AccountSubtype,
+  AccountType,
   AccountId,
   BudgetId,
   JournalDisplayType,
   JournalId,
   TransactionId,
 } from '@/src/types/domain';
+
+import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
+import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
 import * as SQLite from 'expo-sqlite';

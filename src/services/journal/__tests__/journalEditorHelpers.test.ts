@@ -1,5 +1,11 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import {
+  AccountType,
+  TransactionType,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TransactionId,
+} from '@/src/types/domain';
+
 import {
   inferSimpleTabTypeFromTwoLegs,
   isJournalEditorEntryReady,
@@ -8,7 +14,6 @@ import {
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
-import { EMPTY_ACCOUNT_ID, JournalEntryLine, TransactionId } from '@/src/types/domain';
 
 describe('journalEditorHelpers', () => {
   describe('inferSimpleTabTypeFromTwoLegs', () => {

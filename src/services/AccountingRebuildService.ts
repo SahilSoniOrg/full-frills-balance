@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -11,8 +11,8 @@ import { foldBalances } from '@/src/services/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
+import { TransactionType, AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { storage } from '@/src/utils/storage';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;

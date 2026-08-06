@@ -1,12 +1,11 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');

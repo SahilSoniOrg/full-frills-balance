@@ -2,61 +2,9 @@ import { IconName } from '@/src/types/domainIcons';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
-
-export enum AccountType {
-  ASSET = 'ASSET',
-  LIABILITY = 'LIABILITY',
-  EQUITY = 'EQUITY',
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE',
-}
-
-export enum AccountSubtype {
-  CASH = 'CASH',
-  WALLET = 'WALLET',
-  BANK_CHECKING = 'BANK_CHECKING',
-  BANK_SAVINGS = 'BANK_SAVINGS',
-  FIXED_DEPOSIT = 'FIXED_DEPOSIT',
-  MONEY_MARKET = 'MONEY_MARKET',
-  BROKERAGE = 'BROKERAGE',
-  RETIREMENT = 'RETIREMENT',
-  EMERGENCY_FUND = 'EMERGENCY_FUND',
-  CREDIT_CARD = 'CREDIT_CARD',
-  LINE_OF_CREDIT = 'LINE_OF_CREDIT',
-  OVERDRAFT = 'OVERDRAFT',
-  MORTGAGE = 'MORTGAGE',
-  STUDENT_LOAN = 'STUDENT_LOAN',
-  AUTO_LOAN = 'AUTO_LOAN',
-  PERSONAL_LOAN = 'PERSONAL_LOAN',
-  LOAN = 'LOAN',
-  INVESTMENT = 'INVESTMENT',
-  RECEIVABLE = 'RECEIVABLE',
-  TAX_RECEIVABLE = 'TAX_RECEIVABLE',
-  PAYABLE = 'PAYABLE',
-  TAX_PAYABLE = 'TAX_PAYABLE',
-  OPENING_BALANCE = 'OPENING_BALANCE',
-  NET_WORTH_ADJUSTMENT = 'NET_WORTH_ADJUSTMENT',
-  TRANSFER_CLEARING = 'TRANSFER_CLEARING',
-  SALARY = 'SALARY',
-  BUSINESS_INCOME = 'BUSINESS_INCOME',
-  INTEREST_INCOME = 'INTEREST_INCOME',
-  DIVIDEND_INCOME = 'DIVIDEND_INCOME',
-  RENT_INCOME = 'RENT_INCOME',
-  FOOD = 'FOOD',
-  HOUSING = 'HOUSING',
-  TRANSPORT = 'TRANSPORT',
-  UTILITIES = 'UTILITIES',
-  HEALTHCARE = 'HEALTHCARE',
-  EDUCATION = 'EDUCATION',
-  ENTERTAINMENT = 'ENTERTAINMENT',
-  SHOPPING = 'SHOPPING',
-  TAX = 'TAX',
-  TRANSFER = 'TRANSFER',
-  OTHER = 'OTHER',
-}
 
 export const ACCOUNT_SUBTYPES_BY_TYPE: Record<AccountType, readonly AccountSubtype[]> = {
   [AccountType.ASSET]: [

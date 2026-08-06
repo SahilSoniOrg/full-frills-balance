@@ -1,7 +1,14 @@
-import Account, { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account from '@/src/data/models/Account';
+import {
+  TransactionType,
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TransactionId,
+  AccountType,
+} from '@/src/types/domain';
+
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
-import { AccountId, EMPTY_ACCOUNT_ID, JournalEntryLine, TransactionId } from '@/src/types/domain';
 
 export const SPLIT_SOURCE_LINE_ID = 'split-source' as TransactionId;
 

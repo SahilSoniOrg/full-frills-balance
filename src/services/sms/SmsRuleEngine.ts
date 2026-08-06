@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+
 import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
@@ -22,7 +23,6 @@ import {
 } from '@/src/services/ledger/RuleMatcher';
 import { dispositionForRuleAccounts } from '@/src/services/sms/ruleActionsAccountIds';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 

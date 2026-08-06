@@ -1,6 +1,7 @@
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { Spacing } from '@/src/constants';
-import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType } from '@/src/types/domain';
+
 import { Separator } from '@/src/design-system';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';

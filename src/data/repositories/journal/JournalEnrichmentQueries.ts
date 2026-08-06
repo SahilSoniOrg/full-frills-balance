@@ -1,9 +1,15 @@
 import { database } from '@/src/data/database/Database';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalId,
+  WorkplaceId,
+  AccountType,
+  TransactionType,
+} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 

@@ -1,8 +1,7 @@
-import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
+import { CreateAccountIntent, useAccounts } from '@/src/features/accounts';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
-import { useAccounts } from '@/src/features/accounts';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';

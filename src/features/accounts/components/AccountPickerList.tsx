@@ -1,9 +1,9 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import {
   AccountSection,
   getAccountAccentColor,
@@ -18,7 +18,6 @@ export type CreateAccountIntent = {
   type?: AccountType;
 };
 
-// === MEMOIZED ROW COMPONENT ===
 const AccountPickerRow = React.memo(
   ({
     item,
@@ -66,7 +65,6 @@ const AccountPickerRow = React.memo(
 
 AccountPickerRow.displayName = 'AccountPickerRow';
 
-// Discriminated union for prop safety
 type AccountPickerListProps = {
   accounts: (Account | PlainAccount)[];
   selectedIds: Set<AccountId>;
@@ -95,9 +93,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     isMultiple,
     excludeParentAccounts = false,
   } = props;
-
   const { theme } = useTheme();
-
   const {
     searchQuery,
     setSearchQuery,
@@ -108,29 +104,20 @@ export function AccountPickerList(props: AccountPickerListProps) {
     totalCount,
     filteredCount,
   } = useAccountPickerList({ accounts, excludeParentAccounts });
-
-  // Memoize extraData to prevent SectionList identity churn
   const extraData = useMemo(
-    () => ({
-      selectedIds,
-      collapsedSections,
-      isSearchMode,
-    }),
+    () => ({ selectedIds, collapsedSections, isSearchMode }),
     [selectedIds, collapsedSections, isSearchMode],
   );
-
   const handleToggleSelection = useCallback(
     (id: AccountId) => {
-      if (isMultiple && onToggle) {
-        onToggle(id);
-      } else if (onSelect) {
+      if (isMultiple && onToggle) onToggle(id);
+      else if (onSelect) {
         onSelect(id);
         Keyboard.dismiss();
       }
     },
     [isMultiple, onToggle, onSelect],
   );
-
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
@@ -156,29 +143,23 @@ export function AccountPickerList(props: AccountPickerListProps) {
     ),
     [isSearchMode, searchQuery, onCreateRequest, onClose, theme],
   );
-
   const renderSectionHeader = useCallback(
     ({ section }: { section: any }) => {
-      const {
-        title: sectionTitle,
-        data,
-        type: sectionType,
-        key: sectionKey,
-      } = section as AccountSection;
-      const isCollapsed = collapsedSections.has(sectionKey) && !isSearchMode;
-      const color = getSectionColor(sectionTitle, theme);
-
+      const { title, data, type, key } = section as AccountSection;
+      const isCollapsed = collapsedSections.has(key) && !isSearchMode;
       return (
         <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
           <TouchableOpacity
             activeOpacity={Opacity.medium}
-            onPress={() => toggleSection(sectionKey)}
+            onPress={() => toggleSection(key)}
             style={styles.sectionToggle}
           >
             <View style={styles.sectionTitleRow}>
-              <View style={[styles.sectionDot, { backgroundColor: color }]} />
+              <View
+                style={[styles.sectionDot, { backgroundColor: getSectionColor(title, theme) }]}
+              />
               <AppText variant="subheading" weight="bold" color="secondary">
-                {sectionTitle}
+                {title}
               </AppText>
               <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
                 <AppText variant="caption" weight="bold" color="tertiary">
@@ -186,19 +167,16 @@ export function AccountPickerList(props: AccountPickerListProps) {
                 </AppText>
               </View>
             </View>
-
             <View style={styles.sectionActions}>
               {onCreateRequest && !isSearchMode && (
                 <TouchableOpacity
-                  onPress={e => {
-                    e.stopPropagation();
+                  onPress={event => {
+                    event.stopPropagation();
                     onClose();
-                    requestAnimationFrame(() => {
-                      onCreateRequest({ suggestedName: '', type: sectionType });
-                    });
+                    requestAnimationFrame(() => onCreateRequest({ suggestedName: '', type }));
                   }}
                   style={styles.actionButton}
-                  accessibilityLabel={`Create ${sectionTitle} account`}
+                  accessibilityLabel={`Create ${title} account`}
                 >
                   <AppIcon name="plus" size={Size.iconSm} color={theme.primary} />
                 </TouchableOpacity>
@@ -217,19 +195,14 @@ export function AccountPickerList(props: AccountPickerListProps) {
     },
     [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
   );
-
   const renderItem = useCallback(
     ({ item, section }: { item: Account | PlainAccount; section: any }) => {
-      const { key: sectionKey } = section as AccountSection;
-      const isCollapsed = collapsedSections.has(sectionKey) && !isSearchMode;
-      if (isCollapsed) return null;
-
-      const isSelected = selectedIds.has(item.id);
-
+      const { key } = section as AccountSection;
+      if (collapsedSections.has(key) && !isSearchMode) return null;
       return (
         <AccountPickerRow
           item={item}
-          isSelected={isSelected}
+          isSelected={selectedIds.has(item.id)}
           isMultiple={isMultiple}
           onPress={() => handleToggleSelection(item.id)}
         />
@@ -237,7 +210,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
     },
     [collapsedSections, isSearchMode, isMultiple, selectedIds, handleToggleSelection],
   );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -260,20 +232,18 @@ export function AccountPickerList(props: AccountPickerListProps) {
           </View>
         )}
       </View>
-
       <View style={styles.listWrapper}>
         <SectionList
           sections={sections}
           keyExtractor={item => item.id}
           extraData={extraData}
-          stickySectionHeadersEnabled={true}
+          stickySectionHeadersEnabled
           ListEmptyComponent={renderEmpty}
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
           keyboardShouldPersistTaps="always"
         />
       </View>
-
       {isMultiple && onApply && (
         <View
           style={[
@@ -297,42 +267,14 @@ export function AccountPickerList(props: AccountPickerListProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    display: 'flex',
-  },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  countIndicator: {
-    marginTop: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-  },
-  listWrapper: {
-    flex: 1,
-    minHeight: 400,
-  },
-  sectionHeader: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  sectionToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  sectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  container: { flexGrow: 1, display: 'flex' },
+  header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  countIndicator: { marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
+  listWrapper: { flex: 1, minHeight: 400 },
+  sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
+  sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  sectionDot: { width: 8, height: 8, borderRadius: 4 },
   countBadge: {
     paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
@@ -340,31 +282,15 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: 'center',
   },
-  sectionActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  actionButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.xs,
-  },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  actionButton: { padding: Spacing.xs, marginRight: Spacing.xs },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
     borderTopWidth: 1,
   },
-  emptyContainer: {
-    padding: Spacing.xxxxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    marginTop: Spacing.lg,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    marginTop: Spacing.xl,
-  },
+  emptyContainer: { padding: Spacing.xxxxl, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { marginTop: Spacing.lg, textAlign: 'center' },
+  emptyButton: { marginTop: Spacing.xl },
 });

@@ -1,13 +1,13 @@
 import { AppConfig } from '@/src/constants';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { WorkplaceId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
 import { shareReplay, switchMap, take } from 'rxjs/operators';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceJournalMeta,

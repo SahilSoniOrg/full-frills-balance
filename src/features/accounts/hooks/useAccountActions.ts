@@ -1,8 +1,9 @@
+import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
 /**
  * Account mutation hooks — thin wrappers over named command modules (ADR-0008).
  */
 import { IconName } from '@/src/components/core';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import {
   deleteAccount as deleteAccountCommand,
   recoverAccount as recoverAccountCommand,
@@ -16,7 +17,6 @@ import {
   updateAccountOrder as updateAccountOrderCommand,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
 /** CRUD + management actions. Prefer importing this over the fat `useAccounts` module. */

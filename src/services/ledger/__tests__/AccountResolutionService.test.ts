@@ -1,8 +1,7 @@
 import { accountResolutionService } from '../AccountResolutionService';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
 
 describe('AccountResolutionService', () => {
   const workplaceId = 'test-workplace-id' as WorkplaceId;

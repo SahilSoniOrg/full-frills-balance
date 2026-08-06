@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountPickerModal } from '@/src/features/accounts';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
@@ -11,7 +11,8 @@ import { AppIcon, AppText, IconName, isValidIconName, IvyIcon } from '@/src/comp
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/domain';
+
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { BalanceChangeClassifySheet } from '@/src/features/accounts/components/BalanceChangeClassifySheet';

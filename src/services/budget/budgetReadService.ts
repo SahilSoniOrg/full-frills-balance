@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountType, AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
+
 import Budget from '@/src/data/models/Budget';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -7,7 +8,6 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
-import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';

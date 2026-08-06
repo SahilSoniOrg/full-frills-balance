@@ -1,13 +1,14 @@
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import {
+  AccountType,
+  TransactionType,
   AccountId,
   EMPTY_ACCOUNT_ID,
   JournalEntryLine,
   TabType,
   TransactionId,
 } from '@/src/types/domain';
+
+import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 
 /** Enriched journal leg as returned for edit-mode load (transaction service / repository). */
 export interface JournalEditorEnrichedLine {
