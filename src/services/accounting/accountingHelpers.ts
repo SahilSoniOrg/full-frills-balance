@@ -6,6 +6,8 @@ import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { effect } from '@/src/services/accounting/BalanceEffects';
+import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
+import { AccountId } from '@/src/types/domain';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
 
@@ -80,39 +82,41 @@ export function calculateIncomeVsExpenseSummary(
   };
 }
 
-export interface CategoryBreakdownItem {
-  category: string;
-  amount: number;
-  percentage: number;
-}
-
 export function calculateCategoryBreakdownItems(
-  items: { category: string; amount: number }[],
+  items: { category: string; amount: number; accountId?: AccountId }[],
   precision: number = AppConfig.constants.precision,
-): CategoryBreakdownItem[] {
-  const aggregatedMap = new Map<string, number>();
+): CategoryBreakdown[] {
+  const aggregatedMap = new Map<string, { amount: number; accountIds: Set<AccountId> }>();
   let grandTotal = 0;
 
   for (const item of items) {
-    const current = aggregatedMap.get(item.category) || 0;
-    aggregatedMap.set(item.category, current + item.amount);
+    const current = aggregatedMap.get(item.category) ?? {
+      amount: 0,
+      accountIds: new Set<AccountId>(),
+    };
+    current.amount += item.amount;
+    if (item.accountId) {
+      current.accountIds.add(item.accountId);
+    }
+    aggregatedMap.set(item.category, current);
   }
 
-  for (const amount of aggregatedMap.values()) {
+  for (const { amount } of aggregatedMap.values()) {
     if (amount > 0) {
       grandTotal += amount;
     }
   }
 
   return Array.from(aggregatedMap.entries())
-    .filter(([_, amount]) => amount > 0)
-    .map(([category, amount]) => {
+    .filter(([_, { amount }]) => amount > 0)
+    .map(([category, { amount, accountIds }]) => {
       const roundedAmount = roundToPrecision(amount, precision);
       const percentage = grandTotal > 0 ? roundToPrecision((amount / grandTotal) * 100, 2) : 0;
       return {
         category,
         amount: roundedAmount,
         percentage,
+        accountIds: Array.from(accountIds),
       };
     })
     .sort((a, b) => b.amount - a.amount);

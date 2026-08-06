@@ -134,7 +134,6 @@ export function useReportsViewModel(): ReportsViewModel {
     spendingHeatmap: chartData.spendingHeatmap,
     calendarHeatmap: chartData.calendarHeatmap,
     onLegendRowPress: actions.onLegendRowPress,
-    onCategoryPress: actions.onCategoryPress,
     targetCurrency,
   };
 

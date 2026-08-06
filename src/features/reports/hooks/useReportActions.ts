@@ -27,26 +27,14 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
   }, [selectedPeriod, onViewTransactions]);
 
   const onLegendRowPress = useCallback(
-    (accountId: AccountId) => {
+    (accountIds: AccountId[]) => {
+      if (accountIds.length === 0) return;
+
       const start = selectedPeriod?.start ?? dateRange.startDate;
       const end = selectedPeriod?.end ?? dateRange.endDate;
 
       AppNavigation.toJournalSearch({
-        accountIds: [accountId],
-        startDate: start,
-        endDate: end,
-      });
-    },
-    [dateRange.endDate, dateRange.startDate, selectedPeriod],
-  );
-
-  const onCategoryPress = useCallback(
-    (category: string) => {
-      const start = selectedPeriod?.start ?? dateRange.startDate;
-      const end = selectedPeriod?.end ?? dateRange.endDate;
-
-      AppNavigation.toJournalSearch({
-        searchQuery: category,
+        accountIds,
         startDate: start,
         endDate: end,
       });
@@ -58,6 +46,5 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
     onViewTransactions,
     onViewSelectedTransactions,
     onLegendRowPress,
-    onCategoryPress,
   };
 }

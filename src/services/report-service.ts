@@ -24,7 +24,7 @@ import type {
 import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
 import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId, AccountId } from '@/src/types/domain';
 import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
@@ -220,9 +220,11 @@ export class ReportService {
         const category =
           accountSubtypeMap.get(d.accountId) || AppConfig.strings.reports.categoryOther;
         const val = d.delta ?? d.amount ?? 0;
-        return { category, amount: val };
+        return { category, amount: val, accountId: d.accountId };
       })
-      .filter((item): item is { category: string; amount: number } => item !== null);
+      .filter((item): item is { category: string; amount: number; accountId: AccountId } => {
+        return item !== null;
+      });
 
     return calculateCategoryBreakdownItems(items);
   }

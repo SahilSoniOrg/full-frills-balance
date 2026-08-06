@@ -5,27 +5,20 @@ import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
+import { ReportLegendRow } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-interface LegendRow {
-  id: AccountId;
-  color: string;
-  accountName: string;
-  percentage: number;
-  amount: number;
-}
-
 interface BreakdownDonutCardProps {
   title?: string;
   donutData: { value: number; color: string; label: string }[];
-  legendRows: LegendRow[];
+  legendRows: ReportLegendRow[];
   totalCount: number;
   showExpansionButton: boolean;
   expanded: boolean;
   onToggleExpansion: () => void;
-  onLegendRowPress: (accountId: AccountId) => void;
+  onLegendRowPress: (accountIds: AccountId[]) => void;
   currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
@@ -56,7 +49,7 @@ export function BreakdownDonutCard({
           <TouchableOpacity
             key={row.id}
             style={styles.legendItem}
-            onPress={() => onLegendRowPress(row.id)}
+            onPress={() => onLegendRowPress(row.accountIds)}
             activeOpacity={REPORT_CHART_LAYOUT.donutLegendRowActiveOpacity}
           >
             <ColoredDot color={resolveThemeColor(theme, row.color) || theme.border} />

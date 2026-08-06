@@ -55,7 +55,7 @@ describe('useReportsViewModel', () => {
     ],
     expenses: [],
     expenseCategories: [],
-    incomeCategories: [{ category: 'Salary', amount: 1000, percentage: 100 }],
+    incomeCategories: [{ category: 'Salary', amount: 1000, percentage: 100, accountIds: ['a1'] }],
     incomeBreakdown: [
       {
         accountId: 'a1' as AccountId,
@@ -154,11 +154,11 @@ describe('useReportsViewModel', () => {
     expect(result.current.spending.expandedExpenses).toBe(false);
   });
 
-  it('should navigate to account details with selected reports date range on legend row press', () => {
+  it('should navigate to journal search with account ids on legend row press', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
     act(() => {
-      result.current.spending.onLegendRowPress('account-123' as AccountId);
+      result.current.spending.onLegendRowPress(['account-123' as AccountId]);
     });
 
     expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
@@ -166,5 +166,52 @@ describe('useReportsViewModel', () => {
       startDate: 1704067200000,
       endDate: 1706745599999,
     });
+  });
+
+  it('should expose category account ids on spending category legend rows', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      expenseCategories: [
+        { category: 'FOOD', amount: 500, percentage: 100, accountIds: ['food-1', 'food-2'] },
+      ],
+    });
+
+    const { result } = renderHook(() => useReportsViewModel());
+
+    expect(result.current.spending.expenseCategoryViewState.legendRows[0]?.accountIds).toEqual([
+      'food-1',
+      'food-2',
+    ]);
+  });
+
+  it('should navigate to journal search with category account ids on category legend press', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      expenseCategories: [
+        { category: 'FOOD', amount: 500, percentage: 100, accountIds: ['food-1', 'food-2'] },
+      ],
+    });
+
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => {
+      result.current.spending.onLegendRowPress(['food-1', 'food-2'] as AccountId[]);
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['food-1', 'food-2'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+    });
+  });
+
+  it('should not navigate to journal search when legend row has no account ids', () => {
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => {
+      result.current.spending.onLegendRowPress([]);
+    });
+
+    expect(AppNavigation.toJournalSearch).not.toHaveBeenCalled();
   });
 });

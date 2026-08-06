@@ -5,6 +5,7 @@ import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
+import { AccountId } from '@/src/types/domain';
 
 describe('accountingHelpers aggregates', () => {
   describe('calculateAccountPeriodFlows', () => {
@@ -58,10 +59,10 @@ describe('accountingHelpers aggregates', () => {
   describe('calculateCategoryBreakdownItems', () => {
     it('aggregates amounts, calculates percentages, and sorts by highest amount', () => {
       const raw = [
-        { category: 'Groceries', amount: 300 },
-        { category: 'Rent', amount: 1200 },
-        { category: 'Groceries', amount: 100 },
-        { category: 'Entertainment', amount: 0 },
+        { category: 'Groceries', amount: 300, accountId: 'acc-1' as AccountId },
+        { category: 'Rent', amount: 1200, accountId: 'acc-2' as AccountId },
+        { category: 'Groceries', amount: 100, accountId: 'acc-3' as AccountId },
+        { category: 'Entertainment', amount: 0, accountId: 'acc-4' as AccountId },
       ];
       const breakdown = calculateCategoryBreakdownItems(raw);
       expect(breakdown).toHaveLength(2);
@@ -69,11 +70,13 @@ describe('accountingHelpers aggregates', () => {
         category: 'Rent',
         amount: 1200,
         percentage: 75,
+        accountIds: ['acc-2'],
       });
       expect(breakdown[1]).toEqual({
         category: 'Groceries',
         amount: 400,
         percentage: 25,
+        accountIds: ['acc-1', 'acc-3'],
       });
     });
 

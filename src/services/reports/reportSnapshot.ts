@@ -33,6 +33,7 @@ export interface CategoryBreakdown {
   category: string; // AccountSubtype
   amount: number;
   percentage: number;
+  accountIds: AccountId[];
   color?: string;
 }
 

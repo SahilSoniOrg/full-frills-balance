@@ -6,7 +6,8 @@ export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
 export type ReportDonutDatum = { value: number; color: string; label: string };
 
 export type ReportLegendRow = {
-  id: AccountId;
+  id: string;
+  accountIds: AccountId[];
   color: string;
   accountName: string;
   percentage: number;
@@ -78,8 +79,7 @@ export interface ReportSpendingTabVm {
   toggleIncomeCategoryExpansion: () => void;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
-  onLegendRowPress: (accountId: AccountId) => void;
-  onCategoryPress: (category: string) => void;
+  onLegendRowPress: (accountIds: AccountId[]) => void;
   targetCurrency: string;
 }
 

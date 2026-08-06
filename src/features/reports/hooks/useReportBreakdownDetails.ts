@@ -1,5 +1,9 @@
 import { Theme } from '@/src/constants/design-tokens';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
+import {
+  mapAccountBreakdownToLegendEntry,
+  mapCategoryBreakdownToLegendEntries,
+} from '@/src/features/reports/hooks/breakdownLegendEntries';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
@@ -8,7 +12,7 @@ import {
   ExpenseCategory,
   IncomeVsExpense,
 } from '@/src/services/reports/reportSnapshot';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/domain';
 import { useMemo, useState } from 'react';
 import { of } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -97,35 +101,33 @@ export function useReportBreakdownDetails({
   );
 
   const expenseViewState = useBreakdownViewState({
-    globalBreakdown: globalExpenses,
-    selectedBreakdown: selectedBreakdown.expenses.length > 0 ? selectedBreakdown.expenses : null,
+    globalBreakdown: globalExpenses.map(mapAccountBreakdownToLegendEntry),
+    selectedBreakdown:
+      selectedBreakdown.expenses.length > 0
+        ? selectedBreakdown.expenses.map(mapAccountBreakdownToLegendEntry)
+        : null,
     expanded: expandedExpenses,
     fallbackColor: theme.error,
   });
   const incomeViewState = useBreakdownViewState({
-    globalBreakdown: globalIncomeBreakdown,
-    selectedBreakdown: selectedBreakdown.income.length > 0 ? selectedBreakdown.income : null,
+    globalBreakdown: globalIncomeBreakdown.map(mapAccountBreakdownToLegendEntry),
+    selectedBreakdown:
+      selectedBreakdown.income.length > 0
+        ? selectedBreakdown.income.map(mapAccountBreakdownToLegendEntry)
+        : null,
     expanded: expandedIncome,
     fallbackColor: theme.success,
   });
 
   const expenseCategoryViewState = useBreakdownViewState({
-    globalBreakdown: expenseCategories.map(c => ({
-      ...c,
-      accountId: c.category as AccountId,
-      accountName: c.category,
-    })),
+    globalBreakdown: mapCategoryBreakdownToLegendEntries(expenseCategories),
     selectedBreakdown: null,
     expanded: expandedExpenseCategories,
     fallbackColor: theme.error,
   });
 
   const incomeCategoryViewState = useBreakdownViewState({
-    globalBreakdown: incomeCategories.map(c => ({
-      ...c,
-      accountId: c.category as AccountId,
-      accountName: c.category,
-    })),
+    globalBreakdown: mapCategoryBreakdownToLegendEntries(incomeCategories),
     selectedBreakdown: null,
     expanded: expandedIncomeCategories,
     fallbackColor: theme.success,
