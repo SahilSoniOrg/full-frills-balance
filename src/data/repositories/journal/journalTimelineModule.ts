@@ -5,6 +5,7 @@ import { Q } from '@nozbe/watermelondb';
 /**
  * Narrow timeline/read intent: list, by-id, observation, and enrichment queries.
  * Prefer this over `JournalRepository` for journal reads used in timelines and UI lists.
+ * Enriched list observe lives in `journalTimelineReadModel`.
  */
 export { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 export { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';

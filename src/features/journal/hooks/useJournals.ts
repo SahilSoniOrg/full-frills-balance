@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
+import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';

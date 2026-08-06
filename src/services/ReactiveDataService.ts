@@ -9,7 +9,7 @@ import {
   clearReactiveWorkplaceAccountsAndJournalMetaCache,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { getAccountDescendants } from '@/src/services/accounts/accountDescendants';
-import { observeEnrichedJournals } from '@/src/services/journal/journalEnrichedObserver';
+import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { WealthSummary } from '@/src/services/wealth-service';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
