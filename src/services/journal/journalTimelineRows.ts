@@ -49,3 +49,12 @@ export function journalsToTimelineRows(
     selectionId: journal.id,
   }));
 }
+
+/** Unique enriched journals referenced by timeline rows (journal list order). */
+export function journalsFromTimelineRows(rows: JournalTimelineRow[]): EnrichedJournal[] {
+  const byId = new Map<JournalId, EnrichedJournal>();
+  for (const row of rows) {
+    byId.set(row.journal.id, row.journal);
+  }
+  return [...byId.values()];
+}

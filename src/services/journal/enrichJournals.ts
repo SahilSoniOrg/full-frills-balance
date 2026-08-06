@@ -1,24 +1,22 @@
 import Journal from '@/src/data/models/Journal';
-import { AccountId, AccountType, EnrichedJournal, TransactionType } from '@/src/types/domain';
+import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { AccountType, EnrichedJournal, TransactionType } from '@/src/types/domain';
 
-/** Raw enrichment row from `journalEnrichmentQueries.getEnrichmentDataRaw`. */
-export type JournalEnrichmentRow = {
-  journal_id: string;
-  account_id: string;
-  amount: number;
-  transaction_type: TransactionType;
-  account_name: string;
-  account_type: AccountType;
-  account_icon?: string;
-};
+function sortEnrichmentRows(rows: JournalEnrichmentRow[]): JournalEnrichmentRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.journal_id !== b.journal_id) return a.journal_id < b.journal_id ? -1 : 1;
+    return a.account_id < b.account_id ? -1 : a.account_id > b.account_id ? 1 : 0;
+  });
+}
 
 /** Map enrichment SQL rows by journal id for a single enrichment pass. */
 export function groupEnrichmentRowsByJournalId(
   rows: JournalEnrichmentRow[],
 ): Map<string, JournalEnrichmentRow[]> {
+  const sorted = sortEnrichmentRows(rows);
   const byJournal = new Map<string, JournalEnrichmentRow[]>();
-  for (const row of rows) {
+  for (const row of sorted) {
     const list = byJournal.get(row.journal_id) || [];
     list.push(row);
     byJournal.set(row.journal_id, list);
@@ -53,7 +51,7 @@ export function enrichJournals(
     }));
 
     const txsForPresenter = rows.map(r => ({
-      accountId: r.account_id as AccountId,
+      accountId: r.account_id,
       amount: r.amount,
       transactionType: r.transaction_type,
     }));
@@ -87,46 +85,41 @@ export function enrichJournals(
   });
 }
 
-/** Equality for reactive journal list emissions (includes per-leg amounts). */
+/** Canonical fingerprint for reactive list equality (stable account leg order). */
+export function journalEnrichmentFingerprint(journal: EnrichedJournal): string {
+  return JSON.stringify({
+    id: journal.id,
+    status: journal.status,
+    description: journal.description ?? '',
+    notes: journal.notes ?? '',
+    totalAmount: journal.totalAmount,
+    transactionCount: journal.transactionCount,
+    journalDate: journal.journalDate,
+    currencyCode: journal.currencyCode,
+    displayType: journal.displayType,
+    semanticType: journal.semanticType ?? '',
+    semanticLabel: journal.semanticLabel ?? '',
+    plannedPaymentId: journal.plannedPaymentId ?? '',
+    accounts: journal.accounts.map(a => ({
+      id: a.id,
+      role: a.role,
+      amount: a.amount,
+      name: a.name,
+      accountType: a.accountType,
+      icon: a.icon ?? '',
+    })),
+  });
+}
+
+/** Equality for reactive journal list emissions. */
 export function enrichedJournalsAreEqual(
   prev: EnrichedJournal[],
   curr: EnrichedJournal[],
 ): boolean {
   if (prev.length !== curr.length) return false;
   for (let i = 0; i < prev.length; i++) {
-    const p = prev[i];
-    const c = curr[i];
-    if (
-      p.id !== c.id ||
-      p.status !== c.status ||
-      p.description !== c.description ||
-      p.notes !== c.notes ||
-      p.totalAmount !== c.totalAmount ||
-      p.transactionCount !== c.transactionCount ||
-      p.journalDate !== c.journalDate ||
-      p.currencyCode !== c.currencyCode ||
-      p.displayType !== c.displayType ||
-      p.semanticType !== c.semanticType ||
-      p.semanticLabel !== c.semanticLabel ||
-      p.plannedPaymentId !== c.plannedPaymentId ||
-      p.accounts.length !== c.accounts.length
-    ) {
+    if (journalEnrichmentFingerprint(prev[i]) !== journalEnrichmentFingerprint(curr[i])) {
       return false;
-    }
-
-    for (let j = 0; j < p.accounts.length; j++) {
-      const pa = p.accounts[j];
-      const ca = c.accounts[j];
-      if (
-        pa.id !== ca.id ||
-        pa.name !== ca.name ||
-        pa.accountType !== ca.accountType ||
-        pa.role !== ca.role ||
-        pa.icon !== ca.icon ||
-        pa.amount !== ca.amount
-      ) {
-        return false;
-      }
     }
   }
   return true;

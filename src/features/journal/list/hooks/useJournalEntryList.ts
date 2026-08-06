@@ -4,10 +4,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
-import {
-  JournalTimelineRow,
-  journalsToTimelineRows,
-} from '@/src/services/journal/journalTimelineRows';
 import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
@@ -17,6 +13,7 @@ import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { sharingService } from '@/src/services/SharingService';
 import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
+import type { JournalTimelineRow } from '@/src/services/journal/journalTimeline';
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListItem } from '@/src/types/ui';
@@ -94,15 +91,21 @@ export function useJournalEntryList({
   const { precision } = useCurrencyPrecision(baseCurrency);
   const missingCurrenciesCache = useRef(new Set<string>());
 
+  const timelineRowOptions = useMemo(
+    () => ({ viewer, expandAccountIds: expandScopedLegs }),
+    [viewer, expandScopedLegs],
+  );
+
   const journalOptions = useMemo(
     () => ({
       ...queryOptions,
       initialItems: initialItems ?? queryOptions?.initialItems,
+      timelineRowOptions,
     }),
-    [queryOptions, initialItems],
+    [queryOptions, initialItems, timelineRowOptions],
   );
 
-  const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+  const { journals, timelineRows, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
     workplaceId,
     pageSize,
     dateRange,
@@ -122,15 +125,6 @@ export function useJournalEntryList({
     exitSelectionMode,
     setSelectedIds,
   } = selectionControl;
-
-  const timelineRows = useMemo(
-    () =>
-      journalsToTimelineRows(journals, {
-        viewer,
-        expandAccountIds: expandScopedLegs,
-      }),
-    [journals, viewer, expandScopedLegs],
-  );
 
   const handleRowPress = useCallback(
     (row: JournalTimelineRow) => {
@@ -159,7 +153,7 @@ export function useJournalEntryList({
   const groupingOptions = useMemo(
     () =>
       buildTimelineGroupingOptions(
-        timelineRows,
+        timelineRows ?? [],
         baseCurrency,
         precision,
         exchangeRateMap,

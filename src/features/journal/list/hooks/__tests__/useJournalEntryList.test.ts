@@ -122,6 +122,11 @@ describe('useJournalEntryList', () => {
     mockRateMap = { EUR: 0.5 };
     useJournalsMock.mockReturnValue({
       journals: mockEnrichedJournals,
+      timelineRows: mockEnrichedJournals.map(j => ({
+        journal: j,
+        listId: j.id,
+        selectionId: j.id,
+      })),
       isLoading: false,
       isLoadingMore: false,
       hasMore: true,
@@ -225,6 +230,13 @@ describe('useJournalEntryList', () => {
 
     useJournalsMock.mockReturnValue({
       journals: mockEnrichedJournals.filter(j => j.id !== 'j3'),
+      timelineRows: mockEnrichedJournals
+        .filter(j => j.id !== 'j3')
+        .map(j => ({
+          journal: j,
+          listId: j.id,
+          selectionId: j.id,
+        })),
       isLoading: false,
       isLoadingMore: false,
       hasMore: true,

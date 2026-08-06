@@ -1,8 +1,9 @@
+import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { AccountType, JournalDisplayType, SemanticType, TransactionType } from '@/src/types/domain';
 import {
   enrichJournals,
   enrichedJournalsAreEqual,
-  JournalEnrichmentRow,
+  journalEnrichmentFingerprint,
 } from '@/src/services/journal/enrichJournals';
 
 function journalStub(id: string) {
@@ -28,8 +29,8 @@ function enrichmentRow(
   accountName: string,
 ): JournalEnrichmentRow {
   return {
-    journal_id: journalId,
-    account_id: accountId,
+    journal_id: journalId as JournalEnrichmentRow['journal_id'],
+    account_id: accountId as JournalEnrichmentRow['account_id'],
     amount,
     transaction_type: transactionType,
     account_name: accountName,
@@ -55,6 +56,17 @@ describe('enrichJournals', () => {
       expect.objectContaining({ id: 'cash', role: 'SOURCE', amount: 10 }),
       expect.objectContaining({ id: 'food', role: 'DESTINATION', amount: 10 }),
     ]);
+  });
+
+  it('sorts account legs by account id for stable enrichment order', () => {
+    const journal = journalStub('j-1');
+    const rows: JournalEnrichmentRow[] = [
+      enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+      enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+    ];
+
+    const enriched = enrichJournals([journal], rows);
+    expect(enriched[0].accounts.map(a => a.id)).toEqual(['cash', 'food']);
   });
 });
 
@@ -87,5 +99,28 @@ describe('enrichedJournalsAreEqual', () => {
     const b = enrichJournals([journalStub('j-1')], rows);
 
     expect(enrichedJournalsAreEqual(a, b)).toBe(true);
+  });
+
+  it('returns true when enrichment row order differs but legs are identical', () => {
+    const journal = journalStub('j-1');
+    const ordered = enrichJournals(
+      [journal],
+      [
+        enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+        enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+      ],
+    );
+    const reversedInput = enrichJournals(
+      [journal],
+      [
+        enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+        enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+      ],
+    );
+
+    expect(enrichedJournalsAreEqual(ordered, reversedInput)).toBe(true);
+    expect(journalEnrichmentFingerprint(ordered[0])).toBe(
+      journalEnrichmentFingerprint(reversedInput[0]),
+    );
   });
 });

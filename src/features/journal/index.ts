@@ -26,9 +26,10 @@ export type {
 } from './list/hooks/useJournalEntryList';
 export {
   journalsToTimelineRows,
+  journalsFromTimelineRows,
   type JournalTimelineRow,
   type JournalTimelineRowsOptions,
-} from './list/journalTimelineRows';
+} from '@/src/services/journal/journalTimeline';
 export { AiBenchmarkView } from './components/AiBenchmarkView';
 export { AiExampleView } from './components/AiExampleView';
 export { BulkEntryGrid } from './entry/components/BulkEntryGrid';

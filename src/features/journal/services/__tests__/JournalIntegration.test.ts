@@ -18,7 +18,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
+import { observeEnrichedJournals } from '@/src/services/journal/journalTimeline';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { transactionService } from '@/src/services/transaction-ingestion';

@@ -114,6 +114,7 @@ describe('useJournalList', () => {
     mockDateRange = { startDate: 1, endDate: 2 };
     useJournalsMock.mockReturnValue({
       journals: mockEnrichedJournals,
+      timelineRows: undefined,
       isLoading: false,
       isLoadingMore: false,
       hasMore: true,

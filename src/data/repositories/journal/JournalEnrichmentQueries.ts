@@ -3,13 +3,8 @@ import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import {
-  AccountId,
-  JournalId,
-  WorkplaceId,
-  AccountType,
-  TransactionType,
-} from '@/src/types/domain';
+import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 
@@ -78,17 +73,7 @@ export class JournalEnrichmentQueries {
     }
   }
 
-  async getEnrichmentDataRaw(journalIds: string[]): Promise<
-    {
-      journal_id: JournalId;
-      account_id: AccountId;
-      amount: number;
-      transaction_type: TransactionType;
-      account_name: string;
-      account_type: AccountType;
-      account_icon?: string;
-    }[]
-  > {
+  async getEnrichmentDataRaw(journalIds: string[]): Promise<JournalEnrichmentRow[]> {
     if (journalIds.length === 0) return [];
 
     const placeholders = journalIds.map(() => '?').join(',');
@@ -104,33 +89,16 @@ export class JournalEnrichmentQueries {
       FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       WHERE t.journal_id IN (${placeholders}) AND t.deleted_at IS NULL
+      ORDER BY t.journal_id, t.account_id
     `;
 
-    type EnrichmentRow = {
-      journal_id: JournalId;
-      account_id: AccountId;
-      amount: number;
-      transaction_type: TransactionType;
-      account_name: string;
-      account_type: AccountType;
-      account_icon?: string;
-    };
-
-    const results = await transactionRawRepository.queryRaw<EnrichmentRow>(sql, journalIds);
+    const results = await transactionRawRepository.queryRaw<JournalEnrichmentRow>(sql, journalIds);
     if (results !== null) {
       return results;
     }
 
     const journals = await this.journals.query(Q.where('id', Q.oneOf(journalIds))).fetch();
-    const enriched: {
-      journal_id: JournalId;
-      account_id: AccountId;
-      amount: number;
-      transaction_type: TransactionType;
-      account_name: string;
-      account_type: AccountType;
-      account_icon?: string;
-    }[] = [];
+    const enriched: JournalEnrichmentRow[] = [];
 
     for (const journal of journals) {
       const txs = await this.transactions

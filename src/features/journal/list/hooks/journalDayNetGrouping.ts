@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
-import { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
+import type { JournalTimelineRow } from '@/src/services/journal/journalTimeline';
 import type { GroupingOptions } from '@/src/hooks/useJournalListGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger/buildDayNetStats';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';

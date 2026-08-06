@@ -4,7 +4,7 @@ import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { journalDisplayTypeChrome } from '@/src/services/accounting/journalTimelineMapper';
+import { journalDisplayTypeChrome } from '@/src/services/journal/journalTimeline';
 import { JournalDisplayType } from '@/src/types/domain';
 import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo, useState } from 'react';

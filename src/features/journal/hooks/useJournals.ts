@@ -2,7 +2,16 @@ import { AppConfig } from '@/src/constants';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
+import {
+  observeEnrichedJournals,
+  observeJournalTimelineRows,
+} from '@/src/services/journal/journalTimeline';
+import {
+  journalsFromTimelineRows,
+  journalsToTimelineRows,
+  JournalTimelineRow,
+  JournalTimelineRowsOptions,
+} from '@/src/services/journal/journalTimelineRows';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
@@ -17,6 +26,17 @@ export interface JournalFilterRange {
   minAmount?: number;
   maxAmount?: number;
   displayType?: string;
+}
+
+function mapInitialTimelineRows(
+  initialItems: EnrichedJournal[] | (() => EnrichedJournal[]),
+  rowOptions: JournalTimelineRowsOptions,
+): JournalTimelineRow[] | (() => JournalTimelineRow[]) {
+  const mapRows = (enriched: EnrichedJournal[]) => journalsToTimelineRows(enriched, rowOptions);
+  if (typeof initialItems === 'function') {
+    return () => mapRows(initialItems());
+  }
+  return mapRows(initialItems);
 }
 
 /**
@@ -36,10 +56,19 @@ export function useJournals(
     accountIds?: string[];
     journalIds?: JournalId[];
     initialItems?: EnrichedJournal[] | (() => EnrichedJournal[]);
+    timelineRowOptions?: JournalTimelineRowsOptions;
   },
 ) {
   const { startDate, endDate } = dateRange || {};
-  const { minAmount, maxAmount, displayType, accountIds, journalIds, initialItems } = options || {};
+  const {
+    minAmount,
+    maxAmount,
+    displayType,
+    accountIds,
+    journalIds,
+    initialItems,
+    timelineRowOptions,
+  } = options || {};
 
   const statusKey = useMemo(() => status?.join('|') ?? 'none', [status]);
   const stableStatus = useMemo(
@@ -122,6 +151,17 @@ export function useJournals(
         maxAmount: range?.maxAmount,
         displayType: range?.displayType,
       };
+      if (timelineRowOptions) {
+        return observeJournalTimelineRows(
+          workplaceId,
+          limit,
+          range as any,
+          query,
+          stableStatus,
+          effectiveOptions,
+          timelineRowOptions,
+        );
+      }
       return observeEnrichedJournals(
         workplaceId,
         limit,
@@ -131,17 +171,19 @@ export function useJournals(
         effectiveOptions,
       );
     },
-    [stableStatus, workplaceId],
+    [stableStatus, workplaceId, timelineRowOptions],
   );
 
-  const {
-    items: journals,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    loadMore,
-    version,
-  } = usePaginatedObservable<any, EnrichedJournal, JournalFilterRange>({
+  const paginatedInitialItems = useMemo(() => {
+    if (!initialItems || !timelineRowOptions) return initialItems;
+    return mapInitialTimelineRows(initialItems, timelineRowOptions);
+  }, [initialItems, timelineRowOptions]);
+
+  const { items, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<
+    any,
+    EnrichedJournal | JournalTimelineRow,
+    JournalFilterRange
+  >({
     pageSize,
     filter: effectiveRange,
     searchQuery,
@@ -151,10 +193,32 @@ export function useJournals(
       if (!f) return 'none';
       return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}-${f.journalIds?.join(',')}`;
     },
-    initialItems,
+    initialItems: paginatedInitialItems as
+      (EnrichedJournal | JournalTimelineRow)[] | (() => (EnrichedJournal | JournalTimelineRow)[]),
   });
 
-  return { journals, isLoading, isLoadingMore, hasMore, loadMore, version };
+  if (timelineRowOptions) {
+    const timelineRows = items as JournalTimelineRow[];
+    return {
+      journals: journalsFromTimelineRows(timelineRows),
+      timelineRows,
+      isLoading,
+      isLoadingMore,
+      hasMore,
+      loadMore,
+      version,
+    };
+  }
+
+  return {
+    journals: items as EnrichedJournal[],
+    timelineRows: undefined,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    version,
+  };
 }
 
 export function useJournalLegs(

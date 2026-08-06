@@ -10,10 +10,10 @@ import {
   journalDisplayTypeChrome,
   ledgerLineChrome,
   mapJournalToTimelineItem,
-} from '@/src/services/accounting/journalTimelineMapper';
+} from '@/src/services/journal/journalTimeline';
 import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
 
-describe('journalTimelineMapper', () => {
+describe('journalTimelinePresentation', () => {
   it('journalDisplayTypeChrome maps expense to down arrow', () => {
     const chrome = journalDisplayTypeChrome(JournalDisplayType.EXPENSE);
     expect(chrome.typeIcon).toBe('arrowDown');
