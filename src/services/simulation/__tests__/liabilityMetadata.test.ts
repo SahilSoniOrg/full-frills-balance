@@ -23,4 +23,18 @@ describe('toLiabilityMetadata', () => {
       minimumPaymentPercent: 5,
     });
   });
+
+  it('preserves runtime-only emiAmount from fixtures and test mocks', () => {
+    const metadata = {
+      emiDay: 20,
+      payFromAccountId: 'acct-1',
+      emiAmount: 350,
+    } as AccountMetadata;
+
+    expect(toLiabilityMetadata(metadata)).toEqual({
+      emiDay: 20,
+      payFromAccountId: 'acct-1',
+      emiAmount: 350,
+    });
+  });
 });
