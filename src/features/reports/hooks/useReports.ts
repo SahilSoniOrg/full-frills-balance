@@ -9,6 +9,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
+import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
 import { wealthService } from '@/src/services/wealth-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
@@ -95,7 +96,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
       incomeVsExpenseHistory: [],
       incomeVsExpense: { income: 0, expense: 0 },
       dailyIncomeVsExpense: [],
-      sankeyData: { nodes: [], links: [] },
+      sankeyData: emptySankeyData(),
       spendingHeatmap: [],
       calendarHeatmap: [],
     },

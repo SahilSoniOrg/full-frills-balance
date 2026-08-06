@@ -92,7 +92,11 @@ describe('useReportsViewModel', () => {
       { date: 1, income: 100, expense: 50 },
       { date: 2, income: 200, expense: 100 },
     ],
-    sankeyData: { nodes: [], links: [] },
+    sankeyData: {
+      nodes: [],
+      links: [],
+      summary: { totalIncome: 0, totalExpense: 0, surplus: 0, deficit: 0 },
+    },
     spendingHeatmap: [],
     calendarHeatmap: [],
   };

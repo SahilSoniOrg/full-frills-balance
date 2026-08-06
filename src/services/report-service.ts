@@ -139,7 +139,10 @@ export class ReportService {
       currency,
     );
 
-    const sankeyData = calculateSankeyDataFromSummaries(incomeBreakdown, expenseCategoryBreakdown);
+    const sankeyData = calculateSankeyDataFromSummaries(
+      incomeCategoryBreakdown,
+      expenseCategoryBreakdown,
+    );
     const spendingHeatmap = calculateSpendingHeatmapFromTransactions(convertedTransactions);
     const calendarHeatmap = calculateCalendarHeatmapFromHistory(history);
 

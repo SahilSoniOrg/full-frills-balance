@@ -87,10 +87,16 @@ export const REPORT_CHART_LAYOUT = {
   calendarDayLabelHeight: 15,
   calendarCellHeight: 20,
   calendarDefaultHeight: 200,
-  sankeyNodeWidth: 12,
-  sankeyNodeSpacing: 30,
+  sankeyNodeWidth: 10,
+  sankeyNodePadding: 12,
+  sankeyLabelGutter: 12,
   sankeyLabelOffset: 8,
-  sankeyDefaultHeight: 300,
+  sankeyChartLabelFontSize: 10,
+  sankeyMarginVertical: 8,
+  sankeyMinHeight: 180,
+  sankeyMaxHeight: 260,
+  sankeyDefaultHeight: 200,
+  sankeyMinLinkWidth: 2,
 } as const;
 
 export const REPORT_CHART_EVENTS = {

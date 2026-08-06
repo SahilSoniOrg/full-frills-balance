@@ -242,6 +242,11 @@ export const UI_STRINGS = {
     today: 'Today',
     sankeyTotalIncome: 'Total Income',
     sankeySurplus: 'Savings/Surplus',
+    sankeyDrawdown: 'Deficit/Drawdown',
+    sankeyIncomeColumn: 'Income',
+    sankeySpendingColumn: 'Spending',
+    sankeyIncomeLabel: (name: string) => `Income · ${name}`,
+    sankeyExpenseLabel: (name: string) => `Spent · ${name}`,
   },
   settings: {
     title: 'Settings',
