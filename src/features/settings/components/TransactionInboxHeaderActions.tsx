@@ -21,7 +21,13 @@ export function TransactionInboxHeaderActions({
         Rules
       </AppButton>
       {isAndroid ? (
-        <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={onRefresh}>
+        <AppButton
+          variant="ghost"
+          size="sm"
+          loading={isRefreshing}
+          onPress={onRefresh}
+          testID="inbox-refresh-sms"
+        >
           Refresh SMS
         </AppButton>
       ) : null}

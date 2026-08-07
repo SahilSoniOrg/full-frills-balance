@@ -29,6 +29,14 @@ module.exports = {
       build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
       reversePorts: [8081],
     },
+    'android.release': {
+      type: 'android.apk',
+      binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
+      build:
+        'cd android && EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+    },
   },
   devices: {
     simulator: {
@@ -40,7 +48,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: process.env.DETOX_AVD_NAME || 'Pixel_7_API_34',
+        avdName: process.env.DETOX_AVD_NAME || 'Pixel_10_Pro',
       },
     },
   },
@@ -56,6 +64,10 @@ module.exports = {
     'android.emu.debug': {
       device: 'emulator',
       app: 'android.debug',
+    },
+    'android.emu.release': {
+      device: 'emulator',
+      app: 'android.release',
     },
   },
   artifacts: {

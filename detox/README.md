@@ -2,6 +2,8 @@
 
 End-to-end tests on the **iOS Simulator** or **Android emulator**. Playwright tests in `e2e/*.test.ts` cover the web export.
 
+**Maestro** and **Detox** run locally. See [`.maestro/README.md`](../.maestro/README.md). iOS Detox also runs in GitHub Actions (`.github/workflows/detox.yml`).
+
 ## iOS (default): Release + embedded bundle
 
 Detox uses a **Release** simulator build with `export:embed` — **no Expo dev client, no Metro**. Debug builds set `SKIP_BUNDLING=1` and require the dev launcher; we avoid that for E2E.
@@ -22,6 +24,8 @@ npx detox clean-framework-cache && npx detox build-framework-cache
 cp .env.e2e.example .env.local
 EXPO_PUBLIC_E2E=1 bun run e2e:build:ios
 ```
+
+Android Detox/Maestro native setup (`@config-plugins/detox`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
 
 ## Run tests locally
 
@@ -45,15 +49,16 @@ bun run e2e:clean:ios
 
 `ios.sim.debug` still exists for manual dev-client debugging; it requires Metro on **8081** and the dev launcher flow.
 
-## Android (local)
+## Android (local Detox)
 
-Prerequisites: Android SDK, a running or bootable AVD (default name `Pixel_7_API_34`), Metro on **8081**.
+Prerequisites: Android SDK, a running or bootable AVD (default name `Pixel_10_Pro`).
+
+Uses **release + embedded bundle** (`android.emu.release`) — no Metro, no dev launcher.
 
 ```bash
-npx expo prebuild --platform android   # after native / @config-plugins/detox changes
+npx expo prebuild --platform android   # regenerates android/ from app.config plugins
 cp .env.e2e.example .env.local         # optional: EXPO_PUBLIC_E2E=1
 bun run e2e:build:android
-bun start                                # separate terminal
 bun run e2e:test:android
 ```
 
@@ -62,8 +67,6 @@ Use an existing AVD:
 ```bash
 DETOX_AVD_NAME="Your_Avd_Name" bun run e2e:test:android
 ```
-
-`reversePorts` in `.detoxrc.js` forwards Metro to the emulator; on a physical device you may need `adb reverse tcp:8081 tcp:8081` instead of the emulator config.
 
 ## Layout (one-mobile style)
 

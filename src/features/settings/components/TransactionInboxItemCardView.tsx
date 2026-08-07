@@ -16,6 +16,7 @@ interface TransactionInboxItemCardViewProps {
   handleImport: (item: TransactionInboxItem) => void;
   onCompareDuplicate: (item: TransactionInboxItem) => void;
   onOpenJournal: (item: TransactionInboxItem) => void;
+  testID?: string;
 }
 
 export function TransactionInboxItemCardView({
@@ -26,6 +27,7 @@ export function TransactionInboxItemCardView({
   handleImport,
   onCompareDuplicate,
   onOpenJournal,
+  testID,
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
 
@@ -36,7 +38,7 @@ export function TransactionInboxItemCardView({
     item.channel === 'voice' ? 'Spoken' : item.channel === 'sms' ? 'SMS' : 'Email';
 
   return (
-    <AppCard style={styles.card}>
+    <AppCard style={styles.card} testID={testID}>
       <View style={styles.cardTop}>
         <View style={{ flex: 1 }}>
           <View style={styles.channelHeader}>
@@ -118,6 +120,7 @@ export function TransactionInboxItemCardView({
           size="sm"
           style={styles.inlineButton}
           onPress={() => onCompareDuplicate(item)}
+          testID={`inbox-compare-duplicate-${item.deviceSourceId}`}
         >
           Compare duplicate
         </AppButton>

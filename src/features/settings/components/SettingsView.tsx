@@ -40,6 +40,7 @@ export function SettingsView() {
             description="Review reminders, SMS inbox, and auto-post rules"
             onPress={AppNavigation.toAutomationSettings}
             prominent
+            testID="settings-automation"
           />
         </SettingsMenu>
 

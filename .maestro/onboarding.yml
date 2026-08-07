@@ -1,0 +1,50 @@
+appId: in.sahilsoni.fullfrillsbalance
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: onboarding-name-input
+    timeout: 120000
+- tapOn:
+    id: onboarding-name-input
+- inputText: 'Maestro User'
+- hideKeyboard
+- tapOn:
+    id: onboarding-continue-button
+- extendedWaitUntil:
+    visible:
+      id: selectable-grid-continue-button
+    timeout: 30000
+- tapOn:
+    id: selectable-grid-continue-button
+- extendedWaitUntil:
+    visible:
+      id: selectable-grid-continue-button
+    timeout: 30000
+- tapOn:
+    id: selectable-grid-continue-button
+- extendedWaitUntil:
+    visible:
+      id: selectable-grid-continue-button
+    timeout: 30000
+- tapOn:
+    id: selectable-grid-continue-button
+- extendedWaitUntil:
+    visible:
+      id: onboarding-theme-continue-button
+    timeout: 30000
+- tapOn:
+    id: onboarding-theme-continue-button
+- extendedWaitUntil:
+    visible:
+      id: onboarding-finish-button
+    timeout: 30000
+- tapOn:
+    id: onboarding-finish-button
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- assertVisible:
+    id: tab-dashboard

@@ -1,5 +1,7 @@
 import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
+import { getE2eSmsInboxMessages } from '@/src/testing/e2eSmsInject';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { PermissionError } from '@/src/utils/errors';
 import { PermissionsAndroid, Platform } from 'react-native';
 
@@ -29,6 +31,14 @@ export class SmsInboxBridge {
 
     if (!ExpoSmsInboxModule) {
       throw new Error('ExpoSmsInbox module is not available');
+    }
+
+    const e2eConfig = readE2eLaunchConfig();
+    if (e2eConfig) {
+      const injected = getE2eSmsInboxMessages();
+      if (injected.length > 0) {
+        return injected.slice(0, limit);
+      }
     }
 
     return ExpoSmsInboxModule.getSmsInbox(limit);

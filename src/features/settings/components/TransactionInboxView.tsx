@@ -36,99 +36,105 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
   const isAndroid = Platform.OS === 'android';
 
   return (
-    <SettingsLayout
-      title="Transaction Inbox"
-      headerActions={headerActions}
-      scrollable={false}
-      hideFooter
-    >
-      <View style={styles.container}>
-        {!isAndroid && filter === 'pending' ? (
-          <View
-            style={[
-              styles.platformNotice,
-              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-            ]}
-          >
-            <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-              Note: SMS transaction scanning is only supported on Android devices. Voice input
-              drafts are fully supported.
-            </AppText>
-          </View>
-        ) : null}
-
-        <FlatList
-          data={items}
-          keyExtractor={item => item.id}
-          ListHeaderComponent={
-            <View style={styles.filters}>
-              {filterButtons.map(button => (
-                <AppButton
-                  key={button.key}
-                  size="sm"
-                  variant={filter === button.key ? 'primary' : 'secondary'}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setFilter(button.key);
-                  }}
-                  style={styles.filterButton}
-                >
-                  {button.label}
-                </AppButton>
-              ))}
+    <View style={styles.container} testID="transaction-inbox-screen">
+      <SettingsLayout
+        title="Transaction Inbox"
+        headerActions={headerActions}
+        scrollable={false}
+        hideFooter
+      >
+        <View style={styles.container}>
+          {!isAndroid && filter === 'pending' ? (
+            <View
+              style={[
+                styles.platformNotice,
+                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+              ]}
+            >
+              <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                Note: SMS transaction scanning is only supported on Android devices. Voice input
+                drafts are fully supported.
+              </AppText>
             </View>
-          }
-          renderItem={({ item }) => (
-            <TransactionInboxItemCardView
-              item={item}
-              currencyCode={defaultCurrencyCode}
-              handleDismiss={handleDismiss}
-              handleUndismiss={handleUndismiss}
-              handleImport={handleImport}
-              onCompareDuplicate={handleCompareDuplicate}
-              onOpenJournal={handleOpenJournal}
-            />
-          )}
-          contentContainerStyle={styles.content}
-          ListEmptyComponent={
-            isLoading ? (
-              <View style={styles.center}>
-                <ActivityIndicator color={theme.primary} />
-                <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
-                  {isAndroid ? 'Scanning SMS and pending inputs...' : 'Loading pending items...'}
-                </AppText>
-              </View>
-            ) : (
-              <EmptyStateView
-                title="No pending transactions"
-                subtitle={
-                  isAndroid
-                    ? 'Try refreshing or loading older messages.'
-                    : 'Your pending draft queue is empty.'
-                }
-              />
-            )
-          }
-          ListFooterComponent={
-            isAndroid && (hasMore || items.length > 0 || isLoadingMore || isScanningOlder) ? (
-              <Stack space="lg" style={styles.footer}>
-                {(isLoadingMore || isScanningOlder) && <ActivityIndicator color={theme.primary} />}
-                {hasMore && (
+          ) : null}
+
+          <FlatList
+            data={items}
+            keyExtractor={item => item.id}
+            ListHeaderComponent={
+              <View style={styles.filters}>
+                {filterButtons.map(button => (
                   <AppButton
-                    variant="secondary"
+                    key={button.key}
                     size="sm"
-                    onPress={handleLoadOlder}
-                    loading={isScanningOlder}
+                    variant={filter === button.key ? 'primary' : 'secondary'}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setFilter(button.key);
+                    }}
+                    style={styles.filterButton}
+                    testID={`inbox-filter-${button.key}`}
                   >
-                    Load Older Messages
+                    {button.label}
                   </AppButton>
-                )}
-              </Stack>
-            ) : null
-          }
-        />
-      </View>
-    </SettingsLayout>
+                ))}
+              </View>
+            }
+            renderItem={({ item }) => (
+              <TransactionInboxItemCardView
+                item={item}
+                currencyCode={defaultCurrencyCode}
+                handleDismiss={handleDismiss}
+                handleUndismiss={handleUndismiss}
+                handleImport={handleImport}
+                onCompareDuplicate={handleCompareDuplicate}
+                onOpenJournal={handleOpenJournal}
+                testID={`inbox-item-${item.deviceSourceId}`}
+              />
+            )}
+            contentContainerStyle={styles.content}
+            ListEmptyComponent={
+              isLoading ? (
+                <View style={styles.center}>
+                  <ActivityIndicator color={theme.primary} />
+                  <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
+                    {isAndroid ? 'Scanning SMS and pending inputs...' : 'Loading pending items...'}
+                  </AppText>
+                </View>
+              ) : (
+                <EmptyStateView
+                  title="No pending transactions"
+                  subtitle={
+                    isAndroid
+                      ? 'Try refreshing or loading older messages.'
+                      : 'Your pending draft queue is empty.'
+                  }
+                />
+              )
+            }
+            ListFooterComponent={
+              isAndroid && (hasMore || items.length > 0 || isLoadingMore || isScanningOlder) ? (
+                <Stack space="lg" style={styles.footer}>
+                  {(isLoadingMore || isScanningOlder) && (
+                    <ActivityIndicator color={theme.primary} />
+                  )}
+                  {hasMore && (
+                    <AppButton
+                      variant="secondary"
+                      size="sm"
+                      onPress={handleLoadOlder}
+                      loading={isScanningOlder}
+                    >
+                      Load Older Messages
+                    </AppButton>
+                  )}
+                </Stack>
+              ) : null
+            }
+          />
+        </View>
+      </SettingsLayout>
+    </View>
   );
 }
 

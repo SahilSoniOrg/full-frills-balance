@@ -66,6 +66,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
               onPress={AppNavigation.toTransactionInbox}
+              testID="settings-sms-inbox"
             />
             {vm.isSmsImportEnabled && (
               <>

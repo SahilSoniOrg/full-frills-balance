@@ -98,7 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           enableMinifyInReleaseBuilds: true,
           shrinkResources: true,
           packagingOptions: {
-            pickFirst: ['**/libc++_shared.so'],
+            pickFirst: ['**/*.so'],
             jniLibs: {
               useLegacyPackaging: false,
             },
@@ -114,6 +114,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-localization',
     './plugins/withTelephony',
     './plugins/withGradleOptimizations',
+    './plugins/withAndroidNativeLibPackaging',
     './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',
     './plugins/withXcodeAmbiguousDependencies',

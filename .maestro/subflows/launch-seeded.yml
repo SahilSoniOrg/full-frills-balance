@@ -1,0 +1,8 @@
+appId: in.sahilsoni.fullfrillsbalance
+---
+- launchApp:
+    clearState: true
+    arguments:
+      e2eAuth: ffb-e2e-v1
+      e2eReset: '1'
+      e2eSeedProfile: ${SEED_PROFILE}

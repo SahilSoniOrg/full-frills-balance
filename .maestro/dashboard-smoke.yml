@@ -1,0 +1,11 @@
+appId: in.sahilsoni.fullfrillsbalance
+env:
+  SEED_PROFILE: onboarded
+---
+- runFlow: subflows/launch-seeded.yml
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- assertVisible:
+    id: tab-dashboard

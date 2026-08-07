@@ -51,3 +51,14 @@ export const plannedPayments = {
   toAccount: 'planned-payment-to-account',
   submitFooter: 'submit-footer-button',
 } as const;
+
+export const smsInbox = {
+  screen: 'transaction-inbox-screen',
+  settingsAutomation: 'settings-automation',
+  settingsSmsInbox: 'settings-sms-inbox',
+  filterDuplicates: 'inbox-filter-duplicates',
+  filterPending: 'inbox-filter-pending',
+  refreshSms: 'inbox-refresh-sms',
+  item: (deviceSourceId: string) => `inbox-item-${deviceSourceId}`,
+  compareDuplicate: (deviceSourceId: string) => `inbox-compare-duplicate-${deviceSourceId}`,
+} as const;
