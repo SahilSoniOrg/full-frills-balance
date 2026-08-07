@@ -461,6 +461,14 @@ export class SmsSyncPipeline {
     duplicate?: { journalId: JournalId; score: number; reasons: string[] },
   ): { ops: Model[]; record: TransactionInboxRecord } {
     const ops: Model[] = [];
+    const now = Date.now();
+    const existingMetadata = existingRecord?.metadataJson
+      ? safeParseJSON<Record<string, unknown>>(existingRecord.metadataJson, {})
+      : {};
+    const metadataJson = JSON.stringify({
+      ...existingMetadata,
+      ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
+    });
     const payload = {
       workplaceId,
       channel: 'sms' as const,
@@ -468,9 +476,8 @@ export class SmsSyncPipeline {
       senderAddress: sms.address,
       rawBody: sms.body,
       inputDate: sms.date,
-      fingerprint,
+      inputFingerprint: fingerprint,
       parseStatus: parsed.parseStatus,
-      rawPayloadJson: JSON.stringify(sms),
       parsedAmount: parsed.amount,
       parsedCurrencyCode: parsed.currencyCode,
       parsedMerchant: parsed.merchant,
@@ -479,8 +486,10 @@ export class SmsSyncPipeline {
       processingStatus,
       linkedJournalId,
       duplicateJournalId: duplicate?.journalId,
-      duplicateScore: duplicate?.score,
-      duplicateReason: duplicate ? duplicate.reasons.join(', ') : undefined,
+      duplicateConfidence: duplicate?.score,
+      metadataJson,
+      firstSeenAt: existingRecord?.firstSeenAt ?? now,
+      lastScannedAt: now,
     };
 
     let targetRecord: TransactionInboxRecord;

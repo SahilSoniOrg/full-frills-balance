@@ -4,6 +4,7 @@ import {
   InboxProcessingStatus,
   TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
+import { AppConfig } from '@/src/constants';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { JournalId } from '@/src/types/domain';
 
@@ -82,17 +83,30 @@ describe('SmsSyncPipeline', () => {
       expect(status).toBe(InboxProcessingStatus.IMPORTED);
     });
 
-    it('returns DUPLICATE_FLAGGED when score exceeds threshold', () => {
+    it('returns DUPLICATE_FLAGGED when score meets threshold', () => {
       const status = pipeline.resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         duplicate: {
           journalId: 'j1' as JournalId,
-          score: 85,
+          score: AppConfig.input.sms.duplicateDetection.scoreThreshold,
           reasons: ['Same amount', 'Close in time'],
         },
       });
       expect(status).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+    });
+
+    it('returns PENDING when duplicate score is below threshold', () => {
+      const status = pipeline.resolveProcessingStatus({
+        parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
+        processedIds: new Set(),
+        duplicate: {
+          journalId: 'j1' as JournalId,
+          score: AppConfig.input.sms.duplicateDetection.scoreThreshold - 0.01,
+          reasons: ['Same amount'],
+        },
+      });
+      expect(status).toBe(InboxProcessingStatus.PENDING);
     });
 
     it('returns PENDING for clean unprocessed messages', () => {
@@ -102,6 +116,82 @@ describe('SmsSyncPipeline', () => {
         duplicate: null,
       });
       expect(status).toBe(InboxProcessingStatus.PENDING);
+    });
+  });
+
+  describe('prepareUpsertInboxRecord', () => {
+    const sms = {
+      id: 'sms-42',
+      address: 'HDFCBK',
+      body: 'Debited INR 500 at SWIGGY',
+      date: 1700000000000,
+    };
+
+    it('persists duplicate metadata on the inbox model fields', () => {
+      let createdRecord: Record<string, unknown> = {};
+      const mockInbox = {
+        prepareCreate: jest.fn((fn: (record: Record<string, unknown>) => void) => {
+          fn(createdRecord);
+          return createdRecord;
+        }),
+      };
+
+      jest.spyOn(pipeline as any, 'inbox', 'get').mockReturnValue(mockInbox);
+
+      const { record } = pipeline.prepareUpsertInboxRecord(
+        sms,
+        makeParsedTx({ amount: 500, merchant: 'SWIGGY' }),
+        'fingerprint-abc',
+        null,
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+        'wp-1' as any,
+        undefined,
+        {
+          journalId: 'journal-dup' as JournalId,
+          score: 0.72,
+          reasons: ['Same amount', 'Matching description/merchant'],
+        },
+      );
+
+      expect(record).toBe(createdRecord);
+      expect(createdRecord.inputFingerprint).toBe('fingerprint-abc');
+      expect(createdRecord.duplicateJournalId).toBe('journal-dup');
+      expect(createdRecord.duplicateConfidence).toBe(0.72);
+      expect(createdRecord.firstSeenAt).toEqual(expect.any(Number));
+      expect(createdRecord.lastScannedAt).toEqual(expect.any(Number));
+
+      const metadata = JSON.parse(createdRecord.metadataJson as string);
+      expect(metadata.duplicateReasons).toEqual(['Same amount', 'Matching description/merchant']);
+    });
+
+    it('preserves firstSeenAt and merges metadata when updating an existing record', () => {
+      let updatedRecord: Record<string, unknown> = {};
+      const existingRecord = {
+        firstSeenAt: 1699000000000,
+        metadataJson: JSON.stringify({ keepMe: true }),
+        prepareUpdate: jest.fn((fn: (record: Record<string, unknown>) => void) => {
+          updatedRecord = {
+            firstSeenAt: 1699000000000,
+            metadataJson: JSON.stringify({ keepMe: true }),
+          };
+          fn(updatedRecord);
+          return updatedRecord;
+        }),
+      };
+
+      pipeline.prepareUpsertInboxRecord(
+        sms,
+        makeParsedTx({ amount: 500 }),
+        'fingerprint-abc',
+        existingRecord as any,
+        InboxProcessingStatus.PENDING,
+        'wp-1' as any,
+      );
+
+      expect(updatedRecord.firstSeenAt).toBe(1699000000000);
+      expect(updatedRecord.lastScannedAt).toEqual(expect.any(Number));
+      const metadata = JSON.parse(updatedRecord.metadataJson as string);
+      expect(metadata.keepMe).toBe(true);
     });
   });
 });
