@@ -563,6 +563,8 @@ describe('Journal ledger integration', () => {
         new Promise<any[]>(resolve => {
           const subscription = observeEnrichedJournals('wp-1' as WorkplaceId, 10, {
             accountIds: [expenseAccountId],
+            startDate: 0,
+            endDate: Number.MAX_SAFE_INTEGER,
           }).subscribe(data => {
             subscription.unsubscribe();
             resolve(data);
@@ -604,6 +606,8 @@ describe('Journal ledger integration', () => {
       return new Promise<any[]>(resolve => {
         const subscription = observeEnrichedJournals('wp-1' as WorkplaceId, 10, {
           accountIds,
+          startDate: 0,
+          endDate: Number.MAX_SAFE_INTEGER,
         }).subscribe(data => {
           subscription.unsubscribe();
           resolve(data);
