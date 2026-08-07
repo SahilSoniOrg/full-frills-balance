@@ -94,7 +94,7 @@ export class SmsSyncPipeline {
       .replace(/\s+/g, ' ')
       .replace(/[^a-z0-9 ]/g, '')
       .trim();
-    const dateBucket = Math.floor(date / DUPLICATE_CONFIG.dayWindowMs);
+    const dateBucket = Math.floor(date / DUPLICATE_CONFIG.fingerprintDayBucketMs);
     return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
   }
 
@@ -293,9 +293,9 @@ export class SmsSyncPipeline {
     const results = new Map<string, DuplicateMatch>();
     const amounts = Array.from(new Set(parsedItems.map(p => p.parsed.amount!)));
     const minDate =
-      Math.min(...parsedItems.map(p => p.message.date)) - DUPLICATE_CONFIG.dayWindowMs;
+      Math.min(...parsedItems.map(p => p.message.date)) - DUPLICATE_CONFIG.fuzzyWindowMs;
     const maxDate =
-      Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.dayWindowMs;
+      Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.fuzzyWindowMs;
 
     const journals = await smsJournalQueries.findNearbyJournals(
       {
@@ -312,7 +312,7 @@ export class SmsSyncPipeline {
     for (const { message, parsed } of parsedItems) {
       const nearby = journals.filter(
         j =>
-          Math.abs(j.journalDate - message.date) <= DUPLICATE_CONFIG.dayWindowMs &&
+          Math.abs(j.journalDate - message.date) <= DUPLICATE_CONFIG.fuzzyWindowMs &&
           j.totalAmount === parsed.amount,
       );
 
@@ -327,7 +327,7 @@ export class SmsSyncPipeline {
         const timeScore = Math.max(
           0,
           DUPLICATE_CONFIG.weightTime -
-            (timeDistance / DUPLICATE_CONFIG.dayWindowMs) * DUPLICATE_CONFIG.weightTime,
+            (timeDistance / DUPLICATE_CONFIG.fuzzyWindowMs) * DUPLICATE_CONFIG.weightTime,
         );
         score += timeScore;
         if (timeScore > DUPLICATE_CONFIG.weightTime / 2) reasons.push('Close in time');
@@ -482,6 +482,7 @@ export class SmsSyncPipeline {
       parsedCurrencyCode: parsed.currencyCode,
       parsedMerchant: parsed.merchant,
       parsedAccountSource: parsed.accountSource,
+      referenceNumber: parsed.referenceNumber,
       direction: this.toDirection(parsed.type),
       processingStatus,
       linkedJournalId,
