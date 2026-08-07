@@ -136,6 +136,49 @@ export class SmsJournalQueries {
     return resultMap;
   }
 
+  async findJournalsByReferenceNumbers(
+    referenceNumbers: string[],
+    workplaceId: WorkplaceId,
+  ): Promise<Map<string, Journal>> {
+    if (referenceNumbers.length === 0) return new Map();
+
+    const inboxRecords = await database.collections
+      .get<TransactionInboxRecord>('transaction_inbox_records')
+      .query(
+        Q.where('reference_number', Q.oneOf(referenceNumbers)),
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+      )
+      .fetch();
+
+    const referenceToJournalId = new Map<string, JournalId>();
+    const journalIds: JournalId[] = [];
+
+    for (const record of inboxRecords) {
+      const linkedJournalId = record.linkedJournalId;
+      const referenceNumber = record.referenceNumber;
+      if (!linkedJournalId || !referenceNumber) continue;
+      const normalized = referenceNumber.replace(/\s+/g, '').toUpperCase();
+      journalIds.push(linkedJournalId);
+      referenceToJournalId.set(normalized, linkedJournalId);
+    }
+
+    if (journalIds.length === 0) return new Map();
+
+    const journals = await this.findByIds(workplaceId, journalIds);
+    const journalMap = new Map(journals.map(j => [j.id, j]));
+    const resultMap = new Map<string, Journal>();
+
+    for (const [reference, journalId] of referenceToJournalId) {
+      const journal = journalMap.get(journalId);
+      if (journal) {
+        resultMap.set(reference, journal);
+      }
+    }
+
+    return resultMap;
+  }
+
   async findNearbyJournals(
     params: {
       centerDate: number;

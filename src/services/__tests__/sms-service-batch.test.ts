@@ -85,6 +85,7 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
     findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
     findJournalBySmsFingerprint: jest.fn().mockResolvedValue(null),
     findJournalsBySmsFingerprints: jest.fn().mockResolvedValue(new Map()),
+    findJournalsByReferenceNumbers: jest.fn().mockResolvedValue(new Map()),
     findNearbyJournals: jest.fn().mockResolvedValue([]),
   },
 }));

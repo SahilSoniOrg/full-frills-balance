@@ -1,7 +1,7 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import { JournalStatus } from '@/src/data/models/Journal';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType, JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
@@ -38,6 +38,53 @@ type DuplicateMatch = {
   score: number;
   reasons: string[];
 } | null;
+
+export function normalizeSmsReferenceNumber(referenceNumber: string): string {
+  return referenceNumber.replace(/\s+/g, '').toUpperCase();
+}
+
+export function scoreFuzzyDuplicateMatch(params: {
+  journalDate: number;
+  messageDate: number;
+  journalDescription?: string | null;
+  merchant?: string;
+}): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+
+  const timeDistance = Math.abs(params.journalDate - params.messageDate);
+  const timeScore = Math.max(
+    0,
+    DUPLICATE_CONFIG.weightTime -
+      (timeDistance / DUPLICATE_CONFIG.fuzzyWindowMs) * DUPLICATE_CONFIG.weightTime,
+  );
+  score += timeScore;
+  if (timeScore > DUPLICATE_CONFIG.weightTime / 2) {
+    reasons.push('Close in time');
+  }
+
+  if (
+    params.merchant &&
+    params.journalDescription &&
+    params.journalDescription.toLowerCase().includes(params.merchant.toLowerCase())
+  ) {
+    score += DUPLICATE_CONFIG.weightMerchant;
+    reasons.push('Matching description/merchant');
+  }
+
+  return { score, reasons };
+}
+
+export function buildReferenceDuplicateMatch(
+  journalId: JournalId,
+  referenceNumber: string,
+): DuplicateMatch {
+  return {
+    journalId,
+    score: DUPLICATE_CONFIG.referenceMatchScore,
+    reasons: [`Matching reference number (${referenceNumber})`],
+  };
+}
 
 interface SmsAnalysisResult {
   message: SmsMessage;
@@ -154,9 +201,19 @@ export class SmsSyncPipeline {
     const messageIds = messages.map(m => m.id);
     const fingerprints = parsedMessages.map(m => m.fingerprint);
 
-    const [journalsById, journalsByFingerprint] = await Promise.all([
+    const referenceNumbers = Array.from(
+      new Set(
+        parsedMessages
+          .map(({ parsed }) => parsed.referenceNumber)
+          .filter((referenceNumber): referenceNumber is string => Boolean(referenceNumber))
+          .map(normalizeSmsReferenceNumber),
+      ),
+    );
+
+    const [journalsById, journalsByFingerprint, journalsByReference] = await Promise.all([
       smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
       smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+      smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
     ]);
 
     const parsedWithAmounts = parsedMessages.filter(
@@ -176,7 +233,9 @@ export class SmsSyncPipeline {
     const analysisResults: SmsAnalysisResult[] = await Promise.all(
       candidateMessages.map(async ({ message, parsed, fingerprint }) => {
         const existingRecord = existingMap.get(message.id) || null;
-        const duplicate = allCandidateJournals.get(message.id) || null;
+        const fuzzyDuplicate = allCandidateJournals.get(message.id) || null;
+        const referenceDuplicate = this.findReferenceDuplicateMatch(parsed, journalsByReference);
+        const duplicate = this.pickStrongerDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
         const exactJournal = journalsById.get(message.id) || null;
         const fingerprintJournal = exactJournal
           ? null
@@ -284,6 +343,35 @@ export class SmsSyncPipeline {
     return importedCount;
   }
 
+  private findReferenceDuplicateMatch(
+    parsed: ParsedTransaction,
+    journalsByReference: Map<string, Journal>,
+  ): DuplicateMatch {
+    if (!parsed.referenceNumber) {
+      return null;
+    }
+
+    const journal = journalsByReference.get(normalizeSmsReferenceNumber(parsed.referenceNumber));
+    if (!journal) {
+      return null;
+    }
+
+    if (parsed.amount != null && journal.totalAmount !== parsed.amount) {
+      return null;
+    }
+
+    return buildReferenceDuplicateMatch(journal.id, parsed.referenceNumber);
+  }
+
+  private pickStrongerDuplicateMatch(
+    referenceDuplicate: DuplicateMatch,
+    fuzzyDuplicate: DuplicateMatch,
+  ): DuplicateMatch {
+    if (!referenceDuplicate) return fuzzyDuplicate;
+    if (!fuzzyDuplicate) return referenceDuplicate;
+    return referenceDuplicate.score >= fuzzyDuplicate.score ? referenceDuplicate : fuzzyDuplicate;
+  }
+
   private async findManyDuplicateCandidates(
     parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
     workplaceId: WorkplaceId,
@@ -320,26 +408,12 @@ export class SmsSyncPipeline {
 
       let best: DuplicateMatch = null;
       for (const journal of nearby) {
-        const reasons: string[] = ['Same amount'];
-        let score = DUPLICATE_CONFIG.weightAmount;
-
-        const timeDistance = Math.abs(journal.journalDate - message.date);
-        const timeScore = Math.max(
-          0,
-          DUPLICATE_CONFIG.weightTime -
-            (timeDistance / DUPLICATE_CONFIG.fuzzyWindowMs) * DUPLICATE_CONFIG.weightTime,
-        );
-        score += timeScore;
-        if (timeScore > DUPLICATE_CONFIG.weightTime / 2) reasons.push('Close in time');
-
-        if (
-          parsed.merchant &&
-          journal.description &&
-          journal.description.toLowerCase().includes(parsed.merchant.toLowerCase())
-        ) {
-          score += DUPLICATE_CONFIG.weightMerchant;
-          reasons.push('Matching description/merchant');
-        }
+        const { score, reasons } = scoreFuzzyDuplicateMatch({
+          journalDate: journal.journalDate,
+          messageDate: message.date,
+          journalDescription: journal.description,
+          merchant: parsed.merchant,
+        });
 
         if (!best || score > best.score) {
           best = { journalId: journal.id, score, reasons };
