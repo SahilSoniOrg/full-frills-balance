@@ -2,8 +2,10 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 export class SmsJournalQueries {
@@ -142,32 +144,58 @@ export class SmsJournalQueries {
   ): Promise<Map<string, Journal>> {
     if (referenceNumbers.length === 0) return new Map();
 
+    const normalizedRefs = new Set(referenceNumbers.map(normalizeSmsReferenceNumber));
+    const resultMap = new Map<string, Journal>();
+
     const inboxRecords = await database.collections
       .get<TransactionInboxRecord>('transaction_inbox_records')
       .query(
-        Q.where('reference_number', Q.oneOf(referenceNumbers)),
+        Q.where('reference_number', Q.oneOf([...normalizedRefs])),
         Q.where('workplace_id', workplaceId),
         Q.where('channel', 'sms'),
       )
       .fetch();
 
-    const referenceToJournalId = new Map<string, JournalId>();
     const journalIds: JournalId[] = [];
+    const referenceToJournalId = new Map<string, JournalId>();
 
     for (const record of inboxRecords) {
       const linkedJournalId = record.linkedJournalId;
       const referenceNumber = record.referenceNumber;
       if (!linkedJournalId || !referenceNumber) continue;
-      const normalized = referenceNumber.replace(/\s+/g, '').toUpperCase();
+      const normalized = normalizeSmsReferenceNumber(referenceNumber);
+      if (!normalizedRefs.has(normalized)) continue;
       journalIds.push(linkedJournalId);
       referenceToJournalId.set(normalized, linkedJournalId);
     }
 
-    if (journalIds.length === 0) return new Map();
+    const unresolvedRefs = [...normalizedRefs].filter(ref => !referenceToJournalId.has(ref));
+    if (unresolvedRefs.length > 0) {
+      const metadataRecords = await this.journalMetadata
+        .query(Q.where('workplace_id', workplaceId), Q.where('metadata_json', Q.notEq(null)))
+        .fetch();
+
+      for (const metadata of metadataRecords) {
+        if (!metadata.metadataJson) continue;
+        const parsed = safeParseJSON<{ referenceNumber?: string | null }>(
+          metadata.metadataJson,
+          {},
+        );
+        const ref = parsed.referenceNumber;
+        if (!ref) continue;
+        const normalized = normalizeSmsReferenceNumber(ref);
+        if (!unresolvedRefs.includes(normalized) || referenceToJournalId.has(normalized)) {
+          continue;
+        }
+        referenceToJournalId.set(normalized, metadata.journalId);
+        journalIds.push(metadata.journalId);
+      }
+    }
+
+    if (journalIds.length === 0) return resultMap;
 
     const journals = await this.findByIds(workplaceId, journalIds);
     const journalMap = new Map(journals.map(j => [j.id, j]));
-    const resultMap = new Map<string, Journal>();
 
     for (const [reference, journalId] of referenceToJournalId) {
       const journal = journalMap.get(journalId);

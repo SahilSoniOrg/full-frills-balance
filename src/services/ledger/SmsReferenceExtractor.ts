@@ -52,11 +52,6 @@ const REFERENCE_PATTERNS: ReferencePattern[] = [
     regex:
       /\b(?:txn(?:\s+id)?|tx(?:\s+id)?|trx(?:\s+id)?|ref(?:erence)?(?:\s+(?:no|id|#))?|transaction\s+id|cheque(?:\s+no)?|order\s+id|trace(?:\s+id)?|tid)\s*[:#\-.]?\s*([a-z0-9]{6,30})\b/i,
   },
-  {
-    kind: 'rrn',
-    confidence: 0.78,
-    regex: /\b(\d{12})\b/,
-  },
 ];
 
 const ACCOUNT_OR_CARD_SPAN =
@@ -100,7 +95,7 @@ function overlapsSpan(
   return spans.some(span => start < span.end && end > span.start);
 }
 
-function normalizeReferenceValue(raw: string): string {
+export function normalizeSmsReferenceNumber(raw: string): string {
   return raw.replace(/\s+/g, '').toUpperCase();
 }
 
@@ -164,7 +159,7 @@ export function extractSmsReference(body: string): SmsReferenceResult | null {
       continue;
     }
 
-    const value = normalizeReferenceValue(match[1]);
+    const value = normalizeSmsReferenceNumber(match[1]);
     const matchStart = match.index + match[0].indexOf(match[1]);
     const matchEnd = matchStart + match[1].length;
 

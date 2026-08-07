@@ -1,7 +1,7 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType, JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
@@ -22,8 +22,15 @@ import {
   SmsParser,
   toTransactionDirection,
 } from '@/src/services/ledger/SmsParser';
+import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
+import {
+  DuplicateMatch,
+  findReferenceDuplicateMatch,
+  resolveDuplicateMatch,
+  scoreFuzzyDuplicateMatch,
+} from '@/src/services/sms/smsDuplicateDetection';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -32,59 +39,6 @@ import { Model, Q } from '@nozbe/watermelondb';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
-
-type DuplicateMatch = {
-  journalId: JournalId;
-  score: number;
-  reasons: string[];
-} | null;
-
-export function normalizeSmsReferenceNumber(referenceNumber: string): string {
-  return referenceNumber.replace(/\s+/g, '').toUpperCase();
-}
-
-export function scoreFuzzyDuplicateMatch(params: {
-  journalDate: number;
-  messageDate: number;
-  journalDescription?: string | null;
-  merchant?: string;
-}): { score: number; reasons: string[] } {
-  const reasons: string[] = [];
-  let score = 0;
-
-  const timeDistance = Math.abs(params.journalDate - params.messageDate);
-  const timeScore = Math.max(
-    0,
-    DUPLICATE_CONFIG.weightTime -
-      (timeDistance / DUPLICATE_CONFIG.fuzzyWindowMs) * DUPLICATE_CONFIG.weightTime,
-  );
-  score += timeScore;
-  if (timeScore > DUPLICATE_CONFIG.weightTime / 2) {
-    reasons.push('Close in time');
-  }
-
-  if (
-    params.merchant &&
-    params.journalDescription &&
-    params.journalDescription.toLowerCase().includes(params.merchant.toLowerCase())
-  ) {
-    score += DUPLICATE_CONFIG.weightMerchant;
-    reasons.push('Matching description/merchant');
-  }
-
-  return { score, reasons };
-}
-
-export function buildReferenceDuplicateMatch(
-  journalId: JournalId,
-  referenceNumber: string,
-): DuplicateMatch {
-  return {
-    journalId,
-    score: DUPLICATE_CONFIG.referenceMatchScore,
-    reasons: [`Matching reference number (${referenceNumber})`],
-  };
-}
 
 interface SmsAnalysisResult {
   message: SmsMessage;
@@ -158,7 +112,16 @@ export class SmsSyncPipeline {
   }): InboxProcessingStatus {
     const { parsed, processedIds, exactJournalId, duplicate, existingStatus } = params;
 
-    if (existingStatus) return existingStatus;
+    if (existingStatus) {
+      if (
+        existingStatus === InboxProcessingStatus.PENDING &&
+        duplicate &&
+        duplicate.score >= DUPLICATE_CONFIG.scoreThreshold
+      ) {
+        return InboxProcessingStatus.DUPLICATE_FLAGGED;
+      }
+      return existingStatus;
+    }
     if (parsed.parseStatus === InboxParseStatus.PARSE_FAILED)
       return InboxProcessingStatus.PARSE_FAILED;
     if (parsed.parseStatus === InboxParseStatus.IGNORED) return InboxProcessingStatus.DISMISSED;
@@ -220,8 +183,10 @@ export class SmsSyncPipeline {
       m => m.parsed.parseStatus === InboxParseStatus.PARSED && m.parsed.amount,
     );
 
+    const parsedForFuzzy = parsedWithAmounts.filter(({ parsed }) => !parsed.referenceNumber);
+
     const allCandidateJournals = await this.findManyDuplicateCandidates(
-      parsedWithAmounts,
+      parsedForFuzzy,
       workplaceId,
     );
 
@@ -234,8 +199,8 @@ export class SmsSyncPipeline {
       candidateMessages.map(async ({ message, parsed, fingerprint }) => {
         const existingRecord = existingMap.get(message.id) || null;
         const fuzzyDuplicate = allCandidateJournals.get(message.id) || null;
-        const referenceDuplicate = this.findReferenceDuplicateMatch(parsed, journalsByReference);
-        const duplicate = this.pickStrongerDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
+        const referenceDuplicate = findReferenceDuplicateMatch(parsed, journalsByReference);
+        const duplicate = resolveDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
         const exactJournal = journalsById.get(message.id) || null;
         const fingerprintJournal = exactJournal
           ? null
@@ -343,35 +308,6 @@ export class SmsSyncPipeline {
     return importedCount;
   }
 
-  private findReferenceDuplicateMatch(
-    parsed: ParsedTransaction,
-    journalsByReference: Map<string, Journal>,
-  ): DuplicateMatch {
-    if (!parsed.referenceNumber) {
-      return null;
-    }
-
-    const journal = journalsByReference.get(normalizeSmsReferenceNumber(parsed.referenceNumber));
-    if (!journal) {
-      return null;
-    }
-
-    if (parsed.amount != null && journal.totalAmount !== parsed.amount) {
-      return null;
-    }
-
-    return buildReferenceDuplicateMatch(journal.id, parsed.referenceNumber);
-  }
-
-  private pickStrongerDuplicateMatch(
-    referenceDuplicate: DuplicateMatch,
-    fuzzyDuplicate: DuplicateMatch,
-  ): DuplicateMatch {
-    if (!referenceDuplicate) return fuzzyDuplicate;
-    if (!fuzzyDuplicate) return referenceDuplicate;
-    return referenceDuplicate.score >= fuzzyDuplicate.score ? referenceDuplicate : fuzzyDuplicate;
-  }
-
   private async findManyDuplicateCandidates(
     parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
     workplaceId: WorkplaceId,
@@ -420,7 +356,7 @@ export class SmsSyncPipeline {
         }
       }
 
-      if (best) {
+      if (best && best.score >= DUPLICATE_CONFIG.scoreThreshold) {
         results.set(message.id, best);
       }
     }

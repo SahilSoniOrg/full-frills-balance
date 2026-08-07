@@ -33,7 +33,6 @@ export class SmsExtractor implements TransactionExtractor {
       currencyCode: currencyMatch?.currencyCode || undefined,
       direction,
       referenceNumber: reference?.value,
-      paymentChannel: reference?.paymentChannel,
       sourceAccountHint: accountSource,
       destinationCategoryHint: merchant,
       merchantName: merchant,
