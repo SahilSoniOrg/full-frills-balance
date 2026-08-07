@@ -9,11 +9,14 @@ export interface RawTransactionInput {
   metadata?: Record<string, unknown>; // Custom metadata specific to the channel
 }
 
+export type PaymentChannel = 'upi' | 'imps' | 'neft' | 'rtgs' | 'card' | 'unknown';
+
 export interface ExtractedInfo {
   amount?: number;
   currencyCode?: string;
   direction: 'debit' | 'credit' | 'unknown';
   referenceNumber?: string;
+  paymentChannel?: PaymentChannel;
   sourceAccountHint?: string; // e.g., "HDFC 1234", "cash"
   destinationCategoryHint?: string; // e.g., "banana", "uber", "groceries"
   merchantName?: string; // e.g., "Starbucks", "Uber India"

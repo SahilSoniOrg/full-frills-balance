@@ -4,6 +4,7 @@ import {
   TransactionExtractor,
   transactionExtractorRegistry,
 } from './TransactionExtractor';
+import { extractSmsReference } from './SmsReferenceExtractor';
 
 export class SmsExtractor implements TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean {
@@ -25,13 +26,14 @@ export class SmsExtractor implements TransactionExtractor {
     const currencyMatch = this.extractCurrencyAndAmount(input.rawText);
     const merchant = this.extractMerchant(input.rawText, direction);
     const accountSource = this.extractAccountSource(input.rawText);
-    const referenceNumber = this.extractReferenceNumber(input.rawText);
+    const reference = extractSmsReference(input.rawText);
 
     return {
       amount: currencyMatch?.amount,
       currencyCode: currencyMatch?.currencyCode || undefined,
       direction,
-      referenceNumber,
+      referenceNumber: reference?.value,
+      paymentChannel: reference?.paymentChannel,
       sourceAccountHint: accountSource,
       destinationCategoryHint: merchant,
       merchantName: merchant,
@@ -122,13 +124,6 @@ export class SmsExtractor implements TransactionExtractor {
     if (match[2]) return 'UPI';
     if (match[3]) return `A/c ${match[3].replace(/[^0-9]/g, '')}`;
     return undefined;
-  }
-
-  private extractReferenceNumber(body: string): string | undefined {
-    const match = body.match(
-      /(?:utr|ref(?:\s*no)?|txn\s*id|transaction\s*id|rrn|cheque(?:\s*no)?)\s*[:\-]?\s*([a-zA-Z0-9]{6,30})/i,
-    );
-    return match?.[1];
   }
 
   private normalizeAmount(raw: string): number | null {
