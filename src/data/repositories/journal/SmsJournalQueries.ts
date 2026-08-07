@@ -5,7 +5,6 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 export class SmsJournalQueries {
@@ -146,6 +145,8 @@ export class SmsJournalQueries {
 
     const normalizedRefs = new Set(referenceNumbers.map(normalizeSmsReferenceNumber));
     const resultMap = new Map<string, Journal>();
+    const referenceToJournalId = new Map<string, JournalId>();
+    const journalIds: JournalId[] = [];
 
     const inboxRecords = await database.collections
       .get<TransactionInboxRecord>('transaction_inbox_records')
@@ -156,15 +157,12 @@ export class SmsJournalQueries {
       )
       .fetch();
 
-    const journalIds: JournalId[] = [];
-    const referenceToJournalId = new Map<string, JournalId>();
-
     for (const record of inboxRecords) {
       const linkedJournalId = record.linkedJournalId;
       const referenceNumber = record.referenceNumber;
       if (!linkedJournalId || !referenceNumber) continue;
       const normalized = normalizeSmsReferenceNumber(referenceNumber);
-      if (!normalizedRefs.has(normalized)) continue;
+      if (!normalizedRefs.has(normalized) || referenceToJournalId.has(normalized)) continue;
       journalIds.push(linkedJournalId);
       referenceToJournalId.set(normalized, linkedJournalId);
     }
@@ -172,22 +170,16 @@ export class SmsJournalQueries {
     const unresolvedRefs = [...normalizedRefs].filter(ref => !referenceToJournalId.has(ref));
     if (unresolvedRefs.length > 0) {
       const metadataRecords = await this.journalMetadata
-        .query(Q.where('workplace_id', workplaceId), Q.where('metadata_json', Q.notEq(null)))
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('reference_number', Q.oneOf(unresolvedRefs)),
+        )
         .fetch();
 
       for (const metadata of metadataRecords) {
-        if (!metadata.metadataJson) continue;
-        const parsed = safeParseJSON<{ referenceNumber?: string | null }>(
-          metadata.metadataJson,
-          {},
-        );
-        const ref = parsed.referenceNumber;
-        if (!ref) continue;
-        const normalized = normalizeSmsReferenceNumber(ref);
-        if (!unresolvedRefs.includes(normalized) || referenceToJournalId.has(normalized)) {
-          continue;
-        }
-        referenceToJournalId.set(normalized, metadata.journalId);
+        const ref = metadata.referenceNumber;
+        if (!ref || referenceToJournalId.has(ref)) continue;
+        referenceToJournalId.set(ref, metadata.journalId);
         journalIds.push(metadata.journalId);
       }
     }

@@ -7,8 +7,15 @@ import TransactionInboxRecord, {
 } from '@/src/data/models/TransactionInboxRecord';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import { AccountType, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountType,
+  AccountId,
+  JournalId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
@@ -70,12 +77,12 @@ export async function seedExpenseJournal(params: {
       metadata: params.metadata,
       transactions: [
         {
-          accountId: params.cashId as any,
+          accountId: params.cashId as AccountId,
           amount: params.amount,
           transactionType: TransactionType.CREDIT,
         },
         {
-          accountId: params.expenseId as any,
+          accountId: params.expenseId as AccountId,
           amount: params.amount,
           transactionType: TransactionType.DEBIT,
         },
@@ -122,7 +129,9 @@ export async function seedInboxRecord(params: {
       record.parsedCurrencyCode = 'INR';
       record.direction = TransactionDirection.DEBIT;
       record.processingStatus = params.processingStatus;
-      record.referenceNumber = params.referenceNumber;
+      record.referenceNumber = params.referenceNumber
+        ? normalizeSmsReferenceNumber(params.referenceNumber)
+        : undefined;
       record.linkedJournalId = params.linkedJournalId;
       record.duplicateJournalId = params.duplicateJournalId;
       record.duplicateConfidence = params.duplicateConfidence;

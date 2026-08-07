@@ -33,7 +33,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/services/accounting/BalanceEffects';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 28;
+const EXPECTED_SCHEMA_VERSION = 29;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);

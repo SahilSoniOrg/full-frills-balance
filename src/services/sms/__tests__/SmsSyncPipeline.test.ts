@@ -156,15 +156,11 @@ describe('SmsSyncPipeline', () => {
       expect(status).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
     });
 
-    it('returns PENDING when duplicate score is below threshold', () => {
+    it('returns PENDING when no actionable duplicate is provided', () => {
       const status = pipeline.resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
-        duplicate: {
-          journalId: 'j1' as JournalId,
-          score: AppConfig.input.sms.duplicateDetection.scoreThreshold - 0.01,
-          reasons: ['Close in time'],
-        },
+        duplicate: null,
       });
       expect(status).toBe(InboxProcessingStatus.PENDING);
     });

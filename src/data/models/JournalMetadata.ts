@@ -18,6 +18,7 @@ export default class JournalMetadata extends BaseScopedModel {
   @field('original_sms_sender') originalSmsSender?: string;
   @field('original_sms_body') originalSmsBody?: string;
   @field('metadata_json') metadataJson?: string;
+  @field('reference_number') referenceNumber?: string;
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

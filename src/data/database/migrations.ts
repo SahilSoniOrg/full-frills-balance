@@ -871,5 +871,28 @@ export const migrations = schemaMigrations({
         unsafeExecuteSql('DROP TABLE IF EXISTS sms_inbox_records;'),
       ],
     },
+    {
+      toVersion: 29,
+      steps: [
+        addColumns({
+          table: 'journal_metadata',
+          columns: [
+            { name: 'reference_number', type: 'string', isOptional: true, isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          UPDATE journal_metadata
+          SET reference_number = UPPER(REPLACE(json_extract(metadata_json, '$.referenceNumber'), ' ', ''))
+          WHERE metadata_json IS NOT NULL
+            AND json_extract(metadata_json, '$.referenceNumber') IS NOT NULL
+            AND json_extract(metadata_json, '$.referenceNumber') != '';
+        `),
+        unsafeExecuteSql(`
+          UPDATE transaction_inbox_records
+          SET reference_number = UPPER(REPLACE(reference_number, ' ', ''))
+          WHERE reference_number IS NOT NULL;
+        `),
+      ],
+    },
   ],
 });

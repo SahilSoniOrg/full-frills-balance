@@ -1,21 +1,17 @@
-import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord, {
-  InboxParseStatus,
   InboxProcessingStatus,
-  TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { AppConfig } from '@/src/constants';
 import { smsService } from '@/src/services/sms-service';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { JournalId } from '@/src/types/domain';
 import {
   resetSmsTestDb,
   seedExpenseJournal,
+  seedInboxRecord,
   seedSmsTestAccounts,
   SMS_TEST_WORKPLACE,
 } from '@/src/testing/smsTestHarness';
-import { Q } from '@nozbe/watermelondb';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
@@ -41,37 +37,20 @@ describe('transactionInboxMapping integration', () => {
       journalDate: Date.now(),
     });
 
-    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-    let record!: TransactionInboxRecord;
-    const now = Date.now();
-
-    await database.write(async () => {
-      record = await inbox.create(entry => {
-        entry.workplaceId = workplaceId;
-        entry.channel = 'sms';
-        entry.deviceSourceId = 'dup-mapping-1';
-        entry.senderAddress = 'HDFCBK';
-        entry.rawBody = 'INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.';
-        entry.inputDate = now;
-        entry.inputFingerprint = 'dup-mapping-fp';
-        entry.parseStatus = InboxParseStatus.PARSED;
-        entry.parsedAmount = 250;
-        entry.parsedCurrencyCode = 'INR';
-        entry.parsedMerchant = 'Merchant';
-        entry.referenceNumber = '121554846690';
-        entry.direction = TransactionDirection.DEBIT;
-        entry.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
-        entry.duplicateJournalId = journal.id as JournalId;
-        entry.duplicateConfidence = AppConfig.input.sms.duplicateDetection.referenceMatchScore;
-        entry.metadataJson = JSON.stringify({
-          duplicateReasons: ['Matching reference number (121554846690)'],
-        });
-        entry.firstSeenAt = now;
-        entry.lastScannedAt = now;
-      });
+    const record = await seedInboxRecord({
+      deviceSourceId: 'dup-mapping-1',
+      referenceNumber: '121554846690',
+      duplicateJournalId: journal.id,
+      duplicateConfidence: AppConfig.input.sms.duplicateDetection.referenceMatchScore,
+      processingStatus: InboxProcessingStatus.DUPLICATE_FLAGGED,
+      parsedAmount: 250,
+      rawBody: 'INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.',
+      metadataJson: JSON.stringify({
+        duplicateReasons: ['Matching reference number (121554846690)'],
+      }),
     });
 
-    return { record, journalId: journal.id as JournalId };
+    return { record, journalId: journal.id };
   }
 
   it('builds duplicateCandidate from persisted inbox fields', async () => {
@@ -91,25 +70,13 @@ describe('transactionInboxMapping integration', () => {
 
   it('observeInbox duplicates filter returns only DUPLICATE_FLAGGED records', async () => {
     const { record: duplicateRecord } = await seedDuplicateInboxRecord();
-    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-    const now = Date.now();
 
-    await database.write(async () => {
-      await inbox.create(entry => {
-        entry.workplaceId = workplaceId;
-        entry.channel = 'sms';
-        entry.deviceSourceId = 'pending-mapping-1';
-        entry.senderAddress = 'HDFCBK';
-        entry.rawBody = 'Pending only';
-        entry.inputDate = now;
-        entry.inputFingerprint = 'pending-mapping-fp';
-        entry.parseStatus = InboxParseStatus.PARSED;
-        entry.parsedAmount = 99;
-        entry.direction = TransactionDirection.DEBIT;
-        entry.processingStatus = InboxProcessingStatus.PENDING;
-        entry.firstSeenAt = now;
-        entry.lastScannedAt = now;
-      });
+    await seedInboxRecord({
+      deviceSourceId: 'pending-mapping-1',
+      processingStatus: InboxProcessingStatus.PENDING,
+      parsedAmount: 99,
+      rawBody: 'Pending only',
+      inputFingerprint: 'pending-mapping-fp',
     });
 
     const records = await firstValueFrom(
@@ -121,25 +88,13 @@ describe('transactionInboxMapping integration', () => {
 
   it('observeInbox pending filter excludes duplicate-flagged records', async () => {
     await seedDuplicateInboxRecord();
-    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-    const now = Date.now();
 
-    await database.write(async () => {
-      await inbox.create(entry => {
-        entry.workplaceId = workplaceId;
-        entry.channel = 'sms';
-        entry.deviceSourceId = 'pending-mapping-2';
-        entry.senderAddress = 'HDFCBK';
-        entry.rawBody = 'Still pending';
-        entry.inputDate = now;
-        entry.inputFingerprint = 'pending-mapping-fp-2';
-        entry.parseStatus = InboxParseStatus.PARSED;
-        entry.parsedAmount = 99;
-        entry.direction = TransactionDirection.DEBIT;
-        entry.processingStatus = InboxProcessingStatus.PENDING;
-        entry.firstSeenAt = now;
-        entry.lastScannedAt = now;
-      });
+    await seedInboxRecord({
+      deviceSourceId: 'pending-mapping-2',
+      processingStatus: InboxProcessingStatus.PENDING,
+      parsedAmount: 99,
+      rawBody: 'Still pending',
+      inputFingerprint: 'pending-mapping-fp-2',
     });
 
     const records = await firstValueFrom(

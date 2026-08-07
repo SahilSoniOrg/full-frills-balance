@@ -4,6 +4,7 @@ import { database } from '@/src/data/database/Database';
 import { checkJournal } from '@/src/services/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
 import { JournalEntryLine, WorkplaceId } from '@/src/types/domain';
 import { sanitizeAmount } from '@/src/utils/validation';
 
@@ -117,7 +118,9 @@ async function resolveSmsMetadataJson(smsRecordId?: string): Promise<string | un
       parsedAmount: inboxRecord.parsedAmount ?? null,
       parsedCurrencyCode: inboxRecord.parsedCurrencyCode ?? null,
       parsedMerchant: inboxRecord.parsedMerchant ?? null,
-      referenceNumber: inboxRecord.referenceNumber ?? null,
+      referenceNumber: inboxRecord.referenceNumber
+        ? normalizeSmsReferenceNumber(inboxRecord.referenceNumber)
+        : null,
       accountSource: inboxRecord.parsedAccountSource ?? null,
     });
   } catch {

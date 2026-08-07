@@ -4,6 +4,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { referenceNumberFromMetadataJson } from '@/src/services/ledger/SmsReferenceExtractor';
 import {
   AccountId,
   JournalDisplayType,
@@ -116,6 +117,7 @@ export class JournalWriteRepository {
         m.originalSmsSender = metadata.originalSmsSender;
         m.originalSmsBody = metadata.originalSmsBody;
         m.metadataJson = metadata.metadataJson;
+        m.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
       });
     }
 
@@ -226,6 +228,7 @@ export class JournalWriteRepository {
             m.originalSmsSender = metadata.originalSmsSender;
             m.originalSmsBody = metadata.originalSmsBody;
             m.metadataJson = metadata.metadataJson;
+            m.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
             m.workplaceId = workplaceId;
             m.updatedAt = now;
           });
@@ -239,6 +242,7 @@ export class JournalWriteRepository {
             m.originalSmsSender = metadata.originalSmsSender;
             m.originalSmsBody = metadata.originalSmsBody;
             m.metadataJson = metadata.metadataJson;
+            m.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
             m.createdAt = now;
             m.updatedAt = now;
           });

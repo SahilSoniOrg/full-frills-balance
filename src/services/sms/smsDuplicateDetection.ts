@@ -86,3 +86,12 @@ export function resolveDuplicateMatch(
 export function isDuplicateAboveThreshold(duplicate: DuplicateMatch): boolean {
   return duplicate != null && duplicate.score >= DUPLICATE_CONFIG.scoreThreshold;
 }
+
+/** Resolve tiers and drop matches below the fuzzy score threshold. */
+export function coalesceActionableDuplicate(
+  referenceDuplicate: DuplicateMatch,
+  fuzzyDuplicate: DuplicateMatch,
+): DuplicateMatch {
+  const match = resolveDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
+  return isDuplicateAboveThreshold(match) ? match : null;
+}

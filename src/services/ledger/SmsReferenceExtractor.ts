@@ -99,6 +99,17 @@ export function normalizeSmsReferenceNumber(raw: string): string {
   return raw.replace(/\s+/g, '').toUpperCase();
 }
 
+export function referenceNumberFromMetadataJson(metadataJson?: string | null): string | undefined {
+  if (!metadataJson) return undefined;
+  try {
+    const parsed = JSON.parse(metadataJson) as { referenceNumber?: string | null };
+    if (!parsed.referenceNumber) return undefined;
+    return normalizeSmsReferenceNumber(parsed.referenceNumber);
+  } catch {
+    return undefined;
+  }
+}
+
 function isRejectedReference(
   value: string,
   body: string,

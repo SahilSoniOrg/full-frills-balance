@@ -5,6 +5,7 @@ import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceE
 import { JournalId } from '@/src/types/domain';
 import {
   buildReferenceDuplicateMatch,
+  coalesceActionableDuplicate,
   findReferenceDuplicateMatch,
   resolveDuplicateMatch,
   scoreFuzzyDuplicateMatch,
@@ -122,6 +123,29 @@ describe('smsDuplicateDetection', () => {
 
     it('falls back to fuzzy when reference tier has no match', () => {
       expect(resolveDuplicateMatch(null, fuzzyMatch)).toBe(fuzzyMatch);
+    });
+  });
+
+  describe('coalesceActionableDuplicate', () => {
+    it('drops fuzzy matches below the score threshold', () => {
+      const belowThreshold = {
+        journalId: 'j-fuzzy' as JournalId,
+        score: AppConfig.input.sms.duplicateDetection.scoreThreshold - 0.01,
+        reasons: ['Close in time'],
+      };
+
+      expect(coalesceActionableDuplicate(null, belowThreshold)).toBeNull();
+    });
+
+    it('keeps reference matches regardless of fuzzy tier', () => {
+      const refMatch = buildReferenceDuplicateMatch('j-ref' as JournalId, 'UTR123');
+      const belowThreshold = {
+        journalId: 'j-fuzzy' as JournalId,
+        score: AppConfig.input.sms.duplicateDetection.scoreThreshold - 0.01,
+        reasons: ['Close in time'],
+      };
+
+      expect(coalesceActionableDuplicate(refMatch, belowThreshold)).toBe(refMatch);
     });
   });
 });

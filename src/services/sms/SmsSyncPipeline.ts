@@ -27,8 +27,9 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import {
   DuplicateMatch,
+  coalesceActionableDuplicate,
   findReferenceDuplicateMatch,
-  resolveDuplicateMatch,
+  isDuplicateAboveThreshold,
   scoreFuzzyDuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
@@ -113,11 +114,7 @@ export class SmsSyncPipeline {
     const { parsed, processedIds, exactJournalId, duplicate, existingStatus } = params;
 
     if (existingStatus) {
-      if (
-        existingStatus === InboxProcessingStatus.PENDING &&
-        duplicate &&
-        duplicate.score >= DUPLICATE_CONFIG.scoreThreshold
-      ) {
+      if (existingStatus === InboxProcessingStatus.PENDING && duplicate) {
         return InboxProcessingStatus.DUPLICATE_FLAGGED;
       }
       return existingStatus;
@@ -127,9 +124,7 @@ export class SmsSyncPipeline {
     if (parsed.parseStatus === InboxParseStatus.IGNORED) return InboxProcessingStatus.DISMISSED;
     if (exactJournalId) return InboxProcessingStatus.IMPORTED;
     if (processedIds.has(parsed.id || '')) return InboxProcessingStatus.IMPORTED;
-    if (duplicate && duplicate.score >= DUPLICATE_CONFIG.scoreThreshold) {
-      return InboxProcessingStatus.DUPLICATE_FLAGGED;
-    }
+    if (duplicate) return InboxProcessingStatus.DUPLICATE_FLAGGED;
     return InboxProcessingStatus.PENDING;
   }
 
@@ -198,9 +193,11 @@ export class SmsSyncPipeline {
     const analysisResults: SmsAnalysisResult[] = await Promise.all(
       candidateMessages.map(async ({ message, parsed, fingerprint }) => {
         const existingRecord = existingMap.get(message.id) || null;
-        const fuzzyDuplicate = allCandidateJournals.get(message.id) || null;
         const referenceDuplicate = findReferenceDuplicateMatch(parsed, journalsByReference);
-        const duplicate = resolveDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
+        const duplicate = coalesceActionableDuplicate(
+          referenceDuplicate,
+          allCandidateJournals.get(message.id) || null,
+        );
         const exactJournal = journalsById.get(message.id) || null;
         const fingerprintJournal = exactJournal
           ? null
@@ -356,7 +353,7 @@ export class SmsSyncPipeline {
         }
       }
 
-      if (best && best.score >= DUPLICATE_CONFIG.scoreThreshold) {
+      if (best && isDuplicateAboveThreshold(best)) {
         results.set(message.id, best);
       }
     }
@@ -492,7 +489,9 @@ export class SmsSyncPipeline {
       parsedCurrencyCode: parsed.currencyCode,
       parsedMerchant: parsed.merchant,
       parsedAccountSource: parsed.accountSource,
-      referenceNumber: parsed.referenceNumber,
+      referenceNumber: parsed.referenceNumber
+        ? normalizeSmsReferenceNumber(parsed.referenceNumber)
+        : undefined,
       direction: this.toDirection(parsed.type),
       processingStatus,
       linkedJournalId,
