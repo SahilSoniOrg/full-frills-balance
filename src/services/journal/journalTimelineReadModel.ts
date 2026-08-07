@@ -41,7 +41,12 @@ export function observeEnrichedJournals(
   const accountIds = dateRange?.accountIds || (dateRange?.accountId ? [dateRange.accountId] : []);
 
   if (accountIds.length > 0 && !dateRange?.plannedPaymentId) {
-    clauses.push(Q.on('transactions', Q.where('account_id', Q.oneOf(accountIds))));
+    clauses.push(
+      Q.on('transactions', [
+        Q.where('account_id', Q.oneOf(accountIds)),
+        Q.where('deleted_at', Q.eq(null)),
+      ]),
+    );
   }
 
   if (dateRange) {

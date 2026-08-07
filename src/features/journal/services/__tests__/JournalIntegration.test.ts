@@ -529,5 +529,201 @@ describe('Journal ledger integration', () => {
       const accountIds = matchingJournal!.accounts.map((a: any) => a.id);
       expect(accountIds).toContain(accountC.id);
     });
+
+    it('should not list a journal on an account page after that account is removed from the journal', async () => {
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Account filter test',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const accountC = await accountRepository.create({
+        name: 'Account C',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      const observeForExpenseAccount = () =>
+        new Promise<any[]>(resolve => {
+          const subscription = observeEnrichedJournals('wp-1' as WorkplaceId, 10, {
+            accountIds: [expenseAccountId],
+          }).subscribe(data => {
+            subscription.unsubscribe();
+            resolve(data);
+          });
+        });
+
+      const beforeUpdate = await observeForExpenseAccount();
+      expect(beforeUpdate.some(j => j.id === journal.id)).toBe(true);
+
+      await journalService.updateJournal(
+        journal.id as JournalId,
+        {
+          description: 'Account filter test',
+          journalDate: journal.journalDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: accountC.id as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const afterUpdate = await observeForExpenseAccount();
+      expect(afterUpdate.some(j => j.id === journal.id)).toBe(false);
+    });
+  });
+
+  describe('observeEnrichedJournals account filter', () => {
+    async function observeForAccounts(accountIds: string[]) {
+      return new Promise<any[]>(resolve => {
+        const subscription = observeEnrichedJournals('wp-1' as WorkplaceId, 10, {
+          accountIds,
+        }).subscribe(data => {
+          subscription.unsubscribe();
+          resolve(data);
+        });
+      });
+    }
+
+    async function createCashExpenseJournal(description: string, amount = 10) {
+      return ledgerWriteService.createJournal(
+        {
+          description,
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+    }
+
+    it('lists a journal when the account has an active transaction leg', async () => {
+      const journal = await createCashExpenseJournal('Active leg filter');
+
+      const results = await observeForAccounts([expenseAccountId]);
+
+      expect(results.some(j => j.id === journal.id)).toBe(true);
+    });
+
+    it('still lists the journal for the replacement account after a counterparty swap', async () => {
+      const journal = await createCashExpenseJournal('Replacement account filter');
+      const accountC = await accountRepository.create({
+        name: 'Account C',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      await journalService.updateJournal(
+        journal.id as JournalId,
+        {
+          description: 'Replacement account filter',
+          journalDate: journal.journalDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: accountC.id as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const results = await observeForAccounts([accountC.id]);
+
+      expect(results.some(j => j.id === journal.id)).toBe(true);
+    });
+
+    it('still lists the journal for an unchanged account after only the counterparty changes', async () => {
+      const journal = await createCashExpenseJournal('Unchanged account filter');
+      const accountC = await accountRepository.create({
+        name: 'Account C',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      await journalService.updateJournal(
+        journal.id as JournalId,
+        {
+          description: 'Unchanged account filter',
+          journalDate: journal.journalDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: accountC.id as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const results = await observeForAccounts([cashAccountId]);
+
+      expect(results.some(j => j.id === journal.id)).toBe(true);
+    });
+
+    it('does not list a soft-deleted journal even when a deleted leg matched the account', async () => {
+      const journal = await createCashExpenseJournal('Deleted journal filter');
+
+      const beforeDelete = await observeForAccounts([expenseAccountId]);
+      expect(beforeDelete.some(j => j.id === journal.id)).toBe(true);
+
+      await journalService.deleteJournal(journal.id as JournalId, 'wp-1' as WorkplaceId);
+
+      const afterDelete = await observeForAccounts([expenseAccountId]);
+      expect(afterDelete.some(j => j.id === journal.id)).toBe(false);
+    });
   });
 });
