@@ -1,11 +1,11 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
+import { useRevealHorizontalItem } from '@/src/components/common/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Bleed, Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import React, { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from 'react-native';
 
 export interface SelectionTileProps {
   id: string;
@@ -14,6 +14,15 @@ export interface SelectionTileProps {
   color: string;
 }
 
+export type SelectionTilePresentation = {
+  borderStyle?: 'solid' | 'dashed';
+  borderWidth?: number;
+  borderColor?: string;
+  showSelectedFill?: boolean;
+  showCheckmark?: boolean;
+  opacity?: number;
+};
+
 export interface SelectionTileListProps {
   items: SelectionTileProps[];
   selectedId: string;
@@ -21,6 +30,11 @@ export interface SelectionTileListProps {
   disabled?: boolean;
   testIDPrefix?: string;
   allowDeselect?: boolean;
+  getTilePresentation?: (
+    item: SelectionTileProps,
+    isSelected: boolean,
+  ) => SelectionTilePresentation | undefined;
+  renderAccessory?: (item: SelectionTileProps, isSelected: boolean) => React.ReactNode;
 }
 
 const TILE_ESTIMATED_WIDTH = 140;
@@ -32,6 +46,8 @@ type SelectionTileRowProps = {
   allowDeselect: boolean;
   testIDPrefix: string;
   onSelect: (id: string) => void;
+  presentation?: SelectionTilePresentation;
+  accessory?: React.ReactNode;
 };
 
 const SelectionTileRow = React.memo(function SelectionTileRow({
@@ -41,23 +57,31 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
   allowDeselect,
   testIDPrefix,
   onSelect,
+  presentation,
+  accessory,
 }: SelectionTileRowProps) {
   const { theme } = useTheme();
+  const defaultBorderColor = withOpacity(theme.textSecondary, Opacity.muted);
+  const showSelectedFill = isSelected && (presentation?.showSelectedFill ?? true);
+  const showCheckmark = isSelected && (presentation?.showCheckmark ?? true);
+
+  const tileStyle: ViewStyle = {
+    backgroundColor: theme.surface,
+    borderColor: presentation?.borderColor ?? defaultBorderColor,
+    borderStyle: presentation?.borderStyle ?? 'solid',
+    borderWidth: presentation?.borderWidth ?? 1,
+    opacity: presentation?.opacity ?? 1,
+  };
+
+  if (showSelectedFill) {
+    tileStyle.backgroundColor = withOpacity(item.color, Opacity.soft);
+    tileStyle.borderColor = withOpacity(item.color, Opacity.medium);
+  }
 
   return (
     <TouchableOpacity
       testID={`${testIDPrefix}-${item.id}`}
-      style={[
-        styles.tile,
-        {
-          backgroundColor: theme.surface,
-          borderColor: withOpacity(theme.textSecondary, Opacity.muted),
-        },
-        isSelected && {
-          backgroundColor: withOpacity(item.color, Opacity.soft),
-          borderColor: withOpacity(item.color, Opacity.medium),
-        },
-      ]}
+      style={[styles.tile, tileStyle]}
       onPress={() => onSelect(isSelected && allowDeselect ? '' : item.id)}
       disabled={disabled}
     >
@@ -69,19 +93,29 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
           background={item.color as any}
           style={{ opacity: isSelected ? 1 : Opacity.soft }}
         />
-        {item.icon && (
+        {accessory}
+        {item.icon ? (
           <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
+        ) : (
+          <AppIcon name="wallet" size={Size.iconXs} color={item.color} />
         )}
         <AppText
           variant="body"
           weight={isSelected ? 'semibold' : 'regular'}
-          style={{ color: theme.text, flexShrink: 1 }}
+          style={{
+            color: theme.text,
+            flexShrink: 1,
+          }}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {item.label}
         </AppText>
-        {isSelected && <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />}
+        <View style={styles.checkmarkSlot}>
+          {showCheckmark ? (
+            <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
+          ) : null}
+        </View>
       </Inline>
     </TouchableOpacity>
   );
@@ -94,41 +128,14 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
   disabled = false,
   testIDPrefix = 'selection-tile',
   allowDeselect = false,
+  getTilePresentation,
+  renderAccessory,
 }) => {
-  const listRef = useRef<FlashListRef<SelectionTileProps>>(null);
-  const lastScrolledId = useRef<string | null>(null);
-
-  const scrollToSelected = useCallback(
-    (animated: boolean) => {
-      if (!selectedId || lastScrolledId.current === selectedId) return;
-      const index = items.findIndex(item => item.id === selectedId);
-      if (index < 0) return;
-      listRef.current?.scrollToIndex({ index, animated });
-      lastScrolledId.current = selectedId;
-    },
-    [items, selectedId],
-  );
-
-  useEffect(() => {
-    lastScrolledId.current = null;
-    scrollToSelected(true);
-  }, [selectedId, items, scrollToSelected]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: SelectionTileProps }) => (
-      <View style={styles.tileWrapper}>
-        <SelectionTileRow
-          item={item}
-          isSelected={selectedId === item.id}
-          disabled={disabled}
-          allowDeselect={allowDeselect}
-          testIDPrefix={testIDPrefix}
-          onSelect={onSelect}
-        />
-      </View>
-    ),
-    [allowDeselect, disabled, onSelect, selectedId, testIDPrefix],
-  );
+  const itemIds = items.map(item => item.id);
+  const { scrollRef, contentRef, registerItemRef } = useRevealHorizontalItem(selectedId, itemIds, {
+    margin: Spacing.lg,
+    estimatedItemWidth: TILE_ESTIMATED_WIDTH,
+  });
 
   if (items.length === 0) {
     return null;
@@ -136,29 +143,40 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
 
   return (
     <Bleed horizontal="lg">
-      <View style={styles.listHost}>
-        <FlashList
-          ref={listRef}
-          horizontal
-          data={items}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          onLoad={() => scrollToSelected(false)}
-        />
-      </View>
+      <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
+        <View ref={contentRef} style={styles.scrollContent}>
+          {items.map(item => {
+            const isSelected = selectedId === item.id;
+            return (
+              <View
+                key={item.id}
+                ref={node => registerItemRef(item.id, node)}
+                style={styles.tileWrapper}
+              >
+                <SelectionTileRow
+                  item={item}
+                  isSelected={isSelected}
+                  disabled={disabled}
+                  allowDeselect={allowDeselect}
+                  testIDPrefix={testIDPrefix}
+                  onSelect={onSelect}
+                  presentation={getTilePresentation?.(item, isSelected)}
+                  accessory={renderAccessory?.(item, isSelected)}
+                />
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </Bleed>
   );
 };
 
 const styles = StyleSheet.create({
-  listHost: {
-    minHeight: 48,
-  },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xs,
+    flexDirection: 'row',
   },
   tileWrapper: {
     marginRight: Spacing.sm,
@@ -171,6 +189,8 @@ const styles = StyleSheet.create({
     minWidth: 100,
     maxWidth: 240,
   },
+  checkmarkSlot: {
+    width: Size.iconSm,
+    alignItems: 'center',
+  },
 });
-
-export const selectionTileEstimatedWidth = TILE_ESTIMATED_WIDTH;
