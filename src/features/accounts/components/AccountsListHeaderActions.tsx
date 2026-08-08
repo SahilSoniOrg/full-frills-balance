@@ -1,7 +1,10 @@
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { IconButton, InlineSearchField } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
+
+type ArchiveAccountRef = { archivedAt?: Date | number | null };
 
 export type AccountsListHeaderActionsProps = {
   isSearching: boolean;
@@ -10,6 +13,7 @@ export type AccountsListHeaderActionsProps = {
   setIsSearching: (searching: boolean) => void;
   onReorderPress: () => void;
   onManageHierarchy: () => void;
+  accountsForArchiveToggle: readonly ArchiveAccountRef[];
 };
 
 export function AccountsListHeaderActions({
@@ -19,6 +23,7 @@ export function AccountsListHeaderActions({
   setIsSearching,
   onReorderPress,
   onManageHierarchy,
+  accountsForArchiveToggle,
 }: AccountsListHeaderActionsProps) {
   return (
     <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
@@ -40,6 +45,7 @@ export function AccountsListHeaderActions({
           />
         </>
       ) : null}
+      <ShowArchivedButton accounts={accountsForArchiveToggle} />
       <InlineSearchField
         value={searchQuery}
         onChangeText={onSearchChange}

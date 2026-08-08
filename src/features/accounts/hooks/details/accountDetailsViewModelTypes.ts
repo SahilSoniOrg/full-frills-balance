@@ -19,6 +19,7 @@ export interface AccountDetailsViewModel {
   accountIcon: IconName | null;
   accountTypeColorKey: string;
   isDeleted: boolean;
+  isArchived: boolean;
   currencyCode: string;
   balanceAmount: number | null;
   transactionCountText: string;

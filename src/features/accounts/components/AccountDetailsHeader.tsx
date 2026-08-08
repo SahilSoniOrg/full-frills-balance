@@ -3,7 +3,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -20,6 +20,7 @@ interface AccountDetailsHeaderProps {
   accountTypeColorKey: string;
   isParent: boolean;
   isDeleted: boolean;
+  isArchived: boolean;
   subAccountCount: number;
   onShowSubAccounts: () => void;
   balanceAmount: number | null;
@@ -51,6 +52,7 @@ export function AccountDetailsHeader({
   accountTypeColorKey,
   isParent,
   isDeleted,
+  isArchived,
   subAccountCount,
   onShowSubAccounts,
   balanceAmount,
@@ -71,7 +73,7 @@ export function AccountDetailsHeader({
 
   return (
     <View style={styles.headerListRegion}>
-      <AppCard elevation="sm" style={styles.accountInfoCard}>
+      <AppCard elevation="sm" style={[styles.accountInfoCard, isArchived && styles.archivedCard]}>
         <View style={styles.accountHeader}>
           <IvyIcon
             name={accountIcon || undefined}
@@ -99,6 +101,11 @@ export function AccountDetailsHeader({
                 </Pressable>
               ) : null}
               {isDeleted ? <Badge variant="expense">DELETED</Badge> : null}
+              {isArchived ? (
+                <Badge variant="default" icon="archive">
+                  {AppConfig.strings.accounts.archive.archivedBadge}
+                </Badge>
+              ) : null}
               {reconciledAt ? (
                 <Badge variant="success" icon="shieldCheck">
                   {formatRelativeReconciledDate(reconciledAt)}
@@ -289,6 +296,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     padding: Spacing.lg,
     borderRadius: Shape.radius.xl,
+  },
+  archivedCard: {
+    opacity: Opacity.medium,
   },
   accountHeader: {
     flexDirection: 'row',

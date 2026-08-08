@@ -114,28 +114,30 @@ export function AccountsListView({
             );
           }}
           ListHeaderComponent={
-            activeTab === 'accounts' ? (
-              <View style={styles.header}>
-                <NetWorthCard
-                  netWorth={netWorth}
-                  totalAssets={totalAssets}
-                  totalLiabilities={totalLiabilities}
-                  currencyCode={currencyCode}
-                  isLoading={isLoading}
-                />
-              </View>
-            ) : (
-              <View style={styles.header}>
-                <CashFlowCard
-                  totalIncome={inflowIncome}
-                  totalExpense={inflowExpense}
-                  inflowPeriod={inflowPeriod}
-                  onChangePeriod={setInflowPeriod}
-                  currencyCode={currencyCode}
-                  isLoading={isLoading || isPeriodLoading}
-                />
-              </View>
-            )
+            <View>
+              {activeTab === 'accounts' ? (
+                <View style={styles.header}>
+                  <NetWorthCard
+                    netWorth={netWorth}
+                    totalAssets={totalAssets}
+                    totalLiabilities={totalLiabilities}
+                    currencyCode={currencyCode}
+                    isLoading={isLoading}
+                  />
+                </View>
+              ) : (
+                <View style={styles.header}>
+                  <CashFlowCard
+                    totalIncome={inflowIncome}
+                    totalExpense={inflowExpense}
+                    inflowPeriod={inflowPeriod}
+                    onChangePeriod={setInflowPeriod}
+                    currencyCode={currencyCode}
+                    isLoading={isLoading || isPeriodLoading}
+                  />
+                </View>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>

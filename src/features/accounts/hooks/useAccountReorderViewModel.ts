@@ -13,12 +13,19 @@ import { AccountId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
+import {
+  useArchiveScopedAccounts,
+  useArchiveVisibility,
+} from '@/src/contexts/ArchiveVisibilityScope';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface AccountReorderViewModel {
   theme: ReturnType<typeof useTheme>['theme'];
   accounts: Account[];
   isLoading: boolean;
+  /** False while archived siblings are hidden — orderNums must use the full set. */
+  canReorder: boolean;
+  accountsForArchiveToggle: Account[];
   onMove: (index: number, direction: 'up' | 'down') => void;
   onBack: () => void;
   title: string;
@@ -29,6 +36,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
   const { workplaceId } = useWorkplace();
   const { accounts: sourceAccounts, isLoading } = useAccounts(workplaceId);
   const { updateAccountOrder } = useAccountActions(workplaceId);
+  const { showArchived } = useArchiveVisibility();
   /** Optimistic id order over the live list — never mirror source into useState. */
   const [pendingOrder, setPendingOrder] = useState<AccountId[] | null>(null);
 
@@ -40,6 +48,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
     [sourceAccounts, filterMode],
   );
 
+  // Canonical sibling order (includes archived). Moves always use this set.
   const sourceIds = useMemo(() => baseSorted.map(a => a.id as AccountId), [baseSorted]);
 
   // Live list caught up: clear overlay via render-time adjust (not a sync effect).
@@ -51,14 +60,23 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
   const activePendingOrder =
     pendingOrder !== null && !accountIdsMatch(sourceIds, pendingOrder) ? pendingOrder : null;
 
-  const accounts = useMemo(
+  const orderedAccounts = useMemo(
     () => applyPendingOrder(baseSorted, activePendingOrder),
     [baseSorted, activePendingOrder],
   );
 
+  // Display may hide archived. Reorder only when the displayed order matches the
+  // canonical sibling set (show archived, or none are archived).
+  const { visibleAccounts: accounts, hasArchivedAccounts } =
+    useArchiveScopedAccounts(orderedAccounts);
+  const canReorder = showArchived || !hasArchivedAccounts;
+
   const onMove = useCallback(
     async (index: number, direction: 'up' | 'down') => {
-      const move = computeReorderMove(accounts, index, direction);
+      if (!canReorder) return;
+
+      // Index is into the displayed list, which equals the full ordered set when canReorder.
+      const move = computeReorderMove(orderedAccounts, index, direction);
       if (!move) return;
 
       setPendingOrder(move.nextAccounts.map(a => a.id as AccountId));
@@ -71,7 +89,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
         setPendingOrder(null);
       }
     },
-    [accounts, updateAccountOrder],
+    [canReorder, orderedAccounts, updateAccountOrder],
   );
 
   const onBack = useCallback(() => {
@@ -82,6 +100,8 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
     theme,
     accounts,
     isLoading,
+    canReorder,
+    accountsForArchiveToggle: orderedAccounts,
     onMove,
     onBack,
     title: filterMode === 'categories' ? 'Reorder Categories' : 'Reorder Accounts',

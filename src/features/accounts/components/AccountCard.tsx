@@ -6,6 +6,7 @@ import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountType } from '@/src/types/domain';
 
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import { ArchivedAccountIndicator } from '@/src/features/accounts/components/ArchivedAccountIndicator';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
@@ -96,7 +97,11 @@ export function AccountCardBase({
         opacity: account.depth > 0 ? 0.9 : 1,
       }}
     >
-      <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={Opacity.heavy}
+        style={{ opacity: account.isArchived ? Opacity.medium : 1 }}
+      >
         <Box unsafe_backgroundRaw={account.accentColor} padding="lg">
           <Column gap="md">
             <Row align="center" justify="space-between">
@@ -115,6 +120,7 @@ export function AccountCardBase({
                 >
                   {account.name}
                 </Text>
+                {account.isArchived ? <ArchivedAccountIndicator /> : null}
               </Row>
 
               <Row gap="sm" align="center">

@@ -7,10 +7,12 @@ function EntryScreenContent() {
   return <JournalEntryView {...vm} />;
 }
 
-export default function EntryScreen() {
+function EntryScreen() {
   return (
     <ModeHandleProvider>
       <EntryScreenContent />
     </ModeHandleProvider>
   );
 }
+
+export default EntryScreen;

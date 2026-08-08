@@ -77,4 +77,15 @@ describe('hierarchyHelpers', () => {
     });
     expect(getParentCandidates(accounts, readyRoot, new Set(), balances)).toEqual([]);
   });
+
+  it('promotes children to roots when parent is absent from visible set', () => {
+    const child = makeAccount('child', 'parent');
+    const visible = [child];
+    const groups = groupAccountsByParent(visible);
+    const balances = new Map([[child.id, { directTransactionCount: 0 }]]);
+
+    expect(getVisibleRootAccountsByCategory(visible, groups, balances)).toMatchObject({
+      ASSET: [child],
+    });
+  });
 });

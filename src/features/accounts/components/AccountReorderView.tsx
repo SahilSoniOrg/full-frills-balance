@@ -1,6 +1,7 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { UI_STRINGS } from '@/src/constants/copy/ui-strings';
 import { AccountReorderViewModel } from '@/src/features/accounts/hooks/useAccountReorderViewModel';
 import {
   getAccountFallbackIcon,
@@ -13,6 +14,7 @@ export function AccountReorderView({
   theme,
   accounts,
   isLoading,
+  canReorder,
   onMove,
   chrome,
 }: AccountReorderViewModel & { chrome: ScreenNavChrome }) {
@@ -24,6 +26,7 @@ export function AccountReorderView({
         <AppText variant="caption" color="secondary" style={styles.tipText}>
           Manual ordering affects all lists. Accounts are grouped by category but follow this
           sequence.
+          {!canReorder ? ` ${UI_STRINGS.accounts.archive.reorderShowArchivedHint}` : ''}
         </AppText>
 
         <View style={{ gap: Spacing.sm }}>
@@ -35,6 +38,8 @@ export function AccountReorderView({
               !prevAccount || prevAccount.accountType !== account.accountType;
             const nextAccount = accounts[index + 1];
             const isLastInSection = !nextAccount || nextAccount.accountType !== account.accountType;
+            const disableUp = !canReorder || isFirstInSection;
+            const disableDown = !canReorder || isLastInSection;
 
             return (
               <React.Fragment key={account.id}>
@@ -67,22 +72,22 @@ export function AccountReorderView({
                     <View style={styles.actions}>
                       <TouchableOpacity
                         onPress={() => onMove(index, 'up')}
-                        disabled={isFirstInSection}
+                        disabled={disableUp}
                         style={[
                           styles.actionButton,
                           { backgroundColor: withOpacity(theme.text, Opacity.soft) },
-                          isFirstInSection && { opacity: Opacity.muted },
+                          disableUp && { opacity: Opacity.muted },
                         ]}
                       >
                         <AppIcon name="chevronUp" size={20} color={theme.text} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => onMove(index, 'down')}
-                        disabled={isLastInSection}
+                        disabled={disableDown}
                         style={[
                           styles.actionButton,
                           { backgroundColor: withOpacity(theme.text, Opacity.soft) },
-                          isLastInSection && { opacity: Opacity.muted },
+                          disableDown && { opacity: Opacity.muted },
                         ]}
                       >
                         <AppIcon name="chevronDown" size={20} color={theme.text} />

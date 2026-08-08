@@ -20,6 +20,7 @@ import {
   parseSimpleAmountInput,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
+import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
@@ -78,10 +79,17 @@ export function useSimpleJournalEditor({
   const destinationLineExchangeRate = destinationLine?.exchangeRate ?? '';
   const destinationLineAmount = destinationLine?.amount ?? '';
 
-  // Use shared account selection logic for filtering
+  const pinnedAccountIds = useMemo(() => {
+    const selectedIds = [sourceId, destinationId].filter(
+      (id): id is AccountId => !!id && id !== EMPTY_ACCOUNT_ID,
+    );
+    return pinnedArchivedAccountIds(selectedIds, accounts);
+  }, [accounts, sourceId, destinationId]);
+
   const { transactionAccounts, expenseAccounts, incomeAccounts, leafAccounts } =
     useAccountSelection({
       accounts,
+      pinnedAccountIds,
     });
 
   useSimpleJournalAccountSync({
@@ -216,32 +224,32 @@ export function useSimpleJournalEditor({
 
   const setSourceId = useCallback(
     (id: AccountId) => {
+      const line = editor.lines.find(item => item.transactionType === TransactionType.CREDIT);
+      if (!line) return;
       const account = accounts.find(a => a.id === id);
-      if (sourceLine) {
-        editor.updateLine(sourceLine.id, {
-          accountId: id,
-          accountName: account?.name || '',
-          accountType: account?.accountType || AccountType.ASSET,
-          accountCurrency: account?.currencyCode,
-        });
-      }
+      editor.updateLine(line.id, {
+        accountId: id,
+        accountName: account?.name || '',
+        accountType: account?.accountType || AccountType.ASSET,
+        accountCurrency: account?.currencyCode,
+      });
     },
-    [accounts, sourceLine, editor],
+    [accounts, editor],
   );
 
   const setDestinationId = useCallback(
     (id: AccountId) => {
+      const line = editor.lines.find(item => item.transactionType === TransactionType.DEBIT);
+      if (!line) return;
       const account = accounts.find(a => a.id === id);
-      if (destinationLine) {
-        editor.updateLine(destinationLine.id, {
-          accountId: id,
-          accountName: account?.name || '',
-          accountType: account?.accountType || AccountType.ASSET,
-          accountCurrency: account?.currencyCode,
-        });
-      }
+      editor.updateLine(line.id, {
+        accountId: id,
+        accountName: account?.name || '',
+        accountType: account?.accountType || AccountType.ASSET,
+        accountCurrency: account?.currencyCode,
+      });
     },
-    [accounts, destinationLine, editor],
+    [accounts, editor],
   );
 
   const handleSave = useCallback(async () => {
@@ -272,13 +280,14 @@ export function useSimpleJournalEditor({
   const accountSections = useMemo((): SimpleFormSection[] => {
     return buildSimpleFormAccountSections(type, {
       leafAccounts,
+      accountPool: accounts,
       sourceId,
       destinationId,
     }).map(section => ({
       ...section,
       onSelect: section.role === 'source' ? setSourceId : setDestinationId,
     }));
-  }, [type, leafAccounts, sourceId, destinationId, setSourceId, setDestinationId]);
+  }, [type, leafAccounts, accounts, sourceId, destinationId, setSourceId, setDestinationId]);
 
   const openAccountPicker = useCallback(
     (role: AccountRole) => {

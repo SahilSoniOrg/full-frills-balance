@@ -12,11 +12,13 @@ import { reconcileAccount as reconcileAccountCommand } from '@/src/services/acco
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import { createAccount as createAccountCommand } from '@/src/services/accounts/accountCommands';
+import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import {
   updateAccount as updateAccountCommand,
   updateAccountOrder as updateAccountOrderCommand,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
+import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { useCallback } from 'react';
 
 /** CRUD + management actions. Prefer importing this over the fat `useAccounts` module. */
@@ -52,6 +54,13 @@ export function useAccountActions(workplaceId: WorkplaceId) {
       },
     ) => {
       return updateAccountCommand(workplaceId, account.id as AccountId, data);
+    },
+    [workplaceId],
+  );
+
+  const applyArchiveChanges = useCallback(
+    async (changes: AccountArchiveChanges) => {
+      return applyAccountArchiveChanges(workplaceId, changes);
     },
     [workplaceId],
   );
@@ -101,6 +110,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   return {
     createAccount,
     updateAccount,
+    applyArchiveChanges,
     deleteAccount,
     recoverAccount,
     updateAccountOrder,

@@ -10,6 +10,13 @@ export { ReconciledMarker } from '@/src/components/common/ReconciledMarker';
 export { useAccountPickerList } from './hooks/useAccountPickerList';
 export { useAccountActions } from './hooks/useAccountActions';
 export { useAccount, useAccountBalance, useAccounts } from './hooks/useAccounts';
+export { ShowArchivedButton } from './components/ShowArchivedButton';
+export { ArchivedAccountIndicator } from './components/ArchivedAccountIndicator';
+export {
+  getArchivedAccountTilePresentation,
+  getArchivedAccountPickerRowPresentation,
+} from './utils/archivedAccountDisplay';
+export { getAccountIcon } from './utils/getAccountIcon';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as CategoryCreationScreen } from './screens/CategoryCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';

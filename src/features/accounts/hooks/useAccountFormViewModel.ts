@@ -30,6 +30,8 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
+import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccountArchiveAction';
+import type { ReactNode } from 'react';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { useMemo } from 'react';
@@ -89,6 +91,10 @@ export interface AccountFormViewModel {
     onClose: () => void;
     onSelect: (counterparty: BalanceChangeCounterparty) => void;
   } | null;
+  archiveAction: {
+    headerActions: ReactNode;
+    cascadeModal: ReactNode;
+  };
 }
 
 /**
@@ -182,6 +188,13 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accountId,
     accounts.length > 0,
   );
+
+  const archiveAction = useAccountArchiveAction({
+    enabled: isEditMode,
+    accountId,
+    account: existingAccount ?? null,
+    accounts,
+  });
 
   const { balanceClassify, onSave } = useAccountFormBalanceClassify({
     dispatch,
@@ -278,5 +291,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     metadata,
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
     balanceClassify,
+    archiveAction,
   };
 }

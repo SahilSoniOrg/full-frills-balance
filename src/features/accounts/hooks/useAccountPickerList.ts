@@ -1,33 +1,37 @@
 import Account from '@/src/data/models/Account';
+import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useDebounce } from '@/src/hooks/useDebounce';
-import { PlainAccount } from '@/src/types/domain';
+import { AccountId, PlainAccount } from '@/src/types/domain';
 import { getAccountSections } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 
 /**
  * useAccountPickerList - Logic for the account picker.
- * Handles searching, grouping, and section collapse state.
+ * Handles searching, grouping, section collapse state, and archive visibility.
  */
 export function useAccountPickerList({
   accounts,
   excludeParentAccounts,
+  pinnedAccountIds = new Set<AccountId>(),
 }: {
   accounts: (Account | PlainAccount)[];
   excludeParentAccounts: boolean;
+  pinnedAccountIds?: ReadonlySet<AccountId>;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 150);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-
   const isSearchMode = debouncedSearch.trim().length > 0;
 
-  const filteredAccounts = useMemo(() => {
-    if (!accounts || accounts.length === 0) return [];
+  const { visibleAccounts } = useArchiveScopedAccounts(accounts, pinnedAccountIds);
 
-    let result = accounts;
+  const filteredAccounts = useMemo(() => {
+    if (!visibleAccounts || visibleAccounts.length === 0) return [];
+
+    let result = visibleAccounts;
     if (isSearchMode) {
       const q = debouncedSearch.toLowerCase().trim();
-      result = accounts.filter(
+      result = visibleAccounts.filter(
         a =>
           a.name.toLowerCase().includes(q) ||
           a.accountType.toLowerCase().includes(q) ||
@@ -36,7 +40,6 @@ export function useAccountPickerList({
     }
 
     if (excludeParentAccounts) {
-      // Robust check: any account that is referenced as a parent
       const accountsWithChildren = new Set(
         accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
       );
@@ -44,7 +47,7 @@ export function useAccountPickerList({
     }
 
     return result;
-  }, [accounts, debouncedSearch, isSearchMode, excludeParentAccounts]);
+  }, [accounts, visibleAccounts, debouncedSearch, isSearchMode, excludeParentAccounts]);
 
   const sections = useMemo(() => {
     return getAccountSections(filteredAccounts);
@@ -66,7 +69,7 @@ export function useAccountPickerList({
     toggleSection,
     collapsedSections,
     isSearchMode,
-    totalCount: accounts.length,
+    totalCount: visibleAccounts.length,
     filteredCount: filteredAccounts.length,
   };
 }

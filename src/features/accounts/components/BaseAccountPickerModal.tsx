@@ -1,3 +1,4 @@
+import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -44,7 +45,9 @@ export function BaseAccountPickerModal({
                 </TouchableOpacity>
               </View>
 
-              {children}
+              {visible ? (
+                <ArchiveVisibilityScopeProvider>{children}</ArchiveVisibilityScopeProvider>
+              ) : null}
             </View>
           </TouchableWithoutFeedback>
         </View>

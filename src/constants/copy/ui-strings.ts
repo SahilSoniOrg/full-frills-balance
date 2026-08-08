@@ -601,6 +601,35 @@ export const UI_STRINGS = {
       createAccount: 'Create New Account',
       applySelection: (count: number) => `Apply Selection (${count})`,
     },
+    archive: {
+      showArchived: 'Show archived',
+      hideArchived: 'Hide archived',
+      archivedAccount: 'Archived account',
+      archivedBadge: 'ARCHIVED',
+      archiveAccount: 'Archive account',
+      unarchiveAccount: 'Unarchive account',
+      archivedSuccess: (name: string) => `"${name}" archived`,
+      unarchivedSuccess: (name: string) => `"${name}" unarchived`,
+      archiveFailed: 'Failed to archive account',
+      unarchiveFailed: 'Failed to unarchive account',
+      archiveDescription:
+        'Hide this account from lists and pickers. Balances and history are unchanged.',
+      systemAccountTitle: 'Archive system account?',
+      systemAccountMessage:
+        'This account is used automatically by the app. You can still archive it, but some flows may reference it internally.',
+      archiveAnyway: 'Archive anyway',
+      parentArchivedTitle: 'Parent is archived',
+      parentArchivedMessage: (parentName: string) =>
+        `"${parentName}" is archived. Unarchive the parent and choose related accounts?`,
+      unarchiveParent: 'Unarchive parent',
+      thisAccountOnly: 'This account only',
+      cascadeArchiveTitle: 'Archive accounts',
+      cascadeUnarchiveTitle: 'Unarchive accounts',
+      cascadeArchiveDescription: 'Select which accounts to archive.',
+      cascadeUnarchiveDescription: 'Select which accounts to unarchive.',
+      reorderShowArchivedHint:
+        'Use the archive icon in the header to include hidden archived accounts in the sequence.',
+    },
     hierarchy: {
       title: 'Hierarchy',
       description: 'Drag accounts to reorder them or place them under a parent account.',

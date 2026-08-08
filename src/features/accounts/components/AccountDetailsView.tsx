@@ -28,6 +28,7 @@ export function AccountDetailsView({
     accountIcon,
     accountTypeColorKey,
     isDeleted,
+    isArchived,
     balanceAmount,
     transactionCountText,
     onBack,
@@ -112,6 +113,7 @@ export function AccountDetailsView({
                 accountTypeColorKey={accountTypeColorKey}
                 isParent={isParent}
                 isDeleted={isDeleted}
+                isArchived={isArchived}
                 subAccountCount={subAccountCount}
                 onShowSubAccounts={onShowSubAccounts}
                 balanceAmount={balanceAmount}

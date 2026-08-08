@@ -33,6 +33,7 @@ export type IconName =
   | 'arrowDown'
   | 'swapHorizontal'
   | 'document'
+  | 'archive'
   | 'folderOpen'
   | 'search'
   | 'closeCircle'

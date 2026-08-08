@@ -1,5 +1,6 @@
-import { AccountType } from '@/src/types/domain';
+import { AccountId, AccountType } from '@/src/types/domain';
 
+import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { renderHook } from '@testing-library/react-native';
 
@@ -98,5 +99,42 @@ describe('useAccountSelection', () => {
     expect(result.current.expenseAccounts).toEqual([]);
     expect(result.current.incomeAccounts).toEqual([]);
     expect(result.current.leafAccounts).toEqual([]);
+  });
+
+  it('hides archived leaf accounts unless pinned', () => {
+    const accounts = [
+      {
+        id: 'active',
+        name: 'Active',
+        accountType: AccountType.EXPENSE,
+        parentAccountId: undefined,
+      },
+      {
+        id: 'archived',
+        name: 'Archived',
+        accountType: AccountType.EXPENSE,
+        parentAccountId: undefined,
+        archivedAt: new Date('2024-01-01'),
+      },
+    ] as any[];
+
+    const { result } = renderHook(() => useAccountSelection({ accounts }), {
+      wrapper: ArchiveVisibilityScopeProvider,
+    });
+
+    expect(result.current.expenseAccounts.map(a => a.id)).toEqual(['active']);
+
+    const { result: pinnedResult } = renderHook(
+      () =>
+        useAccountSelection({
+          accounts,
+          pinnedAccountIds: new Set<AccountId>(['archived' as AccountId]),
+        }),
+      { wrapper: ArchiveVisibilityScopeProvider },
+    );
+
+    expect(pinnedResult.current.expenseAccounts.map(a => a.id)).toEqual(
+      expect.arrayContaining(['active', 'archived']),
+    );
   });
 });

@@ -877,6 +877,8 @@ export const Layout = {
       height: 4,
       borderRadius: 2,
     },
+    /** Scrollable list body inside confirmation / cascade sheets. */
+    listMaxHeight: 360,
   },
   chart: {
     donut: {

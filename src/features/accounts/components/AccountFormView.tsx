@@ -59,6 +59,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     payFromAccountOptions,
     metadata,
     balanceClassify,
+    archiveAction,
   } = vm;
 
   const {
@@ -308,6 +309,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
           onSelect={balanceClassify.onSelect}
         />
       ) : null}
+      {archiveAction.cascadeModal}
     </EntityFormScreen>
   );
 }

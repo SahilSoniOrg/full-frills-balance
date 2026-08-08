@@ -9,6 +9,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -62,7 +63,7 @@ export function useRegisterModeHandle(handle: ModeHandle): void {
   const { submitLabel, isSubmitDisabled, isSubmitting = false } = handle;
   const { submit, applyAccountToLine, resolveSelectedAccountId } = handle;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     actionsRef.current = { submit, applyAccountToLine, resolveSelectedAccountId };
   }, [actionsRef, submit, applyAccountToLine, resolveSelectedAccountId]);
 

@@ -8,6 +8,7 @@ type InfoSheetAction = {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  disabled?: boolean;
 };
 
 interface InfoSheetProps {
@@ -53,6 +54,7 @@ export function InfoSheet({
           <AppButton
             variant={primaryAction.variant || 'primary'}
             onPress={primaryAction.onPress}
+            disabled={primaryAction.disabled}
             style={styles.actionButton}
           >
             {primaryAction.label}

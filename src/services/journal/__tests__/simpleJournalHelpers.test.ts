@@ -1,8 +1,10 @@
 import {
   computeSimpleConvertedAmount,
   deriveCrossCurrencyDisplayRate,
+  ensureSelectedAccountVisible,
   resolveSimpleCrossCurrencyRates,
 } from '@/src/services/journal/simpleJournalHelpers';
+import { AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 
 describe('simpleJournalHelpers cross-currency', () => {
   describe('deriveCrossCurrencyDisplayRate', () => {
@@ -49,5 +51,28 @@ describe('simpleJournalHelpers cross-currency', () => {
       expect(computeSimpleConvertedAmount(100, true, 0.5)).toBe(50);
       expect(computeSimpleConvertedAmount(100, true, null)).toBe(100);
     });
+  });
+});
+
+describe('ensureSelectedAccountVisible', () => {
+  const pool = [
+    { id: 'cash', name: 'Cash', accountType: AccountType.ASSET },
+    { id: 'bank', name: 'Bank', accountType: AccountType.ASSET },
+    { id: 'equity', name: 'Equity', accountType: AccountType.EQUITY },
+  ] as any[];
+
+  it('prepends the selected account when it is missing from the section list', () => {
+    expect(
+      ensureSelectedAccountVisible(
+        [{ id: 'bank', name: 'Bank', accountType: AccountType.ASSET } as any],
+        'equity' as any,
+        pool,
+      ).map(account => account.id),
+    ).toEqual(['equity', 'bank']);
+  });
+
+  it('returns the section unchanged when nothing is selected', () => {
+    const section = [{ id: 'bank', name: 'Bank', accountType: AccountType.ASSET } as any];
+    expect(ensureSelectedAccountVisible(section, EMPTY_ACCOUNT_ID, pool)).toBe(section);
   });
 });

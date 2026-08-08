@@ -8,6 +8,7 @@ import {
   resolveJournalEntrySubmitLabel,
   resolveSimpleTypeAccentColor,
 } from '@/src/features/journal/entry/journalEntryPresentation';
+import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import Account from '@/src/data/models/Account';
@@ -79,25 +80,23 @@ export function GuidedModePanel({
     onSelectAccountRequest: requestAccountForRole,
   });
 
-  const { setSourceId, setDestinationId, handleSave } = simpleEditor;
+  const { handleSave } = simpleEditor;
 
   const applyAccountToLine = useCallback(
     (lineId: string, accountId: AccountId) => {
-      const line = editor.lines.find(candidate => candidate.id === lineId);
-      if (!line) return;
-      if (line.transactionType === 'CREDIT') setSourceId(accountId);
-      else setDestinationId(accountId);
+      applyJournalLineAccountSelection({
+        lineId,
+        accountId,
+        accounts,
+        updateLine: editor.updateLine,
+      });
     },
-    [editor.lines, setSourceId, setDestinationId],
+    [accounts, editor.updateLine],
   );
 
   const resolveSelectedAccountId = useCallback(
-    (lineId: string) => {
-      const line = editor.lines.find(candidate => candidate.id === lineId);
-      if (!line) return undefined;
-      return line.transactionType === 'CREDIT' ? simpleEditor.sourceId : simpleEditor.destinationId;
-    },
-    [editor.lines, simpleEditor.destinationId, simpleEditor.sourceId],
+    (lineId: string) => editor.lines.find(line => line.id === lineId)?.accountId,
+    [editor.lines],
   );
 
   const isSimpleValid =

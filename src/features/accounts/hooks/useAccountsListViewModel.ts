@@ -18,6 +18,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useEffect, useMemo, useRef } from 'react';
 import { of } from 'rxjs';
 
@@ -58,6 +59,8 @@ export interface AccountsListViewModel {
   isSearching: boolean;
   onSearchChange: (query: string) => void;
   setIsSearching: (isSearching: boolean) => void;
+  /** Tab-scoped accounts for the show-archived header control. */
+  accountsForArchiveToggle: { archivedAt?: Date | number | null }[];
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
@@ -149,6 +152,11 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onCollapseAccount,
   } = useAccountsListUiState();
 
+  const accountsForArchiveToggle = useMemo(
+    () => filterAccountsForListTab(accounts, activeTab),
+    [accounts, activeTab],
+  );
+
   const { inflowPeriod, setInflowPeriod, inflowIncome, inflowExpense, isPeriodLoading } =
     useAccountsInflowSummary({
       workplaceId,
@@ -173,6 +181,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     () => filterAccountsBySearch(accounts, searchQuery),
     [accounts, searchQuery],
   );
+
+  const { visibleAccounts: displayAccounts } = useArchiveScopedAccounts(filteredAccounts);
 
   // M-5 fix: Memoize transform options to prevent redundant re-transformations
   // when unrelated UI state (like filters or privacy mode) haven't changed.
@@ -210,10 +220,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   );
 
   const sections = useMemo(() => {
-    const accountsForTab = filterAccountsForListTab(filteredAccounts, activeTab);
+    const accountsForTab = filterAccountsForListTab(displayAccounts, activeTab);
     const rawSections = transformAccountsToSections(accountsForTab, transformOptions);
     return filterAccountSectionsForTab(rawSections, activeTab);
-  }, [filteredAccounts, transformOptions, activeTab]);
+  }, [displayAccounts, transformOptions, activeTab]);
 
   return {
     sections,
@@ -242,5 +252,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     setIsSearching,
     activeTab,
     setActiveTab,
+    accountsForArchiveToggle,
   };
 }

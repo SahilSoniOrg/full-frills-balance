@@ -9,7 +9,8 @@ import {
   validateSplitState,
 } from '@/src/services/journal/splitJournalHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
@@ -28,8 +29,6 @@ export function useSplitJournalEditor({
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
-  // journalNav prefs are global today; workplace scoping is F9.
-  const { transactionAccounts, expenseAccounts } = useAccountSelection({ accounts });
   const initializedRef = useRef(false);
 
   const {
@@ -52,6 +51,19 @@ export function useSplitJournalEditor({
     removeSplitRow,
     updateSplitRow,
   } = useSplitEntryState();
+
+  const pinnedAccountIds = useMemo(() => {
+    const selectedIds = [
+      sourceAccountId !== EMPTY_ACCOUNT_ID ? sourceAccountId : undefined,
+      ...splits.map(split => split.accountId),
+    ].filter((id): id is AccountId => !!id && id !== EMPTY_ACCOUNT_ID);
+    return pinnedArchivedAccountIds(selectedIds, accounts);
+  }, [accounts, sourceAccountId, splits]);
+
+  const { transactionAccounts, expenseAccounts } = useAccountSelection({
+    accounts,
+    pinnedAccountIds,
+  });
 
   const resolvedSourceAccountId = useMemo(() => {
     if (sourceAccountId !== EMPTY_ACCOUNT_ID) return sourceAccountId;

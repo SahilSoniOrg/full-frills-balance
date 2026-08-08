@@ -1,12 +1,19 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppIcon, AppText } from '@/src/components/core';
-import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
+import {
+  ArchivedAccountIndicator,
+  getAccountIcon,
+  getArchivedAccountTilePresentation,
+  useAccounts,
+} from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
+import { isAccountArchived } from '@/src/utils/accountArchive';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 export interface AccountTileListProps {
@@ -29,15 +36,43 @@ export const AccountTileList = React.memo(function AccountTileList({
   emptyPrompt,
 }: AccountTileListProps) {
   const { theme } = useTheme();
+  const { workplaceId } = useWorkplace();
+  const { version: accountsVersion } = useAccounts(workplaceId);
 
   const items = useMemo(() => {
+    void accountsVersion;
     return accounts.map(account => ({
       id: account.id,
       label: account.name,
-      icon: account.icon as IconName,
+      icon: getAccountIcon(account),
       color: getAccountAccentColor(account.accountType, theme),
     }));
-  }, [accounts, theme]);
+  }, [accounts, theme, accountsVersion]);
+
+  const archivedById = useMemo(() => {
+    void accountsVersion;
+    return new Map<string, boolean>(
+      accounts.map(account => [account.id, isAccountArchived(account)]),
+    );
+  }, [accounts, accountsVersion]);
+
+  const getTilePresentation = useCallback(
+    (item: { id: string; color: string }, isSelected: boolean) =>
+      getArchivedAccountTilePresentation(
+        archivedById.get(item.id) ?? false,
+        isSelected,
+        item.color,
+      ),
+    [archivedById],
+  );
+
+  const renderAccessory = useCallback(
+    (item: { id: string }, isSelected: boolean) => {
+      if (!archivedById.get(item.id)) return null;
+      return <ArchivedAccountIndicator emphasized={isSelected} />;
+    },
+    [archivedById],
+  );
 
   return (
     <View style={{ gap: Spacing.xs, marginVertical: Spacing.sm }}>
@@ -109,6 +144,8 @@ export const AccountTileList = React.memo(function AccountTileList({
             selectedId={selectedId}
             onSelect={id => onSelect(id as AccountId)}
             testIDPrefix="account-option"
+            getTilePresentation={getTilePresentation}
+            renderAccessory={renderAccessory}
           />
         )}
       </View>

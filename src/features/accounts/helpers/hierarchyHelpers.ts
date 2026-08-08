@@ -1,5 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
+import { getVisibleRoots } from '@/src/utils/accountArchive';
 import { AccountId } from '@/src/types/domain';
 
 export interface HierarchyBalanceSummary {
@@ -41,7 +42,7 @@ export function getVisibleRootAccountsByCategory(
   balancesByAccountId: ReadonlyMap<string, HierarchyBalanceSummary>,
 ) {
   const groups = createAccountTypeRecord<Account[]>(() => []);
-  const rootAccounts = accounts.filter(account => !account.parentAccountId);
+  const rootAccounts = getVisibleRoots(accounts);
 
   rootAccounts.forEach(account => {
     const children = accountsByParent.get(account.id) || [];

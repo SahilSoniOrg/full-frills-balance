@@ -1,4 +1,5 @@
 import {
+  applyJournalLineAccountSelection,
   resolveJournalEntrySelectableAccounts,
   resolveJournalEntrySelectedAccountId,
 } from '../journalEntryAccountPickerPolicy';
@@ -44,5 +45,22 @@ describe('journalEntryAccountPickerPolicy', () => {
         lines: [],
       }),
     ).toHaveLength(2);
+  });
+
+  it('applyJournalLineAccountSelection patches the target line', () => {
+    const updateLine = jest.fn();
+    applyJournalLineAccountSelection({
+      lineId: 'line-1',
+      accountId: 'a2' as AccountId,
+      accounts,
+      updateLine,
+    });
+
+    expect(updateLine).toHaveBeenCalledWith('line-1', {
+      accountId: 'a2',
+      accountName: 'Food',
+      accountType: 'expense',
+      accountCurrency: undefined,
+    });
   });
 });

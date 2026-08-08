@@ -14,6 +14,7 @@ import { AccountId } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
+import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation } from 'react-native';
 
@@ -29,6 +30,7 @@ export interface ManageHierarchyViewModel {
   visibleRootAccountsByCategory: Record<string, Account[]>;
   addChildCandidates: Account[];
   parentCandidates: Account[];
+  accountsForArchiveToggle: Account[];
   onCreateParent: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
   onRequestAddChild: (parentId: AccountId) => void;
@@ -57,14 +59,14 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
-  // Filter accounts list to only match the current workspace mode
-  const filteredAccounts = useMemo(() => {
+  const modeFilteredAccounts = useMemo(() => {
     if (filterMode === 'categories') {
       return accounts.filter(a => a.accountType === 'INCOME' || a.accountType === 'EXPENSE');
-    } else {
-      return accounts.filter(a => a.accountType !== 'INCOME' && a.accountType !== 'EXPENSE');
     }
+    return accounts.filter(a => a.accountType !== 'INCOME' && a.accountType !== 'EXPENSE');
   }, [accounts, filterMode]);
+
+  const { visibleAccounts: filteredAccounts } = useArchiveScopedAccounts(modeFilteredAccounts);
 
   // Auto-expand parents of the focused account
   useEffect(() => {
@@ -239,6 +241,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     visibleRootAccountsByCategory,
     addChildCandidates,
     parentCandidates,
+    accountsForArchiveToggle: modeFilteredAccounts,
     onCreateParent,
     onSelectAccount,
     onRequestAddChild,

@@ -1,18 +1,24 @@
+import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import Account from '@/src/data/models/Account';
+import { AccountId, AccountType } from '@/src/types/domain';
 import { getAccountSections, isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
-import { AccountType } from '@/src/types/domain';
 
 export interface UseAccountSelectionOptions {
   accounts: Account[];
+  pinnedAccountIds?: ReadonlySet<AccountId>;
 }
 
 /**
  * useAccountSelection - Shared logic for filtering accounts into leaf buckets.
  * Used by journal editors for source/destination account lists.
  */
-export function useAccountSelection({ accounts }: UseAccountSelectionOptions) {
+export function useAccountSelection({
+  accounts,
+  pinnedAccountIds = new Set<AccountId>(),
+}: UseAccountSelectionOptions) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const visibleAccounts = useVisibleAccounts(accounts, pinnedAccountIds);
 
   const toggleSection = useCallback((title: string) => {
     setCollapsedSections(prev => {
@@ -27,9 +33,11 @@ export function useAccountSelection({ accounts }: UseAccountSelectionOptions) {
   }, []);
 
   const leafAccounts = useMemo(() => {
-    const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
-    return accounts.filter(a => !parentIds.has(a.id));
-  }, [accounts]);
+    const parentIds = new Set(
+      visibleAccounts.map(a => a.parentAccountId).filter(Boolean) as string[],
+    );
+    return visibleAccounts.filter(a => !parentIds.has(a.id));
+  }, [visibleAccounts]);
 
   const sections = useMemo(() => {
     return getAccountSections(leafAccounts);

@@ -145,18 +145,40 @@ export interface SimpleFormSectionConfig {
   role: AccountRole;
 }
 
+/** Keep the active picker choice visible even when archive filtering hides it from the default set. */
+export function ensureSelectedAccountVisible(
+  sectionAccounts: Account[],
+  selectedId: AccountId,
+  accountPool: Account[],
+): Account[] {
+  if (!selectedId || selectedId === EMPTY_ACCOUNT_ID) return sectionAccounts;
+  if (sectionAccounts.some(account => account.id === selectedId)) return sectionAccounts;
+
+  const selected = accountPool.find(account => account.id === selectedId);
+  return selected ? [selected, ...sectionAccounts] : sectionAccounts;
+}
+
 export function buildSimpleFormAccountSections(
   type: TabType,
   options: {
     leafAccounts: Account[];
+    accountPool: Account[];
     sourceId: AccountId;
     destinationId: AccountId;
   },
 ): SimpleFormSectionConfig[] {
-  const { leafAccounts, sourceId, destinationId } = options;
+  const { leafAccounts, accountPool, sourceId, destinationId } = options;
 
-  const sourceAccounts = filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT);
-  const destinationAccounts = filterGuidedLegAccounts(leafAccounts, type, TransactionType.DEBIT);
+  const sourceAccounts = ensureSelectedAccountVisible(
+    filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT),
+    sourceId,
+    accountPool,
+  );
+  const destinationAccounts = ensureSelectedAccountVisible(
+    filterGuidedLegAccounts(leafAccounts, type, TransactionType.DEBIT),
+    destinationId,
+    accountPool,
+  );
 
   if (type === 'expense') {
     return [

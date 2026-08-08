@@ -1,5 +1,12 @@
 import Account from '@/src/data/models/Account';
-import { TransactionType, AccountId, JournalEntryLine, TabType } from '@/src/types/domain';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TabType,
+} from '@/src/types/domain';
 
 import {
   filterGuidedLegAccounts,
@@ -9,6 +16,31 @@ import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntr
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
+
+export function buildJournalLineAccountPatch(
+  accountId: AccountId,
+  account: Account | undefined,
+): Partial<JournalEntryLine> {
+  return {
+    accountId,
+    accountName: account?.name ?? '',
+    accountType: account?.accountType ?? AccountType.ASSET,
+    accountCurrency: account?.currencyCode,
+  };
+}
+
+/** Apply a picker choice directly to a journal line (guided / advanced shell path). */
+export function applyJournalLineAccountSelection(input: {
+  lineId: string;
+  accountId: AccountId;
+  accounts: Account[];
+  updateLine: (lineId: string, patch: Partial<JournalEntryLine>) => void;
+}): void {
+  const { lineId, accountId, accounts, updateLine } = input;
+  if (!lineId || !accountId || accountId === EMPTY_ACCOUNT_ID) return;
+  const account = accounts.find(item => item.id === accountId);
+  updateLine(lineId, buildJournalLineAccountPatch(accountId, account));
+}
 
 export function resolveJournalEntrySelectableAccounts(input: {
   accounts: Account[];

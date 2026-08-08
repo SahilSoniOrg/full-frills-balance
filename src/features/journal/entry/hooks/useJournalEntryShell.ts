@@ -5,6 +5,7 @@ import Account from '@/src/data/models/Account';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
+import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import {
   createSmsJournalAfterSaveHandler,
   JournalEntryScreenMode,
@@ -108,6 +109,32 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { applyAccountToLine, resolveSelectedAccountId } = useModeAccountActions();
 
+  const applyAccountToActiveLine = useCallback(
+    (lineId: string, accountId: AccountId) => {
+      if (activeMode === 'guided' || activeMode === 'advanced') {
+        applyJournalLineAccountSelection({
+          lineId,
+          accountId,
+          accounts,
+          updateLine: editor.updateLine,
+        });
+        return;
+      }
+      applyAccountToLine?.(lineId, accountId);
+    },
+    [activeMode, accounts, editor.updateLine, applyAccountToLine],
+  );
+
+  const resolvePickerSelectedAccountId = useCallback(
+    (lineId: string) => {
+      if (activeMode === 'guided' || activeMode === 'advanced') {
+        return editor.lines.find(line => line.id === lineId)?.accountId;
+      }
+      return resolveSelectedAccountId?.(lineId);
+    },
+    [activeMode, editor.lines, resolveSelectedAccountId],
+  );
+
   const {
     showAccountPicker,
     onSelectAccountRequest,
@@ -120,8 +147,8 @@ export function useJournalEntryShell(): JournalEntryShell {
     accounts,
     editor,
     activeMode,
-    applyAccountToActiveLine: applyAccountToLine,
-    resolveModeSelectedAccountId: resolveSelectedAccountId,
+    applyAccountToActiveLine,
+    resolveModeSelectedAccountId: resolvePickerSelectedAccountId,
   });
 
   const [guidedFooterAmount, setGuidedFooterAmount] = useState<GuidedFooterAmount | null>(null);

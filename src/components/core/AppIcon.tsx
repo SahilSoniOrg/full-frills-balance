@@ -3,6 +3,7 @@ import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   Activity,
+  Archive,
   CircleAlert as AlertCircle,
   TriangleAlert as AlertTriangle,
   ArrowDown,
@@ -51,6 +52,7 @@ import {
   Info,
   Landmark,
   LayoutDashboard,
+  ListTree,
   Lock,
   LogOut,
   Menu,
@@ -130,6 +132,7 @@ export const IconMap = {
   arrowDown: ArrowDown,
   swapHorizontal: ArrowRightLeft,
   document: FileText,
+  archive: Archive,
   folderOpen: FolderOpen,
   search: Search,
   closeCircle: XCircle,
@@ -152,7 +155,7 @@ export const IconMap = {
   bus: Bus,
   film: Film,
   shoppingBag: ShoppingBag,
-  hierarchy: FolderOpen,
+  hierarchy: ListTree,
   history: History,
   eject: LogOut,
   helpCircle: HelpCircle,

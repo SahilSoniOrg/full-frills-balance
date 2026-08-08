@@ -22,7 +22,7 @@ export function SimpleFormAccountSections({
   return (
     <View style={styles.accountSectionStack}>
       {sections.map(section => (
-        <View key={section.title} style={styles.accountSection}>
+        <View key={section.role} style={styles.accountSection}>
           <AccountTileList
             title={section.title}
             accounts={section.accounts}

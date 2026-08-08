@@ -1,5 +1,6 @@
 import { AccountsListHeaderActions } from '@/src/features/accounts/components/AccountsListHeaderActions';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { withArchiveVisibilityScope } from '@/src/contexts/ArchiveVisibilityScope';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountsListView } from '@/src/features/accounts/components/AccountsListView';
 import { useAccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
@@ -21,6 +22,7 @@ function AccountsScreen() {
           setIsSearching={vm.setIsSearching}
           onReorderPress={vm.onReorderPress}
           onManageHierarchy={vm.onManageHierarchy}
+          accountsForArchiveToggle={vm.accountsForArchiveToggle}
         />
       ),
       fab: vm.isSearching
@@ -35,6 +37,7 @@ function AccountsScreen() {
     }),
     [
       vm.activeTab,
+      vm.accountsForArchiveToggle,
       vm.isSearching,
       vm.onCreateAccount,
       vm.onManageHierarchy,
@@ -48,4 +51,4 @@ function AccountsScreen() {
   return <AccountsListView {...vm} chrome={chrome} />;
 }
 
-export default withPrivacyScope(AccountsScreen);
+export default withPrivacyScope(withArchiveVisibilityScope(AccountsScreen));

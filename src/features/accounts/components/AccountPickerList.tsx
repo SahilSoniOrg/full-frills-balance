@@ -1,9 +1,14 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
+import { ArchivedAccountIndicator } from '@/src/features/accounts/components/ArchivedAccountIndicator';
+import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
+import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
+import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
+import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import {
   AccountSection,
   getAccountAccentColor,
@@ -23,16 +28,23 @@ const AccountPickerRow = React.memo(
     item,
     isSelected,
     isMultiple,
+    isPinnedArchived,
     onPress,
   }: {
     item: Account | PlainAccount;
     isSelected: boolean;
     isMultiple: boolean;
+    isPinnedArchived: boolean;
     onPress: () => void;
   }) => {
     const { theme } = useTheme();
+    const archived = isAccountArchived(item);
     const subtitle = [item.accountType, item.currencyCode].filter(Boolean).join(' • ');
     const accentColor = getAccountAccentColor(item.accountType, theme);
+    const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
+      archived,
+      isPinnedArchived,
+    );
 
     return (
       <ListRow
@@ -44,19 +56,28 @@ const AccountPickerRow = React.memo(
         onPress={onPress}
         background={isSelected ? 'surfaceSecondary' : 'transparent'}
         padding="md"
+        style={{ opacity }}
         leading={
-          <AppIcon name={(item.icon as any) || 'wallet'} size={Size.iconMd} color={accentColor} />
+          <AppIcon
+            name={getAccountIcon(item)}
+            size={Size.iconMd}
+            color={accentColor}
+            fallbackIcon="wallet"
+          />
         }
         trailing={
-          isMultiple ? (
-            <AppIcon
-              name={isSelected ? 'checkCircle' : 'circle'}
-              size={Size.iconMd}
-              color={isSelected ? theme.primary : theme.textTertiary}
-            />
-          ) : isSelected ? (
-            <AppIcon name="check" size={Size.iconMd} color={theme.primary} />
-          ) : undefined
+          <View style={styles.trailing}>
+            {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
+            {isMultiple ? (
+              <AppIcon
+                name={isSelected ? 'checkCircle' : 'circle'}
+                size={Size.iconMd}
+                color={isSelected ? theme.primary : theme.textTertiary}
+              />
+            ) : isSelected ? (
+              <AppIcon name="check" size={Size.iconMd} color={theme.primary} />
+            ) : undefined}
+          </View>
         }
       />
     );
@@ -94,6 +115,17 @@ export function AccountPickerList(props: AccountPickerListProps) {
     excludeParentAccounts = false,
   } = props;
   const { theme } = useTheme();
+
+  const accountsById = useMemo(
+    () => new Map(accounts.map(account => [account.id, account])),
+    [accounts],
+  );
+
+  const pinnedAccountIds = useMemo(
+    () => pinnedArchivedAccountIds(selectedIds, accountsById),
+    [accountsById, selectedIds],
+  );
+
   const {
     searchQuery,
     setSearchQuery,
@@ -103,7 +135,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     isSearchMode,
     totalCount,
     filteredCount,
-  } = useAccountPickerList({ accounts, excludeParentAccounts });
+  } = useAccountPickerList({ accounts, excludeParentAccounts, pinnedAccountIds });
   const extraData = useMemo(
     () => ({ selectedIds, collapsedSections, isSearchMode }),
     [selectedIds, collapsedSections, isSearchMode],
@@ -204,26 +236,39 @@ export function AccountPickerList(props: AccountPickerListProps) {
           item={item}
           isSelected={selectedIds.has(item.id)}
           isMultiple={isMultiple}
+          isPinnedArchived={pinnedAccountIds.has(item.id)}
           onPress={() => handleToggleSelection(item.id)}
         />
       );
     },
-    [collapsedSections, isSearchMode, isMultiple, selectedIds, handleToggleSelection],
+    [
+      collapsedSections,
+      isSearchMode,
+      isMultiple,
+      selectedIds,
+      pinnedAccountIds,
+      handleToggleSelection,
+    ],
   );
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AppInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={AppConfig.strings.accounts.picker.searchPlaceholder}
-          testID="account-picker-search-input"
-          leftIcon="search"
-          variant="default"
-          background="surfaceSecondary"
-          borderColor="transparent"
-          borderRadius="full"
-        />
+        <View style={styles.searchRow}>
+          <View style={styles.searchInput}>
+            <AppInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={AppConfig.strings.accounts.picker.searchPlaceholder}
+              testID="account-picker-search-input"
+              leftIcon="search"
+              variant="default"
+              background="surfaceSecondary"
+              borderColor="transparent"
+              borderRadius="full"
+            />
+          </View>
+          <ShowArchivedButton accounts={accounts} />
+        </View>
         {isSearchMode && (
           <View style={styles.countIndicator}>
             <AppText variant="caption" color="secondary">
@@ -269,6 +314,12 @@ export function AccountPickerList(props: AccountPickerListProps) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, display: 'flex' },
   header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  searchInput: { flex: 1 },
   countIndicator: { marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
   listWrapper: { flex: 1, minHeight: 400 },
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
@@ -293,4 +344,5 @@ const styles = StyleSheet.create({
   emptyContainer: { padding: Spacing.xxxxl, alignItems: 'center', justifyContent: 'center' },
   emptyText: { marginTop: Spacing.lg, textAlign: 'center' },
   emptyButton: { marginTop: Spacing.xl },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 });

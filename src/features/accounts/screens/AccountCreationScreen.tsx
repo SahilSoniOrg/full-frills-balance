@@ -10,8 +10,9 @@ export default function AccountCreationScreen() {
       screenTitle: vm.heroTitle,
       showBack: true,
       backIcon: 'back',
+      headerActions: vm.archiveAction.headerActions,
     }),
-    [vm.heroTitle],
+    [vm.heroTitle, vm.archiveAction.headerActions],
   );
   return <AccountFormView {...vm} chrome={chrome} />;
 }

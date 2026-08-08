@@ -8,6 +8,7 @@ import {
   getSectionColor,
 } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
+import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
 import { logger } from '@/src/utils/logger';
 
 export interface AccountCardViewModel {
@@ -27,6 +28,7 @@ export interface AccountCardViewModel {
   hasChildren: boolean;
   isExpanded: boolean;
   reconciledAt?: Date;
+  isArchived: boolean;
 }
 
 export interface AccountSectionViewModel {
@@ -122,9 +124,7 @@ export function transformAccountsToSections(
       }
     });
 
-    const rootAccounts = typeAccounts.filter(
-      a => !a.parentAccountId || !typeAccounts.find(p => p.id === a.parentAccountId),
-    );
+    const rootAccounts = getVisibleRoots(typeAccounts);
     const flattenedData: AccountCardViewModel[] = [];
 
     const flatten = (account: Account | PlainAccount, depth: number) => {
@@ -151,7 +151,13 @@ export function transformAccountsToSections(
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
       // hasChildren is keyed explicitly: child writes don't bump this account's updatedAt.
-      const stateKey = `${account.id}:${updatedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
+      const archivedAtTs =
+        account.archivedAt instanceof Date
+          ? account.archivedAt.getTime()
+          : account.archivedAt
+            ? new Date(account.archivedAt).getTime()
+            : 0;
+      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
@@ -207,6 +213,7 @@ export function transformAccountsToSections(
             ? account.reconciledAt
             : new Date(account.reconciledAt)
           : undefined,
+        isArchived: isAccountArchived(account),
       };
 
       viewModel = createdViewModel;
