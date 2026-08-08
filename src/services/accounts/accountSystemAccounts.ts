@@ -5,6 +5,17 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
 
+export function isSystemAccount(account: { name: string }): boolean {
+  const { openingBalances, balanceCorrections } = AppConfig.systemAccounts;
+  const lower = account.name.trim().toLowerCase();
+  const openingPrefix = openingBalances.namePrefix.toLowerCase();
+  const correctionsPrefix = balanceCorrections.namePrefix.toLowerCase();
+  // Generated names are `${prefix} (${currency})`; legacy exact names also count.
+  if (lower === openingPrefix || lower.startsWith(`${openingPrefix} (`)) return true;
+  if (lower === correctionsPrefix || lower.startsWith(`${correctionsPrefix} (`)) return true;
+  return balanceCorrections.legacyNames.some(name => lower === name.toLowerCase());
+}
+
 export async function findAccountByName(
   workplaceId: WorkplaceId,
   name: string,

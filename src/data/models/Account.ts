@@ -135,6 +135,7 @@ export default class Account extends BaseScopedModel<AccountId> {
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
   @date('deleted_at') deletedAt?: Date;
+  @date('archived_at') archivedAt?: Date;
 
   // Relations with proper types
   @children('transactions') transactions!: Query<Transaction>;

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 29,
+  version: 30,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -18,6 +18,7 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'archived_at', type: 'number', isOptional: true, isIndexed: true },
         { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
       unsafeSql: sql => `${sql};

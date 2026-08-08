@@ -2,7 +2,7 @@ import {
   AccountPersistenceInput,
   accountRepository,
 } from '@/src/data/repositories/AccountRepository';
-import { database } from '@/src/data/database/Database';
+import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
 import { AccountAuditState, AccountId, WorkplaceId } from '@/src/types/domain';
 
 /**
@@ -12,8 +12,9 @@ import { AccountAuditState, AccountId, WorkplaceId } from '@/src/types/domain';
 export async function revertAccountFromAuditState(
   workplaceId: WorkplaceId,
   accountId: AccountId,
-  before: AccountAuditState,
+  beforeRaw: AccountAuditState | Record<string, unknown>,
 ): Promise<void> {
+  const before = normalizeAccountAuditState(beforeRaw);
   const account = await accountRepository.findWithDeleted(workplaceId, accountId);
   if (!account) {
     throw new Error('Account not found');
@@ -29,17 +30,14 @@ export async function revertAccountFromAuditState(
   if (before.parentAccountId !== undefined) {
     payload.parentAccountId = before.parentAccountId;
   }
-
-  if (Object.keys(payload).length > 0) {
-    await accountRepository.update(account, payload, workplaceId);
-  }
-
   if (before.deletedAt !== undefined) {
-    await database.write(async () => {
-      await account.update(record => {
-        record.deletedAt = before.deletedAt ?? undefined;
-        record.updatedAt = new Date();
-      });
-    });
+    payload.deletedAt = before.deletedAt ?? null;
   }
+  if ('archivedAt' in before) {
+    payload.archivedAt = before.archivedAt ?? null;
+  }
+
+  if (Object.keys(payload).length === 0) return;
+
+  await accountRepository.update(account, payload, workplaceId);
 }

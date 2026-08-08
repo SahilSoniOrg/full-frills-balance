@@ -19,6 +19,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
+import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
@@ -192,5 +193,34 @@ describe('account commands (integration)', () => {
     await expect(
       mergeAccounts(WP, asset.id as AccountId, [expense.id as AccountId]),
     ).rejects.toThrow('different categories');
+  });
+
+  it('applyAccountArchiveChanges archives primary + child in one write', async () => {
+    const parent = await createAccount(WP, {
+      name: 'Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+      icon: 'wallet',
+    });
+    const child = await createAccount(WP, {
+      name: 'Cash Sub',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+      parentAccountId: parent.id as AccountId,
+      icon: 'wallet',
+    });
+
+    const applied = await applyAccountArchiveChanges(WP, {
+      toArchive: [parent.id as AccountId, child.id as AccountId],
+      toUnarchive: [],
+    });
+
+    expect(applied).toBe(true);
+    const updated = await accountRepository.find(WP, parent.id as AccountId);
+    expect(updated?.archivedAt).toBeTruthy();
+    const refreshedChild = await accountRepository.find(WP, child.id as AccountId);
+    expect(refreshedChild?.archivedAt).toBeTruthy();
   });
 });

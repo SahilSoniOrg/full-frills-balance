@@ -92,6 +92,7 @@ export interface PlainAccount {
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;
+  archivedAt?: number;
 }
 
 export interface PlainBudget {
@@ -451,6 +452,8 @@ export interface AccountAuditState {
   icon?: IconName;
   parentAccountId?: AccountId;
   deletedAt?: Date;
+  /** null = explicitly not archived. Persisted audits use ISO strings; normalized to Date at revert. */
+  archivedAt?: Date | null;
   restoredAt?: Date;
 }
 /**

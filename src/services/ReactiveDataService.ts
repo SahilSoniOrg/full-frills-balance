@@ -70,11 +70,16 @@ class ReactiveDataService {
    * Clears all cached observables. Primarily used for unit test isolation.
    */
   clearCache(): void {
+    this.invalidateAccountCaches();
+    clearReactiveWorkplaceObservesCache();
+    clearReactiveAggregatedBalancesCache();
+  }
+
+  /** Drop cached account-detail graphs so archive mutations re-hydrate. */
+  invalidateAccountCaches(): void {
     this._dashboardCache.clear();
     this._optimizedAccountListCache.clear();
     this._accountDashboardCache.clear();
-    clearReactiveWorkplaceObservesCache();
-    clearReactiveAggregatedBalancesCache();
   }
 
   /**
@@ -150,6 +155,7 @@ class ReactiveDataService {
           createdAt: a.createdAt?.getTime(),
           updatedAt: a.updatedAt?.getTime(),
           deletedAt: a.deletedAt?.getTime(),
+          archivedAt: a.archivedAt?.getTime(),
         }));
 
         const data: DashboardData = {

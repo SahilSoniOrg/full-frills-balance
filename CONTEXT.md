@@ -48,3 +48,25 @@ _Avoid_: formattedAmount inside description strings
 **Insight description**:
 Human-readable reason prose for why an Insight appeared. Contains no monetary figures.
 _Avoid_: Preformatted money in copy
+
+### Accounts
+
+**Account**:
+A workplace-scoped ledger bucket (asset, liability, equity, income, or expense) that journal lines post to. May form a parent/child hierarchy; only leaf accounts receive transactions.
+_Avoid_: Wallet (as the domain term for any account); category (except for income/expense account types in user-facing copy)
+
+**Archived account**:
+An account marked archived so it is hidden from default account lists and pickers. Still fully live for balances, reporting, posting, and references — archive is a visibility preference, not removal.
+_Avoid_: Deleted account; inactive account; hidden account (as the canonical term)
+
+**Archive**:
+The act of marking an account archived. Distinct from delete: archive never removes history or blocks references; delete is a separate, reference-guarded soft-delete.
+_Avoid_: Deactivate; hide (as the verb — use archive)
+
+**Show archived**:
+An ephemeral toggle on account list and picker surfaces. Off by default; resets each time the surface opens. When on, archived accounts appear with muted styling and an archive icon.
+_Avoid_: Include inactive; show hidden
+
+**Archive cascade**:
+When archiving or unarchiving an account that has descendants, a confirmation dialog listing the account tree (parents and leaves, hierarchy indented). The user selects which nodes to include; nothing cascades without explicit selection.
+_Avoid_: Archive all; cascade archive (as automatic behavior)

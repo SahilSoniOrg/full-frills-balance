@@ -15,8 +15,8 @@ import {
 } from '@/src/types/domain';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { Q } from '@nozbe/watermelondb';
-import { map, of } from 'rxjs';
+import { Model, Q } from '@nozbe/watermelondb';
+import { map, of, distinctUntilChanged } from 'rxjs';
 
 export interface AccountPersistenceInput {
   name: string;
@@ -30,6 +30,10 @@ export interface AccountPersistenceInput {
   parentAccountId?: AccountId;
   workplaceId: WorkplaceId;
   metadata?: Partial<SerializedAccountMetadataPayload>;
+  /** null clears archive. Omit to leave unchanged. */
+  archivedAt?: Date | null;
+  /** null clears soft-delete. Omit to leave unchanged. */
+  deletedAt?: Date | null;
 }
 
 export interface AccountListItemRaw {
@@ -81,6 +85,7 @@ export class AccountRepository {
         'description',
         'parent_account_id',
         'deleted_at',
+        'archived_at',
         'updated_at',
       ]);
   }
@@ -90,7 +95,9 @@ export class AccountRepository {
       Q.where('deleted_at', Q.eq(null)),
       Q.where('workplace_id', workplaceId),
     ];
-    return this.accounts.query(...clauses).observeWithColumns(['parent_account_id', 'deleted_at']);
+    return this.accounts
+      .query(...clauses)
+      .observeWithColumns(['parent_account_id', 'deleted_at', 'archived_at']);
   }
 
   observeByType(workplaceId: WorkplaceId, accountType: AccountType) {
@@ -111,6 +118,7 @@ export class AccountRepository {
         'description',
         'parent_account_id',
         'deleted_at',
+        'archived_at',
       ]);
   }
 
@@ -137,18 +145,50 @@ export class AccountRepository {
         'description',
         'parent_account_id',
         'deleted_at',
+        'archived_at',
       ]);
   }
 
   observeById(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
       .query(Q.where('id', accountId), Q.where('workplace_id', workplaceId))
-      .observe()
+      .observeWithColumns([
+        'name',
+        'account_type',
+        'account_subtype',
+        'currency_code',
+        'icon',
+        'description',
+        'parent_account_id',
+        'deleted_at',
+        'archived_at',
+        'reconciled_at',
+        'updated_at',
+      ])
       .pipe(
         map(accounts => {
           const account = accounts[0];
           return account && !account.deletedAt ? account : null;
         }),
+      );
+  }
+
+  /** Primitive archived_at for React — avoids stale UI from stable model references. */
+  observeArchivedAt(workplaceId: WorkplaceId, accountId: AccountId) {
+    return this.accounts
+      .query(
+        Q.where('id', accountId),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .observeWithColumns(['archived_at', 'deleted_at'])
+      .pipe(
+        map(accounts => {
+          const account = accounts[0];
+          if (!account) return null;
+          return account.archivedAt?.getTime() ?? null;
+        }),
+        distinctUntilChanged(),
       );
   }
 
@@ -333,6 +373,7 @@ export class AccountRepository {
         'reconciled_at',
         'parent_account_id',
         'deleted_at',
+        'archived_at',
       ]);
   }
 
@@ -368,11 +409,18 @@ export class AccountRepository {
     });
   }
 
-  async update(
+  /**
+   * Validate + read everything needed before prepare→batch.
+   * Callers that own the write (e.g. archive compose) use this with prepareUpdateBatchOps.
+   */
+  async planUpdate(
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
-  ): Promise<Account> {
+  ): Promise<{
+    normalizedUpdates: Partial<AccountPersistenceInput>;
+    existingMetadata: AccountMetadata | null;
+  }> {
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, workplaceId, account.id);
     }
@@ -390,22 +438,57 @@ export class AccountRepository {
     const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype;
     this.validateSubtype(nextType, nextSubtype);
 
-    return await this.db.write(async () => {
-      await account.update(acc => {
-        const { metadata, ...accountUpdates } = normalizedUpdates;
-        Object.assign(acc, accountUpdates);
-        acc.updatedAt = new Date();
-      });
+    const existingMetadata = updates.metadata
+      ? await this.findMetadata(workplaceId, account.id)
+      : null;
 
-      if (updates.metadata) {
-        const existingMetadata = await this.findMetadata(workplaceId, account.id);
-        if (existingMetadata) {
-          await existingMetadata.update(meta => {
+    return { normalizedUpdates, existingMetadata };
+  }
+
+  /**
+   * Sync prepare of account (+ optional metadata) ops.
+   * Call only inside db.write after all awaits — WatermelonDB requires prepare→batch sync.
+   */
+  prepareUpdateBatchOps(
+    account: Account,
+    updates: Partial<AccountPersistenceInput>,
+    existingMetadata: AccountMetadata | null,
+  ): Model[] {
+    const batchOps: Model[] = [];
+    const hasRowUpdates = Object.keys(updates).some(key => key !== 'metadata');
+
+    if (hasRowUpdates) {
+      batchOps.push(
+        account.prepareUpdate(acc => {
+          const {
+            metadata: _metadata,
+            archivedAt: _archivedAt,
+            deletedAt: _deletedAt,
+            ...accountUpdates
+          } = updates;
+          Object.assign(acc, accountUpdates);
+          if ('archivedAt' in updates) {
+            acc.archivedAt = updates.archivedAt ?? undefined;
+          }
+          if ('deletedAt' in updates) {
+            acc.deletedAt = updates.deletedAt ?? undefined;
+          }
+          acc.updatedAt = new Date();
+        }),
+      );
+    }
+
+    if (updates.metadata) {
+      if (existingMetadata) {
+        batchOps.push(
+          existingMetadata.prepareUpdate(meta => {
             Object.assign(meta, updates.metadata);
             meta.updatedAt = new Date();
-          });
-        } else {
-          await this.metadata.create(meta => {
+          }),
+        );
+      } else {
+        batchOps.push(
+          this.metadata.prepareCreate(meta => {
             Object.assign(meta, updates.metadata);
             meta.account.set(account);
             if (account.workplaceId) {
@@ -413,10 +496,30 @@ export class AccountRepository {
             }
             meta.createdAt = new Date();
             meta.updatedAt = new Date();
-          });
-        }
+          }),
+        );
       }
+    }
 
+    return batchOps;
+  }
+
+  async update(
+    account: Account,
+    updates: Partial<AccountPersistenceInput>,
+    workplaceId: WorkplaceId,
+  ): Promise<Account> {
+    const { normalizedUpdates, existingMetadata } = await this.planUpdate(
+      account,
+      updates,
+      workplaceId,
+    );
+
+    return await this.db.write(async () => {
+      const batchOps = this.prepareUpdateBatchOps(account, normalizedUpdates, existingMetadata);
+      if (batchOps.length > 0) {
+        await this.db.batch(...batchOps);
+      }
       return account;
     });
   }

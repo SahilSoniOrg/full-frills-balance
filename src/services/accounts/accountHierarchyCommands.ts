@@ -6,6 +6,7 @@ import {
 } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
+import { auditService } from '@/src/services/audit-service';
 import { CreateAccountData } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,
@@ -13,7 +14,6 @@ import {
   assertParentMatchesChildType,
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -65,16 +65,28 @@ async function getPlainMetadata(
   };
 }
 
+export type AccountFieldUpdateContext = {
+  account: Account;
+  updatePayload: Partial<AccountPersistenceInput>;
+  beforeState: {
+    name: string;
+    accountType: Account['accountType'];
+    accountSubtype: Account['accountSubtype'];
+    currencyCode: string;
+    description?: string;
+  };
+  beforeMetadata: Record<string, any> | undefined;
+};
+
 /**
- * Hierarchy update command: applies field/parent changes, enforcing self-parent,
- * circular-parent, parent-type, and parent-transaction invariants. Owns account
- * hierarchy mutation, audit, and type-change rebuild policy.
+ * Validate parent/type invariants and build the persistence payload.
+ * Shared by field-only update and archive compose writes.
  */
-export async function updateAccount(
+export async function prepareAccountFieldUpdate(
   workplaceId: WorkplaceId,
   accountId: AccountId,
   updates: Partial<CreateAccountData>,
-): Promise<Account> {
+): Promise<AccountFieldUpdateContext> {
   const account = await accountRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
 
@@ -86,7 +98,6 @@ export async function updateAccount(
     description: account.description,
   };
 
-  // Validate parent account if updated (existence via graph; circular/self stay here)
   if (updates.parentAccountId) {
     assertNotSelfParent(accountId, updates.parentAccountId);
     const [parent] = await assertWritable(workplaceId, [updates.parentAccountId], 'Parent account');
@@ -108,7 +119,6 @@ export async function updateAccount(
     }
   }
 
-  // Build update object selectively to avoid overwriting existing fields with undefined
   const updatePayload: Partial<AccountPersistenceInput> = {};
   if (updates.name !== undefined) updatePayload.name = updates.name;
   if (updates.accountType !== undefined) updatePayload.accountType = updates.accountType;
@@ -118,7 +128,6 @@ export async function updateAccount(
   if (updates.icon !== undefined) updatePayload.icon = updates.icon;
   if (updates.orderNum !== undefined) updatePayload.orderNum = updates.orderNum;
 
-  // Handle parentAccountId specifically as it can be null (to clear parent)
   if (updates.parentAccountId !== undefined) {
     updatePayload.parentAccountId = updates.parentAccountId || undefined;
   }
@@ -138,7 +147,46 @@ export async function updateAccount(
     accountId,
     updatePayload,
   });
-  const updatedAccount = await accountRepository.update(account, updatePayload, workplaceId);
+
+  const beforeMetadata = await getPlainMetadata(accountId, workplaceId);
+
+  return { account, updatePayload, beforeState, beforeMetadata };
+}
+
+/** Analytics + type-change rebuild after a successful field persist. */
+export function emitAccountUpdateSideEffects(
+  ctx: AccountFieldUpdateContext,
+  updates: Partial<CreateAccountData>,
+  workplaceId: WorkplaceId,
+): void {
+  analytics.trackFeatureUsage('account', 'update', {
+    account_type: ctx.beforeState.accountType,
+    has_parent: !!updates.parentAccountId,
+    fields_updated: Object.keys(updates),
+  });
+
+  if (updates.accountType && updates.accountType !== ctx.beforeState.accountType) {
+    rebuildQueueService.enqueue(ctx.account.id, 0, workplaceId);
+  }
+}
+
+/**
+ * Hierarchy update command: applies field/parent changes, enforcing self-parent,
+ * circular-parent, parent-type, and parent-transaction invariants. Owns account
+ * hierarchy mutation, audit, and type-change rebuild policy.
+ */
+export async function updateAccount(
+  workplaceId: WorkplaceId,
+  accountId: AccountId,
+  updates: Partial<CreateAccountData>,
+): Promise<Account> {
+  const ctx = await prepareAccountFieldUpdate(workplaceId, accountId, updates);
+
+  const updatedAccount = await accountRepository.update(
+    ctx.account,
+    ctx.updatePayload,
+    workplaceId,
+  );
 
   await auditService.log(
     {
@@ -147,14 +195,14 @@ export async function updateAccount(
       action: AuditAction.UPDATE,
       changes: {
         before: {
-          name: beforeState.name,
-          accountType: beforeState.accountType,
-          accountSubtype: beforeState.accountSubtype,
-          currencyCode: beforeState.currencyCode,
-          description: beforeState.description,
-          icon: account.icon,
-          parentAccountId: account.parentAccountId,
-          metadata: await getPlainMetadata(accountId, workplaceId),
+          name: ctx.beforeState.name,
+          accountType: ctx.beforeState.accountType,
+          accountSubtype: ctx.beforeState.accountSubtype,
+          currencyCode: ctx.beforeState.currencyCode,
+          description: ctx.beforeState.description,
+          icon: ctx.account.icon,
+          parentAccountId: ctx.account.parentAccountId,
+          metadata: ctx.beforeMetadata,
         },
         after: updates,
       },
@@ -162,17 +210,7 @@ export async function updateAccount(
     workplaceId,
   );
 
-  // Track Analytics
-  analytics.trackFeatureUsage('account', 'update', {
-    account_type: beforeState.accountType,
-    has_parent: !!updates.parentAccountId,
-    fields_updated: Object.keys(updates),
-  });
-
-  if (updates.accountType && updates.accountType !== beforeState.accountType) {
-    rebuildQueueService.enqueue(account.id, 0, workplaceId);
-  }
-
+  emitAccountUpdateSideEffects(ctx, updates, workplaceId);
   return updatedAccount;
 }
 
@@ -184,6 +222,8 @@ export async function updateAccountOrder(
   account: Account,
   newOrder: number,
 ): Promise<void> {
+  const previousOrderNum = account.orderNum;
+
   await accountRepository.update(account, { orderNum: newOrder }, workplaceId);
 
   await auditService.log(
@@ -192,7 +232,7 @@ export async function updateAccountOrder(
       entityId: account.id,
       action: AuditAction.UPDATE,
       changes: {
-        before: { orderNum: account.orderNum },
+        before: { orderNum: previousOrderNum },
         after: { orderNum: newOrder },
       },
     },

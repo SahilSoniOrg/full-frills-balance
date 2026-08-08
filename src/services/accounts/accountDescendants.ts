@@ -1,13 +1,17 @@
-import Account from '@/src/data/models/Account';
 import { AccountId } from '@/src/types/domain';
 
+export type HierarchyAccountLike = {
+  id: AccountId | string;
+  parentAccountId?: AccountId | string | null;
+};
+
 /** All descendant accounts under `parentId` (direct and nested). */
-export function getAccountDescendants(
-  accounts: Account[],
+export function getAccountDescendants<T extends HierarchyAccountLike>(
+  accounts: readonly T[],
   parentId: AccountId | string,
-): Account[] {
+): T[] {
   const directChildren = accounts.filter(a => a.parentAccountId === parentId);
-  const all: Account[] = [...directChildren];
+  const all: T[] = [...directChildren];
   for (const child of directChildren) {
     all.push(...getAccountDescendants(accounts, child.id));
   }

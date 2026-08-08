@@ -894,5 +894,14 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 30,
+      steps: [
+        addColumns({
+          table: 'accounts',
+          columns: [{ name: 'archived_at', type: 'number', isOptional: true, isIndexed: true }],
+        }),
+      ],
+    },
   ],
 });

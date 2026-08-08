@@ -28,6 +28,15 @@ export interface AggregatedAccountBalances {
 
 const aggregatedBalancesCache = new Map<string, Observable<AggregatedAccountBalances>>();
 
+function accountsObserveSignature(accounts: Account[]): string {
+  return accounts
+    .map(
+      account =>
+        `${account.id}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}`,
+    )
+    .join('|');
+}
+
 export function clearReactiveAggregatedBalancesCache(): void {
   aggregatedBalancesCache.clear();
 }
@@ -54,7 +63,10 @@ export function observeAggregatedAccountBalances(
     firstFastDebounce(Animation.dataRefreshDebounce),
     distinctUntilChanged((prev, curr) => {
       return (
-        prev[0] === curr[0] && prev[1] === curr[1] && prev[2] === curr[2] && prev[3] === curr[3]
+        accountsObserveSignature(prev[0]) === accountsObserveSignature(curr[0]) &&
+        prev[1] === curr[1] &&
+        prev[2] === curr[2] &&
+        prev[3] === curr[3]
       );
     }),
     switchMap(async ([accounts]) => {

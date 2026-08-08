@@ -18,6 +18,7 @@ import { journalWriteRepository } from '@/src/data/repositories/journal/journalW
 import { balanceService } from '@/src/services/BalanceService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
+import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 
 describe('AccountRepository', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;
@@ -99,6 +100,53 @@ describe('AccountRepository', () => {
 
       expect(updated.accountType).toBe(AccountType.EQUITY);
       expect(updated.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE);
+    });
+
+    it('archives primary + child via applyAccountArchiveChanges', async () => {
+      const account = await accountRepository.create({
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+        workplaceId,
+        icon: 'wallet',
+      });
+      const child = await accountRepository.create({
+        name: 'Cash Sub',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+        workplaceId,
+        parentAccountId: account.id as AccountId,
+      });
+
+      const applied = await applyAccountArchiveChanges(workplaceId, {
+        toArchive: [account.id as AccountId, child.id as AccountId],
+        toUnarchive: [],
+      });
+      expect(applied).toBe(true);
+
+      const updated = await accountRepository.find(workplaceId, account.id as AccountId);
+      expect(updated?.archivedAt).toBeTruthy();
+      const refreshedChild = await accountRepository.find(workplaceId, child.id as AccountId);
+      expect(refreshedChild?.archivedAt).toBeTruthy();
+    });
+
+    it('persists archivedAt as a first-class update field', async () => {
+      const account = await accountRepository.create({
+        name: 'Vault',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+      const now = new Date('2026-08-07T22:04:32.000Z');
+      const updated = await accountRepository.update(account, { archivedAt: now }, workplaceId);
+      expect(updated.archivedAt?.toISOString()).toBe(now.toISOString());
+
+      await accountRepository.update(updated, { archivedAt: null }, workplaceId);
+      const refreshed = await accountRepository.find(workplaceId, account.id as AccountId);
+      expect(refreshed?.archivedAt == null).toBe(true);
     });
   });
 
