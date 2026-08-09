@@ -129,15 +129,9 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
           )}
 
           <SettingsMenuItem
-            leftIcon="terminal"
-            title="AI Benchmark Lab"
-            description="Download models and test performance"
-            onPress={AppNavigation.toAiBenchmark}
-          />
-          <SettingsMenuItem
             leftIcon="zap"
-            title="AI Example (Raw)"
-            description="Direct litert-lm test — no service layer"
+            title="AI Dev Lab"
+            description="Chat and benchmark litert-lm on-device"
             onPress={AppNavigation.toAiExample}
           />
         </SettingsMenu>

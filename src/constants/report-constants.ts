@@ -99,10 +99,6 @@ export const REPORT_CHART_LAYOUT = {
   sankeyMinLinkWidth: 2,
 } as const;
 
-export const REPORT_CHART_EVENTS = {
-  globalTouch: 'globalTouch',
-} as const;
-
 export const REPORT_CHART_COLORS = {
   tooltipShadow: '#000',
 } as const;

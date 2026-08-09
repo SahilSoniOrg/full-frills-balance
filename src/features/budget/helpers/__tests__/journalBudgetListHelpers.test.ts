@@ -8,7 +8,7 @@ import {
 } from '@/src/types/domain';
 
 import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
-import { journalsToTimelineRows } from '@/src/features/journal';
+import { journalsToTimelineRows } from '@/src/services/journal/journalTimeline';
 
 describe('journalsToTimelineRows', () => {
   const journal: EnrichedJournal = {

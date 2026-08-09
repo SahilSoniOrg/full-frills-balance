@@ -1,6 +1,4 @@
-import { useSyncExternalStore } from 'react';
 import { createPreferencesFacade } from './PreferencesFacade';
-import type { UIPreferences } from './types';
 
 export type {
   AiPrefs,
@@ -42,17 +40,3 @@ export const preferencesMigration = {
     preferences.clearLegacyCurrencyFields();
   },
 };
-
-/**
- * React hook to observe UI preferences reactively.
- */
-export function usePreferences(): UIPreferences {
-  return useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observeAll().subscribe(() => onStoreChange());
-      return () => sub.unsubscribe();
-    },
-    () => preferences.getPreferences(),
-    () => preferences.getPreferences(),
-  );
-}

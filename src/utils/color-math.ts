@@ -68,15 +68,6 @@ export function withOpacity(color: string, opacity: number): string {
 }
 
 /**
- * Adds alpha to a hex color and returns hex-with-alpha string.
- * @deprecated Use withOpacity for RGBA return value which is more standard in this RN project.
- */
-export function addAlpha(hexColor: string, opacity: number): string {
-  const _opacity = Math.round(Math.min(Math.max(opacity || 1, 0), 1) * 255);
-  return hexColor + _opacity.toString(16).toUpperCase().padStart(2, '0');
-}
-
-/**
  * Blends two hex colors together based on alpha weight.
  * Returns a solid 6-digit hex string.
  */

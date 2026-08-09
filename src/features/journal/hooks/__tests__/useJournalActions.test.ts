@@ -18,32 +18,6 @@ describe('useJournalActions', () => {
     jest.clearAllMocks();
   });
 
-  it('should delegate createJournal to journalService', async () => {
-    const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
-    const data = { description: 'test', currencyCode: 'USD', transactions: [] } as any;
-
-    await act(async () => {
-      await result.current.createJournal(data);
-    });
-
-    expect(journalService.createJournal).toHaveBeenCalledWith(data, 'test-wp' as WorkplaceId);
-  });
-
-  it('should delegate updateJournal to journalService', async () => {
-    const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
-    const data = { description: 'update' } as any;
-
-    await act(async () => {
-      await result.current.updateJournal('id1' as JournalId, data);
-    });
-
-    expect(journalService.updateJournal).toHaveBeenCalledWith(
-      'id1' as JournalId,
-      data,
-      'test-wp' as WorkplaceId,
-    );
-  });
-
   it('should delegate deleteJournal to journalService', async () => {
     const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
     const journal = { id: 'id1' } as any;
@@ -53,19 +27,6 @@ describe('useJournalActions', () => {
     });
 
     expect(journalService.deleteJournal).toHaveBeenCalledWith(
-      'id1' as JournalId,
-      'test-wp' as WorkplaceId,
-    );
-  });
-
-  it('should delegate recoverJournal to journalService', async () => {
-    const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
-
-    await act(async () => {
-      await result.current.recoverJournal('id1' as JournalId);
-    });
-
-    expect(journalService.recoverJournal).toHaveBeenCalledWith(
       'id1' as JournalId,
       'test-wp' as WorkplaceId,
     );

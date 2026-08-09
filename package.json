@@ -76,7 +76,6 @@
     "expo-splash-screen": "~57.0.5",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
-    "expo-system-ui": "~57.0.1",
     "expo-updates": "~57.0.10",
     "expo-web-browser": "~57.0.2",
     "lucide-react-native": "^0.563.0",
@@ -140,10 +139,6 @@
     ]
   },
   "private": true,
-  "trustedDependencies": [
-    "@shopify/react-native-skia",
-    "unrs-resolver"
-  ],
   "experiments": {
     "reactCompiler": true
   }

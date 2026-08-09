@@ -1,4 +1,3 @@
-export * from './components/DashboardSummary';
 export * from './components/SafeToSpendCard';
 export { PlannedPaymentsSection } from './components/PlannedPaymentsSection';
 export type { PlannedPaymentsSectionProps } from './components/PlannedPaymentsSection';

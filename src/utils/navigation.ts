@@ -640,14 +640,7 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the AI Benchmark screen.
-   */
-  toAiBenchmark: () => {
-    router.push('/ai-benchmark' as Href);
-  },
-
-  /**
-   * Navigate to the AI Example replica screen (raw litert-lm test).
+   * Navigate to the on-device AI dev lab (litert-lm chat + benchmark).
    */
   toAiExample: () => {
     router.push('/ai-example' as Href);

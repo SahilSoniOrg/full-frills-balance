@@ -46,18 +46,6 @@ export function resolveMarginSpacing(
   return Spacing[value as SpacingKey];
 }
 
-/**
- * @deprecated Use resolvePaddingSpacing or resolveMarginSpacing
- */
-export function resolveSpacing(
-  value: SpacingKey | number | 'auto' | undefined,
-): number | string | undefined {
-  if (value === undefined) return undefined;
-  if (value === 'auto') return 'auto';
-  if (typeof value === 'number') return value;
-  return Spacing[value as SpacingKey];
-}
-
 export function resolveRadius(value: RadiusKey | number | undefined): number | undefined {
   if (value === undefined) return undefined;
   if (typeof value === 'number') return value;

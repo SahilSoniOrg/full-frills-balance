@@ -14,7 +14,6 @@ export interface InlineSearchFieldProps {
 /**
  * InlineSearchField — search icon that expands in-place to a text field.
  * Use when search happens on the current screen.
- * For navigation-to-search-screen, use SearchNavButton instead.
  */
 export const InlineSearchField = ({
   value,
