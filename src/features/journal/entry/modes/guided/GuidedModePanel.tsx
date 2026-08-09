@@ -3,6 +3,7 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import type { VoiceJournalApplyParams } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
@@ -30,15 +31,7 @@ export type GuidedVoiceActions = {
   open: () => void;
 };
 
-export type GuidedVoiceApplyParams = {
-  amount?: number;
-  merchantName?: string;
-  direction: 'debit' | 'credit' | 'unknown';
-  transactionType?: 'expense' | 'income' | 'transfer';
-  sourceAccountId: AccountId;
-  categoryAccountId: AccountId;
-  transcription: string;
-};
+export type GuidedVoiceApplyParams = VoiceJournalApplyParams;
 
 export type GuidedModePanelProps = {
   accounts: Account[];
@@ -221,7 +214,22 @@ export function GuidedModePanel({
 
   return (
     <>
-      <SimpleForm {...simpleEditor} />
+      <SimpleForm
+        type={simpleEditor.type}
+        setType={simpleEditor.setType}
+        amount={simpleEditor.amount}
+        sourceId={simpleEditor.sourceId}
+        destinationId={simpleEditor.destinationId}
+        exchangeRate={simpleEditor.exchangeRate}
+        isLoadingRate={simpleEditor.isLoadingRate}
+        rateError={simpleEditor.rateError}
+        isCrossCurrency={simpleEditor.isCrossCurrency}
+        convertedAmount={simpleEditor.convertedAmount}
+        sourceCurrency={simpleEditor.sourceCurrency}
+        destCurrency={simpleEditor.destCurrency}
+        openAccountPicker={simpleEditor.openAccountPicker}
+        accountSections={simpleEditor.accountSections}
+      />
       <VoiceInputModal
         visible={isVoiceModalVisible}
         onClose={() => setIsVoiceModalVisible(false)}

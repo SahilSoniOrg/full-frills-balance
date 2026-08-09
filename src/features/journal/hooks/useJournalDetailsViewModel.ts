@@ -10,7 +10,6 @@ import {
   buildJournalSplitItems,
   JournalSplitItemViewModel,
 } from '@/src/features/journal/hooks/journalDetailsSplitItems';
-import { useTheme } from '@/src/hooks/use-theme';
 import {
   JournalStatusChipVariant,
   resolveJournalDetailsInfo,
@@ -27,7 +26,6 @@ import { useCallback, useMemo } from 'react';
 export type { JournalSplitItemViewModel } from '@/src/features/journal/hooks/journalDetailsSplitItems';
 
 export interface JournalDetailsViewModel {
-  theme: ReturnType<typeof useTheme>['theme'];
   isLoading: boolean;
   isMissing: boolean;
   title: string;
@@ -91,7 +89,6 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     typeIcon?: string;
     displayType?: string;
   }>();
-  const { theme } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const { transactions, isLoading: isLoadingTransactions } = useJournalLegs(
@@ -183,7 +180,6 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     : undefined;
 
   return {
-    theme,
     isLoading,
     isMissing: !isLoading && !journalInfo,
     title: 'Journal details',

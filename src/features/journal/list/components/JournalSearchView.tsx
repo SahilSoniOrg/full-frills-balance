@@ -13,7 +13,7 @@ import { JournalListView } from '@/src/features/journal/components/JournalListVi
 import type { ScreenChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -23,8 +23,6 @@ type JournalSearchViewProps = JournalSearchViewModel & {
 
 export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
   const { theme } = useTheme();
-  const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
   const filterHeader = useMemo(
     () => (
@@ -50,7 +48,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             range={vm.dateRange}
             onPress={() => {
               Keyboard.dismiss();
-              setIsDatePickerVisible(true);
+              vm.openDatePicker();
             }}
             showNavigationArrows={false}
           />
@@ -62,7 +60,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
               isActive={vm.accountIds.length > 0}
               onPress={() => {
                 Keyboard.dismiss();
-                setIsAccountPickerVisible(true);
+                vm.openAccountPicker();
               }}
             />
           </View>
@@ -149,8 +147,8 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
       />
 
       <MultiAccountPickerModal
-        visible={isAccountPickerVisible}
-        onClose={() => setIsAccountPickerVisible(false)}
+        visible={vm.isAccountPickerVisible}
+        onClose={vm.closeAccountPicker}
         selectedIds={vm.accountIds}
         onSelect={vm.setAccountIds}
         accounts={vm.accounts}
@@ -158,13 +156,10 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
       />
 
       <DateRangePicker
-        visible={isDatePickerVisible}
-        onClose={() => setIsDatePickerVisible(false)}
+        visible={vm.isDatePickerVisible}
+        onClose={vm.closeDatePicker}
         currentFilter={vm.periodFilter}
-        onSelect={(range, filter) => {
-          vm.setDateRange(range, filter);
-          setIsDatePickerVisible(false);
-        }}
+        onSelect={vm.setDateRange}
       />
     </>
   );

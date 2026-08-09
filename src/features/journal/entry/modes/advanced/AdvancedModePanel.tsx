@@ -37,6 +37,8 @@ export function AdvancedModePanel({
     availableCurrencies,
     selectedCurrency,
     setSelectedCurrency,
+    journalBaseCurrency,
+    getLineBaseAmount,
   } = useAdvancedJournalSummary(editor.lines);
 
   const isAdvancedValid = isAdvancedJournalFormValid({
@@ -112,6 +114,8 @@ export function AdvancedModePanel({
       <AdvancedForm
         editor={editor}
         workplaceCurrency={workplaceCurrency}
+        journalBaseCurrency={journalBaseCurrency}
+        getLineBaseAmount={getLineBaseAmount}
         onSelectAccountRequest={onSelectAccountRequest}
       />
       <JournalSummary

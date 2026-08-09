@@ -13,10 +13,8 @@ export interface SimpleFormProps {
   type: TabType;
   setType: (type: TabType) => void;
   amount: string;
-  setAmount: (amount: string) => void;
   sourceId: AccountId;
   destinationId: AccountId;
-  isSubmitting: boolean;
   exchangeRate: number | null;
   isLoadingRate: boolean;
   rateError: string | null;
@@ -25,7 +23,6 @@ export interface SimpleFormProps {
   sourceCurrency?: string;
   destCurrency?: string;
   openAccountPicker: (role: AccountRole) => void;
-  handleSave: () => Promise<void>;
   accountSections: SimpleFormSection[];
 }
 

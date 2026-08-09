@@ -2,16 +2,17 @@ import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/compone
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useAiPrefs } from '@/src/hooks/useAiPrefs';
 import { Separator } from '@/src/design-system';
+import {
+  useVoiceJournalParse,
+  type VoiceJournalApplyParams,
+} from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { logger } from '@/src/utils/logger';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
-import { useEffect, useRef, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -20,21 +21,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { transactionIngestionService } from '@/src/services/transaction-ingestion';
-import type { ParserOutput } from '@/src/services/transaction-ingestion';
 
 interface VoiceInputModalProps {
   visible: boolean;
   onClose: () => void;
-  onApply: (params: {
-    amount?: number;
-    merchantName?: string;
-    direction: 'debit' | 'credit' | 'unknown';
-    transactionType?: 'expense' | 'income' | 'transfer';
-    sourceAccountId: AccountId;
-    categoryAccountId: AccountId;
-    transcription: string;
-  }) => void;
+  onApply: (params: VoiceJournalApplyParams) => void;
   workplaceId: WorkplaceId;
 }
 
@@ -51,12 +42,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   const { isNativeAiEnabled } = useAiPrefs();
   const insets = useSafeAreaInsets();
 
-  const [transcription, setTranscription] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
-
-  // Animated bars for voice pulsing visualizer
   const [animValues] = useState(() => [
     new Animated.Value(1),
     new Animated.Value(1),
@@ -64,39 +49,45 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     new Animated.Value(1),
     new Animated.Value(1),
   ]);
-  // Real-time voice events
-  useSpeechRecognitionEvent('start', () => setIsRecording(true));
-  useSpeechRecognitionEvent('end', () => setIsRecording(false));
-  useSpeechRecognitionEvent('result', event => {
-    const text = event.results[0]?.transcript || '';
-    setTranscription(text);
-  });
-  useSpeechRecognitionEvent('error', event => {
-    logger.error('[VoiceInputModal] Speech recognition error', event.error);
-    setIsRecording(false);
-  });
 
-  // Vertical bar visualizer driven by real volume
-  useSpeechRecognitionEvent('volumechange', event => {
-    // Value is typically -2 to 10. Normalize to a scale factor.
-    const volume = event.value;
-    const scale = Math.max(1, (volume + 2) / 3); // Map to ~1.0 to 4.0
+  const onVolumeChange = useCallback(
+    (volume: number) => {
+      const scale = Math.max(1, (volume + 2) / 3);
+      animValues.forEach(anim => {
+        Animated.spring(anim, {
+          toValue: scale * (0.8 + Math.random() * 0.4),
+          useNativeDriver: true,
+          friction: 7,
+          tension: 40,
+        }).start();
+      });
+    },
+    [animValues],
+  );
 
-    animValues.forEach((anim, _i) => {
-      Animated.spring(anim, {
-        toValue: scale * (0.8 + Math.random() * 0.4), // Add some variation per bar
-        useNativeDriver: true,
-        friction: 7,
-        tension: 40,
-      }).start();
-    });
+  const {
+    transcription,
+    setTranscription,
+    isRecording,
+    isParsing,
+    parserOutput,
+    startRecording,
+    stopRecording,
+    parseTranscription,
+    selectTemplate,
+    applyParsedResult,
+  } = useVoiceJournalParse({
+    workplaceId,
+    visible,
+    onApply,
+    onClose,
+    onVolumeChange,
   });
 
   const animLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (isRecording) {
-      // Start looping animation for the vertical visualizer bars
       const animations = animValues.map((anim, index) => {
         return Animated.loop(
           Animated.sequence([
@@ -137,79 +128,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     };
   }, [isRecording, animValues]);
 
-  // Reset local state when opened/closed
-  useEffect(() => {
-    if (!visible) return;
-    setTimeout(() => {
-      setTranscription('');
-      setIsRecording(false);
-      setIsParsing(false);
-      setParserOutput(null);
-    }, 0);
-  }, [visible]);
-
-  const handleStartRecording = async () => {
-    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!result.granted) {
-      logger.warn('[VoiceInputModal] Speech permissions denied');
-      return;
-    }
-
-    setParserOutput(null);
-    setTranscription('');
-
-    ExpoSpeechRecognitionModule.start({
-      lang: 'en-IN', // Indian English is common for this userbase
-      interimResults: true,
-      volumeChangeEventOptions: {
-        enabled: true,
-        intervalMillis: 50,
-      },
-    });
-  };
-
-  const handleStopRecording = () => {
-    ExpoSpeechRecognitionModule.stop();
-  };
-
-  const triggerExtraction = async (textToParse: string, forceAi: boolean = false) => {
-    if (!textToParse.trim()) return;
-    setIsParsing(true);
-    Keyboard.dismiss();
-
-    try {
-      const output = await transactionIngestionService.ingest(textToParse, workplaceId, forceAi);
-      setParserOutput(output);
-    } catch (err) {
-      logger.error('[VoiceInputModal] Extraction failed', err);
-      setParserOutput(null);
-    } finally {
-      setIsParsing(false);
-    }
-  };
-
-  const handleSelectTemplate = (template: string) => {
-    setTranscription(template);
-    triggerExtraction(template);
-  };
-
-  const handleApply = () => {
-    if (!parserOutput || parserOutput.transactions.length === 0) return;
-    const result = parserOutput.transactions[0];
-
-    onApply({
-      amount: result.amount,
-      merchantName: result.categoryNameHint || result.description,
-      direction: result.type === 'income' ? 'credit' : 'debit',
-      transactionType:
-        result.type === 'unknown' ? undefined : (result.type as 'expense' | 'income' | 'transfer'),
-      sourceAccountId: (result.accountId as AccountId) || ('' as AccountId),
-      categoryAccountId: (result.categoryId as AccountId) || ('' as AccountId),
-      transcription: transcription.trim(),
-    });
-    onClose();
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
@@ -223,7 +141,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             },
           ]}
         >
-          {/* Header */}
           <View style={styles.header}>
             <IconButton name="close" onPress={onClose} />
             <View style={styles.headerTitle}>
@@ -242,11 +159,10 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             contentContainerStyle={styles.scrollableContent}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Pulsing Visualizer Section */}
             <View style={styles.visualizerContainer}>
               <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
                 {isRecording ? (
-                  <TouchableOpacity onPress={handleStopRecording} style={styles.barGroup}>
+                  <TouchableOpacity onPress={stopRecording} style={styles.barGroup}>
                     {animValues.map((anim, idx) => (
                       <Animated.View
                         key={idx}
@@ -262,7 +178,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    onPress={handleStartRecording}
+                    onPress={startRecording}
                     style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
                   >
                     <AppIcon name="mic" size={28} color={theme.onPrimary} />
@@ -279,7 +195,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
 
             <Separator style={styles.divider} />
 
-            {/* Input & Examples Section */}
             <View style={styles.section}>
               <AppText
                 variant="caption"
@@ -302,7 +217,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 <View style={styles.parseActionsGroup}>
                   {transcription.trim().length > 0 && (
                     <TouchableOpacity
-                      onPress={() => triggerExtraction(transcription)}
+                      onPress={() => void parseTranscription(transcription)}
                       disabled={isParsing}
                       style={[
                         styles.parseTextTouch,
@@ -320,7 +235,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                   )}
                   {isNativeAiEnabled && transcription.trim().length > 0 && (
                     <TouchableOpacity
-                      onPress={() => triggerExtraction(transcription, true)}
+                      onPress={() => void parseTranscription(transcription, true)}
                       disabled={isParsing}
                       style={[styles.parseTextTouch, { backgroundColor: theme.primary }]}
                     >
@@ -350,7 +265,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 {PREDEFINED_TEMPLATES.map((item, idx) => (
                   <TouchableOpacity
                     key={idx}
-                    onPress={() => handleSelectTemplate(item)}
+                    onPress={() => selectTemplate(item)}
                     style={[
                       styles.templateRow,
                       {
@@ -373,7 +288,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
               </View>
             </View>
 
-            {/* Parsing Result Dash */}
             {isParsing && (
               <View style={styles.resolutionContainer}>
                 <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
@@ -533,13 +447,12 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             )}
           </ScrollView>
 
-          {/* Actions */}
           <Separator style={styles.divider} />
           <View style={styles.footerActions}>
             <AppButton
               variant="primary"
               disabled={!parserOutput || isParsing}
-              onPress={handleApply}
+              onPress={applyParsedResult}
             >
               Confirm & Apply
             </AppButton>

@@ -7,6 +7,7 @@ import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback, useState } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
 import { useJournalEntryList } from './useJournalEntryList';
 
@@ -40,6 +41,14 @@ export interface JournalSearchViewModel {
 
   hasMore: boolean;
   accounts: Account[];
+
+  // Filter chrome (picker visibility)
+  isAccountPickerVisible: boolean;
+  openAccountPicker: () => void;
+  closeAccountPicker: () => void;
+  isDatePickerVisible: boolean;
+  openDatePicker: () => void;
+  closeDatePicker: () => void;
 
   // Selection
   selectedIds: Set<JournalId>;
@@ -79,14 +88,37 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     paginationPolicy: 'always',
   });
 
+  const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+
+  const openAccountPicker = useCallback(() => setIsAccountPickerVisible(true), []);
+  const closeAccountPicker = useCallback(() => setIsAccountPickerVisible(false), []);
+  const openDatePicker = useCallback(() => setIsDatePickerVisible(true), []);
+  const closeDatePicker = useCallback(() => setIsDatePickerVisible(false), []);
+
+  const setDateRange = useCallback(
+    (range: DateRange | null, filter: PeriodFilter) => {
+      filters.setDateRange(range, filter);
+      setIsDatePickerVisible(false);
+    },
+    [filters.setDateRange],
+  );
+
   return {
     items: core.items,
     isLoading: core.isLoading,
     isLoadingMore: core.isLoadingMore,
     onEndReached: core.onEndReached,
     ...filters,
+    setDateRange,
     hasMore: core.hasMore,
     accounts,
+    isAccountPickerVisible,
+    openAccountPicker,
+    closeAccountPicker,
+    isDatePickerVisible,
+    openDatePicker,
+    closeDatePicker,
     selectedIds: core.selectedIds,
     isSelectionModeActive: core.isSelectionModeActive,
     onLongPressItem: core.onLongPressItem,

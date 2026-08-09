@@ -115,6 +115,27 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     setManualCurrency(currency);
   };
 
+  const journalBaseCurrency = useMemo(() => {
+    const currencies = [
+      ...new Set(lines.map(l => l.accountCurrency || defaultCurrency).filter(Boolean)),
+    ];
+    return currencies.length === 1 ? currencies[0] : defaultCurrency;
+  }, [lines, defaultCurrency]);
+
+  const getLineBaseAmount = useMemo(
+    () =>
+      (
+        line: {
+          amount: number | string;
+          exchangeRate?: number | string;
+          accountCurrency?: string;
+        },
+        baseCurrency: string,
+      ) =>
+        JournalCalculator.getLineBaseAmount(line, baseCurrency),
+    [],
+  );
+
   return {
     totalDebits,
     totalCredits,
@@ -125,5 +146,7 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     selectedCurrency,
     setSelectedCurrency: onSelectCurrency,
     baseCurrency: defaultCurrency,
+    journalBaseCurrency,
+    getLineBaseAmount,
   };
 }

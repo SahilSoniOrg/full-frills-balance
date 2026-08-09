@@ -113,8 +113,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
             setNotes={vm.editor.setNotes}
             showBanner={showEditBanner}
             bannerText={editBannerText}
-            variant="minimal"
-            density="tight"
             suggestions={vm.suggestions}
             hideSuggestions={hideSuggestions}
             onDescriptionFocus={onDescriptionFocus}

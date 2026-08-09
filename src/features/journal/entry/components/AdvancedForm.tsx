@@ -2,7 +2,6 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { JournalEntryLine } from '@/src/types/domain';
 import { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -10,12 +9,16 @@ import { TouchableOpacity, View } from 'react-native';
 interface AdvancedFormProps {
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
+  journalBaseCurrency: string;
+  getLineBaseAmount: (line: JournalEntryLine, baseCurrency: string) => number;
   onSelectAccountRequest: (lineId: string) => void;
 }
 
 export const AdvancedForm = ({
   editor,
   workplaceCurrency,
+  journalBaseCurrency,
+  getLineBaseAmount,
   onSelectAccountRequest,
 }: AdvancedFormProps) => {
   const handleUpdateLine = useCallback(
@@ -51,33 +54,23 @@ export const AdvancedForm = ({
         </View>
 
         <View style={{ gap: 0 }}>
-          {(() => {
-            const journalCurrencies = [
-              ...new Set(
-                editor.lines.map(l => l.accountCurrency || workplaceCurrency).filter(Boolean),
-              ),
-            ];
-            const journalBaseCurrency =
-              journalCurrencies.length === 1 ? journalCurrencies[0] : workplaceCurrency;
-
-            return editor.lines.map((line, index) => (
-              <JournalLineItem
-                key={line.id}
-                line={line}
-                index={index}
-                canRemove={editor.lines.length > 2}
-                onUpdate={(field, value) => handleUpdateLine(line.id, field, value)}
-                onRemove={() => editor.removeLine(line.id)}
-                onSelectAccount={() => onSelectAccountRequest(line.id)}
-                onAutoFetchRate={force => editor.fetchRatesForLines([line.id], force)}
-                onBalanceLine={() => editor.balanceLine(line.id)}
-                isBalancePrimary={editor.isUnbalanced && editor.isEntryReadyToBalance}
-                getLineBaseAmount={JournalCalculator.getLineBaseAmount}
-                workplaceCurrency={workplaceCurrency}
-                journalBaseCurrency={journalBaseCurrency}
-              />
-            ));
-          })()}
+          {editor.lines.map((line, index) => (
+            <JournalLineItem
+              key={line.id}
+              line={line}
+              index={index}
+              canRemove={editor.lines.length > 2}
+              onUpdate={(field, value) => handleUpdateLine(line.id, field, value)}
+              onRemove={() => editor.removeLine(line.id)}
+              onSelectAccount={() => onSelectAccountRequest(line.id)}
+              onAutoFetchRate={force => editor.fetchRatesForLines([line.id], force)}
+              onBalanceLine={() => editor.balanceLine(line.id)}
+              isBalancePrimary={editor.isUnbalanced && editor.isEntryReadyToBalance}
+              getLineBaseAmount={getLineBaseAmount}
+              workplaceCurrency={workplaceCurrency}
+              journalBaseCurrency={journalBaseCurrency}
+            />
+          ))}
         </View>
       </View>
     </View>
