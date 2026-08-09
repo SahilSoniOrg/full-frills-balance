@@ -7,37 +7,37 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02202A07DCDD4226AA2D8CF3 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 7C9AF970D5D74AD382AE0219 /* FullFrillsBalanceWidget.appex */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		5DAE5E6EDB024430B9A7B2EA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A24821C06E14AC18B9DB1B9 /* WidgetKit.framework */; };
-		93650F208B461E83C5052FCA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FA698F452EE0FF4678329851 /* PrivacyInfo.xcprivacy */; };
-		9870329D3D8945ED9E4E00E8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B72849B889E947F9A2E0380B /* SwiftUI.framework */; };
-		BAFD7D1D9B3678A66C00D57B /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B2A5A9CA49564CB9881DFE86 /* libPods-FullFrillsBalance.a */; };
+		6628AB796D4C19DBF666DC09 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 887F5701ABE60C5A9DFCE678 /* PrivacyInfo.xcprivacy */; };
+		9EAD402DEE824731864377FC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7B22CE83198432AAA82A5EB /* WidgetKit.framework */; };
+		A7791308FFFE4F09B8F27DAF /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144644167E6C476E9635D20B /* FullFrillsBalanceWidget.swift */; };
+		AA3072C2B98221AC7AE587BD /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C2196840E79AE3C69269B97A /* libPods-FullFrillsBalance.a */; };
+		B72D64DAF576553CA25F7716 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA633B68FCD5BF964A2F0418 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		C6C7AA88B6304418931EACC0 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 366F455995D74389850843FD /* FullFrillsBalanceWidget.appex */; };
-		CFEAC1F43EBF485D9A94EAE3 /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A0C2D3498E4A9F9D50C224 /* FullFrillsBalanceWidget.swift */; };
-		E30C938BD14A91713061A8B9 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA909E22920565E57668D13 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F84F235B599C445598668B8F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59A9164D531B42DBA120562B /* SwiftUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		F1E2D3C4B5A6978877665544 /* PBXContainerItemProxy */ = {
+		26E288929C0F452895C6E77D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = A7AD1668E4184F28A24A3095;
+			remoteGlobalIDString = F397AE0E773944CC9D011C8F;
 			remoteInfo = FullFrillsBalanceWidget;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		BDA3DD1D1DCB42C78030933D /* Copy Files */ = {
+		E2DA90A182904EAAAEFDCB1A /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				C6C7AA88B6304418931EACC0 /* FullFrillsBalanceWidget.appex in Copy Files */,
+				02202A07DCDD4226AA2D8CF3 /* FullFrillsBalanceWidget.appex in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -48,21 +48,21 @@
 		13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FullFrillsBalance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FullFrillsBalance/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FullFrillsBalance/Info.plist; sourceTree = "<group>"; };
-		366F455995D74389850843FD /* FullFrillsBalanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = FullFrillsBalanceWidget.appex; path = FullFrillsBalanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		37A0C2D3498E4A9F9D50C224 /* FullFrillsBalanceWidget.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = FullFrillsBalanceWidget.swift; path = FullFrillsBalanceWidget/FullFrillsBalanceWidget.swift; sourceTree = "<group>"; };
-		49768AAFDC50DE1AADB2B559 /* Pods-FullFrillsBalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.debug.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.debug.xcconfig"; sourceTree = "<group>"; };
-		7A24821C06E14AC18B9DB1B9 /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		8C07FA5C58E940EC900E03B4 /* FullFrillsBalanceWidget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "FullFrillsBalanceWidget-Info.plist"; path = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist"; sourceTree = "<group>"; };
+		144644167E6C476E9635D20B /* FullFrillsBalanceWidget.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = FullFrillsBalanceWidget.swift; path = FullFrillsBalanceWidget/FullFrillsBalanceWidget.swift; sourceTree = "<group>"; };
+		2BD9E9A95CC179362FD4BC36 /* Pods-FullFrillsBalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.debug.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.debug.xcconfig"; sourceTree = "<group>"; };
+		3E327D4C1C0E48EE927D6BC7 /* FullFrillsBalanceWidget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "FullFrillsBalanceWidget-Info.plist"; path = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist"; sourceTree = "<group>"; };
+		59A9164D531B42DBA120562B /* SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		7C9AF970D5D74AD382AE0219 /* FullFrillsBalanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = FullFrillsBalanceWidget.appex; path = FullFrillsBalanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		887F5701ABE60C5A9DFCE678 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = FullFrillsBalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = FullFrillsBalance/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B2A5A9CA49564CB9881DFE86 /* libPods-FullFrillsBalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FullFrillsBalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		B72849B889E947F9A2E0380B /* SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		B77A2D92B8B1D004B075AC0C /* Pods-FullFrillsBalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.release.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.release.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		C2196840E79AE3C69269B97A /* libPods-FullFrillsBalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FullFrillsBalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C7B22CE83198432AAA82A5EB /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		D997203C93759A714B581303 /* Pods-FullFrillsBalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.release.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.release.xcconfig"; sourceTree = "<group>"; };
+		DA633B68FCD5BF964A2F0418 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FullFrillsBalance/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* FullFrillsBalance-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "FullFrillsBalance-Bridging-Header.h"; path = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h"; sourceTree = "<group>"; };
-		FA698F452EE0FF4678329851 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = FullFrillsBalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		FBA909E22920565E57668D13 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,16 +70,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9870329D3D8945ED9E4E00E8 /* SwiftUI.framework in Frameworks */,
-				5DAE5E6EDB024430B9A7B2EA /* WidgetKit.framework in Frameworks */,
-				BAFD7D1D9B3678A66C00D57B /* libPods-FullFrillsBalance.a in Frameworks */,
+				AA3072C2B98221AC7AE587BD /* libPods-FullFrillsBalance.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		DD4FFE3B64E4462A9469D606 /* Frameworks */ = {
+		95B0B1247B73407FA028526A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F84F235B599C445598668B8F /* SwiftUI.framework in Frameworks */,
+				9EAD402DEE824731864377FC /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,28 +95,46 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				FA698F452EE0FF4678329851 /* PrivacyInfo.xcprivacy */,
+				887F5701ABE60C5A9DFCE678 /* PrivacyInfo.xcprivacy */,
 			);
 			name = FullFrillsBalance;
+			sourceTree = "<group>";
+		};
+		1F0C1FE19EC4B50653EEECF5 /* FullFrillsBalance */ = {
+			isa = PBXGroup;
+			children = (
+				DA633B68FCD5BF964A2F0418 /* ExpoModulesProvider.swift */,
+			);
+			name = FullFrillsBalance;
+			sourceTree = "<group>";
+		};
+		2BED9B309D064C8CB71B9D8B /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				1F0C1FE19EC4B50653EEECF5 /* FullFrillsBalance */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				B72849B889E947F9A2E0380B /* SwiftUI.framework */,
-				7A24821C06E14AC18B9DB1B9 /* WidgetKit.framework */,
-				B2A5A9CA49564CB9881DFE86 /* libPods-FullFrillsBalance.a */,
+				59A9164D531B42DBA120562B /* SwiftUI.framework */,
+				C7B22CE83198432AAA82A5EB /* WidgetKit.framework */,
+				C2196840E79AE3C69269B97A /* libPods-FullFrillsBalance.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		51032E492BF243A10770D7C0 /* FullFrillsBalance */ = {
+		3235175966EB767FB353F648 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				FBA909E22920565E57668D13 /* ExpoModulesProvider.swift */,
+				2BD9E9A95CC179362FD4BC36 /* Pods-FullFrillsBalance.debug.xcconfig */,
+				D997203C93759A714B581303 /* Pods-FullFrillsBalance.release.xcconfig */,
 			);
-			name = FullFrillsBalance;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -133,9 +151,9 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				D856AEA8552A46F48AFA79EE /* FullFrillsBalanceWidget */,
-				8F12197C1507DB416E3C97F4 /* Pods */,
-				8BBB7DA4CC6787CDACC28941 /* ExpoModulesProviders */,
+				C23F81CF3B56439C9A91D4B3 /* FullFrillsBalanceWidget */,
+				3235175966EB767FB353F648 /* Pods */,
+				2BED9B309D064C8CB71B9D8B /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -146,27 +164,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */,
-				366F455995D74389850843FD /* FullFrillsBalanceWidget.appex */,
+				7C9AF970D5D74AD382AE0219 /* FullFrillsBalanceWidget.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		8BBB7DA4CC6787CDACC28941 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				51032E492BF243A10770D7C0 /* FullFrillsBalance */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		8F12197C1507DB416E3C97F4 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				49768AAFDC50DE1AADB2B559 /* Pods-FullFrillsBalance.debug.xcconfig */,
-				B77A2D92B8B1D004B075AC0C /* Pods-FullFrillsBalance.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -178,11 +178,11 @@
 			path = FullFrillsBalance/Supporting;
 			sourceTree = "<group>";
 		};
-		D856AEA8552A46F48AFA79EE /* FullFrillsBalanceWidget */ = {
+		C23F81CF3B56439C9A91D4B3 /* FullFrillsBalanceWidget */ = {
 			isa = PBXGroup;
 			children = (
-				37A0C2D3498E4A9F9D50C224 /* FullFrillsBalanceWidget.swift */,
-				8C07FA5C58E940EC900E03B4 /* FullFrillsBalanceWidget-Info.plist */,
+				144644167E6C476E9635D20B /* FullFrillsBalanceWidget.swift */,
+				3E327D4C1C0E48EE927D6BC7 /* FullFrillsBalanceWidget-Info.plist */,
 			);
 			name = FullFrillsBalanceWidget;
 			path = "";
@@ -196,34 +196,34 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "FullFrillsBalance" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				DE951D30A4F745B64FD3AA43 /* [Expo] Configure project */,
+				BFF35A716BB60E7C7539DE70 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				FF71E5F042214107A1D77E5E /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
-				337AC12F15944CD3A7B3BE28 /* Upload Debug Symbols to Sentry */,
-				BDA3DD1D1DCB42C78030933D /* Copy Files */,
-				EB9843026519D3F6894E7A9B /* [CP] Embed Pods Frameworks */,
+				39F9401FB8104B2980B50F1E /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
+				8F70263F65B947BCAAA8A675 /* Upload Debug Symbols to Sentry */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
+				E2DA90A182904EAAAEFDCB1A /* Copy Files */,
+				8BBFE49C8ED00261C4806E52 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				E2D3C4B5A697887766554433 /* PBXTargetDependency */,
+				A4CCCC07D56B413BB75FD63E /* PBXTargetDependency */,
 			);
 			name = FullFrillsBalance;
 			productName = FullFrillsBalance;
 			productReference = 13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A7AD1668E4184F28A24A3095 /* FullFrillsBalanceWidget */ = {
+		F397AE0E773944CC9D011C8F /* FullFrillsBalanceWidget */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = DDD919364980481BA7BAC0D8 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */;
+			buildConfigurationList = B90449700E2F447EB7700D96 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */;
 			buildPhases = (
-				8A63D6BE70715B5B648252D8 /* Sources */,
-				DD4FFE3B64E4462A9469D606 /* Frameworks */,
-				B303D432CE294D07BA991891 /* Resources */,
+				466EB3C848204BE18FDBB382 /* Sources */,
+				95B0B1247B73407FA028526A /* Frameworks */,
+				7468B0042EC44B49BFB641C3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -231,7 +231,7 @@
 			);
 			name = FullFrillsBalanceWidget;
 			productName = FullFrillsBalanceWidget;
-			productReference = 366F455995D74389850843FD /* FullFrillsBalanceWidget.appex */;
+			productReference = 7C9AF970D5D74AD382AE0219 /* FullFrillsBalanceWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -261,7 +261,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* FullFrillsBalance */,
-				A7AD1668E4184F28A24A3095 /* FullFrillsBalanceWidget */,
+				F397AE0E773944CC9D011C8F /* FullFrillsBalanceWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -274,11 +274,11 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				93650F208B461E83C5052FCA /* PrivacyInfo.xcprivacy in Resources */,
+				6628AB796D4C19DBF666DC09 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B303D432CE294D07BA991891 /* Resources */ = {
+		7468B0042EC44B49BFB641C3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -327,7 +327,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		337AC12F15944CD3A7B3BE28 /* Upload Debug Symbols to Sentry */ = {
+		39F9401FB8104B2980B50F1E /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -335,12 +335,12 @@
 			);
 			inputPaths = (
 			);
-			name = "Upload Debug Symbols to Sentry";
+			name = "[Expo Dev Launcher] Strip Local Network Keys for Release";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
+			shellScript = "# Strip dev-launcher-specific local network permission keys from non-Debug builds\n# This only removes _expo._tcp Bonjour services and the dev-launcher usage description.\n# Other Bonjour services and custom descriptions are preserved for production use.\n\nif [ \"$CONFIGURATION\" != \"Debug\" ]; then\n  PLIST_PATH=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n  if [ -f \"$PLIST_PATH\" ]; then\n    # Check if NSBonjourServices exists\n    if /usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" >/dev/null 2>&1; then\n      # Get the count of services\n      COUNT=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n\n      # Remove _expo._tcp\n      for ((i=COUNT-1; i>=0; i--)); do\n        SERVICE=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n        if echo \"$SERVICE\" | grep -q \"_expo._tcp\"; then\n          /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || true\n        fi\n      done\n\n      # If the array is now empty, remove it entirely\n      REMAINING=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n      if [ \"$REMAINING\" -eq \"0\" ]; then\n        /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null || true\n      fi\n    fi\n\n    # Only delete the description if it matches the dev-launcher default text\n    DESC=$(/usr/libexec/PlistBuddy -c \"Print :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n    if echo \"$DESC\" | grep -q \"Expo Dev Launcher\"; then\n      /usr/libexec/PlistBuddy -c \"Delete :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || true\n    fi\n  fi\nfi\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -396,31 +396,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		DE951D30A4F745B64FD3AA43 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/FullFrillsBalance/FullFrillsBalance.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-FullFrillsBalance/expo-configure-project.sh\"\n";
-		};
-		EB9843026519D3F6894E7A9B /* [CP] Embed Pods Frameworks */ = {
+		8BBFE49C8ED00261C4806E52 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -468,7 +444,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		FF71E5F042214107A1D77E5E /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+		8F70263F65B947BCAAA8A675 /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -476,12 +452,36 @@
 			);
 			inputPaths = (
 			);
-			name = "[Expo Dev Launcher] Strip Local Network Keys for Release";
+			name = "Upload Debug Symbols to Sentry";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Strip dev-launcher-specific local network permission keys from non-Debug builds\n# This only removes _expo._tcp Bonjour services and the dev-launcher usage description.\n# Other Bonjour services and custom descriptions are preserved for production use.\n\nif [ \"$CONFIGURATION\" != \"Debug\" ]; then\n  PLIST_PATH=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n  if [ -f \"$PLIST_PATH\" ]; then\n    # Check if NSBonjourServices exists\n    if /usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" >/dev/null 2>&1; then\n      # Get the count of services\n      COUNT=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n\n      # Remove _expo._tcp\n      for ((i=COUNT-1; i>=0; i--)); do\n        SERVICE=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n        if echo \"$SERVICE\" | grep -q \"_expo._tcp\"; then\n          /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || true\n        fi\n      done\n\n      # If the array is now empty, remove it entirely\n      REMAINING=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n      if [ \"$REMAINING\" -eq \"0\" ]; then\n        /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null || true\n      fi\n    fi\n\n    # Only delete the description if it matches the dev-launcher default text\n    DESC=$(/usr/libexec/PlistBuddy -c \"Print :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n    if echo \"$DESC\" | grep -q \"Expo Dev Launcher\"; then\n      /usr/libexec/PlistBuddy -c \"Delete :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || true\n    fi\n  fi\nfi\n";
+			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
+		};
+		BFF35A716BB60E7C7539DE70 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/FullFrillsBalance/FullFrillsBalance.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-FullFrillsBalance/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -491,57 +491,32 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				E30C938BD14A91713061A8B9 /* ExpoModulesProvider.swift in Sources */,
+				B72D64DAF576553CA25F7716 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		8A63D6BE70715B5B648252D8 /* Sources */ = {
+		466EB3C848204BE18FDBB382 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CFEAC1F43EBF485D9A94EAE3 /* FullFrillsBalanceWidget.swift in Sources */,
+				A7791308FFFE4F09B8F27DAF /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		E2D3C4B5A697887766554433 /* PBXTargetDependency */ = {
+		A4CCCC07D56B413BB75FD63E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A7AD1668E4184F28A24A3095 /* FullFrillsBalanceWidget */;
-			targetProxy = F1E2D3C4B5A6978877665544 /* PBXContainerItemProxy */;
+			target = F397AE0E773944CC9D011C8F /* FullFrillsBalanceWidget */;
+			targetProxy = 26E288929C0F452895C6E77D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		0BEB8E3A890C4A02A853B608 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = FullFrillsBalanceWidget/FullFrillsBalanceWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance.widget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 49768AAFDC50DE1AADB2B559 /* Pods-FullFrillsBalance.debug.xcconfig */;
+			baseConfigurationReference = 2BD9E9A95CC179362FD4BC36 /* Pods-FullFrillsBalance.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -578,7 +553,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B77A2D92B8B1D004B075AC0C /* Pods-FullFrillsBalance.release.xcconfig */;
+			baseConfigurationReference = D997203C93759A714B581303 /* Pods-FullFrillsBalance.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -606,6 +581,35 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		81654FB69CDD41D5B8847A04 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FullFrillsBalanceWidget/FullFrillsBalanceWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -743,17 +747,13 @@
 			};
 			name = Release;
 		};
-		FE59B67EE98A4F4B85B2571C /* Debug */ = {
+		8473584E06DF4E0896248A3D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = FullFrillsBalanceWidget/FullFrillsBalanceWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
@@ -763,14 +763,14 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -793,11 +793,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		DDD919364980481BA7BAC0D8 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */ = {
+		B90449700E2F447EB7700D96 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				FE59B67EE98A4F4B85B2571C /* Debug */,
-				0BEB8E3A890C4A02A853B608 /* Release */,
+				81654FB69CDD41D5B8847A04 /* Debug */,
+				8473584E06DF4E0896248A3D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -115,11 +115,6 @@ export class ReportService {
       accountPeriodDeltas,
       currency,
     );
-    const incomeBreakdown = this.calculateBreakdownFromDeltas(
-      scopedIncome,
-      accountPeriodDeltas,
-      currency,
-    );
     const expenseCategoryBreakdown = this.calculateCategoryBreakdownFromDeltas(
       scopedExpense,
       accountPeriodDeltas,
@@ -148,7 +143,6 @@ export class ReportService {
 
     return {
       expenseBreakdown,
-      incomeBreakdown,
       expenseCategoryBreakdown,
       incomeCategoryBreakdown,
       incomeVsExpenseHistory: history,

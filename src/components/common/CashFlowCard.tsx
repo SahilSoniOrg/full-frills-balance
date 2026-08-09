@@ -28,7 +28,7 @@ export const CashFlowCard = ({
   return (
     <AppCard
       elevation="md"
-      padding="lg"
+      paddingSize="lg"
       radius="r1"
       style={[styles.container, { backgroundColor: theme.surface }]}
     >

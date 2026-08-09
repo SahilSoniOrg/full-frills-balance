@@ -82,13 +82,9 @@ export function canonicalImportFromBatchImportData(
 
 export function resolveParsedImportBatchData(parsed: {
   canonical?: CanonicalImport;
-  data?: BatchImportData;
 }): BatchImportData {
   if (parsed.canonical) {
     return batchImportDataFromCanonical(parsed.canonical);
   }
-  if (parsed.data) {
-    return parsed.data;
-  }
-  throw new Error('Parsed import result missing canonical or batch data');
+  throw new Error('Parsed import result missing canonical data');
 }

@@ -10,7 +10,7 @@ import {
   journalDisplayTypeChrome,
   ledgerLineChrome,
   mapJournalToTimelineItem,
-} from '@/src/services/journal/journalTimeline';
+} from '@/src/services/journal/journalTimelinePresentation';
 import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
 
 describe('journalTimelinePresentation', () => {

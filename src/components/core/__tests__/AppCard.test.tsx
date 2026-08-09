@@ -46,7 +46,7 @@ describe('AppCard', () => {
 
   it('renders with custom padding', () => {
     render(
-      <AppCard testID="custom-card" padding="md">
+      <AppCard testID="custom-card" paddingSize="md">
         <View testID="test-child" />
       </AppCard>,
     );
@@ -57,23 +57,12 @@ describe('AppCard', () => {
 
   it('renders with no padding when specified', () => {
     render(
-      <AppCard padding="none">
+      <AppCard paddingSize="none">
         <View testID="test-child" />
       </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
-  });
-
-  it('allows numeric padding to pass through as raw Box padding', () => {
-    render(
-      <AppCard testID="custom-card" padding={0}>
-        <View testID="test-child" />
-      </AppCard>,
-    );
-
-    const card = screen.getByTestId('custom-card');
-    expect(StyleSheet.flatten(card.props.style).padding).toBe(0);
   });
 
   it('renders with custom border radius', () => {

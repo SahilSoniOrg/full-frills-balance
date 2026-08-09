@@ -5,7 +5,7 @@ import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import {
   observeEnrichedJournals,
   observeJournalTimelineRows,
-} from '@/src/services/journal/journalTimeline';
+} from '@/src/services/journal/journalTimelineReadModel';
 import {
   journalsFromTimelineRows,
   journalsToTimelineRows,

@@ -98,15 +98,6 @@ export class AnalyticsService {
   }
 
   /**
-   * Deprecated: Use earlyInitializeSentry and delayedInitializePostHog.
-   * Kept for backward compatibility during migration.
-   */
-  initialize() {
-    this.earlyInitializeSentry();
-    this.delayedInitializePostHog();
-  }
-
-  /**
    * Initialize Sentry for error tracking and performance monitoring.
    */
   private initializeSentry() {

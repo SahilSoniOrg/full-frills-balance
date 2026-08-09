@@ -88,7 +88,7 @@ export function AccountCardBase({
   return (
     <AppCard
       elevation="sm"
-      padding="none"
+      paddingSize="none"
       radius="r2"
       background={surfaceColor}
       style={{

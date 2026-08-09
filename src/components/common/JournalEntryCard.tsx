@@ -90,7 +90,7 @@ const JournalEntryCardComponent = ({
       <AppCard
         testID="journal-entry-card"
         elevation="sm"
-        padding="none"
+        paddingSize="none"
         radius="r2"
         style={[styles.container, { backgroundColor: theme.surface }, cardStyle]}
       >

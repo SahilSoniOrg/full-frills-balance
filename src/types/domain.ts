@@ -322,9 +322,11 @@ export interface TransactionLinkedJournalInfo {
   status: string;
 }
 
+export type TransactionChannel = 'sms' | 'voice';
+
 export interface TransactionInboxItem {
   id: string; // Internal record ID
-  channel: 'sms' | 'voice' | 'email';
+  channel: TransactionChannel;
   deviceSourceId: string;
   senderAddress?: string;
   rawBody?: string;

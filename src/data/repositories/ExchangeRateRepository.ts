@@ -9,13 +9,6 @@ import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { Q } from '@nozbe/watermelondb';
 
-export interface ExchangeRateCacheData {
-  fromCurrency: string;
-  toCurrency: string;
-  rate: number;
-  source?: string;
-}
-
 class ExchangeRateRepository {
   private get collection() {
     return database.collections.get<ExchangeRate>('exchange_rates');
@@ -69,21 +62,6 @@ class ExchangeRateRepository {
         Q.sortBy('created_at', 'desc'),
       )
       .observe();
-  }
-
-  /**
-   * Cache an exchange rate in the database (deprecated - use cacheRatesBatch)
-   */
-  async cacheRate(data: ExchangeRateCacheData): Promise<ExchangeRate> {
-    return database.write(async () => {
-      return this.collection.create(record => {
-        record.fromCurrency = data.fromCurrency;
-        record.toCurrency = data.toCurrency;
-        record.rate = data.rate;
-        record.effectiveDate = Date.now();
-        record.source = data.source || 'exchangerate-api.com';
-      });
-    });
   }
 
   /**

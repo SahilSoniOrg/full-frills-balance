@@ -62,7 +62,7 @@ export function ModalSurface({
       >
         <AppCard
           elevation="lg"
-          padding="lg"
+          paddingSize="lg"
           radius="r2"
           style={[
             styles.modalCard,

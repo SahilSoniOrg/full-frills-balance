@@ -19,7 +19,6 @@ import { map } from 'rxjs/operators';
 
 export type ReportPeriodSnapshot = {
   expenses: ExpenseCategory[];
-  income: ExpenseCategory[];
   expenseCategories: CategoryBreakdown[];
   incomeCategories: CategoryBreakdown[];
   sankeyData: SankeyData;
@@ -28,7 +27,6 @@ export type ReportPeriodSnapshot = {
 
 const emptyPeriodSnapshot = (): ReportPeriodSnapshot => ({
   expenses: [],
-  income: [],
   expenseCategories: [],
   incomeCategories: [],
   sankeyData: emptySankeyData(),
@@ -86,7 +84,6 @@ export function useSelectedReportPeriod({
         .pipe(
           map(reportSnapshot => ({
             expenses: colorizeBreakdownItems(reportSnapshot.expenseBreakdown, palettes.expense),
-            income: colorizeBreakdownItems(reportSnapshot.incomeBreakdown, palettes.income),
             expenseCategories: colorizeBreakdownItems(
               reportSnapshot.expenseCategoryBreakdown,
               palettes.expense,

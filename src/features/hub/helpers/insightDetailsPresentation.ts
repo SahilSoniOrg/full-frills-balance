@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import type { Theme } from '@/src/constants/design-tokens';
 import type { IconName } from '@/src/components/core';
-import { resolveThemeColor } from '@/src/design-system/utils';
+import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 
 export type InsightDetailsRouteParams = {
   id?: string;
@@ -36,18 +36,11 @@ export function buildInsightDetailsHeader(
   theme: Theme,
 ): InsightDetailsHeaderModel {
   const strings = AppConfig.strings.dashboard.insightDetails;
-
-  let baseColor = theme.primary;
-  let severityLabel = strings.severityLabel.low;
-  if (params.severity === 'high') {
-    baseColor = theme.error;
-    severityLabel = strings.severityLabel.high;
-  } else if (params.severity === 'medium') {
-    baseColor = theme.warning;
-    severityLabel = strings.severityLabel.medium;
-  }
-
-  const severityColor = resolveThemeColor(theme, baseColor) as string;
+  const { color: severityColor, label: severityLabel } = resolveInsightSeverityPresentation(
+    params.severity,
+    theme,
+    strings.severityLabel,
+  );
 
   let amount: number | null = null;
   if (params.amount) {

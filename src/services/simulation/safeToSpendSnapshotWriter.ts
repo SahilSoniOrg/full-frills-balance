@@ -10,11 +10,10 @@ import { snapshotService } from '@/src/utils/SnapshotService';
 export function persistSafeToSpendSnapshot(
   workplaceId: WorkplaceId,
   dashboard: SafeToSpendDashboard,
-): SafeToSpendDashboard {
+): void {
   try {
     snapshotService.saveCustomSnapshot(workplaceId, 'safe_to_spend', dashboard);
   } catch (error) {
     logger.warn('[SafeToSpendReadModel] Failed to save snapshot', { error });
   }
-  return dashboard;
 }

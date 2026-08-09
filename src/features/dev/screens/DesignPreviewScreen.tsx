@@ -145,7 +145,7 @@ export default function DesignPreviewScreen() {
         <Inset horizontal="lg" vertical="xl">
           <Stack space="xl">
             {/* Typography Section */}
-            <AppCard elevation="sm" padding="lg">
+            <AppCard elevation="sm" paddingSize="lg">
               <Stack space="md">
                 <AppText variant="heading">Typography</AppText>
                 <Separator />
@@ -198,7 +198,7 @@ export default function DesignPreviewScreen() {
             </AppCard>
 
             {/* Layout Primitives Section */}
-            <AppCard elevation="sm" padding="lg">
+            <AppCard elevation="sm" paddingSize="lg">
               <Stack space="md">
                 <AppText variant="heading">Layout Primitives</AppText>
                 <Separator />
@@ -206,13 +206,13 @@ export default function DesignPreviewScreen() {
                 <AppText variant="subheading">Stack (Vertical, gap: md)</AppText>
                 <Box background="surfaceSecondary" padding="md" borderRadius="md">
                   <Stack space="md">
-                    <AppCard elevation="none" padding="sm">
+                    <AppCard elevation="none" paddingSize="sm">
                       <AppText variant="caption">Item 1</AppText>
                     </AppCard>
-                    <AppCard elevation="none" padding="sm">
+                    <AppCard elevation="none" paddingSize="sm">
                       <AppText variant="caption">Item 2</AppText>
                     </AppCard>
-                    <AppCard elevation="none" padding="sm">
+                    <AppCard elevation="none" paddingSize="sm">
                       <AppText variant="caption">Item 3</AppText>
                     </AppCard>
                   </Stack>
@@ -302,7 +302,7 @@ export default function DesignPreviewScreen() {
             </PreviewSectionCard>
 
             {/* List Rows Section */}
-            <AppCard elevation="sm" padding="lg">
+            <AppCard elevation="sm" paddingSize="lg">
               <Stack space="md">
                 <AppText variant="heading">List Rows</AppText>
                 <Separator />
@@ -574,7 +574,7 @@ export default function DesignPreviewScreen() {
             </PreviewSectionCard>
 
             {/* Performance Stress Test Section */}
-            <AppCard elevation="sm" padding="lg">
+            <AppCard elevation="sm" paddingSize="lg">
               <Stack space="md">
                 <AppText variant="heading">Performance Stress Test</AppText>
                 <AppText variant="caption" color="secondary">

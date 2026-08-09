@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
-import { resolveThemeColor } from '@/src/design-system/utils';
+import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -57,30 +57,10 @@ export const HubWidget = ({
     AppNavigation.toHub();
   };
 
-  const getSeverityMeta = (severity: Insight['severity']) => {
-    const errorColor = resolveThemeColor(theme, theme.error) as string;
-    const warningColor = resolveThemeColor(theme, theme.warning) as string;
-    const primaryColor = resolveThemeColor(theme, theme.primary) as string;
-
-    if (severity === 'high') {
-      return {
-        color: errorColor,
-        label: AppConfig.strings.alerts.validationError,
-        chipBg: withOpacity(errorColor, Opacity.hover),
-      };
-    }
-    if (severity === 'medium') {
-      return {
-        color: warningColor,
-        label: AppConfig.strings.alerts.warning,
-        chipBg: withOpacity(warningColor, Opacity.hover),
-      };
-    }
-    return {
-      color: primaryColor,
-      label: AppConfig.strings.alerts.info,
-      chipBg: withOpacity(primaryColor, Opacity.hover),
-    };
+  const hubSeverityLabels = {
+    high: AppConfig.strings.alerts.validationError,
+    medium: AppConfig.strings.alerts.warning,
+    low: AppConfig.strings.alerts.info,
   };
 
   const getPrimaryActionLabel = (patternType: Insight['type']) => {
@@ -134,12 +114,16 @@ export const HubWidget = ({
         </View>
         <View style={styles.listContent}>
           {insights.map(insight => {
-            const severity = getSeverityMeta(insight.severity);
+            const severity = resolveInsightSeverityPresentation(
+              insight.severity,
+              theme,
+              hubSeverityLabels,
+            );
             return (
               <AppCard
                 key={insight.id}
                 elevation="sm"
-                padding="none"
+                paddingSize="none"
                 style={[
                   styles.card,
                   {

@@ -74,7 +74,7 @@ export const RestartRequiredScreen = () => {
         </AppText>
 
         {isSuccess && importStats && (
-          <AppCard padding="lg" elevation="sm" style={styles.statsCard}>
+          <AppCard paddingSize="lg" elevation="sm" style={styles.statsCard}>
             <View style={{ gap: Spacing.md }}>
               <View style={styles.statRow}>
                 <AppText variant="body" weight="medium">

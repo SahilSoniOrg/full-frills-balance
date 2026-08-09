@@ -123,7 +123,7 @@ describe('ReportService', () => {
 
       expect(result.incomeVsExpense).toEqual({ income: 2000, expense: 100 });
       expect(result.expenseBreakdown[0].accountName).toBe('Food');
-      expect(result.incomeBreakdown[0].accountName).toBe('Salary');
+      expect(result.incomeCategoryBreakdown.length).toBeGreaterThan(0);
       expect(result.incomeVsExpenseHistory.length).toBeGreaterThan(0);
       expect(result.dailyIncomeVsExpense.length).toBeGreaterThan(0);
 

@@ -22,7 +22,7 @@ export function ReportChartCard({
   return (
     <>
       {title && <ScreenSectionHeader title={title} style={styles.sectionTitle} />}
-      <AppCard style={[styles.chartCard, { zIndex, overflow: 'visible' }, style]} padding="lg">
+      <AppCard style={[styles.chartCard, { zIndex, overflow: 'visible' }, style]} paddingSize="lg">
         {headerContent && <View style={styles.headerRow}>{headerContent}</View>}
         {children}
       </AppCard>

@@ -41,7 +41,7 @@ export const AuditLogItem = ({
   } = useAuditLogItemMeta({ item, entityStatusMap });
 
   return (
-    <AppCard padding="md" elevation="sm" radius="r2" style={styles.card}>
+    <AppCard paddingSize="md" elevation="sm" radius="r2" style={styles.card}>
       <TouchableOpacity
         onPress={onToggle}
         accessibilityLabel={AppConfig.strings.audit.viewDetails}

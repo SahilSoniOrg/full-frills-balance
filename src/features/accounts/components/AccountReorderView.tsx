@@ -50,7 +50,7 @@ export function AccountReorderView({
                     </AppText>
                   </View>
                 )}
-                <AppCard padding="none" style={styles.itemCard}>
+                <AppCard paddingSize="none" style={styles.itemCard}>
                   <View style={styles.itemContent}>
                     <View style={styles.dragHandle}>
                       <AppIcon

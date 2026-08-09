@@ -18,8 +18,6 @@ export interface UseSelectionResult<T> {
   clearItems: () => void;
   exitSelectionMode: () => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<T>>>;
-  /** @deprecated use exitSelectionMode */
-  clearSelection: () => void;
 }
 
 /**
@@ -112,7 +110,6 @@ export function useSelection<T>(
     selectAll,
     clearItems,
     exitSelectionMode,
-    clearSelection: clearItems,
     setSelectedIds,
   };
 }

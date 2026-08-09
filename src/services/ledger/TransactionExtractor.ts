@@ -1,4 +1,6 @@
-export type TransactionChannel = 'sms' | 'voice' | 'email';
+import type { TransactionChannel } from '@/src/types/domain';
+
+export type { TransactionChannel };
 
 export interface RawTransactionInput {
   channel: TransactionChannel;

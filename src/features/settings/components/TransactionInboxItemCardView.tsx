@@ -31,11 +31,8 @@ export function TransactionInboxItemCardView({
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
 
-  // Channel icon and label mapping
-  const channelIcon =
-    item.channel === 'voice' ? 'mic' : item.channel === 'sms' ? 'messageSquare' : 'receipt';
-  const channelLabel =
-    item.channel === 'voice' ? 'Spoken' : item.channel === 'sms' ? 'SMS' : 'Email';
+  const channelIcon = item.channel === 'voice' ? 'mic' : 'messageSquare';
+  const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
 
   return (
     <AppCard style={styles.card} testID={testID}>

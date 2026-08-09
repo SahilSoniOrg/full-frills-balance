@@ -15,8 +15,6 @@ type AppCardPadding = 'none' | 'sm' | 'md' | 'lg';
 export type AppCardBaseProps = Omit<BoxBaseProps, 'padding'> & {
   elevation?: ElevationKey;
   paddingSize?: AppCardPadding;
-  /** @deprecated use paddingSize for card padding, or numeric/non-card tokens for raw Box padding */
-  padding?: AppCardPadding | BoxBaseProps['padding'];
   radius?: RadiusKey;
   variant?: 'default' | 'secondary' | 'outline' | 'ghost';
   background?: ColorKey;
@@ -55,17 +53,12 @@ const PADDING_MAP: Record<AppCardPadding, SpacingKey | number> = {
   lg: 'xl',
 };
 
-function isCardPadding(value: AppCardBaseProps['padding']): value is AppCardPadding {
-  return value === 'none' || value === 'sm' || value === 'md' || value === 'lg';
-}
-
 export type AppCardProps = AppCardBaseProps;
 
 export const AppCard = forwardRef<View, AppCardProps>((initialProps, ref) => {
   const {
     elevation: elevationProp,
-    paddingSize,
-    padding: legacyPadding,
+    paddingSize = 'md',
     radius = 'r2',
     variant = 'default',
     children,
@@ -86,11 +79,7 @@ export const AppCard = forwardRef<View, AppCardProps>((initialProps, ref) => {
     ...remainingBoxProps
   } = boxProps;
 
-  const paddingValue = paddingSize
-    ? PADDING_MAP[paddingSize]
-    : isCardPadding(legacyPadding)
-      ? PADDING_MAP[legacyPadding]
-      : (legacyPadding ?? PADDING_MAP.md);
+  const paddingValue = PADDING_MAP[paddingSize];
   const variantConfig = CARD_VARIANTS[variant];
   const resolvedElevation: ElevationKey | undefined =
     elevationProp === 'none' ? 'none' : elevationProp || shadowProp || variantConfig.shadow;

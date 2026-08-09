@@ -39,7 +39,6 @@ export interface CategoryBreakdown {
 
 export interface ReportSnapshot {
   expenseBreakdown: ExpenseCategory[];
-  incomeBreakdown: ExpenseCategory[];
   expenseCategoryBreakdown: CategoryBreakdown[];
   incomeCategoryBreakdown: CategoryBreakdown[];
   incomeVsExpenseHistory: IncomeVsExpense[];

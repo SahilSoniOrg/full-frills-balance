@@ -10,7 +10,7 @@ export default class TransactionAutoPostRule extends BaseScopedModel {
     accounts: { type: 'belongs_to', key: 'source_account_id' },
   } as const; // Note: accounts relation is standard scoped
 
-  @field('channels_json') channelsJson?: string; // Serialized string array e.g. '["sms", "email"]'
+  @field('channels_json') channelsJson?: string; // Serialized string array e.g. '["sms"]'
   @field('sender_match') senderMatch?: string;
   @field('body_match') bodyMatch?: string;
   @field('conditions_json') conditionsJson?: string;

@@ -7,7 +7,7 @@ import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
 import { firstValueFrom, from, Observable, of } from 'rxjs';
-import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
+import { catchError, map, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 export type {
   SafeToSpendDashboard,
@@ -98,7 +98,7 @@ export class SafeToSpendReadModel {
         }
 
         return from(projectSafeToSpendDashboardFromSnapshot(outcome.snapshot)).pipe(
-          map(result => persistSafeToSpendSnapshot(workplaceId, result)),
+          tap(result => persistSafeToSpendSnapshot(workplaceId, result)),
         );
       }),
       catchError(err => {

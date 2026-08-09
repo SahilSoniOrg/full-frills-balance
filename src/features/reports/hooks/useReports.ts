@@ -90,7 +90,6 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     [workplaceId, dateRange, triggerObservable, targetCurrency, accountIds],
     {
       expenseBreakdown: [],
-      incomeBreakdown: [],
       expenseCategoryBreakdown: [],
       incomeCategoryBreakdown: [],
       incomeVsExpenseHistory: [],
@@ -113,11 +112,6 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     const colors = REPORT_CHART_COLOR_KEYS.expense.map(colorKey => theme[colorKey]);
     return data.expenseBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
   }, [data.expenseBreakdown, theme]);
-
-  const incomeBreakdown = useMemo(() => {
-    const colors = REPORT_CHART_COLOR_KEYS.income.map(colorKey => theme[colorKey]);
-    return data.incomeBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
-  }, [data.incomeBreakdown, theme]);
 
   const expenseCategories = useMemo(() => {
     const colors = REPORT_CHART_COLOR_KEYS.expense.map(colorKey => theme[colorKey]);
@@ -161,7 +155,6 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     accounts,
     netWorthHistory: data.netWorthHistory,
     expenses,
-    incomeBreakdown,
     expenseCategories,
     incomeCategories,
     incomeVsExpenseHistory: data.incomeVsExpenseHistory,

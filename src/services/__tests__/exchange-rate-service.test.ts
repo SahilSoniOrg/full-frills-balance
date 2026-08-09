@@ -6,7 +6,6 @@ jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
   exchangeRateRepository: {
     getCachedRate: jest.fn().mockResolvedValue(null),
     getAllRatesForBase: jest.fn().mockResolvedValue([]),
-    cacheRate: jest.fn().mockResolvedValue({}),
     cacheRatesBatch: jest.fn().mockResolvedValue([]),
   },
 }));

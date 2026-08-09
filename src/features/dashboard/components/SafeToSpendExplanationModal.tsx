@@ -144,7 +144,7 @@ export const SafeToSpendExplanationModal = ({
       </AppText>
 
       <AppCard
-        padding="none"
+        paddingSize="none"
         elevation="lg"
         style={{
           marginBottom: Spacing.xl,

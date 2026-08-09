@@ -13,7 +13,7 @@ import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { sharingService } from '@/src/services/SharingService';
 import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
-import type { JournalTimelineRow } from '@/src/services/journal/journalTimeline';
+import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListItem } from '@/src/types/ui';

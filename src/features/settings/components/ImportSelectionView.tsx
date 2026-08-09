@@ -21,7 +21,7 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
   }, [onSelect, plugin.id]);
 
   return (
-    <AppCard key={plugin.id} elevation="sm" padding="md" style={styles.card}>
+    <AppCard key={plugin.id} elevation="sm" paddingSize="md" style={styles.card}>
       <View style={styles.headerRow}>
         <View style={[styles.iconPlaceholder, { backgroundColor: theme.surfaceSecondary }]}>
           <AppText variant="heading" style={{ fontSize: Typography.sizes.xxl }}>

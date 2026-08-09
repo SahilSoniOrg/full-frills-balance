@@ -55,15 +55,6 @@ describe('useReportsViewModel', () => {
     expenses: [],
     expenseCategories: [],
     incomeCategories: [{ category: 'Salary', amount: 1000, percentage: 100, accountIds: ['a1'] }],
-    incomeBreakdown: [
-      {
-        accountId: 'a1' as AccountId,
-        accountName: 'Salary',
-        category: 'Salary',
-        amount: 1000,
-        percentage: 100,
-      },
-    ],
     incomeVsExpenseHistory: [
       {
         period: 'Jan',

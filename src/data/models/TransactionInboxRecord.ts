@@ -1,9 +1,10 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import { JournalId } from '@/src/types/domain';
+import { JournalId, TransactionChannel } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 
+export type { TransactionChannel };
 export enum InboxParseStatus {
   PARSED = 'parsed',
   PARSE_FAILED = 'parse_failed',
@@ -24,8 +25,6 @@ export enum TransactionDirection {
   CREDIT = 'credit',
   UNKNOWN = 'unknown',
 }
-
-export type TransactionChannel = 'sms' | 'voice' | 'email';
 
 export default class TransactionInboxRecord extends BaseScopedModel {
   static table = 'transaction_inbox_records';

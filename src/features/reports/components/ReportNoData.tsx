@@ -8,7 +8,7 @@ interface ReportNoDataProps {
 
 export function ReportNoData({ zIndex }: ReportNoDataProps) {
   return (
-    <AppCard padding="lg" style={[styles.card, { zIndex, overflow: 'visible' }]}>
+    <AppCard paddingSize="lg" style={[styles.card, { zIndex, overflow: 'visible' }]}>
       <AppText variant="body" color="secondary" style={styles.text}>
         {AppConfig.strings.reports.noData}
       </AppText>

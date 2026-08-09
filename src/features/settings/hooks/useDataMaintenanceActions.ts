@@ -120,6 +120,9 @@ export function useDataMaintenanceActions({
       destructive: false,
       onConfirm: async () => {
         try {
+          if (!__DEV__) {
+            throw new Error('seedMockData is only available in development builds');
+          }
           setIsSeeding(true);
           setSeedingProgress(0);
           setSeedingProgressMessage('Initializing seeder...');

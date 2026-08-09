@@ -1,11 +1,6 @@
-import { AppConfig } from '@/src/constants/app-config';
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
 import { Platform } from 'react-native';
 import { ModelRegistry } from 'react-native-litert-lm';
 import type { AIModelMetadata, ModelDownloadStatus } from './types';
-
-const CUSTOM_MODELS_KEY = 'ai_custom_models';
 
 /**
  * Supported model catalog.
@@ -181,75 +176,19 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
   },
 ];
 
+/**
+ * Catalog + cache status for on-device models.
+ * Model files are acquired via LiteRT (`ModelRegistry` / provider load), not this service.
+ */
 export class ModelManagementService {
-  private activeDownloads = new Map<string, boolean>();
-  private progressListeners = new Set<
-    (modelId: string, progress: number, isComplete: boolean) => void
-  >();
-
-  addListener(listener: (modelId: string, progress: number, isComplete: boolean) => void) {
-    this.progressListeners.add(listener);
-  }
-
-  removeListener(listener: (modelId: string, progress: number, isComplete: boolean) => void) {
-    this.progressListeners.delete(listener);
-  }
-
-  private emitProgress(modelId: string, progress: number, isComplete: boolean) {
-    this.progressListeners.forEach(listener => listener(modelId, progress, isComplete));
-  }
-
-  isDownloading(modelId: string): boolean {
-    return this.activeDownloads.has(modelId);
-  }
-
-  getCustomModels(): AIModelMetadata[] {
-    const stored = storage.getString(CUSTOM_MODELS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  }
-
   getAllModels(): AIModelMetadata[] {
-    const models = [...SUPPORTED_MODELS, ...this.getCustomModels()];
     const supportedPlatform =
       Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
-    return models.filter(
+    return SUPPORTED_MODELS.filter(
       m =>
         !m.supportedPlatforms ||
         (supportedPlatform !== null && m.supportedPlatforms.includes(supportedPlatform)),
     );
-  }
-
-  async getRecommendedModel(): Promise<AIModelMetadata> {
-    const allModels = this.getAllModels();
-    const defaultId = AppConfig.defaults.defaultAiModelId;
-
-    const defaultModel = allModels.find(m => m.id === defaultId);
-    if (defaultModel) {
-      const status = await this.getDownloadStatus(defaultModel.id);
-      if (status.isDownloaded) return defaultModel;
-    }
-
-    const sortedBySize = [...allModels].sort((a, b) => a.sizeBytes - b.sizeBytes);
-    for (const model of sortedBySize) {
-      const status = await this.getDownloadStatus(model.id);
-      if (status.isDownloaded) return model;
-    }
-
-    return defaultModel ?? allModels[0];
-  }
-
-  async registerCustomModel(model: Omit<AIModelMetadata, 'isCustom'>): Promise<void> {
-    const customModels = this.getCustomModels();
-    const newModel = { ...model, isCustom: true };
-
-    const index = customModels.findIndex(m => m.id === model.id);
-    if (index !== -1) {
-      customModels[index] = newModel;
-    } else {
-      customModels.push(newModel);
-    }
-
-    storage.set(CUSTOM_MODELS_KEY, JSON.stringify(customModels));
   }
 
   async getDownloadStatus(modelId: string): Promise<ModelDownloadStatus> {
@@ -263,69 +202,6 @@ export class ModelManagementService {
       isDownloaded,
       progress: isDownloaded ? 1 : 0,
     };
-  }
-
-  async downloadModel(modelId: string, onProgress?: (progress: number) => void): Promise<string> {
-    const model = this.getAllModels().find(m => m.id === modelId);
-    if (!model) throw new Error(`Model ${modelId} not supported`);
-
-    if (ModelRegistry.isCached(model.url)) {
-      return ModelRegistry.getFilePath(model.url);
-    }
-
-    if (this.activeDownloads.has(modelId)) {
-      logger.info(`Download already in progress for ${modelId}`);
-      return '';
-    }
-
-    const headers: Record<string, string> = {};
-    const hfToken = process.env.HF_TOKEN ?? process.env.EXPO_PUBLIC_HF_TOKEN;
-    if (hfToken && model.url.includes('huggingface.co')) {
-      headers['Authorization'] = `Bearer ${hfToken}`;
-    }
-
-    this.activeDownloads.set(modelId, true);
-    this.emitProgress(modelId, 0, false);
-
-    try {
-      const result = await ModelRegistry.resolveModel(model.url, {
-        headers,
-        onProgress: progress => {
-          onProgress?.(progress);
-          this.emitProgress(modelId, progress, false);
-        },
-      });
-
-      this.activeDownloads.delete(modelId);
-      this.emitProgress(modelId, 1, true);
-      return result;
-    } catch (e) {
-      this.activeDownloads.delete(modelId);
-      this.emitProgress(modelId, 0, false);
-      logger.error(`Failed to download model ${modelId}`, e);
-      throw e;
-    }
-  }
-
-  async cancelDownload(modelId: string): Promise<void> {
-    this.activeDownloads.delete(modelId);
-    this.emitProgress(modelId, 0, false);
-  }
-
-  async deleteModel(modelId: string): Promise<void> {
-    const model = this.getAllModels().find(m => m.id === modelId);
-    if (!model) return;
-
-    try {
-      ModelRegistry.deleteFile(model.url);
-    } catch (e) {
-      logger.error(`Failed to delete model ${modelId}`, e);
-    }
-
-    if (model.isCustom) {
-      const customModels = this.getCustomModels().filter(m => m.id !== modelId);
-      storage.set(CUSTOM_MODELS_KEY, JSON.stringify(customModels));
-    }
   }
 }
 

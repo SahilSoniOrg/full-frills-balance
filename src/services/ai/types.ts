@@ -9,7 +9,6 @@ export interface AIModelMetadata {
   parameters: string; // e.g., "2B", "1B"
   quantization: string; // e.g., "INT8", "Q4"
   filename: string;
-  isCustom?: boolean;
   /** Minimum device RAM in GB required to load this model */
   minDeviceMemoryGb?: number;
   /** Model capabilities: e.g., 'speculative_decoding', 'llm_thinking' */

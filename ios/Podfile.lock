@@ -254,8 +254,6 @@ PODS:
     - ExpoModulesCore
   - ExpoSharing (57.0.7):
     - ExpoModulesCore
-  - ExpoSmsInbox (1.0.0):
-    - ExpoModulesCore
   - ExpoSpeechRecognition (56.0.1):
     - ExpoModulesCore
   - ExpoSplashScreen (57.0.5):
@@ -264,7 +262,7 @@ PODS:
     - ExpoModulesCore
   - ExpoSymbols (57.0.1):
     - ExpoModulesCore
-  - ExpoSystemUI (57.0.1):
+  - ExpoSystemUI (57.0.2):
     - ExpoModulesCore
   - ExpoUI (57.0.7):
     - ExpoModulesCore
@@ -2724,7 +2722,6 @@ DEPENDENCIES:
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoScreenCapture (from `../node_modules/expo-screen-capture/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
-  - ExpoSmsInbox (from `../modules/expo-sms-inbox/ios`)
   - ExpoSpeechRecognition (from `../node_modules/expo-speech-recognition/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
@@ -2905,8 +2902,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-screen-capture/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
-  ExpoSmsInbox:
-    :path: "../modules/expo-sms-inbox/ios"
   ExpoSpeechRecognition:
     :path: "../node_modules/expo-speech-recognition/ios"
   ExpoSplashScreen:
@@ -3152,12 +3147,11 @@ SPEC CHECKSUMS:
   ExpoRouter: c086c97b2229152334ab68200ade40b64f75515b
   ExpoScreenCapture: 1728376b2a32a05dc1f6bae6a8d19b1bd33926f9
   ExpoSharing: c13f24ffc10753e229c2e7bdcaf45cfb7287684c
-  ExpoSmsInbox: f1a0632313b77b4eb7f64bbd462c1d55d3892e41
   ExpoSpeechRecognition: 119acf84448579e53f841d040aad76982f945e2d
   ExpoSplashScreen: 247464c0fe484f766892db0d66c3fe54f92a624e
   ExpoSQLite: ddd65ed74bdebcff20f6766e682f9321ecb28ab8
   ExpoSymbols: 7c7c7bd3c52f0b6dcbba6e8af4088b0dc1ea7d29
-  ExpoSystemUI: 6f2ce8968292aaa91f4aa553c23bdd8cee5cdc85
+  ExpoSystemUI: ff3142b323ae7b4d11dc0b1dc4acfa30d92be7dc
   ExpoUI: 19f2ca6e82d91240530ee9762dedccc31fc6f429
   ExpoWebBrowser: 9b98d939d5f1c5dd8f523f0a0683056fb1204434
   ExpoWidgets: a8bb2516b590674c21705db120332032f12741e4
