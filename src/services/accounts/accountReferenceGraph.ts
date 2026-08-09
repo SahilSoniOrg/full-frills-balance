@@ -86,11 +86,11 @@ export type AccountImportRuleRef = {
 
 export type ImportPlan = {
   missingAccountIds: string[];
-  rulePatches: Array<{
+  rulePatches: {
     ruleKey: string;
     sourceAccountId?: string;
     categoryAccountId?: string;
-  }>;
+  }[];
 };
 
 export type MissingImportedAccountRef = {

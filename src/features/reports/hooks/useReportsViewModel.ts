@@ -95,7 +95,7 @@ export function useReportsViewModel(): ReportsViewModel {
   const resetSelections = useCallback(() => {
     breakdownDetails.setExpandedExpenses(false);
     clearSubPeriod();
-  }, [breakdownDetails.setExpandedExpenses, clearSubPeriod]);
+  }, [breakdownDetails, clearSubPeriod]);
 
   const filters = useReportFilters({
     accounts,

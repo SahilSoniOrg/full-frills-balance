@@ -101,7 +101,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       filters.setDateRange(range, filter);
       setIsDatePickerVisible(false);
     },
-    [filters.setDateRange],
+    [filters],
   );
 
   return {

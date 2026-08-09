@@ -105,7 +105,6 @@ export function useAccountDetailsData(): AccountDetailsData {
     subAccounts: rawSubBalances,
     allAccounts: accounts,
     isLoading: dashboardLoading,
-    version: dashboardVersion,
   } = useAccountDashboard(workplaceId, accountId, workplaceCurrency);
 
   const pName = params.pName;
@@ -154,11 +153,7 @@ export function useAccountDetailsData(): AccountDetailsData {
   const balance = balanceData?.balance ?? 0;
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
-  // dashboardVersion forces re-read when WatermelonDB mutates fields on a stable model ref.
-  const isArchived = useMemo(
-    () => (account ? isAccountArchived(account) : false),
-    [account, dashboardVersion],
-  );
+  const isArchived = account ? isAccountArchived(account) : false;
   const reconciledAt = (() => {
     if (!account?.reconciledAt) return null;
     return account.reconciledAt instanceof Date

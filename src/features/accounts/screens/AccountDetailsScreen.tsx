@@ -15,25 +15,47 @@ import { useMemo } from 'react';
 function AccountDetailsScreen() {
   const vm = useAccountDetailsViewModel();
   const { theme } = useTheme();
+  const {
+    accountLoading,
+    accountMissing,
+    accountType,
+    exitSelectionMode,
+    headerActions,
+    isDeleted,
+    isParent,
+    isSelectionModeActive,
+    onAddPress,
+    onAuditPress,
+    reconciledAt,
+    unreconciledCount,
+  } = vm;
 
   const chrome = useMemo<ScreenNavChrome>(() => {
-    const phase = vm.accountLoading ? 'loading' : vm.accountMissing ? 'missing' : 'ready';
+    const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
+    const titleVm = { isParent, accountType };
+    const headerVm = {
+      accountType,
+      headerActions,
+      unreconciledCount,
+      reconciledAt,
+      onAuditPress,
+    };
 
     return applySelectionChrome(
       buildDetailNavChrome({
         phase,
-        readyTitle: accountDetailsScreenTitle(vm),
+        readyTitle: accountDetailsScreenTitle(titleVm),
         loadingTitle: 'Account Details',
         headerActions: (
           <MoneyDetailHeaderActions
             privacyVariant="surface"
-            actions={buildAccountDetailsHeaderActions(vm, theme)}
+            actions={buildAccountDetailsHeaderActions(headerVm, theme)}
           />
         ),
-        fab: vm.isDeleted
+        fab: isDeleted
           ? undefined
           : {
-              onPress: vm.onAddPress,
+              onPress: onAddPress,
               label: 'Add Transaction',
               icon: 'plusCircle',
               placement: 'end',
@@ -41,24 +63,24 @@ function AccountDetailsScreen() {
             },
       }),
       {
-        active: vm.isSelectionModeActive,
-        onExit: vm.exitSelectionMode,
+        active: isSelectionModeActive,
+        onExit: exitSelectionMode,
       },
     );
   }, [
     theme,
-    vm.accountLoading,
-    vm.accountMissing,
-    vm.accountType,
-    vm.exitSelectionMode,
-    vm.headerActions,
-    vm.isDeleted,
-    vm.isParent,
-    vm.isSelectionModeActive,
-    vm.onAddPress,
-    vm.onAuditPress,
-    vm.reconciledAt,
-    vm.unreconciledCount,
+    accountLoading,
+    accountMissing,
+    accountType,
+    exitSelectionMode,
+    headerActions,
+    isDeleted,
+    isParent,
+    isSelectionModeActive,
+    onAddPress,
+    onAuditPress,
+    reconciledAt,
+    unreconciledCount,
   ]);
 
   return <AccountDetailsView {...vm} chrome={chrome} />;
