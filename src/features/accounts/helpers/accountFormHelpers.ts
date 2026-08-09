@@ -1,10 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import { AccountId, AccountType } from '@/src/types/domain';
+import { isCategoryAccountType } from '@/src/utils/accountCategory';
 
-export function isCategoryAccountType(accountType: AccountType): boolean {
-  return accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
-}
+export { isCategoryAccountType };
 
 export function resolveInitialAccountType(input: {
   pathname: string;

@@ -98,6 +98,10 @@ export function isBalanceSheetAccount(typeOrLabel: string | AccountType): boolea
   );
 }
 
+export function isCategoryAccountType(accountType: AccountType): boolean {
+  return accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
+}
+
 export function getInferredAccountType(tab: TabType, side: TransactionType): AccountType {
   if (tab === 'expense') {
     return side === TransactionType.DEBIT ? AccountType.EXPENSE : AccountType.ASSET;

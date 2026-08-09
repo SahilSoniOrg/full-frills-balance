@@ -1,13 +1,11 @@
 import Account from '@/src/data/models/Account';
-import {
-  TransactionType,
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  TabType,
-  AccountType,
-} from '@/src/types/domain';
+import { TransactionType, AccountId, EMPTY_ACCOUNT_ID, TabType } from '@/src/types/domain';
 
-import { getAllowedAccountTypes, isBalanceSheetAccount } from '@/src/utils/accountCategory';
+import {
+  getAllowedAccountTypes,
+  isBalanceSheetAccount,
+  isCategoryAccountType,
+} from '@/src/utils/accountCategory';
 
 /** Postable accounts only — excludes parents that have child accounts. */
 export function filterToLeafAccounts(accounts: Account[]): Account[] {
@@ -23,10 +21,6 @@ export function filterGuidedLegAccounts(
 ): Account[] {
   const allowedTypes = getAllowedAccountTypes(tab, side);
   return leafAccounts.filter(a => allowedTypes.includes(a.accountType));
-}
-
-export function isCategoryAccountType(accountType: AccountType): boolean {
-  return accountType === AccountType.EXPENSE || accountType === AccountType.INCOME;
 }
 
 export function isAccountAllowedOnGuidedLeg(

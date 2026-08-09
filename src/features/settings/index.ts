@@ -8,8 +8,7 @@ export { default as PersonalizationSettingsScreen } from './screens/Personalizat
 export { default as PrivacySecuritySettingsScreen } from './screens/PrivacySecuritySettingsScreen';
 export { default as SettingsScreen } from './screens/SettingsScreen';
 
-export { default as TransactionInboxScreen } from './screens/TransactionInboxScreen';
-export { default as SmsInboxScreen } from './screens/TransactionInboxScreen'; // Backward compatibility alias
+export { default as SmsInboxScreen } from './screens/TransactionInboxScreen';
 export { default as SmsRuleFormScreen } from './screens/SmsRuleFormScreen';
 export { default as SmsRulesScreen } from './screens/SmsRulesScreen';
 export { default as WorkplaceSettingsScreen } from './screens/WorkplaceSettingsScreen';
