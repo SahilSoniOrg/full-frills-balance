@@ -2,8 +2,10 @@ import { JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { injectReconciledMarkersIntoJournalList } from '../accountJournalListPresentation';
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 describe('injectReconciledMarkersIntoJournalList', () => {
-  it('returns input when reconciledAt is null or list is empty', () => {
+  it('returns input when reconciledAtMs is null or list is empty', () => {
     const items: JournalListItem[] = [
       {
         id: 'j1',
@@ -13,11 +15,11 @@ describe('injectReconciledMarkersIntoJournalList', () => {
       },
     ];
     expect(injectReconciledMarkersIntoJournalList(items, null)).toBe(items);
-    expect(injectReconciledMarkersIntoJournalList([], new Date(1000))).toEqual([]);
+    expect(injectReconciledMarkersIntoJournalList([], 1000)).toEqual([]);
   });
 
   it('inserts a reconciled marker before the first journal entry at or before recon time', () => {
-    const recon = new Date(2000);
+    const reconTime = 2000;
     const items: JournalListItem[] = [
       {
         id: 'j-new',
@@ -33,17 +35,17 @@ describe('injectReconciledMarkersIntoJournalList', () => {
       },
     ];
 
-    const result = injectReconciledMarkersIntoJournalList(items, recon);
+    const result = injectReconciledMarkersIntoJournalList(items, reconTime);
     expect(result.map(i => i.id)).toEqual(['j-new', 'reconciled-separator', 'j-old']);
     expect(result[1]).toMatchObject({
       type: 'reconciledMarker',
-      date: 2000,
+      date: reconTime,
     });
   });
 
   it('stamps reconciledAt on a collapsed day separator covering the recon time', () => {
     const startOfDay = Date.UTC(2024, 0, 15);
-    const recon = new Date(startOfDay + 12 * 60 * 60 * 1000);
+    const reconTime = startOfDay + 12 * 60 * 60 * 1000;
     const items: JournalListItem[] = [
       { id: 'day', type: 'separator', date: startOfDay, isCollapsed: true },
       {
@@ -54,15 +56,15 @@ describe('injectReconciledMarkersIntoJournalList', () => {
       },
     ];
 
-    const result = injectReconciledMarkersIntoJournalList(items, recon);
-    expect(result[0]).toMatchObject({ id: 'day', reconciledAt: recon.getTime() });
+    const result = injectReconciledMarkersIntoJournalList(items, reconTime);
+    expect(result[0]).toMatchObject({ id: 'day', reconciledAt: reconTime });
     expect(result.some(i => i.type === 'reconciledMarker')).toBe(false);
   });
 
   it('inserts a marker on an expanded day before journals at or before recon time', () => {
     const startOfDay = new Date(2026, 7, 11).setHours(0, 0, 0, 0);
     const txnTime = new Date(2026, 7, 11, 0, 17).getTime();
-    const recon = new Date(2026, 7, 11, 0, 22);
+    const reconTime = new Date(2026, 7, 11, 0, 22).getTime();
 
     const items: JournalListItem[] = [
       { id: 'day', type: 'separator', date: startOfDay, isCollapsed: false },
@@ -75,14 +77,14 @@ describe('injectReconciledMarkersIntoJournalList', () => {
       { id: 'older-day', type: 'separator', date: startOfDay - MS_PER_DAY, isCollapsed: false },
     ];
 
-    const result = injectReconciledMarkersIntoJournalList(items, recon);
+    const result = injectReconciledMarkersIntoJournalList(items, reconTime);
     expect(result.map(i => i.id)).toEqual(['day', 'reconciled-separator', 'j1', 'older-day']);
   });
 
   it('inserts a marker after journals when recon is earlier than all entries on an expanded day', () => {
     const startOfDay = new Date(2026, 7, 11).setHours(0, 0, 0, 0);
     const txnTime = new Date(2026, 7, 11, 0, 30).getTime();
-    const recon = new Date(2026, 7, 11, 0, 22);
+    const reconTime = new Date(2026, 7, 11, 0, 22).getTime();
 
     const items: JournalListItem[] = [
       { id: 'day', type: 'separator', date: startOfDay, isCollapsed: false },
@@ -95,9 +97,7 @@ describe('injectReconciledMarkersIntoJournalList', () => {
       { id: 'older-day', type: 'separator', date: startOfDay - MS_PER_DAY, isCollapsed: false },
     ];
 
-    const result = injectReconciledMarkersIntoJournalList(items, recon);
+    const result = injectReconciledMarkersIntoJournalList(items, reconTime);
     expect(result.map(i => i.id)).toEqual(['day', 'j1', 'reconciled-separator', 'older-day']);
   });
 });
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;

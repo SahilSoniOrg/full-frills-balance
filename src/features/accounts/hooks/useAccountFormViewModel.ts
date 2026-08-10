@@ -97,15 +97,18 @@ export interface AccountFormViewModel {
     headerActions: ReactNode;
     cascadeModal: ReactNode;
   };
-  destructiveAction: {
-    label: string;
-    onPress: () => void;
-    testID: string;
-  } | null;
-  isMergeModalVisible: boolean;
-  setIsMergeModalVisible: (visible: boolean) => void;
-  mergeCandidates: (Account | PlainAccount)[];
-  onConfirmMerge: (targetAccountId: AccountId) => void;
+  deleteMerge: {
+    destructiveAction: {
+      label: string;
+      onPress: () => void;
+      testID: string;
+    } | null;
+    canMerge: boolean;
+    isMergeModalVisible: boolean;
+    setIsMergeModalVisible: (visible: boolean) => void;
+    mergeCandidates: (Account | PlainAccount)[];
+    onConfirmMerge: (targetAccountId: AccountId) => void;
+  };
 }
 
 /**
@@ -320,10 +323,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
     balanceClassify,
     archiveAction,
-    destructiveAction: deleteMerge.destructiveAction,
-    isMergeModalVisible: deleteMerge.isMergeModalVisible,
-    setIsMergeModalVisible: deleteMerge.setIsMergeModalVisible,
-    mergeCandidates: deleteMerge.mergeCandidates,
-    onConfirmMerge: deleteMerge.onConfirmMerge,
+    deleteMerge,
   };
 }

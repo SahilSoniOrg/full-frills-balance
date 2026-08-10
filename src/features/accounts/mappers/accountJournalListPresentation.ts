@@ -1,66 +1,69 @@
+import { AppConfig } from '@/src/constants';
 import { JournalListItem } from '@/src/types/ui';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_DAY = AppConfig.time.msPerDay;
 
-/** Inserts reconciled markers into grouped journal list items. */
+/**
+ * Inserts reconciled markers into grouped journal list items.
+ *
+ * Expects journals within each expanded day to be time-sorted (see useJournalListGrouping).
+ */
 export function injectReconciledMarkersIntoJournalList(
   rawGroupedItems: JournalListItem[],
-  reconciledAt: Date | null,
+  reconciledAtMs: number | null,
 ): JournalListItem[] {
-  if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
+  if (reconciledAtMs == null || !rawGroupedItems.length) return rawGroupedItems;
 
-  const result: JournalListItem[] = [];
-  let markerAdded = false;
-  let pendingExpandedDayRecon: number | null = null;
-  const reconTime = reconciledAt.getTime();
+  const reconTime = reconciledAtMs;
+  const marker = (): JournalListItem => ({
+    id: 'reconciled-separator',
+    type: 'reconciledMarker',
+    date: reconTime,
+  });
 
-  const pushMarker = () => {
-    if (markerAdded) return;
-    result.push({
-      id: 'reconciled-separator',
-      type: 'reconciledMarker',
-      date: reconTime,
-    });
-    markerAdded = true;
-    pendingExpandedDayRecon = null;
-  };
+  const stamped = rawGroupedItems.map(item => {
+    if (item.type !== 'separator' || !item.isCollapsed) return item;
+    const endOfDay = item.date + MS_PER_DAY - 1;
+    if (reconTime >= item.date && reconTime <= endOfDay) {
+      return { ...item, reconciledAt: reconTime };
+    }
+    return item;
+  });
 
-  for (const item of rawGroupedItems) {
-    let itemToPush = item;
+  const collapsedCoversRecon = stamped.some(item => {
+    if (item.type !== 'separator' || !item.isCollapsed) return false;
+    const endOfDay = item.date + MS_PER_DAY - 1;
+    return reconTime >= item.date && reconTime <= endOfDay;
+  });
+  if (collapsedCoversRecon) return stamped;
 
-    if (!markerAdded) {
-      if (item.type === 'journal' && item.date && item.date <= reconTime) {
-        pushMarker();
-      } else if (item.type === 'separator') {
-        if (pendingExpandedDayRecon !== null) {
-          // Recon fell on an expanded day where every journal was after the checkpoint.
-          pushMarker();
-        }
+  let insertAt = stamped.length;
+  let inExpandedReconDay = false;
 
-        const startOfDay = item.date;
-        const endOfDay = startOfDay + MS_PER_DAY - 1;
-        if (reconTime >= startOfDay) {
-          if (item.isCollapsed) {
-            itemToPush = { ...item, reconciledAt: reconTime };
-            if (reconTime <= endOfDay) {
-              markerAdded = true;
-            }
-          } else if (reconTime > endOfDay) {
-            pushMarker();
-          } else {
-            // Expanded day containing the checkpoint — place marker among journals.
-            pendingExpandedDayRecon = reconTime;
-          }
-        }
+  for (let i = 0; i < stamped.length; i++) {
+    const item = stamped[i];
+
+    if (item.type === 'separator') {
+      if (inExpandedReconDay) {
+        insertAt = i;
+        break;
       }
+
+      const endOfDay = item.date + MS_PER_DAY - 1;
+      if (!item.isCollapsed && reconTime >= item.date && reconTime <= endOfDay) {
+        inExpandedReconDay = true;
+      } else if (!item.isCollapsed && reconTime > endOfDay) {
+        insertAt = i;
+        break;
+      }
+      continue;
     }
 
-    result.push(itemToPush);
+    if (item.type === 'journal' && item.date != null && item.date <= reconTime) {
+      insertAt = i;
+      break;
+    }
   }
 
-  if (!markerAdded && pendingExpandedDayRecon !== null) {
-    pushMarker();
-  }
-
-  return result;
+  return [...stamped.slice(0, insertAt), marker(), ...stamped.slice(insertAt)];
 }

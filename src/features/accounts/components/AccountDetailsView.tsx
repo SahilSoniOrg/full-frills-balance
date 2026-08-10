@@ -4,9 +4,8 @@ import { AppButton, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Spacing } from '@/src/constants';
-import { AccountActivitySection } from '@/src/features/accounts/components/AccountActivitySection';
+import { AccountDetailsListHeader } from '@/src/features/accounts/components/AccountDetailsListHeader';
 import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
-import { AccountSummaryCard } from '@/src/features/accounts/components/AccountSummaryCard';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -22,40 +21,19 @@ export function AccountDetailsView({
     accountLoading,
     accountMissing,
     accountName,
-    accountType,
-    accountSubtypeLabel,
-    accountTypeVariant,
-    accountIcon,
-    accountTypeColorKey,
-    isDeleted,
-    isArchived,
-    balanceAmount,
-    transactionCountText,
-    reconciledAt,
     onBack,
-    dateRange,
-    periodFilter,
+    listHeader,
     isDatePickerVisible,
-    showDatePicker,
     hideDatePicker,
-    navigatePrevious,
-    navigateNext,
+    periodFilter,
     onDateSelect,
-    chartData,
-    rollingAverageData,
-    xTicks,
-    periodMetrics,
     journalsLoading,
     journalsLoadingMore,
     journalItems,
     onLoadMore,
-    secondaryBalances,
-    isParent,
-    subAccountCount,
     subAccounts,
     subAccountsLoading,
     isSubAccountsModalVisible,
-    onShowSubAccounts,
     onHideSubAccounts,
     selectedIds,
     isSelectionModeActive,
@@ -64,10 +42,6 @@ export function AccountDetailsView({
     clearItems,
     onShareSelected,
     exitSelectionMode,
-    onAuditPress,
-    onReconcilePress,
-    unreconciledCount,
-    currencyCode,
   } = vm;
 
   const selectionChrome = useMemo(
@@ -78,76 +52,6 @@ export function AccountDetailsView({
       onShareSelected,
     }),
     [exitSelectionMode, selectAll, clearItems, onShareSelected],
-  );
-
-  const listHeader = useMemo(
-    () => (
-      <View style={styles.headerListRegion}>
-        <AccountSummaryCard
-          accountName={accountName}
-          accountIcon={accountIcon}
-          accountType={accountType}
-          accountSubtypeLabel={accountSubtypeLabel}
-          accountTypeVariant={accountTypeVariant}
-          accountTypeColorKey={accountTypeColorKey}
-          isParent={isParent}
-          isDeleted={isDeleted}
-          isArchived={isArchived}
-          subAccountCount={subAccountCount}
-          onShowSubAccounts={onShowSubAccounts}
-          balanceAmount={balanceAmount}
-          currencyCode={currencyCode}
-          secondaryBalances={secondaryBalances}
-          transactionCountText={transactionCountText}
-          reconciledAt={reconciledAt}
-          onAuditPress={onAuditPress}
-        />
-        <AccountActivitySection
-          accountType={accountType}
-          reconciledAt={reconciledAt}
-          dateRange={dateRange}
-          onShowDatePicker={showDatePicker}
-          onPreviousPeriod={navigatePrevious}
-          onNextPeriod={navigateNext}
-          chartData={chartData}
-          rollingAverageData={rollingAverageData}
-          xTicks={xTicks}
-          periodMetrics={periodMetrics}
-          currencyCode={currencyCode}
-          onReconcile={onReconcilePress}
-          unreconciledCount={unreconciledCount}
-        />
-      </View>
-    ),
-    [
-      accountName,
-      accountIcon,
-      accountType,
-      accountSubtypeLabel,
-      accountTypeVariant,
-      accountTypeColorKey,
-      isParent,
-      isDeleted,
-      isArchived,
-      subAccountCount,
-      onShowSubAccounts,
-      balanceAmount,
-      currencyCode,
-      secondaryBalances,
-      transactionCountText,
-      reconciledAt,
-      onAuditPress,
-      dateRange,
-      showDatePicker,
-      navigatePrevious,
-      navigateNext,
-      chartData,
-      rollingAverageData,
-      xTicks,
-      periodMetrics,
-      onReconcilePress,
-      unreconciledCount,
-    ],
   );
 
   return (
@@ -178,7 +82,7 @@ export function AccountDetailsView({
             onLongPressItem={onLongPressItem}
             isSelectionModeActive={isSelectionModeActive}
             selectionChrome={selectionChrome}
-            ListHeaderComponent={listHeader}
+            ListHeaderComponent={<AccountDetailsListHeader {...listHeader} />}
             contentContainerStyle={styles.listContainer}
             style={styles.list}
           />
@@ -231,8 +135,5 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xxxxl,
-  },
-  headerListRegion: {
-    paddingVertical: Spacing.md,
   },
 });

@@ -29,6 +29,8 @@ export interface AggregatedAccountBalances {
 const aggregatedBalancesCache = new Map<string, Observable<AggregatedAccountBalances>>();
 
 function accountsObserveSignature(accounts: Account[]): string {
+  // reconciled_at is included so account-list rows (e.g. AccountCard badge) refresh
+  // when reconciliation changes, independent of balance recomputation.
   return accounts
     .map(
       account =>

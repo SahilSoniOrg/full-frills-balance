@@ -5,35 +5,17 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import type { AccountActivitySectionModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import { DateRange, formatShortDate } from '@/src/utils/dateUtils';
+import { formatShortDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { StyleSheet, View } from 'react-native';
 
-export interface AccountActivitySectionProps {
-  accountType: string;
-  reconciledAt: Date | null;
-  dateRange: DateRange | null;
-  onShowDatePicker: () => void;
-  onPreviousPeriod?: () => void;
-  onNextPeriod?: () => void;
-  chartData: { x: number; y: number }[];
-  rollingAverageData: { x: number; y: number }[];
-  xTicks: number[];
-  periodMetrics: {
-    totalIncrease: number;
-    totalDecrease: number;
-    dailyAverage: number | null;
-    isLoading: boolean;
-  };
-  currencyCode: string;
-  onReconcile?: () => void;
-  unreconciledCount: number;
-}
+export type { AccountActivitySectionModel as AccountActivitySectionProps };
 
 export function AccountActivitySection({
   accountType,
-  reconciledAt,
+  reconciledAtMs,
   dateRange,
   onShowDatePicker,
   onPreviousPeriod,
@@ -45,10 +27,14 @@ export function AccountActivitySection({
   currencyCode,
   onReconcile,
   unreconciledCount,
-}: AccountActivitySectionProps) {
+}: AccountActivitySectionModel) {
   const { theme } = useTheme();
   const reconcileColor =
-    unreconciledCount > 0 ? theme.warning : reconciledAt ? theme.success : theme.textSecondary;
+    unreconciledCount > 0
+      ? theme.warning
+      : reconciledAtMs != null
+        ? theme.success
+        : theme.textSecondary;
 
   return (
     <>

@@ -1,30 +1,13 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-export interface AccountSummaryCardProps {
-  accountName: string;
-  accountIcon: string | null;
-  accountType: string;
-  accountSubtypeLabel: string;
-  accountTypeVariant: string;
-  accountTypeColorKey: string;
-  isParent: boolean;
-  isDeleted: boolean;
-  isArchived: boolean;
-  subAccountCount: number;
-  onShowSubAccounts: () => void;
-  balanceAmount: number | null;
-  currencyCode: string;
-  secondaryBalances: { currencyCode: string; amount: number }[];
-  transactionCountText: string;
-  reconciledAt: Date | null;
-  onAuditPress: () => void;
-}
+export type { AccountSummaryCardModel as AccountSummaryCardProps };
 
 export function AccountSummaryCard({
   accountName,
@@ -41,10 +24,10 @@ export function AccountSummaryCard({
   balanceAmount,
   secondaryBalances,
   transactionCountText,
-  reconciledAt,
+  reconciledAtMs,
   currencyCode,
   onAuditPress,
-}: AccountSummaryCardProps) {
+}: AccountSummaryCardModel) {
   const { theme } = useTheme();
 
   return (
@@ -61,16 +44,16 @@ export function AccountSummaryCard({
         <View style={styles.titleInfo}>
           <AppText variant="title">{accountName}</AppText>
           <View style={styles.badgesRow}>
-            <Badge variant={accountTypeVariant as any}>{accountType}</Badge>
+            <Badge variant={accountTypeVariant}>{accountType}</Badge>
             {accountSubtypeLabel ? (
-              <Badge variant={accountTypeVariant as any}>{accountSubtypeLabel}</Badge>
+              <Badge variant={accountTypeVariant}>{accountSubtypeLabel}</Badge>
             ) : null}
             {isParent ? (
               <Pressable
                 onPress={onShowSubAccounts}
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <Badge variant={accountTypeVariant as any} icon="hierarchy">
+                <Badge variant={accountTypeVariant} icon="hierarchy">
                   {subAccountCount} {subAccountCount === 1 ? 'SUB-ACCOUNT' : 'SUB-ACCOUNTS'}
                 </Badge>
               </Pressable>
@@ -81,9 +64,9 @@ export function AccountSummaryCard({
                 {AppConfig.strings.accounts.archive.archivedBadge}
               </Badge>
             ) : null}
-            {reconciledAt ? (
+            {reconciledAtMs != null ? (
               <Badge variant="success" icon="shieldCheck">
-                {formatRelativeReconciledDate(reconciledAt)}
+                {formatRelativeReconciledDate(reconciledAtMs)}
               </Badge>
             ) : null}
           </View>

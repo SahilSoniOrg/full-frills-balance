@@ -17,6 +17,7 @@ import {
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
@@ -35,7 +36,7 @@ export interface AccountDetailsData {
   accountName: string;
   accountType: AccountType;
   accountSubtypeLabel: string;
-  accountTypeVariant: string;
+  accountTypeVariant: ComponentVariant;
   accountIcon: IconName | null;
   accountTypeColorKey: string;
   isDeleted: boolean;

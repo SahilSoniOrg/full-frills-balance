@@ -148,6 +148,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
 
   return {
     destructiveAction,
+    canMerge,
     isMergeModalVisible,
     setIsMergeModalVisible,
     mergeCandidates,

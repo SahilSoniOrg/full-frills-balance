@@ -30,7 +30,6 @@ function AccountDetailsScreen() {
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
     const titleVm = { isParent, accountType };
-    const headerVm = { headerActions };
 
     return applySelectionChrome(
       buildDetailNavChrome({
@@ -40,7 +39,7 @@ function AccountDetailsScreen() {
         headerActions: (
           <MoneyDetailHeaderActions
             privacyVariant="surface"
-            actions={buildAccountDetailsHeaderActions(headerVm, theme)}
+            actions={buildAccountDetailsHeaderActions(headerActions, theme)}
           />
         ),
         fab: isDeleted

@@ -4,8 +4,50 @@ import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAc
 import { AccountId, JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 
 export type { PeriodMetrics, SubAccountViewModel };
+
+export interface AccountSummaryCardModel {
+  accountName: string;
+  accountIcon: IconName | null;
+  accountType: string;
+  accountSubtypeLabel: string;
+  accountTypeVariant: ComponentVariant;
+  accountTypeColorKey: string;
+  isParent: boolean;
+  isDeleted: boolean;
+  isArchived: boolean;
+  subAccountCount: number;
+  onShowSubAccounts: () => void;
+  balanceAmount: number | null;
+  currencyCode: string;
+  secondaryBalances: { currencyCode: string; amount: number }[];
+  transactionCountText: string;
+  reconciledAtMs: number | null;
+  onAuditPress: () => void;
+}
+
+export interface AccountActivitySectionModel {
+  accountType: string;
+  reconciledAtMs: number | null;
+  dateRange: DateRange | null;
+  onShowDatePicker: () => void;
+  onPreviousPeriod?: () => void;
+  onNextPeriod?: () => void;
+  chartData: { x: number; y: number }[];
+  rollingAverageData: { x: number; y: number }[];
+  xTicks: number[];
+  periodMetrics: PeriodMetrics;
+  currencyCode: string;
+  onReconcile?: () => void;
+  unreconciledCount: number;
+}
+
+export interface AccountDetailsListHeaderModel {
+  summary: AccountSummaryCardModel;
+  activity: AccountActivitySectionModel;
+}
 
 export interface AccountDetailsViewModel {
   accountId: AccountId;
@@ -32,7 +74,8 @@ export interface AccountDetailsViewModel {
   isReconcileModalVisible: boolean;
   setIsReconcileModalVisible: (visible: boolean) => void;
   onConfirmReconcile: () => void;
-  reconciledAt: Date | null;
+  reconciledAtMs: number | null;
+  listHeader: AccountDetailsListHeaderModel;
   onBack: () => void;
   onAuditPress: () => void;
   onAddPress: () => void;

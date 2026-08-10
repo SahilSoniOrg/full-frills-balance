@@ -193,7 +193,7 @@ export class AccountRepository {
       );
   }
 
-  /** Primitive reconciled_at for React — avoids stale UI from the dashboard balance pipeline. */
+  /** Primitive reconciled_at (ms) for React — avoids stale UI from the dashboard balance pipeline. */
   observeReconciledAt(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
       .query(

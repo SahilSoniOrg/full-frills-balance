@@ -60,11 +60,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     metadata,
     balanceClassify,
     archiveAction,
-    destructiveAction,
-    isMergeModalVisible,
-    setIsMergeModalVisible,
-    mergeCandidates,
-    onConfirmMerge,
+    deleteMerge,
   } = vm;
 
   const {
@@ -84,12 +80,12 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         disabled: isSaveDisabled,
       }}
       secondaryAction={
-        destructiveAction
+        deleteMerge.destructiveAction
           ? {
-              label: destructiveAction.label,
-              onPress: destructiveAction.onPress,
+              label: deleteMerge.destructiveAction.label,
+              onPress: deleteMerge.destructiveAction.onPress,
               variant: 'destructive-outline',
-              testID: destructiveAction.testID,
+              testID: deleteMerge.destructiveAction.testID,
             }
           : undefined
       }
@@ -325,13 +321,15 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         />
       ) : null}
       {archiveAction.cascadeModal}
-      <AccountPickerModal
-        visible={isMergeModalVisible}
-        onClose={() => setIsMergeModalVisible(false)}
-        accounts={mergeCandidates}
-        onSelect={onConfirmMerge}
-        title="Merge Into Account"
-      />
+      {deleteMerge.canMerge ? (
+        <AccountPickerModal
+          visible={deleteMerge.isMergeModalVisible}
+          onClose={() => deleteMerge.setIsMergeModalVisible(false)}
+          accounts={deleteMerge.mergeCandidates}
+          onSelect={deleteMerge.onConfirmMerge}
+          title="Merge Into Account"
+        />
+      ) : null}
     </EntityFormScreen>
   );
 }

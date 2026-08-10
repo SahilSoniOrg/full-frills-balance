@@ -1,15 +1,16 @@
 import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
 import type { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import type { Theme } from '@/src/constants/design-tokens';
+import { isCategoryAccountType } from '@/src/utils/accountCategory';
+import { AccountType } from '@/src/types/domain';
 
-type AccountDetailsHeaderVm = Pick<AccountDetailsViewModel, 'headerActions'>;
+type AccountDetailsHeaderActions = AccountDetailsViewModel['headerActions'];
 
 export function buildAccountDetailsHeaderActions(
-  vm: AccountDetailsHeaderVm,
+  headerActions: AccountDetailsHeaderActions,
   theme: Theme,
 ): ScreenHeaderActionItem[] {
   const surface = 'surface' as const;
-  const { headerActions } = vm;
 
   if (headerActions.canRecover) {
     return [
@@ -46,10 +47,11 @@ export function buildAccountDetailsHeaderActions(
   return actions;
 }
 
-export function accountDetailsScreenTitle(
-  vm: Pick<AccountDetailsViewModel, 'isParent' | 'accountType'>,
-): string {
-  const isCategory = vm.accountType === 'INCOME' || vm.accountType === 'EXPENSE';
+export function accountDetailsScreenTitle(vm: {
+  isParent: boolean;
+  accountType: string | AccountType;
+}): string {
+  const isCategory = isCategoryAccountType(vm.accountType as AccountType);
   if (vm.isParent) {
     return isCategory ? 'Group Category' : 'Group Account';
   }
