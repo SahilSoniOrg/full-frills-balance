@@ -20,7 +20,6 @@ export function AccountDetailsView({
   const {
     accountLoading,
     accountMissing,
-    accountName,
     onBack,
     listHeader,
     isDatePickerVisible,
@@ -97,7 +96,7 @@ export function AccountDetailsView({
           <SubAccountListModal
             visible={isSubAccountsModalVisible}
             onClose={onHideSubAccounts}
-            parentName={accountName}
+            parentName={listHeader.summary.accountName}
             subAccounts={subAccounts}
             isLoading={subAccountsLoading}
           />

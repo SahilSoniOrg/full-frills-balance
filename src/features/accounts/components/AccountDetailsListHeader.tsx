@@ -1,22 +1,29 @@
 import { AccountActivitySection } from '@/src/features/accounts/components/AccountActivitySection';
 import { AccountSummaryCard } from '@/src/features/accounts/components/AccountSummaryCard';
-import type {
-  AccountActivitySectionModel,
-  AccountSummaryCardModel,
-} from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
+import type { AccountDetailsListHeaderModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 
-export interface AccountDetailsListHeaderProps {
-  summary: AccountSummaryCardModel;
-  activity: AccountActivitySectionModel;
-}
-
-export function AccountDetailsListHeader({ summary, activity }: AccountDetailsListHeaderProps) {
+export function AccountDetailsListHeader({
+  accountType,
+  summary,
+  activity,
+  reconciledAtMs,
+  currencyCode,
+}: AccountDetailsListHeaderModel) {
   return (
     <View style={styles.headerListRegion}>
-      <AccountSummaryCard {...summary} />
-      <AccountActivitySection {...activity} />
+      <AccountSummaryCard
+        {...summary}
+        reconciledAtMs={reconciledAtMs}
+        currencyCode={currencyCode}
+      />
+      <AccountActivitySection
+        {...activity}
+        accountType={accountType}
+        reconciledAtMs={reconciledAtMs}
+        currencyCode={currencyCode}
+      />
     </View>
   );
 }

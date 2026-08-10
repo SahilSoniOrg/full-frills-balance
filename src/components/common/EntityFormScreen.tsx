@@ -17,9 +17,8 @@ type SubmitAction = {
 type SecondaryAction = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
   disabled?: boolean;
-  testID?: string;
 };
 
 type EntityFormScreenProps = {
@@ -67,7 +66,6 @@ export function EntityFormScreen({
                 onPress={secondaryAction.onPress}
                 disabled={secondaryAction.disabled}
                 style={styles.secondaryActionButton}
-                testID={secondaryAction.testID}
               >
                 {secondaryAction.label}
               </AppButton>

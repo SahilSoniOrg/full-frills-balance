@@ -101,14 +101,11 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     }
   }, [accountId, account]);
 
-  const onReconcilePress =
-    !isDeleted && !isCategoryAccountType(accountType) ? onReconcile : undefined;
-
   return {
     onBack,
     onAuditPress,
     onAddPress,
-    onReconcilePress,
+    onReconcile: !isDeleted && !isCategoryAccountType(accountType) ? onReconcile : undefined,
     headerActions: {
       canRecover: isDeleted,
       onRecover,

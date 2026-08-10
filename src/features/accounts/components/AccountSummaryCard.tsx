@@ -7,7 +7,10 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-export type { AccountSummaryCardModel as AccountSummaryCardProps };
+export type AccountSummaryCardProps = AccountSummaryCardModel & {
+  currencyCode: string;
+  reconciledAtMs: number | null;
+};
 
 export function AccountSummaryCard({
   accountName,
@@ -27,7 +30,7 @@ export function AccountSummaryCard({
   reconciledAtMs,
   currencyCode,
   onAuditPress,
-}: AccountSummaryCardModel) {
+}: AccountSummaryCardProps) {
   const { theme } = useTheme();
 
   return (

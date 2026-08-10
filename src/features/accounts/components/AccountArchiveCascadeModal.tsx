@@ -12,7 +12,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-type AccountArchiveCascadeModalProps = {
+export type AccountArchiveCascadeModalProps = {
   visible: boolean;
   archiving: boolean;
   rootAccountId: AccountId;

@@ -70,11 +70,11 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    expect(result.current.destructiveAction).toMatchObject({
-      label: 'Delete Account',
+    expect(result.current.headerActionItems[0]).toMatchObject({
+      name: 'delete',
       testID: 'delete-button',
     });
-    expect(result.current.canMerge).toBe(false);
+    expect(result.current.mergePickerModal).toBeNull();
   });
 
   it('exposes merge when enabled with transactions', () => {
@@ -93,12 +93,15 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    expect(result.current.destructiveAction).toMatchObject({
-      label: 'Merge Account',
+    expect(result.current.headerActionItems[0]).toMatchObject({
+      name: 'merge',
       testID: 'merge-button',
     });
-    expect(result.current.canMerge).toBe(true);
-    expect(result.current.mergeCandidates).toEqual([targetAccount]);
+    expect(result.current.mergePickerModal).toMatchObject({
+      visible: false,
+      accounts: [targetAccount],
+      title: 'Merge Into Account',
+    });
   });
 
   it('shows a toast when merge has no eligible targets', () => {
@@ -117,10 +120,10 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    act(() => result.current.destructiveAction?.onPress());
+    act(() => result.current.headerActionItems[0]?.onPress?.());
 
     expect(toast.info).toHaveBeenCalledWith('No eligible accounts found to merge into.');
-    expect(result.current.isMergeModalVisible).toBe(false);
+    expect(result.current.mergePickerModal?.visible).toBe(false);
   });
 
   it('opens the merge modal when candidates exist', () => {
@@ -139,9 +142,9 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    act(() => result.current.destructiveAction?.onPress());
+    act(() => result.current.headerActionItems[0]?.onPress?.());
 
-    expect(result.current.isMergeModalVisible).toBe(true);
+    expect(result.current.mergePickerModal?.visible).toBe(true);
   });
 
   it('deletes the account and navigates away on confirm', async () => {
@@ -160,7 +163,7 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    act(() => result.current.destructiveAction?.onPress());
+    act(() => result.current.headerActionItems[0]?.onPress?.());
 
     const confirmCall = (confirm.show as jest.Mock).mock.calls[0][0];
     await act(async () => {
@@ -188,7 +191,7 @@ describe('useAccountDeleteMergeActions', () => {
       }),
     );
 
-    act(() => result.current.destructiveAction?.onPress());
+    act(() => result.current.headerActionItems[0]?.onPress?.());
 
     const confirmCall = (confirm.show as jest.Mock).mock.calls[0][0];
     await act(async () => {

@@ -11,7 +11,11 @@ import { formatShortDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { StyleSheet, View } from 'react-native';
 
-export type { AccountActivitySectionModel as AccountActivitySectionProps };
+export type AccountActivitySectionProps = AccountActivitySectionModel & {
+  accountType: string;
+  currencyCode: string;
+  reconciledAtMs: number | null;
+};
 
 export function AccountActivitySection({
   accountType,
@@ -27,7 +31,7 @@ export function AccountActivitySection({
   currencyCode,
   onReconcile,
   unreconciledCount,
-}: AccountActivitySectionModel) {
+}: AccountActivitySectionProps) {
   const { theme } = useTheme();
   const reconcileColor =
     unreconciledCount > 0

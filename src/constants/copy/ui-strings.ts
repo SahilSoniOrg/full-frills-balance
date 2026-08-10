@@ -614,6 +614,8 @@ export const UI_STRINGS = {
       unarchiveFailed: 'Failed to unarchive account',
       archiveDescription:
         'Hide this account from lists and pickers. Balances and history are unchanged.',
+      unarchiveDescription:
+        'Show this account in lists and pickers again. Balances and history are unchanged.',
       systemAccountTitle: 'Archive system account?',
       systemAccountMessage:
         'This account is used automatically by the app. You can still archive it, but some flows may reference it internally.',

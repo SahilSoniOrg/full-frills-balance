@@ -1,4 +1,5 @@
 import { AccountPickerModal } from '@/src/features/accounts';
+import { AccountFormEditModals } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
@@ -59,8 +60,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     payFromAccountOptions,
     metadata,
     balanceClassify,
-    archiveAction,
-    deleteMerge,
+    formChrome,
   } = vm;
 
   const {
@@ -79,16 +79,6 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         label: saveLabel,
         disabled: isSaveDisabled,
       }}
-      secondaryAction={
-        deleteMerge.destructiveAction
-          ? {
-              label: deleteMerge.destructiveAction.label,
-              onPress: deleteMerge.destructiveAction.onPress,
-              variant: 'destructive-outline',
-              testID: deleteMerge.destructiveAction.testID,
-            }
-          : undefined
-      }
     >
       <FormHeroSection
         prefix={
@@ -320,16 +310,10 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
           onSelect={balanceClassify.onSelect}
         />
       ) : null}
-      {archiveAction.cascadeModal}
-      {deleteMerge.canMerge ? (
-        <AccountPickerModal
-          visible={deleteMerge.isMergeModalVisible}
-          onClose={() => deleteMerge.setIsMergeModalVisible(false)}
-          accounts={deleteMerge.mergeCandidates}
-          onSelect={deleteMerge.onConfirmMerge}
-          title="Merge Into Account"
-        />
-      ) : null}
+      <AccountFormEditModals
+        archiveCascadeModal={formChrome.archiveCascadeModal}
+        mergePickerModal={formChrome.mergePickerModal}
+      />
     </EntityFormScreen>
   );
 }

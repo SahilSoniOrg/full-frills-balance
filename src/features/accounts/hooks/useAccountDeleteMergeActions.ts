@@ -1,14 +1,17 @@
 import Account from '@/src/data/models/Account';
+import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
+import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo, useState } from 'react';
 
 export type DeleteMergeEntityLabel = 'Account' | 'Category';
 
 export interface UseAccountDeleteMergeActionsOptions {
-  accountId: AccountId;
+  accountId?: AccountId;
   account: Account | null;
   accounts: (Account | PlainAccount)[];
   transactionCount: number;
@@ -34,6 +37,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     mergeAccounts,
   } = options;
 
+  const { theme } = useTheme();
   const [isMergeModalVisible, setIsMergeModalVisible] = useState(false);
 
   const mergeCandidates = useMemo(() => {
@@ -52,7 +56,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
   const canMerge = enabled && !isDeleted && transactionCount > 0;
 
   const onDelete = useCallback(() => {
-    if (!account) return;
+    if (!account || !accountId) return;
     confirm.show({
       title: `Delete ${entityLabel}`,
       message: `Are you sure you want to delete this ${entityLabel.toLowerCase()}? This action cannot be undone.`,
@@ -102,7 +106,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
   const onConfirmMerge = useCallback(
     async (targetAccountId: AccountId) => {
       const target = accounts.find(a => a.id === targetAccountId);
-      if (!target || !account) return;
+      if (!target || !account || !accountId) return;
 
       setIsMergeModalVisible(false);
 
@@ -128,30 +132,53 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     [account, accountId, accounts, entityLabel, mergeAccounts, mergeTitle],
   );
 
-  const destructiveAction = useMemo(() => {
+  const closeMergeModal = useCallback(() => {
+    setIsMergeModalVisible(false);
+  }, []);
+
+  const headerActionItems = useMemo((): ScreenHeaderActionItem[] => {
     if (canDelete) {
-      return {
-        label: `Delete ${entityLabel}`,
-        onPress: onDelete,
-        testID: 'delete-button',
-      };
+      return [
+        {
+          name: 'delete',
+          onPress: onDelete,
+          variant: 'surface',
+          iconColor: theme.error,
+          testID: 'delete-button',
+          accessibilityLabel: `Delete ${entityLabel}`,
+        },
+      ];
     }
     if (canMerge) {
-      return {
-        label: `Merge ${entityLabel}`,
-        onPress: onMerge,
-        testID: 'merge-button',
-      };
+      return [
+        {
+          name: 'merge',
+          onPress: onMerge,
+          variant: 'surface',
+          iconColor: theme.error,
+          testID: 'merge-button',
+          accessibilityLabel: `Merge ${entityLabel}`,
+        },
+      ];
     }
-    return null;
-  }, [canDelete, canMerge, entityLabel, onDelete, onMerge]);
+    return [];
+  }, [canDelete, canMerge, entityLabel, onDelete, onMerge, theme.error]);
+
+  const mergePickerModal = useMemo((): AccountMergePickerModalProps | null => {
+    if (!canMerge) return null;
+
+    return {
+      visible: isMergeModalVisible,
+      onClose: closeMergeModal,
+      accounts: mergeCandidates,
+      onSelect: onConfirmMerge,
+      title: 'Merge Into Account',
+    };
+  }, [canMerge, closeMergeModal, isMergeModalVisible, mergeCandidates, onConfirmMerge]);
 
   return {
-    destructiveAction,
-    canMerge,
-    isMergeModalVisible,
-    setIsMergeModalVisible,
-    mergeCandidates,
+    headerActionItems,
+    mergePickerModal,
     onConfirmMerge,
   };
 }

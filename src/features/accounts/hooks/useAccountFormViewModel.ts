@@ -4,7 +4,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Currency from '@/src/data/models/Currency';
-import { AccountId, AccountSubtype, AccountType, PlainAccount } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
@@ -31,9 +31,8 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
-import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccountArchiveAction';
-import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
-import type { ReactNode } from 'react';
+import { useAccountFormHeaderActions } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
+import type { AccountFormChromeState } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { useMemo } from 'react';
@@ -93,22 +92,7 @@ export interface AccountFormViewModel {
     onClose: () => void;
     onSelect: (counterparty: BalanceChangeCounterparty) => void;
   } | null;
-  archiveAction: {
-    headerActions: ReactNode;
-    cascadeModal: ReactNode;
-  };
-  deleteMerge: {
-    destructiveAction: {
-      label: string;
-      onPress: () => void;
-      testID: string;
-    } | null;
-    canMerge: boolean;
-    isMergeModalVisible: boolean;
-    setIsMergeModalVisible: (visible: boolean) => void;
-    mergeCandidates: (Account | PlainAccount)[];
-    onConfirmMerge: (targetAccountId: AccountId) => void;
-  };
+  formChrome: AccountFormChromeState;
 }
 
 /**
@@ -203,24 +187,17 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accounts.length > 0,
   );
 
-  const archiveAction = useAccountArchiveAction({
-    enabled: isEditMode,
-    accountId,
-    account: existingAccount ?? null,
-    accounts,
-  });
-
   const { deleteAccount, recoverAccount, mergeAccounts } = useAccountActions(workplaceId);
   const transactionCount = balanceData?.transactionCount ?? 0;
   const isDeleted = Boolean(existingAccount?.deletedAt);
 
-  const deleteMerge = useAccountDeleteMergeActions({
+  const formChrome = useAccountFormHeaderActions({
+    enabled: isEditMode,
     accountId,
     account: existingAccount ?? null,
     accounts,
     transactionCount,
     isDeleted,
-    enabled: isEditMode,
     entityLabel: core.isCategory ? 'Category' : 'Account',
     deleteAccount,
     recoverAction: recoverAccount,
@@ -322,7 +299,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     metadata,
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
     balanceClassify,
-    archiveAction,
-    deleteMerge,
+    formChrome,
   };
 }

@@ -1,7 +1,7 @@
 import { IconName } from '@/src/components/core';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { AccountId, JournalId } from '@/src/types/domain';
+import { AccountType, JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -21,16 +21,12 @@ export interface AccountSummaryCardModel {
   subAccountCount: number;
   onShowSubAccounts: () => void;
   balanceAmount: number | null;
-  currencyCode: string;
   secondaryBalances: { currencyCode: string; amount: number }[];
   transactionCountText: string;
-  reconciledAtMs: number | null;
   onAuditPress: () => void;
 }
 
 export interface AccountActivitySectionModel {
-  accountType: string;
-  reconciledAtMs: number | null;
   dateRange: DateRange | null;
   onShowDatePicker: () => void;
   onPreviousPeriod?: () => void;
@@ -39,79 +35,58 @@ export interface AccountActivitySectionModel {
   rollingAverageData: { x: number; y: number }[];
   xTicks: number[];
   periodMetrics: PeriodMetrics;
-  currencyCode: string;
   onReconcile?: () => void;
   unreconciledCount: number;
 }
 
-export interface AccountDetailsListHeaderModel {
+export type AccountDetailsListHeaderModel = {
+  accountType: string;
+  reconciledAtMs: number | null;
+  currencyCode: string;
   summary: AccountSummaryCardModel;
   activity: AccountActivitySectionModel;
+};
+
+export interface AccountDetailsHeaderActions {
+  canRecover: boolean;
+  onRecover: () => void;
+  onEdit: () => void;
+  onSearch?: () => void;
 }
 
 export interface AccountDetailsViewModel {
-  accountId: AccountId;
   accountLoading: boolean;
   accountMissing: boolean;
-  accountName: string;
-  accountType: string;
-  accountSubtypeLabel: string;
-  accountTypeVariant: string;
-  accountIcon: IconName | null;
-  accountTypeColorKey: string;
+  accountType: AccountType;
+  isParent: boolean;
   isDeleted: boolean;
-  isArchived: boolean;
-  currencyCode: string;
-  balanceAmount: number | null;
-  transactionCountText: string;
-  headerActions: {
-    canRecover: boolean;
-    onRecover: () => void;
-    onEdit: () => void;
-    onSearch?: () => void;
-  };
-  onReconcilePress?: () => void;
-  isReconcileModalVisible: boolean;
-  setIsReconcileModalVisible: (visible: boolean) => void;
-  onConfirmReconcile: () => void;
-  reconciledAtMs: number | null;
-  listHeader: AccountDetailsListHeaderModel;
-  onBack: () => void;
-  onAuditPress: () => void;
+  headerActions: AccountDetailsHeaderActions;
   onAddPress: () => void;
-  dateRange: DateRange | null;
-  periodFilter: PeriodFilter;
+  onBack: () => void;
+  listHeader: AccountDetailsListHeaderModel;
   isDatePickerVisible: boolean;
-  showDatePicker: () => void;
   hideDatePicker: () => void;
-  navigatePrevious?: () => void;
-  navigateNext?: () => void;
+  periodFilter: PeriodFilter;
   onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
-  chartData: { x: number; y: number }[];
-  rollingAverageData: { x: number; y: number }[];
-  xTicks: number[];
-  periodMetrics: PeriodMetrics;
+  journalItems: JournalListItem[];
   journalsLoading: boolean;
   journalsLoadingMore: boolean;
-  journalItems: JournalListItem[];
   onLoadMore?: () => void;
-  secondaryBalances: { currencyCode: string; amount: number }[];
-  isParent: boolean;
-  subAccountCount: number;
   subAccounts: SubAccountViewModel[];
   subAccountsLoading: boolean;
   isSubAccountsModalVisible: boolean;
-  onShowSubAccounts: () => void;
   onHideSubAccounts: () => void;
+  isReconcileModalVisible: boolean;
+  setIsReconcileModalVisible: (visible: boolean) => void;
+  onConfirmReconcile: () => void;
+  balanceAmount: number | null;
+  currencyCode: string;
   unreconciledCount: number;
-  unreconciledAmount: number;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  toggleSelection: (id: JournalId) => void;
   selectAll: () => void;
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
 }
