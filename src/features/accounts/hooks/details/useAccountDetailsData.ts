@@ -6,6 +6,7 @@ import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccount
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
   AccountBalance,
   AccountId,
@@ -18,6 +19,7 @@ import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accou
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
+import { of } from 'rxjs';
 
 export interface AccountDetailsData {
   accountId: AccountId;
@@ -43,6 +45,7 @@ export interface AccountDetailsData {
   balanceAmount: number | null;
   transactionCount: number;
   transactionCountText: string;
+  reconciledAtMs: number | null;
   reconciledAt: Date | null;
   dateRange: DateRange | null;
   periodFilter: PeriodFilter;
@@ -154,12 +157,17 @@ export function useAccountDetailsData(): AccountDetailsData {
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
   const isArchived = account ? isAccountArchived(account) : false;
-  const reconciledAt = (() => {
-    if (!account?.reconciledAt) return null;
-    return account.reconciledAt instanceof Date
-      ? account.reconciledAt
-      : new Date(account.reconciledAt);
-  })();
+
+  const { data: reconciledAtMs } = useObservable(
+    () =>
+      accountId && workplaceId
+        ? accountQueries.observeReconciledAt(workplaceId, accountId)
+        : of(null),
+    [accountId, workplaceId],
+    null as number | null,
+  );
+
+  const reconciledAt = reconciledAtMs != null ? new Date(reconciledAtMs) : null;
 
   const accountSubtypeLabel = account?.accountSubtype
     ? formatAccountSubtypeLabel(account.accountSubtype)
@@ -178,14 +186,8 @@ export function useAccountDetailsData(): AccountDetailsData {
   );
 
   const { data: unreconciledMetrics } = useObservable<{ count: number; total: number }>(
-    () =>
-      observeUnreconciledMetrics(
-        workplaceId,
-        accountId,
-        reconciledAt?.getTime() || null,
-        accountType,
-      ),
-    [workplaceId, accountId, reconciledAt, accountType],
+    () => observeUnreconciledMetrics(workplaceId, accountId, reconciledAtMs, accountType),
+    [workplaceId, accountId, reconciledAtMs, accountType],
     { count: 0, total: 0 },
   );
 
@@ -212,6 +214,7 @@ export function useAccountDetailsData(): AccountDetailsData {
     balanceAmount,
     transactionCount,
     transactionCountText,
+    reconciledAtMs,
     reconciledAt,
     dateRange,
     periodFilter,

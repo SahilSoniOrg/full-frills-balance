@@ -1,4 +1,3 @@
-import { AccountPickerModal } from '@/src/features/accounts';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
 import { AppButton, AppText } from '@/src/components/core';
@@ -63,6 +62,9 @@ export function AccountDetailsView({
     clearItems,
     onShareSelected,
     exitSelectionMode,
+    onAuditPress,
+    onReconcilePress,
+    unreconciledCount,
   } = vm;
 
   const selectionChrome = useMemo(
@@ -129,6 +131,9 @@ export function AccountDetailsView({
                 rollingAverageData={rollingAverageData}
                 xTicks={xTicks}
                 periodMetrics={periodMetrics}
+                onAuditPress={onAuditPress}
+                onReconcile={onReconcilePress}
+                unreconciledCount={unreconciledCount}
               />
             }
             contentContainerStyle={styles.listContainer}
@@ -157,14 +162,6 @@ export function AccountDetailsView({
             balanceAmount={vm.balanceAmount ?? 0}
             currencyCode={vm.currencyCode}
             unreconciledCount={vm.unreconciledCount}
-          />
-
-          <AccountPickerModal
-            visible={vm.isMergeModalVisible}
-            onClose={() => vm.setIsMergeModalVisible(false)}
-            accounts={vm.mergeCandidates}
-            onSelect={vm.onConfirmMerge}
-            title="Merge Into Account"
           />
         </>
       )}

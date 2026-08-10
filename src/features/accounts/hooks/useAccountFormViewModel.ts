@@ -4,7 +4,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Currency from '@/src/data/models/Currency';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType, PlainAccount } from '@/src/types/domain';
 import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
@@ -23,6 +23,7 @@ import {
   useAccountBalance,
   useAccounts,
 } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { resolveAccountFormDefaults } from '@/src/features/accounts/services/accountFormService';
@@ -31,6 +32,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccountArchiveAction';
+import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { ReactNode } from 'react';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
@@ -95,6 +97,15 @@ export interface AccountFormViewModel {
     headerActions: ReactNode;
     cascadeModal: ReactNode;
   };
+  destructiveAction: {
+    label: string;
+    onPress: () => void;
+    testID: string;
+  } | null;
+  isMergeModalVisible: boolean;
+  setIsMergeModalVisible: (visible: boolean) => void;
+  mergeCandidates: (Account | PlainAccount)[];
+  onConfirmMerge: (targetAccountId: AccountId) => void;
 }
 
 /**
@@ -196,6 +207,23 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accounts,
   });
 
+  const { deleteAccount, recoverAccount, mergeAccounts } = useAccountActions(workplaceId);
+  const transactionCount = balanceData?.transactionCount ?? 0;
+  const isDeleted = Boolean(existingAccount?.deletedAt);
+
+  const deleteMerge = useAccountDeleteMergeActions({
+    accountId,
+    account: existingAccount ?? null,
+    accounts,
+    transactionCount,
+    isDeleted,
+    enabled: isEditMode,
+    entityLabel: core.isCategory ? 'Category' : 'Account',
+    deleteAccount,
+    recoverAction: recoverAccount,
+    mergeAccounts,
+  });
+
   const { balanceClassify, onSave } = useAccountFormBalanceClassify({
     dispatch,
     accountId,
@@ -292,5 +320,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
     balanceClassify,
     archiveAction,
+    destructiveAction: deleteMerge.destructiveAction,
+    isMergeModalVisible: deleteMerge.isMergeModalVisible,
+    setIsMergeModalVisible: deleteMerge.setIsMergeModalVisible,
+    mergeCandidates: deleteMerge.mergeCandidates,
+    onConfirmMerge: deleteMerge.onConfirmMerge,
   };
 }

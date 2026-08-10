@@ -157,6 +157,9 @@ export class AccountsPage extends BasePage {
   }
 
   async deleteAccount(confirmationName: string) {
+    await expect(this.page.getByTestId('edit-button')).toBeVisible();
+    await this.page.getByTestId('edit-button').click();
+
     await expect(this.page.getByTestId('delete-button')).toBeVisible();
 
     await this.page.getByTestId('delete-button').click();

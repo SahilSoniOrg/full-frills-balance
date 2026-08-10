@@ -19,6 +19,10 @@ export const accountQueries = {
     return accountRepository.observeArchivedAt(workplaceId, accountId);
   },
 
+  observeReconciledAt(workplaceId: WorkplaceId, accountId: AccountId) {
+    return accountRepository.observeReconciledAt(workplaceId, accountId);
+  },
+
   observeByType(workplaceId: WorkplaceId, accountType: AccountType) {
     return accountRepository.observeByType(workplaceId, accountType);
   },

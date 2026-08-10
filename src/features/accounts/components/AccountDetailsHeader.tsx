@@ -2,7 +2,7 @@ import { MoneyText } from '@/src/components/common/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
+import { AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
@@ -41,6 +41,9 @@ interface AccountDetailsHeaderProps {
     dailyAverage: number | null;
     isLoading: boolean;
   };
+  onAuditPress: () => void;
+  onReconcile?: () => void;
+  unreconciledCount: number;
 }
 
 export function AccountDetailsHeader({
@@ -68,8 +71,13 @@ export function AccountDetailsHeader({
   xTicks,
   periodMetrics,
   currencyCode,
+  onAuditPress,
+  onReconcile,
+  unreconciledCount,
 }: AccountDetailsHeaderProps) {
   const { theme } = useTheme();
+  const reconcileColor =
+    unreconciledCount > 0 ? theme.warning : reconciledAt ? theme.success : theme.textSecondary;
 
   return (
     <View style={styles.headerListRegion}>
@@ -113,6 +121,14 @@ export function AccountDetailsHeader({
               ) : null}
             </View>
           </View>
+          <IconButton
+            name="history"
+            onPress={onAuditPress}
+            variant="surface"
+            iconColor={theme.textSecondary}
+            accessibilityLabel="View account history"
+            testID="audit-button"
+          />
         </View>
 
         <View style={styles.accountStats}>
@@ -155,12 +171,28 @@ export function AccountDetailsHeader({
         title="Activity"
         style={styles.sectionHeader}
         action={
-          <DateRangeTrigger
-            range={dateRange}
-            onPress={onShowDatePicker}
-            onPrevious={onPreviousPeriod}
-            onNext={onNextPeriod}
-          />
+          <View style={styles.activityActions}>
+            {onReconcile ? (
+              <IconButton
+                name="checkCircle"
+                onPress={onReconcile}
+                variant="surface"
+                iconColor={reconcileColor}
+                testID="reconcile-button"
+                accessibilityLabel={
+                  unreconciledCount > 0
+                    ? `Reconcile account, ${unreconciledCount} unreconciled`
+                    : 'Reconcile account'
+                }
+              />
+            ) : null}
+            <DateRangeTrigger
+              range={dateRange}
+              onPress={onShowDatePicker}
+              onPrevious={onPreviousPeriod}
+              onNext={onNextPeriod}
+            />
+          </View>
         }
       />
 
@@ -302,7 +334,7 @@ const styles = StyleSheet.create({
   },
   accountHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: Spacing.md,
   },
   titleInfo: {
@@ -332,6 +364,11 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     marginBottom: Spacing.sm,
+  },
+  activityActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   metricsContainer: {
     flexDirection: 'row',

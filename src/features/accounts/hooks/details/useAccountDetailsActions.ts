@@ -2,73 +2,24 @@ import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { AccountId, PlainAccount } from '@/src/types/domain';
-import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
+import { isCategoryAccountType } from '@/src/utils/accountCategory';
+import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface UseAccountDetailsActionsOptions {
   accountId: AccountId;
   account: Account | PlainAccount | null;
-  accounts: (Account | PlainAccount)[];
-  transactionCount: number;
   isDeleted: boolean;
-  deleteAccount: (account: Account) => Promise<void>;
   recoverAction: (id: AccountId) => Promise<void>;
   reconcileAccount: (id: AccountId, date: Date) => Promise<Account | null>;
-  mergeAccounts: (targetId: AccountId, sourceIds: AccountId[]) => Promise<void>;
 }
 
 export function useAccountDetailsActions(options: UseAccountDetailsActionsOptions) {
-  const {
-    accountId,
-    account,
-    accounts,
-    transactionCount,
-    isDeleted,
-    deleteAccount,
-    recoverAction,
-    reconcileAccount,
-    mergeAccounts,
-  } = options;
+  const { accountId, account, isDeleted, recoverAction, reconcileAccount } = options;
 
   const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
-  const [isMergeModalVisible, setIsMergeModalVisible] = useState(false);
-
-  const onDelete = useCallback(() => {
-    if (!account) return;
-    confirm.show({
-      title: 'Delete Account',
-      message: 'Are you sure you want to delete this account? This action cannot be undone.',
-      destructive: true,
-      requiredConfirmationValue: account.name,
-      onConfirm: async () => {
-        try {
-          await deleteAccount(account as Account);
-          toast.success('Account has been deleted.', {
-            action: {
-              label: 'Undo',
-              onPress: async () => {
-                try {
-                  await recoverAction(accountId);
-                  toast.success('Account restored.');
-                } catch (err) {
-                  logger.error('Failed to undo deletion:', err);
-                  showErrorAlert('Could not restore account');
-                }
-              },
-            },
-          });
-          AppNavigation.toAccounts();
-        } catch (error) {
-          logger.error('Failed to delete account:', error);
-          showErrorAlert(
-            `Could not delete account: ${error instanceof Error ? error.message : 'Unknown'}`,
-          );
-        }
-      },
-    });
-  }, [account, deleteAccount, accountId, recoverAction]);
 
   const onRecover = useCallback(() => {
     showConfirmationAlert(
@@ -93,7 +44,7 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     setIsReconcileModalVisible(true);
   }, []);
 
-  const onConfirmReconcile = async () => {
+  const onConfirmReconcile = useCallback(async () => {
     setIsReconcileModalVisible(false);
     try {
       await reconcileAccount(accountId, new Date());
@@ -104,61 +55,11 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
         `Could not reconcile account: ${error instanceof Error ? error.message : 'Unknown'}`,
       );
     }
-  };
-
-  const mergeCandidates = useMemo(() => {
-    if (!account) return [];
-    return accounts.filter(
-      a =>
-        a.id !== accountId &&
-        a.accountType === account.accountType &&
-        a.accountSubtype === account.accountSubtype &&
-        a.currencyCode === account.currencyCode &&
-        a.deletedAt === null,
-    );
-  }, [account, accounts, accountId]);
-
-  const onMerge = useCallback(() => {
-    if (mergeCandidates.length === 0) {
-      toast.info('No eligible accounts found to merge into.');
-      return;
-    }
-    setIsMergeModalVisible(true);
-  }, [mergeCandidates.length]);
-
-  const onConfirmMerge = useCallback(
-    async (targetAccountId: AccountId) => {
-      const target = accounts.find(a => a.id === targetAccountId);
-      if (!target || !account) return;
-
-      setIsMergeModalVisible(false);
-
-      confirm.show({
-        title: 'Merge Accounts',
-        message: `This account has transactions and cannot be deleted directly. Merging will move ALL transactions, planned payments, and rules from "${account.name}" into "${target.name}", and then delete "${account.name}". This action is permanent.`,
-        destructive: true,
-        requiredConfirmationValue: account.name,
-        onConfirm: async () => {
-          try {
-            await mergeAccounts(targetAccountId, [accountId]);
-            toast.success(`Successfully merged into ${target.name}`);
-            AppNavigation.toAccounts();
-          } catch (error) {
-            logger.error('Failed to merge accounts:', error);
-            showErrorAlert(
-              `Merge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            );
-          }
-        },
-      });
-    },
-    [account, accountId, accounts, mergeAccounts],
-  );
+  }, [accountId, reconcileAccount]);
 
   const onEdit = useCallback(() => {
     if (!account) return;
-    const isCategory = account.accountType === 'INCOME' || account.accountType === 'EXPENSE';
-    if (isCategory) {
+    if (isCategoryAccountType(account.accountType)) {
       AppNavigation.toCategoryForm(accountId, {
         name: account.name,
         type: account.accountType,
@@ -180,18 +81,10 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
       canRecover: isDeleted,
       onRecover,
       onEdit,
-      onDelete,
-      onReconcile,
-      onMerge,
-      canDelete: !isDeleted && transactionCount === 0,
-      canMerge: !isDeleted && transactionCount > 0,
     },
+    onReconcile,
     isReconcileModalVisible,
     setIsReconcileModalVisible,
     onConfirmReconcile,
-    isMergeModalVisible,
-    setIsMergeModalVisible,
-    mergeCandidates,
-    onConfirmMerge,
   };
 }

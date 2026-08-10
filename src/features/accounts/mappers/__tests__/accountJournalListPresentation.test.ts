@@ -41,7 +41,7 @@ describe('injectReconciledMarkersIntoJournalList', () => {
     });
   });
 
-  it('stamps reconciledAt on a day separator covering the recon time', () => {
+  it('stamps reconciledAt on a collapsed day separator covering the recon time', () => {
     const startOfDay = Date.UTC(2024, 0, 15);
     const recon = new Date(startOfDay + 12 * 60 * 60 * 1000);
     const items: JournalListItem[] = [
@@ -58,4 +58,46 @@ describe('injectReconciledMarkersIntoJournalList', () => {
     expect(result[0]).toMatchObject({ id: 'day', reconciledAt: recon.getTime() });
     expect(result.some(i => i.type === 'reconciledMarker')).toBe(false);
   });
+
+  it('inserts a marker on an expanded day before journals at or before recon time', () => {
+    const startOfDay = new Date(2026, 7, 11).setHours(0, 0, 0, 0);
+    const txnTime = new Date(2026, 7, 11, 0, 17).getTime();
+    const recon = new Date(2026, 7, 11, 0, 22);
+
+    const items: JournalListItem[] = [
+      { id: 'day', type: 'separator', date: startOfDay, isCollapsed: false },
+      {
+        id: 'j1',
+        selectionId: 'j1' as JournalId,
+        type: 'journal',
+        date: txnTime,
+      },
+      { id: 'older-day', type: 'separator', date: startOfDay - MS_PER_DAY, isCollapsed: false },
+    ];
+
+    const result = injectReconciledMarkersIntoJournalList(items, recon);
+    expect(result.map(i => i.id)).toEqual(['day', 'reconciled-separator', 'j1', 'older-day']);
+  });
+
+  it('inserts a marker after journals when recon is earlier than all entries on an expanded day', () => {
+    const startOfDay = new Date(2026, 7, 11).setHours(0, 0, 0, 0);
+    const txnTime = new Date(2026, 7, 11, 0, 30).getTime();
+    const recon = new Date(2026, 7, 11, 0, 22);
+
+    const items: JournalListItem[] = [
+      { id: 'day', type: 'separator', date: startOfDay, isCollapsed: false },
+      {
+        id: 'j1',
+        selectionId: 'j1' as JournalId,
+        type: 'journal',
+        date: txnTime,
+      },
+      { id: 'older-day', type: 'separator', date: startOfDay - MS_PER_DAY, isCollapsed: false },
+    ];
+
+    const result = injectReconciledMarkersIntoJournalList(items, recon);
+    expect(result.map(i => i.id)).toEqual(['day', 'j1', 'reconciled-separator', 'older-day']);
+  });
 });
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;

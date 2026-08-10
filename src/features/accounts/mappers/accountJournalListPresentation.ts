@@ -1,6 +1,9 @@
 import { JournalListItem } from '@/src/types/ui';
 
-/** Inserts reconciled markers into grouped journal list items. */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Inserts reconciled markers into grouped journal list items.
+ *  Journal items within a day must be newest-first for marker placement on expanded days. */
 export function injectReconciledMarkersIntoJournalList(
   rawGroupedItems: JournalListItem[],
   reconciledAt: Date | null,
@@ -9,36 +12,55 @@ export function injectReconciledMarkersIntoJournalList(
 
   const result: JournalListItem[] = [];
   let markerAdded = false;
+  let pendingExpandedDayRecon: number | null = null;
   const reconTime = reconciledAt.getTime();
+
+  const pushMarker = () => {
+    if (markerAdded) return;
+    result.push({
+      id: 'reconciled-separator',
+      type: 'reconciledMarker',
+      date: reconTime,
+    });
+    markerAdded = true;
+    pendingExpandedDayRecon = null;
+  };
 
   for (const item of rawGroupedItems) {
     let itemToPush = item;
+
     if (!markerAdded) {
       if (item.type === 'journal' && item.date && item.date <= reconTime) {
-        result.push({
-          id: 'reconciled-separator',
-          type: 'reconciledMarker',
-          date: reconTime,
-        });
-        markerAdded = true;
+        pushMarker();
       } else if (item.type === 'separator') {
+        if (pendingExpandedDayRecon !== null) {
+          // Recon fell on an expanded day where every journal was after the checkpoint.
+          pushMarker();
+        }
+
         const startOfDay = item.date;
-        const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
+        const endOfDay = startOfDay + MS_PER_DAY - 1;
         if (reconTime >= startOfDay) {
-          itemToPush = { ...item, reconciledAt: reconTime };
-          if (reconTime <= endOfDay || item.isCollapsed) markerAdded = true;
-          if (!item.isCollapsed && reconTime > endOfDay) {
-            result.push({
-              id: 'reconciled-separator',
-              type: 'reconciledMarker',
-              date: reconTime,
-            });
-            markerAdded = true;
+          if (item.isCollapsed) {
+            itemToPush = { ...item, reconciledAt: reconTime };
+            if (reconTime <= endOfDay) {
+              markerAdded = true;
+            }
+          } else if (reconTime > endOfDay) {
+            pushMarker();
+          } else {
+            // Expanded day containing the checkpoint — place marker among journals.
+            pendingExpandedDayRecon = reconTime;
           }
         }
       }
     }
+
     result.push(itemToPush);
+  }
+
+  if (!markerAdded && pendingExpandedDayRecon !== null) {
+    pushMarker();
   }
 
   return result;

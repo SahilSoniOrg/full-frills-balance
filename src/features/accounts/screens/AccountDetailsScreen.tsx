@@ -25,21 +25,12 @@ function AccountDetailsScreen() {
     isParent,
     isSelectionModeActive,
     onAddPress,
-    onAuditPress,
-    reconciledAt,
-    unreconciledCount,
   } = vm;
 
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
     const titleVm = { isParent, accountType };
-    const headerVm = {
-      accountType,
-      headerActions,
-      unreconciledCount,
-      reconciledAt,
-      onAuditPress,
-    };
+    const headerVm = { headerActions };
 
     return applySelectionChrome(
       buildDetailNavChrome({
@@ -78,9 +69,6 @@ function AccountDetailsScreen() {
     isParent,
     isSelectionModeActive,
     onAddPress,
-    onAuditPress,
-    reconciledAt,
-    unreconciledCount,
   ]);
 
   return <AccountDetailsView {...vm} chrome={chrome} />;

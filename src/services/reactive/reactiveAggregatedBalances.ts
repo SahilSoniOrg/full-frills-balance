@@ -32,7 +32,7 @@ function accountsObserveSignature(accounts: Account[]): string {
   return accounts
     .map(
       account =>
-        `${account.id}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}`,
+        `${account.id}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
     )
     .join('|');
 }

@@ -60,6 +60,11 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     metadata,
     balanceClassify,
     archiveAction,
+    destructiveAction,
+    isMergeModalVisible,
+    setIsMergeModalVisible,
+    mergeCandidates,
+    onConfirmMerge,
   } = vm;
 
   const {
@@ -78,6 +83,16 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         label: saveLabel,
         disabled: isSaveDisabled,
       }}
+      secondaryAction={
+        destructiveAction
+          ? {
+              label: destructiveAction.label,
+              onPress: destructiveAction.onPress,
+              variant: 'destructive-outline',
+              testID: destructiveAction.testID,
+            }
+          : undefined
+      }
     >
       <FormHeroSection
         prefix={
@@ -310,6 +325,13 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         />
       ) : null}
       {archiveAction.cascadeModal}
+      <AccountPickerModal
+        visible={isMergeModalVisible}
+        onClose={() => setIsMergeModalVisible(false)}
+        accounts={mergeCandidates}
+        onSelect={onConfirmMerge}
+        title="Merge Into Account"
+      />
     </EntityFormScreen>
   );
 }

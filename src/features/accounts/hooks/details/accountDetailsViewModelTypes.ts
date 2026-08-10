@@ -1,8 +1,7 @@
 import { IconName } from '@/src/components/core';
-import Account from '@/src/data/models/Account';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { AccountId, JournalId, PlainAccount } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 
@@ -27,12 +26,8 @@ export interface AccountDetailsViewModel {
     canRecover: boolean;
     onRecover: () => void;
     onEdit: () => void;
-    onDelete: () => void;
-    onReconcile: () => void;
-    onMerge: () => void;
-    canDelete: boolean;
-    canMerge: boolean;
   };
+  onReconcilePress?: () => void;
   isReconcileModalVisible: boolean;
   setIsReconcileModalVisible: (visible: boolean) => void;
   onConfirmReconcile: () => void;
@@ -75,8 +70,4 @@ export interface AccountDetailsViewModel {
   exitSelectionMode: () => void;
   onShareSelected: () => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
-  isMergeModalVisible: boolean;
-  setIsMergeModalVisible: (visible: boolean) => void;
-  mergeCandidates: (Account | PlainAccount)[];
-  onConfirmMerge: (targetAccountId: AccountId) => void;
 }

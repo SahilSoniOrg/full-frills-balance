@@ -11,6 +11,7 @@ import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/
 import { useJournalEntryList } from '@/src/features/journal';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { AppNavigation } from '@/src/utils/navigation';
+import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { useCallback, useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
@@ -24,22 +25,17 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accounts,
     rawSubBalances,
     dashboardLoading,
-    transactionCount,
     balanceCurrency,
     accountId,
     accountType,
     isDeleted,
+    reconciledAtMs,
     reconciledAt,
     dateRange,
     ...dataVm
   } = useAccountDetailsData();
 
-  const {
-    deleteAccount,
-    recoverAccount: recoverAction,
-    reconcileAccount,
-    mergeAccounts,
-  } = useAccountActions(workplaceId);
+  const { recoverAccount: recoverAction, reconcileAccount } = useAccountActions(workplaceId);
 
   const { precision, ...metricsVm } = useAccountDetailsMetrics({
     accountId,
@@ -71,21 +67,24 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   });
 
   const journalItems = useMemo(
-    () => injectReconciledMarkersIntoJournalList(journalList.items, reconciledAt),
-    [journalList.items, reconciledAt],
+    () =>
+      injectReconciledMarkersIntoJournalList(
+        journalList.items,
+        reconciledAtMs != null ? new Date(reconciledAtMs) : null,
+      ),
+    [journalList.items, reconciledAtMs],
   );
 
   const actionsVm = useAccountDetailsActions({
     accountId,
     account,
-    accounts,
-    transactionCount,
     isDeleted,
-    deleteAccount,
     recoverAction,
     reconcileAccount,
-    mergeAccounts,
   });
+
+  const onReconcilePress =
+    !isDeleted && !isCategoryAccountType(accountType) ? actionsVm.onReconcile : undefined;
 
   const onBack = useCallback(() => AppNavigation.back(), []);
   const onAuditPress = useCallback(
@@ -124,5 +123,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     onShareSelected: journalList.onShareSelected,
     setSelectedIds: journalList.setSelectedIds,
     ...actionsVm,
+    onReconcilePress,
   };
 }

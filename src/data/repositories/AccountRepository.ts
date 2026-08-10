@@ -86,6 +86,7 @@ export class AccountRepository {
         'parent_account_id',
         'deleted_at',
         'archived_at',
+        'reconciled_at',
         'updated_at',
       ]);
   }
@@ -187,6 +188,25 @@ export class AccountRepository {
           const account = accounts[0];
           if (!account) return null;
           return account.archivedAt?.getTime() ?? null;
+        }),
+        distinctUntilChanged(),
+      );
+  }
+
+  /** Primitive reconciled_at for React — avoids stale UI from the dashboard balance pipeline. */
+  observeReconciledAt(workplaceId: WorkplaceId, accountId: AccountId) {
+    return this.accounts
+      .query(
+        Q.where('id', accountId),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .observeWithColumns(['reconciled_at', 'deleted_at'])
+      .pipe(
+        map(accounts => {
+          const account = accounts[0];
+          if (!account) return null;
+          return account.reconciledAt?.getTime() ?? null;
         }),
         distinctUntilChanged(),
       );
