@@ -16,7 +16,7 @@ import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
-import { combineLatest, distinctUntilChanged, Observable, shareReplay, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, Observable, shareReplay, switchMap } from 'rxjs';
 
 type RawSQLRow = Record<string, unknown>;
 
@@ -28,15 +28,21 @@ export interface AggregatedAccountBalances {
 
 const aggregatedBalancesCache = new Map<string, Observable<AggregatedAccountBalances>>();
 
-function accountsObserveSignature(accounts: Account[]): string {
+export type AccountObservationSnapshot = {
+  accounts: Account[];
+  signature: string;
+};
+
+export function snapshotAccountObservation(accounts: Account[]): AccountObservationSnapshot {
   // reconciled_at is included so account-list rows (e.g. AccountCard badge) refresh
   // when reconciliation changes, independent of balance recomputation.
-  return accounts
+  const signature = accounts
     .map(
       account =>
         `${account.id}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
     )
     .join('|');
+  return { accounts, signature };
 }
 
 export function clearReactiveAggregatedBalancesCache(): void {
@@ -57,7 +63,10 @@ export function observeAggregatedAccountBalances(
   }
 
   const obs$ = combineLatest([
-    observeWorkplaceAccounts(workplaceId),
+    // WatermelonDB reuses mutable model instances between emissions. Snapshot
+    // the fields used by distinctUntilChanged before comparing, otherwise the
+    // previous emission observes the mutation too and archive changes vanish.
+    observeWorkplaceAccounts(workplaceId).pipe(map(snapshotAccountObservation)),
     observeWorkplaceJournalMeta(workplaceId),
     observeWorkplaceActiveTransactionCount(workplaceId),
     exchangeRateRepository.observeAll(),
@@ -65,13 +74,14 @@ export function observeAggregatedAccountBalances(
     firstFastDebounce(Animation.dataRefreshDebounce),
     distinctUntilChanged((prev, curr) => {
       return (
-        accountsObserveSignature(prev[0]) === accountsObserveSignature(curr[0]) &&
+        prev[0].signature === curr[0].signature &&
         prev[1] === curr[1] &&
         prev[2] === curr[2] &&
         prev[3] === curr[3]
       );
     }),
-    switchMap(async ([accounts]) => {
+    switchMap(async ([accountsSnapshot]) => {
+      const accounts = accountsSnapshot.accounts;
       const trace = traceService.startTrace('AllBalances.Calculate');
       try {
         const now = new Date();
@@ -139,7 +149,7 @@ export function observeAggregatedAccountBalances(
         trace.end();
       }
     }),
-    shareReplay({ bufferSize: 1, refCount: false }),
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   aggregatedBalancesCache.set(cacheKey, obs$);

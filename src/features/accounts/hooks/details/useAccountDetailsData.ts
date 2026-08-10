@@ -14,7 +14,6 @@ import {
   WorkplaceId,
   AccountType,
 } from '@/src/types/domain';
-import { isAccountArchived } from '@/src/utils/accountArchive';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -156,7 +155,6 @@ export function useAccountDetailsData(): AccountDetailsData {
   const balance = balanceData?.balance ?? 0;
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
-  const isArchived = account ? isAccountArchived(account) : false;
 
   const { data: reconciledAtMs } = useObservable(
     () =>
@@ -166,6 +164,19 @@ export function useAccountDetailsData(): AccountDetailsData {
     [accountId, workplaceId],
     null as number | null,
   );
+
+  // Observe archive state as a primitive; WatermelonDB model references are stable
+  // across writes and are not safe as the source of React archive state.
+  const { data: archivedAtMs } = useObservable(
+    () =>
+      accountId && workplaceId
+        ? accountQueries.observeArchivedAt(workplaceId, accountId)
+        : of(null),
+    [accountId, workplaceId],
+    null as number | null,
+  );
+
+  const isArchived = account ? archivedAtMs != null : false;
 
   const accountSubtypeLabel = account?.accountSubtype
     ? formatAccountSubtypeLabel(account.accountSubtype)
