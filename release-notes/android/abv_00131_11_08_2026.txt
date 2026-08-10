@@ -1,0 +1,27 @@
+New release 🚀
+
+Account archiving, per-screen privacy toggles, smarter SMS reference matching, and a redesigned money flow diagram — plus in-page transaction search and cleaner account headers.
+
+---
+
+Also in this update:
+
+* Account Archiving: Archive old or inactive accounts to remove them from your active lists while keeping all historical transactions and balance totals intact.
+* Per-Screen Privacy: Toggle amount visibility on individual screens — such as reports or journal details — without unmasking numbers across the rest of the app.
+* In-Page Account Search: Find specific transactions quickly with a search bar built right into account details screens.
+* Smarter SMS Matching: SMS tracking parses bank reference numbers to match incoming notifications directly against logged transactions and reduce duplicate alerts.
+* Redesigned Money Flow: A clearer diagram maps out how income flows into categories and expenses, complete with unified chart period controls.
+* Cleaner Headers & Navigation: Account detail headers stay tidy by keeping edit actions in the edit form, stack titles stop clipping, and back button navigation stays fast.
+
+---
+
+Big difference you’ll notice:
+
+* Retiring an old account hides it from daily view without messing up past reports or parent account totals.
+* Unmasking balance numbers on one page won't reveal sensitive figures on other tabs.
+* Searching through an account's transaction history is immediate and built into the screen.
+* Bank SMS alerts pair up with transactions more reliably with fewer duplicate prompts.
+
+---
+
+Under the hood, this release spans 69 commits across 727 files (+17,742 / -16,465 lines). We unified amount masking across all charts and screens, streamlined account detail data flows, tightened SMS deduplication, and cleaned up legacy report paths.
