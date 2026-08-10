@@ -65,6 +65,7 @@ jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
   rebuildAllAccountBalancesAfterImport: jest.fn().mockResolvedValue(undefined),
 }));
 
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { importService } from '@/src/services/import/ImportService';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
@@ -77,7 +78,11 @@ const mockPlugin: ImportPlugin = {
   icon: 'T',
   detect: () => true,
   parse: jest.fn().mockResolvedValue({
-    data: { accounts: [], journals: [], transactions: [] },
+    canonical: canonicalImportFromBatchImportData({
+      accounts: [],
+      journals: [],
+      transactions: [],
+    }),
     stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
   }),
 };

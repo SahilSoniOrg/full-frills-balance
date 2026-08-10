@@ -61,6 +61,7 @@ jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
   rebuildAllAccountBalancesAfterImport: jest.fn().mockResolvedValue(undefined),
 }));
 
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { importService } from '@/src/services/import/ImportService';
 import { database } from '@/src/data/database/Database';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
@@ -86,11 +87,11 @@ function createMockPlugin(overrides?: Partial<ImportPlugin>): ImportPlugin {
     icon: 'T',
     detect: () => true,
     parse: jest.fn().mockResolvedValue({
-      data: {
+      canonical: canonicalImportFromBatchImportData({
         accounts: [{ id: 'account-1', name: 'Cash', accountType: 'ASSET', currencyCode: 'USD' }],
         journals: [],
         transactions: [],
-      },
+      }),
       stats: {
         accounts: 1,
         journals: 0,
@@ -129,13 +130,13 @@ describe('ImportService import workflow (public executeImport contract)', () => 
       parse: jest.fn().mockImplementation(async () => {
         phaseOrder.push('parse');
         return {
-          data: {
+          canonical: canonicalImportFromBatchImportData({
             accounts: [
               { id: 'account-1', name: 'Cash', accountType: 'ASSET', currencyCode: 'EUR' },
             ],
             journals: [],
             transactions: [],
-          },
+          }),
           stats: { accounts: 1, journals: 0, transactions: 0, skippedTransactions: 0 },
         };
       }),
@@ -278,7 +279,11 @@ describe('ImportService import workflow (public executeImport contract)', () => 
   it('restores preferences and activates workplace after successful import', async () => {
     const plugin = createMockPlugin({
       parse: jest.fn().mockResolvedValue({
-        data: { accounts: [], journals: [], transactions: [] },
+        canonical: canonicalImportFromBatchImportData({
+          accounts: [],
+          journals: [],
+          transactions: [],
+        }),
         stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
         preferences: {
           theme: 'dark',

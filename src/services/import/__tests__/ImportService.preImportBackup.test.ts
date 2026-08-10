@@ -61,6 +61,7 @@ jest.mock('@/src/services/import/importStaging', () => ({
   discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
+import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { importService } from '@/src/services/import/ImportService';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
 import {
@@ -79,11 +80,11 @@ const mockPlugin: ImportPlugin = {
   icon: 'T',
   detect: () => true,
   parse: jest.fn().mockResolvedValue({
-    data: {
+    canonical: canonicalImportFromBatchImportData({
       accounts: [],
       journals: [],
       transactions: [],
-    },
+    }),
     stats: {
       accounts: 0,
       journals: 0,
