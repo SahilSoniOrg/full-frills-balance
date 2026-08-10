@@ -49,7 +49,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
   }, [account, accounts, accountId]);
 
   const canDelete = enabled && !isDeleted && transactionCount === 0;
-  const canMerge = enabled && !isDeleted && transactionCount > 0 && mergeCandidates.length > 0;
+  const canMerge = enabled && !isDeleted && transactionCount > 0;
 
   const onDelete = useCallback(() => {
     if (!account) return;
@@ -88,9 +88,16 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     });
   }, [account, accountId, deleteAccount, entityLabel, recoverAction]);
 
+  const mergeEntityPlural = entityLabel === 'Account' ? 'accounts' : 'categories';
+  const mergeTitle = entityLabel === 'Account' ? 'Merge Accounts' : 'Merge Categories';
+
   const onMerge = useCallback(() => {
+    if (mergeCandidates.length === 0) {
+      toast.info(`No eligible ${mergeEntityPlural} found to merge into.`);
+      return;
+    }
     setIsMergeModalVisible(true);
-  }, []);
+  }, [mergeCandidates.length, mergeEntityPlural]);
 
   const onConfirmMerge = useCallback(
     async (targetAccountId: AccountId) => {
@@ -100,8 +107,8 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
       setIsMergeModalVisible(false);
 
       confirm.show({
-        title: 'Merge Accounts',
-        message: `This account has transactions and cannot be deleted directly. Merging will move ALL transactions, planned payments, and rules from "${account.name}" into "${target.name}", and then delete "${account.name}". This action is permanent.`,
+        title: mergeTitle,
+        message: `This ${entityLabel.toLowerCase()} has transactions and cannot be deleted directly. Merging will move ALL transactions, planned payments, and rules from "${account.name}" into "${target.name}", and then delete "${account.name}". This action is permanent.`,
         destructive: true,
         requiredConfirmationValue: account.name,
         onConfirm: async () => {
@@ -118,7 +125,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
         },
       });
     },
-    [account, accountId, accounts, mergeAccounts],
+    [account, accountId, accounts, entityLabel, mergeAccounts, mergeTitle],
   );
 
   const destructiveAction = useMemo(() => {
@@ -131,7 +138,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     }
     if (canMerge) {
       return {
-        label: 'Merge Account',
+        label: `Merge ${entityLabel}`,
         onPress: onMerge,
         testID: 'merge-button',
       };

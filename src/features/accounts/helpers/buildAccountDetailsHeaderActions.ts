@@ -9,27 +9,41 @@ export function buildAccountDetailsHeaderActions(
   theme: Theme,
 ): ScreenHeaderActionItem[] {
   const surface = 'surface' as const;
+  const { headerActions } = vm;
 
-  if (vm.headerActions.canRecover) {
+  if (headerActions.canRecover) {
     return [
       {
         name: 'refresh',
-        onPress: vm.headerActions.onRecover,
+        onPress: headerActions.onRecover,
         variant: surface,
         iconColor: theme.income,
       },
     ];
   }
 
-  return [
-    {
-      name: 'edit',
-      onPress: vm.headerActions.onEdit,
+  const actions: ScreenHeaderActionItem[] = [];
+
+  if (headerActions.onSearch) {
+    actions.push({
+      name: 'search',
+      onPress: headerActions.onSearch,
       variant: surface,
       iconColor: theme.text,
-      testID: 'edit-button',
-    },
-  ];
+      testID: 'search-button',
+      accessibilityLabel: 'Search transactions',
+    });
+  }
+
+  actions.push({
+    name: 'edit',
+    onPress: headerActions.onEdit,
+    variant: surface,
+    iconColor: theme.text,
+    testID: 'edit-button',
+  });
+
+  return actions;
 }
 
 export function accountDetailsScreenTitle(

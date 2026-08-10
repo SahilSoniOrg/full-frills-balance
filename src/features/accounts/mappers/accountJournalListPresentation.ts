@@ -2,8 +2,7 @@ import { JournalListItem } from '@/src/types/ui';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-/** Inserts reconciled markers into grouped journal list items.
- *  Journal items within a day must be newest-first for marker placement on expanded days. */
+/** Inserts reconciled markers into grouped journal list items. */
 export function injectReconciledMarkersIntoJournalList(
   rawGroupedItems: JournalListItem[],
   reconciledAt: Date | null,

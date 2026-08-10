@@ -48,7 +48,10 @@ export function useJournalListGrouping<T>({
     days.sort((a, b) => (sortByDate === 'desc' ? b - a : a - b));
 
     days.forEach(startOfDay => {
-      const itemsForDay = dayGroups[startOfDay];
+      const itemsForDay = dayGroups[startOfDay].sort((a, b) => {
+        const delta = getDate(b) - getDate(a);
+        return sortByDate === 'desc' ? delta : -delta;
+      });
       const isCollapsed = collapsedDays.has(startOfDay);
       const stats = getStats(itemsForDay);
 

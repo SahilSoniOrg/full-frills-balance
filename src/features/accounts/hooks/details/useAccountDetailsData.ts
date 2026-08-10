@@ -46,7 +46,6 @@ export interface AccountDetailsData {
   transactionCount: number;
   transactionCountText: string;
   reconciledAtMs: number | null;
-  reconciledAt: Date | null;
   dateRange: DateRange | null;
   periodFilter: PeriodFilter;
   isDatePickerVisible: boolean;
@@ -167,8 +166,6 @@ export function useAccountDetailsData(): AccountDetailsData {
     null as number | null,
   );
 
-  const reconciledAt = reconciledAtMs != null ? new Date(reconciledAtMs) : null;
-
   const accountSubtypeLabel = account?.accountSubtype
     ? formatAccountSubtypeLabel(account.accountSubtype)
     : '';
@@ -215,7 +212,6 @@ export function useAccountDetailsData(): AccountDetailsData {
     transactionCount,
     transactionCountText,
     reconciledAtMs,
-    reconciledAt,
     dateRange,
     periodFilter,
     isDatePickerVisible,

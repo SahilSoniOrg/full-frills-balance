@@ -26,6 +26,7 @@ export interface AccountDetailsViewModel {
     canRecover: boolean;
     onRecover: () => void;
     onEdit: () => void;
+    onSearch?: () => void;
   };
   onReconcilePress?: () => void;
   isReconcileModalVisible: boolean;

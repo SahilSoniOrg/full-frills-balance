@@ -1,9 +1,10 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
+import { DateRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
@@ -11,15 +12,39 @@ import { useCallback, useState } from 'react';
 export interface UseAccountDetailsActionsOptions {
   accountId: AccountId;
   account: Account | PlainAccount | null;
+  accountType: AccountType;
   isDeleted: boolean;
+  dateRange: DateRange | null;
   recoverAction: (id: AccountId) => Promise<void>;
   reconcileAccount: (id: AccountId, date: Date) => Promise<Account | null>;
 }
 
 export function useAccountDetailsActions(options: UseAccountDetailsActionsOptions) {
-  const { accountId, account, isDeleted, recoverAction, reconcileAccount } = options;
+  const { accountId, account, accountType, isDeleted, dateRange, recoverAction, reconcileAccount } =
+    options;
 
   const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
+
+  const onBack = useCallback(() => AppNavigation.back(), []);
+
+  const onAuditPress = useCallback(
+    () => AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId }),
+    [accountId],
+  );
+
+  const onAddPress = useCallback(
+    () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
+    [accountId],
+  );
+
+  const onSearch = useCallback(
+    () =>
+      AppNavigation.toJournalSearch({
+        accountIds: [accountId],
+        ...(dateRange ? { startDate: dateRange.startDate, endDate: dateRange.endDate } : undefined),
+      }),
+    [accountId, dateRange],
+  );
 
   const onRecover = useCallback(() => {
     showConfirmationAlert(
@@ -76,13 +101,20 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     }
   }, [accountId, account]);
 
+  const onReconcilePress =
+    !isDeleted && !isCategoryAccountType(accountType) ? onReconcile : undefined;
+
   return {
+    onBack,
+    onAuditPress,
+    onAddPress,
+    onReconcilePress,
     headerActions: {
       canRecover: isDeleted,
       onRecover,
       onEdit,
+      onSearch: isDeleted ? undefined : onSearch,
     },
-    onReconcile,
     isReconcileModalVisible,
     setIsReconcileModalVisible,
     onConfirmReconcile,

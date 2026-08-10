@@ -10,9 +10,7 @@ import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/u
 import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
 import { useJournalEntryList } from '@/src/features/journal';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
-import { AppNavigation } from '@/src/utils/navigation';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
@@ -30,7 +28,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accountType,
     isDeleted,
     reconciledAtMs,
-    reconciledAt,
     dateRange,
     ...dataVm
   } = useAccountDetailsData();
@@ -66,35 +63,25 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     paginationPolicy: 'default',
   });
 
+  const reconciledAt = useMemo(
+    () => (reconciledAtMs != null ? new Date(reconciledAtMs) : null),
+    [reconciledAtMs],
+  );
+
   const journalItems = useMemo(
-    () =>
-      injectReconciledMarkersIntoJournalList(
-        journalList.items,
-        reconciledAtMs != null ? new Date(reconciledAtMs) : null,
-      ),
-    [journalList.items, reconciledAtMs],
+    () => injectReconciledMarkersIntoJournalList(journalList.items, reconciledAt),
+    [journalList.items, reconciledAt],
   );
 
   const actionsVm = useAccountDetailsActions({
     accountId,
     account,
+    accountType,
     isDeleted,
+    dateRange,
     recoverAction,
     reconcileAccount,
   });
-
-  const onReconcilePress =
-    !isDeleted && !isCategoryAccountType(accountType) ? actionsVm.onReconcile : undefined;
-
-  const onBack = useCallback(() => AppNavigation.back(), []);
-  const onAuditPress = useCallback(
-    () => AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId }),
-    [accountId],
-  );
-  const onAddPress = useCallback(
-    () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
-    [accountId],
-  );
 
   return {
     accountId,
@@ -103,9 +90,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconciledAt,
     dateRange,
     currencyCode: balanceCurrency,
-    onBack,
-    onAuditPress,
-    onAddPress,
     ...dataVm,
     ...metricsVm,
     ...hierarchyVm,
@@ -123,6 +107,5 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     onShareSelected: journalList.onShareSelected,
     setSelectedIds: journalList.setSelectedIds,
     ...actionsVm,
-    onReconcilePress,
   };
 }
