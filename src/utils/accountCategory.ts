@@ -194,5 +194,40 @@ export function getSectionColor(title: string | AccountType, theme: Theme): stri
 }
 
 export function getAccountAccentColor(accountType: string | AccountType, theme: Theme): string {
-  return theme[getAccountTypeColorKey(accountType)];
+  const key = getAccountTypeColorKey(accountType);
+  return theme[key] ?? theme.text;
+}
+
+export function isValidHexColor(color?: string | null): boolean {
+  if (!color) return false;
+  return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
+export interface AccountAppearanceColors {
+  accentColor: string;
+  categoryColor: string;
+}
+
+export function resolveAccountAppearance(
+  account: { accountType: string | AccountType; color?: string | null },
+  theme: Theme,
+): AccountAppearanceColors {
+  return {
+    accentColor:
+      account.color && isValidHexColor(account.color)
+        ? account.color
+        : getAccountAccentColor(account.accountType, theme),
+    categoryColor: getAccountAccentColor(account.accountType, theme),
+  };
+}
+
+/**
+ * Resolves the effective accent color for an account: custom per-account color
+ * (hex, '' = auto) when set, otherwise derived from the account type.
+ */
+export function resolveAccountAccentColor(
+  account: { accountType: string | AccountType; color?: string | null },
+  theme: Theme,
+): string {
+  return resolveAccountAppearance(account, theme).accentColor;
 }

@@ -27,13 +27,14 @@ import { schema } from '@/src/data/database/schema';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/services/accounting/BalanceEffects';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 30;
+const EXPECTED_SCHEMA_VERSION = 31;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);
@@ -130,5 +131,43 @@ describe('database migrations (LokiJS)', () => {
       workplaceId,
     );
     expect(expenseBalance.balance).toBe(40);
+  });
+
+  it('supports persisting and reading custom account color (v31 schema)', async () => {
+    const coloredAccount = await accountRepository.create({
+      name: 'Custom Colored Asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+      color: '#3B82F6',
+    });
+
+    expect(coloredAccount.color).toBe('#3B82F6');
+    const fetched = await accountRepository.find(workplaceId, coloredAccount.id as AccountId);
+    expect(fetched?.color).toBe('#3B82F6');
+  });
+
+  it('clears custom color when updated back to auto (empty string)', async () => {
+    const coloredAccount = await accountRepository.create({
+      name: 'Red Asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+      color: '#F87171',
+    });
+
+    const prepared = await prepareAccountFieldUpdate(workplaceId, coloredAccount.id as AccountId, {
+      color: '',
+    });
+
+    const updated = await accountRepository.update(
+      coloredAccount,
+      prepared.updatePayload,
+      workplaceId,
+    );
+
+    expect(updated.color).toBe('');
+    const fetched = await accountRepository.find(workplaceId, coloredAccount.id as AccountId);
+    expect(fetched?.color).toBe('');
   });
 });

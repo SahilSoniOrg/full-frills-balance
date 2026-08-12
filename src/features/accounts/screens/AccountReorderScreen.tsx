@@ -1,5 +1,5 @@
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { withArchiveVisibilityScope } from '@/src/contexts/ArchiveVisibilityScope';
+import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { AccountReorderView } from '@/src/features/accounts/components/AccountReorderView';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountReorderViewModel } from '@/src/features/accounts/hooks/useAccountReorderViewModel';
@@ -19,4 +19,10 @@ function AccountReorderScreen() {
   return <AccountReorderView {...vm} chrome={chrome} />;
 }
 
-export default withArchiveVisibilityScope(AccountReorderScreen);
+export default function AccountReorderScreenWithArchivedVisible() {
+  return (
+    <ArchiveVisibilityScopeProvider initialShowArchived>
+      <AccountReorderScreen />
+    </ArchiveVisibilityScopeProvider>
+  );
+}

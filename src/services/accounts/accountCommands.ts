@@ -25,6 +25,7 @@ import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
 import { roundToPrecision } from '@/src/utils/money';
+import { isValidHexColor } from '@/src/utils/accountCategory';
 
 /** Caller-owned fields for creating an account (form / onboarding data only). */
 export interface CreateAccountCommandInput {
@@ -34,6 +35,8 @@ export interface CreateAccountCommandInput {
   currencyCode: string;
   description?: string;
   icon?: IconName;
+  /** Custom accent color (hex). Empty/omitted = derive from account type. */
+  color?: string;
   initialBalance?: number;
   orderNum?: number;
   parentAccountId?: AccountId | null;
@@ -82,6 +85,7 @@ export async function createAccount(
     currencyCode,
     description: input.description,
     icon: input.icon,
+    color: input.color && isValidHexColor(input.color) ? input.color : undefined,
     orderNum,
     parentAccountId: input.parentAccountId || undefined,
     workplaceId: input.workplaceId,
@@ -102,6 +106,7 @@ export async function createAccount(
           currencyCode: account.currencyCode,
           description: account.description,
           icon: account.icon,
+          color: account.color,
           orderNum: account.orderNum,
           parentAccountId: account.parentAccountId,
           initialBalance: input.initialBalance,

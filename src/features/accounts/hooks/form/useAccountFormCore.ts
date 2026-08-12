@@ -18,6 +18,8 @@ export interface AccountFormCoreApi {
   setSelectedCurrency: (value: string) => void;
   selectedIcon: IconName;
   setSelectedIcon: (value: IconName) => void;
+  selectedColor: string;
+  setSelectedColor: (value: string) => void;
   initialBalance: string;
   onInitialBalanceChange: (value: string) => void;
   parentAccountId: AccountId;
@@ -36,6 +38,7 @@ export function useAccountFormCore(
     accountSubtype,
     selectedCurrency,
     selectedIcon,
+    selectedColor,
     initialBalance,
     parentAccountId,
   } = core;
@@ -58,6 +61,10 @@ export function useAccountFormCore(
   );
   const setSelectedIcon = useCallback(
     (value: IconName) => dispatch({ type: 'PATCH_CORE', patch: { selectedIcon: value } }),
+    [dispatch],
+  );
+  const setSelectedColor = useCallback(
+    (value: string) => dispatch({ type: 'PATCH_CORE', patch: { selectedColor: value } }),
     [dispatch],
   );
   const setParentAccountId = useCallback(
@@ -87,6 +94,8 @@ export function useAccountFormCore(
     setSelectedCurrency,
     selectedIcon,
     setSelectedIcon,
+    selectedColor,
+    setSelectedColor,
     initialBalance,
     onInitialBalanceChange,
     parentAccountId,

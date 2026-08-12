@@ -15,6 +15,8 @@ export interface AccountSummaryCardModel {
   accountSubtypeLabel: string;
   accountTypeVariant: ComponentVariant;
   accountTypeColorKey: string;
+  /** Custom per-account color (hex, '' = auto/derive from type). */
+  accountColor?: string;
   isParent: boolean;
   isDeleted: boolean;
   isArchived: boolean;

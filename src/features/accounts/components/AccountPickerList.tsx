@@ -1,20 +1,16 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
+import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { ArchivedAccountIndicator } from '@/src/features/accounts/components/ArchivedAccountIndicator';
 import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import {
-  AccountSection,
-  getAccountAccentColor,
-  getAccountVariant,
-  getSectionColor,
-} from '@/src/utils/accountCategory';
+import { AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
 import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -40,7 +36,7 @@ const AccountPickerRow = React.memo(
     const { theme } = useTheme();
     const archived = isAccountArchived(item);
     const subtitle = [item.accountType, item.currencyCode].filter(Boolean).join(' • ');
-    const accentColor = getAccountAccentColor(item.accountType, theme);
+    const { accentColor } = useAccountColors(item);
     const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
       archived,
       isPinnedArchived,

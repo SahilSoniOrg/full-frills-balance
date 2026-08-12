@@ -1,11 +1,13 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { Layout, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
-import { ACCOUNT_TYPE_ORDER, getAccountTypeColorKey } from '@/src/utils/accountCategory';
+import { ACCOUNT_TYPE_ORDER, resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { isAccountArchived } from '@/src/utils/accountArchive';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface HierarchyTreeProps {
@@ -52,7 +54,7 @@ export function HierarchyTree({
     const canBeParent = balance != null && (balance.directTransactionCount || 0) === 0;
     const isExpandable = hasChildren || canBeParent;
     const isSelected = selectedAccountId === account.id;
-    const categoryColor = theme[getAccountTypeColorKey(account.accountType)];
+    const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(account, theme);
 
     return (
       <View key={account.id}>
@@ -117,12 +119,13 @@ export function HierarchyTree({
                 name={account.icon}
                 fallbackIcon={getAccountFallbackIcon(account.accountType)}
                 size={Size.iconSm}
-                color={categoryColor}
+                color={accountColor}
               />
             </View>
 
             <View style={styles.accountText}>
               <View style={styles.inlineRow}>
+                {isAccountArchived(account) ? <ArchivedAccountIndicator emphasized /> : null}
                 <AppText
                   variant="body"
                   weight={hasChildren ? 'bold' : 'regular'}

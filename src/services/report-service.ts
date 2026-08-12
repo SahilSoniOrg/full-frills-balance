@@ -299,6 +299,7 @@ export class ReportService {
       currencyCode: account.currencyCode,
       accountType: AccountType.INCOME,
       accountSubtype: account.accountSubtype,
+      color: account.color,
     }));
     const expenseAccounts = rawExpenseAccounts.map(account => ({
       id: account.id,
@@ -306,6 +307,7 @@ export class ReportService {
       currencyCode: account.currencyCode,
       accountType: AccountType.EXPENSE,
       accountSubtype: account.accountSubtype,
+      color: account.color,
     }));
 
     return { currency, incomeAccounts, expenseAccounts };
@@ -325,6 +327,7 @@ export class ReportService {
           accountName: account.name,
           amount: m.amount,
           percentage: 0,
+          color: account.color || undefined,
         });
         totalPositiveAmount += m.amount;
       }

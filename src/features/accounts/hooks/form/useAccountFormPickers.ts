@@ -3,8 +3,8 @@ import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/use
 import { useCallback } from 'react';
 
 export interface AccountFormPickersApi {
-  isIconPickerVisible: boolean;
-  setIsIconPickerVisible: (visible: boolean) => void;
+  isAppearancePickerVisible: boolean;
+  setIsAppearancePickerVisible: (visible: boolean) => void;
   isParentPickerVisible: boolean;
   setIsParentPickerVisible: (visible: boolean) => void;
   isPayFromPickerVisible: boolean;
@@ -16,8 +16,9 @@ export function useAccountFormPickers(
   dispatch: AccountFormDraftDispatch,
   pickers: AccountFormPickersDraft,
 ): AccountFormPickersApi {
-  const setIsIconPickerVisible = useCallback(
-    (visible: boolean) => dispatch({ type: 'SET_PICKER', picker: 'isIconPickerVisible', visible }),
+  const setIsAppearancePickerVisible = useCallback(
+    (visible: boolean) =>
+      dispatch({ type: 'SET_PICKER', picker: 'isAppearancePickerVisible', visible }),
     [dispatch],
   );
   const setIsParentPickerVisible = useCallback(
@@ -32,8 +33,8 @@ export function useAccountFormPickers(
   );
 
   return {
-    isIconPickerVisible: pickers.isIconPickerVisible,
-    setIsIconPickerVisible,
+    isAppearancePickerVisible: pickers.isAppearancePickerVisible,
+    setIsAppearancePickerVisible,
     isParentPickerVisible: pickers.isParentPickerVisible,
     setIsParentPickerVisible,
     isPayFromPickerVisible: pickers.isPayFromPickerVisible,

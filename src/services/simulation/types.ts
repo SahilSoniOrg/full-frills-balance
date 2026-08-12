@@ -231,6 +231,8 @@ export interface SimulationReport {
 export interface AccountSimulationSummary {
   accountId: AccountId;
   accountName: string;
+  /** Custom per-account accent color (hex, '' = auto). */
+  color?: string;
   startingBalance: number;
   safeToSpend: number;
   shortfall: number;

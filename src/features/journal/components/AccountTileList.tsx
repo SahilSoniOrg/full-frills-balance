@@ -1,10 +1,10 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import {
-  ArchivedAccountIndicator,
   getAccountIcon,
   getArchivedAccountTilePresentation,
   useAccounts,
@@ -12,7 +12,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { isAccountArchived } from '@/src/utils/accountArchive';
-import { getAccountAccentColor } from '@/src/utils/accountCategory';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import React, { useCallback, useMemo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
@@ -41,12 +41,16 @@ export const AccountTileList = React.memo(function AccountTileList({
 
   const items = useMemo(() => {
     void accountsVersion;
-    return accounts.map(account => ({
-      id: account.id,
-      label: account.name,
-      icon: getAccountIcon(account),
-      color: getAccountAccentColor(account.accountType, theme),
-    }));
+    return accounts.map(account => {
+      const { accentColor, categoryColor } = resolveAccountAppearance(account, theme);
+      return {
+        id: account.id,
+        label: account.name,
+        icon: getAccountIcon(account),
+        color: accentColor,
+        categoryColor,
+      };
+    });
   }, [accounts, theme, accountsVersion]);
 
   const archivedById = useMemo(() => {

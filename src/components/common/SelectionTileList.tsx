@@ -1,8 +1,9 @@
+import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill';
 import { AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
 import { useRevealHorizontalItem } from '@/src/components/common/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import { Bleed, Box, Inline } from '@/src/design-system';
+import { Bleed, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from 'react-native';
@@ -12,6 +13,8 @@ export interface SelectionTileProps {
   label: string;
   icon?: IconName;
   color: string;
+  /** Semantic category color, kept separate from the account identity color. */
+  categoryColor?: string;
 }
 
 export type SelectionTilePresentation = {
@@ -86,12 +89,9 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
       disabled={disabled}
     >
       <Inline align="center" space="sm">
-        <Box
-          width={4}
-          height={Spacing.md}
-          borderRadius="full"
-          background={item.color as any}
-          style={{ opacity: isSelected ? 1 : Opacity.soft }}
+        <AccountCategoryPill
+          color={(item.categoryColor ?? item.color) as string}
+          opacity={isSelected ? 1 : Opacity.soft}
         />
         {accessory}
         {item.icon ? (

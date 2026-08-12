@@ -107,7 +107,7 @@ export function SubAccountListModal({
                       name={account.icon}
                       fallbackIcon={account.icon || 'wallet'}
                       label={account.name}
-                      color={account.color}
+                      color={account.accountColor}
                       size={36}
                       shape="square"
                     />
@@ -124,8 +124,8 @@ export function SubAccountListModal({
                         variant="primary"
                         size="sm"
                         style={styles.badge}
-                        backgroundColor={withOpacity(account.color, Opacity.hover)}
-                        textColor={account.color}
+                        backgroundColor={withOpacity(account.categoryColor, Opacity.hover)}
+                        textColor={account.categoryColor}
                       >
                         Group
                       </Badge>

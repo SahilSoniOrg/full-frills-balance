@@ -1,12 +1,13 @@
-import React, { useCallback } from 'react';
+import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
+import Account from '@/src/data/models/Account';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useTheme } from '@/src/hooks/use-theme';
-import Account from '@/src/data/models/Account';
-import { getAccountAccentColor } from '@/src/utils/accountCategory';
+import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
+import React, { useCallback } from 'react';
 import {
   Keyboard,
   Pressable,
@@ -23,14 +24,7 @@ const AMOUNT_COL_WIDTH = 116;
 const DELETE_COL_WIDTH = 28;
 
 function accountChipStyles(account: Account | undefined, theme: Theme) {
-  if (!account) {
-    return {
-      text: theme.textTertiary,
-      icon: theme.textTertiary,
-    };
-  }
-  const accent = getAccountAccentColor(account.accountType, theme);
-  return { text: accent, icon: accent };
+  return resolveAccountChipColors(account, theme);
 }
 
 interface SplitRowItemProps {
@@ -75,17 +69,14 @@ const SplitRowItem = React.memo(function SplitRowItem({
           accessibilityLabel={`${str.category}: ${categoryAccount?.name ?? 'Choose category'}`}
         >
           <View style={styles.categoryCellInner} pointerEvents="none">
-            <AppText
+            <AccountInlineLabel
+              account={categoryAccount}
+              placeholder="Choose category"
               variant="caption"
               weight={categoryAccount ? 'semibold' : 'medium'}
-              numberOfLines={1}
-              style={[
-                styles.splitCategoryLabel,
-                { color: categoryAccount ? categoryStyles.text : theme.textTertiary },
-              ]}
-            >
-              {categoryAccount?.name ?? 'Choose category'}
-            </AppText>
+              textColor={categoryAccount ? categoryStyles.text : theme.textTertiary}
+              colors={{ accentColor: categoryStyles.text, categoryColor: categoryStyles.marker }}
+            />
             <AppIcon
               name="chevronDown"
               size={12}
@@ -206,17 +197,14 @@ export function SplitForm({
               accessibilityLabel={str.fromAccount}
             >
               <View style={styles.categoryCellInner} pointerEvents="none">
-                <AppText
+                <AccountInlineLabel
+                  account={sourceAccount}
+                  placeholder="Select account"
                   variant="body"
                   weight="semibold"
-                  numberOfLines={1}
-                  style={[
-                    styles.sourceAccountLabel,
-                    { color: hasSource ? sourceStyles.text : theme.textSecondary },
-                  ]}
-                >
-                  {sourceAccount?.name ?? 'Select account'}
-                </AppText>
+                  textColor={hasSource ? sourceStyles.text : theme.textSecondary}
+                  colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
+                />
                 <AppIcon
                   name="chevronDown"
                   size={12}
@@ -401,6 +389,9 @@ const styles = StyleSheet.create({
   categoryChevron: {
     marginLeft: Spacing.xs,
     flexShrink: 0,
+  },
+  archivedIndicatorSpacer: {
+    marginRight: Spacing.xs,
   },
   amountCell: {
     width: AMOUNT_COL_WIDTH,

@@ -1,17 +1,17 @@
 import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppCard, AppIcon, IvyIcon } from '@/src/components/core';
-import { Opacity, Size } from '@/src/constants';
+import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountType } from '@/src/types/domain';
 
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { ArchivedAccountIndicator } from '@/src/features/accounts/components/ArchivedAccountIndicator';
-import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { withOpacity } from '@/src/utils/color-math';
 
 interface AccountCardProps {
   account: AccountCardViewModel;
@@ -75,9 +75,11 @@ export function AccountCardBase({
   dividerColor,
   surfaceColor,
 }: AccountCardProps) {
-  const { theme, fonts } = useTheme();
+  const { fonts } = useTheme();
   const formatMoney = useMoneyFormat({ loading: isLoading });
-  const resolvedTextColor = resolveThemeColor(theme, account.textColor);
+  // The account color owns the card surface, so this contrast color is derived
+  // from the account surface rather than the category marker.
+  const resolvedTextColor = account.textColor;
 
   const stats = getAccountStatsConfig(
     account.accountType,
@@ -92,8 +94,8 @@ export function AccountCardBase({
       radius="r2"
       background={surfaceColor}
       style={{
-        marginBottom: 12,
-        marginLeft: account.depth * 16,
+        marginBottom: Spacing.md,
+        marginLeft: account.depth * Spacing.lg,
         opacity: account.depth > 0 ? 0.9 : 1,
       }}
     >
@@ -102,16 +104,30 @@ export function AccountCardBase({
         activeOpacity={Opacity.heavy}
         style={{ opacity: account.isArchived ? Opacity.medium : 1 }}
       >
-        <Box unsafe_backgroundRaw={account.accentColor} padding="lg">
+        <Box
+          unsafe_backgroundRaw={account.accountColor}
+          padding="lg"
+          style={{ position: 'relative', overflow: 'hidden' }}
+        >
           <Column gap="md">
             <Row align="center" justify="space-between">
               <Row gap="md" align="center" flex={1}>
-                <IvyIcon
-                  name={account.icon}
-                  label={account.name}
-                  color={account.textColor}
-                  size={Size.avatarSm}
-                />
+                <View
+                  style={[
+                    styles.categoryIconFrame,
+                    {
+                      borderColor: account.categoryColor,
+                      backgroundColor: withOpacity(account.categoryColor, Opacity.soft),
+                    },
+                  ]}
+                >
+                  <IvyIcon
+                    name={account.icon}
+                    label={account.name}
+                    color={account.textColor}
+                    size={Size.avatarSm}
+                  />
+                </View>
                 <Text
                   variant="base"
                   weight="bold"
@@ -134,7 +150,7 @@ export function AccountCardBase({
                     align="center"
                     gap="xs"
                   >
-                    <AppIcon name="shieldCheck" color={account.textColor} size={Size.iconXs} />
+                    <AppIcon name="shieldCheck" color={resolvedTextColor} size={Size.iconXs} />
                     <Text
                       weight="medium"
                       variant="xs"
@@ -155,10 +171,10 @@ export function AccountCardBase({
                         }}
                         style={{ padding: 4, marginRight: -4 }}
                       >
-                        <AppIcon name="chevronUp" color={account.textColor} size={Size.iconSm} />
+                        <AppIcon name="chevronUp" color={resolvedTextColor} size={Size.iconSm} />
                       </TouchableOpacity>
                     ) : (
-                      <IvyIcon name="hierarchy" color={account.textColor} size={Size.iconXs} />
+                      <IvyIcon name="hierarchy" color={resolvedTextColor} size={Size.iconXs} />
                     )}
                   </Box>
                 )}
@@ -219,5 +235,15 @@ export function AccountCardBase({
     </AppCard>
   );
 }
+
+const styles = StyleSheet.create({
+  categoryIconFrame: {
+    padding: Spacing.xs,
+    borderWidth: 2,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export const AccountCard = React.memo(AccountCardBase);

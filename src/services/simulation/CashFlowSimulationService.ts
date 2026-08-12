@@ -426,6 +426,7 @@ export class CashFlowSimulationService {
         return {
           accountId,
           accountName: acc?.name || 'Unknown',
+          color: acc?.color || undefined,
           startingBalance: startingBal,
           safeToSpend: Math.max(0, Math.min(startingBal, minBefore)),
           shortfall: minBefore < 0 ? Math.abs(minBefore) : 0,

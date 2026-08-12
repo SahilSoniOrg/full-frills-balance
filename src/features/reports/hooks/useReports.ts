@@ -18,6 +18,8 @@ import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
 
+import { colorizeBreakdownItems } from './reportBreakdownColors';
+
 export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   const { theme } = useTheme();
   const targetCurrency = currencyCode;
@@ -110,20 +112,17 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
 
   const expenses = useMemo(() => {
     const colors = REPORT_CHART_COLOR_KEYS.expense.map(colorKey => theme[colorKey]);
-    return data.expenseBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
+    return colorizeBreakdownItems(data.expenseBreakdown, colors);
   }, [data.expenseBreakdown, theme]);
 
   const expenseCategories = useMemo(() => {
     const colors = REPORT_CHART_COLOR_KEYS.expense.map(colorKey => theme[colorKey]);
-    return data.expenseCategoryBreakdown.map((b, i) => ({
-      ...b,
-      color: colors[i % colors.length],
-    }));
+    return colorizeBreakdownItems(data.expenseCategoryBreakdown, colors);
   }, [data.expenseCategoryBreakdown, theme]);
 
   const incomeCategories = useMemo(() => {
     const colors = REPORT_CHART_COLOR_KEYS.income.map(colorKey => theme[colorKey]);
-    return data.incomeCategoryBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
+    return colorizeBreakdownItems(data.incomeCategoryBreakdown, colors);
   }, [data.incomeCategoryBreakdown, theme]);
 
   const updateFilter = useCallback(

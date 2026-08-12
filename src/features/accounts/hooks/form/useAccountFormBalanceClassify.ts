@@ -65,6 +65,7 @@ export function useAccountFormBalanceClassify(args: {
     accountSubtype,
     selectedCurrency,
     selectedIcon,
+    selectedColor,
     initialBalance,
     parentAccountId,
   } = core;
@@ -79,6 +80,7 @@ export function useAccountFormBalanceClassify(args: {
         accountSubtype,
         selectedCurrency,
         selectedIcon,
+        selectedColor,
         initialBalance,
         parentAccountId,
         metadataValues,
@@ -128,6 +130,7 @@ export function useAccountFormBalanceClassify(args: {
       accountSubtype,
       selectedCurrency,
       selectedIcon,
+      selectedColor,
       initialBalance,
       parentAccountId,
       metadataValues,

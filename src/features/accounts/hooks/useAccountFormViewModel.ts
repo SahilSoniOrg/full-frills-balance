@@ -57,8 +57,10 @@ export interface AccountFormViewModel {
   setSelectedCurrency: (value: string) => void;
   selectedIcon: IconName;
   setSelectedIcon: (value: IconName) => void;
-  isIconPickerVisible: boolean;
-  setIsIconPickerVisible: (value: boolean) => void;
+  selectedColor: string;
+  setSelectedColor: (value: string) => void;
+  isAppearancePickerVisible: boolean;
+  setIsAppearancePickerVisible: (value: boolean) => void;
   initialBalance: string;
   onInitialBalanceChange: (value: string) => void;
   onBack: () => void;
@@ -271,8 +273,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setSelectedCurrency: core.setSelectedCurrency,
     selectedIcon: core.selectedIcon,
     setSelectedIcon: core.setSelectedIcon,
-    isIconPickerVisible: pickers.isIconPickerVisible,
-    setIsIconPickerVisible: pickers.setIsIconPickerVisible,
+    selectedColor: core.selectedColor,
+    setSelectedColor: core.setSelectedColor,
+    isAppearancePickerVisible: pickers.isAppearancePickerVisible,
+    setIsAppearancePickerVisible: pickers.setIsAppearancePickerVisible,
     initialBalance: core.initialBalance,
     onInitialBalanceChange: core.onInitialBalanceChange,
     onBack: () => AppNavigation.back(),

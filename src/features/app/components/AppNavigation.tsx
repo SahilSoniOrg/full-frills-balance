@@ -38,16 +38,7 @@ export function NavigationStack() {
           gestureDirection: 'vertical',
         }}
       />
-      <Stack.Screen
-        name="account-creation"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
+      <Stack.Screen name="account-creation" options={{ headerShown: false }} />
       <Stack.Screen
         name="onboarding"
         options={{

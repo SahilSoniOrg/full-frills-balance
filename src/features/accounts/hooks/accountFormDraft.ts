@@ -20,12 +20,14 @@ export interface AccountFormCoreDraft {
   accountSubtype: AccountSubtype;
   selectedCurrency: string;
   selectedIcon: IconName;
+  /** Custom accent hex ('' = auto, derived from account type). */
+  selectedColor: string;
   initialBalance: string;
   parentAccountId: AccountId;
 }
 
 export interface AccountFormPickersDraft {
-  isIconPickerVisible: boolean;
+  isAppearancePickerVisible: boolean;
   isParentPickerVisible: boolean;
   isPayFromPickerVisible: boolean;
 }
@@ -72,7 +74,7 @@ export type AccountFormDraftAction =
   | { type: 'SET_LOCAL_ERROR'; error: string | null };
 
 const EMPTY_PICKERS: AccountFormPickersDraft = {
-  isIconPickerVisible: false,
+  isAppearancePickerVisible: false,
   isParentPickerVisible: false,
   isPayFromPickerVisible: false,
 };
@@ -89,6 +91,7 @@ export function coreFromDefaults(defaults: AccountFormDefaults): AccountFormCore
     accountSubtype: defaults.accountSubtype,
     selectedCurrency: defaults.selectedCurrency,
     selectedIcon: defaults.selectedIcon,
+    selectedColor: defaults.selectedColor,
     initialBalance: '',
     parentAccountId: defaults.parentAccountId,
   };
@@ -179,6 +182,7 @@ export function accountFormDraftReducer(
           accountSubtype: action.core.accountSubtype,
           selectedCurrency: action.core.selectedCurrency,
           selectedIcon: action.core.selectedIcon,
+          selectedColor: action.core.selectedColor,
           parentAccountId: action.core.parentAccountId,
         }),
         core: action.core,

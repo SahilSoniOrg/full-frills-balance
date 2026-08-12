@@ -25,6 +25,7 @@ export interface AccountPersistenceInput {
   currencyCode: string;
   description?: string;
   icon?: string;
+  color?: string;
   orderNum?: number;
   reconciledAt?: Date;
   parentAccountId?: AccountId;
@@ -82,6 +83,7 @@ export class AccountRepository {
         'order_num',
         'currency_code',
         'icon',
+        'color',
         'description',
         'parent_account_id',
         'deleted_at',
@@ -116,6 +118,7 @@ export class AccountRepository {
         'order_num',
         'currency_code',
         'icon',
+        'color',
         'description',
         'parent_account_id',
         'deleted_at',
@@ -143,6 +146,7 @@ export class AccountRepository {
         'currency_code',
         'order_num',
         'icon',
+        'color',
         'description',
         'parent_account_id',
         'deleted_at',
@@ -159,6 +163,7 @@ export class AccountRepository {
         'account_subtype',
         'currency_code',
         'icon',
+        'color',
         'description',
         'parent_account_id',
         'deleted_at',
@@ -390,6 +395,7 @@ export class AccountRepository {
         'account_type',
         'account_subtype',
         'currency_code',
+        'color',
         'reconciled_at',
         'parent_account_id',
         'deleted_at',

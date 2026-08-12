@@ -87,6 +87,7 @@ export interface PlainAccount {
   parentAccountId?: AccountId;
   description?: string;
   icon?: IconName;
+  color?: string;
   orderNum?: number;
   reconciledAt?: number;
   createdAt?: number;

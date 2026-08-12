@@ -903,5 +903,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 31,
+      steps: [
+        addColumns({
+          table: 'accounts',
+          columns: [{ name: 'color', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

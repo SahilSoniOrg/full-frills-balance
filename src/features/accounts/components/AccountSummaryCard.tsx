@@ -5,6 +5,7 @@ import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/deta
 import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 export type AccountSummaryCardProps = AccountSummaryCardModel & {
@@ -18,7 +19,7 @@ export function AccountSummaryCard({
   accountType,
   accountSubtypeLabel,
   accountTypeVariant,
-  accountTypeColorKey,
+  accountColor,
   isParent,
   isDeleted,
   isArchived,
@@ -32,18 +33,32 @@ export function AccountSummaryCard({
   onAuditPress,
 }: AccountSummaryCardProps) {
   const { theme } = useTheme();
+  const { accentColor, categoryColor } = resolveAccountAppearance(
+    { accountType, color: accountColor },
+    theme,
+  );
 
   return (
     <AppCard elevation="sm" style={[styles.accountInfoCard, isArchived && styles.archivedCard]}>
       <View style={styles.accountHeader}>
-        <IvyIcon
-          name={accountIcon || undefined}
-          fallbackIcon={getAccountFallbackIcon(accountType)}
-          label={accountName}
-          color={theme[accountTypeColorKey as keyof typeof theme] as string}
-          size={Size.avatarMd}
-          shape={isParent ? 'square' : 'circle'}
-        />
+        <View
+          style={[
+            styles.accountIconFrame,
+            {
+              borderColor: categoryColor,
+              borderRadius: isParent ? Shape.radius.sm : Shape.radius.full,
+            },
+          ]}
+        >
+          <IvyIcon
+            name={accountIcon || undefined}
+            fallbackIcon={getAccountFallbackIcon(accountType)}
+            label={accountName}
+            color={accentColor}
+            size={Size.avatarMd}
+            shape={isParent ? 'square' : 'circle'}
+          />
+        </View>
         <View style={styles.titleInfo}>
           <AppText variant="title">{accountName}</AppText>
           <View style={styles.badgesRow}>
@@ -123,6 +138,10 @@ export function AccountSummaryCard({
 }
 
 const styles = StyleSheet.create({
+  accountIconFrame: {
+    borderWidth: 2,
+    padding: Spacing.xs / 2,
+  },
   accountInfoCard: {
     marginBottom: Spacing.lg,
     padding: Spacing.lg,

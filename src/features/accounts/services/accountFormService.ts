@@ -33,6 +33,8 @@ export interface AccountFormDefaults {
   accountSubtype: AccountSubtype;
   selectedCurrency: string;
   selectedIcon: IconName;
+  /** Custom accent hex ('' = auto, derived from account type). */
+  selectedColor: string;
   parentAccountId: AccountId;
 }
 
@@ -55,6 +57,7 @@ export function resolveAccountFormDefaults(
         existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
       selectedCurrency: existingAccount.currencyCode,
       selectedIcon: resolveAccountIcon(existingAccount.accountType, existingAccount.icon),
+      selectedColor: existingAccount.color || '',
       parentAccountId: existingAccount.parentAccountId || EMPTY_ACCOUNT_ID,
     };
   }
@@ -65,6 +68,7 @@ export function resolveAccountFormDefaults(
     accountSubtype: getDefaultSubtypeForType(initialType),
     selectedCurrency: route.previewCurrency || workplaceCurrency,
     selectedIcon: resolveAccountIcon(initialType, (route.previewIcon as IconName) || null),
+    selectedColor: '',
     parentAccountId: EMPTY_ACCOUNT_ID,
   };
 }
@@ -80,6 +84,7 @@ export interface AccountSaveFormInput {
   accountSubtype: AccountSubtype;
   selectedCurrency: string;
   selectedIcon: IconName;
+  selectedColor: string;
   initialBalance: string;
   parentAccountId: AccountId;
   metadataValues: AccountMetadataValues;
@@ -93,6 +98,7 @@ export interface AccountSavePayload {
   accountSubtype: AccountSubtype;
   selectedCurrency: string;
   selectedIcon: IconName;
+  selectedColor: string;
   initialBalance: string;
   balanceData?: { balance: number };
   parentAccountId?: AccountId;
@@ -130,6 +136,7 @@ export function buildAccountSavePayload(
       accountSubtype: input.accountSubtype,
       selectedCurrency: input.selectedCurrency,
       selectedIcon: input.selectedIcon,
+      selectedColor: input.selectedColor,
       initialBalance: isCurrentCategory ? '' : input.initialBalance,
       balanceData: isCurrentCategory ? undefined : input.balanceData || undefined,
       parentAccountId: input.parentAccountId || undefined,

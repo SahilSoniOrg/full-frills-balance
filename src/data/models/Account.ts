@@ -129,6 +129,7 @@ export default class Account extends BaseScopedModel<AccountId> {
   @field('parent_account_id') parentAccountId?: AccountId;
   @field('description') description?: string;
   @field('icon') icon?: IconName;
+  @field('color') color?: string;
   @field('order_num') orderNum?: number;
   @date('reconciled_at') reconciledAt?: Date;
 

@@ -8,12 +8,16 @@ export function getReportChartPalettes(theme: Theme) {
   };
 }
 
-export function colorizeBreakdownItems<T extends object>(
-  items: T[],
-  palette: string[],
+/**
+ * Assigns chart breakdown colors to items. Preserves explicit item `color`
+ * (e.g., custom per-account accent) when present, otherwise falls back to sequential palette colors.
+ */
+export function colorizeBreakdownItems<T extends { color?: string }>(
+  items: readonly T[],
+  palette: readonly string[],
 ): (T & { color: string })[] {
   return items.map((item, index) => ({
     ...item,
-    color: palette[index % palette.length],
+    color: item.color || palette[index % palette.length],
   }));
 }

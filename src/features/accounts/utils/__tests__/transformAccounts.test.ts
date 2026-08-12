@@ -10,7 +10,7 @@ describe('transformAccountsToSections', () => {
     showAccountMonthlyStats: false,
     isLoading: false,
     collapsedSections: new Set<string>(),
-    theme: { background: '#ffffff' } as Theme,
+    theme: { background: '#ffffff', asset: '#10B981', text: '#1F2937' } as Theme,
     totalAssets: 1000,
     totalLiabilities: 0,
     totalEquity: 0,
@@ -42,6 +42,22 @@ describe('transformAccountsToSections', () => {
     const sectionsV2 = transformAccountsToSections([accountV2], defaultOptions);
     const cardV2 = sectionsV2[0].data[0];
     expect(cardV2.icon).toBe('creditCard');
+  });
+
+  it('keeps category color when a custom account color is present', () => {
+    const account: PlainAccount = {
+      id: 'acc_colors' as AccountId,
+      name: 'Blue Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      color: '#F87171',
+    };
+
+    const card = transformAccountsToSections([account], defaultOptions)[0].data[0];
+
+    expect(card.accountColor).toBe('#F87171');
+    expect(card.categoryColor).toBeDefined();
+    expect(card.categoryColor).not.toBe(card.accountColor);
   });
 
   it('updates the view model name when the account name changes', () => {

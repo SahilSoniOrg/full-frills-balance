@@ -15,8 +15,14 @@ const ArchiveVisibilityScopeContext = createContext<ArchiveVisibilityValue | nul
  * Ephemeral archive visibility for a screen or modal.
  * Resets when the provider unmounts (screen leave / modal close).
  */
-export function ArchiveVisibilityScopeProvider({ children }: { children: React.ReactNode }) {
-  const [showArchived, setShowArchived] = useState(false);
+export function ArchiveVisibilityScopeProvider({
+  children,
+  initialShowArchived = false,
+}: {
+  children: React.ReactNode;
+  initialShowArchived?: boolean;
+}) {
+  const [showArchived, setShowArchived] = useState(initialShowArchived);
   const value = useMemo(() => ({ showArchived, setShowArchived }), [showArchived]);
 
   return (

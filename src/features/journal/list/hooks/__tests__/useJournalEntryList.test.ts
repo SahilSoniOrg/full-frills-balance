@@ -80,7 +80,7 @@ jest.mock('@/src/utils/money', () => ({
 const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
   {
     id: 'j1' as JournalId,
-    journalDate: new Date(2024, 2, 20, 10).getTime(),
+    journalDate: new Date(2024, 2, 20, 15).getTime(),
     displayType: JournalDisplayType.INCOME,
     totalAmount: 100,
     currencyCode: 'USD',
@@ -91,7 +91,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
   },
   {
     id: 'j2' as JournalId,
-    journalDate: new Date(2024, 2, 20, 15).getTime(),
+    journalDate: new Date(2024, 2, 20, 10).getTime(),
     displayType: JournalDisplayType.EXPENSE,
     totalAmount: 20,
     currencyCode: 'USD',

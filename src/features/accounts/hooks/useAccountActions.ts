@@ -30,6 +30,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
       accountSubtype?: AccountSubtype;
       currencyCode: string;
       icon?: IconName;
+      color?: string;
       initialBalance?: number;
       parentAccountId?: AccountId | null;
       metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
@@ -49,6 +50,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
         currencyCode?: string;
         description?: string;
         icon?: IconName;
+        color?: string;
         parentAccountId?: AccountId | null;
         metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
       },

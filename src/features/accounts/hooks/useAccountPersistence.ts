@@ -53,6 +53,7 @@ export function useAccountPersistence(
           accountType: payload.accountType,
           accountSubtype: payload.accountSubtype,
           icon: payload.selectedIcon,
+          color: payload.selectedColor,
           parentAccountId: payload.parentAccountId,
           metadata: payload.metadata,
         });
@@ -82,6 +83,7 @@ export function useAccountPersistence(
           currencyCode: payload.selectedCurrency,
           initialBalance: payload.initialBalance ? parseFloat(payload.initialBalance) : 0,
           icon: payload.selectedIcon,
+          color: payload.selectedColor || undefined,
           parentAccountId: payload.parentAccountId,
           metadata: payload.metadata,
         });

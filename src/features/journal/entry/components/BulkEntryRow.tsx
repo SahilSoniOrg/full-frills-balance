@@ -5,6 +5,8 @@ import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/co
 import { useTheme } from '@/src/hooks/use-theme';
 import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
 import Account from '@/src/data/models/Account';
+import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
+import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
 import dayjs from 'dayjs';
 
 interface BulkEntryRowProps {
@@ -48,33 +50,17 @@ export const BulkEntryRow = React.memo(
     }, [row.journalDate]);
 
     const getAccountStyles = useCallback(
-      (account: Account | undefined, hasConflictError: boolean) => {
+      (account: Account | undefined, hasConflictError: boolean): AccountChipColors => {
         if (hasConflictError) {
           return {
             bg: 'transparent',
             border: theme.error,
             text: theme.textTertiary,
             icon: theme.textTertiary,
+            marker: theme.error,
           };
         }
-        if (!account) {
-          return {
-            bg: 'transparent',
-            border: theme.border,
-            text: theme.textTertiary,
-            icon: theme.textTertiary,
-          };
-        }
-
-        const colorKey = account.accountType.toLowerCase() as keyof typeof theme;
-        const baseColor = theme[colorKey] || theme.primary;
-
-        return {
-          bg: 'transparent',
-          border: baseColor as string,
-          text: baseColor as string,
-          icon: baseColor as string,
-        };
+        return resolveAccountChipColors(account, theme);
       },
       [theme],
     );
@@ -181,14 +167,14 @@ export const BulkEntryRow = React.memo(
             }}
             testID={`bulk-source-${row.id}`}
           >
-            <AppText
+            <AccountInlineLabel
+              account={sourceAccount}
+              placeholder="Source"
               variant="caption"
               weight="semibold"
-              numberOfLines={1}
-              style={[styles.accountLabel, { color: sourceStyles.text }]}
-            >
-              {sourceAccount ? sourceAccount.name : 'Source'}
-            </AppText>
+              textColor={sourceStyles.text}
+              colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
+            />
             <AppIcon name="chevronDown" size={12} color={sourceStyles.icon} />
           </TouchableOpacity>
 
@@ -210,14 +196,14 @@ export const BulkEntryRow = React.memo(
             }}
             testID={`bulk-destination-${row.id}`}
           >
-            <AppText
+            <AccountInlineLabel
+              account={destAccount}
+              placeholder="Destination"
               variant="caption"
               weight="semibold"
-              numberOfLines={1}
-              style={[styles.accountLabel, { color: destStyles.text }]}
-            >
-              {destAccount ? destAccount.name : 'Destination'}
-            </AppText>
+              textColor={destStyles.text}
+              colors={{ accentColor: destStyles.text, categoryColor: destStyles.marker }}
+            />
             <AppIcon name="chevronDown" size={12} color={theme.textTertiary} />
           </TouchableOpacity>
         </View>
@@ -352,6 +338,15 @@ const styles = StyleSheet.create({
   accountLabel: {
     flex: 1,
     fontSize: Typography.sizes.sm,
+  },
+  accountLabelWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  archivedIndicatorSpacer: {
+    marginRight: Spacing.xs,
   },
   arrowContainer: {
     width: 24,

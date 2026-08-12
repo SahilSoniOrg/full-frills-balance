@@ -9,6 +9,7 @@ type ArchivedAccountIndicatorProps = {
 
 export function ArchivedAccountIndicator({ emphasized = false }: ArchivedAccountIndicatorProps) {
   const { theme } = useTheme();
+
   return (
     <View style={styles.container}>
       <AppIcon

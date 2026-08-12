@@ -3,9 +3,9 @@ import { Theme } from '@/src/constants/design-tokens';
 import Account from '@/src/data/models/Account';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import {
-  getAccountAccentColor,
   getAccountSections,
   getSectionColor,
+  resolveAccountAppearance,
 } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
@@ -16,7 +16,10 @@ export interface AccountCardViewModel {
   name: string;
   icon: IconName;
   accountType?: AccountType;
-  accentColor: string;
+  /** Semantic account category color (asset/liability/etc.). */
+  categoryColor: string;
+  /** User-selected account identity color, falling back to categoryColor. */
+  accountColor: string;
   textColor: string;
   /** Raw balance — presentational layer formats using screen privacy flag. */
   balance: number;
@@ -69,7 +72,7 @@ interface TransformOptions {
 // 1. Static Metadata Cache (Name, Icons, Colors - invariant for account lifecycle)
 const STATIC_META_CACHE = new Map<
   string,
-  { accentColor: string; textColor: string; contrastColor: string }
+  { categoryColor: string; accountColor: string; textColor: string; contrastColor: string }
 >();
 
 // 2. State-Based ViewModel Cache (Financial values, UI states)
@@ -137,7 +140,7 @@ export function transformAccountsToSections(
       const children = accountsByParent.get(account.id) || [];
 
       // CACHE KEY: account identity + record version + rendered fields + volatile UI flags.
-      // updatedAt covers WatermelonDB model mutations; name+icon cover PlainAccount snapshots
+      // updatedAt covers WatermelonDB model mutations; name+icon+color cover PlainAccount snapshots
       // that may reconstruct fields without bumping updatedAt.
       // Privacy is intentionally excluded — leaves format from a screen-level flag.
       const updatedAtTs =
@@ -157,7 +160,7 @@ export function transformAccountsToSections(
           : account.archivedAt
             ? new Date(account.archivedAt).getTime()
             : 0;
-      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
+      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${account.color ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
@@ -181,13 +184,18 @@ export function transformAccountsToSections(
       }
 
       // LAYER 1: Static Metadata (Colors/Icons)
-      const metaKey = `${account.id}:${account.accountType}:${account.name}:${theme.background}`;
+      const metaKey = `${account.id}:${account.accountType}:${account.color ?? ''}:${theme.background}`;
       let meta = STATIC_META_CACHE.get(metaKey);
 
       if (!meta) {
-        const accentColor = getAccountAccentColor(account.accountType, theme);
-        const textColor = onContrast(accentColor);
-        meta = { accentColor, textColor, contrastColor: textColor };
+        const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(
+          account,
+          theme,
+        );
+        // Account cards use accountColor as their solid surface, so derive
+        // readable foreground text from that surface.
+        const textColor = onContrast(accountColor);
+        meta = { categoryColor, accountColor, textColor, contrastColor: textColor };
         STATIC_META_CACHE.set(metaKey, meta);
       }
 
@@ -198,7 +206,8 @@ export function transformAccountsToSections(
         name: account.name,
         icon: getAccountIcon(account),
         accountType: account.accountType,
-        accentColor: meta.accentColor,
+        categoryColor: meta.categoryColor,
+        accountColor: meta.accountColor,
         textColor: meta.textColor,
         balance,
         monthlyIncome,

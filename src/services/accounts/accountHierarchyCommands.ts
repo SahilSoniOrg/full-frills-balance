@@ -17,6 +17,7 @@ import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { isValidHexColor } from '@/src/utils/accountCategory';
 
 async function isDescendant(
   potentialParentId: AccountId,
@@ -126,6 +127,9 @@ export async function prepareAccountFieldUpdate(
   if (updates.currencyCode !== undefined) updatePayload.currencyCode = updates.currencyCode;
   if (updates.description !== undefined) updatePayload.description = updates.description;
   if (updates.icon !== undefined) updatePayload.icon = updates.icon;
+  if (updates.color !== undefined) {
+    updatePayload.color = updates.color && isValidHexColor(updates.color) ? updates.color : '';
+  }
   if (updates.orderNum !== undefined) updatePayload.orderNum = updates.orderNum;
 
   if (updates.parentAccountId !== undefined) {

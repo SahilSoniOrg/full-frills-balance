@@ -3,7 +3,7 @@ import Account from '@/src/data/models/Account';
 import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
-import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
+import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface SubAccountViewModel {
@@ -12,7 +12,8 @@ export interface SubAccountViewModel {
   icon: IconName;
   balanceAmount: number;
   currencyCode: string;
-  color: string;
+  categoryColor: string;
+  accountColor: string;
   level: number;
   isGroup: boolean;
 }
@@ -71,7 +72,8 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
   const subAccounts = useMemo(() => {
     return descendants.map(({ account: child, level }) => {
       const subBalance = subBalances.get(child.id);
-      const color = theme[getAccountTypeColorKey(child.accountType)];
+      const categoryColor = getAccountAccentColor(child.accountType, theme);
+      const accountColor = resolveAccountAccentColor(child, theme);
       const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
       const currencyCode = subBalance?.currencyCode || child.currencyCode || workplaceCurrency;
       return {
@@ -80,7 +82,8 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
         icon: getAccountIcon(child),
         balanceAmount: subBalance?.balance ?? 0,
         currencyCode,
-        color,
+        categoryColor,
+        accountColor,
         level,
         isGroup,
       };

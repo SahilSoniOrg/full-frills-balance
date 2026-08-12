@@ -138,6 +138,12 @@ export const Opacity = {
   solid: 1,
 } as const;
 
+export const BorderWidth = {
+  thin: 1,
+  medium: 2,
+  focus: 2.5,
+} as const;
+
 // === SIZE SCALE ===
 // For consistent sizing across components
 export const Size = {
@@ -174,6 +180,8 @@ export const Size = {
   avatarMd: 48,
   avatarLg: 64,
   avatarXl: 100,
+
+  appearancePreviewHeight: 86,
 
   // Touch targets (minimum 44pt for accessibility)
   touchTarget: 44,

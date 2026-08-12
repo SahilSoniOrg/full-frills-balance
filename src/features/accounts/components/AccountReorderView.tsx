@@ -1,3 +1,4 @@
+import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
@@ -9,6 +10,7 @@ import {
 } from '@/src/features/accounts/utils/getAccountIcon';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { resolveAccountAccentColor } from '@/src/utils/accountCategory';
 
 export function AccountReorderView({
   theme,
@@ -56,14 +58,12 @@ export function AccountReorderView({
                       <AppIcon
                         name={getAccountIcon(account)}
                         fallbackIcon={getAccountFallbackIcon(account.accountType)}
-                        color={theme.primary}
+                        color={resolveAccountAccentColor(account, theme)}
                       />
                     </View>
 
                     <View style={styles.accountInfo}>
-                      <AppText variant="body" weight="semibold" numberOfLines={1}>
-                        {account.name}
-                      </AppText>
+                      <AccountInlineLabel account={account} weight="semibold" />
                       <AppText variant="caption" color="secondary">
                         {account.accountType} • {account.currencyCode}
                       </AppText>

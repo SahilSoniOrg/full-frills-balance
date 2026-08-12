@@ -13,6 +13,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountId } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { useLocalSearchParams } from 'expo-router';
 import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -60,10 +61,10 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   const modeFilteredAccounts = useMemo(() => {
-    if (filterMode === 'categories') {
-      return accounts.filter(a => a.accountType === 'INCOME' || a.accountType === 'EXPENSE');
-    }
-    return accounts.filter(a => a.accountType !== 'INCOME' && a.accountType !== 'EXPENSE');
+    const isCategoryMode = filterMode === 'categories';
+    return accounts.filter(a =>
+      isCategoryMode ? !isBalanceSheetAccount(a.accountType) : isBalanceSheetAccount(a.accountType),
+    );
   }, [accounts, filterMode]);
 
   const { visibleAccounts: filteredAccounts } = useArchiveScopedAccounts(modeFilteredAccounts);
@@ -117,22 +118,23 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     [filteredAccounts, selectedAccountId],
   );
 
-  const addChildParent = useMemo(
-    () => filteredAccounts.find(account => account.id === addChildParentId),
-    [filteredAccounts, addChildParentId],
-  );
-
   const moveDescendantIds = useMemo(() => {
     return collectDescendantIds(accountsByParent, selectedAccountId);
   }, [accountsByParent, selectedAccountId]);
 
-  const addChildDescendantIds = useMemo(() => {
-    return collectDescendantIds(accountsByParent, addChildParentId);
-  }, [accountsByParent, addChildParentId]);
-
   const addChildCandidates = useMemo(() => {
-    return getAddChildCandidates(filteredAccounts, addChildParent, addChildDescendantIds);
-  }, [filteredAccounts, addChildParent, addChildDescendantIds]);
+    // Keep archived candidates in the source list so the picker can expose
+    // its archive toggle and render archived rows with the archive indicator.
+    // The picker applies the current archive visibility scope itself.
+    const isCategoryMode = filterMode === 'categories';
+    const allModeAccounts = accounts.filter(a =>
+      isCategoryMode ? !isBalanceSheetAccount(a.accountType) : isBalanceSheetAccount(a.accountType),
+    );
+    const allAccountsByParent = groupAccountsByParent(allModeAccounts);
+    const allDescendantIds = collectDescendantIds(allAccountsByParent, addChildParentId);
+    const allParent = allModeAccounts.find(account => account.id === addChildParentId);
+    return getAddChildCandidates(allModeAccounts, allParent, allDescendantIds);
+  }, [accounts, filterMode, addChildParentId]);
 
   const parentCandidates = useMemo(() => {
     return getParentCandidates(
@@ -209,7 +211,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
 
   const onCreateParent = useCallback(() => {
     if (filterMode === 'categories') {
-      AppNavigation.toCategoryCreation();
+      AppNavigation.toCategoryCreation('EXPENSE');
     } else {
       AppNavigation.toAccountCreation();
     }

@@ -38,6 +38,8 @@ export interface AccountDetailsData {
   accountTypeVariant: ComponentVariant;
   accountIcon: IconName | null;
   accountTypeColorKey: string;
+  /** Custom per-account color (hex, '' = auto/derive from type). */
+  accountColor: string;
   isDeleted: boolean;
   isArchived: boolean;
   balanceCurrency: string;
@@ -217,6 +219,7 @@ export function useAccountDetailsData(): AccountDetailsData {
     accountTypeVariant,
     accountIcon: account?.icon || null,
     accountTypeColorKey,
+    accountColor: account?.color || '',
     isDeleted,
     isArchived,
     balanceCurrency,

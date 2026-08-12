@@ -546,6 +546,8 @@ export const UI_STRINGS = {
       clear: 'Clear',
       payDebtFrom: 'Pay Debt From',
       selectPaymentAccount: 'Select Payment Account',
+      colorPickerTitle: 'Account Color',
+      colorAuto: 'Auto (from type)',
       currencyLockedTooltip:
         'Currency cannot be changed once an account is created to maintain data integrity.',
     },

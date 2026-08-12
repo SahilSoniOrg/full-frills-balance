@@ -14,6 +14,8 @@ export interface ReportAccount {
   currencyCode?: string;
   accountType: AccountType;
   accountSubtype?: string;
+  /** Custom per-account accent color (hex, '' = auto). */
+  color?: string;
 }
 
 export interface ReportingDeltaInput {

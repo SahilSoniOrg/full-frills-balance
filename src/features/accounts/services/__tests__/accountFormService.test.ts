@@ -97,6 +97,7 @@ describe('accountFormService', () => {
         accountSubtype: AccountSubtype.CASH,
         selectedCurrency: 'USD',
         selectedIcon: 'wallet',
+        selectedColor: '',
         initialBalance: 'not-a-number',
         parentAccountId: EMPTY_ACCOUNT_ID,
         metadataValues: baseMetadata,
@@ -113,6 +114,7 @@ describe('accountFormService', () => {
         accountSubtype: AccountSubtype.CASH,
         selectedCurrency: 'USD',
         selectedIcon: 'wallet',
+        selectedColor: '#7DD3A8',
         initialBalance: '100',
         parentAccountId: EMPTY_ACCOUNT_ID,
         metadataValues: baseMetadata,
@@ -124,6 +126,7 @@ describe('accountFormService', () => {
       if (!result.ok) return;
       expect(result.payload.initialBalance).toBe('100');
       expect(result.payload.balanceData).toEqual({ balance: 50 });
+      expect(result.payload.selectedColor).toBe('#7DD3A8');
       expect(result.payload.metadata).toBeUndefined();
     });
 
@@ -134,6 +137,7 @@ describe('accountFormService', () => {
         accountSubtype: AccountSubtype.FOOD,
         selectedCurrency: 'USD',
         selectedIcon: 'tag',
+        selectedColor: '',
         initialBalance: '99',
         parentAccountId: EMPTY_ACCOUNT_ID,
         metadataValues: baseMetadata,

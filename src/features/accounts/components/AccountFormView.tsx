@@ -1,17 +1,18 @@
 import { AccountPickerModal } from '@/src/features/accounts';
 import { AccountFormEditModals } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
+import { AppearancePickerModal } from '@/src/components/common/AppearancePickerModal';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { IconPickerModal } from '@/src/components/common/IconPickerModal';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppIcon, AppText, IconName, isValidIconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
+import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { AccountType } from '@/src/types/domain';
 
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
@@ -43,8 +44,10 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     setSelectedCurrency,
     selectedIcon,
     setSelectedIcon,
-    isIconPickerVisible,
-    setIsIconPickerVisible,
+    isAppearancePickerVisible,
+    setIsAppearancePickerVisible,
+    selectedColor,
+    setSelectedColor,
     initialBalance,
     onInitialBalanceChange,
     formError,
@@ -70,6 +73,11 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     setPayFromAccountId,
   } = metadata;
 
+  const { accentColor: effectiveAccentColor } = useAccountColors({
+    accountType,
+    color: selectedColor,
+  });
+
   return (
     <EntityFormScreen
       chrome={chrome}
@@ -82,23 +90,27 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     >
       <FormHeroSection
         prefix={
-          <TouchableOpacity
-            onPress={() => setIsIconPickerVisible(true)}
-            style={[
-              styles.iconButton,
-              {
-                backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                borderColor: withOpacity(theme.primary, Opacity.medium),
-              },
-            ]}
-          >
-            <IvyIcon
-              name={selectedIcon as IconName}
-              fallbackIcon={getAccountFallbackIcon(accountType)}
-              color={theme.primary}
-              size={Size.iconLg}
-            />
-          </TouchableOpacity>
+          <Inline align="center">
+            <TouchableOpacity
+              onPress={() => setIsAppearancePickerVisible(true)}
+              accessibilityLabel="Customize account appearance"
+              style={[
+                styles.iconButton,
+                {
+                  backgroundColor: withOpacity(effectiveAccentColor, Opacity.soft),
+                  borderColor: effectiveAccentColor,
+                  borderWidth: 3,
+                },
+              ]}
+            >
+              <IvyIcon
+                name={selectedIcon as IconName}
+                fallbackIcon={getAccountFallbackIcon(accountType)}
+                color={effectiveAccentColor}
+                size={Size.iconLg}
+              />
+            </TouchableOpacity>
+          </Inline>
         }
         nameAlign="left"
         nameLabel={
@@ -248,14 +260,15 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         />
       </Stack>
 
-      <IconPickerModal
-        visible={isIconPickerVisible}
-        onClose={() => setIsIconPickerVisible(false)}
-        onSelect={icon => {
-          setSelectedIcon(icon);
-          setIsIconPickerVisible(false);
-        }}
+      <AppearancePickerModal
+        key={isAppearancePickerVisible ? 'appearance-open' : 'appearance-closed'}
+        visible={isAppearancePickerVisible}
+        onClose={() => setIsAppearancePickerVisible(false)}
+        onIconSelect={setSelectedIcon}
+        onColorSelect={setSelectedColor}
         selectedIcon={isValidIconName(selectedIcon) ? (selectedIcon as IconName) : 'wallet'}
+        selectedColor={selectedColor}
+        accountType={accountType}
       />
       <AccountPickerModal
         visible={isParentPickerVisible}

@@ -15,6 +15,7 @@ const defaults = {
   accountSubtype: 'CASH' as any,
   selectedCurrency: 'USD',
   selectedIcon: 'wallet' as const,
+  selectedColor: '',
   parentAccountId: '' as AccountId,
 };
 
@@ -166,11 +167,27 @@ describe('accountFormDraft', () => {
         accountSubtype: 'CASH',
         currencyCode: 'EUR',
         icon: 'wallet',
+        color: '#F87171',
         parentAccountId: '',
       } as any;
       const core = mapAccountToCoreDraft(account, { pathname: '/account-creation' }, 'USD');
       expect(core.accountName).toBe('Cash');
       expect(core.selectedCurrency).toBe('EUR');
+      expect(core.selectedColor).toBe('#F87171');
+    });
+
+    it('maps missing color to auto (empty string)', () => {
+      const account = {
+        id: 'a2',
+        name: 'Wallet',
+        accountType: AccountType.ASSET,
+        accountSubtype: 'CASH',
+        currencyCode: 'USD',
+        icon: 'wallet',
+        parentAccountId: '',
+      } as any;
+      const core = mapAccountToCoreDraft(account, { pathname: '/account-creation' }, 'USD');
+      expect(core.selectedColor).toBe('');
     });
   });
 });

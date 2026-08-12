@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 30,
+  version: 31,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -13,6 +13,8 @@ export const schema = appSchema({
         { name: 'parent_account_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'description', type: 'string', isOptional: true },
         { name: 'icon', type: 'string', isOptional: true },
+        // Custom per-account accent color (hex, e.g. '#7DD3A8'). Empty/null = derive from type.
+        { name: 'color', type: 'string', isOptional: true },
         { name: 'order_num', type: 'number', isOptional: true, isIndexed: true },
         { name: 'reconciled_at', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },

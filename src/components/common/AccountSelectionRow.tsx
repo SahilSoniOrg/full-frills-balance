@@ -1,9 +1,9 @@
-import { AppText, ListRow } from '@/src/components/core';
+import { ListRow } from '@/src/components/core';
+import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import Account from '@/src/data/models/Account';
 import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
-import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
-import { withOpacity } from '@/src/utils/color-math';
+import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
 import { useMemo } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
@@ -37,66 +37,56 @@ export function AccountSelectionRow({
   }, [accounts]);
 
   const subtitle = useMemo(() => {
-    // Handle Multiple Selection
+    // Resolve selected accounts — either from multi or single selection
+    const resolvedAccounts: Account[] = [];
+
     if (selectedAccountIds && selectedAccountIds.length > 0) {
-      const selectedAccounts = selectedAccountIds
-        .map(id => accountMap.get(id))
-        .filter((acc): acc is Account => !!acc);
-
-      if (selectedAccounts.length === 0) return placeholder;
-      if (selectedAccounts.length === 1) {
-        const acc = selectedAccounts[0];
-        const colorKey = getAccountTypeColorKey(acc.accountType);
-        const color = theme[colorKey] || theme.text;
-        return (
-          <AppText variant="body" weight="medium" style={{ color }}>
-            {acc.name}
-          </AppText>
-        );
-      }
-
-      return (
-        <Box flexDirection="row" flexWrap="wrap" gap="xs" marginTop="xs">
-          {selectedAccounts.map(acc => {
-            const colorKey = getAccountTypeColorKey(acc.accountType);
-            const color = theme[colorKey] || theme.text;
-            return (
-              <Box
-                key={acc.id}
-                style={{
-                  backgroundColor: withOpacity(color as string, 0.1),
-                  borderColor: withOpacity(color as string, 0.2),
-                }}
-                paddingHorizontal="sm"
-                paddingVertical={2}
-                borderRadius="r2"
-                borderWidth={1}
-              >
-                <AppText variant="caption" style={{ color }}>
-                  {acc.name}
-                </AppText>
-              </Box>
-            );
-          })}
-        </Box>
-      );
-    }
-
-    // Handle Single Selection
-    if (selectedAccountId) {
+      selectedAccountIds.forEach(id => {
+        const acc = accountMap.get(id);
+        if (acc) resolvedAccounts.push(acc);
+      });
+    } else if (selectedAccountId) {
       const acc = accountMap.get(selectedAccountId);
-      if (acc) {
-        const colorKey = getAccountTypeColorKey(acc.accountType);
-        const color = theme[colorKey] || theme.text;
-        return (
-          <AppText variant="body" weight="medium" style={{ color }}>
-            {acc.name}
-          </AppText>
-        );
-      }
+      if (acc) resolvedAccounts.push(acc);
     }
 
-    return placeholder;
+    if (resolvedAccounts.length === 0) return placeholder;
+
+    // Single account — inline label
+    if (resolvedAccounts.length === 1) {
+      return <AccountInlineLabel account={resolvedAccounts[0]} />;
+    }
+
+    // Multiple accounts — chip badges
+    return (
+      <Box flexDirection="row" flexWrap="wrap" gap="xs" marginTop="xs">
+        {resolvedAccounts.map(acc => {
+          const chipColors = resolveAccountChipColors(acc, theme);
+          return (
+            <Box
+              key={acc.id}
+              style={{
+                backgroundColor: chipColors.bg,
+                borderColor: chipColors.border,
+              }}
+              flexDirection="row"
+              alignItems="center"
+              paddingHorizontal="sm"
+              paddingVertical={2}
+              borderRadius="r2"
+              borderWidth={1}
+            >
+              <AccountInlineLabel
+                account={acc}
+                variant="caption"
+                pillSize="sm"
+                textColor={chipColors.text}
+              />
+            </Box>
+          );
+        })}
+      </Box>
+    );
   }, [accountMap, placeholder, selectedAccountId, selectedAccountIds, theme]);
 
   return (

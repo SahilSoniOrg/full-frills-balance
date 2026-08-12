@@ -1,5 +1,5 @@
 import { Href, router } from 'expo-router';
-import { AccountId, BudgetId, PlannedPaymentId } from '../types/domain';
+import { AccountId, AccountType, BudgetId, PlannedPaymentId } from '../types/domain';
 
 /**
  * Centralized navigation utility to handle routing across the application.
@@ -257,12 +257,11 @@ export const AppNavigation = {
   /**
    * Navigate to account creation route with optional preselected type.
    */
-  toAccountCreation: (type?: string) => {
-    if (type) {
-      router.push(`/account-creation?type=${type}` as Href);
-    } else {
-      router.push('/account-creation' as Href);
-    }
+  toAccountCreation: (type?: AccountType | string) => {
+    router.push({
+      pathname: '/account-creation',
+      params: type ? { type } : undefined,
+    } as Href);
   },
 
   /**
@@ -292,12 +291,11 @@ export const AppNavigation = {
   /**
    * Navigate to category creation route with optional preselected type.
    */
-  toCategoryCreation: (type?: string) => {
-    if (type) {
-      router.push(`/category-creation?type=${type}` as Href);
-    } else {
-      router.push('/category-creation' as Href);
-    }
+  toCategoryCreation: (type?: AccountType | string) => {
+    router.push({
+      pathname: '/category-creation',
+      params: type ? { type } : undefined,
+    } as Href);
   },
 
   /**
