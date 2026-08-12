@@ -47,8 +47,6 @@ interface ExportSummary {
   auditLogs: number;
   budgets: number;
   budgetScopes: number;
-  currencies: number;
-  exchangeRates: number;
   accountMetadata: number;
   plannedPayments: number;
   journalMetadata: number;
@@ -274,8 +272,6 @@ class ExportService {
         journalMetadata,
         transactionAutoPostRules,
         transactionInboxRecords,
-        currencies,
-        exchangeRates,
         balanceSnapshotsRaw,
       ] = fetchResults;
 
@@ -329,8 +325,6 @@ class ExportService {
           ['journalMetadata', journalMetadataActive],
           ['transactionAutoPostRules', transactionAutoPostRules],
           ['transactionInboxRecords', transactionInboxRecords],
-          ['currencies', currencies],
-          ['exchange_rates', exchangeRates],
           ['balance_snapshots', balanceSnapshots],
         ],
         (message, serializationProgress) =>
@@ -350,8 +344,6 @@ class ExportService {
         plannedPayments: plannedPayments.length,
         journalMetadata: journalMetadataActive.length,
         transactionAutoPostRules: transactionAutoPostRules.length,
-        currencies: currencies.length,
-        exchangeRates: exchangeRates.length,
         balanceSnapshots: balanceSnapshots.length,
       });
 
@@ -403,8 +395,6 @@ class ExportService {
       auditLogs,
       budgets,
       budgetScopes,
-      currencies,
-      exchangeRates,
       accountMetadata,
       plannedPayments,
       journalMetadata,
@@ -418,8 +408,6 @@ class ExportService {
       getCount('audit_logs'),
       getCount('budgets'),
       getCount('budget_scopes'),
-      getCount('currencies'),
-      getCount('exchange_rates'),
       getCount('account_metadata'),
       getCount('planned_payments'),
       getCount('journal_metadata'),
@@ -435,8 +423,6 @@ class ExportService {
       auditLogs,
       budgets,
       budgetScopes,
-      currencies,
-      exchangeRates,
       accountMetadata,
       plannedPayments,
       journalMetadata,

@@ -239,8 +239,8 @@ describe('ExportService', () => {
       const backupJson = zipCall[1]['backup.json'] as string;
       const parsed = JSON.parse(backupJson);
       expect(parsed.schemaVersion).toBe(schema.version);
-      expect(parsed.currencies).toEqual(expect.any(Array));
-      expect(parsed.exchange_rates).toEqual(expect.any(Array));
+      expect(parsed.currencies).toBeUndefined();
+      expect(parsed.exchange_rates).toBeUndefined();
       expect(parsed.balance_snapshots).toEqual(expect.any(Array));
     });
 
@@ -372,8 +372,6 @@ describe('ExportService', () => {
         ['audit_logs', createCollectionMock([], 3)],
         ['budgets', createCollectionMock([], 4)],
         ['budget_scopes', createCollectionMock([], 6)],
-        ['currencies', createCollectionMock([], 2)],
-        ['exchange_rates', createCollectionMock([], 7)],
         ['account_metadata', createCollectionMock([], 8)],
         ['balance_snapshots', createCollectionMock([], 9)],
       ]);
@@ -388,8 +386,6 @@ describe('ExportService', () => {
       expect(summary.auditLogs).toBe(3);
       expect(summary.budgets).toBe(4);
       expect(summary.budgetScopes).toBe(6);
-      expect(summary.currencies).toBe(2);
-      expect(summary.exchangeRates).toBe(7);
       expect(summary.accountMetadata).toBe(8);
       expect(summary.balanceSnapshots).toBe(9);
     });

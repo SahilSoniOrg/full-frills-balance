@@ -8,7 +8,7 @@ export type WorkplaceDataTableTask = {
 };
 
 /** Included in JSON export but not keyed by workplace_id (see schema.ts). */
-export const WORKPLACE_EXPORT_GLOBAL_TABLE_NAMES = ['currencies', 'exchange_rates'] as const;
+export const WORKPLACE_EXPORT_GLOBAL_TABLE_NAMES = [] as const;
 
 export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Accounts', table: 'accounts' },
@@ -22,8 +22,6 @@ export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Journal Metadata', table: 'journal_metadata' },
   { name: 'Rules', table: 'transaction_auto_post_rules' },
   { name: 'Inbox', table: 'transaction_inbox_records' },
-  { name: 'Currencies', table: 'currencies' },
-  { name: 'Exchange Rates', table: 'exchange_rates' },
   { name: 'Balance Snapshots', table: 'balance_snapshots' },
 ] as const;
 
