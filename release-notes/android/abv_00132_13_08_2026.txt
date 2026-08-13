@@ -1,0 +1,17 @@
+New release 🚀
+
+Personalize your accounts with custom color accents, plus faster and lighter data exports.
+
+---
+
+Also in this update:
+
+* Custom account colors: Choose custom color accents for your accounts to identify them quickly across lists, entry forms, and reports.
+* Unified appearance picker: A simplified picker makes selecting account colors and icons straightforward.
+* Lighter backups: Data exports are now smaller and faster by stripping cached exchange rate tables while keeping all personal financial history intact.
+
+---
+
+Big difference you’ll notice:
+
+* Account cards, category badges, and journal entry pickers highlight each account with its assigned custom color.
