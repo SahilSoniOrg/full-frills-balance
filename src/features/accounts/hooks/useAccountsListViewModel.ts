@@ -1,40 +1,72 @@
-import { getPerfNow } from '@/src/utils/dateHelpers';
-import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
-  filterAccountSectionsForTab,
   filterAccountsBySearch,
   filterAccountsForListTab,
+  filterAccountSectionsForTab,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
-import { useAccountsListActions } from '@/src/features/accounts/hooks/useAccountsListActions';
+import { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
+import { useAccountsBulkOperations } from '@/src/features/accounts/hooks/useAccountsBulkOperations';
 import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
+import { useAccountsListActions } from '@/src/features/accounts/hooks/useAccountsListActions';
 import { useAccountsListUiState } from '@/src/features/accounts/hooks/useAccountsListUiState';
 import {
   AccountCardViewModel,
+  AccountSectionViewModel,
   transformAccountsToSections,
 } from '@/src/features/accounts/utils/transformAccounts';
-import { useTheme } from '@/src/hooks/use-theme';
+import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useSelection } from '@/src/hooks/useSelection';
+import { useTheme } from '@/src/hooks/use-theme';
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import { IconName } from '@/src/components/core';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
+import { getPerfNow } from '@/src/utils/dateHelpers';
 import { logger } from '@/src/utils/logger';
-import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
-export interface AccountSectionViewModel {
-  title: string;
-  count: number;
-  total: number;
-  totalColor: string;
-  isCollapsed: boolean;
-  data: AccountCardViewModel[];
-}
+export type { AccountSectionViewModel };
+
+export type AccountsListActiveModal =
+  | { type: 'actionSheet'; account: AccountCardViewModel }
+  | { type: 'appearance'; account: AccountCardViewModel }
+  | { type: 'bulkRename' }
+  | { type: 'bulkAppearance'; mode: 'icon' | 'color' }
+  | { type: 'bulkHierarchy' }
+  | null;
 
 export interface AccountsListViewModel {
   sections: AccountSectionViewModel[];
   onToggleSection: (title: string) => void;
+  onToggleSectionSelect: (accountIds: AccountId[]) => void;
   onAccountPress: (accountId: AccountId) => void;
+  onAccountLongPress: (account: AccountCardViewModel) => void;
+  onAccountActionPress: (account: AccountCardViewModel) => void;
+  selectedAccountIds: Set<AccountId>;
+  selectedAccountsList: AccountCardViewModel[];
+  isSelectionModeActive: boolean;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+  onClearSelection: () => void;
+  selectionActions: SelectionAction[];
+  totalSelectableAccounts: number;
+  activeModal: AccountsListActiveModal;
+  onCloseModal: () => void;
+  onBulkRenameSave: (namesByAccountId: Record<AccountId, string>) => Promise<void>;
+  onBulkHierarchyMoveAssign: (parentId: AccountId | null) => Promise<void>;
+  onBulkAppearanceSelect: (updates: { icon?: IconName; color?: string }) => Promise<void>;
+  bulkParentCandidates: HierarchyCandidateAccount[];
+  onViewDetails: (account: AccountCardViewModel) => void;
+  onEditAccount: (account: AccountCardViewModel) => void;
+  onRecolorAccount: (account: AccountCardViewModel) => void;
+  onReconcileAccount: (account: AccountCardViewModel) => void;
+  onToggleArchiveAccount: (account: AccountCardViewModel) => void;
+  onDeleteAccount: (account: AccountCardViewModel) => void;
+  onAppearanceUpdate: (updates: { icon?: IconName; color?: string }) => Promise<void>;
   onCollapseAccount: (accountId: AccountId) => void;
   onCreateAccount: () => void;
   onReorderPress: () => void;
@@ -54,29 +86,24 @@ export interface AccountsListViewModel {
   currencyCode: string;
   activeTab: 'accounts' | 'categories';
   setActiveTab: (tab: 'accounts' | 'categories') => void;
-  // Search
   searchQuery: string;
   isSearching: boolean;
   onSearchChange: (query: string) => void;
   setIsSearching: (isSearching: boolean) => void;
-  /** Tab-scoped accounts for the show-archived header control. */
   accountsForArchiveToggle: { archivedAt?: Date | number | null }[];
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
   const { theme, onContrast } = useTheme();
-  const { workplaceId } = useWorkplace();
-
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
-  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+
+  const [activeModal, setActiveModal] = useState<AccountsListActiveModal>(null);
+  const selection = useSelection<AccountId>();
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
     mountTimeRef.current = getPerfNow();
-  }, []);
-
-  // Log UI Mount
-  useEffect(() => {
     logger.info('[AccountsList] Screen Mounted');
   }, []);
 
@@ -119,7 +146,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const hasData = !!(dashboardData.accounts.length > 0 || dashboardData.balances.length > 0);
 
-  // Log Data Arrival
   useEffect(() => {
     if (hasData) {
       const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
@@ -168,14 +194,24 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       dataVersion: version,
     });
 
-  const { onAccountPress, onCreateAccount, onReorderPress, onManageHierarchy } =
-    useAccountsListActions({
-      accounts,
-      balancesByAccountId,
-      expandedAccountIds,
-      setExpandedAccountIds,
-      activeTab,
-    });
+  const { applyArchiveChanges } = useAccountActions(workplaceId);
+
+  const onCloseModal = useCallback(() => {
+    setActiveModal(null);
+  }, []);
+
+  const actions = useAccountsListActions({
+    workplaceId,
+    accounts,
+    balancesByAccountId,
+    expandedAccountIds,
+    setExpandedAccountIds,
+    activeTab,
+    activeModal,
+    openModal: setActiveModal,
+    closeModal: onCloseModal,
+    applyArchiveChanges,
+  });
 
   const filteredAccounts = useMemo(
     () => filterAccountsBySearch(accounts, searchQuery),
@@ -184,8 +220,38 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const { visibleAccounts: displayAccounts } = useArchiveScopedAccounts(filteredAccounts);
 
-  // M-5 fix: Memoize transform options to prevent redundant re-transformations
-  // when unrelated UI state (like filters or privacy mode) haven't changed.
+  const allSelectableAccountIds = useMemo(() => {
+    const tabAccounts = filterAccountsForListTab(displayAccounts, activeTab);
+    return tabAccounts.map(a => a.id as AccountId);
+  }, [displayAccounts, activeTab]);
+
+  const onAccountPress = useCallback(
+    (accountId: AccountId) => {
+      if (selection.isSelectionModeActive) {
+        selection.toggleSelection(accountId);
+        return;
+      }
+      actions.onAccountPress(accountId);
+    },
+    [selection, actions],
+  );
+
+  const onAccountLongPress = useCallback(
+    (account: AccountCardViewModel) => {
+      selection.onLongPressItem(account.id as AccountId);
+    },
+    [selection],
+  );
+
+  const onAccountActionPress = useCallback(
+    (account: AccountCardViewModel) => {
+      if (!selection.isSelectionModeActive) {
+        setActiveModal({ type: 'actionSheet', account });
+      }
+    },
+    [selection.isSelectionModeActive],
+  );
+
   const transformOptions = useMemo(
     () => ({
       balancesByAccountId,
@@ -225,14 +291,57 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     return filterAccountSectionsForTab(rawSections, activeTab);
   }, [displayAccounts, transformOptions, activeTab]);
 
+  const bulk = useAccountsBulkOperations({
+    workplaceId,
+    accounts,
+    sections,
+    selection,
+    isBulkHierarchyOpen: activeModal?.type === 'bulkHierarchy',
+    openModal: setActiveModal,
+    closeModal: onCloseModal,
+    applyArchiveChanges,
+  });
+
+  const handleTabChange = useCallback(
+    (tab: 'accounts' | 'categories') => {
+      selection.exitSelectionMode();
+      setActiveTab(tab);
+    },
+    [selection, setActiveTab],
+  );
+
   return {
     sections,
     onToggleSection,
+    onToggleSectionSelect: selection.toggleMultiple,
     onAccountPress,
+    onAccountLongPress,
+    onAccountActionPress,
+    selectedAccountIds: selection.selectedIds,
+    selectedAccountsList: bulk.selectedAccountsList,
+    isSelectionModeActive: selection.isSelectionModeActive,
+    onSelectAll: () => selection.selectAll(allSelectableAccountIds),
+    onDeselectAll: selection.clearItems,
+    onClearSelection: selection.exitSelectionMode,
+    selectionActions: bulk.selectionActions,
+    totalSelectableAccounts: allSelectableAccountIds.length,
+    activeModal,
+    onCloseModal,
+    onBulkRenameSave: bulk.handleBulkRenameSave,
+    onBulkHierarchyMoveAssign: bulk.handleBulkHierarchyMoveAssign,
+    onBulkAppearanceSelect: bulk.handleBulkAppearanceSelect,
+    bulkParentCandidates: bulk.bulkParentCandidates,
+    onViewDetails: actions.onViewDetails,
+    onEditAccount: actions.onEditAccount,
+    onRecolorAccount: actions.onRecolorAccount,
+    onReconcileAccount: actions.onReconcileAccount,
+    onToggleArchiveAccount: actions.onToggleArchiveAccount,
+    onDeleteAccount: actions.onDeleteAccount,
+    onAppearanceUpdate: actions.onAppearanceUpdate,
     onCollapseAccount,
-    onCreateAccount,
-    onReorderPress,
-    onManageHierarchy,
+    onCreateAccount: actions.onCreateAccount,
+    onReorderPress: actions.onReorderPress,
+    onManageHierarchy: actions.onManageHierarchy,
     isLoading,
     version,
     netWorth,
@@ -251,7 +360,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onSearchChange: setSearchQuery,
     setIsSearching,
     activeTab,
-    setActiveTab,
+    setActiveTab: handleTabChange,
     accountsForArchiveToggle,
   };
 }

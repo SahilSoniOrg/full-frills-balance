@@ -33,7 +33,7 @@ export function ModalSurface({
   accessibilityCloseLabel = 'Close dialog',
   fixedHeight = true,
   scrollable = true,
-  useNativeModal = true,
+  useNativeModal = process.env.NODE_ENV !== 'test',
   position = 'center',
   animationType,
 }: ModalSurfaceProps) {

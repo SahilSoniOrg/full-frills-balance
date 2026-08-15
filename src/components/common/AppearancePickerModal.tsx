@@ -2,6 +2,7 @@ import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { AppButton, AppIcon, AppText, IconName, IvyIcon } from '@/src/components/core';
 import {
   ACCOUNT_COLOR_PALETTE,
+  ACCOUNT_ICON_PALETTE,
   AppConfig,
   BorderWidth,
   Opacity,
@@ -18,119 +19,181 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type AppearanceTab = 'icon' | 'color';
 
-const ICONS: IconName[] = [
-  'tag',
-  'trendingUp',
-  'shoppingCart',
-  'coffee',
-  'bus',
-  'film',
-  'shoppingBag',
-  'document',
-  'home',
-  'wallet',
-  'bank',
-  'safe',
-  'creditCard',
-  'briefcase',
-  'circle',
-  'copy',
-  'receipt',
-  'calendar',
-  'search',
-  'edit',
-  'delete',
-  'arrowUp',
-  'arrowDown',
-  'swapHorizontal',
-];
-
-export const AppearancePickerModal: React.FC<{
+export interface AppearancePickerModalProps {
   visible: boolean;
   onClose: () => void;
-  onIconSelect: (icon: IconName) => void;
-  onColorSelect: (color: string) => void;
-  selectedIcon: IconName;
-  selectedColor: string;
-  accountType: AccountType;
-}> = ({
+  onIconSelect?: (icon: IconName) => void | Promise<void>;
+  onColorSelect?: (color: string) => void | Promise<void>;
+  onSave?: (updates: { icon: IconName; color: string }) => void | Promise<void>;
+  selectedIcon?: IconName;
+  selectedColor?: string;
+  accountType?: AccountType;
+  mode?: 'both' | 'icon' | 'color';
+  title?: string;
+}
+
+export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
   visible,
   onClose,
   onIconSelect,
   onColorSelect,
-  selectedIcon,
-  selectedColor,
-  accountType,
+  onSave,
+  selectedIcon = 'wallet',
+  selectedColor = '',
+  accountType = AccountType.ASSET,
+  mode = 'both',
+  title,
 }) => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<AppearanceTab>('icon');
+  const [activeTab, setActiveTab] = useState<AppearanceTab>(mode === 'color' ? 'color' : 'icon');
+  const [draftIcon, setDraftIcon] = useState<IconName>(selectedIcon);
+  const [draftColor, setDraftColor] = useState<string>(selectedColor);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const effectiveIcon = mode === 'both' ? draftIcon : selectedIcon;
+  const effectiveColor = mode === 'both' ? draftColor : selectedColor;
+
   const { accentColor: accountColor, categoryColor } = useAccountColors({
     accountType,
-    color: selectedColor,
+    color: effectiveColor,
   });
+
+  const handleIconPress = async (icon: IconName) => {
+    if (mode === 'both') {
+      setDraftIcon(icon);
+      onIconSelect?.(icon);
+    } else {
+      if (isSaving) return;
+      setIsSaving(true);
+      try {
+        await onIconSelect?.(icon);
+        onClose();
+      } catch {
+        // The caller owns error presentation. Keep open for retry.
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleColorPress = async (color: string) => {
+    if (mode === 'both') {
+      setDraftColor(color);
+      onColorSelect?.(color);
+    } else {
+      if (isSaving) return;
+      setIsSaving(true);
+      try {
+        await onColorSelect?.(color);
+        onClose();
+      } catch {
+        // The caller owns error presentation. Keep open for retry.
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleDone = async () => {
+    if (mode === 'both' && onSave) {
+      if (isSaving) return;
+      setIsSaving(true);
+      try {
+        await onSave({ icon: draftIcon, color: draftColor });
+        onClose();
+      } catch {
+        // The caller owns error presentation. Keep open for retry.
+        setIsSaving(false);
+      }
+    } else {
+      onClose();
+    }
+  };
+
+  const resolvedTitle =
+    title ||
+    (mode === 'icon'
+      ? AppConfig.strings.onboarding.iconPickerTitle
+      : mode === 'color'
+        ? 'Select Color'
+        : 'Account appearance');
+
+  const showPreview = mode === 'both';
+  const showTabs = mode === 'both';
+  const currentTab = mode === 'both' ? activeTab : mode;
 
   return (
     <ModalSurface
       visible={visible}
-      title="Account appearance"
+      title={resolvedTitle}
       onClose={onClose}
       maxHeightPercent={82}
       fixedHeight={false}
       animationType="fade"
-      accessibilityCloseLabel="Close account appearance"
+      accessibilityCloseLabel="Close appearance picker"
       footer={
-        <AppButton variant="primary" onPress={onClose} style={styles.doneButton}>
-          Done
+        <AppButton
+          variant={mode === 'both' ? 'primary' : 'ghost'}
+          onPress={() => void handleDone()}
+          style={styles.doneButton}
+        >
+          {mode === 'both' ? 'Done' : AppConfig.strings.common.cancel}
         </AppButton>
       }
     >
-      <View
-        style={[
-          styles.preview,
-          {
-            backgroundColor: withOpacity(accountColor, Opacity.soft),
-            borderColor: categoryColor,
-          },
-        ]}
-      >
-        <View style={[styles.previewHalo, { borderColor: categoryColor }]}>
-          <IvyIcon
-            name={selectedIcon}
-            label="Selected account icon"
-            color={accountColor}
-            size={Size.avatarSm}
-          />
+      {showPreview && (
+        <View
+          style={[
+            styles.preview,
+            {
+              backgroundColor: withOpacity(accountColor, Opacity.soft),
+              borderColor: categoryColor,
+            },
+          ]}
+        >
+          <View style={[styles.previewHalo, { borderColor: categoryColor }]}>
+            <IvyIcon
+              name={effectiveIcon}
+              label="Selected account icon"
+              color={accountColor}
+              size={Size.avatarSm}
+            />
+          </View>
+          <AppText variant="caption" color="secondary">
+            Preview
+          </AppText>
         </View>
-        <AppText variant="caption" color="secondary">
-          Preview
-        </AppText>
-      </View>
+      )}
 
-      <View style={[styles.tabs, { borderBottomColor: theme.border }]}>
-        {(['icon', 'color'] as AppearanceTab[]).map(tab => {
-          const selected = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={[styles.tab, selected && { borderBottomColor: theme.primary }]}
-            >
-              <AppText variant="body" weight="semibold" color={selected ? 'primary' : 'secondary'}>
-                {tab === 'icon' ? 'Icon' : 'Color'}
-              </AppText>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {showTabs && (
+        <View style={[styles.tabs, { borderBottomColor: theme.border }]}>
+          {(['icon', 'color'] as AppearanceTab[]).map(tab => {
+            const selected = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tab, selected && { borderBottomColor: theme.primary }]}
+              >
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  color={selected ? 'primary' : 'secondary'}
+                >
+                  {tab === 'icon' ? 'Icon' : 'Color'}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
-      {activeTab === 'icon' ? (
+      {currentTab === 'icon' ? (
         <View style={styles.iconGrid}>
-          {ICONS.map(icon => {
-            const selected = selectedIcon === icon;
+          {ACCOUNT_ICON_PALETTE.map(icon => {
+            const selected = effectiveIcon === icon;
             return (
               <TouchableOpacity
                 key={icon}
-                onPress={() => onIconSelect(icon)}
+                onPress={() => void handleIconPress(icon)}
                 style={[
                   styles.iconButton,
                   {
@@ -139,6 +202,8 @@ export const AppearancePickerModal: React.FC<{
                       : 'transparent',
                   },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Select icon ${icon}`}
               >
                 <AppIcon
                   name={icon}
@@ -152,34 +217,37 @@ export const AppearancePickerModal: React.FC<{
       ) : (
         <View>
           <TouchableOpacity
-            onPress={() => onColorSelect('')}
+            onPress={() => void handleColorPress('')}
             style={styles.autoColorRow}
             accessibilityLabel="Auto color (from account type)"
+            accessibilityRole="button"
           >
             <View
               style={[
                 styles.swatch,
                 styles.autoSwatch,
                 { borderColor: theme.border },
-                !selectedColor && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
+                !effectiveColor && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
               ]}
             />
-            <AppText variant="body" color={!selectedColor ? 'primary' : 'secondary'}>
+            <AppText variant="body" color={!effectiveColor ? 'primary' : 'secondary'}>
               {AppConfig.strings.accounts.form.colorAuto}
             </AppText>
           </TouchableOpacity>
           <View style={styles.colorGrid}>
             {ACCOUNT_COLOR_PALETTE.map(color => {
-              const selected = selectedColor.toUpperCase() === color.toUpperCase();
+              const selected = effectiveColor.toUpperCase() === color.toUpperCase();
               return (
                 <TouchableOpacity
                   key={color}
-                  onPress={() => onColorSelect(color)}
+                  onPress={() => void handleColorPress(color)}
                   style={[
                     styles.swatch,
                     { backgroundColor: color },
                     selected && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Color ${color}`}
                 >
                   {selected && <AppIcon name="check" size={Size.iconSm} color={theme.background} />}
                 </TouchableOpacity>

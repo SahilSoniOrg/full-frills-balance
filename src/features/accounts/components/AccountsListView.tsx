@@ -4,8 +4,10 @@ import { NetWorthCard } from '@/src/components/common/NetWorthCard';
 import { AppIcon, AppTabs, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
+import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
+import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
   AccountCardViewModel,
@@ -22,7 +24,31 @@ const TAB_OPTIONS = [
 export function AccountsListView({
   sections,
   onToggleSection,
+  onToggleSectionSelect,
   onAccountPress,
+  onAccountLongPress,
+  onAccountActionPress,
+  selectedAccountIds,
+  selectedAccountsList,
+  isSelectionModeActive,
+  onSelectAll,
+  onDeselectAll,
+  onClearSelection,
+  selectionActions,
+  totalSelectableAccounts,
+  activeModal,
+  onCloseModal,
+  onBulkRenameSave,
+  onBulkHierarchyMoveAssign,
+  onBulkAppearanceSelect,
+  bulkParentCandidates,
+  onViewDetails,
+  onEditAccount,
+  onRecolorAccount,
+  onReconcileAccount,
+  onToggleArchiveAccount,
+  onDeleteAccount,
+  onAppearanceUpdate,
   onCollapseAccount,
   isLoading,
   netWorth,
@@ -55,43 +81,101 @@ export function AccountsListView({
               section.type === 'EXPENSE' ||
               section.type === 'LIABILITY' ||
               section.type === 'EQUITY';
+
+            const sectionAccountIds = section.data.map(item => item.id);
+            const isAllSectionSelected =
+              sectionAccountIds.length > 0 &&
+              sectionAccountIds.every(id => selectedAccountIds.has(id));
+            const isSomeSectionSelected =
+              !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
+
             return (
-              <TouchableOpacity
-                onPress={() => onToggleSection(section.title)}
-                activeOpacity={Opacity.heavy}
+              <View
                 style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
-                accessibilityLabel={`${section.title} section, ${section.count} accounts`}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: !section.isCollapsed }}
               >
-                <View style={[styles.summaryRow, { flex: 1 }]}>
-                  <View style={styles.flexRowGapSm}>
-                    <AppText variant="subheading" weight="bold" color="secondary">
-                      {section.title}
-                    </AppText>
-                    <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
-                      <AppText variant="caption" weight="bold" color="tertiary">
-                        {section.count}
+                <TouchableOpacity
+                  onPress={() => onToggleSection(section.title)}
+                  onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
+                  activeOpacity={Opacity.heavy}
+                  style={styles.sectionHeaderPressable}
+                  accessibilityLabel={`${section.title} section, ${section.count} accounts`}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: !section.isCollapsed }}
+                >
+                  <View style={[styles.summaryRow, { flex: 1 }]}>
+                    <View style={styles.flexRowGapSm}>
+                      <AppText variant="subheading" weight="bold" color="secondary">
+                        {section.title}
                       </AppText>
+                      <View
+                        style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}
+                      >
+                        <AppText variant="caption" weight="bold" color="tertiary">
+                          {section.count}
+                        </AppText>
+                      </View>
+                    </View>
+                    <View style={styles.flexRowGapMd}>
+                      <MoneyText
+                        amount={section.total}
+                        currencyCode={currencyCode}
+                        formatStyle="short"
+                        variant="body"
+                        weight="bold"
+                        style={{ color: section.totalColor }}
+                      />
+                      <AppIcon
+                        name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
+                        size={Size.iconSm}
+                        color={theme.textSecondary}
+                      />
                     </View>
                   </View>
-                  <View style={styles.flexRowGapMd}>
-                    <MoneyText
-                      amount={section.total}
-                      currencyCode={currencyCode}
-                      formatStyle="short"
-                      variant="body"
-                      weight="bold"
-                      style={{ color: section.totalColor }}
-                    />
-                    <AppIcon
-                      name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
-                      size={Size.iconSm}
-                      color={theme.textSecondary}
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+
+                {isSelectionModeActive && sectionAccountIds.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => onToggleSectionSelect(sectionAccountIds)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.sectionSelectButton}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isAllSectionSelected }}
+                    accessibilityLabel={`Select all ${section.title} accounts`}
+                    testID={`section-select-${section.title.toLowerCase()}`}
+                  >
+                    <View
+                      style={[
+                        styles.sectionSelectionIndicator,
+                        {
+                          borderColor:
+                            isAllSectionSelected || isSomeSectionSelected
+                              ? theme.primary
+                              : withOpacity(theme.textSecondary, Opacity.medium),
+                          backgroundColor: isAllSectionSelected
+                            ? theme.primary
+                            : isSomeSectionSelected
+                              ? withOpacity(theme.primary, Opacity.soft)
+                              : 'transparent',
+                        },
+                      ]}
+                    >
+                      {isAllSectionSelected && (
+                        <AppIcon name="check" size={12} color={theme.onPrimary} />
+                      )}
+                      {isSomeSectionSelected && (
+                        <View
+                          style={{
+                            width: 8,
+                            height: 2,
+                            backgroundColor: theme.primary,
+                            borderRadius: 1,
+                          }}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
             );
           }}
           renderItem={({
@@ -107,9 +191,13 @@ export function AccountsListView({
                 account={item}
                 isLoading={isLoading}
                 onPress={() => onAccountPress(item.id)}
+                onLongPress={() => onAccountLongPress(item)}
+                onActionPress={() => onAccountActionPress(item)}
                 onCollapse={() => onCollapseAccount(item.id)}
                 dividerColor="divider"
                 surfaceColor="surface"
+                isSelected={selectedAccountIds.has(item.id)}
+                isSelectionModeActive={isSelectionModeActive}
               />
             );
           }}
@@ -157,6 +245,34 @@ export function AccountsListView({
           contentContainerStyle={styles.listContainer}
           stickySectionHeadersEnabled={false}
         />
+
+        <SelectionActionBar
+          isVisible={isSelectionModeActive}
+          selectedCount={selectedAccountIds.size}
+          totalCount={totalSelectableAccounts}
+          onClear={onClearSelection}
+          onSelectAll={onSelectAll}
+          onDeselectAll={onDeselectAll}
+          actions={selectionActions}
+        />
+
+        <AccountsListModals
+          activeModal={activeModal}
+          onCloseModal={onCloseModal}
+          selectedAccountsList={selectedAccountsList}
+          selectedCount={selectedAccountIds.size}
+          bulkParentCandidates={bulkParentCandidates}
+          onBulkRenameSave={onBulkRenameSave}
+          onBulkHierarchyMoveAssign={onBulkHierarchyMoveAssign}
+          onBulkAppearanceSelect={onBulkAppearanceSelect}
+          onViewDetails={onViewDetails}
+          onEditAccount={onEditAccount}
+          onRecolorAccount={onRecolorAccount}
+          onReconcileAccount={onReconcileAccount}
+          onToggleArchiveAccount={onToggleArchiveAccount}
+          onDeleteAccount={onDeleteAccount}
+          onAppearanceUpdate={onAppearanceUpdate}
+        />
       </View>
     </ScreenWithChrome>
   );
@@ -197,6 +313,24 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  sectionHeaderPressable: {
+    flex: 1,
+  },
+  sectionSelectButton: {
+    paddingVertical: Spacing.xs,
+    paddingLeft: Spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionSelectionIndicator: {
+    width: 22,
+    height: 22,
+    borderRadius: Shape.radius.full,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: Spacing.sm,
   },
   countBadge: {
     paddingHorizontal: Spacing.xs,

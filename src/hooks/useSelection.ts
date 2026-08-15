@@ -13,6 +13,7 @@ export interface UseSelectionResult<T> {
   selectedIds: Set<T>;
   isSelectionModeActive: boolean;
   toggleSelection: (id: T) => void;
+  toggleMultiple: (ids: T[]) => void;
   onLongPressItem: (id: T) => void;
   selectAll: (allIds: T[]) => void;
   clearItems: () => void;
@@ -48,10 +49,41 @@ export function useSelection<T>(
     [options],
   );
 
+  const toggleMultiple = useCallback(
+    (ids: T[]) => {
+      if (ids.length === 0) return;
+      void Haptics.selectionAsync();
+
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        const allSelected = ids.every(id => prev.has(id));
+
+        if (allSelected) {
+          for (const id of ids) {
+            next.delete(id);
+          }
+        } else {
+          for (const id of ids) {
+            next.add(id);
+          }
+        }
+
+        options.onSelectionChange?.(next);
+        return next;
+      });
+
+      if (!isSelectionModeActive) {
+        setSelectionModeActive(true);
+        options.onEnterSelectionMode?.();
+      }
+    },
+    [isSelectionModeActive, options],
+  );
+
   const onLongPressItem = useCallback(
     (id: T) => {
       toggleSelection(id);
-      Haptics.selectionAsync();
+      void Haptics.selectionAsync();
 
       if (!isSelectionModeActive) {
         setSelectionModeActive(true);
@@ -106,6 +138,7 @@ export function useSelection<T>(
     selectedIds,
     isSelectionModeActive,
     toggleSelection,
+    toggleMultiple,
     onLongPressItem,
     selectAll,
     clearItems,

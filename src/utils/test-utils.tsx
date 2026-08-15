@@ -4,6 +4,7 @@ import React, { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UIContext } from '@/src/contexts/UIContext';
+import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 
 const mockUIContext: any = {
   hasCompletedOnboarding: true,
@@ -40,7 +41,9 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
         insets: { top: 0, left: 0, right: 0, bottom: 0 },
       }}
     >
-      <UIContext.Provider value={mockUIContext}>{children}</UIContext.Provider>
+      <PrivacyScopeProvider>
+        <UIContext.Provider value={mockUIContext}>{children}</UIContext.Provider>
+      </PrivacyScopeProvider>
     </SafeAreaProvider>
   );
 };

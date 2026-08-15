@@ -108,8 +108,8 @@ export const SelectionActionBar = ({
               },
             ]}
           >
-            <Inset horizontal="sm" vertical="xs">
-              <Inline align="center" justify="space-between" gap="sm">
+            <Inset horizontal="md" vertical="xs">
+              <Inline align="center" justify="space-between" gap="xs">
                 {/* LEFT: Exit & Count */}
                 <Inline align="center" gap="xs">
                   <IconButton
@@ -125,7 +125,7 @@ export const SelectionActionBar = ({
                     borderRadius="full"
                     paddingHorizontal="sm"
                     paddingVertical="xs"
-                    minWidth={28}
+                    minWidth={26}
                     alignItems="center"
                   >
                     <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
@@ -135,11 +135,12 @@ export const SelectionActionBar = ({
                 </Inline>
 
                 {/* RIGHT: Actions */}
-                <Inline align="center" gap="sm">
+                <Inline align="center" gap="xs">
                   <IconButton
                     name={selectIcon}
                     onPress={handleSelectToggle}
                     variant="clear"
+                    size={Size.iconSm}
                     disabled={totalCount === 0}
                     accessibilityLabel="Toggle all"
                   />
@@ -149,7 +150,7 @@ export const SelectionActionBar = ({
                       key={`${action.name}-${index}`}
                       name={action.name}
                       variant={action.variant ?? 'primary'}
-                      size={Size.iconMd}
+                      size={Size.iconSm}
                       iconColor={action.iconColor}
                       onPress={action.onPress}
                       disabled={action.disabled ?? selectedCount === 0}
@@ -170,16 +171,16 @@ export const SelectionActionBar = ({
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    left: Spacing.xl,
-    right: Spacing.xl,
+    left: Spacing.md,
+    right: Spacing.md,
     alignItems: 'center',
     zIndex: 1000,
   },
   container: {
-    borderRadius: Shape.radius.lg,
+    borderRadius: Shape.radius.full,
     borderWidth: 1,
     width: '100%',
-    maxWidth: 320, // Tighter bar
+    maxWidth: 420,
     ...Platform.select({
       ios: {
         shadowColor: '#000',

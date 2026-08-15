@@ -1,9 +1,11 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
+import { database } from '@/src/data/database/Database';
 import {
   AccountPersistenceInput,
   accountRepository,
 } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
@@ -78,6 +80,25 @@ export type AccountFieldUpdateContext = {
   };
   beforeMetadata: Record<string, any> | undefined;
 };
+
+function buildAccountUpdateAuditChanges(
+  context: AccountFieldUpdateContext,
+  after: Partial<CreateAccountData>,
+) {
+  return {
+    before: {
+      name: context.beforeState.name,
+      accountType: context.beforeState.accountType,
+      accountSubtype: context.beforeState.accountSubtype,
+      currencyCode: context.beforeState.currencyCode,
+      description: context.beforeState.description,
+      icon: context.account.icon,
+      parentAccountId: context.account.parentAccountId,
+      metadata: context.beforeMetadata,
+    },
+    after,
+  };
+}
 
 /**
  * Validate parent/type invariants and build the persistence payload.
@@ -197,25 +218,75 @@ export async function updateAccount(
       entityType: 'account',
       entityId: accountId,
       action: AuditAction.UPDATE,
-      changes: {
-        before: {
-          name: ctx.beforeState.name,
-          accountType: ctx.beforeState.accountType,
-          accountSubtype: ctx.beforeState.accountSubtype,
-          currencyCode: ctx.beforeState.currencyCode,
-          description: ctx.beforeState.description,
-          icon: ctx.account.icon,
-          parentAccountId: ctx.account.parentAccountId,
-          metadata: ctx.beforeMetadata,
-        },
-        after: updates,
-      },
+      changes: buildAccountUpdateAuditChanges(ctx, updates),
     },
     workplaceId,
   );
 
   emitAccountUpdateSideEffects(ctx, updates, workplaceId);
   return updatedAccount;
+}
+
+export interface AccountBulkUpdate {
+  accountId: AccountId;
+  updates: Partial<CreateAccountData>;
+}
+
+/**
+ * Validate and persist related account updates in one database batch.
+ * Callers use this for bulk UI actions so a failed validation cannot leave a
+ * selection half-updated.
+ */
+export async function updateAccounts(
+  workplaceId: WorkplaceId,
+  requests: AccountBulkUpdate[],
+): Promise<Account[]> {
+  if (requests.length === 0) return [];
+
+  const contexts = await Promise.all(
+    requests.map(request =>
+      prepareAccountFieldUpdate(workplaceId, request.accountId, request.updates),
+    ),
+  );
+  const planned = await Promise.all(
+    contexts.map(async context => ({
+      context,
+      update: await accountRepository.planUpdate(
+        context.account,
+        context.updatePayload,
+        workplaceId,
+      ),
+    })),
+  );
+
+  await database.write(async () => {
+    const operations = planned.flatMap(({ context, update }) =>
+      accountRepository.prepareUpdateBatchOps(
+        context.account,
+        update.normalizedUpdates,
+        update.existingMetadata,
+      ),
+    );
+    const auditLogs = planned.map(({ context, update }) =>
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: context.account.id,
+          action: AuditAction.UPDATE,
+          changes: buildAccountUpdateAuditChanges(context, update.normalizedUpdates),
+        },
+        workplaceId,
+      ),
+    );
+
+    await database.batch(...operations, ...auditLogs);
+  });
+
+  planned.forEach(({ context, update }) => {
+    emitAccountUpdateSideEffects(context, update.normalizedUpdates, workplaceId);
+  });
+
+  return planned.map(({ context }) => context.account);
 }
 
 /**

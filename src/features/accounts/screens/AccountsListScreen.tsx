@@ -25,20 +25,22 @@ function AccountsScreen() {
           accountsForArchiveToggle={vm.accountsForArchiveToggle}
         />
       ),
-      fab: vm.isSearching
-        ? undefined
-        : {
-            onPress: vm.onCreateAccount,
-            label: vm.activeTab === 'categories' ? 'New Category' : 'New Account',
-            placement: 'end',
-            accessibilityLabel:
-              vm.activeTab === 'categories' ? 'Create a new category' : 'Create a new account',
-          },
+      fab:
+        vm.isSearching || vm.isSelectionModeActive
+          ? undefined
+          : {
+              onPress: vm.onCreateAccount,
+              label: vm.activeTab === 'categories' ? 'New Category' : 'New Account',
+              placement: 'end',
+              accessibilityLabel:
+                vm.activeTab === 'categories' ? 'Create a new category' : 'Create a new account',
+            },
     }),
     [
       vm.activeTab,
       vm.accountsForArchiveToggle,
       vm.isSearching,
+      vm.isSelectionModeActive,
       vm.onCreateAccount,
       vm.onManageHierarchy,
       vm.onReorderPress,

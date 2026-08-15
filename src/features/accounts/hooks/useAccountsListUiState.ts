@@ -23,7 +23,11 @@ export function useAccountsListUiState() {
   const onCollapseAccount = useCallback((accountId: AccountId) => {
     setExpandedAccountIds(previous => {
       const next = new Set(previous);
-      next.delete(accountId);
+      if (next.has(accountId)) {
+        next.delete(accountId);
+      } else {
+        next.add(accountId);
+      }
       return next;
     });
   }, []);

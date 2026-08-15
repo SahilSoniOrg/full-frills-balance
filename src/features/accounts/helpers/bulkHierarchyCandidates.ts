@@ -1,0 +1,64 @@
+import { IconName } from '@/src/components/core';
+import { AccountId, AccountType } from '@/src/types/domain';
+
+export interface HierarchyCandidateAccount {
+  id: string;
+  name: string;
+  icon?: IconName;
+  accountType: AccountType;
+}
+
+type HierarchyAccount = {
+  id: AccountId | string;
+  name: string;
+  icon?: IconName;
+  accountType: AccountType;
+  parentAccountId?: AccountId | string | null;
+};
+
+export function getBulkHierarchyCandidates(
+  accounts: HierarchyAccount[],
+  selectedIds: ReadonlySet<AccountId>,
+): HierarchyCandidateAccount[] {
+  if (selectedIds.size === 0) return [];
+  const selected = accounts.filter(account => selectedIds.has(account.id as AccountId));
+  const selectedTypes = new Set(selected.map(account => account.accountType));
+  if (selectedTypes.size !== 1) return [];
+  const targetType = selected[0].accountType;
+
+  const childrenByParent = new Map<AccountId, AccountId[]>();
+
+  for (const account of accounts) {
+    if (!account.parentAccountId) continue;
+    const parentId = account.parentAccountId as AccountId;
+    const children = childrenByParent.get(parentId) ?? [];
+    children.push(account.id as AccountId);
+    childrenByParent.set(parentId, children);
+  }
+
+  const descendants = new Set<AccountId>();
+  const pending = [...selectedIds];
+  while (pending.length > 0) {
+    const childIds = childrenByParent.get(pending.pop() as AccountId) ?? [];
+    for (const childId of childIds) {
+      if (!descendants.has(childId)) {
+        descendants.add(childId);
+        pending.push(childId);
+      }
+    }
+  }
+
+  return accounts
+    .filter(
+      account =>
+        !selectedIds.has(account.id as AccountId) &&
+        !descendants.has(account.id as AccountId) &&
+        account.accountType === targetType,
+    )
+    .map(account => ({
+      id: account.id,
+      name: account.name,
+      icon: account.icon,
+      accountType: account.accountType,
+    }));
+}

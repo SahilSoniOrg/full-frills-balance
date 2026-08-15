@@ -1,3 +1,5 @@
+import { IconName } from '@/src/types/domainIcons';
+
 /**
  * Account-specific design and configuration constants.
  */
@@ -31,4 +33,34 @@ export const ACCOUNT_COLOR_PALETTE: readonly string[] = [
   '#2DD4BF', // teal
   '#94A3B8', // slate
   '#64748B', // slate dark
+];
+
+/**
+ * Curated icon palette for account and category customization.
+ */
+export const ACCOUNT_ICON_PALETTE: readonly IconName[] = [
+  'tag',
+  'trendingUp',
+  'shoppingCart',
+  'coffee',
+  'bus',
+  'film',
+  'shoppingBag',
+  'document',
+  'home',
+  'wallet',
+  'bank',
+  'safe',
+  'creditCard',
+  'briefcase',
+  'circle',
+  'copy',
+  'receipt',
+  'calendar',
+  'search',
+  'edit',
+  'delete',
+  'arrowUp',
+  'arrowDown',
+  'swapHorizontal',
 ];
