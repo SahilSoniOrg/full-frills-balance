@@ -149,7 +149,7 @@ export function observeAggregatedAccountBalances(
         trace.end();
       }
     }),
-    shareReplay({ bufferSize: 1, refCount: true }),
+    shareReplay({ bufferSize: 1, refCount: false }),
   );
 
   aggregatedBalancesCache.set(cacheKey, obs$);

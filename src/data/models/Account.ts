@@ -2,7 +2,7 @@ import { IconName } from '@/src/types/domainIcons';
 import type AccountMetadata from '@/src/data/models/AccountMetadata';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType, PlainAccount } from '@/src/types/domain';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
@@ -142,4 +142,27 @@ export default class Account extends BaseScopedModel<AccountId> {
   @children('transactions') transactions!: Query<Transaction>;
   @children('accounts') subAccounts!: Query<Account>;
   @children('account_metadata') metadataRecords!: Query<AccountMetadata>;
+}
+
+export function toPlainAccount(a: Account): PlainAccount {
+  return {
+    id: a.id,
+    name: a.name,
+    accountType: a.accountType,
+    accountSubtype: a.accountSubtype,
+    currencyCode: a.currencyCode,
+    parentAccountId: a.parentAccountId,
+    description: a.description,
+    icon: a.icon,
+    orderNum: a.orderNum,
+    reconciledAt: a.reconciledAt?.getTime(),
+    createdAt: a.createdAt?.getTime(),
+    updatedAt: a.updatedAt?.getTime(),
+    deletedAt: a.deletedAt?.getTime(),
+    archivedAt: a.archivedAt?.getTime(),
+  };
+}
+
+export function toPlainAccounts(accounts: Account[]): PlainAccount[] {
+  return accounts.map(toPlainAccount);
 }

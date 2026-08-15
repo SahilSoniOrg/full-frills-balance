@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import Account, { toPlainAccounts } from '@/src/data/models/Account';
 import {
   clearReactiveAggregatedBalancesCache,
   observeAggregatedAccountBalances,
@@ -139,24 +139,7 @@ class ReactiveDataService {
     ]).pipe(
       switchMap(async ([base, enrichedJournals]) => {
         const { accounts, balancesMap, wealthSummary } = base;
-
-        // Sanitization: Map Account models to plain objects to avoid circular references during JSON.stringify
-        const plainAccounts: PlainAccount[] = accounts.map(a => ({
-          id: a.id,
-          name: a.name,
-          accountType: a.accountType,
-          accountSubtype: a.accountSubtype,
-          currencyCode: a.currencyCode,
-          parentAccountId: a.parentAccountId,
-          description: a.description,
-          icon: a.icon,
-          orderNum: a.orderNum,
-          reconciledAt: a.reconciledAt?.getTime(),
-          createdAt: a.createdAt?.getTime(),
-          updatedAt: a.updatedAt?.getTime(),
-          deletedAt: a.deletedAt?.getTime(),
-          archivedAt: a.archivedAt?.getTime(),
-        }));
+        const plainAccounts = toPlainAccounts(accounts);
 
         const data: DashboardData = {
           accounts: plainAccounts,
@@ -211,11 +194,17 @@ class ReactiveDataService {
 
     const obs$ = observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
       switchMap(async ({ accounts, balancesMap, wealthSummary }) => {
-        return {
-          accounts,
+        const plainAccounts = toPlainAccounts(accounts);
+
+        const data: LiveAccountsSummaryData = {
+          accounts: plainAccounts,
           balances: Array.from(balancesMap.values()),
           wealthSummary,
         };
+
+        // Persist for Instant Boot / Remount on Accounts Screen
+        snapshotService.saveCustomSnapshot(workplaceId, 'accounts_list_data', data);
+        return data;
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
@@ -242,6 +231,16 @@ class ReactiveDataService {
 
     this._optimizedAccountListCache.set(cacheKey, loggedObs$);
     return loggedObs$;
+  }
+
+  /**
+   * Retrieves the last saved accounts list snapshot for a specific workplace.
+   */
+  getAccountsListSnapshot(workplaceId: WorkplaceId): LiveAccountsSummaryData | null {
+    return snapshotService.getCustomSnapshot<LiveAccountsSummaryData>(
+      workplaceId,
+      'accounts_list_data',
+    );
   }
 
   /**

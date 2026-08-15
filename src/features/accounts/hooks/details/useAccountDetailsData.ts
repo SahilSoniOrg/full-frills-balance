@@ -60,6 +60,11 @@ export interface AccountDetailsData {
   unreconciledAmount: number;
 }
 
+function toTimestampMs(value: Date | number | null | undefined): number | null {
+  if (!value) return null;
+  return value instanceof Date ? value.getTime() : typeof value === 'number' ? value : null;
+}
+
 export function useAccountDetailsData(): AccountDetailsData {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams<{
@@ -158,13 +163,17 @@ export function useAccountDetailsData(): AccountDetailsData {
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
 
+  const initialReconciledAtMs = useMemo(() => toTimestampMs(dbAccount?.reconciledAt), [dbAccount]);
+
+  const initialArchivedAtMs = useMemo(() => toTimestampMs(dbAccount?.archivedAt), [dbAccount]);
+
   const { data: reconciledAtMs } = useObservable(
     () =>
       accountId && workplaceId
         ? accountQueries.observeReconciledAt(workplaceId, accountId)
         : of(null),
     [accountId, workplaceId],
-    null as number | null,
+    initialReconciledAtMs,
   );
 
   // Observe archive state as a primitive; WatermelonDB model references are stable
@@ -175,7 +184,7 @@ export function useAccountDetailsData(): AccountDetailsData {
         ? accountQueries.observeArchivedAt(workplaceId, accountId)
         : of(null),
     [accountId, workplaceId],
-    null as number | null,
+    initialArchivedAtMs,
   );
 
   const isArchived = account ? archivedAtMs != null : false;

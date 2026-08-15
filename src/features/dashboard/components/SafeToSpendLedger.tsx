@@ -113,7 +113,14 @@ export const SafeToSpendLedger = ({
                         analytics.trackFeatureUsage('safe_to_spend', 'account_viewed', {
                           id: acc.accountId,
                         });
-                        AppNavigation.toAccountDetails(acc.accountId);
+                        AppNavigation.toAccountDetails(acc.accountId, {
+                          preview: {
+                            name: acc.accountName,
+                            balance: acc.startingBalance,
+                            currency: currencyCode,
+                            colorKey: acc.color,
+                          },
+                        });
                       }}
                       activeOpacity={Opacity.heavy}
                     >

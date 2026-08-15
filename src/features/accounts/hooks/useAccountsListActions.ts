@@ -67,6 +67,7 @@ export function useAccountsListActions({
           currency: balance?.currencyCode || account.currencyCode,
           icon: getAccountIcon(account),
           type: account.accountType,
+          colorKey: account.color,
         },
       });
     },
@@ -89,7 +90,7 @@ export function useAccountsListActions({
     AppNavigation.toManageHierarchy({ filterMode: activeTab });
   }, [activeTab]);
 
-  const onViewDetails = useCallback(
+  const onNavigateToAccountDetails = useCallback(
     (account: AccountCardViewModel) => {
       const balance = balancesByAccountId.get(account.id as AccountId);
       AppNavigation.toAccountDetails(account.id as AccountId, {
@@ -99,18 +100,18 @@ export function useAccountsListActions({
           currency: balance?.currencyCode || account.currencyCode,
           icon: account.icon,
           type: account.accountType,
+          colorKey: account.accountColor,
         },
       });
     },
     [balancesByAccountId],
   );
 
+  const onViewDetails = onNavigateToAccountDetails;
+  const onReconcileAccount = onNavigateToAccountDetails;
+
   const onEditAccount = useCallback((account: AccountCardViewModel) => {
     AppNavigation.toAccountForm(account.id);
-  }, []);
-
-  const onReconcileAccount = useCallback((account: AccountCardViewModel) => {
-    AppNavigation.toAccountDetails(account.id as AccountId);
   }, []);
 
   const onToggleArchiveAccount = useCallback(

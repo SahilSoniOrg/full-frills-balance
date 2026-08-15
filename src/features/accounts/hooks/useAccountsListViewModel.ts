@@ -76,18 +76,19 @@ export function useAccountsListViewModel(): AccountsListViewModel {
             },
           }),
     [targetCurrency, workplaceId],
-    {
-      accounts: [],
-      balances: [],
-      wealthSummary: {
-        netWorth: 0,
-        totalAssets: 0,
-        totalLiabilities: 0,
-        totalEquity: 0,
-        totalIncome: 0,
-        totalExpense: 0,
+    () =>
+      (workplaceId ? reactiveDataService.getAccountsListSnapshot(workplaceId) : null) ?? {
+        accounts: [],
+        balances: [],
+        wealthSummary: {
+          netWorth: 0,
+          totalAssets: 0,
+          totalLiabilities: 0,
+          totalEquity: 0,
+          totalIncome: 0,
+          totalExpense: 0,
+        },
       },
-    },
   );
 
   const hasData = !!(dashboardData.accounts.length > 0 || dashboardData.balances.length > 0);
