@@ -195,7 +195,12 @@ export class ModelManagementService {
     const model = this.getAllModels().find(m => m.id === modelId);
     if (!model) throw new Error(`Model ${modelId} not supported`);
 
-    const isDownloaded = ModelRegistry.isCached(model.url);
+    let isDownloaded = false;
+    try {
+      isDownloaded = ModelRegistry.isCached(model.url);
+    } catch {
+      isDownloaded = false;
+    }
 
     return {
       modelId,
