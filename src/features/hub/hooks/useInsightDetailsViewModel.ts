@@ -1,3 +1,4 @@
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -5,7 +6,11 @@ import {
   type InsightDetailsHeaderModel,
   type InsightDetailsRouteParams,
 } from '@/src/features/hub/helpers/insightDetailsPresentation';
-import { useJournalEntryList } from '@/src/features/journal';
+import {
+  useJournalEntryList,
+  useJournalsBulkOperations,
+  type JournalListModalsProps,
+} from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { JournalId } from '@/src/types/domain';
 import type { JournalListItem } from '@/src/types/ui';
@@ -18,6 +23,15 @@ export interface InsightDetailsViewModel {
   header: InsightDetailsHeaderModel;
   emptyTitle: string;
   emptySubtitle: string;
+  selectedIds: Set<JournalId>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: JournalId) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }
 
 export function useInsightDetailsViewModel(
@@ -32,7 +46,7 @@ export function useInsightDetailsViewModel(
     [params.journalIds],
   );
 
-  const { items, isLoading } = useJournalEntryList({
+  const journalList = useJournalEntryList({
     workplaceId,
     pageSize: AppConfig.defaults.insightDetailsFetchLimit,
     dateRange: {
@@ -44,13 +58,29 @@ export function useInsightDetailsViewModel(
     paginationPolicy: 'default',
   });
 
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: journalList.journals,
+    selection: journalList,
+    onShareSelected: journalList.onShareSelected,
+  });
+
   const header = useMemo(() => buildInsightDetailsHeader(params, theme), [params, theme]);
 
   return {
-    items,
-    isLoading,
+    items: journalList.items,
+    isLoading: journalList.isLoading,
     header,
     emptyTitle: strings.emptyTitle,
     emptySubtitle: strings.emptySubtitle,
+    selectedIds: journalList.selectedIds,
+    isSelectionModeActive: journalList.isSelectionModeActive,
+    onLongPressItem: journalList.onLongPressItem,
+    selectAll: journalList.selectAll,
+    clearItems: journalList.clearItems,
+    exitSelectionMode: journalList.exitSelectionMode,
+    onShareSelected: journalList.onShareSelected,
+    actions: bulkOperations.actions,
+    modals: bulkOperations.modals,
   };
 }

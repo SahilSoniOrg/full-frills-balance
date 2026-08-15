@@ -6,7 +6,12 @@ import {
   buildBudgetUsagePreview,
 } from '@/src/features/budget/helpers/budgetDetailPresentation';
 import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
-import { useJournalEntryList } from '@/src/features/journal';
+import {
+  useJournalEntryList,
+  useJournalsBulkOperations,
+  type JournalListModalsProps,
+} from '@/src/features/journal';
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -15,7 +20,7 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections';
-import { AccountId, BudgetId, PlainBudget } from '@/src/types/domain';
+import { AccountId, BudgetId, JournalId, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -39,6 +44,15 @@ export interface BudgetDetailViewModel {
   periodLabel: string;
   handleDelete: () => void;
   handleEdit: () => void;
+  selectedIds: Set<JournalId>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: JournalId) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }
 
 export function useBudgetDetailViewModel(): BudgetDetailViewModel {
@@ -125,6 +139,13 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     queryOptions: { accountIds: scopeAccountIds },
     expandScopedLegs: scopeAccountIds.length > 0 ? scopeAccountIds : undefined,
     paginationPolicy: 'always',
+  });
+
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: journalList.journals,
+    selection: journalList,
+    onShareSelected: journalList.onShareSelected,
   });
 
   const chartData = useMemo(() => {
@@ -230,5 +251,14 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     periodLabel: budget ? BudgetPeriodUtils.getPeriodLabel(budget, refTimestamp) : '',
     handleDelete,
     handleEdit,
+    selectedIds: journalList.selectedIds,
+    isSelectionModeActive: journalList.isSelectionModeActive,
+    onLongPressItem: journalList.onLongPressItem,
+    selectAll: journalList.selectAll,
+    clearItems: journalList.clearItems,
+    exitSelectionMode: journalList.exitSelectionMode,
+    onShareSelected: journalList.onShareSelected,
+    actions: bulkOperations.actions,
+    modals: bulkOperations.modals,
   };
 }

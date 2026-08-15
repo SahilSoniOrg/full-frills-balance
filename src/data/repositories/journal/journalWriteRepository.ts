@@ -601,49 +601,70 @@ export class JournalWriteRepository {
   }
 
   /**
-   * Bulk updates accountId for a list of transactions in a single atomic database batch.
+   * Bulk updates accountId for a list of transactions and refreshes parent journals in a single atomic database batch.
    */
-  async bulkReassignTransactionAccounts(
-    transactions: Transaction[],
-    newAccountId: AccountId,
-  ): Promise<void> {
-    if (transactions.length === 0) return;
+  async bulkReassignTransactionAccounts(params: {
+    transactions: Transaction[];
+    newAccountId: AccountId;
+    journals: Journal[];
+    displayTypeByJournalId: Map<JournalId, JournalDisplayType>;
+  }): Promise<void> {
+    const { transactions, newAccountId, journals, displayTypeByJournalId } = params;
+    if (transactions.length === 0 && journals.length === 0) return;
 
     await database.write(async () => {
       const now = new Date();
-      const ops = transactions.map(tx =>
+      const txOps = transactions.map(tx =>
         tx.prepareUpdate(record => {
           record.accountId = newAccountId;
           record.updatedAt = now;
         }),
       );
-      await database.batch(ops);
+      const journalOps = journals.map(journal =>
+        journal.prepareUpdate(record => {
+          const newDisplayType = displayTypeByJournalId.get(journal.id as JournalId);
+          if (newDisplayType !== undefined) {
+            record.displayType = newDisplayType;
+          }
+          record.updatedAt = now;
+        }),
+      );
+      await database.batch([...txOps, ...journalOps]);
     });
   }
 
   /**
-   * Atomically reassigns each transaction back to its own original account in a single batch.
-   * Used for undo of bulk account changes where each transaction may target a different account.
+   * Atomically reassigns each transaction back to its own original account and refreshes parent journals in a single batch.
    */
-  async bulkReassignTransactionAccountsToOriginals(
-    transactions: Transaction[],
-    originalAccountByTxId: Record<string, AccountId>,
-  ): Promise<void> {
-    if (transactions.length === 0) return;
+  async bulkReassignTransactionAccountsToOriginals(params: {
+    transactions: Transaction[];
+    originalAccountIdByTxId: Record<string, AccountId>;
+    journals: Journal[];
+    displayTypeByJournalId: Map<JournalId, JournalDisplayType>;
+  }): Promise<void> {
+    const { transactions, originalAccountIdByTxId, journals, displayTypeByJournalId } = params;
+    if (transactions.length === 0 && journals.length === 0) return;
 
     await database.write(async () => {
       const now = new Date();
-      const ops = transactions
-        .filter(tx => originalAccountByTxId[tx.id] !== undefined)
+      const txOps = transactions
+        .filter(tx => originalAccountIdByTxId[tx.id] !== undefined)
         .map(tx =>
           tx.prepareUpdate(record => {
-            record.accountId = originalAccountByTxId[tx.id];
+            record.accountId = originalAccountIdByTxId[tx.id];
             record.updatedAt = now;
           }),
         );
-      if (ops.length > 0) {
-        await database.batch(ops);
-      }
+      const journalOps = journals.map(journal =>
+        journal.prepareUpdate(record => {
+          const newDisplayType = displayTypeByJournalId.get(journal.id as JournalId);
+          if (newDisplayType !== undefined) {
+            record.displayType = newDisplayType;
+          }
+          record.updatedAt = now;
+        }),
+      );
+      await database.batch([...txOps, ...journalOps]);
     });
   }
 

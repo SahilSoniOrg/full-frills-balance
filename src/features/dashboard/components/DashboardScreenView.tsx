@@ -4,6 +4,7 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
+import { JournalListModals } from '@/src/features/journal';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import React, { useMemo } from 'react';
@@ -100,12 +101,14 @@ export function DashboardScreenView({
       selectAll: recentJournalEntries.selectAll,
       clearItems: recentJournalEntries.clearItems,
       onShareSelected: recentJournalEntries.onShareSelected,
+      actions: recentJournalEntries.actions,
     }),
     [
       recentJournalEntries.exitSelectionMode,
       recentJournalEntries.selectAll,
       recentJournalEntries.clearItems,
       recentJournalEntries.onShareSelected,
+      recentJournalEntries.actions,
     ],
   );
 
@@ -189,6 +192,10 @@ export function DashboardScreenView({
             uiState.setInfoVisible(true);
           }}
         />
+
+        {recentJournalEntries.modals ? (
+          <JournalListModals {...recentJournalEntries.modals} />
+        ) : null}
       </View>
     </ScreenWithChrome>
   );

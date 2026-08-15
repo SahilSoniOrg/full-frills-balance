@@ -9,7 +9,7 @@ import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
-import { useJournalEntryList } from '@/src/features/journal';
+import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
 import { useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
@@ -78,6 +78,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     viewer,
     shareTitle: `Journal entries for ${account?.name || 'Account'}`,
     paginationPolicy: 'default',
+  });
+
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: journalList.journals,
+    selection: journalList,
+    onShareSelected: journalList.onShareSelected,
   });
 
   const journalItems = useMemo(
@@ -198,5 +205,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     clearItems: journalList.clearItems,
     exitSelectionMode: journalList.exitSelectionMode,
     onShareSelected: journalList.onShareSelected,
+    actions: bulkOperations.actions,
+    modals: bulkOperations.modals,
   };
 }

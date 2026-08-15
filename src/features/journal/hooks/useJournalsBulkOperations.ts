@@ -1,5 +1,6 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import Journal from '@/src/data/models/Journal';
+import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
 import { useSelection } from '@/src/hooks/useSelection';
 import {
   bulkChangeJournalAccount as bulkChangeJournalAccountCommand,
@@ -171,6 +172,7 @@ export function useJournalsBulkOperations({
         });
       } catch (error) {
         showErrorAlert(error, 'Failed to update transaction account');
+        throw error;
       }
     },
     [workplaceId, selection, closeModal],
@@ -209,6 +211,7 @@ export function useJournalsBulkOperations({
     return [
       {
         name: 'edit' as const,
+        label: 'Rename',
         onPress: handleOpenBulkRename,
         variant: 'surface',
         disabled,
@@ -216,6 +219,7 @@ export function useJournalsBulkOperations({
       },
       {
         name: 'copy' as const,
+        label: 'Duplicate',
         onPress: handleBulkDuplicate,
         variant: 'surface',
         disabled,
@@ -223,6 +227,7 @@ export function useJournalsBulkOperations({
       },
       {
         name: 'merge' as const,
+        label: 'Merge',
         onPress: handleOpenMerge,
         variant: 'surface',
         disabled: count < 2,
@@ -230,6 +235,7 @@ export function useJournalsBulkOperations({
       },
       {
         name: 'swapHorizontal' as const,
+        label: 'Change Account',
         onPress: handleOpenChangeAccount,
         variant: 'surface',
         disabled,
@@ -237,15 +243,19 @@ export function useJournalsBulkOperations({
       },
       {
         name: 'share' as const,
+        label: 'Share',
         onPress: onShareSelected,
         variant: 'primary',
+        isPrimary: true,
         disabled,
         accessibilityLabel: 'Share selected transactions',
       },
       {
         name: 'delete' as const,
+        label: 'Delete',
         onPress: handleBulkDelete,
         variant: 'error',
+        isPrimary: true,
         disabled,
         accessibilityLabel: 'Delete selected transactions',
       },
@@ -260,6 +270,25 @@ export function useJournalsBulkOperations({
     handleBulkDelete,
   ]);
 
+  const modals = useMemo(
+    (): JournalListModalsProps => ({
+      activeModal,
+      workplaceId,
+      onCloseModal: closeModal,
+      onBulkRenameSave: handleBulkRenameSave,
+      onMergeConfirm: handleMergeConfirm,
+      onBulkChangeAccountSelect: handleBulkChangeAccountSelect,
+    }),
+    [
+      activeModal,
+      workplaceId,
+      closeModal,
+      handleBulkRenameSave,
+      handleMergeConfirm,
+      handleBulkChangeAccountSelect,
+    ],
+  );
+
   return {
     activeModal,
     selectedJournals,
@@ -273,5 +302,6 @@ export function useJournalsBulkOperations({
     handleBulkChangeAccountSelect,
     handleBulkDelete,
     actions,
+    modals,
   };
 }

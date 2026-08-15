@@ -311,21 +311,25 @@ export function useAccountsBulkOperations({
     return [
       {
         name: 'edit' as const,
+        label: 'Rename',
         onPress: () => openModal({ type: 'bulkRename' }),
         accessibilityLabel: 'Edit account names',
       },
       {
         name: 'palette' as const,
+        label: 'Change Color',
         onPress: () => openModal({ type: 'bulkAppearance', mode: 'color' }),
         accessibilityLabel: 'Change account color',
       },
       {
         name: 'tag' as const,
+        label: 'Change Icon',
         onPress: () => openModal({ type: 'bulkAppearance', mode: 'icon' }),
         accessibilityLabel: 'Change account icon',
       },
       {
         name: 'hierarchy' as const,
+        label: 'Move Hierarchy',
         onPress: () => openModal({ type: 'bulkHierarchy' }),
         disabled: isMixedAccountTypes,
         accessibilityLabel: isMixedAccountTypes
@@ -334,7 +338,10 @@ export function useAccountsBulkOperations({
       },
       {
         name: 'archive' as const,
+        label: 'Archive / Unarchive',
         onPress: handleBulkArchive,
+        variant: 'surface',
+        isPrimary: true,
         accessibilityLabel: 'Archive or unarchive selected accounts',
       },
     ];

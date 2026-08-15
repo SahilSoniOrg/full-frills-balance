@@ -1,4 +1,7 @@
 import { AppConfig } from '@/src/constants';
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { JournalListModalsProps } from '../../components/JournalListModals';
+import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
@@ -61,6 +64,8 @@ export interface JournalSearchViewModel {
   exitSelectionMode: () => void;
   onShareSelected: () => void;
   setSelectedIds: Dispatch<SetStateAction<Set<JournalId>>>;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
@@ -87,6 +92,13 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     queryOptions: filters.queryOptions,
     shareTitle: 'Search Transactions',
     paginationPolicy: 'always',
+  });
+
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: core.journals,
+    selection: core,
+    onShareSelected: core.onShareSelected,
   });
 
   const itemsCountRef = useRef(core.items.length);
@@ -155,5 +167,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     exitSelectionMode: core.exitSelectionMode,
     onShareSelected: core.onShareSelected,
     setSelectedIds: core.setSelectedIds,
+    actions: bulkOperations.actions,
+    modals: bulkOperations.modals,
   };
 }

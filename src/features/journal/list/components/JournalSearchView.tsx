@@ -143,7 +143,9 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           clearItems: vm.clearItems,
           exitSelectionMode: vm.exitSelectionMode,
           onShareSelected: vm.onShareSelected,
+          actions: vm.actions,
         }}
+        modals={vm.modals}
       />
 
       <MultiAccountPickerModal

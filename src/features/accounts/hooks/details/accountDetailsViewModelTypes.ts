@@ -1,3 +1,5 @@
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { JournalListModalsProps } from '@/src/features/journal';
 import { IconName } from '@/src/components/core';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
@@ -91,4 +93,6 @@ export interface AccountDetailsViewModel {
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }

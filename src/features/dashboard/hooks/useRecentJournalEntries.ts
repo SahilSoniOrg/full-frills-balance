@@ -1,5 +1,10 @@
 import { AppConfig } from '@/src/constants';
-import { useJournalEntryList } from '@/src/features/journal';
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import {
+  useJournalEntryList,
+  useJournalsBulkOperations,
+  type JournalListModalsProps,
+} from '@/src/features/journal';
 import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 
@@ -30,6 +35,8 @@ export interface RecentJournalEntries {
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }
 
 /**
@@ -54,6 +61,13 @@ export function useRecentJournalEntries({
     paginationPolicy: 'default',
   });
 
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: core.journals,
+    selection: core,
+    onShareSelected: core.onShareSelected,
+  });
+
   return {
     items: core.items,
     isLoading: core.isLoading,
@@ -71,5 +85,7 @@ export function useRecentJournalEntries({
     clearItems: core.clearItems,
     exitSelectionMode: core.exitSelectionMode,
     onShareSelected: core.onShareSelected,
+    actions: bulkOperations.actions,
+    modals: bulkOperations.modals,
   };
 }

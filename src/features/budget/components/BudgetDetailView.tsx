@@ -3,6 +3,8 @@ import { LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
+import { JournalListModals } from '@/src/features/journal';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from '../components/BudgetDetailHeader';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
@@ -12,6 +14,17 @@ export function BudgetDetailView({
   ...vm
 }: BudgetDetailViewModel & { chrome: ScreenNavChrome }) {
   const { budget, usage } = vm;
+
+  const selectionChrome = useMemo(
+    () => ({
+      exitSelectionMode: vm.exitSelectionMode,
+      selectAll: vm.selectAll,
+      clearItems: vm.clearItems,
+      onShareSelected: vm.onShareSelected,
+      actions: vm.actions,
+    }),
+    [vm.exitSelectionMode, vm.selectAll, vm.clearItems, vm.onShareSelected, vm.actions],
+  );
 
   if (vm.isLoading || !budget || !usage) {
     return (
@@ -30,6 +43,10 @@ export function BudgetDetailView({
           isLoadingMore={false}
           emptyTitle={AppConfig.strings.budget.activityEmptyTitle}
           emptySubtitle={AppConfig.strings.budget.activityEmptySubtitle}
+          selectedIds={vm.selectedIds}
+          onLongPressItem={vm.onLongPressItem}
+          isSelectionModeActive={vm.isSelectionModeActive}
+          selectionChrome={selectionChrome}
           ListHeaderComponent={
             <BudgetDetailHeader
               budget={budget}
@@ -45,6 +62,7 @@ export function BudgetDetailView({
           contentContainerStyle={styles.listContent}
         />
       </View>
+      {vm.modals ? <JournalListModals {...vm.modals} /> : null}
     </ScreenWithChrome>
   );
 }

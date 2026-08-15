@@ -30,6 +30,7 @@ function BulkChangeJournalAccountModalContent({
   const [loading, setLoading] = useState(true);
   const [eligibility, setEligibility] = useState<JournalAccountEditEligibility | null>(null);
   const [activeLegForPicker, setActiveLegForPicker] = useState<'debit' | 'credit' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,9 +54,16 @@ function BulkChangeJournalAccountModalContent({
     async (accountId: AccountId) => {
       if (!activeLegForPicker) return;
       const leg = activeLegForPicker;
+      setIsSubmitting(true);
       setActiveLegForPicker(null);
-      await onSelectAccount(leg, accountId);
-      onClose();
+      try {
+        await onSelectAccount(leg, accountId);
+        onClose();
+      } catch {
+        // The parent callback owns error presentation; keep this modal available for retry.
+      } finally {
+        setIsSubmitting(false);
+      }
     },
     [activeLegForPicker, onSelectAccount, onClose],
   );
@@ -63,7 +71,7 @@ function BulkChangeJournalAccountModalContent({
   return (
     <>
       <ModalSurface
-        visible={true}
+        visible={!activeLegForPicker && !isSubmitting}
         onClose={onClose}
         title="Change Account"
         fixedHeight={false}

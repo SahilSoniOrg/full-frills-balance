@@ -24,8 +24,11 @@ export interface PlannedPaymentHistoryCardProps {
   };
 
   isOverdue?: boolean;
+  isSelected?: boolean;
+  isSelectionModeActive?: boolean;
 
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
 /**
@@ -42,7 +45,10 @@ export const PlannedPaymentHistoryCard = ({
   plannedTitle,
   presentation,
   isOverdue,
+  isSelected,
+  isSelectionModeActive,
   onPress,
+  onLongPress,
 }: PlannedPaymentHistoryCardProps) => {
   const { theme, themeMode } = useTheme();
   const formatMoney = useMoneyFormat();
@@ -55,11 +61,18 @@ export const PlannedPaymentHistoryCard = ({
   const content = (
     <Column padding="lg">
       <Row justify="space-between" align="center" marginBottom="md">
-        <Column flex={1} marginRight="sm">
-          <Text variant="subheading" weight="bold" numberOfLines={1}>
+        <Row flex={1} marginRight="sm" align="center" gap="xs">
+          {isSelectionModeActive ? (
+            <AppIcon
+              name={isSelected ? 'checkboxChecked' : 'checkboxBlank'}
+              size={18}
+              color={isSelected ? theme.primary : theme.textTertiary}
+            />
+          ) : null}
+          <Text variant="subheading" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
             {formattedDate}
           </Text>
-        </Column>
+        </Row>
 
         <Badge
           variant="default"
@@ -144,15 +157,20 @@ export const PlannedPaymentHistoryCard = ({
       padding="none"
       radius="r3"
       background="surface"
-      borderWidth={isOverdue ? 1 : undefined}
-      borderColor={isOverdue ? 'error' : undefined}
+      borderWidth={isSelected ? 2 : isOverdue ? 1 : undefined}
+      borderColor={isSelected ? 'primary' : isOverdue ? 'error' : undefined}
       style={{
         marginBottom: Spacing.md,
         overflow: 'hidden',
       }}
     >
-      {onPress ? (
-        <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
+      {onPress || onLongPress ? (
+        <TouchableOpacity
+          onPress={onPress}
+          onLongPress={onLongPress}
+          delayLongPress={200}
+          activeOpacity={Opacity.heavy}
+        >
           {content}
         </TouchableOpacity>
       ) : (

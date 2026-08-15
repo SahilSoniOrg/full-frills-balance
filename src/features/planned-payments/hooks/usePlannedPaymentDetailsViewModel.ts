@@ -1,3 +1,4 @@
+import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
@@ -5,16 +6,21 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccount } from '@/src/features/accounts';
-import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
+import { useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
 import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
+import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
-import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
+import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
+import { sharingService } from '@/src/services/SharingService';
+import { EnrichedJournal, JournalDisplayType, JournalId } from '@/src/types/domain';
+import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
+import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export interface PlannedPaymentDetailsViewModel {
   theme: Theme;
@@ -54,6 +60,17 @@ export interface PlannedPaymentDetailsViewModel {
   onPost?: () => void;
   onSkip?: () => void;
   onToggleStatus?: () => void;
+
+  selectedIds: Set<JournalId>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: JournalId) => void;
+  toggleSelection: (id: JournalId) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  actions?: SelectionAction[];
+  modals?: JournalListModalsProps;
 }
 
 export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDetailsViewModel {
@@ -87,6 +104,81 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   // Build a preview-based skeleton if DB record is still loading
   const isLoadingVisible = isLoading && !pDesc;
 
+  const selectionControl = useSelection<JournalId>();
+  const {
+    selectedIds,
+    isSelectionModeActive,
+    toggleSelection,
+    onLongPressItem,
+    clearItems,
+    exitSelectionMode,
+  } = selectionControl;
+
+  const selectAll = useCallback(() => {
+    if (!history) return;
+    selectionControl.selectAll(history.map(j => j.id as JournalId));
+  }, [history, selectionControl]);
+
+  const onShareSelected = useCallback(async () => {
+    if (selectedIds.size === 0 || !history) return;
+    try {
+      const selectedJournals = history.filter(j => selectedIds.has(j.id as JournalId));
+      const provider = new JournalShareProvider(
+        selectedJournals.map(j => ({
+          id: j.id,
+          date: j.journalDate,
+          description: j.description || j.semanticLabel || 'Journal entry',
+          amount: j.totalAmount,
+          currencyCode: j.currencyCode,
+          displayType: j.displayType,
+        })),
+        {
+          title: `Transactions for ${item?.name || 'Planned Payment'}`,
+          includeTime: true,
+          sort: 'desc',
+          showEmojis: true,
+        },
+      );
+      await sharingService.share(provider);
+    } catch (error) {
+      logger.error('Failed to share journal entries', error);
+    }
+  }, [selectedIds, history, item]);
+
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: history ?? [],
+    selection: selectionControl,
+    onShareSelected,
+  });
+
+  const selectionProps = useMemo(
+    () => ({
+      selectedIds,
+      isSelectionModeActive,
+      onLongPressItem,
+      toggleSelection,
+      selectAll,
+      clearItems,
+      exitSelectionMode,
+      onShareSelected,
+      actions: bulkOperations.actions,
+      modals: bulkOperations.modals,
+    }),
+    [
+      selectedIds,
+      isSelectionModeActive,
+      onLongPressItem,
+      toggleSelection,
+      selectAll,
+      clearItems,
+      exitSelectionMode,
+      onShareSelected,
+      bulkOperations.actions,
+      bulkOperations.modals,
+    ],
+  );
+
   return useMemo(() => {
     if (!item) {
       // Show preview skeleton while loading
@@ -118,6 +210,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           onPost: () => {},
           onSkip: () => {},
           onToggleStatus: handleToggleStatus,
+          ...selectionProps,
         };
       }
       return {
@@ -125,6 +218,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         isLoading,
         isMissing: true,
         onBack: () => AppNavigation.back(),
+        ...selectionProps,
       };
     }
 
@@ -205,6 +299,8 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onPost,
       onSkip,
       onToggleStatus,
+
+      ...selectionProps,
     };
   }, [
     item,
@@ -225,5 +321,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     pDate,
     isLoadingVisible,
     isPrivacyMode,
+    selectionProps,
   ]);
 }

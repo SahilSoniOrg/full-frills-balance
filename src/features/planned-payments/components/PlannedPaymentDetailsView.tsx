@@ -1,11 +1,15 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
+import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
+import { getPlannedPaymentHistoryPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
+import { JournalListModals } from '@/src/features/journal';
+import { JournalId } from '@/src/types/domain';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getNow } from '@/src/utils/dateHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -38,6 +42,16 @@ export function PlannedPaymentDetailsView({
     onPost,
     onSkip,
     onToggleStatus,
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    toggleSelection,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    onShareSelected,
+    actions,
+    modals,
   } = vm;
 
   const accentColor = theme[typeColorKey as keyof typeof theme] as string;
@@ -47,6 +61,18 @@ export function PlannedPaymentDetailsView({
       chrome={chrome}
       scrollable={!isLoading && !isMissing}
       withPadding={!isLoading && !isMissing}
+      footer={
+        <SelectionActionBar
+          isVisible={isSelectionModeActive}
+          selectedCount={selectedIds.size}
+          totalCount={history?.length ?? 0}
+          onSelectAll={selectAll}
+          onDeselectAll={clearItems}
+          onClear={exitSelectionMode}
+          onShare={onShareSelected}
+          actions={actions}
+        />
+      }
     >
       {isLoading ? (
         <Column flex={1} align="center" justify="center">
@@ -248,40 +274,8 @@ export function PlannedPaymentDetailsView({
             ) : (
               <Column marginBottom="lg">
                 {history?.map(journal => {
-                  const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
-                  const today = new Date(getNow()).setHours(0, 0, 0, 0);
-                  const tomorrow = new Date(getNow() + 86400000).setHours(0, 0, 0, 0);
-
-                  const isOverdue = journal.status === 'PLANNED' && dateValue < today;
-                  const isDueSoon =
-                    journal.status === 'PLANNED' && (dateValue === today || dateValue === tomorrow);
-
-                  let label = 'Posted';
-                  if (journal.status === 'PLANNED') {
-                    if (dateValue === today) label = 'Due Today';
-                    else if (dateValue === tomorrow) label = 'Due Tomorrow';
-                    else label = 'Scheduled';
-                  } else if (journal.status === 'SKIPPED') {
-                    label = 'Skipped';
-                  } else if (journal.status === 'PAUSED') {
-                    label = 'Paused';
-                  }
-
-                  let typeColor = 'textSecondary';
-                  if (journal.status === 'PLANNED') {
-                    if (isOverdue) typeColor = 'error';
-                    else if (isDueSoon) typeColor = 'warning';
-                    else typeColor = 'textSecondary';
-                  } else if (journal.status === 'SKIPPED' || journal.status === 'PAUSED') {
-                    typeColor = 'textSecondary';
-                  } else {
-                    typeColor =
-                      journal.displayType === 'INCOME'
-                        ? 'income'
-                        : journal.displayType === 'EXPENSE'
-                          ? 'expense'
-                          : 'transfer';
-                  }
+                  const presentation = getPlannedPaymentHistoryPresentation(journal, getNow());
+                  const isSelected = selectedIds.has(journal.id as JournalId);
 
                   return (
                     <PlannedPaymentHistoryCard
@@ -293,24 +287,24 @@ export function PlannedPaymentDetailsView({
                       journalDate={journal.journalDate}
                       plannedAmount={vm.rawAmount ?? 0}
                       plannedTitle={vm.rawName ?? ''}
-                      presentation={{
-                        label,
-                        typeIcon:
-                          journal.displayType === 'INCOME'
-                            ? 'arrowUp'
-                            : journal.displayType === 'EXPENSE'
-                              ? 'arrowDown'
-                              : 'swapHorizontal',
-                        typeColor,
-                      }}
-                      isOverdue={isOverdue}
-                      onPress={() => AppNavigation.toJournalDetails(journal.id)}
+                      presentation={presentation}
+                      isOverdue={presentation.isOverdue}
+                      isSelected={isSelected}
+                      isSelectionModeActive={isSelectionModeActive}
+                      onLongPress={() => onLongPressItem(journal.id as JournalId)}
+                      onPress={() =>
+                        isSelectionModeActive
+                          ? toggleSelection(journal.id as JournalId)
+                          : AppNavigation.toJournalDetails(journal.id)
+                      }
                     />
                   );
                 })}
               </Column>
             )}
           </Column>
+
+          {modals ? <JournalListModals {...modals} /> : null}
         </>
       )}
     </ScreenWithChrome>
