@@ -46,26 +46,29 @@ const requiredViewProps = {
   onToggleSectionSelect: jest.fn(),
   onAccountActionPress: jest.fn(),
   selectedAccountIds: new Set<AccountId>(),
-  selectedAccountsList: [],
   isSelectionModeActive: false,
   onSelectAll: jest.fn(),
   onDeselectAll: jest.fn(),
   onClearSelection: jest.fn(),
   selectionActions: [],
   totalSelectableAccounts: 0,
-  activeModal: null,
-  onCloseModal: jest.fn(),
-  onBulkRenameSave: jest.fn().mockResolvedValue(undefined),
-  onBulkHierarchyMoveAssign: jest.fn().mockResolvedValue(undefined),
-  onBulkAppearanceSelect: jest.fn().mockResolvedValue(undefined),
-  bulkParentCandidates: [],
-  onViewDetails: jest.fn(),
-  onEditAccount: jest.fn(),
-  onRecolorAccount: jest.fn(),
-  onReconcileAccount: jest.fn(),
-  onToggleArchiveAccount: jest.fn(),
-  onDeleteAccount: jest.fn(),
-  onAppearanceUpdate: jest.fn().mockResolvedValue(undefined),
+  modals: {
+    activeModal: null,
+    onCloseModal: jest.fn(),
+    selectedAccountsList: [],
+    selectedCount: 0,
+    bulkParentCandidates: [],
+    onBulkRenameSave: jest.fn().mockResolvedValue(undefined),
+    onBulkHierarchyMoveAssign: jest.fn().mockResolvedValue(undefined),
+    onBulkAppearanceSelect: jest.fn().mockResolvedValue(undefined),
+    onViewDetails: jest.fn(),
+    onEditAccount: jest.fn(),
+    onRecolorAccount: jest.fn(),
+    onReconcileAccount: jest.fn(),
+    onToggleArchiveAccount: jest.fn(),
+    onDeleteAccount: jest.fn(),
+    onAppearanceUpdate: jest.fn().mockResolvedValue(undefined),
+  },
 };
 
 describe('AccountsListView', () => {
@@ -290,8 +293,11 @@ describe('AccountsListView', () => {
         setIsSearching={jest.fn()}
         accountsForArchiveToggle={[]}
         {...requiredViewProps}
-        activeModal={{ type: 'bulkRename' }}
-        selectedAccountsList={[mockAccount]}
+        modals={{
+          ...requiredViewProps.modals,
+          activeModal: { type: 'bulkRename' },
+          selectedAccountsList: [mockAccount],
+        }}
         chrome={mockChrome as any}
       />,
     );
@@ -333,8 +339,11 @@ describe('AccountsListView', () => {
         setIsSearching={jest.fn()}
         accountsForArchiveToggle={[]}
         {...requiredViewProps}
-        activeModal={{ type: 'appearance', account: mockAccount }}
-        onAppearanceUpdate={onAppearanceUpdate}
+        modals={{
+          ...requiredViewProps.modals,
+          activeModal: { type: 'appearance', account: mockAccount },
+          onAppearanceUpdate,
+        }}
         chrome={mockChrome as any}
       />,
     );

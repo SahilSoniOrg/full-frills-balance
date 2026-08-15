@@ -1,6 +1,6 @@
 import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { AppInput, AppText, IvyIcon } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
@@ -86,14 +86,15 @@ function BulkRenameAccountsModalContent({
               style={[
                 styles.categoryIconFrame,
                 {
-                  borderColor: account.categoryColor,
+                  backgroundColor: account.accountColor,
+                  borderColor: withOpacity(account.categoryColor, Opacity.soft),
                 },
               ]}
             >
               <IvyIcon
                 name={account.icon}
                 label={account.name}
-                color={account.accountColor}
+                color={account.textColor}
                 size={Size.avatarSm}
               />
             </View>

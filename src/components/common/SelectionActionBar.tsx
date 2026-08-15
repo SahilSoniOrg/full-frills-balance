@@ -1,12 +1,11 @@
 import { AppText, IconButton, type IconName } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
-import { Shape, Size, Spacing, withOpacity, Opacity } from '@/src/constants';
-import { Inline, Inset, Box } from '@/src/design-system';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Box, Inline, Inset } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AnimatePresence, MotiView } from 'moti';
 import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface SelectionAction {
   name: IconName;
@@ -27,6 +26,7 @@ export interface SelectionActionBarProps {
   onShare?: () => void;
   actions?: SelectionAction[];
   isVisible: boolean;
+  bottomOffset?: number;
 }
 
 /**
@@ -42,9 +42,10 @@ export const SelectionActionBar = ({
   onShare,
   actions,
   isVisible,
+  bottomOffset,
 }: SelectionActionBarProps) => {
-  const { theme, themeMode } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const bottom = bottomOffset ?? Spacing.md;
 
   const finalActions = useMemo(() => {
     if (actions) return actions;
@@ -92,19 +93,21 @@ export const SelectionActionBar = ({
     <AnimatePresence>
       {isVisible && (
         <MotiView
-          from={{ opacity: 0, scale: Opacity.subtle, translateY: 20 }}
+          from={{ opacity: 0, scale: 0.92, translateY: 24 }}
           animate={{ opacity: 1, scale: 1, translateY: 0 }}
-          exit={{ opacity: 0, scale: Opacity.subtle, translateY: 20 }}
-          transition={{ type: 'timing', duration: 180 }}
-          style={[styles.wrapper, { bottom: insets.bottom + Spacing.xl * 1.5 }]}
+          exit={{ opacity: 0, scale: 0.92, translateY: 24 }}
+          transition={{
+            type: 'timing',
+            duration: 150,
+          }}
+          style={[styles.wrapper, { bottom }]}
         >
           <View
             style={[
               styles.container,
               {
                 backgroundColor: theme.pure,
-                borderColor: withOpacity(theme.border, Opacity.soft),
-                opacity: themeMode === 'dark' ? Opacity.subtle : Opacity.solid,
+                borderColor: withOpacity(theme.primary, Opacity.muted),
               },
             ]}
           >
@@ -178,18 +181,18 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: Shape.radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     width: '100%',
     maxWidth: 420,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.4,
-        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 16,
+        elevation: 12,
       },
     }),
   },

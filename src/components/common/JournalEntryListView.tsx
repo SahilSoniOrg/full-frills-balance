@@ -191,6 +191,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dismissFooter: {
-    height: Spacing.xxxxl * 2,
+    height: Spacing.lg,
   },
 });

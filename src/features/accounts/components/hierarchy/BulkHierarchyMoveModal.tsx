@@ -75,6 +75,12 @@ export function BulkHierarchyMoveModal({
         </AppText>
       </TouchableOpacity>
 
+      {parentCandidates.length === 0 && (
+        <AppText variant="caption" color="secondary" style={styles.emptyNote}>
+          No other accounts of the same type are available as parent destinations.
+        </AppText>
+      )}
+
       {parentCandidates.map(candidate => (
         <TouchableOpacity
           key={candidate.id}
@@ -102,6 +108,9 @@ export function BulkHierarchyMoveModal({
 const styles = StyleSheet.create({
   subtitle: {
     marginBottom: Spacing.sm,
+  },
+  emptyNote: {
+    paddingVertical: Spacing.sm,
   },
   destinationItem: {
     flexDirection: 'row',

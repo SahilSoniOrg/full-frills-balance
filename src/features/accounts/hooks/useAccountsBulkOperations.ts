@@ -12,7 +12,7 @@ import {
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,
 } from '@/src/services/accounts/accountHierarchyCommands';
-import { AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AccountType, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 
@@ -247,6 +247,21 @@ export function useAccountsBulkOperations({
     return allCards.filter(a => selection.selectedIds.has(a.id as AccountId));
   }, [sections, selection.selectedIds]);
 
+  const isMixedAccountTypes = useMemo(() => {
+    if (selection.selectedIds.size <= 1) return false;
+    let firstType: AccountType | undefined;
+    for (const id of selection.selectedIds) {
+      const acc = accountsById.get(id);
+      if (!acc) continue;
+      if (firstType === undefined) {
+        firstType = acc.accountType;
+      } else if (firstType !== acc.accountType) {
+        return true;
+      }
+    }
+    return false;
+  }, [selection.selectedIds, accountsById]);
+
   const selectionActions = useMemo<SelectionAction[]>(() => {
     return [
       {
@@ -267,7 +282,10 @@ export function useAccountsBulkOperations({
       {
         name: 'hierarchy' as const,
         onPress: () => openModal({ type: 'bulkHierarchy' }),
-        accessibilityLabel: 'Move accounts hierarchy',
+        disabled: isMixedAccountTypes,
+        accessibilityLabel: isMixedAccountTypes
+          ? 'Cannot move accounts of mixed types in hierarchy'
+          : 'Move accounts hierarchy',
       },
       {
         name: 'archive' as const,
@@ -275,7 +293,7 @@ export function useAccountsBulkOperations({
         accessibilityLabel: 'Archive or unarchive selected accounts',
       },
     ];
-  }, [handleBulkArchive, openModal]);
+  }, [handleBulkArchive, isMixedAccountTypes, openModal]);
 
   return {
     selectedAccountsList,

@@ -29,26 +29,13 @@ export function AccountsListView({
   onAccountLongPress,
   onAccountActionPress,
   selectedAccountIds,
-  selectedAccountsList,
   isSelectionModeActive,
   onSelectAll,
   onDeselectAll,
   onClearSelection,
   selectionActions,
   totalSelectableAccounts,
-  activeModal,
-  onCloseModal,
-  onBulkRenameSave,
-  onBulkHierarchyMoveAssign,
-  onBulkAppearanceSelect,
-  bulkParentCandidates,
-  onViewDetails,
-  onEditAccount,
-  onRecolorAccount,
-  onReconcileAccount,
-  onToggleArchiveAccount,
-  onDeleteAccount,
-  onAppearanceUpdate,
+  modals,
   onCollapseAccount,
   isLoading,
   netWorth,
@@ -256,23 +243,7 @@ export function AccountsListView({
           actions={selectionActions}
         />
 
-        <AccountsListModals
-          activeModal={activeModal}
-          onCloseModal={onCloseModal}
-          selectedAccountsList={selectedAccountsList}
-          selectedCount={selectedAccountIds.size}
-          bulkParentCandidates={bulkParentCandidates}
-          onBulkRenameSave={onBulkRenameSave}
-          onBulkHierarchyMoveAssign={onBulkHierarchyMoveAssign}
-          onBulkAppearanceSelect={onBulkAppearanceSelect}
-          onViewDetails={onViewDetails}
-          onEditAccount={onEditAccount}
-          onRecolorAccount={onRecolorAccount}
-          onReconcileAccount={onReconcileAccount}
-          onToggleArchiveAccount={onToggleArchiveAccount}
-          onDeleteAccount={onDeleteAccount}
-          onAppearanceUpdate={onAppearanceUpdate}
-        />
+        <AccountsListModals {...modals} />
       </View>
     </ScreenWithChrome>
   );
@@ -287,7 +258,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Size.buttonLg + Spacing.xl,
   },
   header: {
     paddingTop: Spacing.lg,

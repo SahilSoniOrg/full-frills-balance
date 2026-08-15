@@ -1,4 +1,5 @@
 import { AccountsListHeaderActions } from '@/src/features/accounts/components/AccountsListHeaderActions';
+import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { withArchiveVisibilityScope } from '@/src/contexts/ArchiveVisibilityScope';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -9,8 +10,22 @@ import { useMemo } from 'react';
 function AccountsScreen() {
   const vm = useAccountsListViewModel();
 
-  const chrome = useMemo<TabScreenChrome>(
-    () => ({
+  const fab = useMemo(
+    () =>
+      vm.isSearching
+        ? undefined
+        : {
+            onPress: vm.onCreateAccount,
+            label: vm.activeTab === 'categories' ? 'New Category' : 'New Account',
+            placement: 'end' as const,
+            accessibilityLabel:
+              vm.activeTab === 'categories' ? 'Create a new category' : 'Create a new account',
+          },
+    [vm.activeTab, vm.isSearching, vm.onCreateAccount],
+  );
+
+  const chrome = useMemo<TabScreenChrome>(() => {
+    const baseChrome: TabScreenChrome = {
       screenTitle: 'Accounts',
       showBack: false,
       isSearchActive: vm.isSearching,
@@ -25,30 +40,25 @@ function AccountsScreen() {
           accountsForArchiveToggle={vm.accountsForArchiveToggle}
         />
       ),
-      fab:
-        vm.isSearching || vm.isSelectionModeActive
-          ? undefined
-          : {
-              onPress: vm.onCreateAccount,
-              label: vm.activeTab === 'categories' ? 'New Category' : 'New Account',
-              placement: 'end',
-              accessibilityLabel:
-                vm.activeTab === 'categories' ? 'Create a new category' : 'Create a new account',
-            },
-    }),
-    [
-      vm.activeTab,
-      vm.accountsForArchiveToggle,
-      vm.isSearching,
-      vm.isSelectionModeActive,
-      vm.onCreateAccount,
-      vm.onManageHierarchy,
-      vm.onReorderPress,
-      vm.onSearchChange,
-      vm.searchQuery,
-      vm.setIsSearching,
-    ],
-  );
+    };
+
+    return applySelectionChrome(baseChrome, {
+      active: vm.isSelectionModeActive,
+      onExit: vm.onClearSelection,
+      fab,
+    });
+  }, [
+    fab,
+    vm.accountsForArchiveToggle,
+    vm.isSearching,
+    vm.isSelectionModeActive,
+    vm.onClearSelection,
+    vm.onManageHierarchy,
+    vm.onReorderPress,
+    vm.onSearchChange,
+    vm.searchQuery,
+    vm.setIsSearching,
+  ]);
 
   return <AccountsListView {...vm} chrome={chrome} />;
 }

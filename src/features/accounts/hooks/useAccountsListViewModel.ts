@@ -5,7 +5,6 @@ import {
   filterAccountsForListTab,
   filterAccountSectionsForTab,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
-import { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountsBulkOperations } from '@/src/features/accounts/hooks/useAccountsBulkOperations';
 import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
@@ -21,13 +20,14 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
-import { IconName } from '@/src/components/core';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
+
+import type { AccountsListModalsProps } from '@/src/features/accounts/components/AccountsListModals';
 
 export type { AccountSectionViewModel };
 
@@ -47,26 +47,13 @@ export interface AccountsListViewModel {
   onAccountLongPress: (account: AccountCardViewModel) => void;
   onAccountActionPress: (account: AccountCardViewModel) => void;
   selectedAccountIds: Set<AccountId>;
-  selectedAccountsList: AccountCardViewModel[];
   isSelectionModeActive: boolean;
   onSelectAll: () => void;
   onDeselectAll: () => void;
   onClearSelection: () => void;
   selectionActions: SelectionAction[];
   totalSelectableAccounts: number;
-  activeModal: AccountsListActiveModal;
-  onCloseModal: () => void;
-  onBulkRenameSave: (namesByAccountId: Record<AccountId, string>) => Promise<void>;
-  onBulkHierarchyMoveAssign: (parentId: AccountId | null) => Promise<void>;
-  onBulkAppearanceSelect: (updates: { icon?: IconName; color?: string }) => Promise<void>;
-  bulkParentCandidates: HierarchyCandidateAccount[];
-  onViewDetails: (account: AccountCardViewModel) => void;
-  onEditAccount: (account: AccountCardViewModel) => void;
-  onRecolorAccount: (account: AccountCardViewModel) => void;
-  onReconcileAccount: (account: AccountCardViewModel) => void;
-  onToggleArchiveAccount: (account: AccountCardViewModel) => void;
-  onDeleteAccount: (account: AccountCardViewModel) => void;
-  onAppearanceUpdate: (updates: { icon?: IconName; color?: string }) => Promise<void>;
+  modals: AccountsListModalsProps;
   onCollapseAccount: (accountId: AccountId) => void;
   onCreateAccount: () => void;
   onReorderPress: () => void;
@@ -310,6 +297,27 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     [selection, setActiveTab],
   );
 
+  const modals: AccountsListModalsProps = useMemo(
+    () => ({
+      activeModal,
+      onCloseModal,
+      selectedAccountsList: bulk.selectedAccountsList,
+      selectedCount: selection.selectedIds.size,
+      bulkParentCandidates: bulk.bulkParentCandidates,
+      onBulkRenameSave: bulk.handleBulkRenameSave,
+      onBulkHierarchyMoveAssign: bulk.handleBulkHierarchyMoveAssign,
+      onBulkAppearanceSelect: bulk.handleBulkAppearanceSelect,
+      onViewDetails: actions.onViewDetails,
+      onEditAccount: actions.onEditAccount,
+      onRecolorAccount: actions.onRecolorAccount,
+      onReconcileAccount: actions.onReconcileAccount,
+      onToggleArchiveAccount: actions.onToggleArchiveAccount,
+      onDeleteAccount: actions.onDeleteAccount,
+      onAppearanceUpdate: actions.onAppearanceUpdate,
+    }),
+    [activeModal, onCloseModal, bulk, selection.selectedIds.size, actions],
+  );
+
   return {
     sections,
     onToggleSection,
@@ -318,26 +326,13 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onAccountLongPress,
     onAccountActionPress,
     selectedAccountIds: selection.selectedIds,
-    selectedAccountsList: bulk.selectedAccountsList,
     isSelectionModeActive: selection.isSelectionModeActive,
     onSelectAll: () => selection.selectAll(allSelectableAccountIds),
     onDeselectAll: selection.clearItems,
     onClearSelection: selection.exitSelectionMode,
     selectionActions: bulk.selectionActions,
     totalSelectableAccounts: allSelectableAccountIds.length,
-    activeModal,
-    onCloseModal,
-    onBulkRenameSave: bulk.handleBulkRenameSave,
-    onBulkHierarchyMoveAssign: bulk.handleBulkHierarchyMoveAssign,
-    onBulkAppearanceSelect: bulk.handleBulkAppearanceSelect,
-    bulkParentCandidates: bulk.bulkParentCandidates,
-    onViewDetails: actions.onViewDetails,
-    onEditAccount: actions.onEditAccount,
-    onRecolorAccount: actions.onRecolorAccount,
-    onReconcileAccount: actions.onReconcileAccount,
-    onToggleArchiveAccount: actions.onToggleArchiveAccount,
-    onDeleteAccount: actions.onDeleteAccount,
-    onAppearanceUpdate: actions.onAppearanceUpdate,
+    modals,
     onCollapseAccount,
     onCreateAccount: actions.onCreateAccount,
     onReorderPress: actions.onReorderPress,
