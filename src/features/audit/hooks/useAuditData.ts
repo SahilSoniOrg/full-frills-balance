@@ -4,9 +4,6 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
-
-export type { EntityStatus } from '@/src/features/audit/auditLogTypes';
-
 export function useAuditAccounts(wokrplaceId: string) {
   const { data: accounts, isLoading } = useObservable(
     () => accountQueries.observeAll(wokrplaceId as WorkplaceId),

@@ -2,12 +2,8 @@ import { database } from '@/src/data/database/Database';
 import { isAccountType } from '@/src/data/models/Account';
 import Currency from '@/src/data/models/Currency';
 import { AccountType, TransactionType } from '@/src/types/domain';
-
-import type {
-  BatchImportData,
-  ImportedTransaction,
-} from '@/src/data/repositories/ImportRepository';
-import { foldBalances } from '@/src/services/accounting/BalanceEffects';
+import type { BatchImportData, ImportedTransaction } from '@/src/data/repositories/importTypes';
+import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';

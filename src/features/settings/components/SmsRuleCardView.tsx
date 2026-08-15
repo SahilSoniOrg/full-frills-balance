@@ -2,7 +2,7 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SmsRuleCondition } from '@/src/services/ledger/RuleMatcher';
+import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRuleCardViewProps {

@@ -4,9 +4,11 @@
 
 // Design tokens - Visual appearance only
 export * from './design-tokens';
-export * from './theme-helpers';
 export * from './report-constants';
 export * from './account-constants';
 
 // App configuration - Behavior and settings only
 export * from './app-config';
+
+// Utility re-exports for theme
+export { withOpacity } from '@/src/utils/color-math';

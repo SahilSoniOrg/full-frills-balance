@@ -6,7 +6,7 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';

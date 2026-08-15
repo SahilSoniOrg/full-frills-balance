@@ -3,10 +3,11 @@ import { IconName } from '@/src/components/core';
 import Account from '@/src/data/models/Account';
 import {
   getBulkHierarchyCandidates,
-  HierarchyCandidateAccount,
+  type HierarchyCandidateAccount,
 } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
-import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/useAccountsListViewModel';
+import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
 import type { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
+
 import { useSelection } from '@/src/hooks/useSelection';
 import {
   updateAccounts as updateAccountsCommand,

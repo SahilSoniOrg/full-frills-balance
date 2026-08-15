@@ -3,7 +3,7 @@ import { isAccountSubtype, isAccountType } from '@/src/data/models/Account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import type { AccountListItemRaw } from '@/src/data/repositories/AccountRepository';
-import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { WorkplaceId, AccountType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';

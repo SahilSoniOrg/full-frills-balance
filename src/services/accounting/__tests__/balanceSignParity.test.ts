@@ -1,6 +1,6 @@
 import { AccountType, TransactionType } from '@/src/types/domain';
 
-import { effect, periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 
 /**
  * Oracle for `periodFlowSQL().increaseCase` — keep in sync with BalanceEffects.periodFlowSQL.

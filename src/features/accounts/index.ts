@@ -4,7 +4,7 @@ export { CurrencySelector } from './components/CurrencySelector';
 export { useAccount, useAccounts } from './hooks/useAccounts';
 export { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 export { getArchivedAccountTilePresentation } from './utils/archivedAccountDisplay';
-export { getAccountIcon } from './utils/getAccountIcon';
+export { getAccountIcon } from '@/src/utils/accountIcon';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as CategoryCreationScreen } from './screens/CategoryCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';

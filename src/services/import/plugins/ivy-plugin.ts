@@ -29,7 +29,7 @@ import {
   ImportedJournal,
   ImportedPlannedPayment,
   ImportedTransaction,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { logger } from '@/src/utils/logger';

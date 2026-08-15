@@ -4,10 +4,7 @@ import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout'
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { UI_STRINGS } from '@/src/constants/copy/ui-strings';
 import { AccountReorderViewModel } from '@/src/features/accounts/hooks/useAccountReorderViewModel';
-import {
-  getAccountFallbackIcon,
-  getAccountIcon,
-} from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { resolveAccountAccentColor } from '@/src/utils/accountCategory';

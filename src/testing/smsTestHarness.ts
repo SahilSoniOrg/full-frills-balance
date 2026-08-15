@@ -15,7 +15,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';

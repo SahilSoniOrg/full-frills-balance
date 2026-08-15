@@ -1,5 +1,6 @@
 import { HeatmapPoint } from '@/src/services/reports/heatmapCalculators';
 import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/sankeyCalculator';
+import type { CategoryBreakdown } from '@/src/services/reports/reportTypes';
 import { AccountId } from '@/src/types/domain';
 
 /**
@@ -11,7 +12,7 @@ import { AccountId } from '@/src/types/domain';
  * `ReportService` presentation surface.
  */
 
-export type { HeatmapPoint, SankeyData, SankeyLink, SankeyNode };
+export type { CategoryBreakdown, HeatmapPoint, SankeyData, SankeyLink, SankeyNode };
 
 export interface ExpenseCategory {
   accountId: AccountId;
@@ -27,14 +28,6 @@ export interface IncomeVsExpense {
   endDate: number;
   income: number;
   expense: number;
-}
-
-export interface CategoryBreakdown {
-  category: string; // AccountSubtype
-  amount: number;
-  percentage: number;
-  accountIds: AccountId[];
-  color?: string;
 }
 
 export interface ReportSnapshot {

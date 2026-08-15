@@ -1,10 +1,10 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { database } from '@/src/data/database/Database';
-import { checkJournal } from '@/src/services/accounting/BalanceEffects';
+import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { JournalEntryLine, WorkplaceId } from '@/src/types/domain';
 import { sanitizeAmount } from '@/src/utils/validation';
 

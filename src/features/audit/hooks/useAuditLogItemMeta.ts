@@ -10,9 +10,6 @@ import {
 } from '@/src/features/audit/auditLogTypes';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useMemo } from 'react';
-
-export type { AuditLogEntry, EntityStatus } from '@/src/features/audit/auditLogTypes';
-
 const AUDIT_ID_PREVIEW_LEN = 12;
 
 interface UseAuditLogItemMetaParams {

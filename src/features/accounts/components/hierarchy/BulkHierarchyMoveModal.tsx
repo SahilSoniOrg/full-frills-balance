@@ -1,13 +1,12 @@
 import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
-export type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 
 export interface BulkHierarchyMoveModalProps {
   visible: boolean;

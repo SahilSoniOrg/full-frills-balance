@@ -15,13 +15,7 @@ export interface SmsMatchData {
 export type SmsRuleMode = 'builder' | 'regex';
 export type SmsRuleDisposition = 'auto_post' | 'review' | 'ignore';
 export type SmsRuleField =
-  | 'sender'
-  | 'body'
-  | 'merchant'
-  | 'account_source'
-  | 'direction'
-  | 'currency'
-  | 'amount';
+  'sender' | 'body' | 'merchant' | 'account_source' | 'direction' | 'currency' | 'amount';
 export type SmsRuleStringOperator = 'contains' | 'is';
 export type SmsRuleAmountOperator = 'eq' | 'gt' | 'lt' | 'between';
 

@@ -2,10 +2,11 @@ import { IconName } from '@/src/components/core';
 import Account from '@/src/data/models/Account';
 import {
   resolveAccountListPressAction,
-  AccountsListTab,
+  type AccountsListTab,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
-import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/useAccountsListViewModel';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
+import { getAccountIcon } from '@/src/utils/accountIcon';
+
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { deleteAccount as deleteAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
 import { updateAccounts as updateAccountsCommand } from '@/src/services/accounts/accountHierarchyCommands';

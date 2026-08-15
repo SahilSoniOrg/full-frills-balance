@@ -1,7 +1,7 @@
 import { IconName } from '@/src/types/domainIcons';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
+import type AccountMetadata from '@/src/data/models/AccountMetadata';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import Transaction from '@/src/data/models/Transaction';
+import type Transaction from '@/src/data/models/Transaction';
 import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';

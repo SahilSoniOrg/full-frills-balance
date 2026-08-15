@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/features/accounts';
+import { AccountPickerModal } from './AccountPickerModal';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants/app-config';
 import { ManageHierarchyViewModel } from '@/src/features/accounts/hooks/useManageHierarchyViewModel';

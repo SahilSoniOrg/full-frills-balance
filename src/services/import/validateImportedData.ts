@@ -1,4 +1,4 @@
-import { BatchImportData, ImportedAccount } from '@/src/data/repositories/ImportRepository';
+import { BatchImportData, ImportedAccount } from '@/src/data/repositories/importTypes';
 import {
   MissingImportedAccountRef,
   missingImportedAccountRefs,

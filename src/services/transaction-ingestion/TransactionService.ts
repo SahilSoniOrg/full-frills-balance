@@ -15,7 +15,7 @@ import {
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {

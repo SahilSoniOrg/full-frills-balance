@@ -3,8 +3,8 @@ import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
-import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
-import { syncRuleActionsFromColumns } from '@/src/services/sms/ruleActionsAccountIds';
+import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
+import { syncRuleActionsFromColumns } from '@/src/utils/sms/ruleActionsAccountIds';
 
 export interface SmsRuleDraftInput {
   id?: string;

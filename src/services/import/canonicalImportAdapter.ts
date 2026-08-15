@@ -14,7 +14,7 @@ import {
   ImportedTransaction,
   ImportedTransactionAutoPostRule,
   ImportedTransactionInboxRecord,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 
 import {
   CANONICAL_IMPORT_VERSION_V1,

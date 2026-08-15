@@ -5,7 +5,7 @@ import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
  */
 import { AppConfig } from '@/src/constants/app-config';
 
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
 import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';

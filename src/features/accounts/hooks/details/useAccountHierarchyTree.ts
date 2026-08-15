@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core';
 import Account from '@/src/data/models/Account';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
 import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';

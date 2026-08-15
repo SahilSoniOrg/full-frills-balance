@@ -57,12 +57,13 @@ export function useVoiceJournalParse({
 
   useEffect(() => {
     if (!visible) return;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setTranscription('');
       setIsRecording(false);
       setIsParsing(false);
       setParserOutput(null);
     }, 0);
+    return () => clearTimeout(timer);
   }, [visible]);
 
   const startRecording = useCallback(async () => {

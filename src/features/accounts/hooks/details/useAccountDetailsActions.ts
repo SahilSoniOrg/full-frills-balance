@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';

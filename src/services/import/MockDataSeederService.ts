@@ -14,16 +14,16 @@ import {
 import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 
-import {
+import { importRepository } from '@/src/data/repositories/ImportRepository';
+import type {
   BatchImportData,
-  importRepository,
   ImportedAccount,
   ImportedJournal,
   ImportedTransaction,
   ImportedBudget,
   ImportedBudgetScope,
   ImportedPlannedPayment,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 import { integrityService } from '@/src/services/integrity-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';

@@ -1,6 +1,6 @@
 import { AccountType, TransactionType } from '@/src/types/domain';
 
-import { checkJournal, effect } from '@/src/services/accounting/BalanceEffects';
+import { checkJournal, effect } from '@/src/utils/accounting/BalanceEffects';
 import {
   constructSimpleJournal,
   isBackdated,

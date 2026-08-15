@@ -4,7 +4,7 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics-service';
-import { SmsRuleDisposition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
+import { SmsRuleDisposition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
   buildStructuredSmsRuleConditions,
   hydrateSmsRuleForm,

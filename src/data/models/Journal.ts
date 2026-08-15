@@ -1,5 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import Transaction from '@/src/data/models/Transaction';
+import type Transaction from '@/src/data/models/Transaction';
 import { JournalDisplayType, JournalId, PlannedPaymentId } from '@/src/types/domain';
 import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';

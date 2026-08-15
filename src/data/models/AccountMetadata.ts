@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { AccountId } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';

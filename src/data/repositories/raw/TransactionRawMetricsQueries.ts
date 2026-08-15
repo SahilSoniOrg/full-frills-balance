@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { effect, periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';

@@ -5,7 +5,7 @@ import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';

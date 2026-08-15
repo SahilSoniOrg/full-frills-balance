@@ -9,11 +9,6 @@ import { Platform } from 'react-native';
 import { firstValueFrom, from, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
-export type {
-  SafeToSpendDashboard,
-  SafeToSpendDataPoint,
-  SafeToSpendProjection,
-} from '@/src/services/simulation/safeToSpendDashboardProjection';
 
 /** Widget / headline path — intentionally tiny. */
 export type SafeToSpendHeadline = {

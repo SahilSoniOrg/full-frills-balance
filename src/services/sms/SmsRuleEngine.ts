@@ -20,8 +20,8 @@ import {
   SmsRuleActions,
   SmsRuleCondition,
   SmsRuleMode,
-} from '@/src/services/ledger/RuleMatcher';
-import { dispositionForRuleAccounts } from '@/src/services/sms/ruleActionsAccountIds';
+} from '@/src/utils/sms/RuleMatcher';
+import { dispositionForRuleAccounts } from '@/src/utils/sms/ruleActionsAccountIds';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';

@@ -82,23 +82,24 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       current = filteredAccounts.find((a: Account) => a.id === parentId);
     }
 
-    if (expanded.size > 0) {
-      setTimeout(() => setExpandedAccountIds(prev => new Set([...prev, ...expanded])), 0);
-    }
-
-    // Ensure category is expanded
     const focusedAccount = filteredAccounts.find((a: Account) => a.id === initialFocusedId);
-    if (focusedAccount) {
-      setTimeout(
-        () =>
-          setCollapsedCategories(prev => {
-            const next = new Set(prev);
-            next.delete(focusedAccount.accountType);
-            return next;
-          }),
-        0,
-      );
-    }
+
+    const frameId = requestAnimationFrame(() => {
+      if (expanded.size > 0) {
+        setExpandedAccountIds(prev => new Set([...prev, ...expanded]));
+      }
+
+      if (focusedAccount) {
+        setCollapsedCategories(prev => {
+          if (!prev.has(focusedAccount.accountType)) return prev;
+          const next = new Set(prev);
+          next.delete(focusedAccount.accountType);
+          return next;
+        });
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
   }, [initialFocusedId, filteredAccounts]);
 
   const accountsByParent = useMemo(() => {

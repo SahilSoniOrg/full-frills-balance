@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics-service';
-import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import React, { useCallback, useMemo } from 'react';
 import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';

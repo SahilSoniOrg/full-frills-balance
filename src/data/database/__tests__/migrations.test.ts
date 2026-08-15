@@ -31,7 +31,7 @@ import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierar
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { foldBalances } from '@/src/services/accounting/BalanceEffects';
+import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
 const EXPECTED_SCHEMA_VERSION = 31;

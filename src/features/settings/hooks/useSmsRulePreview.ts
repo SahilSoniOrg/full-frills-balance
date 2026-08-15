@@ -1,5 +1,5 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { SmsRuleCondition, SmsRuleMode } from '@/src/services/ledger/RuleMatcher';
+import { SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
   buildSmsRulePreviewInput,
   smsRulePreviewHasConditions,

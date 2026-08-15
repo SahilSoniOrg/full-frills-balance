@@ -4,7 +4,7 @@ import {
   SmsRuleCondition,
   SmsRuleDisposition,
   SmsRuleMode,
-} from '@/src/services/ledger/RuleMatcher';
+} from '@/src/utils/sms/RuleMatcher';
 import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
 import { AccountId } from '@/src/types/domain';
 

@@ -10,10 +10,8 @@ import {
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
 import { analytics } from '@/src/services/analytics-service';
 import { useObservable } from '@/src/hooks/useObservable';
-import {
-  safeToSpendReadModel,
-  SafeToSpendDashboard,
-} from '@/src/services/simulation/SafeToSpendReadModel';
+import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
+import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';

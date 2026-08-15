@@ -28,3 +28,11 @@ export interface ReportingDeltaInput {
   /** Per-leg rate from the transaction when available (historical conversion). */
   exchangeRate?: number;
 }
+
+export interface CategoryBreakdown {
+  category: string; // AccountSubtype
+  amount: number;
+  percentage: number;
+  accountIds: AccountId[];
+  color?: string;
+}

@@ -7,7 +7,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
-import { foldBalances } from '@/src/services/accounting/BalanceEffects';
+import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';

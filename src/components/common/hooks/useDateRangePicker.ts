@@ -49,7 +49,7 @@ export function useDateRangePicker({
 
   useEffect(() => {
     if (visible) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setDraftFilter(currentFilter);
         setView('MENU');
 
@@ -73,6 +73,7 @@ export function useDateRangePicker({
           setLastNUnit('days');
         }
       }, 0);
+      return () => clearTimeout(timer);
     }
   }, [visible, currentFilter, monthList]);
 

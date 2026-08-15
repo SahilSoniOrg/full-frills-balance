@@ -1,5 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import BudgetScope from '@/src/data/models/BudgetScope';
+import type BudgetScope from '@/src/data/models/BudgetScope';
 import { BudgetId } from '@/src/types/domain';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';

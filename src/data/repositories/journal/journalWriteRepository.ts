@@ -4,7 +4,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { referenceNumberFromMetadataJson } from '@/src/services/ledger/SmsReferenceExtractor';
+import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import {
   AccountId,
   JournalDisplayType,

@@ -1,5 +1,5 @@
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
-import { SafeToSpendDashboard } from '@/src/services/simulation/SafeToSpendReadModel';
+import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/domain';
 

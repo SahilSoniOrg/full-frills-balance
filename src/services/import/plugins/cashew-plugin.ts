@@ -10,7 +10,7 @@ import {
   TransactionId,
 } from '@/src/types/domain';
 
-import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { BatchImportData } from '@/src/data/repositories/importTypes';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { files } from '@/src/utils/files';

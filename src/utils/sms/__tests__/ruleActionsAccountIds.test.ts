@@ -3,7 +3,7 @@ import {
   dispositionForRuleAccounts,
   mapOptionalRuleAccountId,
   syncRuleActionsFromColumns,
-} from '@/src/services/sms/ruleActionsAccountIds';
+} from '@/src/utils/sms/ruleActionsAccountIds';
 
 describe('ruleActionsAccountIds', () => {
   describe('syncRuleActionsFromColumns', () => {

@@ -9,7 +9,6 @@ jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/journal/journalWriteModule');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/TransactionRepository');
-jest.mock('@/src/data/repositories/CurrencyRepository');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/utils/logger');

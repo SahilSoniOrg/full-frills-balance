@@ -14,9 +14,6 @@ import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
 import { useSelectedReportPeriod } from './useSelectedReportPeriod';
-
-export type { ReportTab } from './reportTabTypes';
-
 export interface ReportSubPeriod {
   label: string | null;
   onClear: () => void;

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Journal from '@/src/data/models/Journal';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { JournalId } from '@/src/types/domain';
 
 const DUPLICATE_CONFIG = AppConfig.input.sms.duplicateDetection;

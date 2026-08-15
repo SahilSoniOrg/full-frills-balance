@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
-import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
+import type { CategoryBreakdown } from '@/src/services/reports/reportTypes';
 import { roundToPrecision } from '@/src/utils/money';
 
 export interface SankeyNode {

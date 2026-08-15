@@ -2,11 +2,11 @@ import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
-import {
+import { importRepository } from '@/src/data/repositories/ImportRepository';
+import type {
   BatchImportData,
   ImportedTransactionInboxRecord,
-  importRepository,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';

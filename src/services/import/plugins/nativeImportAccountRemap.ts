@@ -10,7 +10,7 @@ import {
   ImportedPlannedPayment,
   ImportedTransaction,
   ImportedTransactionAutoPostRule,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 import {
   AccountImportBatchDto,
   AccountImportRef,
@@ -24,7 +24,7 @@ import {
 import {
   mapOptionalRuleAccountId,
   syncRuleActionsFromColumns,
-} from '@/src/services/sms/ruleActionsAccountIds';
+} from '@/src/utils/sms/ruleActionsAccountIds';
 import { logger } from '@/src/utils/logger';
 
 export type NativeImportAccountSources = {

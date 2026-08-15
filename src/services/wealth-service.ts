@@ -8,7 +8,7 @@ import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { effect } from '@/src/services/accounting/BalanceEffects';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { workplaceService } from '@/src/services/WorkplaceService';

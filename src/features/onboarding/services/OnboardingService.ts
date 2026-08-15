@@ -11,7 +11,7 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
+import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 
 export interface OnboardingData {
   name: string;

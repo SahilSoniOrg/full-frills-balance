@@ -6,7 +6,7 @@ import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
+import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { onboardingService } from '../services/OnboardingService';
 
 export interface OnboardingFlowViewModel {

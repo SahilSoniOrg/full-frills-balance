@@ -1,6 +1,6 @@
-import Account from '@/src/data/models/Account';
+import type Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import Budget from '@/src/data/models/Budget';
+import type Budget from '@/src/data/models/Budget';
 import { AccountId, BudgetId } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';

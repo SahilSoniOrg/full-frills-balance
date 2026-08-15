@@ -2,7 +2,7 @@ import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { formatAccountSubtypeLabel, isAccountType } from '@/src/data/models/Account';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';

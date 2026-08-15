@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/features/accounts';
+import { AccountPickerModal } from './AccountPickerModal';
 import { AccountFormEditModals } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { AppearancePickerModal } from '@/src/components/common/AppearancePickerModal';
@@ -20,7 +20,7 @@ import { AccountTypeSelector } from '@/src/features/accounts/components/AccountT
 import { BalanceChangeClassifySheet } from '@/src/features/accounts/components/BalanceChangeClassifySheet';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';

@@ -19,7 +19,6 @@ import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
 import { getPerfNow } from '@/src/utils/dateHelpers';
@@ -27,58 +26,18 @@ import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
-import type { AccountsListModalsProps } from '@/src/features/accounts/components/AccountsListModals';
+import type {
+  AccountsListActiveModal,
+  AccountsListModalsProps,
+  AccountsListViewModel,
+} from '@/src/features/accounts/hooks/accountsListTypes';
 
-export type { AccountSectionViewModel };
-
-export type AccountsListActiveModal =
-  | { type: 'actionSheet'; account: AccountCardViewModel }
-  | { type: 'appearance'; account: AccountCardViewModel }
-  | { type: 'bulkRename' }
-  | { type: 'bulkAppearance'; mode: 'icon' | 'color' }
-  | { type: 'bulkHierarchy' }
-  | null;
-
-export interface AccountsListViewModel {
-  sections: AccountSectionViewModel[];
-  onToggleSection: (title: string) => void;
-  onToggleSectionSelect: (accountIds: AccountId[]) => void;
-  onAccountPress: (accountId: AccountId) => void;
-  onAccountLongPress: (account: AccountCardViewModel) => void;
-  onAccountActionPress: (account: AccountCardViewModel) => void;
-  selectedAccountIds: Set<AccountId>;
-  isSelectionModeActive: boolean;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
-  onClearSelection: () => void;
-  selectionActions: SelectionAction[];
-  totalSelectableAccounts: number;
-  modals: AccountsListModalsProps;
-  onCollapseAccount: (accountId: AccountId) => void;
-  onCreateAccount: () => void;
-  onReorderPress: () => void;
-  onManageHierarchy: () => void;
-  isLoading: boolean;
-  version: number;
-  netWorth: number;
-  totalAssets: number;
-  totalLiabilities: number;
-  totalIncome: number;
-  totalExpense: number;
-  inflowPeriod: 'overall' | 'month' | '30days';
-  setInflowPeriod: (period: 'overall' | 'month' | '30days') => void;
-  inflowIncome: number;
-  inflowExpense: number;
-  isPeriodLoading: boolean;
-  currencyCode: string;
-  activeTab: 'accounts' | 'categories';
-  setActiveTab: (tab: 'accounts' | 'categories') => void;
-  searchQuery: string;
-  isSearching: boolean;
-  onSearchChange: (query: string) => void;
-  setIsSearching: (isSearching: boolean) => void;
-  accountsForArchiveToggle: { archivedAt?: Date | number | null }[];
-}
+export type {
+  AccountSectionViewModel,
+  AccountsListActiveModal,
+  AccountsListModalsProps,
+  AccountsListViewModel,
+};
 
 export function useAccountsListViewModel(): AccountsListViewModel {
   const { theme, onContrast } = useTheme();

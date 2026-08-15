@@ -865,8 +865,6 @@ export const getContextualTokens = (theme: Theme): ContextualTokens => ({
   },
 });
 
-export { withOpacity } from '@/src/utils/color-math';
-
 // === LAYOUT CONSTANTS ===
 // Interaction areas and component-specific dimensions
 export const Layout = {

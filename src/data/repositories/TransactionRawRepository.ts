@@ -6,7 +6,7 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
-import { periodFlowSQL } from '@/src/services/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { from, Observable } from 'rxjs';

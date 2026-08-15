@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { JournalId } from '@/src/types/domain';
 import {
   buildReferenceDuplicateMatch,

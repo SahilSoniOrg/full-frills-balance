@@ -22,9 +22,6 @@ import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-
-export type { JournalSplitItemViewModel } from '@/src/features/journal/hooks/journalDetailsSplitItems';
-
 export interface JournalDetailsViewModel {
   isLoading: boolean;
   isMissing: boolean;

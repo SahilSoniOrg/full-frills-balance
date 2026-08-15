@@ -8,7 +8,7 @@ import { analytics } from '@/src/services/analytics-service';
 import {
   SafeToSpendDataPoint,
   SafeToSpendProjection,
-} from '@/src/services/simulation/SafeToSpendReadModel';
+} from '@/src/services/simulation/safeToSpendDashboardProjection';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

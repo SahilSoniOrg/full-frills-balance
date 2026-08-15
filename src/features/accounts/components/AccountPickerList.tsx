@@ -5,7 +5,7 @@ import Account from '@/src/data/models/Account';
 import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';

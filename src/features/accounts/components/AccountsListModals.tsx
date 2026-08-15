@@ -1,30 +1,11 @@
 import { AppearancePickerModal } from '@/src/components/common/AppearancePickerModal';
-import { IconName } from '@/src/components/core';
 import { AccountActionSheet } from '@/src/features/accounts/components/AccountActionSheet';
 import { BulkRenameAccountsModal } from '@/src/features/accounts/components/BulkRenameAccountsModal';
 import { BulkHierarchyMoveModal } from '@/src/features/accounts/components/hierarchy/BulkHierarchyMoveModal';
-import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
-import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/useAccountsListViewModel';
-import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/domain';
+import type { AccountsListModalsProps } from '@/src/features/accounts/hooks/accountsListTypes';
 
-export interface AccountsListModalsProps {
-  activeModal: AccountsListActiveModal;
-  onCloseModal: () => void;
-  selectedAccountsList: AccountCardViewModel[];
-  selectedCount: number;
-  bulkParentCandidates: HierarchyCandidateAccount[];
-  onBulkRenameSave: (namesByAccountId: Record<AccountId, string>) => Promise<void> | void;
-  onBulkHierarchyMoveAssign: (parentId: AccountId | null) => Promise<void> | void;
-  onBulkAppearanceSelect: (updates: { icon?: IconName; color?: string }) => Promise<void> | void;
-  onViewDetails?: (account: AccountCardViewModel) => void;
-  onEditAccount?: (account: AccountCardViewModel) => void;
-  onRecolorAccount?: (account: AccountCardViewModel) => void;
-  onReconcileAccount?: (account: AccountCardViewModel) => void;
-  onToggleArchiveAccount?: (account: AccountCardViewModel) => void;
-  onDeleteAccount?: (account: AccountCardViewModel) => void;
-  onAppearanceUpdate: (updates: { icon?: IconName; color?: string }) => Promise<void> | void;
-}
+export type { AccountsListModalsProps };
 
 export function AccountsListModals({
   activeModal,

@@ -1,14 +1,14 @@
 import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import { ImportSelectionView } from '@/src/features/settings/components/ImportSelectionView';
-import { useImportPlugins } from '@/src/features/settings/hooks/useImportPlugins';
 import { useImport } from '@/src/hooks/use-import';
-import { useCallback, useContext } from 'react';
+import { importRegistry } from '@/src/services/import';
+import { useCallback, useContext, useMemo } from 'react';
 
 export default function ImportSelectionScreen() {
   const workplaceContext = useContext(WorkplaceContext);
   const workplaceId = workplaceContext?.workplaceId;
   const { handleImport, isImporting, progress, progressMessage } = useImport();
-  const plugins = useImportPlugins();
+  const plugins = useMemo(() => importRegistry.getAll(), []);
 
   const handleSelect = useCallback(
     (id: string) => {

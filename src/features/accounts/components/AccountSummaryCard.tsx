@@ -2,7 +2,7 @@ import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';

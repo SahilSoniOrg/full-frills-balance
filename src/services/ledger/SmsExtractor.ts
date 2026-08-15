@@ -4,7 +4,7 @@ import {
   TransactionExtractor,
   transactionExtractorRegistry,
 } from './TransactionExtractor';
-import { extractSmsReference } from './SmsReferenceExtractor';
+import { extractSmsReference } from '@/src/utils/sms/SmsReferenceExtractor';
 
 export class SmsExtractor implements TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean {

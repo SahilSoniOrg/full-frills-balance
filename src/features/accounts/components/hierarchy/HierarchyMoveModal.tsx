@@ -2,7 +2,7 @@ import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import {

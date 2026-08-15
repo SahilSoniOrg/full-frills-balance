@@ -4,7 +4,7 @@ import {
   ImportedAccount,
   ImportedJournal,
   ImportedTransaction,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 
 function minimalImport(overrides?: {

@@ -1,4 +1,3 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -9,32 +8,20 @@ import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInter
 import React, { useCallback, useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
-import Svg, {
-  Circle,
-  Defs,
-  Line,
-  LinearGradient,
-  Path,
-  Stop,
-  Text as SvgText,
-} from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
+import {
+  computeLineChartGeometry,
+  DataPoint,
+  findNearestIndex,
+  HorizontalLine,
+} from './line/chartMath';
+import { LineChartGrid } from './line/LineChartGrid';
+import { LineChartSeries } from './line/LineChartSeries';
 
-/** Axis / today labels: useMoneyFormat + SvgText (SVG children). Host under PrivacyScopeProvider. */
-export interface DataPoint {
-  x: number; // timestamp
-  y: number; // value
-  [key: string]: any; // Allow arbitrary extra data to be passed to tooltips
-}
+export type { DataPoint, HorizontalLine };
 
-export interface HorizontalLine {
-  value: number;
-  label?: string;
-  color?: string;
-  strokeDasharray?: string;
-}
-
-interface LineChartProps<T extends DataPoint = DataPoint> {
+export interface LineChartProps<T extends DataPoint = DataPoint> {
   data: T[];
   currencyCode: string;
   height?: number;
@@ -43,48 +30,19 @@ interface LineChartProps<T extends DataPoint = DataPoint> {
   width?: number;
   onPress?: (index: number) => void;
   selectedIndex?: number;
-  domainX?: [number, number]; // [min, max] bound for the time range
-  renderTooltipContent?: (index: number) => React.ReactNode; // Content to render inside built-in popup
-  tooltipWidth?: number; // Needed if using renderTooltipContent
-  tooltipHeight?: number; // Needed if using renderTooltipContent
-  xTicks?: number[]; // Array of X values where ticks/grid lines should be drawn
-  formatXTick?: (x: number) => string; // Function to format the tick labels
-  secondaryData?: T[]; // Optional secondary line data
-  secondaryColor?: string; // Color for the secondary line
-  todayX?: number; // Timestamp for the 'Today' vertical marker
-  extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
-  avoidPointVertical?: boolean; // Whether to place tooltip above/below point instead of centered
-  offset?: number; // Distance from point to tooltip
+  domainX?: [number, number];
+  renderTooltipContent?: (index: number) => React.ReactNode;
+  tooltipWidth?: number;
+  tooltipHeight?: number;
+  xTicks?: number[];
+  formatXTick?: (x: number) => string;
+  secondaryData?: T[];
+  secondaryColor?: string;
+  todayX?: number;
+  extraHorizontalLines?: HorizontalLine[];
+  avoidPointVertical?: boolean;
+  offset?: number;
 }
-
-const findNearestIndex = (data: DataPoint[], targetX: number): number => {
-  if (data.length === 0) return -1;
-  if (data.length === 1) return 0;
-
-  let left = 0;
-  let right = data.length - 1;
-
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    if (data[mid].x === targetX) return mid;
-    if (data[mid].x < targetX) {
-      left = mid + 1;
-    } else {
-      right = mid - 1;
-    }
-  }
-
-  // Check neighbors to find exact nearest
-  const leftIdx = Math.max(0, right);
-  const rightIdx = Math.min(data.length - 1, left);
-
-  if (leftIdx === rightIdx) return leftIdx;
-
-  const leftDiff = Math.abs(data[leftIdx].x - targetX);
-  const rightDiff = Math.abs(data[rightIdx].x - targetX);
-
-  return leftDiff <= rightDiff ? leftIdx : rightIdx;
-};
 
 export const LineChart = <T extends DataPoint>({
   data,
@@ -109,18 +67,29 @@ export const LineChart = <T extends DataPoint>({
   currencyCode,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
-  const formatMoneyShort = useMoneyFormat({ style: 'short' });
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
   const resolvedSecondaryColor = resolveThemeColor(theme, secondaryColor);
   const { width: windowWidth } = Dimensions.get('window');
-  const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2; // Padding
-  const PADDING_VERTICAL = Spacing.lg;
-  const PADDING_LEFT = Spacing.xl * 2; // More space for scale (approx 40px)
-  const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
-  const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
-
-  // Dynamic height calculation
+  const chartWidth = customWidth || windowWidth - Spacing.lg * 2;
+  const paddingVertical = Spacing.lg;
+  const paddingLeft = Spacing.xl * 2;
+  const paddingRight = Spacing.lg;
+  const plotWidth = Math.max(0, chartWidth - paddingLeft - paddingRight);
   const height = propHeight ?? REPORT_CHART_LAYOUT.lineChartDefaultHeight;
+
+  const geometry = useMemo(
+    () =>
+      computeLineChartGeometry({
+        data,
+        secondaryData,
+        domainX,
+        height,
+        plotWidth,
+        paddingVertical,
+        paddingLeft,
+      }),
+    [data, secondaryData, domainX, height, plotWidth, paddingVertical, paddingLeft],
+  );
 
   const {
     path,
@@ -132,115 +101,12 @@ export const LineChart = <T extends DataPoint>({
     displayRange,
     maxValPoint,
     sortedData,
-  } = useMemo(() => {
-    if (data.length === 0)
-      return {
-        path: '',
-        secondaryPath: '',
-        gradientPath: '',
-        minX: 0,
-        maxX: 0,
-        displayMinY: 0,
-        displayRange: 0,
-        maxValPoint: undefined,
-        sortedData: [] as T[],
-      };
-
-    // Ensure data is sorted for binary search safety
-    const activeData = [...data].sort((a, b) => a.x - b.x);
-    const activeSecondaryData = secondaryData
-      ? [...secondaryData].sort((a, b) => a.x - b.x)
-      : undefined;
-
-    const yValues = activeData.map(d => d.y);
-    const xValues = activeData.map(d => d.x);
-
-    if (activeSecondaryData && activeSecondaryData.length > 0) {
-      yValues.push(...activeSecondaryData.map(d => d.y));
-      xValues.push(...activeSecondaryData.map(d => d.x));
-    }
-
-    const minXVal = domainX ? domainX[0] : Math.min(...xValues);
-    const maxXVal = domainX ? domainX[1] : Math.max(...xValues);
-    const minYVal = Math.min(...yValues);
-    const maxYVal = Math.max(...yValues);
-
-    // Add some padding to Y range
-    const yRange = maxYVal - minYVal || 1;
-    const displayMinYVal = minYVal - yRange * 0.1;
-    const displayMaxYVal = maxYVal + yRange * 0.1;
-    const displayRangeVal = displayMaxYVal - displayMinYVal;
-    const xRangeVal = maxXVal - minXVal;
-
-    // Determine max value point for annotation (only from primary data)
-    const maxValIndex = data.map(d => d.y).indexOf(Math.max(...data.map(d => d.y)));
-    const maxValPointVal = maxValIndex >= 0 ? data[maxValIndex] : undefined;
-
-    let pathStr = '';
-    let gradientPathStr = '';
-
-    data.forEach((point, index) => {
-      const normalizedX = xRangeVal === 0 ? 0.5 : (point.x - minXVal) / xRangeVal;
-      const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-      // Invert Y because SVG 0 is top
-      const y =
-        height -
-        PADDING_VERTICAL -
-        ((point.y - displayMinYVal) / displayRangeVal) * (height - PADDING_VERTICAL * 2);
-
-      if (index === 0) {
-        pathStr += `M ${x} ${y}`;
-        gradientPathStr += `M ${x} ${height - PADDING_VERTICAL} L ${x} ${y}`;
-      } else {
-        pathStr += ` L ${x} ${y}`;
-        gradientPathStr += ` L ${x} ${y}`;
-      }
-    });
-
-    // Close gradient path
-    if (activeData.length > 0) {
-      const lastPoint = activeData[activeData.length - 1];
-      const normalizedLastX = xRangeVal === 0 ? 0.5 : (lastPoint.x - minXVal) / xRangeVal;
-      const lastX = PADDING_LEFT + normalizedLastX * PLOT_WIDTH;
-      gradientPathStr += ` L ${lastX} ${height - PADDING_VERTICAL} L ${PADDING_LEFT} ${height - PADDING_VERTICAL} Z`;
-    }
-
-    let secondaryPathStr = '';
-    if (activeSecondaryData && activeSecondaryData.length > 0) {
-      activeSecondaryData.forEach((point, index) => {
-        const normalizedX = xRangeVal === 0 ? 0.5 : (point.x - minXVal) / xRangeVal;
-        const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-        const y =
-          height -
-          PADDING_VERTICAL -
-          ((point.y - displayMinYVal) / displayRangeVal) * (height - PADDING_VERTICAL * 2);
-
-        if (index === 0) {
-          secondaryPathStr += `M ${x} ${y}`;
-        } else {
-          secondaryPathStr += ` L ${x} ${y}`;
-        }
-      });
-    }
-
-    return {
-      path: pathStr,
-      secondaryPath: secondaryPathStr,
-      gradientPath: gradientPathStr,
-      minX: minXVal,
-      maxX: maxXVal,
-      displayMinY: displayMinYVal,
-      displayRange: displayRangeVal,
-      maxValPoint: maxValPointVal,
-      sortedData: activeData,
-    };
-  }, [data, height, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
+  } = geometry;
 
   const [internalSelectedIndex, setInternalSelectedIndex] = React.useState<number | undefined>(
     undefined,
   );
 
-  // Unify state: props.selectedIndex always wins. If not provided, use internal state.
   const isControlled = selectedIndex !== undefined;
   const activeIndex = isControlled ? selectedIndex : internalSelectedIndex;
 
@@ -253,16 +119,14 @@ export const LineChart = <T extends DataPoint>({
       (x: number, _y: number) => {
         if (sortedData.length === 0) return { type: 'none' };
 
-        const relativeX = x - PADDING_LEFT;
-        const normalizedX = Math.max(0, Math.min(1, relativeX / PLOT_WIDTH));
+        const relativeX = x - paddingLeft;
+        const normalizedX = Math.max(0, Math.min(1, relativeX / plotWidth));
         const targetX = minX + normalizedX * (maxX - minX);
 
-        // Find nearest point via Binary Search (O(log n))
         const closestIndex = findNearestIndex(sortedData, targetX);
-
         return { type: 'index', index: closestIndex };
       },
-      [sortedData, PADDING_LEFT, PLOT_WIDTH, minX, maxX],
+      [sortedData, paddingLeft, plotWidth, minX, maxX],
     ),
     onInteractionChange: useCallback(
       (state: InteractionState) => {
@@ -281,17 +145,18 @@ export const LineChart = <T extends DataPoint>({
       activeIndex === -1 ||
       !sortedData[activeIndex] ||
       sortedData.length === 0
-    )
+    ) {
       return null;
-    const xRange = maxX - minX;
+    }
 
+    const xRange = maxX - minX;
     const point = sortedData[activeIndex];
     const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
-    const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
+    const x = paddingLeft + normalizedX * plotWidth;
     const y =
       height -
-      PADDING_VERTICAL -
-      ((point.y - displayMinY) / displayRange) * (height - PADDING_VERTICAL * 2);
+      paddingVertical -
+      ((point.y - displayMinY) / displayRange) * (height - paddingVertical * 2);
 
     return { x, y, point };
   }, [
@@ -302,10 +167,15 @@ export const LineChart = <T extends DataPoint>({
     displayMinY,
     displayRange,
     height,
-    PLOT_WIDTH,
-    PADDING_LEFT,
-    PADDING_VERTICAL,
+    plotWidth,
+    paddingLeft,
+    paddingVertical,
   ]);
+
+  const todayDataPoint = useMemo(() => {
+    if (todayX === undefined) return undefined;
+    return data.find(d => Math.abs(d.x - todayX) < 1000);
+  }, [data, todayX]);
 
   if (data.length === 0) {
     return (
@@ -328,15 +198,15 @@ export const LineChart = <T extends DataPoint>({
 
   return (
     <View
-      style={{ height, width: CHART_WIDTH, overflow: 'visible' }}
+      style={{ height, width: chartWidth, overflow: 'visible' }}
       ref={chartRef}
       collapsable={false}
       onLayout={onLayout}
     >
-      <View style={{ width: CHART_WIDTH, height, overflow: 'visible', zIndex: 0 }}>
+      <View style={{ width: chartWidth, height, overflow: 'visible', zIndex: 0 }}>
         <GestureDetector gesture={gesture}>
-          <View style={{ width: CHART_WIDTH, height, zIndex: 0 }}>
-            <Svg height={height} width={CHART_WIDTH}>
+          <View style={{ width: chartWidth, height, zIndex: 0 }}>
+            <Svg height={height} width={chartWidth}>
               <Defs>
                 <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
                   <Stop offset="0" stopColor={chartColor} stopOpacity="0.5" />
@@ -344,261 +214,47 @@ export const LineChart = <T extends DataPoint>({
                 </LinearGradient>
               </Defs>
 
-              {/* Grid Lines & Ticks */}
-              {REPORT_CHART_LAYOUT.lineChartTicks.map(t => {
-                const val = displayMinY + t * displayRange;
-                const y = height - PADDING_VERTICAL - t * (height - PADDING_VERTICAL * 2);
-                return (
-                  <React.Fragment key={t}>
-                    <Line
-                      x1={PADDING_LEFT}
-                      y1={y}
-                      x2={CHART_WIDTH - PADDING_RIGHT}
-                      y2={y}
-                      stroke={theme.border}
-                      strokeWidth={1}
-                      strokeDasharray="4,4"
-                      opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
-                    />
-                    <SvgText
-                      x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
-                      y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
-                      fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
-                      fill={theme.textSecondary}
-                      textAnchor="end"
-                    >
-                      {formatMoneyShort(val, currencyCode)}
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-
-              {/* X-Axis Grid Lines & Ticks */}
-              {xTicks &&
-                formatXTick &&
-                xTicks.map((xVal, i) => {
-                  const normalizedX = maxX === minX ? 0.5 : (xVal - minX) / (maxX - minX);
-                  if (normalizedX < 0 || normalizedX > 1) return null;
-                  const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-                  return (
-                    <React.Fragment key={`xtick-${i}`}>
-                      <Line
-                        x1={x}
-                        y1={PADDING_VERTICAL}
-                        x2={x}
-                        y2={height - Math.max(0, PADDING_VERTICAL - 5)}
-                        stroke={theme.border}
-                        strokeWidth={1}
-                        strokeDasharray="4,4"
-                        opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
-                      />
-                      <SvgText
-                        x={x}
-                        y={height - Math.max(0, PADDING_VERTICAL - 20)}
-                        fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                        fill={theme.textSecondary}
-                        textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-                      >
-                        {formatXTick(xVal)}
-                      </SvgText>
-                    </React.Fragment>
-                  );
-                })}
-
-              {/* Today marker */}
-              {todayX !== undefined &&
-                (() => {
-                  const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
-                  if (normalizedX < 0 || normalizedX > 1) return null;
-                  const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-                  return (
-                    <React.Fragment>
-                      <Line
-                        x1={x}
-                        y1={PADDING_VERTICAL}
-                        x2={x}
-                        y2={height - PADDING_VERTICAL}
-                        stroke={theme.textSecondary}
-                        strokeWidth={1.5}
-                        opacity={0.6}
-                      />
-                      <SvgText
-                        x={x + 4}
-                        y={PADDING_VERTICAL + 10}
-                        fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                        fill={theme.textSecondary}
-                        textAnchor="start"
-                        opacity={0.8}
-                      >
-                        {AppConfig.strings.reports.today}
-                      </SvgText>
-                      {(() => {
-                        const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000);
-                        if (!todayPoint) return null;
-                        const y =
-                          height -
-                          PADDING_VERTICAL -
-                          ((todayPoint.y - displayMinY) / displayRange) *
-                            (height - PADDING_VERTICAL * 2);
-
-                        return (
-                          <React.Fragment>
-                            <Circle
-                              cx={x}
-                              cy={y}
-                              r={4}
-                              fill={chartColor}
-                              stroke={theme.surface}
-                              strokeWidth={1}
-                            />
-                            <SvgText
-                              x={x + 4}
-                              y={y - 8}
-                              fontSize={11}
-                              fontWeight="bold"
-                              fill={chartColor}
-                              textAnchor="start"
-                            >
-                              {formatMoneyShort(todayPoint.y, currencyCode)}
-                            </SvgText>
-                          </React.Fragment>
-                        );
-                      })()}
-                    </React.Fragment>
-                  );
-                })()}
-
-              {/* Extra Horizontal Reference Lines */}
-              {extraHorizontalLines?.map((line, i) => {
-                if (line.value < displayMinY || line.value > displayMinY + displayRange)
-                  return null;
-                const y =
-                  height -
-                  PADDING_VERTICAL -
-                  ((line.value - displayMinY) / displayRange) * (height - PADDING_VERTICAL * 2);
-                const lineColor = line.color || theme.textSecondary;
-
-                return (
-                  <React.Fragment key={`extra-h-${i}`}>
-                    <Line
-                      x1={PADDING_LEFT}
-                      y1={y}
-                      x2={CHART_WIDTH - PADDING_RIGHT}
-                      y2={y}
-                      stroke={lineColor}
-                      strokeWidth={1}
-                      strokeDasharray={line.strokeDasharray || '4,4'}
-                      opacity={0.8}
-                    />
-                    {line.label && (
-                      <SvgText
-                        x={CHART_WIDTH - PADDING_RIGHT - 4}
-                        y={y - 6}
-                        fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                        fill={lineColor}
-                        textAnchor="end"
-                        fontWeight="bold"
-                        opacity={0.9}
-                      >
-                        {line.label}
-                      </SvgText>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-
-              {/* Max Value Annotation */}
-              {maxValPoint &&
-                (() => {
-                  const normalizedX = maxX === minX ? 0.5 : (maxValPoint.x - minX) / (maxX - minX);
-                  const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-                  const y =
-                    height -
-                    PADDING_VERTICAL -
-                    ((maxValPoint.y - displayMinY) / displayRange) *
-                      (height - PADDING_VERTICAL * 2);
-                  return (
-                    <React.Fragment>
-                      <Circle
-                        cx={x}
-                        cy={y}
-                        r={REPORT_CHART_LAYOUT.lineChartMaxPointRadius}
-                        fill={chartColor}
-                        opacity={0.8}
-                      />
-                      <SvgText
-                        x={x}
-                        y={y - REPORT_CHART_LAYOUT.lineChartMaxLabelOffsetY}
-                        fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                        fontWeight="bold"
-                        fill={chartColor}
-                        textAnchor="middle"
-                      >
-                        {AppConfig.strings.reports.maxLabel}
-                      </SvgText>
-                    </React.Fragment>
-                  );
-                })()}
-
-              {showGradient && <Path d={gradientPath} fill="url(#gradient)" />}
-              <Path
-                d={path}
-                stroke={chartColor}
-                strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={
-                  activeIndex !== undefined && activeIndex !== -1
-                    ? REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity
-                    : 1
-                }
+              <LineChartGrid
+                displayMinY={displayMinY}
+                displayRange={displayRange}
+                minX={minX}
+                maxX={maxX}
+                height={height}
+                chartWidth={chartWidth}
+                plotWidth={plotWidth}
+                paddingLeft={paddingLeft}
+                paddingRight={paddingRight}
+                paddingVertical={paddingVertical}
+                currencyCode={currencyCode}
+                theme={theme}
+                chartColor={chartColor}
+                xTicks={xTicks}
+                formatXTick={formatXTick}
+                todayX={todayX}
+                todayDataPoint={todayDataPoint}
+                extraHorizontalLines={extraHorizontalLines}
+                maxValPoint={maxValPoint}
               />
-              {secondaryPath ? (
-                <Path
-                  d={secondaryPath}
-                  stroke={resolvedSecondaryColor || theme.textSecondary}
-                  strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
-                  fill="none"
-                  opacity={0.7}
-                />
-              ) : null}
 
-              {/* Interactive Points */}
-              {data.map((point, index) => {
-                const normalizedX = maxX === minX ? 0.5 : (point.x - minX) / (maxX - minX);
-                const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-                const y =
-                  height -
-                  PADDING_VERTICAL -
-                  ((point.y - displayMinY) / displayRange) * (height - PADDING_VERTICAL * 2);
-
-                const isSelected = activeIndex === index;
-
-                return (
-                  <React.Fragment key={index}>
-                    {isSelected && (
-                      <>
-                        <Circle
-                          cx={x}
-                          cy={y}
-                          r={REPORT_CHART_LAYOUT.lineChartSelectedPointRadius}
-                          fill={chartColor}
-                          stroke={theme.surface}
-                          strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedPointStrokeWidth}
-                        />
-                        <Path
-                          d={`M ${x} ${height - PADDING_VERTICAL} L ${x} ${y + REPORT_CHART_LAYOUT.lineChartSelectedIndicatorOffsetY}`}
-                          stroke={chartColor}
-                          strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedIndicatorStrokeWidth}
-                          strokeDasharray="4,4"
-                          opacity={REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity}
-                        />
-                      </>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+              <LineChartSeries
+                data={data}
+                path={path}
+                secondaryPath={secondaryPath}
+                gradientPath={gradientPath}
+                showGradient={showGradient}
+                chartColor={chartColor}
+                secondaryColor={resolvedSecondaryColor || theme.textSecondary}
+                activeIndex={activeIndex}
+                minX={minX}
+                maxX={maxX}
+                displayMinY={displayMinY}
+                displayRange={displayRange}
+                height={height}
+                plotWidth={plotWidth}
+                paddingLeft={paddingLeft}
+                paddingVertical={paddingVertical}
+                surfaceColor={theme.surface}
+              />
             </Svg>
           </View>
         </GestureDetector>
@@ -612,7 +268,7 @@ export const LineChart = <T extends DataPoint>({
           <ChartTooltip
             x={selectedPointInfo.x}
             y={selectedPointInfo.y}
-            containerWidth={CHART_WIDTH}
+            containerWidth={chartWidth}
             containerHeight={height}
             tooltipWidth={tooltipWidth}
             tooltipHeight={tooltipHeight}
@@ -620,7 +276,7 @@ export const LineChart = <T extends DataPoint>({
             edgePadding={REPORT_CHART_LAYOUT.gestureSensitivity * 2}
             avoidPointVertical={avoidPointVertical}
           >
-            {renderTooltipContent!(activeIndex!)}
+            {renderTooltipContent(activeIndex!)}
           </ChartTooltip>
         </View>
       )}

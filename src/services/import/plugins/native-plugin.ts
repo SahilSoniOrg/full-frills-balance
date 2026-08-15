@@ -20,7 +20,7 @@ import {
   ImportedTransactionAutoPostRule,
   ImportedTransaction,
   ImportedTransactionInboxRecord,
-} from '@/src/data/repositories/ImportRepository';
+} from '@/src/data/repositories/importTypes';
 
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';

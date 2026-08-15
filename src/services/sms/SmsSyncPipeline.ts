@@ -16,13 +16,13 @@ import { transactionAutoPostRuleRepository } from '@/src/data/repositories/Trans
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { SmsMatchData } from '@/src/services/ledger/RuleMatcher';
+import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
 import {
   ParsedTransaction,
   SmsParser,
   toTransactionDirection,
 } from '@/src/services/ledger/SmsParser';
-import { normalizeSmsReferenceNumber } from '@/src/services/ledger/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import {
