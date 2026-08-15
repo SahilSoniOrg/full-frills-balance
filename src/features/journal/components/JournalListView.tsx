@@ -4,6 +4,10 @@ import { JournalEntryListView } from '@/src/components/common/JournalEntryListVi
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
+import {
+  JournalListModals,
+  type JournalListModalsProps,
+} from '@/src/features/journal/components/JournalListModals';
 import { JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -57,10 +61,11 @@ export interface JournalListViewProps {
   datePicker?: JournalDatePickerBundle;
   periodBar?: JournalPeriodBarBundle;
   selection?: JournalSelectionBundle;
+  modals?: JournalListModalsProps;
 }
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
-  const { list, chrome, datePicker, periodBar, selection } = props;
+  const { list, chrome, datePicker, periodBar, selection, modals } = props;
 
   const selectionChrome = useMemo(
     () =>
@@ -118,6 +123,8 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
             onSelect={datePicker.onSelect}
           />
         ) : null}
+
+        {modals ? <JournalListModals {...modals} /> : null}
       </View>
     </ScreenWithChrome>
   );

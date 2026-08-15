@@ -61,6 +61,7 @@ function JournalScreen() {
       datePicker={journalList.datePicker}
       periodBar={journalList.periodBar}
       selection={journalList.selection}
+      modals={journalList.modals}
     />
   );
 }

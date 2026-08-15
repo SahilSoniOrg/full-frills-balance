@@ -205,13 +205,58 @@ export class TransactionRepository {
 
   async findByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Promise<Transaction[]> {
     if (journalIds.length === 0) return [];
-    return this.transactions
-      .query(
-        Q.where('journal_id', Q.oneOf(journalIds)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
+    const CHUNK_SIZE = 100;
+    if (journalIds.length <= CHUNK_SIZE) {
+      return this.transactions
+        .query(
+          Q.where('journal_id', Q.oneOf(journalIds)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+    }
+
+    const results: Transaction[] = [];
+    for (let i = 0; i < journalIds.length; i += CHUNK_SIZE) {
+      const chunk = journalIds.slice(i, i + CHUNK_SIZE);
+      const batch = await this.transactions
+        .query(
+          Q.where('journal_id', Q.oneOf(chunk)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+      results.push(...batch);
+    }
+    return results;
+  }
+
+  async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Transaction[]> {
+    if (ids.length === 0) return [];
+    const CHUNK_SIZE = 100;
+    if (ids.length <= CHUNK_SIZE) {
+      return this.transactions
+        .query(
+          Q.where('id', Q.oneOf(ids)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+    }
+
+    const results: Transaction[] = [];
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + CHUNK_SIZE);
+      const batch = await this.transactions
+        .query(
+          Q.where('id', Q.oneOf(chunk)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+      results.push(...batch);
+    }
+    return results;
   }
 
   observeByJournals(

@@ -451,6 +451,217 @@ export class JournalWriteRepository {
       return { reversalJournal, replacementJournal };
     });
   }
+
+  /**
+   * Bulk updates descriptions for a list of journals in a single atomic database batch.
+   */
+  async bulkUpdateDescriptions(
+    journals: Journal[],
+    renames: Record<JournalId, string>,
+  ): Promise<void> {
+    if (journals.length === 0) return;
+
+    await database.write(async () => {
+      const now = new Date();
+      const ops: Model[] = [];
+
+      for (const journal of journals) {
+        const newName = renames[journal.id as JournalId];
+        if (newName !== undefined && newName !== journal.description) {
+          ops.push(
+            journal.prepareUpdate(record => {
+              record.description = newName;
+              record.updatedAt = now;
+            }),
+          );
+        }
+      }
+
+      if (ops.length > 0) {
+        await database.batch(ops);
+      }
+    });
+  }
+
+  /**
+   * Atomically soft deletes multiple journals and their child transactions in a single database batch.
+   */
+  async bulkSoftDeleteJournals(
+    workplaceId: WorkplaceId,
+    journalIds: JournalId[],
+  ): Promise<{ affectedAccountIds: Set<AccountId>; minDate: number }> {
+    if (journalIds.length === 0) {
+      return { affectedAccountIds: new Set(), minDate: Infinity };
+    }
+
+    const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
+    const transactions = await this.transactions
+      .query(
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+
+    const affectedAccountIds = new Set<AccountId>();
+    let minDate = Infinity;
+
+    for (const tx of transactions) {
+      affectedAccountIds.add(tx.accountId as AccountId);
+      minDate = Math.min(minDate, tx.transactionDate);
+    }
+
+    await database.write(async () => {
+      const now = new Date();
+      const journalUpdates = journals.map(j =>
+        j.prepareUpdate(record => {
+          record.deletedAt = now;
+          record.updatedAt = now;
+        }),
+      );
+      const txUpdates = transactions.map(t =>
+        t.prepareUpdate(record => {
+          record.deletedAt = now;
+          record.updatedAt = now;
+        }),
+      );
+
+      await database.batch([...journalUpdates, ...txUpdates]);
+    });
+
+    return { affectedAccountIds, minDate };
+  }
+
+  /**
+   * Atomically creates a new merged journal and soft-deletes the source journals in a single database batch.
+   */
+  async mergeJournalsAtomic(params: {
+    workplaceId: WorkplaceId;
+    sourceJournalIds: JournalId[];
+    newJournalData: PrepareCreateJournalData;
+  }): Promise<{
+    mergedJournal: Journal;
+    affectedAccountIds: Set<AccountId>;
+    minDate: number;
+  }> {
+    const { workplaceId, sourceJournalIds, newJournalData } = params;
+
+    const sourceJournals = await journalQueryRepository.findByIds(workplaceId, sourceJournalIds);
+    const sourceTransactions = await this.transactions
+      .query(
+        Q.where('journal_id', Q.oneOf(sourceJournalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+
+    const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
+      newJournalData,
+      workplaceId,
+    );
+
+    const affectedAccountIds = new Set<AccountId>();
+    let minDate = newJournalData.journalDate;
+
+    for (const tx of sourceTransactions) {
+      affectedAccountIds.add(tx.accountId as AccountId);
+      minDate = Math.min(minDate, tx.transactionDate);
+    }
+    for (const tx of newJournalData.transactions) {
+      affectedAccountIds.add(tx.accountId);
+    }
+
+    await database.write(async () => {
+      const now = new Date();
+      const sourceJournalDeletes = sourceJournals.map(j =>
+        j.prepareUpdate(record => {
+          record.deletedAt = now;
+          record.updatedAt = now;
+        }),
+      );
+      const sourceTxDeletes = sourceTransactions.map(t =>
+        t.prepareUpdate(record => {
+          record.deletedAt = now;
+          record.updatedAt = now;
+        }),
+      );
+
+      const batchOps: Model[] = [
+        journal,
+        ...transactions,
+        ...sourceJournalDeletes,
+        ...sourceTxDeletes,
+      ];
+      if (metadataRecord) batchOps.push(metadataRecord);
+
+      await database.batch(batchOps);
+    });
+
+    return { mergedJournal: journal, affectedAccountIds, minDate };
+  }
+
+  /**
+   * Bulk updates accountId for a list of transactions in a single atomic database batch.
+   */
+  async bulkReassignTransactionAccounts(
+    transactions: Transaction[],
+    newAccountId: AccountId,
+  ): Promise<void> {
+    if (transactions.length === 0) return;
+
+    await database.write(async () => {
+      const now = new Date();
+      const ops = transactions.map(tx =>
+        tx.prepareUpdate(record => {
+          record.accountId = newAccountId;
+          record.updatedAt = now;
+        }),
+      );
+      await database.batch(ops);
+    });
+  }
+
+  /**
+   * Atomically creates multiple journals with their transactions in a single database batch.
+   */
+  async bulkCreateJournals(
+    workplaceId: WorkplaceId,
+    items: PrepareCreateJournalData[],
+  ): Promise<{
+    journals: Journal[];
+    affectedAccountIds: Set<AccountId>;
+    minDate: number;
+  }> {
+    if (items.length === 0) {
+      return { journals: [], affectedAccountIds: new Set(), minDate: Infinity };
+    }
+
+    const createdJournals: Journal[] = [];
+    const allOps: Model[] = [];
+    const affectedAccountIds = new Set<AccountId>();
+    let minDate = Infinity;
+
+    for (const item of items) {
+      const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
+        item,
+        workplaceId,
+      );
+      createdJournals.push(journal);
+      allOps.push(journal, ...transactions);
+      if (metadataRecord) allOps.push(metadataRecord);
+
+      minDate = Math.min(minDate, item.journalDate);
+      for (const tx of item.transactions) {
+        affectedAccountIds.add(tx.accountId);
+      }
+    }
+
+    await database.write(async () => {
+      await database.batch(allOps);
+    });
+
+    return { journals: createdJournals, affectedAccountIds, minDate };
+  }
 }
 
 export const journalWriteRepository = new JournalWriteRepository();

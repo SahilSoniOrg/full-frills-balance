@@ -4,6 +4,7 @@ import {
   type JournalPeriodBarBundle,
   type JournalSelectionBundle,
 } from '@/src/features/journal/components/JournalListView';
+import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
 import { AppConfig } from '@/src/constants';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
@@ -12,6 +13,7 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEntryList } from '../list/hooks/useJournalEntryList';
+import { useJournalsBulkOperations } from '@/src/features/journal/hooks/useJournalsBulkOperations';
 
 export type JournalListEmptyState = {
   title: string;
@@ -33,6 +35,7 @@ export type JournalListModel = {
   datePicker: JournalDatePickerBundle;
   selection: JournalSelectionBundle;
   periodBar: JournalPeriodBarBundle;
+  modals: JournalListModalsProps;
   /** For Selection-mode nav chrome. */
   isSelectionModeActive: boolean;
   exitSelectionMode: () => void;
@@ -92,22 +95,72 @@ export function useJournalList(
     [hideDatePicker, setFilter],
   );
 
+  const {
+    items: coreItems,
+    isLoading: coreIsLoading,
+    isLoadingMore: coreIsLoadingMore,
+    onEndReached: coreOnEndReached,
+    selectedIds: coreSelectedIds,
+    isSelectionModeActive: coreIsSelectionModeActive,
+    onLongPressItem: coreOnLongPressItem,
+    toggleSelection: coreToggleSelection,
+    toggleMultiple: coreToggleMultiple,
+    selectAll: coreSelectAll,
+    clearItems: coreClearItems,
+    exitSelectionMode: coreExitSelectionMode,
+    onShareSelected: coreOnShareSelected,
+    setSelectedIds: coreSetSelectedIds,
+    journals: coreJournals,
+  } = core;
+
+  const bulkSelection = useMemo(
+    () => ({
+      selectedIds: coreSelectedIds,
+      isSelectionModeActive: coreIsSelectionModeActive,
+      onLongPressItem: coreOnLongPressItem,
+      toggleSelection: coreToggleSelection,
+      toggleMultiple: coreToggleMultiple,
+      selectAll: coreSelectAll,
+      clearItems: coreClearItems,
+      exitSelectionMode: coreExitSelectionMode,
+      setSelectedIds: coreSetSelectedIds,
+    }),
+    [
+      coreSelectedIds,
+      coreIsSelectionModeActive,
+      coreOnLongPressItem,
+      coreToggleSelection,
+      coreToggleMultiple,
+      coreSelectAll,
+      coreClearItems,
+      coreExitSelectionMode,
+      coreSetSelectedIds,
+    ],
+  );
+
+  const bulkOperations = useJournalsBulkOperations({
+    workplaceId,
+    journals: coreJournals,
+    selection: bulkSelection,
+    onShareSelected: coreOnShareSelected,
+  });
+
   const list = useMemo(
     (): JournalListModel['list'] => ({
-      items: core.items,
-      isLoading: core.isLoading,
-      isLoadingMore: core.isLoadingMore,
+      items: coreItems,
+      isLoading: coreIsLoading,
+      isLoadingMore: coreIsLoadingMore,
       loadingText,
       loadingMoreText,
       emptyTitle: emptyState.title,
       emptySubtitle: emptyState.subtitle,
-      onEndReached: core.onEndReached,
+      onEndReached: coreOnEndReached,
     }),
     [
-      core.items,
-      core.isLoading,
-      core.isLoadingMore,
-      core.onEndReached,
+      coreItems,
+      coreIsLoading,
+      coreIsLoadingMore,
+      coreOnEndReached,
       loadingText,
       loadingMoreText,
       emptyState.title,
@@ -125,26 +178,40 @@ export function useJournalList(
     [isDatePickerVisible, hideDatePicker, periodFilter, onDateSelect],
   );
 
+  const modals = useMemo(
+    (): JournalListModalsProps => ({
+      activeModal: bulkOperations.activeModal,
+      workplaceId,
+      onCloseModal: bulkOperations.closeModal,
+      onBulkRenameSave: bulkOperations.handleBulkRenameSave,
+      onMergeConfirm: bulkOperations.handleMergeConfirm,
+      onBulkChangeAccountSelect: bulkOperations.handleBulkChangeAccountSelect,
+    }),
+    [bulkOperations, workplaceId],
+  );
+
   const selection = useMemo(
     (): JournalSelectionBundle => ({
-      selectedIds: core.selectedIds,
-      isSelectionModeActive: core.isSelectionModeActive,
-      onLongPressItem: core.onLongPressItem,
-      toggleSelection: core.toggleSelection,
-      selectAll: core.selectAll,
-      clearItems: core.clearItems,
-      exitSelectionMode: core.exitSelectionMode,
-      onShareSelected: core.onShareSelected,
+      selectedIds: coreSelectedIds,
+      isSelectionModeActive: coreIsSelectionModeActive,
+      onLongPressItem: coreOnLongPressItem,
+      toggleSelection: coreToggleSelection,
+      selectAll: coreSelectAll,
+      clearItems: coreClearItems,
+      exitSelectionMode: coreExitSelectionMode,
+      onShareSelected: coreOnShareSelected,
+      actions: bulkOperations.actions,
     }),
     [
-      core.selectedIds,
-      core.isSelectionModeActive,
-      core.onLongPressItem,
-      core.toggleSelection,
-      core.selectAll,
-      core.clearItems,
-      core.exitSelectionMode,
-      core.onShareSelected,
+      coreSelectedIds,
+      coreIsSelectionModeActive,
+      coreOnLongPressItem,
+      coreToggleSelection,
+      coreSelectAll,
+      coreClearItems,
+      coreExitSelectionMode,
+      coreOnShareSelected,
+      bulkOperations.actions,
     ],
   );
 
@@ -163,6 +230,7 @@ export function useJournalList(
     datePicker,
     selection,
     periodBar,
+    modals,
     isSelectionModeActive: core.isSelectionModeActive,
     exitSelectionMode: core.exitSelectionMode,
   };

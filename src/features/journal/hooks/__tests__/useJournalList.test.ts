@@ -63,29 +63,36 @@ jest.mock('@/src/utils/logger', () => ({
   logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
 
-jest.mock('@/src/constants', () => ({
-  AppConfig: {
-    defaultCurrency: 'USD',
-    defaultCurrencyPrecision: 2,
-    defaults: {
-      journalPageSize: 20,
-      plannedJournalLimit: 50,
-    },
-    strings: {
-      common: { loading: 'Loading' },
-      journal: {
-        from: 'From: ',
-        to: 'To: ',
-        transaction: 'Transaction',
-        transfer: 'Transfer',
-        transactionCount: (c: number) => `${c} transactions`,
-        errors: {
-          missingExchangeRate: (f: string, t: string) => `Missing ${f} to ${t}`,
+jest.mock('@/src/constants', () => {
+  const actual = jest.requireActual('@/src/constants');
+  return {
+    ...actual,
+    AppConfig: {
+      ...actual.AppConfig,
+      defaultCurrency: 'USD',
+      defaultCurrencyPrecision: 2,
+      defaults: {
+        ...actual.AppConfig?.defaults,
+        journalPageSize: 20,
+        plannedJournalLimit: 50,
+      },
+      strings: {
+        ...actual.AppConfig?.strings,
+        common: { loading: 'Loading' },
+        journal: {
+          from: 'From: ',
+          to: 'To: ',
+          transaction: 'Transaction',
+          transfer: 'Transfer',
+          transactionCount: (c: number) => `${c} transactions`,
+          errors: {
+            missingExchangeRate: (f: string, t: string) => `Missing ${f} to ${t}`,
+          },
         },
       },
     },
-  },
-}));
+  };
+});
 
 jest.mock('@/src/utils/money', () => ({
   safeAdd: (a: number, b: number) => a + b,
