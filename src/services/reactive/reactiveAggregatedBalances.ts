@@ -101,7 +101,7 @@ export function observeAggregatedAccountBalances(
           endOfMonth,
           workplaceId,
           false,
-          true,
+          false,
         );
 
         const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)

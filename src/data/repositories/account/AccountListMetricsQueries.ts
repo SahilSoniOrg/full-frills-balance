@@ -62,6 +62,7 @@ export class AccountListMetricsQueries {
           AND j.deleted_at IS NULL 
           AND j.status IN (${placeholders})
           AND a.workplace_id = ?
+          ${!includeDeleted ? 'AND a.deleted_at IS NULL' : ''}
           ${!includeTotalCount ? 'AND t.transaction_date >= ? AND t.transaction_date <= ?' : ''}
         GROUP BY t.account_id
       )

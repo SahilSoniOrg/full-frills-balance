@@ -211,11 +211,13 @@ export function AccountsListView({
           keyExtractor={keyExtractor}
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
-          initialNumToRender={12}
-          maxToRenderPerBatch={10}
-          windowSize={5}
+          // Account cards are deliberately tall. Keep the first commit small and let
+          // SectionList fill the viewport in batches as the user scrolls.
+          initialNumToRender={4}
+          maxToRenderPerBatch={8}
+          windowSize={2}
           removeClippedSubviews={Platform.OS === 'android'}
-          updateCellsBatchingPeriod={50}
+          updateCellsBatchingPeriod={16}
           ListHeaderComponent={
             <View>
               {activeTab === 'accounts' ? (
