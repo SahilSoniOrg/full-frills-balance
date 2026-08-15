@@ -9,6 +9,7 @@ import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
   resolveAccountFormHeroCopy,
+  resolveAllowedAccountTypes,
 } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { useAccountFormBalanceClassify } from '@/src/features/accounts/hooks/form/useAccountFormBalanceClassify';
 import { useAccountFormCore } from '@/src/features/accounts/hooks/form/useAccountFormCore';
@@ -52,6 +53,7 @@ export interface AccountFormViewModel {
   accountSubtype: AccountSubtype;
   setAccountSubtype: (value: AccountSubtype) => void;
   availableSubtypes: readonly AccountSubtype[];
+  allowedAccountTypes?: readonly AccountType[];
   selectedCurrency: string;
   currencies: Currency[];
   setSelectedCurrency: (value: string) => void;
@@ -256,6 +258,11 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const showBalance = !core.isCategory && !isParent;
   const formError = validation.formError || draft.localFormError;
 
+  const allowedAccountTypes = useMemo(
+    () => resolveAllowedAccountTypes({ isEditMode, isCategory: core.isCategory }),
+    [isEditMode, core.isCategory],
+  );
+
   return {
     heroTitle,
     heroSubtitle,
@@ -268,6 +275,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accountSubtype: core.accountSubtype,
     setAccountSubtype: core.setAccountSubtype,
     availableSubtypes: core.availableSubtypes,
+    allowedAccountTypes,
     selectedCurrency: core.selectedCurrency,
     currencies,
     setSelectedCurrency: core.setSelectedCurrency,

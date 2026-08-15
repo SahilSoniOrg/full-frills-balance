@@ -1,7 +1,8 @@
 import { IconName } from '@/src/components/core';
 import Account, { getDefaultSubtypeForType } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId, AccountSubtype, AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import {
   AccountFormDefaults,
   AccountFormRouteContext,
@@ -232,15 +233,19 @@ export function accountFormDraftReducer(
         localFormError: clearError ? null : state.localFormError,
       };
     }
-    case 'SET_ACCOUNT_TYPE':
+    case 'SET_ACCOUNT_TYPE': {
+      const isTargetCategory = isCategoryAccountType(action.accountType);
       return {
         ...state,
         core: {
           ...state.core,
           accountType: action.accountType,
           accountSubtype: getDefaultSubtypeForType(action.accountType),
+          parentAccountId: EMPTY_ACCOUNT_ID,
+          initialBalance: isTargetCategory ? '' : state.core.initialBalance,
         },
       };
+    }
     case 'PATCH_METADATA':
       return {
         ...state,

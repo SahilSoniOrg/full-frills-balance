@@ -151,5 +151,32 @@ describe('accountFormService', () => {
       expect(result.payload.balanceData).toBeUndefined();
       expect(result.payload.metadata).toBeUndefined();
     });
+
+    it('builds payload for category converted to liability account', () => {
+      const liabilityMetadata = {
+        ...baseMetadata,
+        creditLimitAmount: '5000',
+      };
+      const result = buildAccountSavePayload({
+        accountName: 'Converted Credit Card',
+        accountType: AccountType.LIABILITY,
+        accountSubtype: AccountSubtype.CREDIT_CARD,
+        selectedCurrency: 'USD',
+        selectedIcon: 'creditCard',
+        selectedColor: '',
+        initialBalance: '0',
+        parentAccountId: EMPTY_ACCOUNT_ID,
+        metadataValues: liabilityMetadata,
+        hasExistingMetadata: false,
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.payload.accountType).toBe(AccountType.LIABILITY);
+      expect(result.payload.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
+      expect(result.payload.initialBalance).toBe('0');
+      expect(result.payload.metadata).toBeDefined();
+      expect(result.payload.metadata?.creditLimitAmount).toBe(5000);
+    });
   });
 });

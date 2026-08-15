@@ -156,6 +156,39 @@ describe('accountFormDraft', () => {
       expect(state.core.accountType).toBe(AccountType.EXPENSE);
       expect(state.core.accountSubtype).toBeTruthy();
     });
+
+    it('SET_ACCOUNT_TYPE clears parentAccountId and clears balance when converting to category', () => {
+      const initial = createAccountFormDraft(defaults);
+      initial.core.parentAccountId = 'parent-123' as AccountId;
+      initial.core.initialBalance = '500';
+
+      const updated = accountFormDraftReducer(initial, {
+        type: 'SET_ACCOUNT_TYPE',
+        accountType: AccountType.EXPENSE,
+      });
+
+      expect(updated.core.accountType).toBe(AccountType.EXPENSE);
+      expect(updated.core.parentAccountId).toBe('');
+      expect(updated.core.initialBalance).toBe('');
+    });
+
+    it('SET_ACCOUNT_TYPE clears parentAccountId when converting from category to account', () => {
+      const categoryDefaults = {
+        ...defaults,
+        accountType: AccountType.EXPENSE,
+        accountSubtype: 'FOOD' as any,
+      };
+      const initial = createAccountFormDraft(categoryDefaults);
+      initial.core.parentAccountId = 'parent-cat-1' as AccountId;
+
+      const updated = accountFormDraftReducer(initial, {
+        type: 'SET_ACCOUNT_TYPE',
+        accountType: AccountType.ASSET,
+      });
+
+      expect(updated.core.accountType).toBe(AccountType.ASSET);
+      expect(updated.core.parentAccountId).toBe('');
+    });
   });
 
   describe('mapAccountToCoreDraft', () => {

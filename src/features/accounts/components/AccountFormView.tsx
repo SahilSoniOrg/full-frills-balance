@@ -13,7 +13,6 @@ import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/co
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
-import { AccountType } from '@/src/types/domain';
 
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
@@ -39,6 +38,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     setAccountType,
     accountSubtype,
     setAccountSubtype,
+    allowedAccountTypes,
     selectedCurrency,
     currencies,
     setSelectedCurrency,
@@ -208,12 +208,8 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               <AccountTypeSelector
                 value={accountType}
                 onChange={setAccountType}
-                disabled={isCategory ? isEditMode : isParent}
-                allowedTypes={
-                  isCategory
-                    ? [AccountType.EXPENSE, AccountType.INCOME]
-                    : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY]
-                }
+                disabled={isParent}
+                allowedTypes={allowedAccountTypes ? [...allowedAccountTypes] : undefined}
               />
             </Box>
 

@@ -5,6 +5,25 @@ import { isCategoryAccountType } from '@/src/utils/accountCategory';
 
 export { isCategoryAccountType };
 
+export const CATEGORY_ACCOUNT_TYPES: readonly AccountType[] = [
+  AccountType.EXPENSE,
+  AccountType.INCOME,
+];
+
+export const BALANCE_SHEET_ACCOUNT_TYPES: readonly AccountType[] = [
+  AccountType.ASSET,
+  AccountType.LIABILITY,
+  AccountType.EQUITY,
+];
+
+export function resolveAllowedAccountTypes(input: {
+  isEditMode: boolean;
+  isCategory: boolean;
+}): readonly AccountType[] | undefined {
+  if (input.isEditMode) return undefined;
+  return input.isCategory ? CATEGORY_ACCOUNT_TYPES : BALANCE_SHEET_ACCOUNT_TYPES;
+}
+
 export function resolveInitialAccountType(input: {
   pathname: string;
   typeParam?: string;
