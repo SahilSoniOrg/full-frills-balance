@@ -241,7 +241,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const bulk = useAccountsBulkOperations({
     workplaceId,
     accounts,
-    sections,
     selection,
     isBulkHierarchyOpen: activeModal?.type === 'bulkHierarchy',
     openModal: setActiveModal,
@@ -278,6 +277,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     [activeModal, onCloseModal, bulk, selection.selectedIds.size, actions],
   );
 
+  const handleSelectAll = useCallback(() => {
+    selection.selectAll(allSelectableAccountIds);
+  }, [selection, allSelectableAccountIds]);
+
   return {
     sections,
     onToggleSection,
@@ -287,7 +290,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onAccountActionPress,
     selectedAccountIds: selection.selectedIds,
     isSelectionModeActive: selection.isSelectionModeActive,
-    onSelectAll: () => selection.selectAll(allSelectableAccountIds),
+    onSelectAll: handleSelectAll,
     onDeselectAll: selection.clearItems,
     onClearSelection: selection.exitSelectionMode,
     selectionActions: bulk.selectionActions,

@@ -31,6 +31,7 @@ const mockSections: AccountSectionViewModel[] = [
     totalColor: '#1E1B4B',
     isCollapsed: false,
     data: [mockAccount],
+    accountIds: ['acc-1' as AccountId],
   },
 ];
 

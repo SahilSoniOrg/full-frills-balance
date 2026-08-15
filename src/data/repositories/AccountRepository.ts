@@ -44,6 +44,7 @@ export interface AccountListItemRaw {
   account_subtype: AccountSubtype;
   currency_code: string;
   icon?: string;
+  color?: string;
   parent_account_id?: AccountId;
   direct_balance: number;
   direct_transaction_count: number;

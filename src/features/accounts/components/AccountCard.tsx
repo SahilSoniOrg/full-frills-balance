@@ -4,22 +4,22 @@ import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccoun
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
-import { AccountType } from '@/src/types/domain';
+import { AccountId, AccountType } from '@/src/types/domain';
 
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 
 interface AccountCardProps {
   account: AccountCardViewModel;
   isLoading?: boolean;
-  onPress: () => void;
-  onLongPress?: () => void;
-  onActionPress?: () => void;
-  onCollapse?: () => void;
+  onPress: (id: AccountId) => void;
+  onLongPress?: (account: AccountCardViewModel) => void;
+  onActionPress?: (account: AccountCardViewModel) => void;
+  onCollapse?: (id: AccountId) => void;
   dividerColor: ColorKey;
   surfaceColor: ColorKey;
   isSelected?: boolean;
@@ -89,10 +89,17 @@ export function AccountCardBase({
   // from the account surface rather than the category marker.
   const resolvedTextColor = account.textColor;
 
-  const stats = getAccountStatsConfig(
-    account.accountType,
-    account.monthlyIncome,
-    account.monthlyExpenses,
+  const stats = useMemo(
+    () =>
+      getAccountStatsConfig(account.accountType, account.monthlyIncome, account.monthlyExpenses),
+    [account.accountType, account.monthlyIncome, account.monthlyExpenses],
+  );
+
+  const categoryIconBg = account.categoryIconBg || withOpacity(account.categoryColor, Opacity.soft);
+
+  const reconciledDateText = useMemo(
+    () => (account.reconciledAt ? formatRelativeReconciledDate(account.reconciledAt) : null),
+    [account.reconciledAt],
   );
 
   return (
@@ -114,8 +121,8 @@ export function AccountCardBase({
       ]}
     >
       <TouchableOpacity
-        onPress={onPress}
-        onLongPress={onLongPress}
+        onPress={() => onPress(account.id)}
+        onLongPress={onLongPress ? () => onLongPress(account) : undefined}
         activeOpacity={Opacity.heavy}
         style={{ opacity: account.isArchived ? Opacity.medium : 1 }}
       >
@@ -132,7 +139,7 @@ export function AccountCardBase({
                     styles.categoryIconFrame,
                     {
                       borderColor: account.categoryColor,
-                      backgroundColor: withOpacity(account.categoryColor, Opacity.soft),
+                      backgroundColor: categoryIconBg,
                     },
                   ]}
                 >
@@ -155,7 +162,7 @@ export function AccountCardBase({
               </Row>
 
               <Row gap="xs" align="center">
-                {account.reconciledAt && !isSelectionModeActive && (
+                {reconciledDateText && !isSelectionModeActive && (
                   <Row
                     background="pureInverse"
                     backgroundOpacity="soft"
@@ -172,7 +179,7 @@ export function AccountCardBase({
                       opacity={0.8}
                       style={{ color: resolvedTextColor, lineHeight: 12 }}
                     >
-                      {formatRelativeReconciledDate(account.reconciledAt)}
+                      {reconciledDateText}
                     </Text>
                   </Row>
                 )}
@@ -215,7 +222,7 @@ export function AccountCardBase({
               <TouchableOpacity
                 onPress={event => {
                   event.stopPropagation();
-                  onCollapse?.();
+                  onCollapse?.(account.id);
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
@@ -239,7 +246,7 @@ export function AccountCardBase({
                 variant="clear"
                 onPress={event => {
                   event?.stopPropagation?.();
-                  onActionPress();
+                  onActionPress(account);
                 }}
                 iconColor={resolvedTextColor}
                 accessibilityLabel={`Actions for ${account.name}`}

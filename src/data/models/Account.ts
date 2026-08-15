@@ -154,6 +154,7 @@ export function toPlainAccount(a: Account): PlainAccount {
     parentAccountId: a.parentAccountId,
     description: a.description,
     icon: a.icon,
+    color: a.color,
     orderNum: a.orderNum,
     reconciledAt: a.reconciledAt?.getTime(),
     createdAt: a.createdAt?.getTime(),

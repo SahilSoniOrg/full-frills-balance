@@ -11,6 +11,8 @@ import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
 import { logger } from '@/src/utils/logger';
 
+import { Opacity, withOpacity } from '@/src/constants';
+
 export interface AccountCardViewModel {
   id: AccountId;
   name: string;
@@ -18,6 +20,7 @@ export interface AccountCardViewModel {
   accountType?: AccountType;
   /** Semantic account category color (asset/liability/etc.). */
   categoryColor: string;
+  categoryIconBg?: string;
   /** User-selected account identity color, falling back to categoryColor. */
   accountColor: string;
   textColor: string;
@@ -42,6 +45,7 @@ export interface AccountSectionViewModel {
   totalColor: string;
   isCollapsed: boolean;
   data: AccountCardViewModel[];
+  accountIds: AccountId[];
   type?: string;
 }
 
@@ -72,7 +76,13 @@ interface TransformOptions {
 // 1. Static Metadata Cache (Name, Icons, Colors - invariant for account lifecycle)
 const STATIC_META_CACHE = new Map<
   string,
-  { categoryColor: string; accountColor: string; textColor: string; contrastColor: string }
+  {
+    categoryColor: string;
+    categoryIconBg: string;
+    accountColor: string;
+    textColor: string;
+    contrastColor: string;
+  }
 >();
 
 // 2. State-Based ViewModel Cache (Financial values, UI states)
@@ -184,7 +194,8 @@ export function transformAccountsToSections(
       }
 
       // LAYER 1: Static Metadata (Colors/Icons)
-      const metaKey = `${account.id}:${account.accountType}:${account.color ?? ''}:${theme.background}`;
+      const themeKey = (theme as unknown as { mode?: string }).mode ?? theme.background;
+      const metaKey = `${account.id}:${account.accountType}:${account.color ?? ''}:${themeKey}`;
       let meta = STATIC_META_CACHE.get(metaKey);
 
       if (!meta) {
@@ -195,7 +206,14 @@ export function transformAccountsToSections(
         // Account cards use accountColor as their solid surface, so derive
         // readable foreground text from that surface.
         const textColor = onContrast(accountColor);
-        meta = { categoryColor, accountColor, textColor, contrastColor: textColor };
+        const categoryIconBg = withOpacity(categoryColor, Opacity.soft);
+        meta = {
+          categoryColor,
+          categoryIconBg,
+          accountColor,
+          textColor,
+          contrastColor: textColor,
+        };
         STATIC_META_CACHE.set(metaKey, meta);
       }
 
@@ -207,6 +225,7 @@ export function transformAccountsToSections(
         icon: getAccountIcon(account),
         accountType: account.accountType,
         categoryColor: meta.categoryColor,
+        categoryIconBg: meta.categoryIconBg,
         accountColor: meta.accountColor,
         textColor: meta.textColor,
         balance,
@@ -243,13 +262,16 @@ export function transformAccountsToSections(
 
     rootAccounts.forEach(root => flatten(root, 0));
 
+    const isCollapsed = collapsedSections.has(section.title);
+
     return {
       title: section.title,
       count: typeAccounts.length,
       total: sectionTotal,
       totalColor: sectionColor,
-      isCollapsed: collapsedSections.has(section.title),
-      data: flattenedData,
+      isCollapsed,
+      data: isCollapsed ? [] : flattenedData,
+      accountIds: typeAccounts.map(a => a.id as AccountId),
       type: section.type,
     };
   });

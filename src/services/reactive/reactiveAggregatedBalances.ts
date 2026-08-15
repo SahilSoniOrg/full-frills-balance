@@ -34,12 +34,12 @@ export type AccountObservationSnapshot = {
 };
 
 export function snapshotAccountObservation(accounts: Account[]): AccountObservationSnapshot {
-  // reconciled_at is included so account-list rows (e.g. AccountCard badge) refresh
-  // when reconciliation changes, independent of balance recomputation.
+  // reconciled_at, color, icon, and name are included so account-list rows (e.g. AccountCard badge / theme color) refresh
+  // when reconciliation or appearance changes, independent of balance recomputation.
   const signature = accounts
     .map(
       account =>
-        `${account.id}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
+        `${account.id}:${account.color ?? ''}:${account.icon ?? ''}:${account.name}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
     )
     .join('|');
   return { accounts, signature };
@@ -100,7 +100,7 @@ export function observeAggregatedAccountBalances(
           startOfMonth,
           endOfMonth,
           workplaceId,
-          true,
+          false,
           true,
         );
 

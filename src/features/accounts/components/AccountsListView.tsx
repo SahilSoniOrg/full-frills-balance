@@ -14,7 +14,15 @@ import {
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useCallback } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  SectionList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const TAB_OPTIONS = [
   { id: 'accounts' as const, label: 'Accounts' },
@@ -53,6 +61,144 @@ export function AccountsListView({
 }: AccountsListViewModel & { chrome: TabScreenChrome }) {
   const { theme } = useTheme();
 
+  const keyExtractor = useCallback((item: AccountCardViewModel) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item, section }: { item: AccountCardViewModel; section: AccountSectionViewModel }) => {
+      if (section.isCollapsed) return null;
+      return (
+        <AccountCard
+          account={item}
+          isLoading={isLoading}
+          onPress={onAccountPress}
+          onLongPress={onAccountLongPress}
+          onActionPress={onAccountActionPress}
+          onCollapse={onCollapseAccount}
+          dividerColor="divider"
+          surfaceColor="surface"
+          isSelected={selectedAccountIds.has(item.id)}
+          isSelectionModeActive={isSelectionModeActive}
+        />
+      );
+    },
+    [
+      isLoading,
+      onAccountPress,
+      onAccountLongPress,
+      onAccountActionPress,
+      onCollapseAccount,
+      selectedAccountIds,
+      isSelectionModeActive,
+    ],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: AccountSectionViewModel }) => {
+      const isStartOfGroup =
+        section.type === 'EXPENSE' || section.type === 'LIABILITY' || section.type === 'EQUITY';
+
+      const sectionAccountIds = section.accountIds;
+      const isAllSectionSelected =
+        sectionAccountIds.length > 0 && sectionAccountIds.every(id => selectedAccountIds.has(id));
+      const isSomeSectionSelected =
+        !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
+
+      return (
+        <View style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}>
+          <TouchableOpacity
+            onPress={() => onToggleSection(section.title)}
+            onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
+            activeOpacity={Opacity.heavy}
+            style={styles.sectionHeaderPressable}
+            accessibilityLabel={`${section.title} section, ${section.count} accounts`}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: !section.isCollapsed }}
+          >
+            <View style={[styles.summaryRow, { flex: 1 }]}>
+              <View style={styles.flexRowGapSm}>
+                <AppText variant="subheading" weight="bold" color="secondary">
+                  {section.title}
+                </AppText>
+                <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
+                  <AppText variant="caption" weight="bold" color="tertiary">
+                    {section.count}
+                  </AppText>
+                </View>
+              </View>
+              <View style={styles.flexRowGapMd}>
+                <MoneyText
+                  amount={section.total}
+                  currencyCode={currencyCode}
+                  formatStyle="short"
+                  variant="body"
+                  weight="bold"
+                  style={{ color: section.totalColor }}
+                />
+                <AppIcon
+                  name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
+                  size={Size.iconSm}
+                  color={theme.textSecondary}
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {isSelectionModeActive && sectionAccountIds.length > 0 && (
+            <TouchableOpacity
+              onPress={() => onToggleSectionSelect(sectionAccountIds)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.sectionSelectButton}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isAllSectionSelected }}
+              accessibilityLabel={`Select all ${section.title} accounts`}
+              testID={`section-select-${section.title.toLowerCase()}`}
+            >
+              <View
+                style={[
+                  styles.sectionSelectionIndicator,
+                  {
+                    borderColor:
+                      isAllSectionSelected || isSomeSectionSelected
+                        ? theme.primary
+                        : withOpacity(theme.textSecondary, Opacity.medium),
+                    backgroundColor: isAllSectionSelected
+                      ? theme.primary
+                      : isSomeSectionSelected
+                        ? withOpacity(theme.primary, Opacity.soft)
+                        : 'transparent',
+                  },
+                ]}
+              >
+                {isAllSectionSelected && <AppIcon name="check" size={12} color={theme.onPrimary} />}
+                {isSomeSectionSelected && (
+                  <View
+                    style={{
+                      width: 8,
+                      height: 2,
+                      backgroundColor: theme.primary,
+                      borderRadius: 1,
+                    }}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    },
+    [
+      currencyCode,
+      isSelectionModeActive,
+      onToggleSection,
+      onToggleSectionSelect,
+      selectedAccountIds,
+      theme.onPrimary,
+      theme.primary,
+      theme.surfaceSecondary,
+      theme.textSecondary,
+    ],
+  );
+
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <View style={styles.container}>
@@ -62,132 +208,14 @@ export function AccountsListView({
 
         <SectionList
           sections={sections}
-          keyExtractor={(item: AccountCardViewModel) => item.id}
-          renderSectionHeader={({ section }: { section: AccountSectionViewModel }) => {
-            const isStartOfGroup =
-              section.type === 'EXPENSE' ||
-              section.type === 'LIABILITY' ||
-              section.type === 'EQUITY';
-
-            const sectionAccountIds = section.data.map(item => item.id);
-            const isAllSectionSelected =
-              sectionAccountIds.length > 0 &&
-              sectionAccountIds.every(id => selectedAccountIds.has(id));
-            const isSomeSectionSelected =
-              !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
-
-            return (
-              <View
-                style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
-              >
-                <TouchableOpacity
-                  onPress={() => onToggleSection(section.title)}
-                  onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
-                  activeOpacity={Opacity.heavy}
-                  style={styles.sectionHeaderPressable}
-                  accessibilityLabel={`${section.title} section, ${section.count} accounts`}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: !section.isCollapsed }}
-                >
-                  <View style={[styles.summaryRow, { flex: 1 }]}>
-                    <View style={styles.flexRowGapSm}>
-                      <AppText variant="subheading" weight="bold" color="secondary">
-                        {section.title}
-                      </AppText>
-                      <View
-                        style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}
-                      >
-                        <AppText variant="caption" weight="bold" color="tertiary">
-                          {section.count}
-                        </AppText>
-                      </View>
-                    </View>
-                    <View style={styles.flexRowGapMd}>
-                      <MoneyText
-                        amount={section.total}
-                        currencyCode={currencyCode}
-                        formatStyle="short"
-                        variant="body"
-                        weight="bold"
-                        style={{ color: section.totalColor }}
-                      />
-                      <AppIcon
-                        name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
-                        size={Size.iconSm}
-                        color={theme.textSecondary}
-                      />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                {isSelectionModeActive && sectionAccountIds.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => onToggleSectionSelect(sectionAccountIds)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.sectionSelectButton}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isAllSectionSelected }}
-                    accessibilityLabel={`Select all ${section.title} accounts`}
-                    testID={`section-select-${section.title.toLowerCase()}`}
-                  >
-                    <View
-                      style={[
-                        styles.sectionSelectionIndicator,
-                        {
-                          borderColor:
-                            isAllSectionSelected || isSomeSectionSelected
-                              ? theme.primary
-                              : withOpacity(theme.textSecondary, Opacity.medium),
-                          backgroundColor: isAllSectionSelected
-                            ? theme.primary
-                            : isSomeSectionSelected
-                              ? withOpacity(theme.primary, Opacity.soft)
-                              : 'transparent',
-                        },
-                      ]}
-                    >
-                      {isAllSectionSelected && (
-                        <AppIcon name="check" size={12} color={theme.onPrimary} />
-                      )}
-                      {isSomeSectionSelected && (
-                        <View
-                          style={{
-                            width: 8,
-                            height: 2,
-                            backgroundColor: theme.primary,
-                            borderRadius: 1,
-                          }}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          }}
-          renderItem={({
-            item,
-            section,
-          }: {
-            item: AccountCardViewModel;
-            section: AccountSectionViewModel;
-          }) => {
-            if (section.isCollapsed) return null;
-            return (
-              <AccountCard
-                account={item}
-                isLoading={isLoading}
-                onPress={() => onAccountPress(item.id)}
-                onLongPress={() => onAccountLongPress(item)}
-                onActionPress={() => onAccountActionPress(item)}
-                onCollapse={() => onCollapseAccount(item.id)}
-                dividerColor="divider"
-                surfaceColor="surface"
-                isSelected={selectedAccountIds.has(item.id)}
-                isSelectionModeActive={isSelectionModeActive}
-              />
-            );
-          }}
+          keyExtractor={keyExtractor}
+          renderSectionHeader={renderSectionHeader}
+          renderItem={renderItem}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          updateCellsBatchingPeriod={50}
           ListHeaderComponent={
             <View>
               {activeTab === 'accounts' ? (

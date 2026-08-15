@@ -6,14 +6,17 @@ import {
   type HierarchyCandidateAccount,
 } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
-import type { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
-
+import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useSelection } from '@/src/hooks/useSelection';
+import { useTheme } from '@/src/hooks/use-theme';
 import {
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { AccountId, AccountType, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import { isAccountArchived } from '@/src/utils/accountArchive';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 
@@ -22,7 +25,6 @@ type AccountListItem = Account | PlainAccount;
 interface UseAccountsBulkOperationsInput {
   workplaceId?: WorkplaceId;
   accounts: AccountListItem[];
-  sections: AccountSectionViewModel[];
   selection: ReturnType<typeof useSelection<AccountId>>;
   isBulkHierarchyOpen: boolean;
   openModal: (modal: AccountsListActiveModal) => void;
@@ -57,13 +59,13 @@ function buildInverseBulkUpdates(
 export function useAccountsBulkOperations({
   workplaceId,
   accounts,
-  sections,
   selection,
   isBulkHierarchyOpen,
   openModal,
   closeModal,
   applyArchiveChanges,
 }: UseAccountsBulkOperationsInput) {
+  const { theme, onContrast } = useTheme();
   const accountsById = useMemo(
     () => new Map<AccountId, AccountListItem>(accounts.map(a => [a.id as AccountId, a])),
     [accounts],
@@ -241,10 +243,34 @@ export function useAccountsBulkOperations({
     return getBulkHierarchyCandidates(accounts, selection.selectedIds);
   }, [accounts, selection.selectedIds, isBulkHierarchyOpen]);
 
-  const selectedAccountsList = useMemo(() => {
-    const allCards = sections.flatMap(s => s.data);
-    return allCards.filter(a => selection.selectedIds.has(a.id as AccountId));
-  }, [sections, selection.selectedIds]);
+  const selectedAccountsList = useMemo<AccountCardViewModel[]>(() => {
+    if (selection.selectedIds.size === 0) return [];
+    const result: AccountCardViewModel[] = [];
+    for (const account of accounts) {
+      if (!selection.selectedIds.has(account.id as AccountId)) continue;
+      const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(account, theme);
+      const textColor = onContrast(accountColor);
+      result.push({
+        id: account.id as AccountId,
+        name: account.name,
+        icon: getAccountIcon(account),
+        accountType: account.accountType,
+        categoryColor,
+        accountColor,
+        textColor,
+        balance: 0,
+        monthlyIncome: 0,
+        monthlyExpenses: 0,
+        showMonthlyStats: false,
+        currencyCode: account.currencyCode,
+        depth: 0,
+        hasChildren: false,
+        isExpanded: false,
+        isArchived: isAccountArchived(account),
+      });
+    }
+    return result;
+  }, [accounts, selection.selectedIds, theme, onContrast]);
 
   const isMixedAccountTypes = useMemo(() => {
     if (selection.selectedIds.size <= 1) return false;

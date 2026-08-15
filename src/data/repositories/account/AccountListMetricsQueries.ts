@@ -72,6 +72,7 @@ export class AccountListMetricsQueries {
         a.account_subtype as account_subtype, 
         a.currency_code as currency_code, 
         a.icon as icon, 
+        a.color as color,
         a.parent_account_id as parent_account_id,
         lb.running_balance as direct_balance,
         ${includeTotalCount ? 'IFNULL(agg.direct_transaction_count, 0)' : '0'} as direct_transaction_count,
