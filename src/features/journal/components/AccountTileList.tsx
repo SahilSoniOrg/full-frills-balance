@@ -148,6 +148,7 @@ export const AccountTileList = React.memo(function AccountTileList({
             selectedId={selectedId}
             onSelect={id => onSelect(id as AccountId)}
             testIDPrefix="account-option"
+            allowDeselect={true}
             getTilePresentation={getTilePresentation}
             renderAccessory={renderAccessory}
           />

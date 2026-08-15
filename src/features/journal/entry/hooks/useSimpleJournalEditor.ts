@@ -226,6 +226,15 @@ export function useSimpleJournalEditor({
     (id: AccountId) => {
       const line = editor.lines.find(item => item.transactionType === TransactionType.CREDIT);
       if (!line) return;
+      if (!id || id === EMPTY_ACCOUNT_ID) {
+        editor.updateLine(line.id, {
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(type, TransactionType.CREDIT),
+          accountCurrency: undefined,
+        });
+        return;
+      }
       const account = accounts.find(a => a.id === id);
       editor.updateLine(line.id, {
         accountId: id,
@@ -234,13 +243,22 @@ export function useSimpleJournalEditor({
         accountCurrency: account?.currencyCode,
       });
     },
-    [accounts, editor],
+    [accounts, editor, type],
   );
 
   const setDestinationId = useCallback(
     (id: AccountId) => {
       const line = editor.lines.find(item => item.transactionType === TransactionType.DEBIT);
       if (!line) return;
+      if (!id || id === EMPTY_ACCOUNT_ID) {
+        editor.updateLine(line.id, {
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(type, TransactionType.DEBIT),
+          accountCurrency: undefined,
+        });
+        return;
+      }
       const account = accounts.find(a => a.id === id);
       editor.updateLine(line.id, {
         accountId: id,
@@ -249,7 +267,7 @@ export function useSimpleJournalEditor({
         accountCurrency: account?.currencyCode,
       });
     },
-    [accounts, editor],
+    [accounts, editor, type],
   );
 
   const handleSave = useCallback(async () => {

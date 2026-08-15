@@ -2,6 +2,7 @@ import { CreateAccountIntent, useAccounts } from '@/src/features/accounts';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
@@ -19,8 +20,12 @@ import {
 import { useModeAccountActions } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import {
+  isSimpleTargetAccountUnset,
+  resolveTargetAccountIdForSimpleTab,
+} from '@/src/services/journal/simpleJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, TransactionType, WorkplaceId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
@@ -53,7 +58,8 @@ export interface JournalEntryShell {
   selectableAccounts: Account[];
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
-  suggestions: string[];
+  suggestions: JournalAutofillSuggestion[];
+  onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
 }
@@ -167,6 +173,53 @@ export function useJournalEntryShell(): JournalEntryShell {
     setSavedSummary({ count, items: summaries });
   }, []);
 
+  const onSelectSuggestion = useCallback(
+    (suggestion: JournalAutofillSuggestion) => {
+      editor.setDescription(suggestion.description);
+
+      if (activeMode !== 'guided') return;
+
+      const sourceLine = editor.lines.find(l => l.transactionType === TransactionType.CREDIT);
+      const destLine = editor.lines.find(l => l.transactionType === TransactionType.DEBIT);
+      const sourceId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
+      const destId = destLine?.accountId ?? EMPTY_ACCOUNT_ID;
+
+      const tabType = editor.transactionType;
+      // Non-destructive: only auto-select if target category is currently unset
+      if (!isSimpleTargetAccountUnset(tabType, sourceId, destId)) {
+        return;
+      }
+
+      const targetAccountId = resolveTargetAccountIdForSimpleTab(suggestion, tabType);
+      if (!targetAccountId) return;
+
+      const account = accounts.find(a => a.id === targetAccountId);
+      if (!account) return;
+
+      if (tabType === 'income') {
+        if (sourceLine) {
+          editor.updateLine(sourceLine.id, {
+            accountId: targetAccountId,
+            accountName: account.name,
+            accountType: account.accountType,
+            accountCurrency: account.currencyCode,
+          });
+        }
+      } else {
+        // expense or transfer: target is the destination (DEBIT) line
+        if (destLine) {
+          editor.updateLine(destLine.id, {
+            accountId: targetAccountId,
+            accountName: account.name,
+            accountType: account.accountType,
+            accountCurrency: account.currencyCode,
+          });
+        }
+      }
+    },
+    [editor, activeMode, accounts],
+  );
+
   const headerTitle = useMemo(
     () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit }),
     [editor.isEdit],
@@ -199,6 +252,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     isSimpleModeDisabled,
     onCreateAccountRequest,
     suggestions,
+    onSelectSuggestion,
     workplaceCurrency,
     workplaceId,
   };

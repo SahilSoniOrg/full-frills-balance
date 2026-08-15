@@ -1,9 +1,12 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import Account from '@/src/data/models/Account';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
 import { useTheme } from '@/src/hooks/use-theme';
+import { TabType } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
@@ -15,12 +18,15 @@ interface JournalMetaCardProps {
   setTime: (time: string) => void;
   description: string;
   setDescription: (desc: string) => void;
+  onSelectSuggestion?: (suggestion: JournalAutofillSuggestion) => void;
+  activeTabType?: TabType;
+  accounts?: Account[];
   notes?: string;
   setNotes?: (notes: string) => void;
   style?: StyleProp<ViewStyle>;
   showBanner?: boolean;
   bannerText?: string;
-  suggestions?: string[];
+  suggestions?: JournalAutofillSuggestion[];
   hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
   onVoiceInputPress?: () => void;
@@ -34,6 +40,9 @@ export function JournalMetaCard({
   setTime,
   description,
   setDescription,
+  onSelectSuggestion,
+  activeTabType,
+  accounts = [],
   notes = '',
   setNotes,
   style,
@@ -113,8 +122,14 @@ export function JournalMetaCard({
           {isDescriptionFocused && !hideSuggestions && suggestions.length > 0 && (
             <JournalSuggestions
               suggestions={suggestions}
+              accounts={accounts}
+              activeTabType={activeTabType}
               onSelect={suggestion => {
-                setDescription(suggestion);
+                if (onSelectSuggestion) {
+                  onSelectSuggestion(suggestion);
+                } else {
+                  setDescription(suggestion.description);
+                }
                 Keyboard.dismiss();
               }}
             />

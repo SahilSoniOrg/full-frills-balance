@@ -5,6 +5,7 @@ import {
   journalEnrichmentQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
   CreateJournalData,
   journalWriteRepository,
@@ -256,9 +257,7 @@ export class JournalService {
     }
   }
 
-  async getJournalSuggestions(
-    workplaceId: WorkplaceId,
-  ): Promise<{ description: string; count: number }[]> {
+  async getJournalSuggestions(workplaceId: WorkplaceId): Promise<JournalAutofillSuggestion[]> {
     return journalEnrichmentQueries.getRecentUniqueDescriptions(workplaceId);
   }
 }

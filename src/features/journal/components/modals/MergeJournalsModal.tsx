@@ -6,7 +6,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   analyzeJournalsForMerge,
-  MergeJournalsPreview,
+  MergeJournalsAnalysis,
 } from '@/src/services/journal/journalBulkCommands';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -30,7 +30,7 @@ function MergeJournalsModalContent({
   const { theme, fonts } = useTheme();
   const { accounts } = useAccounts(workplaceId);
   const [loading, setLoading] = useState(true);
-  const [preview, setPreview] = useState<MergeJournalsPreview | null>(null);
+  const [preview, setPreview] = useState<MergeJournalsAnalysis | null>(null);
   const [description, setDescription] = useState('');
   const [isMerging, setIsMerging] = useState(false);
 
@@ -63,11 +63,10 @@ function MergeJournalsModalContent({
         description: description.trim() || preview.combinedDescription,
         journalDate: preview.suggestedDate,
       });
-      onClose();
     } finally {
       setIsMerging(false);
     }
-  }, [preview, description, onConfirmMerge, onClose]);
+  }, [preview, description, onConfirmMerge]);
 
   return (
     <ModalSurface
@@ -114,7 +113,7 @@ function MergeJournalsModalContent({
           >
             <AppIcon name="alert" size={20} color={theme.error} />
             <AppText style={[styles.errorText, { color: theme.error }]}>
-              {preview.reason || preview.errorMessage || 'These transactions cannot be merged.'}
+              {preview.reason || 'These transactions cannot be merged.'}
             </AppText>
           </View>
         </View>

@@ -1,5 +1,6 @@
 import { AccountPickerModal } from '@/src/features/accounts';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { Page } from '@/src/design-system';
 import { BulkSaveSummaryModal } from '@/src/features/journal/entry/components/BulkSaveSummaryModal';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
@@ -42,6 +43,13 @@ export function JournalEntryView(vm: JournalEntryShell) {
       vm.editor.setDescription(desc);
     },
     [vm.editor],
+  );
+  const onSelectSuggestion = useCallback(
+    (suggestion: JournalAutofillSuggestion) => {
+      setHideSuggestions(false);
+      vm.onSelectSuggestion(suggestion);
+    },
+    [vm],
   );
 
   const modeBodyProps: JournalEntryModeBodyProps = {
@@ -109,6 +117,9 @@ export function JournalEntryView(vm: JournalEntryShell) {
             setTime={vm.editor.setJournalTime}
             description={vm.editor.description}
             setDescription={setDescription}
+            onSelectSuggestion={onSelectSuggestion}
+            activeTabType={activeMode === 'guided' ? vm.editor.transactionType : undefined}
+            accounts={vm.accounts}
             notes={vm.editor.notes}
             setNotes={vm.editor.setNotes}
             showBanner={showEditBanner}

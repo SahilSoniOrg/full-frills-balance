@@ -10,3 +10,12 @@ export type JournalEnrichmentRow = {
   account_type: AccountType;
   account_icon?: string;
 };
+
+/** Aggregated autocomplete suggestion with dominant historical target account */
+export type JournalAutofillSuggestion = {
+  description: string;
+  count: number;
+  targetAccountId?: AccountId;
+  targetAccountName?: string;
+  targetAccountType?: AccountType;
+};

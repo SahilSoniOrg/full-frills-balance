@@ -1,15 +1,59 @@
+import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill';
+import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import Account from '@/src/data/models/Account';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountType, TabType } from '@/src/types/domain';
+import { isAccountArchived } from '@/src/utils/accountArchive';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/utils/accountIcon';
+import React, { useMemo } from 'react';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalSuggestionsProps {
-  suggestions: string[];
-  onSelect: (suggestion: string) => void;
+  suggestions: JournalAutofillSuggestion[];
+  accounts?: Account[];
+  onSelect: (suggestion: JournalAutofillSuggestion) => void;
+  activeTabType?: TabType;
 }
 
-export function JournalSuggestions({ suggestions, onSelect }: JournalSuggestionsProps) {
+function resolveVisibleAccount(
+  suggestion: JournalAutofillSuggestion,
+  accountsMap: Map<string, Account>,
+  tabType?: TabType,
+): Account | undefined {
+  if (!suggestion.targetAccountId || !suggestion.targetAccountType) return undefined;
+
+  if (tabType === 'expense' && suggestion.targetAccountType !== AccountType.EXPENSE) {
+    return undefined;
+  }
+  if (tabType === 'income' && suggestion.targetAccountType !== AccountType.INCOME) {
+    return undefined;
+  }
+  if (
+    tabType === 'transfer' &&
+    suggestion.targetAccountType !== AccountType.ASSET &&
+    suggestion.targetAccountType !== AccountType.LIABILITY
+  ) {
+    return undefined;
+  }
+
+  return accountsMap.get(suggestion.targetAccountId);
+}
+
+export function JournalSuggestions({
+  suggestions,
+  accounts = [],
+  onSelect,
+  activeTabType,
+}: JournalSuggestionsProps) {
   const { theme } = useTheme();
+
+  const accountsMap = useMemo(() => {
+    return new Map<string, Account>(accounts.map(a => [a.id, a]));
+  }, [accounts]);
 
   if (suggestions.length === 0) return null;
 
@@ -25,29 +69,103 @@ export function JournalSuggestions({ suggestions, onSelect }: JournalSuggestions
       ]}
     >
       <ScrollView keyboardShouldPersistTaps="always" style={styles.scrollView}>
-        {suggestions.map((suggestion, index) => (
-          <TouchableOpacity
-            key={`${suggestion}-${index}`}
-            style={[
-              styles.suggestionItem,
-              {
-                borderBottomColor: theme.border,
-                borderBottomWidth: index === suggestions.length - 1 ? 0 : StyleSheet.hairlineWidth,
-              },
-            ]}
-            onPress={() => {
-              Keyboard.dismiss();
-              onSelect(suggestion);
-            }}
-          >
-            <View style={styles.itemContent}>
-              <AppIcon name="clock" size={12} color={theme.textTertiary} />
-              <AppText variant="body" color="text" weight="medium" style={styles.suggestionText}>
-                {suggestion}
-              </AppText>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {suggestions.map((suggestion, index) => {
+          const targetAccount = resolveVisibleAccount(suggestion, accountsMap, activeTabType);
+          const fallbackBadgeName =
+            !targetAccount && suggestion.targetAccountName && !activeTabType
+              ? suggestion.targetAccountName
+              : undefined;
+
+          let badgeContent: React.ReactNode = null;
+
+          if (targetAccount) {
+            const { accentColor, categoryColor } = resolveAccountAppearance(targetAccount, theme);
+            const icon = getAccountIcon(targetAccount);
+            const isArchived = isAccountArchived(targetAccount);
+
+            badgeContent = (
+              <View
+                style={[
+                  styles.categoryBadge,
+                  {
+                    backgroundColor: withOpacity(accentColor, Opacity.soft),
+                    borderColor: withOpacity(accentColor, Opacity.muted),
+                  },
+                ]}
+              >
+                <AccountCategoryPill color={categoryColor} size="sm" />
+                <AppIcon name={icon} size={Size.iconXs} color={accentColor} fallbackIcon="wallet" />
+                <AppText
+                  variant="caption"
+                  color="text"
+                  weight="semibold"
+                  numberOfLines={1}
+                  style={styles.badgeText}
+                >
+                  {targetAccount.name}
+                </AppText>
+                {isArchived && <ArchivedAccountIndicator />}
+              </View>
+            );
+          } else if (fallbackBadgeName) {
+            badgeContent = (
+              <View
+                style={[
+                  styles.categoryBadge,
+                  {
+                    backgroundColor: theme.surfaceSecondary,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  weight="medium"
+                  numberOfLines={1}
+                  style={styles.badgeText}
+                >
+                  {fallbackBadgeName}
+                </AppText>
+              </View>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={`${suggestion.description}-${index}`}
+              style={[
+                styles.suggestionItem,
+                {
+                  borderBottomColor: theme.border,
+                  borderBottomWidth:
+                    index === suggestions.length - 1 ? 0 : StyleSheet.hairlineWidth,
+                },
+              ]}
+              onPress={() => {
+                Keyboard.dismiss();
+                onSelect(suggestion);
+              }}
+            >
+              <View style={styles.itemContent}>
+                <View style={styles.leftContent}>
+                  <AppIcon name="clock" size={12} color={theme.textTertiary} />
+                  <AppText
+                    variant="body"
+                    color="text"
+                    weight="medium"
+                    style={styles.suggestionText}
+                    numberOfLines={1}
+                  >
+                    {suggestion.description}
+                  </AppText>
+                </View>
+
+                {badgeContent}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -80,9 +198,30 @@ const styles = StyleSheet.create({
   itemContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  leftContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   suggestionText: {
-    flex: 1,
+    flexShrink: 1,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderRadius: Shape.radius.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    maxWidth: 160,
+  },
+  badgeText: {
+    flexShrink: 1,
+    maxWidth: 100,
   },
 });

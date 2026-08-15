@@ -622,6 +622,32 @@ export class JournalWriteRepository {
   }
 
   /**
+   * Atomically reassigns each transaction back to its own original account in a single batch.
+   * Used for undo of bulk account changes where each transaction may target a different account.
+   */
+  async bulkReassignTransactionAccountsToOriginals(
+    transactions: Transaction[],
+    originalAccountByTxId: Record<string, AccountId>,
+  ): Promise<void> {
+    if (transactions.length === 0) return;
+
+    await database.write(async () => {
+      const now = new Date();
+      const ops = transactions
+        .filter(tx => originalAccountByTxId[tx.id] !== undefined)
+        .map(tx =>
+          tx.prepareUpdate(record => {
+            record.accountId = originalAccountByTxId[tx.id];
+            record.updatedAt = now;
+          }),
+        );
+      if (ops.length > 0) {
+        await database.batch(ops);
+      }
+    });
+  }
+
+  /**
    * Atomically creates multiple journals with their transactions in a single database batch.
    */
   async bulkCreateJournals(

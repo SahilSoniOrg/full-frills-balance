@@ -1,6 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
+  AccountType,
   TransactionType,
   AccountId,
   AccountRole,
@@ -259,4 +261,47 @@ export function shouldApplyLastUsedAccountDefault(
     return type === 'transfer' || type === 'expense';
   }
   return type === 'transfer' || type === 'income';
+}
+
+/** Resolves the target account ID from a suggestion if it matches the active tab's expected account type. */
+export function resolveTargetAccountIdForSimpleTab(
+  suggestion: JournalAutofillSuggestion,
+  tabType: TabType,
+): AccountId | undefined {
+  if (!suggestion.targetAccountId || !suggestion.targetAccountType) {
+    return undefined;
+  }
+
+  if (tabType === 'expense' && suggestion.targetAccountType === AccountType.EXPENSE) {
+    return suggestion.targetAccountId;
+  }
+
+  if (tabType === 'income' && suggestion.targetAccountType === AccountType.INCOME) {
+    return suggestion.targetAccountId;
+  }
+
+  if (
+    tabType === 'transfer' &&
+    (suggestion.targetAccountType === AccountType.ASSET ||
+      suggestion.targetAccountType === AccountType.LIABILITY)
+  ) {
+    return suggestion.targetAccountId;
+  }
+
+  return undefined;
+}
+
+/** Whether the target account leg for the given simple tab is currently unset / empty. */
+export function isSimpleTargetAccountUnset(
+  tabType: TabType,
+  sourceId: AccountId,
+  destinationId: AccountId,
+): boolean {
+  if (tabType === 'expense' || tabType === 'transfer') {
+    return !destinationId || destinationId === EMPTY_ACCOUNT_ID;
+  }
+  if (tabType === 'income') {
+    return !sourceId || sourceId === EMPTY_ACCOUNT_ID;
+  }
+  return false;
 }

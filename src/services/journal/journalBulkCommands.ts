@@ -13,6 +13,37 @@ import {
 } from '@/src/types/domain';
 import { safeAdd } from '@/src/utils/money';
 
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+/** Groups a flat transaction list into a map keyed by journalId. */
+function groupTransactionsByJournal(transactions: Transaction[]): Map<JournalId, Transaction[]> {
+  const map = new Map<JournalId, Transaction[]>();
+  for (const tx of transactions) {
+    const key = tx.journalId as JournalId;
+    const list = map.get(key) ?? [];
+    list.push(tx);
+    map.set(key, list);
+  }
+  return map;
+}
+
+/** Enqueues a running-balance rebuild only when there is meaningful work. */
+function enqueueRebuildIfNeeded(
+  accounts: Set<AccountId>,
+  minDate: number,
+  workplaceId: WorkplaceId,
+): void {
+  if (accounts.size > 0 && minDate !== Infinity) {
+    rebuildQueueService.enqueueMany(accounts, minDate, workplaceId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk Rename
+// ---------------------------------------------------------------------------
+
 export interface BulkRenameResult {
   renamedCount: number;
   inverseRenames: Record<JournalId, string>;
@@ -54,6 +85,10 @@ export async function bulkRenameJournals(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Bulk Duplicate
+// ---------------------------------------------------------------------------
+
 /**
  * Duplicates a set of journals into new active entries in a single atomic database batch.
  */
@@ -65,13 +100,7 @@ export async function bulkDuplicateJournals(
 
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
   const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
-
-  const txByJournal = new Map<JournalId, Transaction[]>();
-  for (const tx of transactions) {
-    const list = txByJournal.get(tx.journalId as JournalId) ?? [];
-    list.push(tx);
-    txByJournal.set(tx.journalId as JournalId, list);
-  }
+  const txByJournal = groupTransactionsByJournal(transactions);
 
   const now = Date.now();
   const createItems = journals.map(journal => {
@@ -99,17 +128,24 @@ export async function bulkDuplicateJournals(
     minDate,
   } = await journalWriteRepository.bulkCreateJournals(workplaceId, createItems);
 
-  if (affectedAccountIds.size > 0 && minDate !== Infinity) {
-    rebuildQueueService.enqueueMany(affectedAccountIds, minDate, workplaceId);
-  }
+  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
 
   return createdJournals;
+}
+
+// ---------------------------------------------------------------------------
+// Merge Analysis + Execution
+// ---------------------------------------------------------------------------
+
+interface MergeLine {
+  accountId: AccountId;
+  transactionType: TransactionType;
+  amount: number;
 }
 
 export interface MergeJournalsAnalysis {
   canMerge: boolean;
   reason?: string;
-  errorMessage?: string;
   sourceJournals: Journal[];
   totalDebit: number;
   totalCredit: number;
@@ -117,14 +153,28 @@ export interface MergeJournalsAnalysis {
   combinedDescription: string;
   suggestedDate: number;
   suggestedDisplayType: JournalDisplayType;
-  combinedLines: {
-    accountId: AccountId;
-    transactionType: TransactionType;
-    amount: number;
-  }[];
+  combinedLines: MergeLine[];
 }
 
-export type MergeJournalsPreview = MergeJournalsAnalysis;
+/** Builds a "cannot merge" result with sensible defaults. */
+function mergeFailure(
+  reason: string,
+  overrides?: Partial<MergeJournalsAnalysis>,
+): MergeJournalsAnalysis {
+  return {
+    canMerge: false,
+    reason,
+    sourceJournals: [],
+    totalDebit: 0,
+    totalCredit: 0,
+    currencyCode: '',
+    combinedDescription: '',
+    suggestedDate: Date.now(),
+    suggestedDisplayType: JournalDisplayType.TRANSFER,
+    combinedLines: [],
+    ...overrides,
+  };
+}
 
 /**
  * Analyses candidate journals to check if they can be merged and prepares the merge preview data.
@@ -134,35 +184,15 @@ export async function analyzeJournalsForMerge(
   journalIds: JournalId[],
 ): Promise<MergeJournalsAnalysis> {
   if (journalIds.length < 2) {
-    return {
-      canMerge: false,
-      reason: 'Select at least 2 transactions to merge.',
-      sourceJournals: [],
-      totalDebit: 0,
-      totalCredit: 0,
-      currencyCode: '',
-      combinedDescription: '',
-      suggestedDate: Date.now(),
-      suggestedDisplayType: JournalDisplayType.TRANSFER,
-      combinedLines: [],
-    };
+    return mergeFailure('Select at least 2 transactions to merge.');
   }
 
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
 
   if (journals.length !== journalIds.length) {
-    return {
-      canMerge: false,
-      reason: 'Some selected transactions could not be found.',
+    return mergeFailure('Some selected transactions could not be found.', {
       sourceJournals: journals,
-      totalDebit: 0,
-      totalCredit: 0,
-      currencyCode: '',
-      combinedDescription: '',
-      suggestedDate: Date.now(),
-      suggestedDisplayType: JournalDisplayType.TRANSFER,
-      combinedLines: [],
-    };
+    });
   }
 
   const journalMap = new Map(journals.map(j => [j.id as JournalId, j]));
@@ -173,18 +203,10 @@ export async function analyzeJournalsForMerge(
   const currencyCode = orderedJournals[0].currencyCode;
   const sameCurrency = orderedJournals.every(j => j.currencyCode === currencyCode);
   if (!sameCurrency) {
-    return {
-      canMerge: false,
-      reason: 'Cannot merge transactions with different currencies.',
+    return mergeFailure('Cannot merge transactions with different currencies.', {
       sourceJournals: orderedJournals,
-      totalDebit: 0,
-      totalCredit: 0,
       currencyCode,
-      combinedDescription: '',
-      suggestedDate: Date.now(),
-      suggestedDisplayType: JournalDisplayType.TRANSFER,
-      combinedLines: [],
-    };
+    });
   }
 
   const firstDisplayType = orderedJournals[0]?.displayType as JournalDisplayType | undefined;
@@ -208,10 +230,7 @@ export async function analyzeJournalsForMerge(
   const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
 
   // Aggregate legs by accountId and transactionType using canonical safeAdd
-  const lineMap = new Map<
-    string,
-    { accountId: AccountId; transactionType: TransactionType; amount: number }
-  >();
+  const lineMap = new Map<string, MergeLine>();
   let totalDebit = 0;
   let totalCredit = 0;
 
@@ -238,9 +257,7 @@ export async function analyzeJournalsForMerge(
 
   // Double-entry accounting invariant check
   if (Math.abs(totalDebit - totalCredit) > 0.001) {
-    return {
-      canMerge: false,
-      reason: 'Selected transactions are unbalanced across total debits and credits.',
+    return mergeFailure('Selected transactions are unbalanced across total debits and credits.', {
       sourceJournals: orderedJournals,
       totalDebit,
       totalCredit,
@@ -249,7 +266,7 @@ export async function analyzeJournalsForMerge(
       suggestedDate: maxDate,
       suggestedDisplayType,
       combinedLines: Array.from(lineMap.values()),
-    };
+    });
   }
 
   return {
@@ -296,12 +313,14 @@ export async function mergeJournals(
       },
     });
 
-  if (affectedAccountIds.size > 0 && minDate !== Infinity) {
-    rebuildQueueService.enqueueMany(affectedAccountIds, minDate, workplaceId);
-  }
+  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
 
   return mergedJournal;
 }
+
+// ---------------------------------------------------------------------------
+// Bulk Change Account (Debit / Credit leg reassignment)
+// ---------------------------------------------------------------------------
 
 export interface JournalAccountEditEligibility {
   canEditDebit: boolean;
@@ -313,6 +332,7 @@ export interface JournalAccountEditEligibility {
 
 /**
  * Checks whether all selected journals have exactly 1 debit and/or 1 credit leg.
+ * Read-only query — safe for UI preview. The write path verifies inline.
  */
 export async function checkJournalAccountEditEligibility(
   workplaceId: WorkplaceId,
@@ -323,14 +343,15 @@ export async function checkJournalAccountEditEligibility(
   }
 
   const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  return evaluateEligibility(transactions, journalIds);
+}
 
-  // Group transactions by journalId
-  const txByJournal = new Map<JournalId, Transaction[]>();
-  for (const tx of transactions) {
-    const list = txByJournal.get(tx.journalId as JournalId) ?? [];
-    list.push(tx);
-    txByJournal.set(tx.journalId as JournalId, list);
-  }
+/** Pure eligibility evaluation from an already-fetched transaction set. */
+function evaluateEligibility(
+  transactions: Transaction[],
+  journalIds: JournalId[],
+): JournalAccountEditEligibility {
+  const txByJournal = groupTransactionsByJournal(transactions);
 
   let allHaveSingleDebit = true;
   let allHaveSingleCredit = true;
@@ -373,7 +394,9 @@ export interface BulkChangeAccountResult {
 }
 
 /**
- * Bulk reassigns either the debit (destination) or credit (source) account across selected journals in an atomic batch.
+ * Bulk reassigns either the debit (destination) or credit (source) account across selected
+ * journals in an atomic batch. Single-fetch: eligibility is verified inline from the same
+ * transaction set used for the update, eliminating the TOCTOU race of a separate check.
  * Returns the original account mapping to support one-tap undo.
  */
 export async function bulkChangeJournalAccount(
@@ -382,7 +405,10 @@ export async function bulkChangeJournalAccount(
   targetType: 'debit' | 'credit',
   newAccountId: AccountId,
 ): Promise<BulkChangeAccountResult> {
-  const eligibility = await checkJournalAccountEditEligibility(workplaceId, journalIds);
+  // Single fetch — verify eligibility inline from the same data
+  const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const eligibility = evaluateEligibility(allTransactions, journalIds);
+
   if (targetType === 'debit' && !eligibility.canEditDebit) {
     throw new Error('All selected transactions must have exactly one destination (debit) leg.');
   }
@@ -391,8 +417,6 @@ export async function bulkChangeJournalAccount(
   }
 
   const transactionType = targetType === 'debit' ? TransactionType.DEBIT : TransactionType.CREDIT;
-
-  const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
   const transactions = allTransactions.filter(t => t.transactionType === transactionType);
 
   if (transactions.length === 0) {
@@ -411,9 +435,7 @@ export async function bulkChangeJournalAccount(
 
   await journalWriteRepository.bulkReassignTransactionAccounts(transactions, newAccountId);
 
-  if (affectedAccounts.size > 0 && minDate !== Infinity) {
-    rebuildQueueService.enqueueMany(affectedAccounts, minDate, workplaceId);
-  }
+  enqueueRebuildIfNeeded(affectedAccounts, minDate, workplaceId);
 
   return {
     updatedCount: transactions.length,
@@ -423,6 +445,7 @@ export async function bulkChangeJournalAccount(
 
 /**
  * Reverts account changes for a set of transactions using the original account map.
+ * All reassignments happen in a single atomic database batch.
  */
 export async function undoBulkChangeJournalAccount(
   workplaceId: WorkplaceId,
@@ -437,29 +460,27 @@ export async function undoBulkChangeJournalAccount(
   const affectedAccounts = new Set<AccountId>();
   let minDate = Infinity;
 
-  // Group transactions by target original account
-  const txByTargetAccount = new Map<AccountId, Transaction[]>();
   for (const tx of transactions) {
     const originalAccId = originalAccountIdByTransactionId[tx.id];
     if (originalAccId) {
       affectedAccounts.add(originalAccId);
       affectedAccounts.add(tx.accountId as AccountId);
       minDate = Math.min(minDate, tx.transactionDate);
-
-      const list = txByTargetAccount.get(originalAccId) ?? [];
-      list.push(tx);
-      txByTargetAccount.set(originalAccId, list);
     }
   }
 
-  for (const [accId, txList] of txByTargetAccount.entries()) {
-    await journalWriteRepository.bulkReassignTransactionAccounts(txList, accId);
-  }
+  // Single atomic batch — each transaction goes back to its own original account
+  await journalWriteRepository.bulkReassignTransactionAccountsToOriginals(
+    transactions,
+    originalAccountIdByTransactionId,
+  );
 
-  if (affectedAccounts.size > 0 && minDate !== Infinity) {
-    rebuildQueueService.enqueueMany(affectedAccounts, minDate, workplaceId);
-  }
+  enqueueRebuildIfNeeded(affectedAccounts, minDate, workplaceId);
 }
+
+// ---------------------------------------------------------------------------
+// Bulk Delete
+// ---------------------------------------------------------------------------
 
 /**
  * Atomically soft deletes multiple journals and their child transactions in a single batch.
@@ -475,7 +496,5 @@ export async function bulkDeleteJournals(
     journalIds,
   );
 
-  if (affectedAccountIds.size > 0 && minDate !== Infinity) {
-    rebuildQueueService.enqueueMany(affectedAccountIds, minDate, workplaceId);
-  }
+  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
 }

@@ -1,3 +1,4 @@
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { WorkplaceId } from '@/src/types/domain';
 import { useEffect, useMemo, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -7,9 +8,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
  * Fetches recent unique descriptions once and filters them based on current input.
  */
 export function useJournalSuggestions(workplaceId: WorkplaceId, searchQuery: string) {
-  const [allSuggestions, setAllSuggestions] = useState<{ description: string; count: number }[]>(
-    [],
-  );
+  const [allSuggestions, setAllSuggestions] = useState<JournalAutofillSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -44,8 +43,7 @@ export function useJournalSuggestions(workplaceId: WorkplaceId, searchQuery: str
         // Sort by frequency (count) descending
         return b.count - a.count;
       })
-      .slice(0, 10) // Limit to top 10 matches
-      .map(item => item.description);
+      .slice(0, 10);
   }, [allSuggestions, searchQuery]);
 
   return {
