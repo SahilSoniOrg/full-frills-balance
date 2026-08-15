@@ -2,6 +2,24 @@ import { Href, router } from 'expo-router';
 import { AccountId, AccountType, BudgetId, PlannedPaymentId } from '../types/domain';
 
 /**
+ * Builds a route with query parameters, filtering out null, undefined, and empty string values.
+ */
+export function buildRoute(
+  pathname: string,
+  params?: Record<string, string | number | boolean | null | undefined>,
+): Href {
+  if (!params) return pathname as Href;
+  const queryParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value));
+    }
+  }
+  const query = queryParams.toString();
+  return (query ? `${pathname}?${query}` : pathname) as Href;
+}
+
+/**
  * Centralized navigation utility to handle routing across the application.
  * Addresses FINDING-004 by removing ad-hoc router.push calls from ViewModels.
  */
@@ -65,38 +83,8 @@ export const AppNavigation = {
     sourceAccountId?: string;
     params?: Record<string, string>;
   }) => {
-    const queryParams = new URLSearchParams();
-    if (options?.journalId) {
-      queryParams.append('journalId', options.journalId);
-    }
-    if (options?.smsId) {
-      queryParams.append('smsId', options.smsId);
-    }
-    if (options?.smsRecordId) {
-      queryParams.append('smsRecordId', options.smsRecordId);
-    }
-    if (options?.smsSender) {
-      queryParams.append('smsSender', options.smsSender);
-    }
-    if (options?.rawSmsBody) {
-      queryParams.append('rawSmsBody', options.rawSmsBody);
-    }
-    if (options?.initialDate) {
-      queryParams.append('initialDate', options.initialDate);
-    }
-    if (options?.sourceAccountId) {
-      queryParams.append('sourceAccountId', options.sourceAccountId);
-    }
-    if (options?.params) {
-      Object.entries(options.params).forEach(([key, value]) => {
-        queryParams.append(key, value);
-      });
-    }
-
-    const queryString = queryParams.toString();
-    const route = queryString ? `/journal-entry?${queryString}` : '/journal-entry';
-
-    router.push(route as Href);
+    const { params, ...direct } = options ?? {};
+    router.push(buildRoute('/journal-entry', { ...direct, ...params }));
   },
 
   /**
@@ -111,22 +99,17 @@ export const AppNavigation = {
       journalId?: string;
     },
   ) => {
-    const params: Record<string, string> = {
-      mode: 'simple',
-      type,
-    };
-
-    if (options?.destinationAccountId) {
-      params.destinationAccountId = options.destinationAccountId;
-    }
-    if (options?.amount) {
-      params.amount = options.amount;
-    }
-
     AppNavigation.toJournalEntry({
       journalId: options?.journalId,
       sourceAccountId: options?.sourceAccountId,
-      params,
+      params: {
+        mode: 'simple',
+        type,
+        ...(options?.destinationAccountId
+          ? { destinationAccountId: options.destinationAccountId }
+          : {}),
+        ...(options?.amount ? { amount: options.amount } : {}),
+      },
     });
   },
 
@@ -137,17 +120,14 @@ export const AppNavigation = {
     sourceAccountId?: string;
     destinationAccountId?: string;
   }) => {
-    const params: Record<string, string> = {
-      mode: 'advanced',
-    };
-
-    if (options?.destinationAccountId) {
-      params.destinationAccountId = options.destinationAccountId;
-    }
-
     AppNavigation.toJournalEntry({
       sourceAccountId: options?.sourceAccountId,
-      params,
+      params: {
+        mode: 'advanced',
+        ...(options?.destinationAccountId
+          ? { destinationAccountId: options.destinationAccountId }
+          : {}),
+      },
     });
   },
 
@@ -167,20 +147,18 @@ export const AppNavigation = {
       displayType?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    queryParams.append('journalId', journalId);
-
-    if (preview) {
-      if (preview.title) queryParams.append('title', preview.title);
-      if (preview.amount !== undefined) queryParams.append('amount', String(preview.amount));
-      if (preview.currencyCode) queryParams.append('currencyCode', preview.currencyCode);
-      if (preview.date) queryParams.append('date', String(preview.date));
-      if (preview.typeColor) queryParams.append('typeColor', preview.typeColor);
-      if (preview.typeIcon) queryParams.append('typeIcon', preview.typeIcon);
-      if (preview.displayType) queryParams.append('displayType', preview.displayType);
-    }
-
-    router.push(`/journal-details?${queryParams.toString()}` as Href);
+    router.push(
+      buildRoute('/journal-details', {
+        journalId,
+        title: preview?.title,
+        amount: preview?.amount,
+        currencyCode: preview?.currencyCode,
+        date: preview?.date,
+        typeColor: preview?.typeColor,
+        typeIcon: preview?.typeIcon,
+        displayType: preview?.displayType,
+      }),
+    );
   },
 
   /**
@@ -201,33 +179,26 @@ export const AppNavigation = {
       };
     },
   ) => {
-    const params: Record<string, string> = { accountId };
-    if (typeof options?.startDate === 'number') {
-      params.startDate = options.startDate.toString();
-    }
-    if (typeof options?.endDate === 'number') {
-      params.endDate = options.endDate.toString();
-    }
-    if (options?.preview) {
-      if (options.preview.name) params.pName = options.preview.name;
-      if (options.preview.balance !== undefined) params.pBalance = String(options.preview.balance);
-      if (options.preview.currency) params.pCurrency = options.preview.currency;
-      if (options.preview.icon) params.pIcon = options.preview.icon;
-      if (options.preview.type) params.pType = options.preview.type;
-      if (options.preview.colorKey) params.pColor = options.preview.colorKey;
-    }
-
-    router.push({
-      pathname: '/account-details',
-      params,
-    } as Href);
+    router.push(
+      buildRoute('/account-details', {
+        accountId,
+        startDate: options?.startDate,
+        endDate: options?.endDate,
+        pName: options?.preview?.name,
+        pBalance: options?.preview?.balance,
+        pCurrency: options?.preview?.currency,
+        pIcon: options?.preview?.icon,
+        pType: options?.preview?.type,
+        pColor: options?.preview?.colorKey,
+      }),
+    );
   },
 
   /**
    * Navigate to the Account Details screen, replacing the current route.
    */
   replaceToAccountDetails: (accountId: AccountId) => {
-    router.replace(`/account-details?accountId=${accountId}` as Href);
+    router.replace(buildRoute('/account-details', { accountId }));
   },
 
   /**
@@ -242,26 +213,22 @@ export const AppNavigation = {
       icon?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    if (accountId) queryParams.append('accountId', accountId);
-    if (preview) {
-      if (preview.name) queryParams.append('pName', preview.name);
-      if (preview.type) queryParams.append('pType', preview.type);
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-      if (preview.icon) queryParams.append('pIcon', preview.icon);
-    }
-    const queryString = queryParams.toString();
-    router.push((queryString ? `/account-creation?${queryString}` : '/account-creation') as Href);
+    router.push(
+      buildRoute('/account-creation', {
+        accountId,
+        pName: preview?.name,
+        pType: preview?.type,
+        pCurrency: preview?.currency,
+        pIcon: preview?.icon,
+      }),
+    );
   },
 
   /**
    * Navigate to account creation route with optional preselected type.
    */
   toAccountCreation: (type?: AccountType | string) => {
-    router.push({
-      pathname: '/account-creation',
-      params: type ? { type } : undefined,
-    } as Href);
+    router.push(buildRoute('/account-creation', { type }));
   },
 
   /**
@@ -276,26 +243,22 @@ export const AppNavigation = {
       icon?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    if (accountId) queryParams.append('accountId', accountId);
-    if (preview) {
-      if (preview.name) queryParams.append('pName', preview.name);
-      if (preview.type) queryParams.append('pType', preview.type);
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-      if (preview.icon) queryParams.append('pIcon', preview.icon);
-    }
-    const queryString = queryParams.toString();
-    router.push((queryString ? `/category-creation?${queryString}` : '/category-creation') as Href);
+    router.push(
+      buildRoute('/category-creation', {
+        accountId,
+        pName: preview?.name,
+        pType: preview?.type,
+        pCurrency: preview?.currency,
+        pIcon: preview?.icon,
+      }),
+    );
   },
 
   /**
    * Navigate to category creation route with optional preselected type.
    */
   toCategoryCreation: (type?: AccountType | string) => {
-    router.push({
-      pathname: '/category-creation',
-      params: type ? { type } : undefined,
-    } as Href);
+    router.push(buildRoute('/category-creation', { type }));
   },
 
   /**
@@ -310,15 +273,15 @@ export const AppNavigation = {
       period?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    queryParams.append('id', budgetId);
-    if (preview) {
-      if (preview.name) queryParams.append('pName', preview.name);
-      if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-      if (preview.period) queryParams.append('pPeriod', preview.period);
-    }
-    router.push(`/budget-details?${queryParams.toString()}` as Href);
+    router.push(
+      buildRoute('/budget-details', {
+        id: budgetId,
+        pName: preview?.name,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+        pPeriod: preview?.period,
+      }),
+    );
   },
 
   /**
@@ -332,15 +295,14 @@ export const AppNavigation = {
       currency?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    if (budgetId) queryParams.append('id', budgetId);
-    if (preview) {
-      if (preview.name) queryParams.append('pName', preview.name);
-      if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-    }
-    const queryString = queryParams.toString();
-    router.push((queryString ? `/budget-edit?${queryString}` : '/budget-edit') as Href);
+    router.push(
+      buildRoute('/budget-edit', {
+        id: budgetId,
+        pName: preview?.name,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+      }),
+    );
   },
 
   /**
@@ -403,35 +365,31 @@ export const AppNavigation = {
    * Navigate to the Audit Log screen.
    */
   toAuditLog: (options?: { entityType?: string; entityId?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (options?.entityType) queryParams.append('entityType', options.entityType);
-    if (options?.entityId) queryParams.append('entityId', options.entityId);
-    const queryString = queryParams.toString();
-    const route = queryString ? `/audit-log?${queryString}` : '/audit-log';
-    router.push(route as Href);
+    router.push(
+      buildRoute('/audit-log', {
+        entityType: options?.entityType,
+        entityId: options?.entityId,
+      }),
+    );
   },
 
   /**
    * Navigate to the Account Reorder screen.
    */
   toAccountReorder: (filterMode?: 'accounts' | 'categories') => {
-    if (filterMode) {
-      router.push(`/account-reorder?filterMode=${filterMode}` as Href);
-    } else {
-      router.push('/account-reorder' as Href);
-    }
+    router.push(buildRoute('/account-reorder', { filterMode }));
   },
 
   /**
    * Navigate to the Manage Hierarchy screen.
    */
   toManageHierarchy: (options?: { accountId?: string; filterMode?: 'accounts' | 'categories' }) => {
-    const queryParams = new URLSearchParams();
-    if (options?.accountId) queryParams.append('accountId', options.accountId);
-    if (options?.filterMode) queryParams.append('filterMode', options.filterMode);
-    const queryString = queryParams.toString();
-    const route = queryString ? `/manage-hierarchy?${queryString}` : '/manage-hierarchy';
-    router.push(route as Href);
+    router.push(
+      buildRoute('/manage-hierarchy', {
+        accountId: options?.accountId,
+        filterMode: options?.filterMode,
+      }),
+    );
   },
 
   /**
@@ -446,15 +404,15 @@ export const AppNavigation = {
       nextDate?: number;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    queryParams.append('id', id);
-    if (preview) {
-      if (preview.description) queryParams.append('pDesc', preview.description);
-      if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-      if (preview.nextDate) queryParams.append('pDate', String(preview.nextDate));
-    }
-    router.push(`/planned-payment-details?${queryParams.toString()}` as Href);
+    router.push(
+      buildRoute('/planned-payment-details', {
+        id,
+        pDesc: preview?.description,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+        pDate: preview?.nextDate,
+      }),
+    );
   },
 
   /**
@@ -468,16 +426,13 @@ export const AppNavigation = {
       currency?: string;
     },
   ) => {
-    const queryParams = new URLSearchParams();
-    if (id) queryParams.append('id', id);
-    if (preview) {
-      if (preview.description) queryParams.append('pDesc', preview.description);
-      if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
-      if (preview.currency) queryParams.append('pCurrency', preview.currency);
-    }
-    const queryString = queryParams.toString();
     router.push(
-      (queryString ? `/planned-payment-form?${queryString}` : '/planned-payment-form') as Href,
+      buildRoute('/planned-payment-form', {
+        id,
+        pDesc: preview?.description,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+      }),
     );
   },
 
@@ -514,17 +469,15 @@ export const AppNavigation = {
       categoryAccountId?: string;
     },
   ) => {
-    const seedParams = new URLSearchParams();
-    if (seed?.senderMatch) seedParams.append('senderMatch', seed.senderMatch);
-    if (seed?.bodyMatch) seedParams.append('bodyMatch', seed.bodyMatch);
-    if (seed?.sourceAccountId) seedParams.append('sourceAccountId', seed.sourceAccountId);
-    if (seed?.categoryAccountId) seedParams.append('categoryAccountId', seed.categoryAccountId);
-    const seedQuery = seedParams.toString();
-    if (id) {
-      router.push(`/sms-rule-form?id=${id}` as Href);
-    } else {
-      router.push((seedQuery ? `/sms-rule-form?${seedQuery}` : '/sms-rule-form') as Href);
-    }
+    router.push(
+      buildRoute('/sms-rule-form', {
+        id,
+        senderMatch: seed?.senderMatch,
+        bodyMatch: seed?.bodyMatch,
+        sourceAccountId: seed?.sourceAccountId,
+        categoryAccountId: seed?.categoryAccountId,
+      }),
+    );
   },
 
   /**
@@ -543,24 +496,17 @@ export const AppNavigation = {
     sourceAccountId?: string;
     destinationAccountId?: string;
   }) => {
-    const params: Record<string, string> = {
-      source: 'widget',
-    };
-
-    if (options?.mode) {
-      params.mode = options.mode;
-    }
-    if (options?.type) {
-      params.type = options.type;
-    }
-    if (options?.sourceAccountId) {
-      params.sourceAccountId = options.sourceAccountId;
-    }
-    if (options?.destinationAccountId) {
-      params.destinationAccountId = options.destinationAccountId;
-    }
-
-    AppNavigation.toJournalEntry({ params });
+    AppNavigation.toJournalEntry({
+      params: {
+        source: 'widget',
+        ...(options?.mode ? { mode: options.mode } : {}),
+        ...(options?.type ? { type: options.type } : {}),
+        ...(options?.sourceAccountId ? { sourceAccountId: options.sourceAccountId } : {}),
+        ...(options?.destinationAccountId
+          ? { destinationAccountId: options.destinationAccountId }
+          : {}),
+      },
+    });
   },
 
   /**
@@ -576,19 +522,18 @@ export const AppNavigation = {
     amount?: number;
     currencyCode?: string;
   }) => {
-    router.push({
-      pathname: '/insight-details',
-      params: {
+    router.push(
+      buildRoute('/insight-details', {
         id: params.id,
         message: params.message,
         description: params.description,
         suggestion: params.suggestion,
         journalIds: params.journalIds.join(','),
         severity: params.severity,
-        amount: typeof params.amount === 'number' ? String(params.amount) : undefined,
+        amount: params.amount,
         currencyCode: params.currencyCode,
-      },
-    } as Href);
+      }),
+    );
   },
 
   /**
@@ -610,17 +555,17 @@ export const AppNavigation = {
     maxAmount?: number;
     displayType?: string;
   }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.searchQuery) queryParams.append('q', params.searchQuery);
-    if (params?.startDate) queryParams.append('startDate', String(params.startDate));
-    if (params?.endDate) queryParams.append('endDate', String(params.endDate));
-    if (params?.accountIds?.length) queryParams.append('accountIds', params.accountIds.join(','));
-    if (params?.minAmount !== undefined) queryParams.append('minAmount', String(params.minAmount));
-    if (params?.maxAmount !== undefined) queryParams.append('maxAmount', String(params.maxAmount));
-    if (params?.displayType) queryParams.append('displayType', params.displayType);
-
-    const queryString = queryParams.toString();
-    router.push((queryString ? `/journal-search?${queryString}` : '/journal-search') as Href);
+    router.push(
+      buildRoute('/journal-search', {
+        q: params?.searchQuery,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+        accountIds: params?.accountIds?.length ? params.accountIds.join(',') : undefined,
+        minAmount: params?.minAmount,
+        maxAmount: params?.maxAmount,
+        displayType: params?.displayType,
+      }),
+    );
   },
 
   /**

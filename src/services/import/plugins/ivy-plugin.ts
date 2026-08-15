@@ -16,7 +16,6 @@ import {
  * Refactored from ivy-import-service.ts to implement ImportPlugin interface.
  */
 
-import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -31,6 +30,7 @@ import {
   ImportedTransaction,
 } from '@/src/data/repositories/importTypes';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
+import { getOrCreateSystemEquityAccount } from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { logger } from '@/src/utils/logger';
 
@@ -677,46 +677,30 @@ export const ivyPlugin: ImportPlugin = {
         destId = destAccId;
         displayType = JournalDisplayType.TRANSFER;
       } else if (isOpeningBalance || isAdjustBalance) {
-        // Route to the dedicated Equity account based on type
-        const accountConfig = isOpeningBalance
-          ? AppConfig.systemAccounts.openingBalances
-          : AppConfig.systemAccounts.balanceCorrections;
-
-        const name = `${accountConfig.namePrefix} (${currencyCode})`;
-        const systemKey = `SYSTEM_${isOpeningBalance ? 'OPENING_BALANCE' : 'BALANCE_CORRECTION'}:::${currencyCode}`;
-
-        if (!categoryAccountMap.has(systemKey)) {
-          categoryAccountMap.set(systemKey, generateId() as AccountId);
-          accountCurrencyMap.set(categoryAccountMap.get(systemKey)!, currencyCode);
-
-          // Add this to our accounts to be created
-          accountImports.push({
-            id: categoryAccountMap.get(systemKey)!,
-            name,
-            accountType: AccountType.EQUITY,
-            currencyCode,
-            description: accountConfig.description,
-            icon: accountConfig.icon,
-            orderNum: accountImports.length + 1,
-          });
-        }
+        const equityAccountId = getOrCreateSystemEquityAccount({
+          isOpeningBalance,
+          currencyCode,
+          categoryAccountMap,
+          accountCurrencyMap,
+          accountImports,
+        });
 
         // For INCOME (positive adjustment): money comes FROM equity TO account
         // For EXPENSE (negative adjustment): money goes FROM account TO equity
         if (tx.type === 'INCOME') {
-          sourceId = categoryAccountMap.get(systemKey);
+          sourceId = equityAccountId;
           destId = accountMap.get(tx.accountId);
           displayType = JournalDisplayType.INCOME;
         } else {
           sourceId = accountMap.get(tx.accountId);
-          destId = categoryAccountMap.get(systemKey);
+          destId = equityAccountId;
           displayType = JournalDisplayType.EXPENSE;
         }
 
         if (!sourceId || !destId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing account mapping for system tx (${systemKey}) - source: ${sourceId}, dest: ${destId}`,
+            reason: `Missing account mapping for system tx - source: ${sourceId}, dest: ${destId}`,
             description: txDesc,
           });
         }

@@ -12,6 +12,7 @@ import {
 
 import { BatchImportData } from '@/src/data/repositories/importTypes';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
+import { parseTimestampMs } from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
@@ -372,7 +373,7 @@ export const cashewPlugin: ImportPlugin = {
         if (processedCashewPks.has(t.transaction_pk)) continue;
 
         const isPaid = t.paid === 1;
-        const journalDate = new Date(t.date_created * 1000).getTime();
+        const journalDate = parseTimestampMs(t.date_created);
         const absoluteAmount = Math.abs(t.amount);
         const isIncome = t.income === 1;
         const walletCurrency = walletCurrencies.get(t.wallet_fk) || workplaceCurrency;

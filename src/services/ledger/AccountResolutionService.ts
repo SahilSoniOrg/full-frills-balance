@@ -4,6 +4,8 @@ import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { AccountId, WorkplaceId, AccountType } from '@/src/types/domain';
+import { LocalTransactionClassifier } from '@/src/utils/nlp/BayesClassifier';
+import { getStringSimilarity } from '@/src/utils/stringDistance';
 import { Q } from '@nozbe/watermelondb';
 
 export interface ResolutionResult {
@@ -15,120 +17,6 @@ export interface ResolutionResult {
   strategyUsed: 'fuzzy' | 'history' | 'bayes' | 'default';
   semanticType?: string;
   isReversal?: boolean;
-}
-
-function getLevenshteinDistance(a: string, b: string): number {
-  const tmp: number[][] = [];
-  let i, j, val;
-  for (i = 0; i <= a.length; i++) {
-    tmp.push([i]);
-  }
-  for (j = 0; j <= b.length; j++) {
-    tmp[0][j] = j;
-  }
-  for (i = 1; i <= a.length; i++) {
-    for (j = 1; j <= b.length; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        val = 0;
-      } else {
-        val = 1;
-      }
-      tmp[i][j] = Math.min(
-        tmp[i - 1][j] + 1, // deletion
-        tmp[i][j - 1] + 1, // insertion
-        tmp[i - 1][j - 1] + val, // substitution
-      );
-    }
-  }
-  return tmp[a.length][b.length];
-}
-
-function getStringSimilarity(a: string, b: string): number {
-  const distance = getLevenshteinDistance(a.toLowerCase(), b.toLowerCase());
-  const maxLength = Math.max(a.length, b.length);
-  if (maxLength === 0) return 1.0;
-  return 1.0 - distance / maxLength;
-}
-
-class LocalTransactionClassifier {
-  private vocabulary = new Set<string>();
-  private classDocCounts: Record<string, number> = {};
-  private classWordCounts: Record<string, Record<string, number>> = {};
-  private classTotalWords: Record<string, number> = {};
-  private totalDocs = 0;
-
-  private tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 2);
-  }
-
-  public train(samples: { text: string; categoryAccountId: string }[]) {
-    this.vocabulary.clear();
-    this.classDocCounts = {};
-    this.classWordCounts = {};
-    this.classTotalWords = {};
-    this.totalDocs = samples.length;
-
-    for (const sample of samples) {
-      const cat = sample.categoryAccountId;
-      const tokens = this.tokenize(sample.text);
-
-      this.classDocCounts[cat] = (this.classDocCounts[cat] || 0) + 1;
-      if (!this.classWordCounts[cat]) {
-        this.classWordCounts[cat] = {};
-        this.classTotalWords[cat] = 0;
-      }
-
-      for (const token of tokens) {
-        this.vocabulary.add(token);
-        this.classWordCounts[cat][token] = (this.classWordCounts[cat][token] || 0) + 1;
-        this.classTotalWords[cat] += 1;
-      }
-    }
-  }
-
-  public classify(text: string): { categoryAccountId: string; probability: number }[] {
-    const tokens = this.tokenize(text);
-    const scores: { categoryAccountId: string; score: number }[] = [];
-    const categories = Object.keys(this.classDocCounts);
-
-    if (categories.length === 0 || this.totalDocs === 0 || this.vocabulary.size === 0) return [];
-
-    for (const cat of categories) {
-      let logProbability = Math.log(this.classDocCounts[cat] / this.totalDocs);
-      const totalWordsInCat = this.classTotalWords[cat] || 0;
-      const vocabSize = this.vocabulary.size;
-
-      for (const token of tokens) {
-        const count = this.classWordCounts[cat]?.[token] || 0;
-        const wordProbability = (count + 1) / (totalWordsInCat + vocabSize);
-        logProbability += Math.log(wordProbability);
-      }
-
-      scores.push({ categoryAccountId: cat, score: logProbability });
-    }
-
-    if (scores.length === 0) return [];
-
-    scores.sort((a, b) => b.score - a.score);
-    const maxScore = scores[0].score;
-
-    const exps = scores.map(s => ({
-      categoryAccountId: s.categoryAccountId,
-      val: Math.exp(s.score - maxScore),
-    }));
-    const sumExps = exps.reduce((acc, curr) => acc + curr.val, 0);
-
-    return exps
-      .map(e => ({
-        categoryAccountId: e.categoryAccountId,
-        probability: sumExps > 0 ? e.val / sumExps : 0,
-      }))
-      .slice(0, 3);
-  }
 }
 
 const SYNONYM_DICTIONARY: Record<string, string> = {

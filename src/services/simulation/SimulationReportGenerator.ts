@@ -1,10 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
+import { AccountId, AccountSubtype } from '@/src/types/domain';
 import dayjs from 'dayjs';
-import { Flow, FlowCategory, SimulationReport } from './types';
+import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay, getLiquidImpact, isCommitmentFlow } from './utils/FlowPolicy';
 import { assertGlobalIntegrity } from './utils/SimulationIntegrity';
-import { AccountSubtype } from '@/src/types/domain';
 
 export class SimulationReportGenerator {
   static generate(
@@ -141,5 +141,144 @@ export class SimulationReportGenerator {
       committedCreditCard: Math.round((committedCreditCard + Number.EPSILON) * 100) / 100,
       committedOther: Math.round((committedOther + Number.EPSILON) * 100) / 100,
     };
+  }
+
+  static generateAccountSummaries({
+    allFlows,
+    liquidAccountIdsSet,
+    accountMap,
+    normalizedStartingBalances,
+    accountMinBalancesBeforeIncome,
+    accountMinBalances,
+    firstMajorInflowDay,
+  }: {
+    allFlows: Flow[];
+    liquidAccountIdsSet: Set<AccountId> | Set<string>;
+    accountMap: Map<string, Account>;
+    normalizedStartingBalances: Map<string, number>;
+    accountMinBalancesBeforeIncome: Map<string, number>;
+    accountMinBalances: Map<string, number>;
+    firstMajorInflowDay: number | null;
+  }): AccountSimulationSummary[] {
+    // Pre-group all flows by account for O(1) inside account loop
+    const flowsByAccount = new Map<string, Flow[]>();
+    allFlows.forEach(f => {
+      if (f.kind === 'TRANSFER') {
+        const fromList = flowsByAccount.get(f.fromAccountId) || [];
+        fromList.push(f);
+        flowsByAccount.set(f.fromAccountId, fromList);
+
+        const toList = flowsByAccount.get(f.toAccountId) || [];
+        toList.push(f);
+        flowsByAccount.set(f.toAccountId, toList);
+      } else {
+        const list = flowsByAccount.get(f.accountId) || [];
+        list.push(f);
+        flowsByAccount.set(f.accountId, list);
+      }
+    });
+
+    return Array.from(liquidAccountIdsSet).map(id => {
+      const accountId = id as AccountId;
+      const acc = accountMap.get(accountId);
+      const startingBal = normalizedStartingBalances.get(accountId) || 0;
+      const minBefore = accountMinBalancesBeforeIncome.get(accountId) ?? startingBal;
+      const absoluteMin = accountMinBalances.get(accountId) ?? startingBal;
+
+      // Usage Details
+      let totalInflow = 0;
+      let totalOutflow = 0;
+      const inflowMap = new Map<
+        string,
+        { name: string; amount: number; source: string; minDay: number }
+      >();
+      const outflowMap = new Map<
+        string,
+        { name: string; amount: number; source: string; minDay: number }
+      >();
+
+      const accFlows = flowsByAccount.get(accountId) || [];
+      accFlows.forEach(f => {
+        const amount = f.amount;
+        let isDebit = false;
+        let isRelevant = true;
+
+        if (f.kind === 'INFLOW' && f.accountId === accountId) {
+          isDebit = false;
+        } else if (f.kind === 'OUTFLOW' && f.accountId === accountId) {
+          isDebit = true;
+        } else if (f.kind === 'TRANSFER') {
+          if (f.fromAccountId === accountId) {
+            isDebit = true;
+          } else if (f.toAccountId === accountId) {
+            isDebit = false;
+          } else {
+            isRelevant = false;
+          }
+        } else {
+          isRelevant = false;
+        }
+
+        if (isRelevant) {
+          const label = f.label || 'Transaction';
+          const source = f.origin;
+          if (isDebit) {
+            totalOutflow += amount;
+            const existing = outflowMap.get(label);
+            outflowMap.set(label, {
+              name: label,
+              amount: (existing?.amount || 0) + amount,
+              source,
+              minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
+            });
+          } else {
+            totalInflow += amount;
+            const existing = inflowMap.get(label);
+            inflowMap.set(label, {
+              name: label,
+              amount: (existing?.amount || 0) + amount,
+              source,
+              minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
+            });
+          }
+        }
+      });
+
+      const topInflows = Array.from(inflowMap.values())
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3)
+        .map(d => ({
+          name: d.name,
+          amount: d.amount,
+          source: d.source,
+          isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
+        }));
+
+      const topOutflows = Array.from(outflowMap.values())
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3)
+        .map(d => ({
+          name: d.name,
+          amount: d.amount,
+          source: d.source,
+          isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
+        }));
+
+      return {
+        accountId,
+        accountName: acc?.name || 'Unknown',
+        color: acc?.color || undefined,
+        startingBalance: startingBal,
+        safeToSpend: Math.max(0, Math.min(startingBal, minBefore)),
+        shortfall: minBefore < 0 ? Math.abs(minBefore) : 0,
+        minBalance: absoluteMin,
+        usageDetails: {
+          totalInflow,
+          totalOutflow,
+          topInflows,
+          topOutflows,
+        },
+      } as AccountSimulationSummary;
+    });
   }
 }

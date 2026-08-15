@@ -25,13 +25,7 @@ import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
 import { toLiabilityMetadata } from './liabilityMetadata';
-import {
-  AccountSimulationSummary,
-  Flow,
-  LiabilityMetadata,
-  SimulationContext,
-  SimulationRunResult,
-} from './types';
+import { LiabilityMetadata, SimulationContext, SimulationRunResult } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
 export type SimulationInput = {
@@ -308,7 +302,6 @@ export class CashFlowSimulationService {
     trace?.metric('simulation_execution');
 
     // 4. PHASE: POST-PROCESS SUMMARIES
-    const firstMajorInflowDay = simulationResult.summary.firstMajorInflowDay;
     const report = SimulationReportGenerator.generate(
       allFlows,
       accountMap,
@@ -317,129 +310,15 @@ export class CashFlowSimulationService {
     );
     trace?.metric('post_process_report');
 
-    // Pre-group all flows by account for O(1) inside account loop
-    const flowsByAccount = new Map<string, Flow[]>();
-    allFlows.forEach(f => {
-      if (f.kind === 'TRANSFER') {
-        const fromList = flowsByAccount.get(f.fromAccountId) || [];
-        fromList.push(f);
-        flowsByAccount.set(f.fromAccountId, fromList);
-
-        const toList = flowsByAccount.get(f.toAccountId) || [];
-        toList.push(f);
-        flowsByAccount.set(f.toAccountId, toList);
-      } else {
-        const list = flowsByAccount.get(f.accountId) || [];
-        list.push(f);
-        flowsByAccount.set(f.accountId, list);
-      }
+    const accountSummaries = SimulationReportGenerator.generateAccountSummaries({
+      allFlows,
+      liquidAccountIdsSet,
+      accountMap,
+      normalizedStartingBalances,
+      accountMinBalancesBeforeIncome: simulationResult.summary.accountMinBalancesBeforeIncome,
+      accountMinBalances: simulationResult.summary.accountMinBalances,
+      firstMajorInflowDay: simulationResult.summary.firstMajorInflowDay,
     });
-
-    const accountSummaries: AccountSimulationSummary[] = Array.from(liquidAccountIdsSet).map(
-      accountId => {
-        const acc = accountMap.get(accountId);
-        const startingBal = normalizedStartingBalances.get(accountId) || 0;
-        const minBefore =
-          simulationResult.summary.accountMinBalancesBeforeIncome.get(accountId) ?? startingBal;
-        const absoluteMin =
-          simulationResult.summary.accountMinBalances.get(accountId) ?? startingBal;
-
-        // Usage Details
-        let totalInflow = 0;
-        let totalOutflow = 0;
-        const inflowMap = new Map<
-          string,
-          { name: string; amount: number; source: string; minDay: number }
-        >();
-        const outflowMap = new Map<
-          string,
-          { name: string; amount: number; source: string; minDay: number }
-        >();
-
-        const accFlows = flowsByAccount.get(accountId) || [];
-        accFlows.forEach(f => {
-          let amount = f.amount;
-          let isDebit = false;
-          let isRelevant = true;
-
-          if (f.kind === 'INFLOW' && f.accountId === accountId) {
-            isDebit = false;
-          } else if (f.kind === 'OUTFLOW' && f.accountId === accountId) {
-            isDebit = true;
-          } else if (f.kind === 'TRANSFER') {
-            if (f.fromAccountId === accountId) {
-              isDebit = true;
-            } else if (f.toAccountId === accountId) {
-              isDebit = false;
-            } else {
-              isRelevant = false;
-            }
-          } else {
-            isRelevant = false;
-          }
-
-          if (isRelevant) {
-            const label = f.label || 'Transaction';
-            const source = f.origin;
-            if (isDebit) {
-              totalOutflow += amount;
-              const existing = outflowMap.get(label);
-              outflowMap.set(label, {
-                name: label,
-                amount: (existing?.amount || 0) + amount,
-                source,
-                minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
-              });
-            } else {
-              totalInflow += amount;
-              const existing = inflowMap.get(label);
-              inflowMap.set(label, {
-                name: label,
-                amount: (existing?.amount || 0) + amount,
-                source,
-                minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
-              });
-            }
-          }
-        });
-
-        const topInflows = Array.from(inflowMap.values())
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 3)
-          .map(d => ({
-            name: d.name,
-            amount: d.amount,
-            source: d.source,
-            isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
-          }));
-
-        const topOutflows = Array.from(outflowMap.values())
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 3)
-          .map(d => ({
-            name: d.name,
-            amount: d.amount,
-            source: d.source,
-            isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
-          }));
-
-        return {
-          accountId,
-          accountName: acc?.name || 'Unknown',
-          color: acc?.color || undefined,
-          startingBalance: startingBal,
-          safeToSpend: Math.max(0, Math.min(startingBal, minBefore)),
-          shortfall: minBefore < 0 ? Math.abs(minBefore) : 0,
-          minBalance: absoluteMin,
-          usageDetails: {
-            totalInflow,
-            totalOutflow,
-            topInflows,
-            topOutflows,
-          },
-        } as AccountSimulationSummary;
-      },
-    );
     trace?.metric('post_process_summaries');
 
     const result: SimulationRunResult = {

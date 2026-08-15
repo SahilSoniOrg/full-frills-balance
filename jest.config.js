@@ -28,7 +28,7 @@ module.exports = {
       branches: 0,
       statements: 0,
     },
-    './src/services/accounting/BalanceEffects.ts': {
+    './src/utils/accounting/BalanceEffects.ts': {
       branches: 80,
       statements: 90,
     },
