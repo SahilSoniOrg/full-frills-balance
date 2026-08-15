@@ -9,6 +9,7 @@ import {
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
+import { analytics } from '@/src/services/analytics-service';
 import { AccountId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -83,13 +84,17 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
 
       try {
         await updateAccountOrder(move.item, move.newOrderNum);
+        analytics.trackFeatureUsage('account', 'reorder', {
+          filter_mode: filterMode,
+          direction,
+        });
         // Keep overlay until sourceIds match (cleared during render above).
       } catch (error) {
         logger.error('Failed to update account order:', error);
         setPendingOrder(null);
       }
     },
-    [canReorder, orderedAccounts, updateAccountOrder],
+    [canReorder, filterMode, orderedAccounts, updateAccountOrder],
   );
 
   const onBack = useCallback(() => {

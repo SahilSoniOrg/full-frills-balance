@@ -9,6 +9,7 @@ import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/acco
 import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
+import { analytics } from '@/src/services/analytics-service';
 import {
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,
@@ -85,6 +86,11 @@ export function useAccountsBulkOperations({
       await applyArchiveChanges({ toArchive, toUnarchive });
       selection.exitSelectionMode();
 
+      analytics.trackFeatureUsage('account', 'bulk_archive', {
+        count: selectedArray.length,
+        is_archive: anyUnarchived,
+      });
+
       const actionText = anyUnarchived ? 'Archived' : 'Unarchived';
       toast.success(
         `${actionText} ${selectedArray.length} account${selectedArray.length === 1 ? '' : 's'}`,
@@ -154,13 +160,19 @@ export function useAccountsBulkOperations({
   );
 
   const handleBulkAppearanceSelect = useCallback(
-    (updates: { icon?: IconName; color?: string }) =>
-      applyBulkUpdate(() => updates, {
+    (updates: { icon?: IconName; color?: string }) => {
+      analytics.trackFeatureUsage('account', 'bulk_appearance', {
+        count: selection.selectedIds.size,
+        has_icon: !!updates.icon,
+        has_color: !!updates.color,
+      });
+      return applyBulkUpdate(() => updates, {
         successMessage: count =>
           `Updated ${updates.icon ? 'icon' : 'color'} for ${count} account${count === 1 ? '' : 's'}`,
         undoMessage: 'Appearance changes undone',
-      }),
-    [applyBulkUpdate],
+      });
+    },
+    [applyBulkUpdate, selection.selectedIds.size],
   );
 
   const handleBulkRenameSave = useCallback(
@@ -205,6 +217,10 @@ export function useAccountsBulkOperations({
         selection.exitSelectionMode();
         closeModal();
 
+        analytics.trackFeatureUsage('account', 'bulk_rename', {
+          count: requests.length,
+        });
+
         toast.success(`Renamed ${requests.length} account${requests.length === 1 ? '' : 's'}`, {
           action: {
             label: 'Undo',
@@ -229,6 +245,10 @@ export function useAccountsBulkOperations({
   const handleBulkHierarchyMoveAssign = useCallback(
     async (parentId: AccountId | null) => {
       if (!workplaceId || selection.selectedIds.size === 0) return;
+      analytics.trackFeatureUsage('account', 'bulk_move_hierarchy', {
+        count: selection.selectedIds.size,
+        has_parent: parentId !== null,
+      });
       await applyBulkUpdate(() => ({ parentAccountId: parentId }), {
         successMessage: count => `Moved ${count} account${count === 1 ? '' : 's'} in hierarchy`,
         undoMessage: 'Hierarchy move undone',

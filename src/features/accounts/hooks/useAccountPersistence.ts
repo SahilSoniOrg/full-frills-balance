@@ -2,6 +2,7 @@ import Account from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';
+import { analytics } from '@/src/services/analytics-service';
 import {
   BalanceChangeCounterparty,
   resolveBalanceChangeRequirement,
@@ -48,6 +49,20 @@ export function useAccountPersistence(
 
     try {
       if (currentAccountId && existingAccount) {
+        const isTypeChanged = existingAccount.accountType !== payload.accountType;
+        if (isTypeChanged) {
+          analytics.trackFeatureUsage('account', 'convert_type', {
+            from_type: existingAccount.accountType,
+            to_type: payload.accountType,
+            is_category_to_account:
+              isCategoryAccountType(existingAccount.accountType) &&
+              !isCategoryAccountType(payload.accountType),
+            is_account_to_category:
+              !isCategoryAccountType(existingAccount.accountType) &&
+              isCategoryAccountType(payload.accountType),
+          });
+        }
+
         const updatedAccount = await updateAccount(existingAccount, {
           name: sanitizedName,
           accountType: payload.accountType,

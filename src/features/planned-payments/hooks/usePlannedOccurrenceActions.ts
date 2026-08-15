@@ -3,6 +3,7 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { analytics } from '@/src/services/analytics-service';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -57,6 +58,11 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
               const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
               if (pp) {
                 await plannedPaymentService.postOccurrence(workplaceId, pp, item.occurrenceDate);
+                analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
+                  payment_id: plannedPaymentId,
+                  currency: item.currencyCode,
+                  is_simulated: false,
+                });
                 toast.success('Payment recorded successfully');
               } else {
                 toast.error('Planned payment details not found');
@@ -81,6 +87,10 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
                       pp,
                       item.occurrenceDate,
                     );
+                    analytics.trackFeatureUsage('planned_payment', 'occurrence_skipped', {
+                      payment_id: plannedPaymentId,
+                      is_simulated: false,
+                    });
                     toast.success('Payment skipped successfully');
                   } else {
                     toast.error('Planned payment details not found');

@@ -68,6 +68,7 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     setIsExporting(true);
     setExportProgress(0);
     setExportProgressMessage('Starting export...');
+    analytics.trackFeatureUsage('data_management', 'export_initiated');
     await new Promise(resolve => setTimeout(resolve, 200));
     try {
       const jsonData = await exportToJSON((message, progress) => {
@@ -87,7 +88,7 @@ export function useDataManagementViewModel(): DataManagementViewModel {
         fileExtension: 'zip',
         getContent: () => jsonData,
       };
-      analytics.trackFeatureUsage('settings', 'export_data', {
+      analytics.trackFeatureUsage('data_management', 'export_completed', {
         has_custom_filename: !!sanitizedName,
         filename_length: sanitizedName.length,
         data_size_bytes: jsonData.length,

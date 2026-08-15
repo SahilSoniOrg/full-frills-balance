@@ -11,6 +11,7 @@ import {
 } from '@/src/features/budget/hooks/budgetEditDraft';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { analytics } from '@/src/services/analytics-service';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -167,8 +168,20 @@ export function useBudgetEditViewModel() {
           input,
           draft.selectedAccountIds,
         );
+        analytics.trackFeatureUsage('budget', 'update', {
+          currency: draft.currencyCode,
+          interval_type: draft.intervalType,
+          category_count: draft.selectedAccountIds.length,
+          asset_count: draft.assetAccountIds.length,
+        });
       } else {
         await budgetWriteService.createBudget(workplaceId, input, draft.selectedAccountIds);
+        analytics.trackFeatureUsage('budget', 'create', {
+          currency: draft.currencyCode,
+          interval_type: draft.intervalType,
+          category_count: draft.selectedAccountIds.length,
+          asset_count: draft.assetAccountIds.length,
+        });
       }
       AppNavigation.back();
     } finally {

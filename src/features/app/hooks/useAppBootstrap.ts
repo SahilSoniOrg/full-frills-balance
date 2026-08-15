@@ -36,6 +36,10 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     if (lastInitializedWorkplaceRef.current === workplaceId) return;
     lastInitializedWorkplaceRef.current = workplaceId;
 
+    if (workplaceId) {
+      analytics.syncActiveWorkplace(workplaceId, defaultCurrencyCode);
+    }
+
     let timeoutId: NodeJS.Timeout;
     const bootStart = performance.now();
     logger.info(

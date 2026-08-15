@@ -97,6 +97,7 @@ function WorkplaceBootstrap() {
  */
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated, hasCompletedOnboarding } = useUI();
+  const hasTrackedColdStartRef = React.useRef(false);
 
   // If onboarding is done, we wait for both UI and Data hydration.
   // Otherwise, we just wait for UI assets to show the onboarding shell.
@@ -116,15 +117,26 @@ function SplashOrchestrator() {
       );
       SplashScreen.hideAsync()
         .then(() => {
+          const totalTtiMs = Math.round(performance.now());
           logger.info(
-            `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms`,
+            `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (TTI: ${totalTtiMs}ms)`,
           );
+
+          if (!hasTrackedColdStartRef.current) {
+            hasTrackedColdStartRef.current = true;
+            analytics.track('app_cold_start', {
+              time_to_interactive_ms: totalTtiMs,
+              time_to_interactive_sec: Math.round(totalTtiMs / 1000),
+              is_onboarding_completed: hasCompletedOnboarding,
+              is_data_hydrated: isDataHydrated,
+            });
+          }
         })
         .catch(err => {
           logger.warn('[Splash] Failed to hide splash screen', err);
         });
     }
-  }, [isFullyReady, isAppReady, isDataHydrated]);
+  }, [isFullyReady, isAppReady, isDataHydrated, hasCompletedOnboarding]);
 
   return null;
 }

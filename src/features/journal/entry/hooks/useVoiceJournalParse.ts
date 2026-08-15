@@ -1,10 +1,11 @@
+import { analytics } from '@/src/services/analytics-service';
+import type { ParserOutput } from '@/src/services/transaction-ingestion';
+import { transactionIngestionService } from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { useCallback, useEffect, useState } from 'react';
 import { Keyboard } from 'react-native';
-import { transactionIngestionService } from '@/src/services/transaction-ingestion';
-import type { ParserOutput } from '@/src/services/transaction-ingestion';
 
 export type VoiceJournalApplyParams = {
   amount?: number;
@@ -49,6 +50,9 @@ export function useVoiceJournalParse({
   });
   useSpeechRecognitionEvent('error', event => {
     logger.error('[useVoiceJournalParse] Speech recognition error', event.error);
+    analytics.trackFeatureUsage('voice_journal', 'speech_error', {
+      error: String(event.error || 'unknown'),
+    });
     setIsRecording(false);
   });
   useSpeechRecognitionEvent('volumechange', event => {
@@ -70,11 +74,13 @@ export function useVoiceJournalParse({
     const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!result.granted) {
       logger.warn('[useVoiceJournalParse] Speech permissions denied');
+      analytics.trackFeatureUsage('voice_journal', 'permission_denied');
       return;
     }
 
     setParserOutput(null);
     setTranscription('');
+    analytics.trackFeatureUsage('voice_journal', 'record_started');
 
     ExpoSpeechRecognitionModule.start({
       lang: 'en-IN',
@@ -99,8 +105,16 @@ export function useVoiceJournalParse({
       try {
         const output = await transactionIngestionService.ingest(textToParse, workplaceId, forceAi);
         setParserOutput(output);
+        analytics.trackFeatureUsage('voice_journal', 'parsed', {
+          success: !!output && output.transactions.length > 0,
+          transaction_count: output?.transactions?.length || 0,
+          is_ai: forceAi,
+        });
       } catch (err) {
         logger.error('[useVoiceJournalParse] Extraction failed', err);
+        analytics.trackFeatureUsage('voice_journal', 'parse_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
         setParserOutput(null);
       } finally {
         setIsParsing(false);
@@ -112,6 +126,9 @@ export function useVoiceJournalParse({
   const selectTemplate = useCallback(
     (template: string) => {
       setTranscription(template);
+      analytics.trackFeatureUsage('voice_journal', 'template_selected', {
+        template_length: template.length,
+      });
       void parseTranscription(template);
     },
     [parseTranscription],
@@ -120,6 +137,13 @@ export function useVoiceJournalParse({
   const applyParsedResult = useCallback(() => {
     if (!parserOutput || parserOutput.transactions.length === 0) return;
     const result = parserOutput.transactions[0];
+
+    analytics.trackFeatureUsage('voice_journal', 'applied', {
+      has_amount: result.amount !== undefined,
+      has_merchant: !!(result.categoryNameHint || result.description),
+      transaction_type: result.type,
+      direction: result.type === 'income' ? 'credit' : 'debit',
+    });
 
     onApply({
       amount: result.amount,

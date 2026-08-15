@@ -1,11 +1,11 @@
 import Journal from '@/src/data/models/Journal';
-import { TransactionType, JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalEntryLine, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
   journalEnrichmentQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
   CreateJournalData,
   journalWriteRepository,
@@ -14,9 +14,9 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
+import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 
 export interface SubmitJournalResult {
   success: boolean;
@@ -39,19 +39,37 @@ export class JournalService {
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
-    return ledgerWriteService.deleteJournal(journalId, workplaceId);
+    await ledgerWriteService.deleteJournal(journalId, workplaceId);
+    analytics.trackFeatureUsage('journal', 'delete', {
+      journal_id: journalId,
+    });
   }
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    return ledgerWriteService.recoverJournal(journalId, workplaceId);
+    const journal = await ledgerWriteService.recoverJournal(journalId, workplaceId);
+    analytics.trackFeatureUsage('journal', 'recover', {
+      journal_id: journalId,
+      currency: journal.currencyCode,
+    });
+    return journal;
   }
 
   async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    return ledgerWriteService.postJournal(journalId, workplaceId);
+    const journal = await ledgerWriteService.postJournal(journalId, workplaceId);
+    analytics.trackFeatureUsage('journal', 'post', {
+      journal_id: journalId,
+      currency: journal.currencyCode,
+    });
+    return journal;
   }
 
   async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    return ledgerWriteService.revertToPlanned(journalId, workplaceId);
+    const journal = await ledgerWriteService.revertToPlanned(journalId, workplaceId);
+    analytics.trackFeatureUsage('journal', 'revert_to_planned', {
+      journal_id: journalId,
+      currency: journal.currencyCode,
+    });
+    return journal;
   }
 
   async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
@@ -60,7 +78,7 @@ export class JournalService {
 
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
-    return ledgerWriteService.createJournal(
+    const duplicated = await ledgerWriteService.createJournal(
       {
         journalDate: Date.now(),
         description: journal.description ? `${journal.description}` : undefined,
@@ -75,6 +93,15 @@ export class JournalService {
       },
       journal.workplaceId,
     );
+
+    analytics.trackFeatureUsage('journal', 'duplicate', {
+      source_journal_id: journalId,
+      new_journal_id: duplicated.id,
+      transaction_count: transactions.length,
+      currency: journal.currencyCode,
+    });
+
+    return duplicated;
   }
 
   async createReversalJournal(
@@ -112,6 +139,13 @@ export class JournalService {
     );
 
     await journalWriteRepository.markReversed(originalJournalId, reversalJournal.id, workplaceId);
+
+    analytics.trackFeatureUsage('journal', 'reversal', {
+      original_journal_id: originalJournalId,
+      reversal_journal_id: reversalJournal.id,
+      reason,
+      currency: originalJournal.currencyCode,
+    });
 
     return reversalJournal;
   }
@@ -203,8 +237,9 @@ export class JournalService {
       currency: string;
     }[] = [];
 
+    let currencyCode: string;
     try {
-      const currencyCode = await workplaceService.getCurrency(workplaceId);
+      currencyCode = await workplaceService.getCurrency(workplaceId);
 
       for (const entry of entries) {
         const assembled = await assembleCreateJournalData({
@@ -242,6 +277,11 @@ export class JournalService {
         analytics.logTransactionCreated('simple', 'create', p.currency);
         analytics.trackConversion('transaction_created');
       }
+
+      analytics.trackFeatureUsage('journal', 'bulk_create', {
+        count: preparedItems.length,
+        currency: currencyCode,
+      });
 
       return {
         success: true,

@@ -10,6 +10,7 @@ import { useJournalEntryList } from '@/src/features/journal';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
+import { analytics } from '@/src/services/analytics-service';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
@@ -188,6 +189,10 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
         try {
           if (budget && 'destroyPermanently' in budget) {
             await budgetWriteService.deleteBudget(workplaceId, budget);
+            analytics.trackFeatureUsage('budget', 'delete', {
+              budget_id: budget.id,
+              currency: budget.currencyCode,
+            });
             AppNavigation.back();
           } else {
             logger.warn('Cannot delete preview/mock budget');

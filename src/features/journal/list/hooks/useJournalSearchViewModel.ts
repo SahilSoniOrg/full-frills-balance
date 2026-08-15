@@ -2,12 +2,13 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
+import { analytics } from '@/src/services/analytics-service';
 import { AccountId, JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';
 import type { Dispatch, SetStateAction } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
 import { useJournalEntryList } from './useJournalEntryList';
 
@@ -87,6 +88,32 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     shareTitle: 'Search Transactions',
     paginationPolicy: 'always',
   });
+
+  const itemsCountRef = useRef(core.items.length);
+  useEffect(() => {
+    itemsCountRef.current = core.items.length;
+  }, [core.items.length]);
+
+  useEffect(() => {
+    if (!filters.searchQuery && filters.accountIds.length === 0 && !filters.dateRange) return;
+    const timer = setTimeout(() => {
+      analytics.trackFeatureUsage('search', 'query_executed', {
+        query_length: filters.searchQuery.length,
+        has_account_filter: filters.accountIds.length > 0,
+        account_filter_count: filters.accountIds.length,
+        has_date_filter: !!filters.dateRange,
+        has_amount_filter: !!(filters.minAmount || filters.maxAmount),
+        result_count: itemsCountRef.current,
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [
+    filters.searchQuery,
+    filters.accountIds.length,
+    filters.dateRange,
+    filters.minAmount,
+    filters.maxAmount,
+  ]);
 
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);

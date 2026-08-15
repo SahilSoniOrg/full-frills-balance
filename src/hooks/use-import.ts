@@ -80,6 +80,11 @@ export function useImport() {
           detectedPlugin = importRegistry.detect(context);
 
           if (expectedType && detectedPlugin && expectedType !== detectedPlugin.id) {
+            analytics.trackFeatureUsage('import', 'format_mismatch', {
+              detected: detectedPlugin.id,
+              expected: expectedType,
+            });
+
             const continueWithMismatch = await new Promise<boolean>(resolve => {
               confirm.show({
                 title: 'Format Mismatch',
@@ -90,6 +95,7 @@ export function useImport() {
             });
 
             if (!continueWithMismatch) {
+              analytics.trackFeatureUsage('import', 'cancelled', { stage: 'mismatch_prompt' });
               setIsImporting(false);
               return;
             }
@@ -98,6 +104,7 @@ export function useImport() {
           const plugin = expectedType ? importRegistry.get(expectedType) : detectedPlugin;
 
           if (!plugin) {
+            analytics.trackFeatureUsage('import', 'failed', { reason: 'undetermined_format' });
             throw new Error('Could not determine file format');
           }
 
@@ -122,6 +129,9 @@ export function useImport() {
           requireRestart({ type: 'IMPORT', stats: finalStats });
         } catch (error) {
           logger.error('[useImport] Import failed', error);
+          analytics.trackFeatureUsage('import', 'failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
           toast.error('Could not parse or import the selected file.');
         } finally {
           if (didSetImporting) {
@@ -142,9 +152,16 @@ export function useImport() {
           copyToCacheDirectory: true,
         });
 
-        if (result.canceled) return;
+        if (result.canceled) {
+          analytics.trackFeatureUsage('import', 'picker_cancelled');
+          return;
+        }
 
         const file = result.assets[0];
+        analytics.trackFeatureUsage('import', 'file_selected', {
+          file_size: file.size ?? 0,
+          mime_type: file.mimeType || 'unknown',
+        });
 
         confirm.show({
           title: 'Import Data',
@@ -155,6 +172,9 @@ export function useImport() {
         });
       } catch (error) {
         logger.error('[useImport] Document pick failed', error);
+        analytics.trackFeatureUsage('import', 'picker_error', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         toast.error('Could not select file');
       }
     },

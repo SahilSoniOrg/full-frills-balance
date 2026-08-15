@@ -219,7 +219,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
         workplaceId,
       );
 
-      analytics.trackFeatureUsage('sms_rule', id ? 'update' : 'create', {
+      analytics.trackFeatureUsage('sms', id ? 'rule_update' : 'rule_create', {
         rule_id: id,
         mode,
         disposition,
@@ -259,7 +259,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     setIsSubmitting(true);
     try {
       await smsService.deleteAutoPostRule(id, workplaceId);
-      analytics.trackFeatureUsage('sms_rule', 'delete', { rule_id: id });
+      analytics.trackFeatureUsage('sms', 'rule_delete', { rule_id: id });
       toast.success('Rule deleted');
       AppNavigation.back();
     } catch {

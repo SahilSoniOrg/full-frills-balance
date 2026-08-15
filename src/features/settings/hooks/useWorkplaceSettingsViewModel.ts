@@ -5,6 +5,7 @@ import { AccountType } from '@/src/types/domain';
 import Workplace from '@/src/data/models/Workplace';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
+import { analytics } from '@/src/services/analytics-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useState } from 'react';
@@ -45,6 +46,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   const setActiveWorkplace = useCallback(
     (workplace: Workplace) => {
       setActiveWorkplaceId(workplace.id);
+      analytics.trackFeatureUsage('settings', 'switch_workplace');
       toast.info(`Switched to ${workplace.name}`);
     },
     [setActiveWorkplaceId],
@@ -74,6 +76,10 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
       setIsCreatingWorkplace(true);
       try {
         const newWorkplace = await workplaceService.createWorkplace(name.trim(), icon, options);
+        analytics.trackFeatureUsage('settings', 'create_workplace', {
+          currency: options.currencyCode,
+          initial_accounts_count: options.initialAccounts?.length ?? 0,
+        });
         setActiveWorkplace(newWorkplace);
         cancelCreateWorkplace();
         return true;
@@ -90,6 +96,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   const updateWorkplaceIcon = useCallback(async (workplace: Workplace, icon: IconName) => {
     try {
       await workplaceService.updateWorkplace(workplace.id, { icon });
+      analytics.trackFeatureUsage('settings', 'update_workplace_icon', { icon });
     } catch {
       toast.error('Failed to update workplace icon.');
     }

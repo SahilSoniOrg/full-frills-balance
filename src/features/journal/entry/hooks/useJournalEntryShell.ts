@@ -20,6 +20,7 @@ import {
 import { useModeAccountActions } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import { analytics } from '@/src/services/analytics-service';
 import {
   isSimpleTargetAccountUnset,
   resolveTargetAccountIdForSimpleTab,
@@ -175,6 +176,12 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const onSelectSuggestion = useCallback(
     (suggestion: JournalAutofillSuggestion) => {
+      analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
+        has_target_account: !!suggestion.targetAccountId,
+        target_account_type: suggestion.targetAccountType || 'none',
+        mode: activeMode,
+      });
+
       editor.setDescription(suggestion.description);
 
       if (activeMode !== 'guided') return;

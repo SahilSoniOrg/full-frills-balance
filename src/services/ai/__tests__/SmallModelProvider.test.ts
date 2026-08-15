@@ -21,6 +21,14 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'ios' },
 }));
 
+jest.mock('@/src/services/analytics-service', () => ({
+  analytics: {
+    trackFeatureUsage: jest.fn(),
+    logAiModelLoad: jest.fn(),
+    track: jest.fn(),
+  },
+}));
+
 describe('SmallModelProvider', () => {
   let provider: SmallModelProvider;
   let mockLLM: any;

@@ -4,6 +4,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AuditEntityType } from '@/src/data/models/AuditLog';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
+import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { AccountId, JournalId } from '@/src/types/domain';
 import * as Alerts from '@/src/utils/alerts';
@@ -83,6 +84,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
   }, []);
 
   const onView = useCallback((type: string, id: string, name?: string) => {
+    analytics.trackFeatureUsage('audit', 'view_entity', { entity_type: type });
     if (type === 'account') {
       AppNavigation.toAccountDetails(id as AccountId, { preview: { name } });
     } else if (type === 'journal') {
@@ -96,10 +98,16 @@ export function useAuditLogViewModel(): AuditLogViewModel {
         AppConfig.strings.audit.revertConfirmTitle,
         AppConfig.strings.audit.revertConfirmMessage,
         async () => {
+          analytics.trackFeatureUsage('audit', 'revert_initiated', { log_id: logId });
           const result = await auditService.revertEntry(logId, workplaceId);
           if (result.success) {
+            analytics.trackFeatureUsage('audit', 'revert_success', { log_id: logId });
             Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
           } else {
+            analytics.trackFeatureUsage('audit', 'revert_failed', {
+              log_id: logId,
+              error: result.error,
+            });
             Alerts.showErrorAlert(result.error || AppConfig.strings.audit.errors.revertFailed);
           }
         },

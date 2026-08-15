@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { analytics } from '@/src/services/analytics-service';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
@@ -107,8 +108,10 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
   const onContinue = useCallback(() => {
     void triggerHaptic('medium');
+    analytics.trackOnboardingStep(String(step), true);
+    analytics.trackFeatureUsage('onboarding', 'step_continue', { current_step: step });
     setStep((prev: number) => prev + 1);
-  }, []);
+  }, [step]);
 
   const onBack = useCallback(() => {
     void triggerHaptic('light');
@@ -193,6 +196,12 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
       // Then update UI state & preferences via Context
       await ui.completeOnboarding(name, 'balance-glancer');
+
+      analytics.trackFeatureUsage('onboarding', 'completed', {
+        accounts_count: selectedAccounts.length + customAccounts.length,
+        categories_count: selectedCategories.length + customCategories.length,
+        currency: selectedCurrency,
+      });
 
       // Clear draft
       storage.remove(ONBOARDING_DRAFT_KEY);

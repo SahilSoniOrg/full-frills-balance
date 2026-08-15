@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -94,36 +95,54 @@ export class SmallModelProvider implements DynamicLLMEngine {
       `[SmallModelProvider] Initializing model ${modelId} with URL ${model.url} (backend: ${requestedBackend})`,
     );
 
-    this.llm = createLLM({ enableMemoryTracking: true });
-
-    const enableSpeculativeDecoding = model.capabilities?.includes('speculative_decoding') ?? false;
-
-    await this.llm.loadModel(model.url, {
-      backend: requestedBackend,
-      maxContextTokens: model.defaultConfig?.maxContextTokens ?? 4096,
-      maxOutputTokens:
-        model.defaultConfig?.maxOutputTokens ?? model.defaultConfig?.maxTokens ?? 1024,
-      systemPrompt: targetSystemPrompt,
-      temperature: model.defaultConfig?.temperature ?? 0.7,
-      topK: model.defaultConfig?.topK ?? 40,
-      topP: model.defaultConfig?.topP ?? 0.95,
-      enableSpeculativeDecoding,
-      multimodal: !!(model.supportsImage || model.supportsAudio),
-    });
-
-    this.currentModelId = modelId;
-    this.currentSystemPrompt = targetSystemPrompt;
-    // Synchronize activeBackend with what was actually initialized (falls back natively to cpu if gpu fails)
+    const loadStartTime = performance.now();
     try {
-      const nativeBackend = Reflect.get(this.llm, 'backend');
-      this.activeBackend = isBackend(nativeBackend) ? nativeBackend : requestedBackend;
-    } catch {
-      this.activeBackend = requestedBackend;
-    }
+      this.llm = createLLM({ enableMemoryTracking: true });
 
-    logger.info(
-      `[SmallModelProvider] Model ${modelId} initialized successfully with active backend: ${this.activeBackend}`,
-    );
+      const enableSpeculativeDecoding =
+        model.capabilities?.includes('speculative_decoding') ?? false;
+
+      await this.llm.loadModel(model.url, {
+        backend: requestedBackend,
+        maxContextTokens: model.defaultConfig?.maxContextTokens ?? 4096,
+        maxOutputTokens:
+          model.defaultConfig?.maxOutputTokens ?? model.defaultConfig?.maxTokens ?? 1024,
+        systemPrompt: targetSystemPrompt,
+        temperature: model.defaultConfig?.temperature ?? 0.7,
+        topK: model.defaultConfig?.topK ?? 40,
+        topP: model.defaultConfig?.topP ?? 0.95,
+        enableSpeculativeDecoding,
+        multimodal: !!(model.supportsImage || model.supportsAudio),
+      });
+
+      this.currentModelId = modelId;
+      this.currentSystemPrompt = targetSystemPrompt;
+      // Synchronize activeBackend with what was actually initialized (falls back natively to cpu if gpu fails)
+      try {
+        const nativeBackend = Reflect.get(this.llm, 'backend');
+        this.activeBackend = isBackend(nativeBackend) ? nativeBackend : requestedBackend;
+      } catch {
+        this.activeBackend = requestedBackend;
+      }
+
+      const loadDurationMs = Math.round(performance.now() - loadStartTime);
+      logger.info(
+        `[SmallModelProvider] Model ${modelId} initialized successfully with active backend: ${this.activeBackend} in ${loadDurationMs}ms`,
+      );
+
+      analytics.logAiModelLoad(true, {
+        model_id: modelId,
+        backend: this.activeBackend,
+        load_duration_ms: loadDurationMs,
+      });
+    } catch (error) {
+      analytics.logAiModelLoad(false, {
+        model_id: modelId,
+        backend: requestedBackend,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   async switchModel(
@@ -164,8 +183,10 @@ export class SmallModelProvider implements DynamicLLMEngine {
     if (this.busy) throw new Error('Inference engine is busy');
     this.busy = true;
 
+    const targetModelId = this.currentModelId || this.defaultModelId;
+    const startTime = performance.now();
+
     try {
-      const targetModelId = this.currentModelId || this.defaultModelId;
       await this.ensureModelLoaded(targetModelId, undefined, options?.systemPrompt);
       if (!this.llm) throw new Error('Provider not initialized');
 
@@ -187,7 +208,25 @@ export class SmallModelProvider implements DynamicLLMEngine {
       }
 
       const stats = this.captureStats();
+      const totalDurationMs = Math.round(performance.now() - startTime);
+
+      analytics.trackFeatureUsage('ai', 'inference_completed', {
+        model_id: targetModelId,
+        backend: this.activeBackend,
+        tokens_per_second: stats?.tokensPerSecond ?? null,
+        time_to_first_token_ms: stats?.timeToFirstTokenMs ?? null,
+        completion_tokens: stats?.completionTokens ?? null,
+        duration_ms: totalDurationMs,
+      });
+
       return { text: cleaned, stats: stats || undefined };
+    } catch (error) {
+      analytics.trackFeatureUsage('ai', 'inference_failed', {
+        model_id: targetModelId,
+        backend: this.activeBackend,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     } finally {
       this.busy = false;
     }

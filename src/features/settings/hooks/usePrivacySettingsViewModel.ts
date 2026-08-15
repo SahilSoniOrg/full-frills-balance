@@ -47,6 +47,10 @@ export function usePrivacySettingsViewModel(): PrivacySettingsViewModel {
       });
       if (result.success) {
         setAppLockEnabled(false);
+        analytics.trackFeatureUsage('settings', 'toggle_app_lock', {
+          new_state: false,
+          success: true,
+        });
       }
     } else {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -86,6 +90,10 @@ export function usePrivacySettingsViewModel(): PrivacySettingsViewModel {
       });
       if (result.success) {
         setAppLockEnabled(true);
+        analytics.trackFeatureUsage('settings', 'toggle_app_lock', {
+          new_state: true,
+          success: true,
+        });
       }
     }
   }, [isAppLockEnabled, setAppLockEnabled]);

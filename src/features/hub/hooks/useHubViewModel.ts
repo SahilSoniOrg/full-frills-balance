@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
+import { analytics } from '@/src/services/analytics-service';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -23,17 +24,24 @@ export interface HubViewModel {
 export function useHubViewModel(): HubViewModel {
   const hubStrings = AppConfig.strings.dashboard.hub;
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const [activeTab, setActiveTab] = useState<HubTab>('active');
+  const [activeTab, setActiveTabState] = useState<HubTab>('active');
+
+  const setActiveTab = useCallback((tab: HubTab) => {
+    setActiveTabState(tab);
+    analytics.trackFeatureUsage('hub', 'change_tab', { tab });
+  }, []);
 
   const { data: activeInsights } = useInsightPatterns(workplaceId);
   const { data: dismissedInsights } = useDismissedInsightPatterns(workplaceId);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
   const dismissInsight = useCallback(async (id: string) => {
+    analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
     await insightService.dismissPattern(id);
   }, []);
 
   const restoreInsight = useCallback(async (id: string) => {
+    analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
     await insightService.undismissPattern(id);
   }, []);
 

@@ -6,6 +6,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { useTransactionInboxImport } from '@/src/features/settings/hooks/useTransactionInboxImport';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
+import { analytics } from '@/src/services/analytics-service';
 import { smsService } from '@/src/services/sms-service';
 import { TransactionInboxItem } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
@@ -85,6 +86,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    analytics.trackFeatureUsage('sms', 'inbox_bulk_sync', { mode: 'refresh' });
     try {
       const result = await smsService.refreshLatestSms(workplaceId, PAGE_SIZE * 2);
       setScanCursor(result.cursor);
@@ -99,6 +101,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const handleLoadOlder = useCallback(async () => {
     if (isScanningOlder) return;
     setIsScanningOlder(true);
+    analytics.trackFeatureUsage('sms', 'inbox_bulk_sync', { mode: 'scan_older' });
     try {
       const result = await smsService.scanOlderSmsPage(scanCursor, workplaceId, PAGE_SIZE);
       setScanCursor(result.cursor);
@@ -111,6 +114,10 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   }, [isScanningOlder, loadMore, scanCursor, workplaceId]);
 
   const handleDismiss = useCallback(async (item: TransactionInboxItem) => {
+    analytics.trackFeatureUsage('sms', 'inbox_dismiss', {
+      channel: item.channel,
+      direction: item.direction,
+    });
     await smsService.markInboxRecordStatus(item.id, InboxProcessingStatus.DISMISSED);
     if (item.channel === 'sms') {
       await smsService.markSmsAsProcessed(item.deviceSourceId);
@@ -144,6 +151,9 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const handleOpenJournal = useCallback(
     (item: TransactionInboxItem) => {
       if (!item.linkedJournal) return;
+      analytics.trackFeatureUsage('sms', 'inbox_accept', {
+        channel: item.channel,
+      });
       AppNavigation.toJournalDetails(item.linkedJournal.journalId, {
         title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress || '',
         amount: item.parsedAmount || 0,

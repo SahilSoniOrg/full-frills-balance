@@ -50,7 +50,7 @@ export function useDataMaintenanceActions({
         title: 'Integrity Check Complete',
         message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`,
       });
-      analytics.trackFeatureUsage('settings', 'integrity_check', {
+      analytics.trackFeatureUsage('data_management', 'integrity_check', {
         accounts_checked: result.totalAccounts,
         issues_found: result.discrepanciesFound,
         repairs_successful: result.repairsSuccessful,
@@ -77,7 +77,7 @@ export function useDataMaintenanceActions({
             title: 'Cleanup Complete',
             message: `Permanently removed ${result.deletedCount} synced records.`,
           });
-          analytics.trackFeatureUsage('settings', 'cleanup_database', {
+          analytics.trackFeatureUsage('data_management', 'database_vacuum', {
             records_removed: result.deletedCount,
           });
         } catch (error) {
@@ -100,7 +100,9 @@ export function useDataMaintenanceActions({
       onConfirm: async () => {
         try {
           setIsResetting(true);
+          analytics.trackFeatureUsage('data_management', 'factory_reset_initiated');
           await resetApp();
+          analytics.trackFeatureUsage('data_management', 'factory_reset_completed');
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           alert.show({ title: 'Error', message: `Reset failed: ${message}`, type: 'error' });
