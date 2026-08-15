@@ -99,8 +99,8 @@ export const LineChart = <T extends DataPoint>({
     maxX,
     displayMinY,
     displayRange,
-    maxValPoint,
-    sortedData,
+    primaryMaxPoint,
+    visibleData,
   } = geometry;
 
   const [internalSelectedIndex, setInternalSelectedIndex] = React.useState<number | undefined>(
@@ -117,16 +117,16 @@ export const LineChart = <T extends DataPoint>({
     },
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
-        if (sortedData.length === 0) return { type: 'none' };
+        if (visibleData.length === 0) return { type: 'none' };
 
         const relativeX = x - paddingLeft;
         const normalizedX = Math.max(0, Math.min(1, relativeX / plotWidth));
         const targetX = minX + normalizedX * (maxX - minX);
 
-        const closestIndex = findNearestIndex(sortedData, targetX);
+        const closestIndex = findNearestIndex(visibleData, targetX);
         return { type: 'index', index: closestIndex };
       },
-      [sortedData, paddingLeft, plotWidth, minX, maxX],
+      [visibleData, paddingLeft, plotWidth, minX, maxX],
     ),
     onInteractionChange: useCallback(
       (state: InteractionState) => {
@@ -136,21 +136,21 @@ export const LineChart = <T extends DataPoint>({
       },
       [onPress, isControlled, setInternalSelectedIndex],
     ),
-    enabled: sortedData.length > 0,
+    enabled: visibleData.length > 0,
   });
 
   const selectedPointInfo = useMemo(() => {
     if (
       activeIndex === undefined ||
       activeIndex === -1 ||
-      !sortedData[activeIndex] ||
-      sortedData.length === 0
+      !visibleData[activeIndex] ||
+      visibleData.length === 0
     ) {
       return null;
     }
 
     const xRange = maxX - minX;
-    const point = sortedData[activeIndex];
+    const point = visibleData[activeIndex];
     const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
     const x = paddingLeft + normalizedX * plotWidth;
     const y =
@@ -161,7 +161,7 @@ export const LineChart = <T extends DataPoint>({
     return { x, y, point };
   }, [
     activeIndex,
-    sortedData,
+    visibleData,
     minX,
     maxX,
     displayMinY,
@@ -233,11 +233,11 @@ export const LineChart = <T extends DataPoint>({
                 todayX={todayX}
                 todayDataPoint={todayDataPoint}
                 extraHorizontalLines={extraHorizontalLines}
-                maxValPoint={maxValPoint}
+                primaryMaxPoint={primaryMaxPoint}
               />
 
               <LineChartSeries
-                data={data}
+                data={visibleData}
                 path={path}
                 secondaryPath={secondaryPath}
                 gradientPath={gradientPath}

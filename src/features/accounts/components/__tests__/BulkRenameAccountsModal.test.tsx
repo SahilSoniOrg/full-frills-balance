@@ -103,4 +103,28 @@ describe('BulkRenameAccountsModal', () => {
 
     expect(view.getByDisplayValue('Checking Account')).toBeTruthy();
   });
+
+  it('keeps modal open and preserves draft when onSave throws or rejects', async () => {
+    const onSave = jest.fn().mockRejectedValue(new Error('Duplicate name'));
+    const onClose = jest.fn();
+    const view = render(
+      <BulkRenameAccountsModal
+        visible={true}
+        accounts={mockAccounts}
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    );
+
+    const checkingInput = view.getByDisplayValue('Checking Account');
+    fireEvent.changeText(checkingInput, 'Duplicate Name');
+
+    await act(async () => {
+      fireEvent.press(view.getByText('Save Changes'));
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(view.getByDisplayValue('Duplicate Name')).toBeTruthy();
+  });
 });

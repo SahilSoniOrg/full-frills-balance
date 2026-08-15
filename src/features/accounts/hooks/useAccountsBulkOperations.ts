@@ -174,11 +174,9 @@ export function useAccountsBulkOperations({
         if (!name) continue;
         const normalized = name.toLowerCase();
         if (seenNames.has(normalized)) {
-          showErrorAlert(
-            new Error(`Duplicate name "${name}" detected among selected accounts`),
-            'Failed to rename accounts',
-          );
-          return;
+          const error = new Error(`Duplicate name "${name}" detected among selected accounts`);
+          showErrorAlert(error, 'Failed to rename accounts');
+          throw error;
         }
         seenNames.add(normalized);
       }

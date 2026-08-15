@@ -10,8 +10,12 @@ export interface HorizontalLine {
   strokeDasharray?: string;
 }
 
-export const findNearestIndex = (data: DataPoint[], targetX: number): number => {
-  if (data.length === 0) return -1;
+/**
+ * Performs a binary search to find the index of the nearest DataPoint by x timestamp.
+ * Assumes `data` is sorted ascending by `x` and contains finite `x` values.
+ */
+export const findNearestIndex = (data: readonly DataPoint[], targetX: number): number => {
+  if (data.length === 0 || !Number.isFinite(targetX)) return -1;
   if (data.length === 1) return 0;
 
   let left = 0;
@@ -46,8 +50,9 @@ export interface ChartGeometry {
   maxX: number;
   displayMinY: number;
   displayRange: number;
-  maxValPoint?: DataPoint;
+  primaryMaxPoint?: DataPoint;
   sortedData: DataPoint[];
+  visibleData: DataPoint[];
 }
 
 export function computeLineChartGeometry<T extends DataPoint>({
@@ -59,59 +64,117 @@ export function computeLineChartGeometry<T extends DataPoint>({
   paddingVertical,
   paddingLeft,
 }: {
-  data: T[];
-  secondaryData?: T[];
+  data: readonly T[];
+  secondaryData?: readonly T[];
   domainX?: [number, number];
   height: number;
   plotWidth: number;
   paddingVertical: number;
   paddingLeft: number;
 }): ChartGeometry {
-  if (data.length === 0) {
+  const isFinitePoint = (p: DataPoint) => Number.isFinite(p.x) && Number.isFinite(p.y);
+  const validData = data.filter(isFinitePoint);
+  const validSecondaryData = secondaryData?.filter(isFinitePoint);
+
+  const hasValidDomainX =
+    domainX !== undefined && Number.isFinite(domainX[0]) && Number.isFinite(domainX[1]);
+
+  const minXDomain = hasValidDomainX ? Math.min(domainX[0], domainX[1]) : undefined;
+  const maxXDomain = hasValidDomainX ? Math.max(domainX[0], domainX[1]) : undefined;
+
+  const sortedData = [...validData].sort((a, b) => a.x - b.x);
+  const sortedSecondaryData = validSecondaryData
+    ? [...validSecondaryData].sort((a, b) => a.x - b.x)
+    : undefined;
+
+  // Viewport filtering when domainX is specified
+  const activeData =
+    minXDomain !== undefined && maxXDomain !== undefined
+      ? sortedData.filter(pt => pt.x >= minXDomain && pt.x <= maxXDomain)
+      : sortedData;
+
+  const activeSecondaryData =
+    sortedSecondaryData && minXDomain !== undefined && maxXDomain !== undefined
+      ? sortedSecondaryData.filter(pt => pt.x >= minXDomain && pt.x <= maxXDomain)
+      : sortedSecondaryData;
+
+  const hasActiveData =
+    activeData.length > 0 || (activeSecondaryData !== undefined && activeSecondaryData.length > 0);
+
+  if (!hasActiveData) {
     return {
       path: '',
       secondaryPath: '',
       gradientPath: '',
-      minX: 0,
-      maxX: 0,
+      minX: minXDomain ?? 0,
+      maxX: maxXDomain ?? 0,
       displayMinY: 0,
-      displayRange: 0,
-      maxValPoint: undefined,
-      sortedData: [],
+      displayRange: 1,
+      primaryMaxPoint: undefined,
+      sortedData,
+      visibleData: [],
     };
   }
 
-  const activeData = [...data].sort((a, b) => a.x - b.x);
-  const activeSecondaryData = secondaryData
-    ? [...secondaryData].sort((a, b) => a.x - b.x)
-    : undefined;
+  let minXVal = minXDomain ?? Infinity;
+  let maxXVal = maxXDomain ?? -Infinity;
+  let minYVal = Infinity;
+  let maxYVal = -Infinity;
 
-  const yValues = activeData.map(d => d.y);
-  const xValues = activeData.map(d => d.x);
-
-  if (activeSecondaryData && activeSecondaryData.length > 0) {
-    yValues.push(...activeSecondaryData.map(d => d.y));
-    xValues.push(...activeSecondaryData.map(d => d.x));
+  for (let i = 0; i < activeData.length; i++) {
+    const pt = activeData[i];
+    if (minXDomain === undefined) {
+      if (pt.x < minXVal) minXVal = pt.x;
+      if (pt.x > maxXVal) maxXVal = pt.x;
+    }
+    if (pt.y < minYVal) minYVal = pt.y;
+    if (pt.y > maxYVal) maxYVal = pt.y;
   }
 
-  const minXVal = domainX ? domainX[0] : Math.min(...xValues);
-  const maxXVal = domainX ? domainX[1] : Math.max(...xValues);
-  const minYVal = Math.min(...yValues);
-  const maxYVal = Math.max(...yValues);
+  if (activeSecondaryData) {
+    for (let i = 0; i < activeSecondaryData.length; i++) {
+      const pt = activeSecondaryData[i];
+      if (minXDomain === undefined) {
+        if (pt.x < minXVal) minXVal = pt.x;
+        if (pt.x > maxXVal) maxXVal = pt.x;
+      }
+      if (pt.y < minYVal) minYVal = pt.y;
+      if (pt.y > maxYVal) maxYVal = pt.y;
+    }
+  }
 
-  const yRange = maxYVal - minYVal || 1;
-  const displayMinYVal = minYVal - yRange * 0.1;
-  const displayMaxYVal = maxYVal + yRange * 0.1;
+  if (!Number.isFinite(minXVal) || !Number.isFinite(maxXVal)) {
+    minXVal = 0;
+    maxXVal = 0;
+  }
+  if (!Number.isFinite(minYVal) || !Number.isFinite(maxYVal)) {
+    minYVal = 0;
+    maxYVal = 0;
+  }
+
+  const rawYRange = maxYVal - minYVal;
+  const displayMinYVal =
+    rawYRange > 0
+      ? minYVal - rawYRange * 0.1
+      : minYVal - (minYVal === 0 ? 1 : Math.max(Math.abs(minYVal) * 0.1, 1));
+
+  const displayMaxYVal =
+    rawYRange > 0
+      ? maxYVal + rawYRange * 0.1
+      : maxYVal + (maxYVal === 0 ? 1 : Math.max(Math.abs(maxYVal) * 0.1, 1));
+
   const displayRangeVal = displayMaxYVal - displayMinYVal;
   const xRangeVal = maxXVal - minXVal;
 
-  const maxValIndex = data.map(d => d.y).indexOf(Math.max(...data.map(d => d.y)));
-  const maxValPointVal = maxValIndex >= 0 ? data[maxValIndex] : undefined;
+  const primaryMaxPointVal =
+    activeData.length > 0
+      ? activeData.reduce((max, curr) => (curr.y > max.y ? curr : max), activeData[0])
+      : undefined;
 
   let pathStr = '';
   let gradientPathStr = '';
 
-  data.forEach((point, index) => {
+  activeData.forEach((point, index) => {
     const normalizedX = xRangeVal === 0 ? 0.5 : (point.x - minXVal) / xRangeVal;
     const x = paddingLeft + normalizedX * plotWidth;
     const y =
@@ -129,10 +192,14 @@ export function computeLineChartGeometry<T extends DataPoint>({
   });
 
   if (activeData.length > 0) {
+    const firstPoint = activeData[0];
+    const normalizedFirstX = xRangeVal === 0 ? 0.5 : (firstPoint.x - minXVal) / xRangeVal;
+    const firstX = paddingLeft + normalizedFirstX * plotWidth;
+
     const lastPoint = activeData[activeData.length - 1];
     const normalizedLastX = xRangeVal === 0 ? 0.5 : (lastPoint.x - minXVal) / xRangeVal;
     const lastX = paddingLeft + normalizedLastX * plotWidth;
-    gradientPathStr += ` L ${lastX} ${height - paddingVertical} L ${paddingLeft} ${height - paddingVertical} Z`;
+    gradientPathStr += ` L ${lastX} ${height - paddingVertical} L ${firstX} ${height - paddingVertical} Z`;
   }
 
   let secondaryPathStr = '';
@@ -161,7 +228,8 @@ export function computeLineChartGeometry<T extends DataPoint>({
     maxX: maxXVal,
     displayMinY: displayMinYVal,
     displayRange: displayRangeVal,
-    maxValPoint: maxValPointVal,
-    sortedData: activeData,
+    primaryMaxPoint: primaryMaxPointVal,
+    sortedData,
+    visibleData: activeData,
   };
 }

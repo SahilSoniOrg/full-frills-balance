@@ -28,7 +28,7 @@ export interface LineChartGridProps {
   todayX?: number;
   todayDataPoint?: DataPoint;
   extraHorizontalLines?: HorizontalLine[];
-  maxValPoint?: DataPoint;
+  primaryMaxPoint?: DataPoint;
 }
 
 export const LineChartGrid = React.memo(function LineChartGrid({
@@ -50,7 +50,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
   todayX,
   todayDataPoint,
   extraHorizontalLines,
-  maxValPoint,
+  primaryMaxPoint,
 }: LineChartGridProps) {
   const formatMoneyShort = useMoneyFormat({ style: 'short' });
 
@@ -218,14 +218,14 @@ export const LineChartGrid = React.memo(function LineChartGrid({
       })}
 
       {/* Max Value Annotation */}
-      {maxValPoint &&
+      {primaryMaxPoint &&
         (() => {
-          const normalizedX = maxX === minX ? 0.5 : (maxValPoint.x - minX) / (maxX - minX);
+          const normalizedX = maxX === minX ? 0.5 : (primaryMaxPoint.x - minX) / (maxX - minX);
           const x = paddingLeft + normalizedX * plotWidth;
           const y =
             height -
             paddingVertical -
-            ((maxValPoint.y - displayMinY) / displayRange) * (height - paddingVertical * 2);
+            ((primaryMaxPoint.y - displayMinY) / displayRange) * (height - paddingVertical * 2);
           return (
             <React.Fragment>
               <Circle
