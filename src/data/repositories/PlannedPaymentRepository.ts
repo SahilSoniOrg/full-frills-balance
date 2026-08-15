@@ -3,7 +3,7 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
@@ -117,16 +117,10 @@ export class PlannedPaymentRepository {
     });
   }
 
-  async delete(workplaceId: WorkplaceId, pp: PlannedPayment): Promise<void> {
-    const record = await this.find(workplaceId, pp.id as PlannedPaymentId);
-    if (!record) {
-      throw new Error('Planned payment not found');
-    }
-    await this.db.write(async () => {
-      await record.update(r => {
-        r.deletedAt = new Date();
-        r.updatedAt = new Date();
-      });
+  prepareDelete(pp: PlannedPayment): Model {
+    return pp.prepareUpdate(record => {
+      record.deletedAt = new Date();
+      record.updatedAt = new Date();
     });
   }
 

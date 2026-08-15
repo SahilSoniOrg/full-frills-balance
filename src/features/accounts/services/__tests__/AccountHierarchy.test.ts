@@ -300,4 +300,46 @@ describe('Account Hierarchy Integration', () => {
     expect(cleared.name).toBe('Original Child Name');
     expect(cleared.parentAccountId).toBeFalsy();
   });
+
+  it('should prevent changing account type if account has sub-accounts', async () => {
+    const parent = await createAccount(workplaceId, {
+      name: 'Parent Category',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    await createAccount(workplaceId, {
+      name: 'Child Category',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      parentAccountId: parent.id,
+      workplaceId,
+    });
+
+    await expect(
+      updateAccount(workplaceId, parent.id, { accountType: AccountType.ASSET }),
+    ).rejects.toThrow('Cannot change category or type of an account that has sub-accounts.');
+  });
+
+  it('should prevent changing child account type to mismatch existing parent type', async () => {
+    const parent = await createAccount(workplaceId, {
+      name: 'Asset Parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    const child = await createAccount(workplaceId, {
+      name: 'Asset Child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      parentAccountId: parent.id,
+      workplaceId,
+    });
+
+    await expect(
+      updateAccount(workplaceId, child.id, { accountType: AccountType.LIABILITY }),
+    ).rejects.toThrow('Parent account must be of the same type');
+  });
 });

@@ -120,25 +120,44 @@ export async function prepareAccountFieldUpdate(
     description: account.description,
   };
 
-  if (updates.parentAccountId) {
-    assertNotSelfParent(accountId, updates.parentAccountId);
-    const [parent] = await assertWritable(workplaceId, [updates.parentAccountId], 'Parent account');
+  const targetType = updates.accountType || account.accountType;
+  const isTypeChanging =
+    updates.accountType !== undefined && updates.accountType !== account.accountType;
 
-    const isCircular = await isDescendant(updates.parentAccountId, accountId, workplaceId);
-    if (isCircular) {
-      throw new Error('Circular parent relationship detected');
+  if (isTypeChanging) {
+    const children = await accountRepository.queryByParentId(workplaceId, accountId).fetch();
+    if (children.length > 0) {
+      throw new Error('Cannot change category or type of an account that has sub-accounts.');
+    }
+  }
+
+  const effectiveParentId =
+    updates.parentAccountId !== undefined
+      ? updates.parentAccountId || undefined
+      : account.parentAccountId;
+
+  if (effectiveParentId) {
+    if (updates.parentAccountId) {
+      assertNotSelfParent(accountId, updates.parentAccountId);
+    }
+    const [parent] = await assertWritable(workplaceId, [effectiveParentId], 'Parent account');
+
+    if (updates.parentAccountId) {
+      const isCircular = await isDescendant(updates.parentAccountId, accountId, workplaceId);
+      if (isCircular) {
+        throw new Error('Circular parent relationship detected');
+      }
+
+      const hasTransactions = await transactionRepository.hasTransactions(
+        workplaceId,
+        updates.parentAccountId,
+      );
+      if (hasTransactions) {
+        assertParentHasNoTransactions(parent.name);
+      }
     }
 
-    const newType = updates.accountType || account.accountType;
-    assertParentMatchesChildType(newType, parent);
-
-    const hasTransactions = await transactionRepository.hasTransactions(
-      workplaceId,
-      updates.parentAccountId,
-    );
-    if (hasTransactions) {
-      assertParentHasNoTransactions(parent.name);
-    }
+    assertParentMatchesChildType(targetType, parent);
   }
 
   const updatePayload: Partial<AccountPersistenceInput> = {};

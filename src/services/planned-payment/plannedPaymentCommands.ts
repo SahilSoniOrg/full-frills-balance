@@ -1,4 +1,8 @@
+import { database } from '@/src/data/database/Database';
+import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import Transaction from '@/src/data/models/Transaction';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
@@ -9,6 +13,7 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { Model, Q } from '@nozbe/watermelondb';
 
 export async function createPlannedPayment(
   workplaceId: WorkplaceId,
@@ -37,9 +42,54 @@ export async function updatePlannedPayment(
   return plannedPaymentRepository.update(workplaceId, existing, updates);
 }
 
+async function prepareSoftDeleteJournalsAndTransactions(
+  workplaceId: WorkplaceId,
+  journals: Journal[],
+): Promise<Model[]> {
+  if (journals.length === 0) return [];
+  const journalIds = journals.map(j => j.id);
+  const transactions = await database.collections
+    .get<Transaction>('transactions')
+    .query(
+      Q.where('workplace_id', workplaceId),
+      Q.where('journal_id', Q.oneOf(journalIds)),
+      Q.where('deleted_at', Q.eq(null)),
+    )
+    .fetch();
+
+  const now = new Date();
+  const journalOps = journals.map(j =>
+    j.prepareUpdate(record => {
+      record.deletedAt = now;
+      record.updatedAt = now;
+    }),
+  );
+  const txOps = transactions.map(t =>
+    t.prepareUpdate(record => {
+      record.deletedAt = now;
+      record.updatedAt = now;
+    }),
+  );
+  return [...journalOps, ...txOps];
+}
+
 export async function deletePlannedPayment(
   workplaceId: WorkplaceId,
   payment: PlannedPayment,
 ): Promise<void> {
-  await plannedPaymentRepository.delete(workplaceId, payment);
+  const existing = await plannedPaymentRepository.find(workplaceId, payment.id as PlannedPaymentId);
+  if (!existing) {
+    throw new Error('Planned payment not found');
+  }
+
+  const unpostedJournals = await journalPlannedQueries.findUnpostedByPlannedPayment(
+    workplaceId,
+    payment.id as PlannedPaymentId,
+  );
+  const journalOps = await prepareSoftDeleteJournalsAndTransactions(workplaceId, unpostedJournals);
+  const ppOp = plannedPaymentRepository.prepareDelete(existing);
+
+  await database.write(async () => {
+    await database.batch([ppOp, ...journalOps]);
+  });
 }

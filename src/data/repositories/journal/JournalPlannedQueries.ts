@@ -87,6 +87,23 @@ export class JournalPlannedQueries {
       .fetch();
   }
 
+  async findUnpostedByPlannedPayment(
+    workplaceId: WorkplaceId,
+    plannedPaymentId: PlannedPaymentId,
+  ): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('planned_payment_id', plannedPaymentId),
+        Q.where('workplace_id', workplaceId),
+        Q.where(
+          'status',
+          Q.oneOf([JournalStatus.PLANNED, JournalStatus.PAUSED, JournalStatus.SKIPPED]),
+        ),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
   prepareStatusUpdates(journals: Journal[], status: JournalStatus): Model[] {
     return journals.map(journal =>
       journal.prepareUpdate((record: Journal) => {
