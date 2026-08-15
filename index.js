@@ -10,6 +10,10 @@ import { logger } from './src/utils/logger';
 // Global anchor for boot performance telemetry
 import 'expo-router/entry';
 
+if (process.env.EXPO_OS !== 'web') {
+  require('react-native-quick-crypto').install();
+}
+
 logger.info('[Boot] JS execution started');
 
 // Prevent splash from hiding until we control it
@@ -19,8 +23,4 @@ analytics.earlyInitializeSentry();
 if (typeof global !== 'undefined') {
   global.__BOOT_START_TIME__ = typeof performance !== 'undefined' ? performance.now() : Date.now();
   global.__HAS_MOUNTED_BEFORE__ = false;
-}
-
-if (process.env.EXPO_OS !== 'web') {
-  require('react-native-quick-crypto').install();
 }

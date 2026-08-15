@@ -175,7 +175,7 @@ export class TransactionRepository {
   observeByAccounts(
     workplaceId: WorkplaceId,
     accountIds: AccountId[],
-    limit: number = AppConfig.pagination.dashboardPageSize,
+    limit: number = AppConfig.pagination.defaultPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): import('rxjs').Observable<Transaction[]> {
     const clauses = this.buildActiveClauses([
@@ -325,7 +325,7 @@ export class TransactionRepository {
   async findTransactionsByAccounts(
     workplaceId: WorkplaceId,
     accountIds: string[],
-    limit: number = AppConfig.pagination.dashboardPageSize,
+    limit: number = AppConfig.pagination.defaultPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): Promise<Transaction[]> {
     const clauses = this.buildActiveClauses([

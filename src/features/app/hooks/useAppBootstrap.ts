@@ -78,7 +78,6 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           await Promise.allSettled([
             currencyReadService.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
-            insightService.preWarm(workplaceId),
             safeToSpendReadModel.forWorkplace(workplaceId).preWarm(),
           ]);
 
@@ -137,6 +136,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
       const notifMinute = preferences.notifications.notificationMinute;
 
       await Promise.allSettled([
+        insightService.preWarm(workplaceId),
         integrityService.runStartupCheck(workplaceId),
         plannedPaymentService.processDuePayments(workplaceId),
         sharingService.init(),

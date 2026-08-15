@@ -69,7 +69,7 @@ export const AppConfig = {
   // Pagination
   pagination: {
     defaultPageSize: 20,
-    dashboardPageSize: 50,
+    dashboardPageSize: 15,
     maxPageSize: 100,
     budgetDetailsTransactionsPageSize: 1000,
     auditRecentLimit: 100,
@@ -175,7 +175,7 @@ export const AppConfig = {
     chartTickCount: 5,
     safeToSpendDaysCap: 99,
     reportMonthlyBucketThresholdDays: 60,
-    journalPageSize: 50,
+    journalPageSize: 20,
     insightDetailsFetchLimit: 100,
     plannedJournalLimit: 10,
     simulation: {

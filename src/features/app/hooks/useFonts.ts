@@ -45,13 +45,6 @@ const FONT_MAP: Record<string, Record<string, any>> = {
   },
 };
 
-function loadDeepSpaceFonts(): Promise<void> {
-  if (typeof window === 'undefined') {
-    return Promise.resolve();
-  }
-  return Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]).catch(() => {});
-}
-
 /**
  * useFonts - Dynamically loads fonts based on the selected theme.
  */
@@ -81,11 +74,7 @@ export function useFonts() {
       }
 
       try {
-        if (fontId === FontIds.DEEP_SPACE) {
-          await loadDeepSpaceFonts();
-        } else {
-          await Font.loadAsync(fontsToLoad);
-        }
+        await Font.loadAsync(fontsToLoad);
 
         const duration = Math.round(performance.now() - start);
         logger.info(`[Fonts] Successfully loaded: ${fontId} in ${duration}ms`);
