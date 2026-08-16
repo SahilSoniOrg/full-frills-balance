@@ -7,6 +7,7 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
+import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 /**
@@ -17,6 +18,8 @@ export async function togglePlannedPaymentStatus(
   workplaceId: WorkplaceId,
   pp: PlannedPayment,
 ): Promise<PlannedPaymentStatus> {
+  assertPlannedPaymentWorkplace(workplaceId, pp);
+
   const newStatus =
     pp.status === PlannedPaymentStatus.ACTIVE
       ? PlannedPaymentStatus.PAUSED

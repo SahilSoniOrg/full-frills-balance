@@ -250,9 +250,62 @@ describe('PlannedPaymentService', () => {
     });
   });
 
+  describe('workplace/model agreement', () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+
+    const makeForeignPayment = () => ({
+      id: 'pp-foreign',
+      workplaceId: 'wp-2' as WorkplaceId,
+      status: PlannedPaymentStatus.ACTIVE,
+      nextOccurrence: new Date(2024, 0, 1).getTime(),
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.MONTHLY,
+    });
+
+    test.each([
+      [
+        'post occurrence',
+        (payment: ReturnType<typeof makeForeignPayment>) =>
+          plannedPaymentService.postOccurrence(workplaceId, payment as any, payment.nextOccurrence),
+      ],
+      [
+        'skip occurrence',
+        (payment: ReturnType<typeof makeForeignPayment>) =>
+          plannedPaymentService.skipOccurrence(workplaceId, payment as any, payment.nextOccurrence),
+      ],
+      [
+        'toggle status',
+        (payment: ReturnType<typeof makeForeignPayment>) =>
+          plannedPaymentService.toggleStatus(workplaceId, payment as any),
+      ],
+      [
+        'delete',
+        (payment: ReturnType<typeof makeForeignPayment>) =>
+          plannedPaymentService.delete(workplaceId, payment as any),
+      ],
+    ])('rejects a foreign model before %s side effects', async (_name, invoke) => {
+      const payment = makeForeignPayment();
+      const original = { ...payment };
+
+      await expect(invoke(payment)).rejects.toThrow(
+        'Planned payment not found or does not belong to the workplace',
+      );
+
+      expect(payment).toEqual(original);
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
+      expect(journalPlannedQueries.findByPlannedPaymentAndStatus).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.find).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
+      expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
+      expect(ledgerWriteService.postJournal).not.toHaveBeenCalled();
+      expect(database.write).not.toHaveBeenCalled();
+    });
+  });
+
   describe('postOccurrence', () => {
     const mockPP = {
       id: 'pp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
       name: 'Rent',
       amount: 1000,
       currencyCode: 'USD',
@@ -329,6 +382,7 @@ describe('PlannedPaymentService', () => {
   describe('skipOccurrence', () => {
     const mockPP = {
       id: 'pp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
       nextOccurrence: new Date(2024, 0, 1).getTime(),
       intervalN: 1,
       amount: 1000,
@@ -425,6 +479,7 @@ describe('PlannedPaymentService', () => {
     test('Pausing: toggles status to PAUSED and marks future PLANNED journals as PAUSED', async () => {
       const mockPP = {
         id: 'pp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
         status: PlannedPaymentStatus.ACTIVE,
         prepareUpdate: jest.fn().mockImplementation((fn: any) => {
           const record = { id: 'pp-1', status: PlannedPaymentStatus.ACTIVE };
@@ -466,6 +521,7 @@ describe('PlannedPaymentService', () => {
     test('Resuming: toggles status to ACTIVE, updates paused journals, and processes due payments', async () => {
       const mockPP = {
         id: 'pp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
         status: PlannedPaymentStatus.PAUSED,
         nextOccurrence: Date.now() - 100000000, // in the past
         intervalN: 1,

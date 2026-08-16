@@ -10,6 +10,7 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
+import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
@@ -28,6 +29,8 @@ export async function resolvePlannedOccurrenceContext(
   pp: PlannedPayment,
   occurrenceDate: number,
 ): Promise<PlannedOccurrenceContext> {
+  assertPlannedPaymentWorkplace(workplaceId, pp);
+
   const plannedPaymentId = pp.id as PlannedPaymentId;
   const earliestPlanned = await journalPlannedQueries.findEarliestPlannedByPayment(
     workplaceId,
@@ -74,6 +77,8 @@ export async function postPlannedPaymentOccurrence(
   pp: PlannedPayment,
   occurrenceDate: number,
 ): Promise<void> {
+  assertPlannedPaymentWorkplace(workplaceId, pp);
+
   try {
     const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
       workplaceId,
@@ -99,7 +104,7 @@ export async function postPlannedPaymentOccurrence(
           status: JournalStatus.POSTED,
           plannedPaymentId: pp.id as PlannedPaymentId,
         },
-        pp.workplaceId,
+        workplaceId,
       );
     }
 
@@ -123,6 +128,8 @@ export async function skipPlannedPaymentOccurrence(
   pp: PlannedPayment,
   occurrenceDate: number,
 ): Promise<void> {
+  assertPlannedPaymentWorkplace(workplaceId, pp);
+
   try {
     const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
       workplaceId,
@@ -150,7 +157,7 @@ export async function skipPlannedPaymentOccurrence(
             status: JournalStatus.SKIPPED,
             plannedPaymentId: pp.id as PlannedPaymentId,
           },
-          pp.workplaceId,
+          workplaceId,
         );
       }
     }

@@ -117,7 +117,11 @@ export class PlannedPaymentRepository {
     });
   }
 
-  prepareDelete(pp: PlannedPayment): Model {
+  prepareDelete(workplaceId: WorkplaceId, pp: PlannedPayment): Model {
+    if (pp.workplaceId !== workplaceId) {
+      throw new Error('Planned payment not found or does not belong to the workplace');
+    }
+
     return pp.prepareUpdate(record => {
       record.deletedAt = new Date();
       record.updatedAt = new Date();

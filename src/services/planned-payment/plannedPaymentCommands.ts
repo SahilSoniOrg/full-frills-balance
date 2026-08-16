@@ -12,6 +12,7 @@ import {
   buildUpdatePersistenceInput,
 } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -77,6 +78,8 @@ export async function deletePlannedPayment(
   workplaceId: WorkplaceId,
   payment: PlannedPayment,
 ): Promise<void> {
+  assertPlannedPaymentWorkplace(workplaceId, payment);
+
   const existing = await plannedPaymentRepository.find(workplaceId, payment.id as PlannedPaymentId);
   if (!existing) {
     throw new Error('Planned payment not found');
@@ -87,7 +90,7 @@ export async function deletePlannedPayment(
     payment.id as PlannedPaymentId,
   );
   const journalOps = await prepareSoftDeleteJournalsAndTransactions(workplaceId, unpostedJournals);
-  const ppOp = plannedPaymentRepository.prepareDelete(existing);
+  const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
 
   await database.write(async () => {
     await database.batch([ppOp, ...journalOps]);
