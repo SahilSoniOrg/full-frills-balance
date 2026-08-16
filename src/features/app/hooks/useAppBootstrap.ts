@@ -19,6 +19,7 @@ import { notificationService } from '@/src/services/notification/NotificationSer
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
 import { runAppBootstrapSideEffects } from '../bootstrap';
+import { LatestGenerationCoordinator } from './latestGeneration';
 
 /**
  * Bootstraps app-wide side effects and data hydration.
@@ -26,21 +27,23 @@ import { runAppBootstrapSideEffects } from '../bootstrap';
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useUI();
-  const lastInitializedWorkplaceRef = useRef<string | null>(null);
+  const hydrationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
+  const stabilizationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
+
+  hydrationCoordinatorRef.current ??= new LatestGenerationCoordinator();
+  stabilizationCoordinatorRef.current ??= new LatestGenerationCoordinator();
 
   // Register audit revert handlers once on cold start (idempotent).
   runAppBootstrapSideEffects();
 
   useEffect(() => {
-    // Prevent double-running for the same workspace ID
-    if (lastInitializedWorkplaceRef.current === workplaceId) return;
-    lastInitializedWorkplaceRef.current = workplaceId;
+    const lease = hydrationCoordinatorRef.current!.begin();
 
     if (workplaceId) {
       analytics.syncActiveWorkplace(workplaceId, defaultCurrencyCode);
     }
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const bootStart = performance.now();
     logger.info(
       `[Bootstrap] Starting initialization for workplace ${workplaceId} at ${Math.round(bootStart)}ms`,
@@ -61,13 +64,13 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           bgHydrationStart - bootStart,
         )}ms`,
       );
-      (async () => {
+      void (async () => {
         try {
           // Stage A: Critical Data Seeding
           await currencyInitService.initialize();
 
           // Safe guard: check if workplace didn't change while we were waiting for the timeout or seed
-          if (lastInitializedWorkplaceRef.current !== workplaceId) {
+          if (!lease.isCurrent()) {
             logger.info(
               `[Bootstrap] Workplace changed during background initialization, aborting.`,
             );
@@ -81,12 +84,15 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             safeToSpendReadModel.forWorkplace(workplaceId).preWarm(),
           ]);
 
+          if (!lease.isCurrent()) return;
+
           logger.info(
             `[Bootstrap] Core background hydration complete for workplace ${workplaceId} in ${Math.round(
               performance.now() - bgHydrationStart,
             )}ms (Total since boot: ${Math.round(performance.now() - bootStart)}ms)`,
           );
         } catch (error) {
+          if (!lease.isCurrent()) return;
           logger.error(
             `[Bootstrap] Background initialization failed partially for ${workplaceId}`,
             error,
@@ -96,9 +102,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     }, 50); // 50ms is enough for one clear UI frame and splash hide
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      lease.cancel();
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
@@ -106,58 +111,68 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
   useEffect(() => {
     if (!isAppReady) return;
 
-    let active = true;
+    const lease = stabilizationCoordinatorRef.current!.begin();
+    let stabilizationTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    runAfterInteractions(async () => {
-      // 3-second delay to ensure Dashboard animations and early interactions are smooth
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      if (!active) {
+    runAfterInteractions(() => {
+      if (!lease.isCurrent()) {
         logger.info('[Bootstrap] Stabilization cancelled (workspace changed or unmounted)');
         return;
       }
 
-      logger.info(`[Bootstrap] Running delayed background tasks for workplace ${workplaceId}...`);
+      // Keep the delay cancellable so a workplace switch cannot leave a stale timer behind.
+      stabilizationTimeoutId = setTimeout(() => {
+        void (async () => {
+          if (!lease.isCurrent()) return;
 
-      // 3. Lazy Analytics & Identity
-      analytics.delayedInitializePostHog();
-      analytics.logAppOpened();
+          logger.info(
+            `[Bootstrap] Running delayed background tasks for workplace ${workplaceId}...`,
+          );
 
-      let anonId = preferences.anonymizedId;
-      if (!anonId) {
-        anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        preferences.setAnonymizedId(anonId);
-      }
-      analytics.identify(anonId);
+          // 3. Lazy Analytics & Identity
+          analytics.delayedInitializePostHog();
+          analytics.logAppOpened();
 
-      // 4. Stabilization
-      const notifCadence = preferences.notifications.notificationCadence;
-      const notifHour = preferences.notifications.notificationHour;
-      const notifMinute = preferences.notifications.notificationMinute;
+          let anonId = preferences.anonymizedId;
+          if (!anonId) {
+            anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            preferences.setAnonymizedId(anonId);
+          }
+          analytics.identify(anonId);
 
-      await Promise.allSettled([
-        insightService.preWarm(workplaceId),
-        integrityService.runStartupCheck(workplaceId),
-        plannedPaymentService.processDuePayments(workplaceId),
-        sharingService.init(),
-        exchangeRateService.preWarmCache(defaultCurrencyCode),
-        notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),
-        ...(Platform.OS === 'android' && preferences.sms.isSmsImportEnabled && workplaceId
-          ? [
-              import('@/src/services/sms-service').then(({ smsService }) =>
-                smsService.processUnprocessedSms(workplaceId),
-              ),
-            ]
-          : []),
-      ]);
+          // 4. Stabilization
+          const notifCadence = preferences.notifications.notificationCadence;
+          const notifHour = preferences.notifications.notificationHour;
+          const notifMinute = preferences.notifications.notificationMinute;
 
-      if (active) {
-        logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);
-      }
+          await Promise.allSettled([
+            insightService.preWarm(workplaceId),
+            integrityService.runStartupCheck(workplaceId),
+            plannedPaymentService.processDuePayments(workplaceId),
+            sharingService.init(),
+            exchangeRateService.preWarmCache(defaultCurrencyCode),
+            notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),
+            ...(Platform.OS === 'android' && preferences.sms.isSmsImportEnabled && workplaceId
+              ? [
+                  import('@/src/services/sms-service').then(({ smsService }) =>
+                    lease.isCurrent()
+                      ? smsService.processUnprocessedSms(workplaceId).then(() => undefined)
+                      : Promise.resolve(),
+                  ),
+                ]
+              : []),
+          ]);
+
+          if (lease.isCurrent()) {
+            logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);
+          }
+        })();
+      }, 3000);
     });
 
     return () => {
-      active = false;
+      lease.cancel();
+      if (stabilizationTimeoutId) clearTimeout(stabilizationTimeoutId);
     };
   }, [isAppReady, workplaceId, defaultCurrencyCode]);
 }
