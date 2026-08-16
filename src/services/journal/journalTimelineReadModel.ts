@@ -106,7 +106,10 @@ export function observeEnrichedJournals(
       if (journals.length === 0) return [] as EnrichedJournal[];
 
       const journalIds = journals.map(j => j.id);
-      const enrichmentData = await journalEnrichmentQueries.getEnrichmentDataRaw(journalIds);
+      const enrichmentData = await journalEnrichmentQueries.getEnrichmentDataRaw(
+        workplaceId,
+        journalIds,
+      );
       return enrichJournals(journals, enrichmentData);
     }),
     distinctUntilChanged(enrichedJournalsAreEqual),

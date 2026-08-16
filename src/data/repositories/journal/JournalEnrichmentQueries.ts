@@ -102,8 +102,12 @@ export class JournalEnrichmentQueries {
       JOIN journals j ON j.description = d.description
         AND j.workplace_id = ?
         AND j.deleted_at IS NULL
-      LEFT JOIN transactions t ON t.journal_id = j.id AND t.deleted_at IS NULL
-      LEFT JOIN accounts a ON a.id = t.account_id AND a.deleted_at IS NULL
+      LEFT JOIN transactions t ON t.journal_id = j.id
+        AND t.workplace_id = ?
+        AND t.deleted_at IS NULL
+      LEFT JOIN accounts a ON a.id = t.account_id
+        AND a.workplace_id = ?
+        AND a.deleted_at IS NULL
       GROUP BY d.description, d.journal_count, d.latest_date,
         t.account_id, a.name, a.account_type
       ORDER BY d.latest_date DESC, account_usage_count DESC
@@ -118,7 +122,7 @@ export class JournalEnrichmentQueries {
         account_type: AccountType | null;
         account_usage_count: number;
         latest_date: number;
-      }>(sql, [workplaceId, limit, workplaceId]);
+      }>(sql, [workplaceId, limit, workplaceId, workplaceId, workplaceId]);
 
       if (!results) {
         return this.getRecentSuggestionsFallback(workplaceId, limit);
@@ -211,7 +215,11 @@ export class JournalEnrichmentQueries {
       allJournalIds.length === 0
         ? []
         : await this.transactions
-            .query(Q.where('journal_id', Q.oneOf(allJournalIds)), Q.where('deleted_at', Q.eq(null)))
+            .query(
+              Q.where('journal_id', Q.oneOf(allJournalIds)),
+              Q.where('workplace_id', workplaceId),
+              Q.where('deleted_at', Q.eq(null)),
+            )
             .fetch();
     const accountIds = [...new Set(transactions.map(tx => tx.accountId))];
     const accounts =
@@ -219,7 +227,11 @@ export class JournalEnrichmentQueries {
         ? []
         : await database.collections
             .get<Account>('accounts')
-            .query(Q.where('id', Q.oneOf(accountIds)), Q.where('deleted_at', Q.eq(null)))
+            .query(
+              Q.where('id', Q.oneOf(accountIds)),
+              Q.where('workplace_id', workplaceId),
+              Q.where('deleted_at', Q.eq(null)),
+            )
             .fetch();
     const accountsById = new Map(accounts.map(account => [account.id, account]));
     const descriptionByJournalId = new Map<string, string>();
@@ -271,7 +283,10 @@ export class JournalEnrichmentQueries {
     return suggestions;
   }
 
-  async getEnrichmentDataRaw(journalIds: string[]): Promise<JournalEnrichmentRow[]> {
+  async getEnrichmentDataRaw(
+    workplaceId: WorkplaceId,
+    journalIds: string[],
+  ): Promise<JournalEnrichmentRow[]> {
     if (journalIds.length === 0) return [];
 
     const placeholders = journalIds.map(() => '?').join(',');
@@ -284,41 +299,56 @@ export class JournalEnrichmentQueries {
         a.name as account_name, 
         a.account_type as account_type, 
         a.icon as account_icon
-      FROM transactions t
+      FROM journals j
+      JOIN transactions t ON t.journal_id = j.id
       JOIN accounts a ON t.account_id = a.id
-      WHERE t.journal_id IN (${placeholders}) AND t.deleted_at IS NULL
+      WHERE j.workplace_id = ?
+        AND t.workplace_id = ?
+        AND a.workplace_id = ?
+        AND j.id IN (${placeholders})
+        AND t.deleted_at IS NULL
       ORDER BY t.journal_id, t.account_id
     `;
 
-    const results = await transactionRawRepository.queryRaw<JournalEnrichmentRow>(sql, journalIds);
+    const results = await transactionRawRepository.queryRaw<JournalEnrichmentRow>(sql, [
+      workplaceId,
+      workplaceId,
+      workplaceId,
+      ...journalIds,
+    ]);
     if (results !== null) {
       return results;
     }
 
-    const journals = await this.journals.query(Q.where('id', Q.oneOf(journalIds))).fetch();
+    const journals = await this.journals
+      .query(Q.where('id', Q.oneOf(journalIds)), Q.where('workplace_id', workplaceId))
+      .fetch();
     const enriched: JournalEnrichmentRow[] = [];
 
     for (const journal of journals) {
       const txs = await this.transactions
-        .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
+        .query(
+          Q.where('journal_id', journal.id),
+          Q.where('workplace_id', workplaceId),
+          Q.where('deleted_at', Q.eq(null)),
+        )
         .fetch();
 
       for (const tx of txs) {
-        try {
-          const account = await database.collections.get<Account>('accounts').find(tx.accountId);
-          if (account) {
-            enriched.push({
-              journal_id: journal.id,
-              account_id: tx.accountId,
-              amount: tx.amount,
-              transaction_type: tx.transactionType,
-              account_name: account.name,
-              account_type: account.accountType,
-              account_icon: account.icon,
-            });
-          }
-        } catch {
-          // Account might be deleted/missing in tests
+        const [account] = await database.collections
+          .get<Account>('accounts')
+          .query(Q.where('id', tx.accountId), Q.where('workplace_id', workplaceId))
+          .fetch();
+        if (account) {
+          enriched.push({
+            journal_id: journal.id,
+            account_id: tx.accountId,
+            amount: tx.amount,
+            transaction_type: tx.transactionType,
+            account_name: account.name,
+            account_type: account.accountType,
+            account_icon: account.icon,
+          });
         }
       }
     }
