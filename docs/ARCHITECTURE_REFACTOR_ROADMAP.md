@@ -1,8 +1,8 @@
 # Architecture Refactor Roadmap
 
-Status: Active  
-Owner: Codex orchestration task  
-Started: 2026-08-16  
+Status: Active
+Owner: Codex orchestration task
+Started: 2026-08-16
 Branch policy: small local commits on `main`; subagents use isolated worktrees; completed work is reviewed and squash-merged; never push.
 
 ## Objective
@@ -84,8 +84,8 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Scope raw transaction count queries.
 - [x] Scope rebuild data queries and ORM fallback paths.
 - [x] Scope recurring-pattern/insight acquisition.
-- [ ] Scope SMS preview, suggestions, ID lookup, and linked-journal lookup.
-- [ ] Scope budget-scope deletion.
+- [x] Scope SMS preview, suggestions, ID lookup, and linked-journal lookup.
+- [x] Scope budget-scope deletion.
 - [ ] Audit every query over workplace-scoped tables.
 - [ ] Add two-workplace regression coverage for balances, rebuilds, insights, SMS, and budgets.
 
@@ -197,6 +197,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-0 | Canonical architecture gate and explicit feature-edge ratchet | `91c755da` |
 | 2026-08-16 | WP-1 | Raw rebuild and transaction-count workplace isolation | `2f759d9e` |
 | 2026-08-16 | WP-1 | Recurring insight acquisition workplace isolation | `40fed24d` |
+| 2026-08-16 | WP-1 | SMS and budget workplace isolation | `b37695c0` |
 
 ## Audit Evidence Index
 
