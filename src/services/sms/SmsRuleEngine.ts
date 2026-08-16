@@ -291,7 +291,11 @@ export class SmsRuleEngine {
     for (const journal of journals) {
       const transactions = await database.collections
         .get<Transaction>('transactions')
-        .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('journal_id', journal.id),
+          Q.where('deleted_at', Q.eq(null)),
+        )
         .fetch();
       journalTransactions.set(journal.id, transactions);
       transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));

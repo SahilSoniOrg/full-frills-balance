@@ -3,9 +3,12 @@ import TransactionInboxRecord, {
   InboxProcessingStatus,
   TransactionDirection,
 } from '@/src/data/models/TransactionInboxRecord';
+import Transaction from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountType, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
@@ -245,6 +248,79 @@ describe('smsService workplace isolation', () => {
 
     expect(foreignRecord.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
     expect(foreignRecord.linkedJournalId).toBe(sharedJournalId);
+  });
+
+  it('excludes foreign transactions linked to local journals from rule suggestions', async () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+    const otherWorkplaceId = 'wp-2' as WorkplaceId;
+    const sourceAccount = await accountRepository.create({
+      name: 'Local card',
+      accountType: AccountType.LIABILITY,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+    const categoryAccount = await accountRepository.create({
+      name: 'Local coffee',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    const journalIds: JournalId[] = [];
+    for (const journalDate of [1_000, 2_000]) {
+      const journal = await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Coffee',
+          journalDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: sourceAccount.id,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceId,
+      );
+      journalIds.push(journal.id);
+    }
+
+    const transactions = database.collections.get<Transaction>('transactions');
+    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
+    await database.write(async () => {
+      for (const [index, journalId] of journalIds.entries()) {
+        await transactions.create(transaction => {
+          transaction.workplaceId = otherWorkplaceId;
+          transaction.journalId = journalId;
+          transaction.accountId = categoryAccount.id;
+          transaction.amount = 10;
+          transaction.transactionType = TransactionType.DEBIT;
+          transaction.currencyCode = 'USD';
+          transaction.transactionDate = (index + 1) * 1_000;
+          transaction.createdAt = new Date();
+          transaction.updatedAt = new Date();
+        });
+        await inbox.create(record => {
+          record.workplaceId = workplaceId;
+          record.channel = 'sms';
+          record.deviceSourceId = `local-sms-${index}`;
+          record.senderAddress = 'BANK';
+          record.rawBody = 'Coffee purchase';
+          record.inputDate = (index + 1) * 1_000;
+          record.inputFingerprint = `local-fingerprint-${index}`;
+          record.parseStatus = InboxParseStatus.PARSED;
+          record.parsedMerchant = 'Coffee';
+          record.direction = TransactionDirection.DEBIT;
+          record.processingStatus = InboxProcessingStatus.IMPORTED;
+          record.linkedJournalId = journalId;
+          record.firstSeenAt = (index + 1) * 1_000;
+          record.lastScannedAt = (index + 1) * 1_000;
+        });
+      }
+    });
+
+    expect(await smsService.getRuleSuggestions(workplaceId)).toEqual([]);
   });
 });
 
