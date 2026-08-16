@@ -69,11 +69,11 @@ Behavior preservation is mandatory unless a tracked integrity defect requires a 
 
 Goal: prevent new entropy while migrations are in flight.
 
-- [ ] Add `check:architecture` to the canonical verification and CI path.
-- [ ] Document the actual read boundary: feature-facing read services are preferred over repositories.
-- [ ] Close the cross-feature barrel-import loophole or define explicit public contracts.
+- [x] Add `check:architecture` to the canonical verification and CI path.
+- [x] Document the actual read boundary: feature-facing read services are preferred over repositories.
+- [x] Close the cross-feature barrel-import loophole or define explicit public contracts.
 - [ ] Add ratcheted checks for unscoped raw queries, feature model imports, and direct database writes.
-- [ ] Align README and architecture documentation with enforced rules.
+- [x] Align README and architecture documentation with enforced rules.
 
 Exit: new violations fail locally and in CI without requiring all historical debt to disappear at once.
 
@@ -81,9 +81,9 @@ Exit: new violations fail locally and in CI without requiring all historical deb
 
 Goal: eliminate cross-workplace read and mutation paths.
 
-- [ ] Scope raw transaction count queries.
-- [ ] Scope rebuild data queries and ORM fallback paths.
-- [ ] Scope recurring-pattern/insight acquisition.
+- [x] Scope raw transaction count queries.
+- [x] Scope rebuild data queries and ORM fallback paths.
+- [x] Scope recurring-pattern/insight acquisition.
 - [ ] Scope SMS preview, suggestions, ID lookup, and linked-journal lookup.
 - [ ] Scope budget-scope deletion.
 - [ ] Audit every query over workplace-scoped tables.
@@ -193,7 +193,10 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 
 | Date | Work package | Result | Commit |
 | --- | --- | --- | --- |
-| 2026-08-16 | Roadmap | Started | pending |
+| 2026-08-16 | Roadmap | Execution plan and invariants recorded | `2ed8cb7f` |
+| 2026-08-16 | WP-0 | Canonical architecture gate and explicit feature-edge ratchet | `91c755da` |
+| 2026-08-16 | WP-1 | Raw rebuild and transaction-count workplace isolation | `2f759d9e` |
+| 2026-08-16 | WP-1 | Recurring insight acquisition workplace isolation | `40fed24d` |
 
 ## Audit Evidence Index
 
