@@ -72,7 +72,7 @@ Goal: prevent new entropy while migrations are in flight.
 - [x] Add `check:architecture` to the canonical verification and CI path.
 - [x] Document the actual read boundary: feature-facing read services are preferred over repositories.
 - [x] Close the cross-feature barrel-import loophole or define explicit public contracts.
-- [ ] Add ratcheted checks for unscoped raw queries, feature model imports, and direct database writes.
+- [x] Add ratcheted checks for unscoped raw queries, feature model imports, and direct database writes.
 - [x] Align README and architecture documentation with enforced rules.
 
 Exit: new violations fail locally and in CI without requiring all historical debt to disappear at once.
@@ -95,11 +95,11 @@ Exit: every scoped persistence operation requires and enforces `workplaceId`.
 
 Goal: make cancellation and disposal explicit.
 
-- [ ] Introduce a workplace generation/cancellation mechanism.
-- [ ] Make bootstrap stages generation-aware.
-- [ ] Dispose reactive cache subscriptions on eviction.
-- [ ] Terminate insight timers for inactive workplaces.
-- [ ] Sequence widget synchronization writes.
+- [x] Introduce a workplace generation/cancellation mechanism.
+- [x] Make bootstrap stages generation-aware.
+- [x] Dispose reactive cache subscriptions on eviction.
+- [x] Terminate insight timers for inactive workplaces.
+- [x] Sequence widget synchronization writes.
 
 Exit: no old-workplace stream, timer, cache, or task survives a workplace switch.
 
@@ -107,9 +107,9 @@ Exit: no old-workplace stream, timer, cache, or task survives a workplace switch
 
 Goal: make completion truthful and repeated operations safe.
 
-- [ ] Model rebuild retries as tracked queue state.
-- [ ] Make rebuild `flush()` await scheduled retries.
-- [ ] Requeue/reconcile batches after unexpected processing errors.
+- [x] Model rebuild retries as tracked queue state.
+- [x] Make rebuild `flush()` await scheduled retries.
+- [x] Requeue/reconcile batches after unexpected processing errors.
 - [ ] Add per-workplace SMS single-flight coordination.
 - [ ] Recheck SMS processing state in the final write boundary.
 - [ ] Add SMS auto-post idempotency protection.
@@ -198,6 +198,10 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Raw rebuild and transaction-count workplace isolation | `2f759d9e` |
 | 2026-08-16 | WP-1 | Recurring insight acquisition workplace isolation | `40fed24d` |
 | 2026-08-16 | WP-1 | SMS and budget workplace isolation | `b37695c0` |
+| 2026-08-16 | WP-0 | Ratchets for raw scope, presentation models, and direct writes | `337946e4` |
+| 2026-08-16 | WP-2 | Disposable reactive caches and inactive insight timers | `ec8a34d3` |
+| 2026-08-16 | WP-2/3 | Bootstrap generations and ordered widget writes | `54f24099`, `b3b7f003` |
+| 2026-08-16 | WP-3 | Tracked rebuild retries, truthful flush, and batch recovery | `c5cb34b9`, `076f2401` |
 
 ## Audit Evidence Index
 
