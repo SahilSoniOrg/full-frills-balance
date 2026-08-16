@@ -115,6 +115,8 @@ Five tabs: **Dashboard · Accounts · Activity · Commitments · Settings**.
 
 Route files may import only feature public barrels. Feature-to-feature dependencies must use an explicitly allowlisted public barrel; deep cross-feature imports are forbidden. Feature hooks may read through repositories where the existing read contract requires it, but mutations belong to domain commands or write services. These boundaries are enforced by ESLint and `bun run check:architecture`.
 
+Existing debt around unscoped raw queries, presentation imports of database models, and direct database writes outside persistence seams is explicitly baselined. The architecture check rejects new occurrences and stale baseline entries; it does not claim those boundaries are fully clean until the baselines reach zero.
+
 ---
 
 ## Testing
