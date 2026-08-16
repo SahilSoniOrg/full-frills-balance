@@ -1,25 +1,56 @@
 import { database } from '@/src/data/database/Database';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import {
   AccountId,
   AccountType,
+  JournalId,
   TransactionId,
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
-import Transaction from '@/src/data/models/Transaction';
-import { Q } from '@nozbe/watermelondb';
+import { firstValueFrom, of, take } from 'rxjs';
 
 const WORKPLACE_ONE = 'wp-raw-isolation-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-raw-isolation-2' as WorkplaceId;
 
 describe('TransactionRawRepository workplace isolation', () => {
   let accountId: AccountId;
+  let foreignAccountId: AccountId;
+
+  async function createMalformedTransaction({
+    workplaceId,
+    journalId,
+    transactionAccountId,
+    amount,
+    transactionDate,
+  }: {
+    workplaceId: WorkplaceId;
+    journalId: JournalId;
+    transactionAccountId: AccountId;
+    amount: number;
+    transactionDate: number;
+  }): Promise<void> {
+    await database.write(async () => {
+      await database.collections.get<Transaction>('transactions').create(transaction => {
+        transaction.workplaceId = workplaceId;
+        transaction.journalId = journalId;
+        transaction.accountId = transactionAccountId;
+        transaction.amount = amount;
+        transaction.transactionType = TransactionType.DEBIT;
+        transaction.currencyCode = 'USD';
+        transaction.transactionDate = transactionDate;
+        transaction.createdAt = new Date(transactionDate);
+        transaction.updatedAt = new Date(transactionDate);
+      });
+    });
+  }
 
   beforeEach(async () => {
     jest.restoreAllMocks();
@@ -47,6 +78,13 @@ describe('TransactionRawRepository workplace isolation', () => {
       workplaceId: WORKPLACE_ONE,
     });
     accountId = account.id;
+    const foreignAccount = await accountRepository.create({
+      name: 'Foreign account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WORKPLACE_TWO,
+    });
+    foreignAccountId = foreignAccount.id;
 
     await journalWriteRepository.createJournalWithTransactions(
       {
@@ -58,35 +96,47 @@ describe('TransactionRawRepository workplace isolation', () => {
       WORKPLACE_ONE,
     );
 
-    // Simulate a legacy/imported cross-workplace account reference. Scoped reads
-    // must remain isolated even when relational data is imperfect.
-    await journalWriteRepository.createJournalWithTransactions(
+    const localJournal = await journalWriteRepository.createJournalWithTransactions(
       {
-        description: 'Workplace two transaction',
+        description: 'Local malformed-link host',
         journalDate: 2_000,
         currencyCode: 'USD',
-        transactions: [{ accountId, amount: 20, transactionType: TransactionType.DEBIT }],
+        transactions: [],
+      },
+      WORKPLACE_ONE,
+    );
+    const foreignJournal = await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Foreign malformed-link host',
+        journalDate: 3_000,
+        currencyCode: 'USD',
+        transactions: [],
       },
       WORKPLACE_TWO,
     );
 
-    const malformedJournal = await journalWriteRepository.createJournalWithTransactions(
-      {
-        description: 'Cross-workplace transaction link',
-        journalDate: 3_000,
-        currencyCode: 'USD',
-        transactions: [{ accountId, amount: 30, transactionType: TransactionType.DEBIT }],
-      },
-      WORKPLACE_ONE,
-    );
-    const [malformedTransaction] = await database.collections
-      .get<Transaction>('transactions')
-      .query(Q.where('journal_id', malformedJournal.id))
-      .fetch();
-    await database.write(async () => {
-      await malformedTransaction.update(transaction => {
-        transaction.workplaceId = WORKPLACE_TWO;
-      });
+    // Simulate independently malformed legacy/imported links. A safe read must
+    // reject each row even when its other two ownership edges look local.
+    await createMalformedTransaction({
+      workplaceId: WORKPLACE_TWO,
+      journalId: localJournal.id,
+      transactionAccountId: accountId,
+      amount: 100,
+      transactionDate: 2_000,
+    });
+    await createMalformedTransaction({
+      workplaceId: WORKPLACE_ONE,
+      journalId: foreignJournal.id,
+      transactionAccountId: accountId,
+      amount: 200,
+      transactionDate: 3_000,
+    });
+    await createMalformedTransaction({
+      workplaceId: WORKPLACE_ONE,
+      journalId: localJournal.id,
+      transactionAccountId: foreignAccountId,
+      amount: 400,
+      transactionDate: 4_000,
     });
   });
 
@@ -174,5 +224,112 @@ describe('TransactionRawRepository workplace isolation', () => {
     );
 
     expect(sum).toBe(10);
+  });
+
+  it('scopes metadata SQL to transaction, journal, and account workplaces', async () => {
+    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+
+    await transactionRawRepository.getTransactionsMetadataRaw(
+      WORKPLACE_ONE,
+      [accountId, foreignAccountId],
+      0,
+      5_000,
+    );
+
+    const [sql, args = []] = queryRaw.mock.calls[0];
+    expect(sql).toContain('t.workplace_id = ?');
+    expect(sql).toContain('a.workplace_id = ?');
+    expect(sql).toContain('j.workplace_id = ?');
+    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
+    expect(args.slice(4, 7)).toEqual([WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+  });
+
+  it('isolates metadata in the ORM fallback despite malformed cross-workplace links', async () => {
+    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+
+    const metadata = await transactionRawRepository.getTransactionsMetadataRaw(
+      WORKPLACE_ONE,
+      [accountId, foreignAccountId],
+      0,
+      5_000,
+    );
+
+    expect(metadata).toHaveLength(1);
+    expect(metadata[0]).toMatchObject({ accountId, amount: 10, transactionDate: 1_000 });
+  });
+
+  it('scopes bulk period SQL to transaction, journal, and account workplaces', async () => {
+    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+
+    await transactionRawRepository.getBulkAccountPeriodMetricsRaw(
+      WORKPLACE_ONE,
+      [
+        { accountId, accountType: AccountType.ASSET },
+        { accountId: foreignAccountId, accountType: AccountType.ASSET },
+      ],
+      0,
+      5_000,
+    );
+
+    const [sql, args = []] = queryRaw.mock.calls[0];
+    expect(sql).toContain('t.workplace_id = ?');
+    expect(sql).toContain('a.workplace_id = ?');
+    expect(sql).toContain('j.workplace_id = ?');
+    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
+    expect(args.slice(0, 3)).toEqual([WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+  });
+
+  it('keeps bulk period fallback metrics isolated despite malformed links', async () => {
+    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+
+    const metrics = await transactionRawRepository.getBulkAccountPeriodMetricsRaw(
+      WORKPLACE_ONE,
+      [
+        { accountId, accountType: AccountType.ASSET },
+        { accountId: foreignAccountId, accountType: AccountType.ASSET },
+      ],
+      0,
+      5_000,
+    );
+
+    expect(metrics.get(accountId)).toEqual({ totalIncrease: 10, totalDecrease: 0 });
+    expect(metrics.get(foreignAccountId)).toEqual({ totalIncrease: 0, totalDecrease: 0 });
+  });
+
+  it('scopes unreconciled SQL to transaction, journal, and account workplaces', async () => {
+    jest.spyOn(transactionRepository, 'observeActiveCount').mockReturnValue(of(0));
+    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+
+    await firstValueFrom(
+      transactionRawRepository
+        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+        .pipe(take(1)),
+    );
+
+    const [sql, args = []] = queryRaw.mock.calls[0];
+    expect(sql).toContain('t.workplace_id = ?');
+    expect(sql).toContain('a.workplace_id = ?');
+    expect(sql).toContain('j.workplace_id = ?');
+    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
+    expect(args.slice(2)).toEqual([0, null, WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+  });
+
+  it('emits isolated unreconciled fallback metrics for local and foreign accounts', async () => {
+    jest.spyOn(transactionRepository, 'observeActiveCount').mockReturnValue(of(0));
+    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+
+    const localMetrics = await firstValueFrom(
+      transactionRawRepository
+        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+        .pipe(take(1)),
+    );
+    const foreignMetrics = await firstValueFrom(
+      transactionRawRepository
+        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, foreignAccountId, null, AccountType.ASSET)
+        .pipe(take(1)),
+    );
+
+    expect(localMetrics).toEqual({ count: 1, total: 10 });
+    expect(foreignMetrics).toEqual({ count: 0, total: 0 });
   });
 });

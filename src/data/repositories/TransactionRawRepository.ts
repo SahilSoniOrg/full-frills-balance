@@ -7,16 +7,18 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
-import { periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { from, Observable } from 'rxjs';
-import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
+import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
 import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries';
 import { transactionRawRebuildQueries } from './raw/TransactionRawRebuildQueries';
+import { transactionRepository } from './TransactionRepository';
 import {
   AccountDelta,
   DailyDelta,
@@ -297,11 +299,14 @@ export class TransactionRawRepository {
         t.transaction_type as transactionType,
         t.currency_code as currencyCode
       FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
       WHERE t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
+        AND t.workplace_id = ?
+        AND a.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.workplace_id = ?
         AND j.status IN (${placeholders})
@@ -313,14 +318,44 @@ export class TransactionRawRepository {
       startDate,
       endDate,
       workplaceId,
+      workplaceId,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
-    return (results || []).map(row => ({
-      ...row,
-      id: row.id as TransactionId,
-      journalId: row.journalId as JournalId,
-      accountId: row.accountId as AccountId,
+    if (results !== null) {
+      return results.map(row => ({
+        ...row,
+        id: row.id as TransactionId,
+        journalId: row.journalId as JournalId,
+        accountId: row.accountId as AccountId,
+      }));
+    }
+
+    const transactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
+        Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.on('journals', 'deleted_at', Q.eq(null)),
+        Q.where('account_id', Q.oneOf(accountIds)),
+        Q.where('transaction_date', Q.gte(startDate)),
+        Q.where('transaction_date', Q.lte(endDate)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('transaction_date', Q.desc),
+      )
+      .fetch();
+
+    return transactions.map(transaction => ({
+      id: transaction.id,
+      journalId: transaction.journalId,
+      accountId: transaction.accountId,
+      amount: transaction.amount,
+      transactionDate: transaction.transactionDate,
+      transactionType: transaction.transactionType,
+      currencyCode: transaction.currencyCode,
     }));
   }
 
@@ -367,6 +402,8 @@ export class TransactionRawRepository {
       JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
       WHERE t.workplace_id = ?
+        AND a.workplace_id = ?
+        AND j.workplace_id = ?
         AND t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
@@ -380,6 +417,8 @@ export class TransactionRawRepository {
     try {
       const raws = await this.queryRaw<RawPeriodMetricsRow>(sql, [
         workplaceId,
+        workplaceId,
+        workplaceId,
         ...accountIds,
         startDate,
         endDate,
@@ -392,6 +431,45 @@ export class TransactionRawRepository {
             totalIncrease: row.totalIncrease,
             totalDecrease: row.totalDecrease,
           });
+        }
+      } else {
+        const [accounts, transactions] = await Promise.all([
+          database.collections
+            .get<Account>('accounts')
+            .query(Q.where('id', Q.oneOf(accountIds)), Q.where('workplace_id', workplaceId))
+            .fetch(),
+          database.collections
+            .get<Transaction>('transactions')
+            .query(
+              Q.where('workplace_id', workplaceId),
+              Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
+              Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+              Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+              Q.on('journals', 'deleted_at', Q.eq(null)),
+              Q.where('account_id', Q.oneOf(accountIds)),
+              Q.where('transaction_date', Q.gte(startDate)),
+              Q.where('transaction_date', Q.lte(endDate)),
+              Q.where('deleted_at', Q.eq(null)),
+            )
+            .fetch(),
+        ]);
+
+        const accountTypeById = new Map(accounts.map(account => [account.id, account.accountType]));
+        for (const transaction of transactions) {
+          const accountType = accountTypeById.get(transaction.accountId);
+          if (!accountType) continue;
+
+          const current = results.get(transaction.accountId) || {
+            totalIncrease: 0,
+            totalDecrease: 0,
+          };
+          const transactionEffect = effect(accountType, transaction.transactionType);
+          if (transactionEffect.isIncrease) {
+            current.totalIncrease += transaction.amount;
+          } else if (transactionEffect.sign < 0) {
+            current.totalDecrease += transaction.amount;
+          }
+          results.set(transaction.accountId, current);
         }
       }
     } catch (error) {
@@ -454,11 +532,8 @@ export class TransactionRawRepository {
   ): Observable<{ count: number; total: number }> {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
     const { increaseCase, decreaseCase } = periodFlowSQL();
-    return from(import('./TransactionRepository')).pipe(
-      switchMap(({ transactionRepository }) =>
-        transactionRepository.observeActiveCount(workplaceId),
-      ),
-      switchMap(() => {
+    return transactionRepository.observeActiveCount(workplaceId).pipe(
+      switchMap(async () => {
         const sql = `
           SELECT COUNT(*) as count, SUM(${increaseCase}) - SUM(${decreaseCase}) as total
           FROM transactions t
@@ -468,24 +543,54 @@ export class TransactionRawRepository {
             AND a.account_type = ?
             AND (t.transaction_date > ? OR ? IS NULL)
             AND t.deleted_at IS NULL
+            AND t.workplace_id = ?
+            AND a.workplace_id = ?
             AND j.deleted_at IS NULL
             AND j.workplace_id = ?
             AND j.status IN (${activeStatusesStr})
         `;
-        return from(
-          this.queryRaw<RawUnreconciledMetricsRow>(sql, [
-            accountId,
-            accountType,
-            reconciledAt || 0,
-            reconciledAt ?? 0,
-            workplaceId,
-          ]),
-        );
+        const raws = await this.queryRaw<RawUnreconciledMetricsRow>(sql, [
+          accountId,
+          accountType,
+          reconciledAt ?? 0,
+          reconciledAt,
+          workplaceId,
+          workplaceId,
+          workplaceId,
+        ]);
+        if (raws !== null) {
+          return {
+            count: raws[0]?.count || 0,
+            total: raws[0]?.total || 0,
+          };
+        }
+
+        const dateClauses =
+          reconciledAt !== null ? [Q.where('transaction_date', Q.gt(reconciledAt))] : [];
+        const transactions = await database.collections
+          .get<Transaction>('transactions')
+          .query(
+            Q.where('workplace_id', workplaceId),
+            Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
+            Q.on('accounts', 'account_type', accountType),
+            Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+            Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+            Q.on('journals', 'deleted_at', Q.eq(null)),
+            Q.where('account_id', accountId),
+            ...dateClauses,
+            Q.where('deleted_at', Q.eq(null)),
+          )
+          .fetch();
+
+        return {
+          count: transactions.length,
+          total: transactions.reduce(
+            (sum, transaction) =>
+              sum + effect(accountType, transaction.transactionType).delta(transaction.amount),
+            0,
+          ),
+        };
       }),
-      map((raws: RawUnreconciledMetricsRow[] | null) => ({
-        count: raws?.[0]?.count || 0,
-        total: raws?.[0]?.total || 0,
-      })),
     );
   }
 }
