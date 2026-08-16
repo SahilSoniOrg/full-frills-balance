@@ -426,7 +426,7 @@ export class IntegrityService {
         onProgress?.('Updating database snapshots...', 0.96);
         const accountsToNotify = await database.collections
           .get<Account>('accounts')
-          .query(Q.where('id', Q.oneOf(repairedAccountIds)))
+          .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(repairedAccountIds)))
           .fetch();
 
         await database.write(async () => {

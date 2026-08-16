@@ -6,6 +6,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { auditService } from '@/src/services/audit-service';
 import { Q } from '@nozbe/watermelondb';
@@ -286,6 +287,52 @@ describe('IntegrityService', () => {
         'wp-1' as WorkplaceId,
       );
       expect(balance).toBe(300);
+    });
+  });
+
+  describe('forceRunCheck workplace isolation', () => {
+    it('does not notify a foreign account when repair output contains its ID', async () => {
+      const foreignAccount = await accountRepository.create({
+        name: 'Foreign account',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId: 'wp-2' as WorkplaceId,
+      });
+      await database.write(async () => {
+        await foreignAccount.update(account => {
+          account.updatedAt = new Date(123);
+        });
+      });
+
+      jest.spyOn(service, 'verifyAccountBalance').mockImplementation(async accountId => {
+        if (accountId === cashAccountId) {
+          return {
+            accountId: foreignAccount.id,
+            accountName: foreignAccount.name,
+            cachedBalance: 999,
+            computedBalance: 100,
+            matches: false,
+            discrepancy: 899,
+          };
+        }
+        return {
+          accountId,
+          accountName: 'Equity',
+          cachedBalance: 0,
+          computedBalance: 0,
+          matches: true,
+          discrepancy: 0,
+        };
+      });
+      jest.spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal').mockResolvedValue();
+
+      await service.forceRunCheck('wp-1' as WorkplaceId);
+
+      const unchangedForeignAccount = await accountRepository.find(
+        'wp-2' as WorkplaceId,
+        foreignAccount.id,
+      );
+      expect(unchangedForeignAccount?.updatedAt.getTime()).toBe(123);
     });
   });
 });

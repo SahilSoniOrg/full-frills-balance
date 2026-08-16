@@ -150,15 +150,19 @@ export class AccountingRebuildService {
         const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
         const models = await database.collections
           .get<Transaction>('transactions')
-          .query(Q.where('id', Q.oneOf(chunkIds)))
+          .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(chunkIds)))
           .fetch();
         allModelsToUpdate.push(...models);
       }
 
       // Fetch invalidated snapshots after the starting point
       const invalidatedSnapshots = await database.collections
-        .get('balance_snapshots')
-        .query(Q.where('account_id', accountId), Q.where('transaction_date', Q.gt(startDate)))
+        .get<BalanceSnapshot>('balance_snapshots')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', Q.gt(startDate)),
+        )
         .fetch();
 
       // 5. Finalize inside the existing parent write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
