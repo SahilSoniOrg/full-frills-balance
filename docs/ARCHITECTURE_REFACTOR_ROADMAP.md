@@ -95,7 +95,7 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Scope account-merge source mutations (WP-1H).
 - [x] Enforce planned-payment workplace/model agreement (WP-1I).
 - [ ] Remove or constrain generic unscoped repository escape hatches (WP-1J).
-- [ ] Validate workplace ownership for model-instance journal batch writers (WP-1K).
+- [x] Validate workplace ownership for model-instance journal batch writers (WP-1K).
 
 Exit: every scoped persistence operation requires and enforces `workplaceId`.
 
@@ -222,6 +222,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Journal enrichment and suggestion isolation; raw-query ratchet at zero | `042a629`, `32462018` |
 | 2026-08-16 | WP-1 | Rebuild/integrity mutation isolation | `73d56859` |
 | 2026-08-16 | WP-1 | Planned-payment workplace/model agreement | `53874cd2` |
+| 2026-08-16 | WP-1 | Journal model-instance writer workplace validation | `faa4a91c` |
 
 ## Audit Evidence Index
 
