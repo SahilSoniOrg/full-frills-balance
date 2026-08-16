@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { ledgerWriteService } from '@/src/services/ledger';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
+import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
 
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
@@ -205,5 +206,74 @@ describe('SmsService Batching', () => {
 
     // Should be at least 3 ops (1 inbox record + 2 ledger ops)
     expect(totalBatchedOps).toBeGreaterThanOrEqual(3);
+  });
+
+  it('rechecks the scoped inbox state inside the final write before auto-posting', async () => {
+    const workplaceId = 'wp-1' as any;
+    const messages = [{ id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() }];
+    (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
+
+    type MockInboxRecord = {
+      id: string;
+      workplaceId: string;
+      deviceSourceId: string;
+      processingStatus: InboxProcessingStatus;
+      linkedJournalId: string;
+      firstSeenAt: number;
+      metadataJson: string;
+      prepareUpdate: jest.Mock<MockInboxRecord, [(record: MockInboxRecord) => void]>;
+    };
+    const existingRecord: MockInboxRecord = {
+      id: 'existing-inbox-record',
+      workplaceId,
+      deviceSourceId: '1',
+      processingStatus: InboxProcessingStatus.AUTO_POSTED,
+      linkedJournalId: 'journal-already-created',
+      firstSeenAt: Date.now() - 1_000,
+      metadataJson: '{}',
+      prepareUpdate: jest.fn((fn: (record: MockInboxRecord) => void): MockInboxRecord => {
+        fn(existingRecord);
+        return existingRecord;
+      }),
+    };
+    const initialFetch = jest.fn().mockResolvedValue([]);
+    const finalFetch = jest.fn().mockResolvedValue([existingRecord]);
+    const mockInboxCollection = {
+      query: jest
+        .fn()
+        .mockReturnValueOnce({ fetch: initialFetch })
+        .mockReturnValueOnce({ fetch: finalFetch }),
+      prepareCreate: jest.fn(),
+    };
+    const mockRulesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([
+          {
+            id: 'rule-1',
+            senderMatch: 'BANK',
+            isActive: true,
+            sourceAccountId: 'acc-1',
+            categoryAccountId: 'cat-1',
+            prepareUpdate: jest.fn(),
+          },
+        ]),
+      }),
+    };
+
+    (database.collections.get as jest.Mock).mockImplementation(name => {
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      return null;
+    });
+
+    await smsService.processUnprocessedSms(workplaceId);
+
+    expect(database.write).toHaveBeenCalledTimes(1);
+    expect(finalFetch).toHaveBeenCalledTimes(1);
+    expect(ledgerWriteService.prepareCreateJournalFromPreparedData).not.toHaveBeenCalled();
+    expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
+    expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);
+    expect(existingRecord.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+    expect(existingRecord.linkedJournalId).toBe('journal-already-created');
   });
 });

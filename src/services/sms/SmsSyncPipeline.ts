@@ -58,6 +58,7 @@ interface SmsAnalysisResult {
 
 export class SmsSyncPipeline {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
+  private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
 
   private get inbox() {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
@@ -113,10 +114,7 @@ export class SmsSyncPipeline {
   }): InboxProcessingStatus {
     const { parsed, processedIds, exactJournalId, duplicate, existingStatus } = params;
 
-    if (existingStatus) {
-      if (existingStatus === InboxProcessingStatus.PENDING && duplicate) {
-        return InboxProcessingStatus.DUPLICATE_FLAGGED;
-      }
+    if (existingStatus && existingStatus !== InboxProcessingStatus.PENDING) {
       return existingStatus;
     }
     if (parsed.parseStatus === InboxParseStatus.PARSE_FAILED)
@@ -129,6 +127,27 @@ export class SmsSyncPipeline {
   }
 
   async scanInbox(workplaceId: WorkplaceId, limit: number): Promise<number> {
+    const previousScan = this.workplaceScans.get(workplaceId) ?? Promise.resolve();
+    const scan = previousScan
+      .catch(() => undefined)
+      .then(() => this.scanInboxOnce(workplaceId, limit));
+    const completion = scan.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    this.workplaceScans.set(workplaceId, completion);
+
+    try {
+      return await scan;
+    } finally {
+      if (this.workplaceScans.get(workplaceId) === completion) {
+        this.workplaceScans.delete(workplaceId);
+      }
+    }
+  }
+
+  private async scanInboxOnce(workplaceId: WorkplaceId, limit: number): Promise<number> {
     const start = Date.now();
     const messages = await smsInboxBridge.getLatestMessages(limit);
     if (messages.length === 0) {
@@ -250,46 +269,95 @@ export class SmsSyncPipeline {
 
     // --- Phase 2: Synchronous Batching ---
     let importedCount = 0;
-    const allOps: Model[] = [];
+    let totalOps = 0;
     const allAccountsToRebuild = new Set<AccountId>();
+    const processedMessageIds: string[] = [];
+    const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0) {
-      for (const result of analysisResults) {
-        let linkedJournalId = result.exactJournalId;
+      await database.write(async () => {
+        const messageIds = analysisResults.map(result => result.message.id);
+        const fingerprints = analysisResults.map(result => result.fingerprint);
+        const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
+          this.inbox
+            .query(
+              Q.where('workplace_id', workplaceId),
+              Q.where('channel', 'sms'),
+              Q.where('device_source_id', Q.oneOf(messageIds)),
+            )
+            .fetch(),
+          smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+          smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+        ]);
+        const latestRecordsByMessageId = new Map(
+          latestRecords.map(record => [record.deviceSourceId, record]),
+        );
+        const latestProcessedIds = new Set(this.getProcessedSmsIds());
+        const allOps: Model[] = [];
 
-        if (result.autoPost) {
-          const { journal, ops, accountsToRebuild } =
-            ledgerWriteService.prepareCreateJournalFromPreparedData(
-              result.autoPost.journalData,
-              result.autoPost.preparedJournal,
-              workplaceId,
-            );
+        for (const result of analysisResults) {
+          const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
+          const latestJournal =
+            latestJournalsById.get(result.message.id) ??
+            latestJournalsByFingerprint.get(result.fingerprint) ??
+            null;
+          let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
+          let finalStatus = this.resolveProcessingStatus({
+            parsed: result.parsed,
+            processedIds: latestProcessedIds,
+            exactJournalId: linkedJournalId,
+            duplicate: result.duplicate,
+            existingStatus: latestRecord?.processingStatus,
+          });
 
-          allOps.push(...ops);
-          accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-          linkedJournalId = journal.id;
-          importedCount += 1;
+          if (
+            result.finalStatus === InboxProcessingStatus.DISMISSED &&
+            finalStatus === InboxProcessingStatus.PENDING
+          ) {
+            finalStatus = InboxProcessingStatus.DISMISSED;
+          }
 
-          analytics.logSmsRuleTriggered(result.autoPost.ruleId, true);
-          this.markSmsAsProcessed(result.message.id);
+          if (
+            result.autoPost &&
+            !linkedJournalId &&
+            finalStatus === InboxProcessingStatus.PENDING
+          ) {
+            const { journal, ops, accountsToRebuild } =
+              ledgerWriteService.prepareCreateJournalFromPreparedData(
+                result.autoPost.journalData,
+                result.autoPost.preparedJournal,
+                workplaceId,
+              );
+
+            allOps.push(...ops);
+            accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+            linkedJournalId = journal.id;
+            finalStatus = InboxProcessingStatus.AUTO_POSTED;
+            importedCount += 1;
+            processedMessageIds.push(result.message.id);
+            triggeredRuleIds.push(result.autoPost.ruleId);
+          }
+
+          const { ops: upsertOps, record } = this.prepareUpsertInboxRecord(
+            result.message,
+            result.parsed,
+            result.fingerprint,
+            latestRecord,
+            finalStatus,
+            workplaceId,
+            linkedJournalId,
+            result.duplicate || undefined,
+          );
+          allOps.push(...upsertOps);
+          latestRecordsByMessageId.set(result.message.id, record);
         }
 
-        const { ops: upsertOps } = this.prepareUpsertInboxRecord(
-          result.message,
-          result.parsed,
-          result.fingerprint,
-          result.existingRecord,
-          result.finalStatus,
-          workplaceId,
-          linkedJournalId,
-          result.duplicate || undefined,
-        );
-        allOps.push(...upsertOps);
-      }
-
-      await database.write(async () => {
         await database.batch(allOps);
+        totalOps = allOps.length;
       });
+
+      processedMessageIds.forEach(messageId => this.markSmsAsProcessed(messageId));
+      triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
 
       if (allAccountsToRebuild.size > 0) {
         const latestDate = Math.max(...messages.map(m => m.date));
@@ -300,7 +368,7 @@ export class SmsSyncPipeline {
     logger.info(`[Trace] SmsSyncPipeline.scanInbox: ${Date.now() - start}ms`, {
       scannedMessages: messages.length,
       importedCount,
-      totalOps: allOps.length,
+      totalOps,
     });
 
     return importedCount;

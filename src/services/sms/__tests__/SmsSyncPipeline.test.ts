@@ -38,6 +38,88 @@ describe('SmsSyncPipeline', () => {
     jest.clearAllMocks();
   });
 
+  describe('scan coordination', () => {
+    const flushMicrotasks = async () => {
+      for (let index = 0; index < 5; index += 1) {
+        await Promise.resolve();
+      }
+    };
+
+    const deferred = <T>() => {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+      });
+      return { promise, resolve, reject };
+    };
+
+    it('serializes concurrent scans for the same workplace without changing their limits', async () => {
+      const firstScan = deferred<number>();
+      const secondScan = deferred<number>();
+      const scanOnce = jest
+        .spyOn(pipeline as any, 'scanInboxOnce')
+        .mockReturnValueOnce(firstScan.promise)
+        .mockReturnValueOnce(secondScan.promise);
+
+      const recent = pipeline.scanInbox('wp-1' as any, 50);
+      const older = pipeline.scanInbox('wp-1' as any, 100);
+      await flushMicrotasks();
+
+      expect(scanOnce).toHaveBeenCalledTimes(1);
+      expect(scanOnce).toHaveBeenNthCalledWith(1, 'wp-1', 50);
+
+      firstScan.resolve(1);
+      await expect(recent).resolves.toBe(1);
+      await flushMicrotasks();
+
+      expect(scanOnce).toHaveBeenCalledTimes(2);
+      expect(scanOnce).toHaveBeenNthCalledWith(2, 'wp-1', 100);
+
+      secondScan.resolve(2);
+      await expect(older).resolves.toBe(2);
+    });
+
+    it('does not serialize scans belonging to different workplaces', async () => {
+      const firstScan = deferred<number>();
+      const secondScan = deferred<number>();
+      const scanOnce = jest
+        .spyOn(pipeline as any, 'scanInboxOnce')
+        .mockReturnValueOnce(firstScan.promise)
+        .mockReturnValueOnce(secondScan.promise);
+
+      const workplaceA = pipeline.scanInbox('wp-a' as any, 50);
+      const workplaceB = pipeline.scanInbox('wp-b' as any, 75);
+      await flushMicrotasks();
+
+      expect(scanOnce).toHaveBeenCalledTimes(2);
+      expect(scanOnce).toHaveBeenCalledWith('wp-a', 50);
+      expect(scanOnce).toHaveBeenCalledWith('wp-b', 75);
+
+      firstScan.resolve(3);
+      secondScan.resolve(4);
+      await expect(Promise.all([workplaceA, workplaceB])).resolves.toEqual([3, 4]);
+    });
+
+    it('continues the workplace queue after a failed scan', async () => {
+      const firstScan = deferred<number>();
+      const scanOnce = jest
+        .spyOn(pipeline as any, 'scanInboxOnce')
+        .mockReturnValueOnce(firstScan.promise)
+        .mockResolvedValueOnce(5);
+
+      const failed = pipeline.scanInbox('wp-1' as any, 50);
+      const retry = pipeline.scanInbox('wp-1' as any, 50);
+      await flushMicrotasks();
+
+      firstScan.reject(new Error('native inbox failed'));
+      await expect(failed).rejects.toThrow('native inbox failed');
+      await expect(retry).resolves.toBe(5);
+      expect(scanOnce).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('computeSmsFingerprint', () => {
     it('normalizes sender, body, and dates into consistent fingerprint strings', () => {
       const fp1 = pipeline.computeSmsFingerprint(
@@ -177,6 +259,18 @@ describe('SmsSyncPipeline', () => {
         },
       });
       expect(status).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+    });
+
+    it('upgrades PENDING to IMPORTED when the final write recheck finds a journal', () => {
+      const status = pipeline.resolveProcessingStatus({
+        parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
+        processedIds: new Set(),
+        exactJournalId: 'journal-created-by-racing-scan',
+        existingStatus: InboxProcessingStatus.PENDING,
+        duplicate: null,
+      });
+
+      expect(status).toBe(InboxProcessingStatus.IMPORTED);
     });
 
     it('preserves IMPORTED status on re-scan even when duplicate is found', () => {
