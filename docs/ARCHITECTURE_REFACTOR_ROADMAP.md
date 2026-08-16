@@ -89,11 +89,11 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Audit every query over workplace-scoped tables.
 - [x] Add two-workplace regression coverage for balances, rebuilds, insights, SMS, and budgets.
 - [x] Close direct cross-workplace export, SMS collision, and large-query paths (WP-1A through WP-1C).
-- [ ] Scope journal enrichment and recent-suggestion joins in raw and fallback paths (WP-1D/WP-1F).
+- [x] Scope journal enrichment and recent-suggestion joins in raw and fallback paths (WP-1D/WP-1F).
 - [ ] Scope every workplace-owned table in transaction metrics, rebuild, pattern, metadata, and account-list joins (WP-1E).
-- [ ] Scope rebuild and integrity follow-up mutations (WP-1G).
+- [x] Scope rebuild and integrity follow-up mutations (WP-1G).
 - [x] Scope account-merge source mutations (WP-1H).
-- [ ] Enforce planned-payment workplace/model agreement (WP-1I).
+- [x] Enforce planned-payment workplace/model agreement (WP-1I).
 - [ ] Remove or constrain generic unscoped repository escape hatches (WP-1J).
 - [ ] Validate workplace ownership for model-instance journal batch writers (WP-1K).
 
@@ -217,6 +217,11 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Scoped export fallback and large transaction chunks | `1564593`, `4f43602` |
 | 2026-08-16 | WP-4 | Persistence ownership and atomicity inventory | `ccc40651` |
 | 2026-08-16 | WP-1 | Account-merge source mutation isolation | `e87e9063` |
+| 2026-08-16 | WP-1 | Raw transaction metrics workplace isolation | `80f6d793` |
+| 2026-08-16 | WP-1 | Removed unused unscoped repository escape hatches | `3284437d` |
+| 2026-08-16 | WP-1 | Journal enrichment and suggestion isolation; raw-query ratchet at zero | `042a629`, `32462018` |
+| 2026-08-16 | WP-1 | Rebuild/integrity mutation isolation | `73d56859` |
+| 2026-08-16 | WP-1 | Planned-payment workplace/model agreement | `53874cd2` |
 
 ## Audit Evidence Index
 
