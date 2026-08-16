@@ -28,6 +28,7 @@ export class TransactionRawPatternQueries {
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
       WHERE t.transaction_date >= ?
+        AND t.workplace_id = ?
         AND j.workplace_id = ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
@@ -40,6 +41,7 @@ export class TransactionRawPatternQueries {
     const raws = await transactionRawMetricsQueries.queryRaw<RecurringPattern>(sql, [
       startDate,
       workplaceId,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
       minCount,
     ]);
@@ -48,6 +50,7 @@ export class TransactionRawPatternQueries {
     const txs = await database.collections
       .get<Transaction>('transactions')
       .query(
+        Q.where('workplace_id', workplaceId),
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
         Q.on('journals', 'deleted_at', Q.eq(null)),
