@@ -142,6 +142,7 @@ export class SmsSyncPipeline {
     const processedIds = new Set(this.getProcessedSmsIds());
     const existing = await this.inbox
       .query(
+        Q.where('workplace_id', workplaceId),
         Q.where('channel', 'sms'),
         Q.where('device_source_id', Q.oneOf(messages.map(message => message.id))),
       )

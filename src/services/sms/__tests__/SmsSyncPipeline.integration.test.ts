@@ -497,6 +497,30 @@ describe('SmsSyncPipeline integration', () => {
   });
 
   describe('workplace isolation', () => {
+    it('does not mutate another workplace row with the same device SMS id', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-iso-collision',
+        date: baseDate,
+      });
+      const workplaceARecord = await seedInboxRecord({
+        workplaceId: SMS_TEST_WORKPLACE,
+        deviceSourceId: message.id,
+        rawBody: 'Workplace A original body',
+        processingStatus: InboxProcessingStatus.DISMISSED,
+      });
+
+      await scanSmsInbox(SMS_TEST_WORKPLACE_B, [message]);
+
+      const unchangedA = await fetchInboxByDeviceId(message.id, SMS_TEST_WORKPLACE);
+      const createdB = await fetchInboxByDeviceId(message.id, SMS_TEST_WORKPLACE_B);
+      expect(unchangedA?.id).toBe(workplaceARecord.id);
+      expect(unchangedA?.rawBody).toBe('Workplace A original body');
+      expect(unchangedA?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
+      expect(createdB).not.toBeNull();
+      expect(createdB?.id).not.toBe(workplaceARecord.id);
+      expect(createdB?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+    });
+
     it('does not flag duplicates across workplaces', async () => {
       await seedSmsTestAccounts(SMS_TEST_WORKPLACE_B);
       const parsed = await parseFixtureMessage('upiRef121554846690', baseDate);
