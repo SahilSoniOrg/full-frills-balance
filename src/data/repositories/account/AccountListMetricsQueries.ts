@@ -1,13 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import { isAccountSubtype, isAccountType } from '@/src/data/models/Account';
+import Account, { isAccountSubtype, isAccountType } from '@/src/data/models/Account';
+import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import type { AccountListItemRaw } from '@/src/data/repositories/AccountRepository';
-import { periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { WorkplaceId, AccountType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
-import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
+import { Q } from '@nozbe/watermelondb';
 
 /**
  * Raw SQL account list metrics (balances + period stats) for dashboard/account screens.
@@ -20,13 +21,6 @@ export class AccountListMetricsQueries {
     includeTotalCount: boolean = false,
     includeDeleted: boolean = false,
   ): Promise<AccountListItemRaw[] | null> {
-    if (!supportsRawSql(database)) {
-      logger.warn(
-        '[AccountListMetricsQueries] getAccountListItemsRaw: Raw SQL not supported. Performance risk.',
-      );
-      return null;
-    }
-
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
     const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
     const { increaseCase, decreaseCase } = periodFlowSQL();
@@ -44,7 +38,11 @@ export class AccountListMetricsQueries {
             ) as rn
           FROM transactions t
           JOIN journals j ON t.journal_id = j.id
-          WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
+          WHERE t.deleted_at IS NULL
+            AND t.workplace_id = ?
+            AND j.deleted_at IS NULL
+            AND j.workplace_id = ?
+            AND j.status IN (${placeholders})
             AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?)
         )
         WHERE rn = 1
@@ -59,7 +57,9 @@ export class AccountListMetricsQueries {
         JOIN journals j ON t.journal_id = j.id
         JOIN accounts a ON t.account_id = a.id
         WHERE t.deleted_at IS NULL 
+          AND t.workplace_id = ?
           AND j.deleted_at IS NULL 
+          AND j.workplace_id = ?
           AND j.status IN (${placeholders})
           AND a.workplace_id = ?
           ${!includeDeleted ? 'AND a.deleted_at IS NULL' : ''}
@@ -86,8 +86,17 @@ export class AccountListMetricsQueries {
       ORDER BY a.order_num ASC
     `;
 
-    const args: RawSQLArg[] = [...statusArgs, workplaceId];
-    args.push(startOfMonth, endOfMonth, startOfMonth, endOfMonth, ...statusArgs, workplaceId);
+    const args: RawSQLArg[] = [workplaceId, workplaceId, ...statusArgs, workplaceId];
+    args.push(
+      startOfMonth,
+      endOfMonth,
+      startOfMonth,
+      endOfMonth,
+      workplaceId,
+      workplaceId,
+      ...statusArgs,
+      workplaceId,
+    );
     if (!includeTotalCount) {
       args.push(startOfMonth, endOfMonth);
     }
@@ -101,7 +110,18 @@ export class AccountListMetricsQueries {
       count: results?.length || 0,
     });
 
-    if (!results) return null;
+    if (!results) {
+      logger.warn(
+        '[AccountListMetricsQueries] getAccountListItemsRaw: Raw SQL not supported. Performance risk.',
+      );
+      return this.getAccountListItemsFallback(
+        startOfMonth,
+        endOfMonth,
+        workplaceId,
+        includeTotalCount,
+        includeDeleted,
+      );
+    }
 
     return results.map(row => {
       if (!isAccountType(row.account_type)) {
@@ -117,6 +137,97 @@ export class AccountListMetricsQueries {
         row.account_subtype = undefined;
       }
       return row as AccountListItemRaw;
+    });
+  }
+
+  private async getAccountListItemsFallback(
+    startOfMonth: number,
+    endOfMonth: number,
+    workplaceId: WorkplaceId,
+    includeTotalCount: boolean,
+    includeDeleted: boolean,
+  ): Promise<AccountListItemRaw[]> {
+    const accountClauses: Q.Clause[] = [
+      Q.where('workplace_id', workplaceId),
+      Q.sortBy('order_num', Q.asc),
+    ];
+    if (!includeDeleted) {
+      accountClauses.push(Q.where('deleted_at', Q.eq(null)));
+    }
+
+    const accounts = await database.collections
+      .get<Account>('accounts')
+      .query(...accountClauses)
+      .fetch();
+    if (accounts.length === 0) return [];
+
+    const accountIds = accounts.map(account => account.id);
+    const transactionClauses: Q.Clause[] = [
+      Q.where('workplace_id', workplaceId),
+      Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
+      Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+      Q.on('journals', 'deleted_at', Q.eq(null)),
+      Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+      Q.where('account_id', Q.oneOf(accountIds)),
+      Q.where('deleted_at', Q.eq(null)),
+    ];
+
+    const transactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(...transactionClauses)
+      .fetch();
+    const transactionsByAccount = new Map<string, Transaction[]>();
+    for (const transaction of transactions) {
+      const accountTransactions = transactionsByAccount.get(transaction.accountId) ?? [];
+      accountTransactions.push(transaction);
+      transactionsByAccount.set(transaction.accountId, accountTransactions);
+    }
+
+    return accounts.map(account => {
+      const accountTransactions = transactionsByAccount.get(account.id) ?? [];
+      const latestTransaction = account.deletedAt
+        ? undefined
+        : accountTransactions.reduce<Transaction | undefined>((latest, transaction) => {
+            if (!latest) return transaction;
+            const transactionCreatedAt = transaction.createdAt?.getTime() ?? 0;
+            const latestCreatedAt = latest.createdAt?.getTime() ?? 0;
+            if (transaction.transactionDate !== latest.transactionDate) {
+              return transaction.transactionDate > latest.transactionDate ? transaction : latest;
+            }
+            if (transactionCreatedAt !== latestCreatedAt) {
+              return transactionCreatedAt > latestCreatedAt ? transaction : latest;
+            }
+            return transaction.id > latest.id ? transaction : latest;
+          }, undefined);
+
+      let periodIncrease = 0;
+      let periodDecrease = 0;
+      for (const transaction of accountTransactions) {
+        if (
+          transaction.transactionDate < startOfMonth ||
+          transaction.transactionDate > endOfMonth
+        ) {
+          continue;
+        }
+        const balanceEffect = effect(account.accountType, transaction.transactionType);
+        if (balanceEffect.sign > 0) periodIncrease += transaction.amount;
+        if (balanceEffect.sign < 0) periodDecrease += transaction.amount;
+      }
+
+      return {
+        id: account.id,
+        name: account.name,
+        account_type: account.accountType,
+        account_subtype: account.accountSubtype,
+        currency_code: account.currencyCode,
+        icon: account.icon,
+        color: account.color,
+        parent_account_id: account.parentAccountId,
+        direct_balance: latestTransaction?.runningBalance ?? 0,
+        direct_transaction_count: includeTotalCount ? accountTransactions.length : 0,
+        periodIncrease,
+        periodDecrease,
+      } as AccountListItemRaw;
     });
   }
 }
