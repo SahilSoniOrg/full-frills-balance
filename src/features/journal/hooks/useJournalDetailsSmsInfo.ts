@@ -21,7 +21,7 @@ export function useJournalDetailsSmsInfo(
         switchMap(metadata => {
           if (!metadata) return of(undefined);
 
-          return from(smsService.findByLinkedJournalId(journalId)).pipe(
+          return from(smsService.findByLinkedJournalId(workplaceId, journalId)).pipe(
             map(inboxRecord =>
               mapSmsJournalMetadataDisplay({
                 originalSmsSender: metadata.originalSmsSender,

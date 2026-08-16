@@ -155,6 +155,7 @@ export class SmsRuleEngine {
   }
 
   async previewRuleMatches(
+    workplaceId: WorkplaceId,
     inputOrSender: SmsRulePreviewInput | string,
     bodyMatch?: string,
   ): Promise<TransactionInboxRecord[]> {
@@ -164,7 +165,12 @@ export class SmsRuleEngine {
         : inputOrSender;
 
     const items = await this.inbox
-      .query(Q.where('channel', 'sms'), Q.sortBy('input_date', Q.desc), Q.take(50))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.sortBy('input_date', Q.desc),
+        Q.take(50),
+      )
       .fetch();
     return items.filter(item => this.matchesPreviewRule(item, previewInput)).slice(0, 5);
   }
@@ -203,6 +209,7 @@ export class SmsRuleEngine {
     const existingRules = await transactionAutoPostRuleRepository.findAllByWorkplace(workplaceId);
     const records = await this.inbox
       .query(
+        Q.where('workplace_id', workplaceId),
         Q.where('channel', 'sms'),
         Q.where('linked_journal_id', Q.notEq(null)),
         Q.where(

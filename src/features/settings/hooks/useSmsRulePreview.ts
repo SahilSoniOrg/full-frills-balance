@@ -5,9 +5,11 @@ import {
   smsRulePreviewHasConditions,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsService } from '@/src/services/sms-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { useEffect, useMemo, useState } from 'react';
 
 export function useSmsRulePreview(
+  workplaceId: WorkplaceId,
   mode: SmsRuleMode,
   structuredConditions: SmsRuleCondition[],
   legacySenderMatch: string,
@@ -32,7 +34,7 @@ export function useSmsRulePreview(
     }
 
     smsService
-      .previewRuleMatches(input)
+      .previewRuleMatches(workplaceId, input)
       .then(matches => {
         if (active) setPreviewMatches(matches);
       })
@@ -43,7 +45,7 @@ export function useSmsRulePreview(
     return () => {
       active = false;
     };
-  }, [hasConditions, legacyBodyMatch, legacySenderMatch, mode, structuredConditions]);
+  }, [hasConditions, legacyBodyMatch, legacySenderMatch, mode, structuredConditions, workplaceId]);
 
   return useMemo(() => (hasConditions ? previewMatches : []), [hasConditions, previewMatches]);
 }

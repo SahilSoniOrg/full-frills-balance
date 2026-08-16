@@ -165,6 +165,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   );
 
   const previewMatches = useSmsRulePreview(
+    workplaceId,
     mode,
     structuredConditions,
     legacySenderMatch,

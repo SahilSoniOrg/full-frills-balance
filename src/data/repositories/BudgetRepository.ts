@@ -180,9 +180,11 @@ export class BudgetRepository {
       if (!existingBudget) {
         throw new Error('Budget not found');
       }
-      const scopes = await this.budgetScopes.query(Q.where('budget_id', budget.id)).fetch();
+      const scopes = await this.budgetScopes
+        .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budget.id))
+        .fetch();
       const removeScopes = scopes.map(s => s.prepareDestroyPermanently());
-      const removeBudget = budget.prepareDestroyPermanently();
+      const removeBudget = existingBudget.prepareDestroyPermanently();
       await this.db.batch([...removeScopes, removeBudget]);
     });
   }

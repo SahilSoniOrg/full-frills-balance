@@ -1,6 +1,11 @@
-import { InboxParseStatus } from '@/src/data/models/TransactionInboxRecord';
+import TransactionInboxRecord, {
+  InboxParseStatus,
+  InboxProcessingStatus,
+  TransactionDirection,
+} from '@/src/data/models/TransactionInboxRecord';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
@@ -179,6 +184,67 @@ describe('smsService.getMatchingRule', () => {
     expect(rule?.sourceAccountId).toBe('hdfc-acc-id');
 
     databaseSpy.mockRestore();
+  });
+});
+
+describe('smsService workplace isolation', () => {
+  beforeEach(async () => {
+    await database.write(async () => {
+      await database.unsafeResetDatabase();
+    });
+  });
+
+  it('limits preview, record-id, and linked-journal reads to the requested workplace', async () => {
+    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
+    const createRecord = async (workplaceId: WorkplaceId, linkedJournalId: JournalId) =>
+      database.write(async () =>
+        inbox.create(record => {
+          record.workplaceId = workplaceId;
+          record.channel = 'sms';
+          record.deviceSourceId = `${workplaceId}-sms`;
+          record.senderAddress = 'BANK';
+          record.rawBody = 'Coffee purchase';
+          record.inputDate = Date.now();
+          record.inputFingerprint = `${workplaceId}-fingerprint`;
+          record.parseStatus = InboxParseStatus.PARSED;
+          record.direction = TransactionDirection.DEBIT;
+          record.processingStatus = InboxProcessingStatus.IMPORTED;
+          record.linkedJournalId = linkedJournalId;
+          record.firstSeenAt = Date.now();
+          record.lastScannedAt = Date.now();
+        }),
+      );
+
+    const workplaceId = 'wp-1' as WorkplaceId;
+    const otherWorkplaceId = 'wp-2' as WorkplaceId;
+    const sharedJournalId = 'shared-journal' as JournalId;
+    const foreignRecord = await createRecord(otherWorkplaceId, sharedJournalId);
+    const currentRecord = await createRecord(workplaceId, sharedJournalId);
+
+    const preview = await smsService.previewRuleMatches(workplaceId, {
+      mode: 'regex',
+      senderMatch: 'BANK',
+    });
+    expect(preview.map(record => record.id)).toEqual([currentRecord.id]);
+    expect(await smsService.getInboxRecord(workplaceId, foreignRecord.id)).toBeNull();
+    expect((await smsService.findByLinkedJournalId(workplaceId, sharedJournalId))?.id).toBe(
+      currentRecord.id,
+    );
+
+    await smsService.markInboxRecordStatus(
+      workplaceId,
+      foreignRecord.id,
+      InboxProcessingStatus.DISMISSED,
+    );
+    await smsService.linkSmsToJournal(
+      workplaceId,
+      foreignRecord.id,
+      'wrong-workplace-journal' as JournalId,
+      InboxProcessingStatus.AUTO_POSTED,
+    );
+
+    expect(foreignRecord.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+    expect(foreignRecord.linkedJournalId).toBe(sharedJournalId);
   });
 });
 

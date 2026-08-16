@@ -1,8 +1,10 @@
 import { database } from '@/src/data/database/Database';
+import BudgetScope from '@/src/data/models/BudgetScope';
 import { AccountType, AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { Q } from '@nozbe/watermelondb';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
@@ -96,6 +98,37 @@ describe('BudgetRepository', () => {
 
       const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(0);
+    });
+
+    it("does not delete another workplace's scope for the same budget id", async () => {
+      const budget = await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Food',
+          amount: 500,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+        },
+        [accountId1 as AccountId],
+      );
+      const budgetScopes = database.collections.get<BudgetScope>('budget_scopes');
+
+      await database.write(async () => {
+        await budgetScopes.create(scope => {
+          scope.workplaceId = 'wp-2' as WorkplaceId;
+          scope.budget.set(budget);
+          scope.accountId = 'foreign-account' as AccountId;
+          scope.createdAt = new Date();
+          scope.updatedAt = new Date();
+        });
+      });
+
+      await budgetRepository.delete('wp-1' as WorkplaceId, budget);
+
+      const foreignScopes = await budgetScopes
+        .query(Q.where('workplace_id', 'wp-2'), Q.where('budget_id', budget.id))
+        .fetch();
+      expect(foreignScopes).toHaveLength(1);
     });
 
     it('should allow removing all source accounts', async () => {

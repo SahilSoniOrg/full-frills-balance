@@ -81,11 +81,12 @@ export function useJournalEntryShell(): JournalEntryShell {
       createSmsJournalAfterSaveHandler({
         smsId: route.smsId,
         smsRecordId: route.smsRecordId,
-        finalizeManualImport: smsService.finalizeManualImport.bind(smsService),
+        finalizeManualImport: (smsRecordId, journalId) =>
+          smsService.finalizeManualImport(workplaceId, smsRecordId, journalId),
         markSmsAsProcessed: (smsId: string) =>
           Promise.resolve(smsService.markSmsAsProcessed(smsId)),
       }),
-    [route.smsId, route.smsRecordId],
+    [route.smsId, route.smsRecordId, workplaceId],
   );
 
   const onSuccess = useCallback(() => AppNavigation.back(), []);

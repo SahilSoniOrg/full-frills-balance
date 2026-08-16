@@ -113,25 +113,32 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     }
   }, [isScanningOlder, loadMore, scanCursor, workplaceId]);
 
-  const handleDismiss = useCallback(async (item: TransactionInboxItem) => {
-    analytics.trackFeatureUsage('sms', 'inbox_dismiss', {
-      channel: item.channel,
-      direction: item.direction,
-    });
-    await smsService.markInboxRecordStatus(item.id, InboxProcessingStatus.DISMISSED);
-    if (item.channel === 'sms') {
-      await smsService.markSmsAsProcessed(item.deviceSourceId);
-    }
-  }, []);
+  const handleDismiss = useCallback(
+    async (item: TransactionInboxItem) => {
+      analytics.trackFeatureUsage('sms', 'inbox_dismiss', {
+        channel: item.channel,
+        direction: item.direction,
+      });
+      await smsService.markInboxRecordStatus(workplaceId, item.id, InboxProcessingStatus.DISMISSED);
+      if (item.channel === 'sms') {
+        await smsService.markSmsAsProcessed(item.deviceSourceId);
+      }
+    },
+    [workplaceId],
+  );
 
-  const handleUndismiss = useCallback(async (item: TransactionInboxItem) => {
-    await smsService.markInboxRecordStatus(
-      item.id,
-      item.duplicateCandidate
-        ? InboxProcessingStatus.DUPLICATE_FLAGGED
-        : InboxProcessingStatus.PENDING,
-    );
-  }, []);
+  const handleUndismiss = useCallback(
+    async (item: TransactionInboxItem) => {
+      await smsService.markInboxRecordStatus(
+        workplaceId,
+        item.id,
+        item.duplicateCandidate
+          ? InboxProcessingStatus.DUPLICATE_FLAGGED
+          : InboxProcessingStatus.PENDING,
+      );
+    },
+    [workplaceId],
+  );
 
   const handleCompareDuplicate = useCallback(
     (item: TransactionInboxItem) => {

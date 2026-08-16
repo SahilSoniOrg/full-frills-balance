@@ -115,23 +115,38 @@ class SmsService {
       .observeCount();
   }
 
-  async getInboxRecord(id: string): Promise<TransactionInboxRecord | null> {
+  async getInboxRecord(
+    workplaceId: WorkplaceId,
+    id: string,
+  ): Promise<TransactionInboxRecord | null> {
     try {
-      return await this.inbox.find(id);
+      const record = await this.inbox.find(id);
+      return record.workplaceId === workplaceId ? record : null;
     } catch {
       return null;
     }
   }
 
-  async findByLinkedJournalId(journalId: string): Promise<TransactionInboxRecord | null> {
+  async findByLinkedJournalId(
+    workplaceId: WorkplaceId,
+    journalId: string,
+  ): Promise<TransactionInboxRecord | null> {
     const records = await this.inbox
-      .query(Q.where('linked_journal_id', journalId), Q.take(1))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('linked_journal_id', journalId),
+        Q.take(1),
+      )
       .fetch();
     return records[0] || null;
   }
 
-  async markInboxRecordStatus(id: string, status: InboxProcessingStatus): Promise<void> {
-    const record = await this.getInboxRecord(id);
+  async markInboxRecordStatus(
+    workplaceId: WorkplaceId,
+    id: string,
+    status: InboxProcessingStatus,
+  ): Promise<void> {
+    const record = await this.getInboxRecord(workplaceId, id);
     if (!record) return;
 
     await database.write(async () => {
@@ -143,11 +158,12 @@ class SmsService {
   }
 
   async linkSmsToJournal(
+    workplaceId: WorkplaceId,
     recordId: string,
     journalId: JournalId,
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Promise<void> {
-    const record = await this.getInboxRecord(recordId);
+    const record = await this.getInboxRecord(workplaceId, recordId);
     if (!record) return;
 
     await database.write(async () => {
@@ -159,8 +175,12 @@ class SmsService {
     });
   }
 
-  async finalizeManualImport(recordId: string, journalId: JournalId): Promise<void> {
-    await this.linkSmsToJournal(recordId, journalId, InboxProcessingStatus.IMPORTED);
+  async finalizeManualImport(
+    workplaceId: WorkplaceId,
+    recordId: string,
+    journalId: JournalId,
+  ): Promise<void> {
+    await this.linkSmsToJournal(workplaceId, recordId, journalId, InboxProcessingStatus.IMPORTED);
   }
 
   clearProcessedMessages(): void {
@@ -172,10 +192,11 @@ class SmsService {
   }
 
   async previewRuleMatches(
+    workplaceId: WorkplaceId,
     inputOrSender: SmsRulePreviewInput | string,
     bodyMatch?: string,
   ): Promise<TransactionInboxRecord[]> {
-    return smsRuleEngine.previewRuleMatches(inputOrSender, bodyMatch);
+    return smsRuleEngine.previewRuleMatches(workplaceId, inputOrSender, bodyMatch);
   }
 
   async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
