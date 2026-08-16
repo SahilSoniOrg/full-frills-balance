@@ -390,6 +390,9 @@ export class AccountRepository {
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {
+    if (!data.workplaceId) {
+      throw new ValidationError('workplaceId is required to create an account');
+    }
     await this.ensureUniqueName(data.name, data.workplaceId, undefined);
     const payload: AccountPersistenceInput = {
       ...data,
@@ -433,6 +436,12 @@ export class AccountRepository {
     normalizedUpdates: Partial<AccountPersistenceInput>;
     existingMetadata: AccountMetadata | null;
   }> {
+    if (account.workplaceId !== workplaceId) {
+      throw new Error('Account does not belong to the specified workplace');
+    }
+    if (updates.workplaceId && updates.workplaceId !== workplaceId) {
+      throw new Error('Workplace mismatch in update payload');
+    }
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, workplaceId, account.id);
     }

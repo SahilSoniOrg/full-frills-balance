@@ -100,7 +100,7 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Scope account-resolution transaction and account follow-up reads (WP-1N).
 - [x] Scope every owned side of common transaction/journal ORM joins (WP-1O).
 - [x] Add scoped balance-snapshot join and equivalent ORM fallback (WP-1P).
-- [ ] Harden remaining account, transaction, and SMS model-writer contracts (WP-1Q).
+- [x] Harden remaining account, transaction, and SMS model-writer contracts (WP-1Q).
 - [x] Make the integrity null-account scan require a workplace (WP-1R).
 - [ ] Repeat the 12-table exit audit with no open findings.
 

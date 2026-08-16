@@ -77,9 +77,10 @@ export class TransactionRepository {
       );
     }
 
-    if (!transactionData.workplaceId) {
-      transactionData.workplaceId = workplaceId;
+    if (transactionData.workplaceId && transactionData.workplaceId !== workplaceId) {
+      throw new Error('Transaction workplaceId mismatch');
     }
+    transactionData.workplaceId = workplaceId;
 
     if (!transactionData.transactionType) {
       throw new Error('transactionType is required for transaction creation');
