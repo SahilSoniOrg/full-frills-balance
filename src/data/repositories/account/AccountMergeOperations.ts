@@ -39,7 +39,7 @@ export class AccountMergeOperations {
       .fetch();
 
     const sourceAccounts = await this.accounts
-      .query(Q.where('id', Q.oneOf(sourceAccountIds)))
+      .query(Q.where('id', Q.oneOf(sourceAccountIds)), Q.where('workplace_id', workplaceId))
       .fetch();
 
     const accountMutations = new Map<
