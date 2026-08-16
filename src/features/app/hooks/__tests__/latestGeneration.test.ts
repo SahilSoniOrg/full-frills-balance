@@ -9,6 +9,30 @@ function deferred() {
 }
 
 describe('LatestGenerationCoordinator', () => {
+  it('aborts the previous lease immediately when a new generation begins', () => {
+    const coordinator = new LatestGenerationCoordinator();
+    const generationA = coordinator.begin();
+
+    expect(generationA.signal.aborted).toBe(false);
+    expect(generationA.isCurrent()).toBe(true);
+
+    const generationB = coordinator.begin();
+
+    expect(generationA.signal.aborted).toBe(true);
+    expect(generationA.isCurrent()).toBe(false);
+    expect(generationB.signal.aborted).toBe(false);
+    expect(generationB.isCurrent()).toBe(true);
+  });
+
+  it('aborts its signal when explicitly cancelled', () => {
+    const lease = new LatestGenerationCoordinator().begin();
+
+    lease.cancel();
+
+    expect(lease.signal.aborted).toBe(true);
+    expect(lease.isCurrent()).toBe(false);
+  });
+
   it('serializes a newer write behind an older in-flight write', async () => {
     const coordinator = new LatestGenerationCoordinator();
     const firstWrite = deferred();
@@ -41,6 +65,26 @@ describe('LatestGenerationCoordinator', () => {
     coordinator.begin();
 
     await expect(generationA.runSerialized(staleWrite)).resolves.toBe(false);
+    expect(staleWrite).not.toHaveBeenCalled();
+  });
+
+  it('drops serialized work that becomes stale before its critical section', async () => {
+    const coordinator = new LatestGenerationCoordinator();
+    const firstWrite = deferred();
+    const generationA = coordinator.begin();
+    const resultA = generationA.runSerialized(() => firstWrite.promise);
+    await Promise.resolve();
+
+    const generationB = coordinator.begin();
+    const staleWrite = jest.fn();
+    const resultB = generationB.runSerialized(staleWrite);
+    expect(generationB.isCurrent()).toBe(true);
+
+    coordinator.begin();
+    firstWrite.resolve();
+
+    await expect(resultA).resolves.toBe(true);
+    await expect(resultB).resolves.toBe(false);
     expect(staleWrite).not.toHaveBeenCalled();
   });
 });
