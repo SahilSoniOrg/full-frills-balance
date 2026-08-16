@@ -2,6 +2,7 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { RebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { storage } from '@/src/utils/storage';
 
 jest.mock('@/src/services/AccountingRebuildService', () => ({
   accountingRebuildService: {
@@ -29,6 +30,7 @@ jest.mock('@/src/utils/logger', () => ({
 const accountId = 'account-1' as AccountId;
 const workplaceId = 'workplace-1' as WorkplaceId;
 const rebuildAccountBalances = accountingRebuildService.rebuildAccountBalances as jest.Mock;
+const storageSet = storage.set as jest.Mock;
 
 function createQueue(config: { retryLimit?: number } = {}): RebuildQueueService {
   return new RebuildQueueService({
@@ -162,5 +164,23 @@ describe('RebuildQueueService lifecycle', () => {
     );
     expect(queue.hasPending).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('requeues a batch after an unexpected processing error', async () => {
+    rebuildAccountBalances.mockResolvedValue(null);
+    let shouldFailProcessingWrite = true;
+    storageSet.mockImplementation((key: string) => {
+      if (key === 'rebuild_processing_batch_v1' && shouldFailProcessingWrite) {
+        shouldFailProcessingWrite = false;
+        throw new Error('processing storage unavailable');
+      }
+    });
+    queue.enqueue(accountId, 777, workplaceId);
+
+    await queue.flush();
+
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+    expect(rebuildAccountBalances).toHaveBeenCalledWith(workplaceId, accountId, 777);
+    expect(queue.hasPending).toBe(false);
   });
 });

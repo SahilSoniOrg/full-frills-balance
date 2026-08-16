@@ -109,7 +109,14 @@ class RebuildQueueService {
       return;
     }
     try {
-      const entries = Array.from(this.queue.entries());
+      const persistedQueue = new Map(this.queue);
+      for (const retry of this.pendingRetries.values()) {
+        const existingDate = persistedQueue.get(retry.item.id);
+        if (existingDate === undefined || retry.item.fromDate < existingDate) {
+          persistedQueue.set(retry.item.id, retry.item.fromDate);
+        }
+      }
+      const entries = Array.from(persistedQueue.entries());
       storage.set(RebuildQueueService.STORAGE_KEY, JSON.stringify(entries));
     } catch (error) {
       logger.error('[RebuildQueue] Failed to sync queue to disk', error);
@@ -288,6 +295,7 @@ class RebuildQueueService {
     }, delay);
 
     this.pendingRetries.set(item.id, { item, timeoutId, generation });
+    this.syncQueueToDisk();
   }
 
   private promotePendingRetries(generation: number): void {
@@ -312,12 +320,13 @@ class RebuildQueueService {
     }
 
     const generation = this.lifecycleGeneration;
-    this.currentProcessingPromise = (async () => {
+    const processingPromise = (async () => {
       const start = Date.now();
+      let batch: RebuildQueueItem[] = [];
       this.isProcessing = true;
       try {
         // Take up to maxBatchSize items from the queue
-        const batch: RebuildQueueItem[] = [];
+        batch = [];
         const entries = Array.from(this.queue.entries());
         for (const [accountId, fromDate] of entries) {
           batch.push({ id: accountId, fromDate });
@@ -371,6 +380,7 @@ class RebuildQueueService {
             if (retryCount <= this.config.retryLimit) {
               this.scheduleRetry(item, retryCount, generation);
             } else {
+              this.retryCounts.delete(item.id);
               logger.error(
                 `[RebuildQueue] Giving up on account ${item.id} after ${retryCount} attempts`,
               );
@@ -400,9 +410,15 @@ class RebuildQueueService {
         }
       } catch (error) {
         logger.error('[RebuildQueue] Error processing queue:', error);
+        if (generation === this.lifecycleGeneration && batch.length > 0) {
+          for (const item of batch) {
+            this.addToQueue(item);
+          }
+          this.syncQueueToDisk();
+          storage.remove(RebuildQueueService.PROCESSING_KEY);
+        }
       } finally {
         this.isProcessing = false;
-        this.currentProcessingPromise = null;
         if (this.queue.size > 0 && !this.timeoutId) {
           this.scheduleProcessing();
         }
@@ -412,7 +428,14 @@ class RebuildQueueService {
       }
     })();
 
-    return this.currentProcessingPromise;
+    this.currentProcessingPromise = processingPromise;
+    try {
+      await processingPromise;
+    } finally {
+      if (this.currentProcessingPromise === processingPromise) {
+        this.currentProcessingPromise = null;
+      }
+    }
   }
 }
 
