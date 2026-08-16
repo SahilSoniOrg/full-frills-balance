@@ -3,6 +3,7 @@ import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { exportService } from '@/src/services/export-service';
+import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -242,6 +243,98 @@ describe('ExportService', () => {
       expect(parsed.currencies).toBeUndefined();
       expect(parsed.exchange_rates).toBeUndefined();
       expect(parsed.balance_snapshots).toEqual(expect.any(Array));
+    });
+
+    it('scopes every workplace-owned table when raw SQL falls back to the ORM', async () => {
+      const workplaceId = 'wp-a' as WorkplaceId;
+      const FIXED_DATE = new Date('2024-01-01T12:00:00Z');
+      const exportKeyByTable: Record<string, string> = {
+        accounts: 'accounts',
+        journals: 'journals',
+        transactions: 'transactions',
+        audit_logs: 'auditLogs',
+        budgets: 'budgets',
+        budget_scopes: 'budgetScopes',
+        account_metadata: 'accountMetadata',
+        planned_payments: 'plannedPayments',
+        journal_metadata: 'journalMetadata',
+        transaction_auto_post_rules: 'transactionAutoPostRules',
+        transaction_inbox_records: 'transactionInboxRecords',
+        balance_snapshots: 'balance_snapshots',
+      };
+      const collectionByTable = new Map<string, ReturnType<typeof createCollectionMock>>();
+
+      for (const { table } of WORKPLACE_DATA_TABLES) {
+        const rows = ['wp-a', 'wp-b'].map(rowWorkplaceId => ({
+          _raw: {
+            id: `${table}-${rowWorkplaceId}`,
+            workplace_id: rowWorkplaceId,
+            journal_id: `journals-${rowWorkplaceId}`,
+            transaction_id: `transactions-${rowWorkplaceId}`,
+          },
+        }));
+        const collection = {
+          query: jest.fn((...clauses: unknown[]) => {
+            const workplaceClause = clauses.find(
+              clause =>
+                (clause as { type?: unknown }).type === 'where' &&
+                (clause as { left?: unknown }).left === 'workplace_id',
+            );
+            const requestedWorkplaceId = (
+              workplaceClause as { comparison?: { right?: { value?: string } } } | undefined
+            )?.comparison?.right?.value;
+            return {
+              fetch: jest
+                .fn()
+                .mockResolvedValue(
+                  rows.filter(row => row._raw.workplace_id === requestedWorkplaceId),
+                ),
+              fetchCount: jest.fn().mockResolvedValue(rows.length),
+            };
+          }),
+          find: jest.fn(),
+        };
+        collectionByTable.set(table, collection);
+      }
+
+      mockGet.mockImplementation((tableName: string) => {
+        if (tableName === 'workplaces') {
+          return createCollectionMock([
+            {
+              id: workplaceId,
+              name: 'Workplace A',
+              createdAt: FIXED_DATE,
+              updatedAt: FIXED_DATE,
+              defaultCurrencyCode: 'USD',
+            },
+          ]);
+        }
+        return collectionByTable.get(tableName);
+      });
+      (supportsRawSql as jest.Mock).mockReturnValue(false);
+      (preferences.loadPreferences as jest.Mock).mockResolvedValue({});
+
+      await exportService.exportToJSON(workplaceId);
+
+      const backupJson = (compression.createZipArchive as jest.Mock).mock.calls[0][1][
+        'backup.json'
+      ] as string;
+      const parsed = JSON.parse(backupJson);
+
+      for (const { table } of WORKPLACE_DATA_TABLES) {
+        expect(collectionByTable.get(table)?.query).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'where',
+            left: 'workplace_id',
+          }),
+        );
+        expect(parsed[exportKeyByTable[table]]).toEqual([
+          expect.objectContaining({
+            id: `${table}-wp-a`,
+            workplaceId: 'wp-a',
+          }),
+        ]);
+      }
     });
 
     it('excludes soft-deleted journals and transaction legs from raw SQL export', async () => {

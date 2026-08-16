@@ -12,7 +12,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { Model, TableSchema } from '@nozbe/watermelondb';
+import { Model, Q, TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
@@ -157,7 +157,10 @@ class ExportService {
       );
       const collection = this.getCollection(tableName);
       if (!collection?.query) return [];
-      const rows = await collection.query().fetch();
+      const clauses = columnNames.includes('workplace_id')
+        ? [Q.where('workplace_id', workplaceId)]
+        : [];
+      const rows = await collection.query(...clauses).fetch();
       raws = rows.map((row: Model) => {
         const source = (row._raw as unknown as Record<string, unknown>) ?? row;
         const mapped: Record<string, unknown> = {};
