@@ -3,6 +3,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import Transaction from '@/src/data/models/Transaction';
 import { getRawAdapter } from '../database/DatabaseUtils';
 
 /**
@@ -73,10 +74,7 @@ export class BalanceSnapshotRepository {
 
     const sqlAdapter = getRawAdapter(database);
     if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') {
-      logger.warn(
-        '[BalanceSnapshotRepository] findLatestForAccountsRaw: Raw SQL not supported. Performance risk.',
-      );
-      return result;
+      return this.findLatestForAccountsOrm(workplaceId, accountIds, date);
     }
 
     const sql = `
@@ -96,7 +94,7 @@ export class BalanceSnapshotRepository {
             ORDER BY bs.transaction_date DESC, bs.created_at DESC, bs.id DESC
           ) as rn
         FROM balance_snapshots bs
-        LEFT JOIN transactions t ON bs.transaction_id = t.id
+        LEFT JOIN transactions t ON bs.transaction_id = t.id AND t.workplace_id = ?
         WHERE bs.workplace_id = ?
           AND bs.account_id IN (${accountIds.map(() => '?').join(',')})
           AND bs.transaction_date <= ?
@@ -109,13 +107,72 @@ export class BalanceSnapshotRepository {
     `;
 
     try {
-      const rows = await sqlAdapter.queryRaw(sql, [workplaceId, ...accountIds, date]);
+      const rows = await sqlAdapter.queryRaw(sql, [workplaceId, workplaceId, ...accountIds, date]);
       const data = Array.isArray(rows) ? rows : rows?.rows || [];
       for (const row of data) {
         result.set(row.accountId, row as SnapshotData);
       }
+      return result;
     } catch (error) {
-      logger.error('[BalanceSnapshotRepository] findLatestForAccountsRaw failed', error);
+      logger.error(
+        '[BalanceSnapshotRepository] findLatestForAccountsRaw failed, falling back to ORM',
+        error,
+      );
+      return this.findLatestForAccountsOrm(workplaceId, accountIds, date);
+    }
+  }
+
+  private async findLatestForAccountsOrm(
+    workplaceId: WorkplaceId,
+    accountIds: string[],
+    date: number = Date.now(),
+  ): Promise<Map<string, SnapshotData>> {
+    const result = new Map<string, SnapshotData>();
+    if (accountIds.length === 0) return result;
+
+    const snapshots = await this.snapshots
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', Q.oneOf(accountIds)),
+        Q.where('transaction_date', Q.lte(date)),
+        Q.sortBy('transaction_date', Q.desc),
+        Q.sortBy('created_at', Q.desc),
+      )
+      .fetch();
+
+    const transactionsTable = database.collections.get<Transaction>('transactions');
+    const seenAccounts = new Set<string>();
+
+    for (const snap of snapshots) {
+      if (seenAccounts.has(snap.accountId)) continue;
+      seenAccounts.add(snap.accountId);
+
+      let txCreatedAt: number | undefined;
+      if (snap.transactionId) {
+        try {
+          const tx = await transactionsTable.find(snap.transactionId);
+          if (tx && tx.workplaceId === workplaceId && !tx.deletedAt) {
+            txCreatedAt =
+              tx.createdAt instanceof Date ? tx.createdAt.getTime() : (tx.createdAt as any);
+          }
+        } catch {
+          // Transaction not found or deleted
+        }
+      }
+
+      result.set(snap.accountId, {
+        id: snap.id,
+        accountId: snap.accountId,
+        transactionId: snap.transactionId,
+        transactionDate: snap.transactionDate,
+        absoluteBalance: snap.absoluteBalance,
+        transactionCount: snap.transactionCount,
+        createdAt:
+          snap.createdAt instanceof Date ? snap.createdAt.getTime() : (snap.createdAt as any),
+        updatedAt:
+          snap.updatedAt instanceof Date ? snap.updatedAt.getTime() : (snap.updatedAt as any),
+        transactionCreatedAt: txCreatedAt,
+      });
     }
 
     return result;
