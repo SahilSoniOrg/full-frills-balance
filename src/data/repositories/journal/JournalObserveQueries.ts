@@ -51,6 +51,7 @@ export class JournalObserveQueries {
       Q.where('workplace_id', workplaceId),
       Q.where('deleted_at', Q.eq(null)),
       Q.on('journals', [
+        Q.where('workplace_id', workplaceId),
         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.where('deleted_at', Q.eq(null)),
       ]),

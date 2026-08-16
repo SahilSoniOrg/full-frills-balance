@@ -16,7 +16,7 @@ export class TransactionRepository {
   async findEarliest(workplaceId: WorkplaceId): Promise<Transaction | null> {
     const transactions = await this.transactions
       .query(
-        ...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]),
+        ...this.buildActiveClauses(workplaceId),
         Q.sortBy('transaction_date', Q.asc),
         Q.take(1),
       )
@@ -28,11 +28,13 @@ export class TransactionRepository {
    * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.
    * Prevents logic divergence across the repository.
    */
-  private buildActiveClauses(extraClauses: Q.Clause[] = []): Q.Clause[] {
+  private buildActiveClauses(workplaceId: WorkplaceId, extraClauses: Q.Clause[] = []): Q.Clause[] {
     return [
       Q.experimentalJoinTables(['journals']),
+      Q.where('workplace_id', workplaceId),
       Q.where('deleted_at', Q.eq(null)),
       Q.on('journals', [
+        Q.where('workplace_id', workplaceId),
         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.where('deleted_at', Q.eq(null)),
       ]),
@@ -141,10 +143,7 @@ export class TransactionRepository {
     sortOrder: 'asc' | 'desc' = 'desc',
   ): Promise<Transaction[]> {
     const qSort = sortOrder === 'asc' ? Q.asc : Q.desc;
-    const clauses = this.buildActiveClauses([
-      Q.where('account_id', accountId),
-      Q.where('workplace_id', workplaceId),
-    ]);
+    const clauses = this.buildActiveClauses(workplaceId, [Q.where('account_id', accountId)]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
@@ -174,9 +173,8 @@ export class TransactionRepository {
     limit: number = AppConfig.pagination.defaultPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): import('rxjs').Observable<Transaction[]> {
-    const clauses = this.buildActiveClauses([
+    const clauses = this.buildActiveClauses(workplaceId, [
       Q.where('account_id', Q.oneOf(accountIds)),
-      Q.where('workplace_id', workplaceId),
     ]);
 
     if (dateRange) {
@@ -324,9 +322,8 @@ export class TransactionRepository {
     limit: number = AppConfig.pagination.defaultPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): Promise<Transaction[]> {
-    const clauses = this.buildActiveClauses([
+    const clauses = this.buildActiveClauses(workplaceId, [
       Q.where('account_id', Q.oneOf(accountIds)),
-      Q.where('workplace_id', workplaceId),
     ]);
 
     if (dateRange) {
@@ -360,13 +357,13 @@ export class TransactionRepository {
    */
   observeActiveCount(workplaceId: WorkplaceId, shouldThrottle: boolean = true) {
     return this.transactions
-      .query(...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]))
+      .query(...this.buildActiveClauses(workplaceId))
       .observeCount(shouldThrottle);
   }
 
   observeActiveWithColumns(workplaceId: WorkplaceId, columns: string[]) {
     return this.transactions
-      .query(...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]))
+      .query(...this.buildActiveClauses(workplaceId))
       .observeWithColumns(columns);
   }
 
@@ -376,16 +373,13 @@ export class TransactionRepository {
    * avoids deserializing the entire transaction history across the bridge.
    */
   observeByDateRange(workplaceId: WorkplaceId, startDate: number, endDate?: number) {
-    const extra: Q.Clause[] = [
-      Q.where('transaction_date', Q.gte(startDate)),
-      Q.where('workplace_id', workplaceId),
-    ];
+    const extra: Q.Clause[] = [Q.where('transaction_date', Q.gte(startDate))];
     if (endDate !== undefined) {
       extra.push(Q.where('transaction_date', Q.lte(endDate)));
     }
 
     return this.transactions
-      .query(...this.buildActiveClauses(extra))
+      .query(...this.buildActiveClauses(workplaceId, extra))
       .observeWithColumns([
         'amount',
         'account_id',
@@ -406,8 +400,7 @@ export class TransactionRepository {
   ) {
     return this.transactions
       .query(
-        ...this.buildActiveClauses([
-          Q.where('workplace_id', workplaceId),
+        ...this.buildActiveClauses(workplaceId, [
           Q.where('account_id', accountId),
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
@@ -513,10 +506,9 @@ export class TransactionRepository {
   ): Promise<Transaction | null> {
     const transactions = await this.deterministicSort(
       this.transactions.query(
-        ...this.buildActiveClauses([
+        ...this.buildActiveClauses(workplaceId, [
           Q.where('account_id', accountId),
           Q.where('transaction_date', inclusive ? Q.lte(date) : Q.lt(date)),
-          Q.where('workplace_id', workplaceId),
         ]),
         Q.take(1),
       ),
@@ -535,11 +527,10 @@ export class TransactionRepository {
     endDate: number,
   ): Promise<Transaction[]> {
     const start = Date.now();
-    const clauses = this.buildActiveClauses([
+    const clauses = this.buildActiveClauses(workplaceId, [
       Q.where('account_id', Q.oneOf(accountIds)),
       Q.where('transaction_date', Q.gte(startDate)),
       Q.where('transaction_date', Q.lte(endDate)),
-      Q.where('workplace_id', workplaceId),
     ]);
 
     // Batching logic: For large account sets, we chunk the query to prevent SQLite performance collapse.
@@ -561,11 +552,10 @@ export class TransactionRepository {
         const batch = allChunks.slice(i, i + CONCURRENCY_LIMIT);
         const batchResults = await Promise.all(
           batch.map(chunk => {
-            const chunkClauses = this.buildActiveClauses([
+            const chunkClauses = this.buildActiveClauses(workplaceId, [
               Q.where('account_id', Q.oneOf(chunk)),
               Q.where('transaction_date', Q.gte(startDate)),
               Q.where('transaction_date', Q.lte(endDate)),
-              Q.where('workplace_id', workplaceId),
             ]);
             return this.deterministicSort(this.transactions.query(...chunkClauses), Q.desc).fetch();
           }),
@@ -617,8 +607,7 @@ export class TransactionRepository {
   ): Promise<number> {
     return this.transactions
       .query(
-        ...this.buildActiveClauses([
-          Q.where('workplace_id', workplaceId),
+        ...this.buildActiveClauses(workplaceId, [
           Q.where('account_id', accountId),
           Q.where('transaction_date', Q.gte(startDate)), // Fix boundary to be inclusive
           Q.where('transaction_date', Q.lte(endDate)),
@@ -639,8 +628,7 @@ export class TransactionRepository {
   ) {
     return this.transactions
       .query(
-        ...this.buildActiveClauses([
-          Q.where('workplace_id', workplaceId),
+        ...this.buildActiveClauses(workplaceId, [
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
         ]),
@@ -656,8 +644,7 @@ export class TransactionRepository {
   ) {
     return this.transactions
       .query(
-        ...this.buildActiveClauses([
-          Q.where('workplace_id', workplaceId),
+        ...this.buildActiveClauses(workplaceId, [
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
         ]),
@@ -672,14 +659,9 @@ export class TransactionRepository {
   ): Promise<Transaction[]> {
     return this.transactions
       .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('account_id', accountId),
-        Q.where('workplace_id', workplaceId),
-        Q.where('transaction_date', Q.lte(cutoffDate)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
+        ...this.buildActiveClauses(workplaceId, [
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', Q.lte(cutoffDate)),
         ]),
         Q.sortBy('transaction_date', Q.asc),
         Q.sortBy('created_at', Q.asc),
@@ -689,12 +671,7 @@ export class TransactionRepository {
 
   async hasTransactions(workplaceId: WorkplaceId, accountId: AccountId): Promise<boolean> {
     const count = await this.transactions
-      .query(
-        ...this.buildActiveClauses([
-          Q.where('workplace_id', workplaceId),
-          Q.where('account_id', accountId),
-        ]),
-      )
+      .query(...this.buildActiveClauses(workplaceId, [Q.where('account_id', accountId)]))
       .fetchCount();
     return count > 0;
   }

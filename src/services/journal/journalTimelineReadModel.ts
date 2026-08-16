@@ -43,6 +43,7 @@ export function observeEnrichedJournals(
   if (accountIds.length > 0 && !dateRange?.plannedPaymentId) {
     clauses.push(
       Q.on('transactions', [
+        Q.where('workplace_id', workplaceId),
         Q.where('account_id', Q.oneOf(accountIds)),
         Q.where('deleted_at', Q.eq(null)),
       ]),

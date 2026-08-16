@@ -464,5 +464,62 @@ describe('TransactionRepository', () => {
         true,
       );
     });
+
+    it('findForAccountUpToDate excludes transactions linked to foreign journals or belonging to foreign workplaces', async () => {
+      const workplaceOne = 'wp-1' as WorkplaceId;
+      const workplaceTwo = 'wp-2' as WorkplaceId;
+
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'wp-1 tx',
+          journalDate: 1_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceOne,
+      );
+
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'wp-2 tx',
+          journalDate: 2_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceTwo,
+      );
+
+      const txs = await transactionRepository.findForAccountUpToDate(
+        workplaceOne,
+        accountId as AccountId,
+        5_000,
+      );
+
+      expect(txs).toHaveLength(1);
+      expect(txs[0].amount).toBe(100);
+      expect(txs[0].workplaceId).toBe(workplaceOne);
+    });
   });
 });
