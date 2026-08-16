@@ -90,7 +90,7 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Add two-workplace regression coverage for balances, rebuilds, insights, SMS, and budgets.
 - [x] Close direct cross-workplace export, SMS collision, and large-query paths (WP-1A through WP-1C).
 - [x] Scope journal enrichment and recent-suggestion joins in raw and fallback paths (WP-1D/WP-1F).
-- [ ] Scope every workplace-owned table in transaction metrics, rebuild, pattern, metadata, and account-list joins (WP-1E).
+- [x] Scope every workplace-owned table in transaction metrics, rebuild, pattern, metadata, and account-list joins (WP-1E).
 - [x] Scope rebuild and integrity follow-up mutations (WP-1G).
 - [x] Scope account-merge source mutations (WP-1H).
 - [x] Enforce planned-payment workplace/model agreement (WP-1I).
@@ -223,6 +223,8 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Rebuild/integrity mutation isolation | `73d56859` |
 | 2026-08-16 | WP-1 | Planned-payment workplace/model agreement | `53874cd2` |
 | 2026-08-16 | WP-1 | Journal model-instance writer workplace validation | `faa4a91c` |
+| 2026-08-16 | WP-1 | Raw rebuild, recurring-pattern, account-list, and repository-metrics isolation | `3878b5dc`, `926f10dd`, `16bbf6f7`, `5edf606a` |
+| 2026-08-16 | WP-1 | SMS rule-history transaction isolation | `adf1378f` |
 
 ## Audit Evidence Index
 
