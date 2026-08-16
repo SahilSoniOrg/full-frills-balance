@@ -27,6 +27,18 @@ export class TransactionRawRebuildQueries {
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const cursorDateSql = `SELECT cursor_t.transaction_date
+      FROM transactions cursor_t
+      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
+      WHERE cursor_t.id = ?
+        AND cursor_t.workplace_id = ?
+        AND cursor_j.workplace_id = ?`;
+    const cursorCreatedAtSql = `SELECT cursor_t.created_at
+      FROM transactions cursor_t
+      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
+      WHERE cursor_t.id = ?
+        AND cursor_t.workplace_id = ?
+        AND cursor_j.workplace_id = ?`;
 
     const sql = `
       SELECT SUM(${multiplierSql}) as total
@@ -34,51 +46,50 @@ export class TransactionRawRebuildQueries {
       JOIN journals j ON t.journal_id = j.id
       WHERE t.account_id = ?
         AND t.transaction_date <= ?
+        AND t.workplace_id = ?
         AND t.deleted_at IS NULL
         AND j.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
         ${
           upToTransactionId
-            ? `AND (t.transaction_date < (SELECT transaction_date FROM transactions WHERE id = ?)
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-                    AND t.created_at < (SELECT created_at FROM transactions WHERE id = ?))
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
-                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+            ? `AND (t.transaction_date < (${cursorDateSql})
+                OR (t.transaction_date = (${cursorDateSql})
+                    AND t.created_at < (${cursorCreatedAtSql}))
+                OR (t.transaction_date = (${cursorDateSql})
+                    AND t.created_at = (${cursorCreatedAtSql})
                     AND t.id <= ?))`
             : ''
         }
         ${
           afterTransactionId
-            ? `AND (t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
-                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+            ? `AND (t.transaction_date > (${cursorDateSql})
+                OR (t.transaction_date = (${cursorDateSql})
+                    AND t.created_at > (${cursorCreatedAtSql}))
+                OR (t.transaction_date = (${cursorDateSql})
+                    AND t.created_at = (${cursorCreatedAtSql})
                     AND t.id > ?))`
             : ''
         }
     `;
-    const args: RawSQLArg[] = [accountId, cutoffDate, workplaceId, ...ACTIVE_JOURNAL_STATUSES];
+    const args: RawSQLArg[] = [
+      accountId,
+      cutoffDate,
+      workplaceId,
+      workplaceId,
+      ...ACTIVE_JOURNAL_STATUSES,
+    ];
+    const addCursorArgs = (transactionId: TransactionId) => {
+      for (let index = 0; index < 5; index += 1) {
+        args.push(transactionId, workplaceId, workplaceId);
+      }
+      args.push(transactionId);
+    };
     if (upToTransactionId) {
-      args.push(
-        upToTransactionId,
-        upToTransactionId,
-        upToTransactionId,
-        upToTransactionId,
-        upToTransactionId,
-        upToTransactionId,
-      );
+      addCursorArgs(upToTransactionId);
     }
     if (afterTransactionId) {
-      args.push(
-        afterTransactionId,
-        afterTransactionId,
-        afterTransactionId,
-        afterTransactionId,
-        afterTransactionId,
-        afterTransactionId,
-      );
+      addCursorArgs(afterTransactionId);
     }
 
     const raws = await transactionRawMetricsQueries.queryRaw<{ total: number }>(sql, args);
@@ -88,6 +99,7 @@ export class TransactionRawRebuildQueries {
       Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.on('journals', 'deleted_at', Q.eq(null)),
       Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+      Q.where('workplace_id', workplaceId),
       Q.where('account_id', accountId),
       Q.where('transaction_date', Q.lte(cutoffDate)),
       Q.where('deleted_at', Q.eq(null)),
