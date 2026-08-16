@@ -1,0 +1,22 @@
+New release 🚀
+
+Manage multiple journal entries and accounts at once. You can now rename, duplicate, merge, move, share, or delete entries in bulk, with one-tap undo for safer changes.
+
+---
+
+Also in this update:
+
+* Bulk account tools: Rename, update appearance, move, or archive multiple accounts together.
+* Smarter journal entry: Suggested target accounts now make common entries quicker to complete.
+* Account type changes: Convert accounts and categories in either direction without rebuilding them.
+* Faster loading: Account lists, account details, the dashboard, and recent entries open more quickly.
+
+---
+
+Big difference you’ll notice:
+
+* Bulk actions are available wherever journal entries appear, including budgets, insights, planned payments, search, and recent entries.
+
+---
+
+Under the hood, safer batch updates keep related account and journal changes in sync.
