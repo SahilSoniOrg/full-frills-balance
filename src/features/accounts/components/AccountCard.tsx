@@ -103,28 +103,31 @@ export function AccountCardBase({
   );
 
   return (
-    <AppCard
-      elevation="sm"
-      paddingSize="none"
-      radius="r2"
-      background={surfaceColor}
+    <TouchableOpacity
+      onPress={() => onPress(account.id)}
+      onLongPress={onLongPress ? () => onLongPress(account) : undefined}
+      activeOpacity={Opacity.heavy}
       style={[
+        styles.touchableWrapper,
         {
           marginBottom: Spacing.md,
           marginLeft: account.depth * Spacing.lg,
-          opacity: account.depth > 0 ? 0.9 : 1,
-        },
-        isSelected && {
-          borderColor: theme.primary,
-          borderWidth: 2,
+          opacity: account.isArchived ? Opacity.medium : account.depth > 0 ? 0.9 : 1,
         },
       ]}
     >
-      <TouchableOpacity
-        onPress={() => onPress(account.id)}
-        onLongPress={onLongPress ? () => onLongPress(account) : undefined}
-        activeOpacity={Opacity.heavy}
-        style={{ opacity: account.isArchived ? Opacity.medium : 1 }}
+      <AppCard
+        elevation="sm"
+        paddingSize="none"
+        radius="r2"
+        background={surfaceColor}
+        style={[
+          styles.cardContainer,
+          {
+            borderWidth: isSelected ? 2 : 0,
+            borderColor: isSelected ? theme.primary : 'transparent',
+          },
+        ]}
       >
         <Box
           unsafe_backgroundRaw={account.accountColor}
@@ -290,12 +293,18 @@ export function AccountCardBase({
             </Column>
           </Row>
         )}
-      </TouchableOpacity>
-    </AppCard>
+      </AppCard>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  touchableWrapper: {
+    width: '100%',
+  },
+  cardContainer: {
+    overflow: 'hidden',
+  },
   categoryIconFrame: {
     padding: Spacing.xs,
     borderWidth: 2,

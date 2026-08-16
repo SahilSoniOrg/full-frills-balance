@@ -14,15 +14,8 @@ import {
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  SectionList,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const TAB_OPTIONS = [
   { id: 'accounts' as const, label: 'Accounts' },
@@ -199,6 +192,14 @@ export function AccountsListView({
     ],
   );
 
+  const extraData = useMemo(
+    () => ({
+      selectedAccountIds,
+      isSelectionModeActive,
+    }),
+    [selectedAccountIds, isSelectionModeActive],
+  );
+
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <View style={styles.container}>
@@ -211,13 +212,13 @@ export function AccountsListView({
           keyExtractor={keyExtractor}
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
-          // Account cards are deliberately tall. Keep the first commit small and let
-          // SectionList fill the viewport in batches as the user scrolls.
-          initialNumToRender={4}
-          maxToRenderPerBatch={8}
-          windowSize={2}
-          removeClippedSubviews={Platform.OS === 'android'}
-          updateCellsBatchingPeriod={16}
+          extraData={extraData}
+          // Account cards are deliberately tall. Keep initial render fast and avoid Android clipping bugs.
+          initialNumToRender={8}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={false}
+          updateCellsBatchingPeriod={30}
           ListHeaderComponent={
             <View>
               {activeTab === 'accounts' ? (
