@@ -86,8 +86,8 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Scope recurring-pattern/insight acquisition.
 - [x] Scope SMS preview, suggestions, ID lookup, and linked-journal lookup.
 - [x] Scope budget-scope deletion.
-- [ ] Audit every query over workplace-scoped tables.
-- [ ] Add two-workplace regression coverage for balances, rebuilds, insights, SMS, and budgets.
+- [x] Audit every query over workplace-scoped tables.
+- [x] Add two-workplace regression coverage for balances, rebuilds, insights, SMS, and budgets.
 
 Exit: every scoped persistence operation requires and enforces `workplaceId`.
 
@@ -96,7 +96,7 @@ Exit: every scoped persistence operation requires and enforces `workplaceId`.
 Goal: make cancellation and disposal explicit.
 
 - [x] Introduce a workplace generation/cancellation mechanism.
-- [x] Make bootstrap stages generation-aware.
+- [ ] Make bootstrap stages generation-aware through completion, including already-started service work.
 - [x] Dispose reactive cache subscriptions on eviction.
 - [x] Terminate insight timers for inactive workplaces.
 - [x] Sequence widget synchronization writes.
@@ -199,8 +199,9 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Recurring insight acquisition workplace isolation | `40fed24d` |
 | 2026-08-16 | WP-1 | SMS and budget workplace isolation | `b37695c0` |
 | 2026-08-16 | WP-0 | Ratchets for raw scope, presentation models, and direct writes | `337946e4` |
+| 2026-08-16 | WP-1 | Exhaustive workplace-isolation inventory | `679b5739` |
 | 2026-08-16 | WP-2 | Disposable reactive caches and inactive insight timers | `ec8a34d3` |
-| 2026-08-16 | WP-2/3 | Bootstrap generations and ordered widget writes | `54f24099`, `b3b7f003` |
+| 2026-08-16 | WP-2/3 | Bootstrap start gates and ordered widget writes | `54f24099`, `b3b7f003` |
 | 2026-08-16 | WP-3 | Tracked rebuild retries, truthful flush, and batch recovery | `c5cb34b9`, `076f2401` |
 
 ## Audit Evidence Index
