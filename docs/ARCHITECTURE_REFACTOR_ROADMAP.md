@@ -110,10 +110,10 @@ Goal: make completion truthful and repeated operations safe.
 - [x] Model rebuild retries as tracked queue state.
 - [x] Make rebuild `flush()` await scheduled retries.
 - [x] Requeue/reconcile batches after unexpected processing errors.
-- [ ] Add per-workplace SMS single-flight coordination.
-- [ ] Recheck SMS processing state in the final write boundary.
-- [ ] Add SMS auto-post idempotency protection.
-- [ ] Serialize or generation-order notification scheduling.
+- [x] Add per-workplace SMS single-flight coordination.
+- [x] Recheck SMS processing state in the final write boundary.
+- [x] Add SMS auto-post idempotency protection.
+- [x] Serialize or generation-order notification scheduling.
 
 Exit: concurrent triggers produce one deterministic final result.
 
@@ -121,11 +121,11 @@ Exit: concurrent triggers produce one deterministic final result.
 
 Goal: remove competing write protocols.
 
-- [ ] Inventory and classify direct database writes, batches, raw model mutation, and private adapter access.
+- [x] Inventory and classify direct database writes, batches, raw model mutation, and private adapter access.
 - [ ] Move service-owned database mechanics into repositories.
 - [ ] Define transaction coordinators for journal, account, planned-payment, SMS, and import flows.
 - [ ] Isolate raw SQL and private adapter access behind named infrastructure interfaces.
-- [ ] Document atomicity ownership for cross-domain mutations.
+- [x] Document atomicity ownership for cross-domain mutations.
 
 Exit: every mutation has one obvious transaction owner and cannot bypass audit/rebuild obligations.
 
@@ -203,6 +203,11 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-2 | Disposable reactive caches and inactive insight timers | `ec8a34d3` |
 | 2026-08-16 | WP-2/3 | Bootstrap start gates and ordered widget writes | `54f24099`, `b3b7f003` |
 | 2026-08-16 | WP-3 | Tracked rebuild retries, truthful flush, and batch recovery | `c5cb34b9`, `076f2401` |
+| 2026-08-16 | WP-1 | SMS device-ID collision isolation | `cb26cd9a` |
+| 2026-08-16 | WP-3 | Ordered notification scheduling | `cdf0d91e` |
+| 2026-08-16 | WP-3 | Per-workplace SMS single-flight and final-write idempotency | `3dcef98` |
+| 2026-08-16 | WP-1 | Scoped export fallback and large transaction chunks | `1564593`, `4f43602` |
+| 2026-08-16 | WP-4 | Persistence ownership and atomicity inventory | `ccc40651` |
 
 ## Audit Evidence Index
 
