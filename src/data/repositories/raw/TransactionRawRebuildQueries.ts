@@ -139,7 +139,11 @@ export class TransactionRawRebuildQueries {
     );
   }
 
-  async getRebuildDataRaw(accountId: AccountId, startDate: number): Promise<RebuildTransaction[]> {
+  async getRebuildDataRaw(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    startDate: number,
+  ): Promise<RebuildTransaction[]> {
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
@@ -154,6 +158,8 @@ export class TransactionRawRebuildQueries {
       JOIN journals j ON t.journal_id = j.id
       WHERE t.account_id = ?
         AND t.transaction_date >= ?
+        AND t.workplace_id = ?
+        AND j.workplace_id = ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
@@ -163,6 +169,8 @@ export class TransactionRawRebuildQueries {
     const raws = await transactionRawMetricsQueries.queryRaw<RebuildTransaction>(sql, [
       accountId,
       startDate,
+      workplaceId,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
     if (raws !== null) return raws;
@@ -170,6 +178,8 @@ export class TransactionRawRebuildQueries {
     const txs = await database.collections
       .get<Transaction>('transactions')
       .query(
+        Q.where('workplace_id', workplaceId),
+        Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'deleted_at', Q.eq(null)),
         Q.where('account_id', accountId),

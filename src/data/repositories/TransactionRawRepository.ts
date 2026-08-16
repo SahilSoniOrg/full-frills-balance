@@ -6,9 +6,12 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
+import { database } from '@/src/data/database/Database';
+import Transaction from '@/src/data/models/Transaction';
 import { periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
+import { Q } from '@nozbe/watermelondb';
 import { from, Observable } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
@@ -112,8 +115,12 @@ export class TransactionRawRepository {
     );
   }
 
-  async getRebuildDataRaw(accountId: AccountId, startDate: number): Promise<RebuildTransaction[]> {
-    return transactionRawRebuildQueries.getRebuildDataRaw(accountId, startDate);
+  async getRebuildDataRaw(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    startDate: number,
+  ): Promise<RebuildTransaction[]> {
+    return transactionRawRebuildQueries.getRebuildDataRaw(workplaceId, accountId, startDate);
   }
 
   async getRecurringPatternsRaw(startDate: number, minCount: number): Promise<RecurringPattern[]> {
@@ -140,7 +147,7 @@ export class TransactionRawRepository {
         accountIdsWithBoundaries.map(b => b.accountId),
         endDate,
       ),
-      this.getAccountTransactionCountsRaw(accountIdsWithBoundaries, endDate),
+      this.getAccountTransactionCountsRaw(workplaceId, accountIdsWithBoundaries, endDate),
     ]);
     return { balances, counts };
   }
@@ -152,6 +159,7 @@ export class TransactionRawRepository {
    * accounts that lack their own snapshot.
    */
   async getAccountTransactionCountsRaw(
+    workplaceId: WorkplaceId,
     accountIdsWithBoundaries: {
       accountId: AccountId;
       startDate: number;
@@ -192,7 +200,9 @@ export class TransactionRawRepository {
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
         JOIN search_boundaries b ON t.account_id = b.acc_id
-        WHERE t.deleted_at IS NULL
+        WHERE t.workplace_id = ?
+          AND j.workplace_id = ?
+          AND t.deleted_at IS NULL
           AND j.deleted_at IS NULL
           AND j.status IN (${placeholders})
           AND t.transaction_date <= ?
@@ -208,6 +218,8 @@ export class TransactionRawRepository {
 
       const queryParams: (string | number)[] = [
         ...boundaryParams,
+        workplaceId,
+        workplaceId,
         ...ACTIVE_JOURNAL_STATUSES,
         endDate,
       ];
@@ -215,6 +227,46 @@ export class TransactionRawRepository {
       const raws = await this.queryRaw<{ accountId: AccountId; count: number }>(sql, queryParams);
       if (raws !== null) {
         for (const row of raws) results.set(row.accountId, row.count);
+        continue;
+      }
+
+      const boundaryByAccount = new Map(chunk.map(boundary => [boundary.accountId, boundary]));
+      const minimumBoundaryDate = Math.min(
+        ...chunk.map(boundary => boundary.afterTransactionDate || 0),
+      );
+      const transactions = await database.collections
+        .get<Transaction>('transactions')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.on('journals', 'deleted_at', Q.eq(null)),
+          Q.where('account_id', Q.oneOf(chunk.map(boundary => boundary.accountId))),
+          Q.where('transaction_date', Q.gte(minimumBoundaryDate)),
+          Q.where('transaction_date', Q.lte(endDate)),
+          Q.where('deleted_at', Q.eq(null)),
+        )
+        .fetch();
+
+      for (const transaction of transactions) {
+        const boundary = boundaryByAccount.get(transaction.accountId);
+        if (!boundary) continue;
+
+        const lastDate = boundary.afterTransactionDate || 0;
+        const lastCreatedAt = boundary.afterTransactionCreatedAt || 0;
+        const lastId = boundary.afterTransactionId || '';
+        const createdAt = transaction.createdAt.getTime();
+        const isAfterCursor =
+          lastId === '' ||
+          transaction.transactionDate > lastDate ||
+          (transaction.transactionDate === lastDate && createdAt > lastCreatedAt) ||
+          (transaction.transactionDate === lastDate &&
+            createdAt === lastCreatedAt &&
+            transaction.id > lastId);
+
+        if (transaction.transactionDate >= lastDate && isAfterCursor) {
+          results.set(transaction.accountId, (results.get(transaction.accountId) || 0) + 1);
+        }
       }
     }
     return results;

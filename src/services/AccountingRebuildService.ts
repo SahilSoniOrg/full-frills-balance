@@ -81,6 +81,7 @@ export class AccountingRebuildService {
     // 2. Fetch minimal raw transaction data for calculation
     // This is significantly faster than fetching full models (O(1) memory per row vs O(Model))
     let rawTransactions: RebuildTransaction[] = await transactionRawRepository.getRebuildDataRaw(
+      workplaceId,
       accountId,
       startDate,
     );

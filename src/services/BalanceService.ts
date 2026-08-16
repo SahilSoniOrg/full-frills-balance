@@ -380,6 +380,7 @@ export class BalanceService {
     }
 
     const deltaCount = await transactionRawRepository.getAccountTransactionCountsRaw(
+      workplaceId,
       [
         {
           accountId,
