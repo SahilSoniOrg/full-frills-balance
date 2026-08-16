@@ -105,7 +105,7 @@ Goal: make cancellation and disposal explicit.
 
 - [x] Introduce a workplace generation/cancellation mechanism.
 - [ ] Make bootstrap stages generation-aware through completion, including already-started service work.
-- [ ] Expose an `AbortSignal` from each generation lease and abort the prior lease on replacement.
+- [x] Expose an `AbortSignal` from each generation lease and abort the prior lease on replacement.
 - [ ] Prevent evicted reactive projections from publishing stale snapshots.
 - [ ] Carry cancellation through startup integrity and its rebuild commit boundary.
 - [ ] Carry cancellation through planned-payment orchestration and the ledger batch boundary.
@@ -230,6 +230,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Journal model-instance writer workplace validation | `faa4a91c` |
 | 2026-08-16 | WP-1 | Raw rebuild, recurring-pattern, account-list, and repository-metrics isolation | `3878b5dc`, `926f10dd`, `16bbf6f7`, `5edf606a` |
 | 2026-08-16 | WP-1 | SMS rule-history transaction isolation | `adf1378f` |
+| 2026-08-16 | WP-2 | Bootstrap lifecycle audit and generation `AbortSignal` foundation | `889dec2f`, `0969745b` |
 
 ## Audit Evidence Index
 
