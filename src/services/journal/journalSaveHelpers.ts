@@ -107,12 +107,18 @@ export function mapLinesToCreateTransactions(
   }));
 }
 
-async function resolveSmsMetadataJson(smsRecordId?: string): Promise<string | undefined> {
+async function resolveSmsMetadataJson(
+  smsRecordId: string | undefined,
+  workplaceId: WorkplaceId,
+): Promise<string | undefined> {
   if (!smsRecordId) return undefined;
   try {
     const inboxRecord = await database.collections
       .get<TransactionInboxRecord>('transaction_inbox_records')
       .find(smsRecordId);
+    if (inboxRecord.workplaceId !== workplaceId) {
+      return undefined;
+    }
     return JSON.stringify({
       smsFingerprint: inboxRecord.inputFingerprint,
       parsedAmount: inboxRecord.parsedAmount ?? null,
@@ -152,7 +158,7 @@ export async function assembleCreateJournalData(
   const currencyCode =
     params.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
 
-  const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId);
+  const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId, params.workplaceId);
   const metadata =
     params.smsId || params.smsSender || params.rawSmsBody
       ? {

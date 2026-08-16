@@ -61,12 +61,12 @@ export class IntegrityService {
    * Scans for any transactions with NULL/missing account_id.
    * Fails loudly to prevent old corrupted records from lingering invisibly.
    */
-  async scanForNullAccountTransactions(workplaceId?: WorkplaceId): Promise<void> {
+  async scanForNullAccountTransactions(workplaceId: WorkplaceId): Promise<void> {
     const query = database.collections
       .get<Transaction>('transactions')
       .query(
-        Q.where('account_id', Q.eq(null)),
-        ...(workplaceId ? [Q.where('workplace_id', workplaceId)] : []),
+        Q.or(Q.where('account_id', null), Q.where('account_id', '')),
+        Q.where('workplace_id', workplaceId),
       );
 
     const nullAccountTxs = await query.fetch();
@@ -74,8 +74,7 @@ export class IntegrityService {
     if (nullAccountTxs.length > 0) {
       const sample = nullAccountTxs[0];
       const errorMsg =
-        `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!` +
-        (workplaceId ? ` (Workplace: ${workplaceId})` : '') +
+        `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId! (Workplace: ${workplaceId})` +
         ` Sample ID: ${sample.id}, Date: ${new Date(sample.transactionDate).toISOString()}`;
 
       logger.error(`[IntegrityService] ${errorMsg}`, undefined, {

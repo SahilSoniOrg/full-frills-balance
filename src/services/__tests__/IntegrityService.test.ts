@@ -337,4 +337,30 @@ describe('IntegrityService', () => {
       expect(unchangedForeignAccount?.updatedAt.getTime()).toBe(123);
     });
   });
+
+  describe('scanForNullAccountTransactions workplace isolation', () => {
+    it('throws only when null-account transactions belong to the scanned workplace', async () => {
+      // Create a transaction in wp-2 with null account_id
+      await database.write(async () => {
+        await database.collections.get<Transaction>('transactions').create(t => {
+          t.workplaceId = 'wp-2' as WorkplaceId;
+          t.transactionDate = Date.now();
+          t.amount = 100;
+          t.transactionType = TransactionType.DEBIT;
+          (t as any).accountId = null;
+          (t as any)._setRaw('account_id', null);
+        });
+      });
+
+      // Scanning wp-1 should not throw because the corrupted transaction is in wp-2
+      await expect(
+        service.scanForNullAccountTransactions('wp-1' as WorkplaceId),
+      ).resolves.toBeUndefined();
+
+      // Scanning wp-2 must throw
+      await expect(service.scanForNullAccountTransactions('wp-2' as WorkplaceId)).rejects.toThrow(
+        /CRITICAL INTEGRITY FAILURE.*Workplace: wp-2/,
+      );
+    });
+  });
 });
