@@ -9,6 +9,7 @@
  */
 
 import { schema } from '@/src/data/database/schema';
+import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -61,7 +62,6 @@ export class IntegrityService {
    * Fails loudly to prevent old corrupted records from lingering invisibly.
    */
   async scanForNullAccountTransactions(workplaceId?: WorkplaceId): Promise<void> {
-    const { database } = await import('@/src/data/database/Database');
     const query = database.collections
       .get<Transaction>('transactions')
       .query(
@@ -379,7 +379,6 @@ export class IntegrityService {
     let repairsSuccessful = 0;
 
     if (discrepancies.length > 0) {
-      const { database } = await import('@/src/data/database/Database');
       const repairedAccountIds: string[] = [];
 
       for (let i = 0; i < discrepancies.length; i++) {

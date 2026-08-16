@@ -292,6 +292,8 @@ describe('IntegrityService', () => {
 
   describe('forceRunCheck workplace isolation', () => {
     it('does not notify a foreign account when repair output contains its ID', async () => {
+      jest.spyOn(service, 'scanForNullAccountTransactions').mockResolvedValue();
+
       const foreignAccount = await accountRepository.create({
         name: 'Foreign account',
         accountType: AccountType.ASSET,
