@@ -569,6 +569,7 @@ export class TransactionRepository {
               Q.where('account_id', Q.oneOf(chunk)),
               Q.where('transaction_date', Q.gte(startDate)),
               Q.where('transaction_date', Q.lte(endDate)),
+              Q.where('workplace_id', workplaceId),
             ]);
             return this.deterministicSort(this.transactions.query(...chunkClauses), Q.desc).fetch();
           }),

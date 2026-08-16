@@ -320,5 +320,149 @@ describe('TransactionRepository', () => {
       expect(txs).toHaveLength(1);
       expect(txs[0].transactionDate).toBe(2000);
     });
+
+    it('keeps every account chunk scoped to the requested workplace', async () => {
+      const workplaceOne = 'wp-1' as WorkplaceId;
+      const workplaceTwo = 'wp-2' as WorkplaceId;
+      const secondLocalAccount = await accountRepository.create({
+        name: 'Second local account',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId: workplaceOne,
+      });
+      const foreignAccount = await accountRepository.create({
+        name: 'Foreign account',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId: workplaceTwo,
+      });
+      const foreignEquity = await accountRepository.create({
+        name: 'Foreign equity',
+        accountType: AccountType.EQUITY,
+        currencyCode: 'USD',
+        workplaceId: workplaceTwo,
+      });
+
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'First chunk local transaction',
+          journalDate: 2_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 20,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 20,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceOne,
+      );
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Second chunk local transaction',
+          journalDate: 3_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: secondLocalAccount.id as AccountId,
+              amount: 30,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 30,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceOne,
+      );
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Foreign transaction',
+          journalDate: 2_500,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: foreignAccount.id as AccountId,
+              amount: 25,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: foreignEquity.id as AccountId,
+              amount: 25,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceTwo,
+      );
+      const deletedJournal = await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Deleted local transaction',
+          journalDate: 3_500,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: secondLocalAccount.id as AccountId,
+              amount: 35,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 35,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceOne,
+      );
+      await journalWriteRepository.softDeleteJournal(workplaceOne, deletedJournal.id as JournalId);
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Out of range local transaction',
+          journalDate: 5_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: accountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        workplaceOne,
+      );
+
+      const accountIds = [
+        accountId,
+        ...Array.from({ length: 99 }, (_, index) => `unused-account-${index}`),
+        secondLocalAccount.id,
+        foreignAccount.id,
+      ];
+      const transactions = await transactionRepository.findByAccountsAndDateRange(
+        workplaceOne,
+        accountIds,
+        1_000,
+        4_000,
+      );
+
+      expect(accountIds).toHaveLength(102);
+      expect(transactions.map(transaction => transaction.transactionDate)).toEqual([3_000, 2_000]);
+      expect(transactions.every(transaction => transaction.workplaceId === workplaceOne)).toBe(
+        true,
+      );
+    });
   });
 });
