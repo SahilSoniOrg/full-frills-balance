@@ -61,6 +61,26 @@ export class JournalWriteRepository {
     return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
+  private assertModelOwnership(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    transactions: Transaction[] = [],
+  ): void {
+    const foreignJournal = journals.find(journal => journal.workplaceId !== workplaceId);
+    if (foreignJournal) {
+      throw new Error(`Journal ${foreignJournal.id} does not belong to workplace ${workplaceId}`);
+    }
+
+    const foreignTransaction = transactions.find(
+      transaction => transaction.workplaceId !== workplaceId,
+    );
+    if (foreignTransaction) {
+      throw new Error(
+        `Transaction ${foreignTransaction.id} does not belong to workplace ${workplaceId}`,
+      );
+    }
+  }
+
   prepareCreateJournalWithTransactions(
     journalData: PrepareCreateJournalData,
     workplaceId: WorkplaceId,
@@ -351,6 +371,7 @@ export class JournalWriteRepository {
     workplaceId: WorkplaceId;
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
     const { originalJournal, originalTransactions, replacementData, workplaceId } = params;
+    this.assertModelOwnership(workplaceId, [originalJournal], originalTransactions);
     const {
       transactions: replacementTransactions,
       totalAmount,
@@ -456,10 +477,12 @@ export class JournalWriteRepository {
    * Bulk updates descriptions for a list of journals in a single atomic database batch.
    */
   async bulkUpdateDescriptions(
+    workplaceId: WorkplaceId,
     journals: Journal[],
     renames: Record<JournalId, string>,
   ): Promise<void> {
     if (journals.length === 0) return;
+    this.assertModelOwnership(workplaceId, journals);
 
     await database.write(async () => {
       const now = new Date();
@@ -604,13 +627,15 @@ export class JournalWriteRepository {
    * Bulk updates accountId for a list of transactions and refreshes parent journals in a single atomic database batch.
    */
   async bulkReassignTransactionAccounts(params: {
+    workplaceId: WorkplaceId;
     transactions: Transaction[];
     newAccountId: AccountId;
     journals: Journal[];
     displayTypeByJournalId: Map<JournalId, JournalDisplayType>;
   }): Promise<void> {
-    const { transactions, newAccountId, journals, displayTypeByJournalId } = params;
+    const { workplaceId, transactions, newAccountId, journals, displayTypeByJournalId } = params;
     if (transactions.length === 0 && journals.length === 0) return;
+    this.assertModelOwnership(workplaceId, journals, transactions);
 
     await database.write(async () => {
       const now = new Date();
@@ -637,13 +662,16 @@ export class JournalWriteRepository {
    * Atomically reassigns each transaction back to its own original account and refreshes parent journals in a single batch.
    */
   async bulkReassignTransactionAccountsToOriginals(params: {
+    workplaceId: WorkplaceId;
     transactions: Transaction[];
     originalAccountIdByTxId: Record<string, AccountId>;
     journals: Journal[];
     displayTypeByJournalId: Map<JournalId, JournalDisplayType>;
   }): Promise<void> {
-    const { transactions, originalAccountIdByTxId, journals, displayTypeByJournalId } = params;
+    const { workplaceId, transactions, originalAccountIdByTxId, journals, displayTypeByJournalId } =
+      params;
     if (transactions.length === 0 && journals.length === 0) return;
+    this.assertModelOwnership(workplaceId, journals, transactions);
 
     await database.write(async () => {
       const now = new Date();

@@ -404,7 +404,7 @@ describe('PlannedPaymentService', () => {
       );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
       (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockImplementation(
-        async (journals: any[], status: JournalStatus) => {
+        async (_workplaceId: WorkplaceId, journals: any[], status: JournalStatus) => {
           for (const journal of journals) {
             journal.status = status;
           }
@@ -428,6 +428,7 @@ describe('PlannedPaymentService', () => {
         expect.any(Number),
       );
       expect(journalPlannedQueries.batchUpdateStatus).toHaveBeenCalledWith(
+        'wp-1',
         [mockJournal],
         JournalStatus.SKIPPED,
       );

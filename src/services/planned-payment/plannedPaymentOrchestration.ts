@@ -137,7 +137,11 @@ export async function skipPlannedPaymentOccurrence(
       occurrenceDate,
     );
 
-    await journalPlannedQueries.batchUpdateStatus(existingPlanned, JournalStatus.SKIPPED);
+    await journalPlannedQueries.batchUpdateStatus(
+      workplaceId,
+      existingPlanned,
+      JournalStatus.SKIPPED,
+    );
 
     if (existingPlanned.length === 0) {
       if (!pp.toAccountId) {

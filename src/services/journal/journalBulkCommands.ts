@@ -79,7 +79,7 @@ export async function bulkRenameJournals(
   }
 
   if (Object.keys(effectiveRenames).length > 0) {
-    await journalWriteRepository.bulkUpdateDescriptions(journals, effectiveRenames);
+    await journalWriteRepository.bulkUpdateDescriptions(workplaceId, journals, effectiveRenames);
   }
 
   return {
@@ -446,6 +446,7 @@ export async function bulkChangeJournalAccount(
   );
 
   await journalWriteRepository.bulkReassignTransactionAccounts({
+    workplaceId,
     transactions: transactionsToUpdate,
     newAccountId,
     journals,
@@ -499,6 +500,7 @@ export async function undoBulkChangeJournalAccount(
 
   // Single atomic batch — each transaction goes back to its own original account and parent journals are updated
   await journalWriteRepository.bulkReassignTransactionAccountsToOriginals({
+    workplaceId,
     transactions,
     originalAccountIdByTxId: originalAccountIdByTransactionId,
     journals,

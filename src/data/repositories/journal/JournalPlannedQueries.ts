@@ -104,7 +104,12 @@ export class JournalPlannedQueries {
       .fetch();
   }
 
-  prepareStatusUpdates(journals: Journal[], status: JournalStatus): Model[] {
+  prepareStatusUpdates(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    status: JournalStatus,
+  ): Model[] {
+    this.assertJournalOwnership(workplaceId, journals);
     return journals.map(journal =>
       journal.prepareUpdate((record: Journal) => {
         record.status = status;
@@ -113,11 +118,23 @@ export class JournalPlannedQueries {
     );
   }
 
-  async batchUpdateStatus(journals: Journal[], status: JournalStatus): Promise<void> {
+  async batchUpdateStatus(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    status: JournalStatus,
+  ): Promise<void> {
     if (journals.length === 0) return;
+    const updates = this.prepareStatusUpdates(workplaceId, journals, status);
     await database.write(async () => {
-      await database.batch(this.prepareStatusUpdates(journals, status));
+      await database.batch(updates);
     });
+  }
+
+  private assertJournalOwnership(workplaceId: WorkplaceId, journals: Journal[]): void {
+    const foreignJournal = journals.find(journal => journal.workplaceId !== workplaceId);
+    if (foreignJournal) {
+      throw new Error(`Journal ${foreignJournal.id} does not belong to workplace ${workplaceId}`);
+    }
   }
 }
 
