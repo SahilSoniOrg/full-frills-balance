@@ -101,7 +101,8 @@ npx expo start
 bun run typecheck    # tsc --noEmit
 bun run test         # Jest + coverage thresholds
 bun run lint         # expo lint
-bun run verify       # typecheck + test:ci + lint (CI gate)
+bun run check:architecture # architecture boundary and debt ratchets
+bun run verify       # architecture + typecheck + test:ci + lint (CI gate)
 ```
 
 Component gallery (dev client): [`/_design-preview`](app/_design-preview.tsx).
@@ -112,7 +113,7 @@ app/ (Expo Router)  →  src/features/*  →  src/services/*  →  repositories 
 
 Five tabs: **Dashboard · Accounts · Activity · Commitments · Settings**.
 
-Feature boundaries are enforced in `eslint.config.js`. Business logic lives in `src/services/`, not in route files.
+Route files may import only feature public barrels. Feature-to-feature dependencies must use an explicitly allowlisted public barrel; deep cross-feature imports are forbidden. Feature hooks may read through repositories where the existing read contract requires it, but mutations belong to domain commands or write services. These boundaries are enforced by ESLint and `bun run check:architecture`.
 
 ---
 

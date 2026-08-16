@@ -1,0 +1,36 @@
+{
+  "accounts": [
+    "journal"
+  ],
+  "app": [
+    "dev"
+  ],
+  "budget": [
+    "accounts",
+    "journal"
+  ],
+  "commitments": [
+    "budget",
+    "planned-payments"
+  ],
+  "dashboard": [
+    "journal",
+    "planned-payments"
+  ],
+  "hub": [
+    "journal"
+  ],
+  "journal": [
+    "accounts"
+  ],
+  "planned-payments": [
+    "accounts",
+    "journal"
+  ],
+  "reports": [
+    "accounts"
+  ],
+  "settings": [
+    "accounts"
+  ]
+}

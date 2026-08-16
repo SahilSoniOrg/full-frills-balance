@@ -4,6 +4,7 @@ const expoConfig = require('eslint-config-expo/flat');
 const fs = require('fs');
 const path = require('path');
 const eslintConfigPrettier = require('eslint-config-prettier');
+const crossFeatureAllowlist = require('./scripts/cross-feature-boundary-allowlist.json');
 
 // Determine feature directories to enforce boundary rules
 const featuresDir = path.join(__dirname, 'src/features');
@@ -16,7 +17,8 @@ try {
   // Ignore if src/features doesn't exist yet
 }
 
-// Generate ESLint rules per feature: a feature cannot deep import from other features
+// Generate ESLint rules per feature. Cross-feature imports must use an explicitly
+// approved public barrel; deep imports always remain forbidden.
 const featureRules = features.map(feature => ({
   files: [`src/features/${feature}/**/*.{ts,tsx}`],
   rules: {
@@ -29,7 +31,14 @@ const featureRules = features.map(feature => ({
           '@/app',
           '@/app/*',
           '@/app/**',
-          ...features.filter(f => f !== feature).map(f => `@/src/features/${f}/*`),
+          ...features
+            .filter(f => f !== feature)
+            .flatMap(otherFeature => [
+              `@/src/features/${otherFeature}/*`,
+              ...(crossFeatureAllowlist[feature]?.includes(otherFeature)
+                ? []
+                : [`@/src/features/${otherFeature}`]),
+            ]),
         ],
       },
     ],
