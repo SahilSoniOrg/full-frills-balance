@@ -6,7 +6,7 @@ import { traceService } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
-import { shareReplay, switchMap, take } from 'rxjs/operators';
+import { switchMap, take } from 'rxjs/operators';
 import { AccountType, WorkplaceId } from '@/src/types/domain';
 import {
   observeWorkplaceAccounts,
@@ -14,6 +14,7 @@ import {
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { calculateInsights } from './insightCalculator';
 import { Insight } from './insightTypes';
+import { createDisposableReplay, DisposableReplay } from '@/src/services/reactive/disposableReplay';
 
 export type { Insight };
 
@@ -35,13 +36,20 @@ export class InsightService {
     }
   }
 
-  private insightCache = new Map<string, Observable<Insight[]>>();
+  private insightCache = new Map<
+    string,
+    DisposableReplay<Insight[]> & { workplaceId: WorkplaceId }
+  >();
 
   /**
-   * Clears internal pattern observation caches. Used for unit test isolation.
+   * Disposes internal pattern observations, optionally for one workplace.
    */
-  clearCache(): void {
-    this.insightCache.clear();
+  clearCache(workplaceId?: WorkplaceId): void {
+    for (const [key, entry] of this.insightCache) {
+      if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
+      entry.dispose();
+      this.insightCache.delete(key);
+    }
   }
 
   observeDismissedPatterns(workplaceId: WorkplaceId): Observable<Insight[]> {
@@ -58,7 +66,7 @@ export class InsightService {
   ): Observable<Insight[]> {
     const cacheKey = `${workplaceId}_${onlyDismissed}`;
     const cached = this.insightCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) return cached.observable;
 
     const insightsConfig = AppConfig.insights;
     const lookbackDays = insightsConfig.lookbackDays;
@@ -115,11 +123,11 @@ export class InsightService {
         }
         return finalPatterns.filter((p: Insight) => !dismissedIds.includes(p.id));
       }),
-      shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    this.insightCache.set(cacheKey, obs$);
-    return obs$;
+    const replay = createDisposableReplay(obs$);
+    this.insightCache.set(cacheKey, { ...replay, workplaceId });
+    return replay.observable;
   }
 
   async dismissPattern(id: string): Promise<void> {

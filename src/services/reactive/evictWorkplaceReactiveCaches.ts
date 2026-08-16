@@ -5,16 +5,17 @@ import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 
 /**
- * Drops shared Rx pipelines keyed by workplace/currency so a switch does not
- * keep prior workplace SQL streams alive (refCount: false caches).
+ * Disposes shared Rx pipelines owned by the departing workplace so a switch
+ * cannot leave its SQL streams or timers alive.
  */
 export function evictWorkplaceReactiveCaches(switchInfo?: {
   from: WorkplaceId;
   to: WorkplaceId;
 }): void {
-  reactiveDataService.clearCache();
+  const departingWorkplaceId = switchInfo?.from;
+  reactiveDataService.clearCache(departingWorkplaceId);
   safeToSpendReadModel.clearCache();
-  insightService.clearCache();
+  insightService.clearCache(departingWorkplaceId);
   if (switchInfo) {
     logger.info('[ReactiveCache] Evicted caches on workplace switch', switchInfo);
   }

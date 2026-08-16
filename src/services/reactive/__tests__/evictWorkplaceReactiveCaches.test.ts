@@ -2,6 +2,7 @@ import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkp
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { insightService } from '@/src/services/insight/InsightService';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/ReactiveDataService', () => ({
   reactiveDataService: { clearCache: jest.fn() },
@@ -19,9 +20,12 @@ describe('evictWorkplaceReactiveCaches', () => {
   });
 
   it('clears dashboard, safe-to-spend, and insight caches', () => {
-    evictWorkplaceReactiveCaches();
-    expect(reactiveDataService.clearCache).toHaveBeenCalled();
+    const oldWorkplace = 'old-workplace' as WorkplaceId;
+    const newWorkplace = 'new-workplace' as WorkplaceId;
+
+    evictWorkplaceReactiveCaches({ from: oldWorkplace, to: newWorkplace });
+    expect(reactiveDataService.clearCache).toHaveBeenCalledWith(oldWorkplace);
     expect(safeToSpendReadModel.clearCache).toHaveBeenCalled();
-    expect(insightService.clearCache).toHaveBeenCalled();
+    expect(insightService.clearCache).toHaveBeenCalledWith(oldWorkplace);
   });
 });

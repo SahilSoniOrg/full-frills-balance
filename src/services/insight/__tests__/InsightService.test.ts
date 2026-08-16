@@ -1,4 +1,5 @@
 import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AppConfig } from '@/src/constants';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import {
@@ -53,6 +54,47 @@ describe('PatternService', () => {
   });
 
   describe('observePatterns', () => {
+    it('stops the departed workplace timer without interrupting the active workplace', async () => {
+      jest.useFakeTimers();
+      const firstWorkplace = 'wp-timer-one' as WorkplaceId;
+      const secondWorkplace = 'wp-timer-two' as WorkplaceId;
+      const firstCompleted = jest.fn();
+      const secondCompleted = jest.fn();
+
+      const firstSubscription = patternService.observePatterns(firstWorkplace).subscribe({
+        complete: firstCompleted,
+      });
+      const secondSubscription = patternService.observePatterns(secondWorkplace).subscribe({
+        complete: secondCompleted,
+      });
+
+      try {
+        await jest.advanceTimersByTimeAsync(0);
+        (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockClear();
+
+        patternService.clearCache(firstWorkplace);
+        await jest.advanceTimersByTimeAsync(AppConfig.insights.refreshIntervalMs);
+
+        expect(firstCompleted).toHaveBeenCalledTimes(1);
+        expect(secondCompleted).not.toHaveBeenCalled();
+        expect(transactionRawRepository.getRecurringPatternsRaw).not.toHaveBeenCalledWith(
+          firstWorkplace,
+          expect.any(Number),
+          expect.any(Number),
+        );
+        expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+          secondWorkplace,
+          expect.any(Number),
+          expect.any(Number),
+        );
+      } finally {
+        firstSubscription.unsubscribe();
+        secondSubscription.unsubscribe();
+        patternService.clearCache();
+        jest.useRealTimers();
+      }
+    });
+
     it('acquires recurring candidates separately for each workplace', async () => {
       const workplaceOne = 'wp-insight-one' as WorkplaceId;
       const workplaceTwo = 'wp-insight-two' as WorkplaceId;

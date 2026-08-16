@@ -16,7 +16,8 @@ import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
-import { combineLatest, distinctUntilChanged, map, Observable, shareReplay, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
+import { createDisposableReplay, DisposableReplay } from '@/src/services/reactive/disposableReplay';
 
 type RawSQLRow = Record<string, unknown>;
 
@@ -26,7 +27,11 @@ export interface AggregatedAccountBalances {
   wealthSummary: WealthSummary;
 }
 
-const aggregatedBalancesCache = new Map<string, Observable<AggregatedAccountBalances>>();
+type AggregatedBalancesCacheEntry = DisposableReplay<AggregatedAccountBalances> & {
+  workplaceId: WorkplaceId;
+};
+
+const aggregatedBalancesCache = new Map<string, AggregatedBalancesCacheEntry>();
 
 export type AccountObservationSnapshot = {
   accounts: Account[];
@@ -45,8 +50,12 @@ export function snapshotAccountObservation(accounts: Account[]): AccountObservat
   return { accounts, signature };
 }
 
-export function clearReactiveAggregatedBalancesCache(): void {
-  aggregatedBalancesCache.clear();
+export function clearReactiveAggregatedBalancesCache(workplaceId?: WorkplaceId): void {
+  for (const [key, entry] of aggregatedBalancesCache) {
+    if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
+    entry.dispose();
+    aggregatedBalancesCache.delete(key);
+  }
 }
 
 /**
@@ -59,7 +68,7 @@ export function observeAggregatedAccountBalances(
 ): Observable<AggregatedAccountBalances> {
   const cacheKey = `${targetCurrency}_${workplaceId}`;
   if (aggregatedBalancesCache.has(cacheKey)) {
-    return aggregatedBalancesCache.get(cacheKey)!;
+    return aggregatedBalancesCache.get(cacheKey)!.observable;
   }
 
   const obs$ = combineLatest([
@@ -149,9 +158,9 @@ export function observeAggregatedAccountBalances(
         trace.end();
       }
     }),
-    shareReplay({ bufferSize: 1, refCount: false }),
   );
 
-  aggregatedBalancesCache.set(cacheKey, obs$);
-  return obs$;
+  const replay = createDisposableReplay(obs$);
+  aggregatedBalancesCache.set(cacheKey, { ...replay, workplaceId });
+  return replay.observable;
 }
