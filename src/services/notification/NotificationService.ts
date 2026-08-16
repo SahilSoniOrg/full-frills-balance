@@ -11,6 +11,9 @@ export type NotificationCadence = 'none' | 'daily' | 'weekly';
  * Insights live at `@/src/services/insight/InsightService`.
  */
 export class NotificationService {
+  private reminderGeneration = 0;
+  private reminderQueue: Promise<void> = Promise.resolve();
+
   constructor() {
     if (Platform.OS === 'web') return;
 
@@ -54,21 +57,57 @@ export class NotificationService {
     return status === 'granted';
   }
 
-  async cancelAll(): Promise<void> {
-    if (Platform.OS === 'web') return;
+  cancelAll(): Promise<void> {
+    if (Platform.OS === 'web') return Promise.resolve();
+
+    const generation = ++this.reminderGeneration;
+    return this.enqueueReminderUpdate(async () => {
+      if (!this.ownsReminderGeneration(generation)) return;
+      await this.cancelScheduledNotifications();
+    });
+  }
+
+  private async cancelScheduledNotifications(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
     logger.info('Cancelled all scheduled notifications');
   }
 
-  async scheduleReminder(
+  scheduleReminder(
     cadence: NotificationCadence,
     hour: number,
     minute: number,
     weekday: number = 1,
   ): Promise<void> {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') return Promise.resolve();
 
-    await this.cancelAll();
+    const generation = ++this.reminderGeneration;
+    return this.enqueueReminderUpdate(() =>
+      this.applyReminderSchedule(generation, cadence, hour, minute, weekday),
+    );
+  }
+
+  private enqueueReminderUpdate(operation: () => Promise<void>): Promise<void> {
+    const pending = this.reminderQueue.catch(() => undefined).then(operation);
+    this.reminderQueue = pending.catch(() => undefined);
+    return pending;
+  }
+
+  private ownsReminderGeneration(generation: number): boolean {
+    return generation === this.reminderGeneration;
+  }
+
+  private async applyReminderSchedule(
+    generation: number,
+    cadence: NotificationCadence,
+    hour: number,
+    minute: number,
+    weekday: number,
+  ): Promise<void> {
+    if (!this.ownsReminderGeneration(generation)) return;
+
+    await this.cancelScheduledNotifications();
+
+    if (!this.ownsReminderGeneration(generation)) return;
 
     if (cadence === 'none') {
       return;
@@ -79,6 +118,8 @@ export class NotificationService {
       logger.debug('Cannot schedule notification: permissions not granted');
       return;
     }
+
+    if (!this.ownsReminderGeneration(generation)) return;
 
     const title = AppConfig.strings.settings.notifications.reminderTitle;
     const body = AppConfig.strings.settings.notifications.reminderBody;

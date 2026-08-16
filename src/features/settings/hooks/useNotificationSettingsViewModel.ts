@@ -8,7 +8,7 @@ import {
   notificationService,
   NotificationCadence,
 } from '@/src/services/notification/NotificationService';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface NotificationSettingsViewModel {
   notificationCadence: NotificationCadence;
@@ -49,6 +49,7 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     setAiInferenceMode,
   } = useAiPrefs();
   const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
+  const notificationUpdateGenerationRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,9 +77,10 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
 
   const onUpdateNotificationCadence = useCallback(
     async (cadence: NotificationCadence) => {
+      const generation = ++notificationUpdateGenerationRef.current;
       if (cadence !== 'none') {
         const granted = await notificationService.requestPermissions();
-        if (!granted) return;
+        if (!granted || generation !== notificationUpdateGenerationRef.current) return;
       }
       setNotificationCadence(cadence);
       analytics.logNotificationPreferenceChanged(cadence, notificationHour);
@@ -95,6 +97,7 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
 
   const onUpdateNotificationTime = useCallback(
     async (hour: number, minute: number, weekday?: number) => {
+      ++notificationUpdateGenerationRef.current;
       setNotificationTime(hour, minute);
       if (weekday !== undefined) {
         setNotificationWeekday(weekday);
