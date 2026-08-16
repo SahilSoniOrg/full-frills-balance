@@ -367,7 +367,11 @@ export class AccountResolutionService {
     const journalIds = journals.map(j => j.id);
     const transactions = await database.collections
       .get<Transaction>('transactions')
-      .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
       .fetch();
 
     const transactionsByJournal = new Map<string, Transaction[]>();
@@ -450,7 +454,11 @@ export class AccountResolutionService {
 
     const transactions = await database.collections
       .get<Transaction>('transactions')
-      .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
       .fetch();
 
     const transactionsByJournal = new Map<string, Transaction[]>();
@@ -462,9 +470,11 @@ export class AccountResolutionService {
       accountIds.add(tx.accountId);
     });
 
+    if (accountIds.size === 0) return [];
+
     const accounts = await database.collections
       .get<Account>('accounts')
-      .query(Q.where('id', Q.oneOf(Array.from(accountIds))))
+      .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(Array.from(accountIds))))
       .fetch();
     const categoryAccounts = new Set(
       accounts

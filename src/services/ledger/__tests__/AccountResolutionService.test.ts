@@ -56,4 +56,81 @@ describe('AccountResolutionService', () => {
     expect(result.strategyUsed).toBe('fuzzy');
     expect(result.confidence).toBeGreaterThan(0.85);
   });
+
+  it('does not resolve from foreign workplace transaction history', async () => {
+    // In wp-2, create accounts and journals
+    const foreignWp = 'foreign-wp-id' as WorkplaceId;
+    const foreignSource = await accountRepository.create({
+      workplaceId: foreignWp,
+      name: 'Bank XYZ',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const foreignCategory = await accountRepository.create({
+      workplaceId: foreignWp,
+      name: 'Electric Bill',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+    });
+
+    // Create journal in wp-2 with keyword 'PowerCorp'
+    await database.write(async () => {
+      const journal = await database.collections.get('journals').create((j: any) => {
+        j.workplaceId = foreignWp;
+        j.journalDate = Date.now();
+        j.description = 'PowerCorp Electric Payment';
+        j.status = 'POSTED';
+        j.totalAmount = 100;
+        j.transactionCount = 2;
+        j.currencyCode = 'USD';
+        j.displayType = 'EXPENSE';
+      });
+
+      await database.collections.get('transactions').create((t: any) => {
+        t.workplaceId = foreignWp;
+        t.journalId = journal.id;
+        t.accountId = foreignSource.id;
+        t.amount = 100;
+        t.transactionType = 'CREDIT';
+        t.currencyCode = 'USD';
+        t.transactionDate = Date.now();
+      });
+
+      await database.collections.get('transactions').create((t: any) => {
+        t.workplaceId = foreignWp;
+        t.journalId = journal.id;
+        t.accountId = foreignCategory.id;
+        t.amount = 100;
+        t.transactionType = 'DEBIT';
+        t.currencyCode = 'USD';
+        t.transactionDate = Date.now();
+      });
+    });
+
+    // In wp-1, create a generic account
+    await accountRepository.create({
+      workplaceId,
+      name: 'Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    await accountRepository.create({
+      workplaceId,
+      name: 'General Expense',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+    });
+
+    // Resolve 'PowerCorp' in wp-1
+    const result = await accountResolutionService.resolve({
+      destinationHint: 'PowerCorp',
+      direction: 'debit',
+      workplaceId,
+    });
+
+    // It should not use history or foreign accounts from wp-2
+    expect(result.strategyUsed).not.toBe('history');
+    expect(result.sourceAccountId).not.toBe(foreignSource.id);
+    expect(result.categoryAccountId).not.toBe(foreignCategory.id);
+  });
 });
