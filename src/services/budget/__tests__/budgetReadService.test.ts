@@ -187,4 +187,87 @@ describe('budgetReadService', () => {
     expect(lastUsage.spent).toBe(200);
     expect(lastUsage.remaining).toBe(300);
   });
+
+  it('returns empty usage when budget belongs to another workplace', async () => {
+    const foreignBudget = await budgetRepository.create(
+      'wp-2' as WorkplaceId,
+      {
+        name: 'Foreign Budget',
+        amount: 800,
+        currencyCode: 'USD',
+        startMonth: '2023-10',
+      },
+      [],
+    );
+
+    let emitted: any;
+    const sub = budgetReadService
+      .observeBudgetUsage('wp-1' as WorkplaceId, foreignBudget, '2023-10')
+      .subscribe(u => {
+        emitted = u;
+      });
+
+    await new Promise(r => setTimeout(r, 100));
+    sub.unsubscribe();
+
+    expect(emitted).toEqual({
+      spent: 0,
+      remaining: 0,
+      budgetAmount: 0,
+      usagePercent: 0,
+    });
+  });
+
+  it('ignores transactions and journals from a different workplace', async () => {
+    const month = '2023-10';
+    const middleOfMonth = dayjs('2023-10-15').valueOf();
+
+    const budget = await budgetRepository.create(
+      'wp-1' as WorkplaceId,
+      {
+        name: 'Food Budget',
+        amount: 500,
+        currencyCode: 'USD',
+        startMonth: month,
+      },
+      [expenseChildId as AccountId],
+    );
+
+    // Create transaction in wp-2
+    await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Foreign Grocery Trip',
+        journalDate: middleOfMonth,
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 300,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: assetId as AccountId, amount: 300, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      'wp-2' as WorkplaceId,
+    );
+
+    await new Promise(r => setTimeout(r, 50));
+
+    let lastUsage: any;
+    const sub = budgetReadService
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget, month)
+      .subscribe(u => {
+        if (u && u.budgetAmount === 500) {
+          lastUsage = u;
+        }
+      });
+
+    await new Promise(r => setTimeout(r, 200));
+    sub.unsubscribe();
+
+    expect(lastUsage).toBeDefined();
+    // wp-2 transaction should be ignored
+    expect(lastUsage.spent).toBe(0);
+    expect(lastUsage.remaining).toBe(500);
+  });
 });

@@ -48,6 +48,15 @@ export class BudgetReadService {
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<BudgetUsage> {
+    if (budget.workplaceId !== workplaceId) {
+      return of({
+        spent: 0,
+        remaining: 0,
+        budgetAmount: 0,
+        usagePercent: 0,
+      });
+    }
+
     return combineLatest([
       budget.observe(),
       budgetRepository.observeScopes(workplaceId, budget.id).pipe(
@@ -59,6 +68,15 @@ export class BudgetReadService {
       accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
     ]).pipe(
       switchMap(([observedBudget, scopeAccounts, allExpenses]) => {
+        if (observedBudget.workplaceId !== workplaceId) {
+          return of({
+            spent: 0,
+            remaining: 0,
+            budgetAmount: 0,
+            usagePercent: 0,
+          });
+        }
+
         let ref: number;
         if (typeof referenceDate === 'string') {
           const isCurrent = referenceDate === dayjs().format('YYYY-MM');
@@ -90,7 +108,7 @@ export class BudgetReadService {
 
         const leafExpenseIds = new Set<AccountId>();
         for (const acc of scopeAccounts) {
-          if (acc.accountType === AccountType.EXPENSE) {
+          if (acc && acc.workplaceId === workplaceId && acc.accountType === AccountType.EXPENSE) {
             leafExpenseIds.add(acc.id);
             getDescendants(acc.id, leafExpenseIds);
           }
@@ -107,11 +125,13 @@ export class BudgetReadService {
 
         const clauses = [
           Q.experimentalJoinTables(['journals']),
+          Q.where('workplace_id', workplaceId),
           Q.where('account_id', Q.oneOf(Array.from(leafExpenseIds))),
           Q.where('transaction_date', Q.gte(startOfMonth)),
           Q.where('transaction_date', Q.lte(endOfMonth)),
           Q.where('deleted_at', Q.eq(null)),
           Q.on('journals', [
+            Q.where('workplace_id', workplaceId),
             Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
             Q.where('deleted_at', Q.eq(null)),
           ]),

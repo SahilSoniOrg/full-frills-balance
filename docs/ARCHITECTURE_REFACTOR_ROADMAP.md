@@ -96,7 +96,7 @@ Goal: eliminate cross-workplace read and mutation paths.
 - [x] Enforce planned-payment workplace/model agreement (WP-1I).
 - [ ] Remove or constrain generic unscoped repository escape hatches (WP-1J).
 - [x] Scope journal-save SMS metadata lookup by workplace (WP-1L).
-- [ ] Enforce budget model, scope-account, transaction, and journal ownership (WP-1M).
+- [x] Enforce budget model, scope-account, transaction, and journal ownership (WP-1M).
 - [ ] Scope account-resolution transaction and account follow-up reads (WP-1N).
 - [ ] Scope every owned side of common transaction/journal ORM joins (WP-1O).
 - [ ] Add scoped balance-snapshot join and equivalent ORM fallback (WP-1P).
