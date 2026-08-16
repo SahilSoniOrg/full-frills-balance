@@ -126,11 +126,15 @@ export class SmsSyncPipeline {
     return InboxProcessingStatus.PENDING;
   }
 
-  async scanInbox(workplaceId: WorkplaceId, limit: number): Promise<number> {
+  async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
+    if (signal?.aborted) return 0;
     const previousScan = this.workplaceScans.get(workplaceId) ?? Promise.resolve();
     const scan = previousScan
       .catch(() => undefined)
-      .then(() => this.scanInboxOnce(workplaceId, limit));
+      .then(() => {
+        if (signal?.aborted) return 0;
+        return this.scanInboxOnce(workplaceId, limit, signal);
+      });
     const completion = scan.then(
       () => undefined,
       () => undefined,
@@ -147,10 +151,15 @@ export class SmsSyncPipeline {
     }
   }
 
-  private async scanInboxOnce(workplaceId: WorkplaceId, limit: number): Promise<number> {
+  private async scanInboxOnce(
+    workplaceId: WorkplaceId,
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<number> {
+    if (signal?.aborted) return 0;
     const start = Date.now();
     const messages = await smsInboxBridge.getLatestMessages(limit);
-    if (messages.length === 0) {
+    if (messages.length === 0 || signal?.aborted) {
       return 0;
     }
 
@@ -274,8 +283,9 @@ export class SmsSyncPipeline {
     const processedMessageIds: string[] = [];
     const triggeredRuleIds: string[] = [];
 
-    if (analysisResults.length > 0) {
+    if (analysisResults.length > 0 && !signal?.aborted) {
       await database.write(async () => {
+        if (signal?.aborted) return;
         const messageIds = analysisResults.map(result => result.message.id);
         const fingerprints = analysisResults.map(result => result.fingerprint);
         const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([

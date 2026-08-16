@@ -2,6 +2,8 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
+import { integrityService } from '@/src/services/integrity-service';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
@@ -134,5 +136,13 @@ describe('useAppBootstrap generation safety', () => {
 
     expect(insightService.preWarm).toHaveBeenCalledTimes(1);
     expect(insightService.preWarm).toHaveBeenCalledWith('workplace-b' as WorkplaceId);
+    expect(integrityService.runStartupCheck).toHaveBeenCalledWith(
+      'workplace-b' as WorkplaceId,
+      expect.any(AbortSignal),
+    );
+    expect(plannedPaymentService.processDuePayments).toHaveBeenCalledWith(
+      'workplace-b' as WorkplaceId,
+      expect.any(AbortSignal),
+    );
   });
 });

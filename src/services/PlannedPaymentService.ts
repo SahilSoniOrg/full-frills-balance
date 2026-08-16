@@ -68,8 +68,8 @@ export class PlannedPaymentService {
     return skipPlannedPaymentOccurrence(workplaceId, pp, occurrenceDate);
   }
 
-  async processDuePayments(workplaceId: WorkplaceId): Promise<void> {
-    return processDuePlannedPayments(workplaceId);
+  async processDuePayments(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<void> {
+    return processDuePlannedPayments(workplaceId, signal);
   }
 
   async prepareMergeOperations(

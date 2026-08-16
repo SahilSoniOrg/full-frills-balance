@@ -20,7 +20,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { firstValueFrom, combineLatest, Observable, switchMap } from 'rxjs';
+import { firstValueFrom, combineLatest, Observable, switchMap, map, tap } from 'rxjs';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
 import { createDisposableReplay, DisposableReplay } from '@/src/services/reactive/disposableReplay';
@@ -155,7 +155,7 @@ class ReactiveDataService {
         undefined,
       ),
     ]).pipe(
-      switchMap(async ([base, enrichedJournals]) => {
+      map(([base, enrichedJournals]) => {
         const { accounts, balancesMap, wealthSummary } = base;
         const plainAccounts = toPlainAccounts(accounts);
 
@@ -165,9 +165,11 @@ class ReactiveDataService {
           balances: Array.from(balancesMap.values()),
           wealthSummary,
         };
+        return data;
+      }),
+      tap(data => {
         // Persist for Instant Boot on next launch
         snapshotService.saveDashboardSnapshot(workplaceId, data);
-        return data;
       }),
     );
 
@@ -212,7 +214,7 @@ class ReactiveDataService {
     }
 
     const obs$ = observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
-      switchMap(async ({ accounts, balancesMap, wealthSummary }) => {
+      map(({ accounts, balancesMap, wealthSummary }) => {
         const plainAccounts = toPlainAccounts(accounts);
 
         const data: LiveAccountsSummaryData = {
@@ -220,10 +222,11 @@ class ReactiveDataService {
           balances: Array.from(balancesMap.values()),
           wealthSummary,
         };
-
+        return data;
+      }),
+      tap(data => {
         // Persist for Instant Boot / Remount on Accounts Screen
         snapshotService.saveCustomSnapshot(workplaceId, 'accounts_list_data', data);
-        return data;
       }),
     );
 

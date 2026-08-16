@@ -111,12 +111,12 @@ Exit: every scoped persistence operation requires and enforces `workplaceId`.
 Goal: make cancellation and disposal explicit.
 
 - [x] Introduce a workplace generation/cancellation mechanism.
-- [ ] Make bootstrap stages generation-aware through completion, including already-started service work.
+- [x] Make bootstrap stages generation-aware through completion, including already-started service work.
 - [x] Expose an `AbortSignal` from each generation lease and abort the prior lease on replacement.
-- [ ] Prevent evicted reactive projections from publishing stale snapshots.
-- [ ] Carry cancellation through startup integrity and its rebuild commit boundary.
-- [ ] Carry cancellation through planned-payment orchestration and the ledger batch boundary.
-- [ ] Carry cancellation through SMS ingestion and its final write boundary.
+- [x] Prevent evicted reactive projections from publishing stale snapshots.
+- [x] Carry cancellation through startup integrity and its rebuild commit boundary.
+- [x] Carry cancellation through planned-payment orchestration and the ledger batch boundary.
+- [x] Carry cancellation through SMS ingestion and its final write boundary.
 - [x] Dispose reactive cache subscriptions on eviction.
 - [x] Terminate insight timers for inactive workplaces.
 - [x] Sequence widget synchronization writes.

@@ -181,8 +181,14 @@ export async function skipPlannedPaymentOccurrence(
 /**
  * Process all active planned payments and generate journals for any due occurrences.
  */
-export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promise<void> {
+export async function processDuePlannedPayments(
+  workplaceId: WorkplaceId,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (signal?.aborted) return;
   const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
+  if (signal?.aborted) return;
+
   const nowTime = normalizeToStartOfDay(Date.now());
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
 
@@ -191,6 +197,7 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
     workplaceId,
     allPlannedIds,
   );
+  if (signal?.aborted) return;
 
   const journalledDays = new Map<string, Set<number>>();
   for (const j of existingJournals) {
@@ -202,6 +209,10 @@ export async function processDuePlannedPayments(workplaceId: WorkplaceId): Promi
   }
 
   for (const pp of activePayments) {
+    if (signal?.aborted) {
+      logger.info('[PlannedPaymentOrchestration] Processing aborted due to signal.');
+      break;
+    }
     let nextOcc = normalizeToStartOfDay(pp.nextOccurrence);
 
     if (nextOcc > horizon) continue;

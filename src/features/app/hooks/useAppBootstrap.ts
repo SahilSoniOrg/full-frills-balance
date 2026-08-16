@@ -147,8 +147,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
           await Promise.allSettled([
             insightService.preWarm(workplaceId),
-            integrityService.runStartupCheck(workplaceId),
-            plannedPaymentService.processDuePayments(workplaceId),
+            integrityService.runStartupCheck(workplaceId, lease.signal),
+            plannedPaymentService.processDuePayments(workplaceId, lease.signal),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),
             notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),
@@ -156,7 +156,9 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               ? [
                   import('@/src/services/sms-service').then(({ smsService }) =>
                     lease.isCurrent()
-                      ? smsService.processUnprocessedSms(workplaceId).then(() => undefined)
+                      ? smsService
+                          .processUnprocessedSms(workplaceId, lease.signal)
+                          .then(() => undefined)
                       : Promise.resolve(),
                   ),
                 ]

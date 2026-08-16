@@ -316,21 +316,26 @@ export class IntegrityService {
   private static readonly SCHEMA_VERSION_KEY = '@integrity_schema_version';
 
   /**
-   * Returns true if the full balance-verification scan should run.
+   * Returns true if the full balance-verification scan should run for this workplace.
    * Runs when the stored schema version differs from the current one (i.e. after a migration).
    */
-  private shouldRunIntegrityCheck(): boolean {
-    const storedVersion = storage.getString(IntegrityService.SCHEMA_VERSION_KEY);
+  private shouldRunIntegrityCheck(workplaceId: WorkplaceId): boolean {
+    const key = `${IntegrityService.SCHEMA_VERSION_KEY}_${workplaceId}`;
+    const storedVersion = storage.getString(key);
     const currentVersion = String(schema.version);
 
     if (storedVersion !== currentVersion) {
       logger.info(
-        `[IntegrityService] Schema changed (${storedVersion} → ${currentVersion}) — running full integrity check.`,
+        `[IntegrityService] Schema changed for workplace ${workplaceId} (${storedVersion} → ${currentVersion}) — running full integrity check.`,
       );
-      storage.set(IntegrityService.SCHEMA_VERSION_KEY, currentVersion);
       return true;
     }
     return false;
+  }
+
+  private markIntegrityCheckComplete(workplaceId: WorkplaceId): void {
+    const key = `${IntegrityService.SCHEMA_VERSION_KEY}_${workplaceId}`;
+    storage.set(key, String(schema.version));
   }
 
   /**
@@ -468,10 +473,35 @@ export class IntegrityService {
    *  - When a crash flag was written by the previous session.
    * Normal warm starts skip it entirely.
    */
-  async runStartupCheck(workplaceId: WorkplaceId): Promise<IntegrityCheckResult> {
+  async runStartupCheck(
+    workplaceId: WorkplaceId,
+    signal?: AbortSignal,
+  ): Promise<IntegrityCheckResult> {
     logger.info('[IntegrityService] Starting startup integrity check...');
 
+    if (signal?.aborted) {
+      logger.info('[IntegrityService] Startup integrity check aborted before start.');
+      return {
+        totalAccounts: 0,
+        accountsChecked: 0,
+        discrepanciesFound: 0,
+        repairsAttempted: 0,
+        repairsSuccessful: 0,
+        results: [],
+      };
+    }
+
     await this.scanForNullAccountTransactions(workplaceId);
+    if (signal?.aborted) {
+      return {
+        totalAccounts: 0,
+        accountsChecked: 0,
+        discrepanciesFound: 0,
+        repairsAttempted: 0,
+        repairsSuccessful: 0,
+        results: [],
+      };
+    }
 
     const accountsExist = await accountRepository.exists(workplaceId);
     if (!accountsExist) {
@@ -480,7 +510,7 @@ export class IntegrityService {
       );
     }
 
-    const shouldRun = this.shouldRunIntegrityCheck();
+    const shouldRun = this.shouldRunIntegrityCheck(workplaceId);
     if (!shouldRun) {
       logger.info(
         '[IntegrityService] Skipping balance verification (no crash flag, schema unchanged).',
@@ -497,12 +527,28 @@ export class IntegrityService {
 
     logger.info('[IntegrityService] Running full balance verification...');
     const results = await this.verifyAllAccountBalances(workplaceId);
+    if (signal?.aborted) {
+      logger.info('[IntegrityService] Startup check aborted after verification.');
+      return {
+        totalAccounts: results.length,
+        accountsChecked: results.length,
+        discrepanciesFound: 0,
+        repairsAttempted: 0,
+        repairsSuccessful: 0,
+        results: [],
+      };
+    }
+
     const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
 
     let repairsAttempted = 0;
     let repairsSuccessful = 0;
 
     for (const discrepancy of discrepancies) {
+      if (signal?.aborted) {
+        logger.info('[IntegrityService] Startup check aborted before completing all repairs.');
+        break;
+      }
       logger.warn(
         `[IntegrityService] Balance discrepancy for ${discrepancy.accountName}: ` +
           `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
@@ -523,6 +569,10 @@ export class IntegrityService {
       if (success) {
         repairsSuccessful++;
       }
+    }
+
+    if (!signal?.aborted) {
+      this.markIntegrityCheckComplete(workplaceId);
     }
 
     const summary: IntegrityCheckResult = {

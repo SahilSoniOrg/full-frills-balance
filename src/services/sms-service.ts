@@ -71,8 +71,8 @@ class SmsService {
     return { cursor: pageSize, importedCount };
   }
 
-  async processUnprocessedSms(workplaceId: WorkplaceId): Promise<number> {
-    return smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+  async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
+    return smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit, signal);
   }
 
   observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
