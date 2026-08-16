@@ -335,15 +335,21 @@ class RebuildQueueService {
           }
         }
 
-        // Move processed items from queue to processing batch storage
-        for (const item of batch) {
-          this.queue.delete(item.id);
-        }
-        this.syncQueueToDisk();
+        // Persist the in-flight marker before removing anything from the
+        // in-memory/durable queue. A failed transition must leave work queued.
         storage.set(
           RebuildQueueService.PROCESSING_KEY,
           JSON.stringify(batch.map(i => [i.id, i.fromDate])),
         );
+        for (const item of batch) {
+          const currentFromDate = this.queue.get(item.id);
+          // Preserve an earlier boundary supplied re-entrantly while the
+          // processing marker was being persisted.
+          if (currentFromDate !== undefined && currentFromDate >= item.fromDate) {
+            this.queue.delete(item.id);
+          }
+        }
+        this.syncQueueToDisk();
 
         logger.debug(`[RebuildQueue] Processing batch of ${batch.length} accounts`);
 

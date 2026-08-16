@@ -166,12 +166,13 @@ describe('RebuildQueueService lifecycle', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
-  it('requeues a batch after an unexpected processing error', async () => {
+  it('keeps the earliest batch boundary after a processing transition error', async () => {
     rebuildAccountBalances.mockResolvedValue(null);
     let shouldFailProcessingWrite = true;
     storageSet.mockImplementation((key: string) => {
       if (key === 'rebuild_processing_batch_v1' && shouldFailProcessingWrite) {
         shouldFailProcessingWrite = false;
+        queue.enqueue(accountId, 100, workplaceId);
         throw new Error('processing storage unavailable');
       }
     });
@@ -180,7 +181,25 @@ describe('RebuildQueueService lifecycle', () => {
     await queue.flush();
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(rebuildAccountBalances).toHaveBeenCalledWith(workplaceId, accountId, 777);
+    expect(rebuildAccountBalances).toHaveBeenCalledWith(workplaceId, accountId, 100);
+    expect(queue.hasPending).toBe(false);
+  });
+
+  it('persists retry-delayed work in the durable queue snapshot', async () => {
+    rebuildAccountBalances.mockRejectedValueOnce(new Error('transient')).mockResolvedValue(null);
+    queue.enqueue(accountId, 777, workplaceId);
+    storageSet.mockClear();
+
+    await jest.advanceTimersByTimeAsync(100);
+
+    const durableWrites = storageSet.mock.calls.filter(([key]) => key === 'rebuild_queue_v1');
+    expect(durableWrites).not.toHaveLength(0);
+    expect(JSON.parse(durableWrites.at(-1)?.[1] ?? '[]')).toEqual([
+      ['workplace-1__account-1', 777],
+    ]);
+    expect(queue.hasPending).toBe(true);
+
+    await queue.flush();
     expect(queue.hasPending).toBe(false);
   });
 });
