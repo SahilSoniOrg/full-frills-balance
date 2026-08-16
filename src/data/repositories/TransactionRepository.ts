@@ -13,10 +13,6 @@ export class TransactionRepository {
     return database.collections.get<Transaction>('transactions');
   }
 
-  transactionsQuery(...clauses: Q.Clause[]) {
-    return this.transactions.query(...clauses);
-  }
-
   async findEarliest(workplaceId: WorkplaceId): Promise<Transaction | null> {
     const transactions = await this.transactions
       .query(

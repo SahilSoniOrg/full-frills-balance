@@ -247,15 +247,6 @@ export class AccountRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async findByIdRaw(id: AccountId): Promise<Account | null> {
-    try {
-      const account = await this.accounts.find(id);
-      return account;
-    } catch {
-      return null;
-    }
-  }
-
   async find(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
@@ -316,12 +307,6 @@ export class AccountRepository {
         Q.where('pay_from_account_id', Q.oneOf(accountIds)),
       )
       .fetch();
-  }
-
-  async findAllByIdsRaw(ids: AccountId[]): Promise<Account[]> {
-    if (ids.length === 0) return [];
-    const clauses: Q.Clause[] = [Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null))];
-    return this.accounts.query(...clauses).fetch();
   }
 
   async findAllByIds(workplaceId: WorkplaceId, ids: AccountId[]): Promise<Account[]> {

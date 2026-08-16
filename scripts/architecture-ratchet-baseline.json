@@ -2,7 +2,6 @@
   "description": "Existing architecture debt by rule and production file. Counts may only decrease; new occurrences and stale entries fail.",
   "rules": {
     "unscoped_raw_query": {
-      "src/data/repositories/AccountRepository.ts": 2,
       "src/data/repositories/journal/JournalEnrichmentQueries.ts": 3
     },
     "presentation_model_import": {
