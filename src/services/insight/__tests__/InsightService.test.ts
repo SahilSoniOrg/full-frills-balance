@@ -10,7 +10,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 // Mock dependencies
@@ -53,6 +53,81 @@ describe('PatternService', () => {
   });
 
   describe('observePatterns', () => {
+    it('acquires recurring candidates separately for each workplace', async () => {
+      const workplaceOne = 'wp-insight-one' as WorkplaceId;
+      const workplaceTwo = 'wp-insight-two' as WorkplaceId;
+      const accountsByWorkplace = new Map<WorkplaceId, object[]>([
+        [
+          workplaceOne,
+          [
+            {
+              id: 'expense-one',
+              name: 'Workplace one expense',
+              accountType: AccountType.EXPENSE,
+              accountSubtype: AccountSubtype.FOOD,
+            },
+          ],
+        ],
+        [
+          workplaceTwo,
+          [
+            {
+              id: 'expense-two',
+              name: 'Workplace two expense',
+              accountType: AccountType.EXPENSE,
+              accountSubtype: AccountSubtype.FOOD,
+            },
+          ],
+        ],
+      ]);
+
+      (accountRepository.observeAll as jest.Mock).mockImplementation((workplaceId: WorkplaceId) =>
+        of(accountsByWorkplace.get(workplaceId) ?? []),
+      );
+      (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockImplementation(
+        (workplaceId: WorkplaceId) =>
+          Promise.resolve([
+            {
+              accountId: workplaceId === workplaceOne ? 'expense-one' : 'expense-two',
+              amount: 10,
+              currencyCode: 'USD',
+              description: workplaceId === workplaceOne ? 'Service one' : 'Service two',
+              occurrenceCount: 3,
+              journalIds: 'j1,j2,j3',
+              transactionDates: '0,2592000000,5184000000',
+            },
+          ]),
+      );
+
+      const [workplaceOneInsights, workplaceTwoInsights] = await Promise.all([
+        firstValueFrom(patternService.observePatterns(workplaceOne).pipe(take(1))),
+        firstValueFrom(patternService.observePatterns(workplaceTwo).pipe(take(1))),
+      ]);
+
+      expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+        workplaceOne,
+        expect.any(Number),
+        expect.any(Number),
+      );
+      expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+        workplaceTwo,
+        expect.any(Number),
+        expect.any(Number),
+      );
+      expect(
+        workplaceOneInsights.some(insight => insight.description.includes('Service one')),
+      ).toBe(true);
+      expect(
+        workplaceOneInsights.some(insight => insight.description.includes('Service two')),
+      ).toBe(false);
+      expect(
+        workplaceTwoInsights.some(insight => insight.description.includes('Service two')),
+      ).toBe(true);
+      expect(
+        workplaceTwoInsights.some(insight => insight.description.includes('Service one')),
+      ).toBe(false);
+    });
+
     it('should group slow leak expenses by subcategory instead of account id', done => {
       const mockAccounts = [
         {

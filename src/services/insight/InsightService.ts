@@ -84,7 +84,11 @@ export class InsightService {
         // 1. Concurrent Fetch: Recurring candidates and Expense history
         trace.metric('fetch_data');
         const [recurringCandidates, expenseTransactions] = await Promise.all([
-          transactionRawRepository.getRecurringPatternsRaw(ninetyDaysAgo as number, minCount),
+          transactionRawRepository.getRecurringPatternsRaw(
+            workplaceId,
+            ninetyDaysAgo as number,
+            minCount,
+          ),
           transactionRawRepository.getTransactionsMetadataRaw(
             workplaceId,
             (accounts as Account[])

@@ -123,8 +123,12 @@ export class TransactionRawRepository {
     return transactionRawRebuildQueries.getRebuildDataRaw(workplaceId, accountId, startDate);
   }
 
-  async getRecurringPatternsRaw(startDate: number, minCount: number): Promise<RecurringPattern[]> {
-    return transactionRawPatternQueries.getRecurringPatternsRaw(startDate, minCount);
+  async getRecurringPatternsRaw(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    minCount: number,
+  ): Promise<RecurringPattern[]> {
+    return transactionRawPatternQueries.getRecurringPatternsRaw(workplaceId, startDate, minCount);
   }
 
   async getLatestBalancesAndCountsRaw(

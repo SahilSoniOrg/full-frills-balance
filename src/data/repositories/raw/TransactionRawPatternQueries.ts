@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';
@@ -7,7 +7,11 @@ import { RecurringPattern } from '../TransactionTypes';
 import { transactionRawMetricsQueries } from './TransactionRawMetricsQueries';
 
 export class TransactionRawPatternQueries {
-  async getRecurringPatternsRaw(startDate: number, minCount: number): Promise<RecurringPattern[]> {
+  async getRecurringPatternsRaw(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    minCount: number,
+  ): Promise<RecurringPattern[]> {
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
@@ -24,6 +28,7 @@ export class TransactionRawPatternQueries {
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
       WHERE t.transaction_date >= ?
+        AND j.workplace_id = ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
@@ -34,6 +39,7 @@ export class TransactionRawPatternQueries {
 
     const raws = await transactionRawMetricsQueries.queryRaw<RecurringPattern>(sql, [
       startDate,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
       minCount,
     ]);
@@ -43,6 +49,7 @@ export class TransactionRawPatternQueries {
       .get<Transaction>('transactions')
       .query(
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
         Q.on('journals', 'deleted_at', Q.eq(null)),
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('deleted_at', Q.eq(null)),
