@@ -105,10 +105,13 @@ export class TransactionRawMetricsQueries {
             ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
           ) as rn
         FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
         JOIN journals j ON t.journal_id = j.id
         WHERE t.account_id IN (${accountPlaceholders})
           AND t.transaction_date <= ?
           AND t.deleted_at IS NULL
+          AND t.workplace_id = ?
+          AND a.workplace_id = ?
           AND j.workplace_id = ?
           AND j.deleted_at IS NULL
           AND j.status IN (${placeholders})
@@ -122,6 +125,8 @@ export class TransactionRawMetricsQueries {
       ...accountIds,
       cutoffDate,
       workplaceId,
+      workplaceId,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
@@ -134,6 +139,8 @@ export class TransactionRawMetricsQueries {
       const txs = await database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.where('workplace_id', workplaceId),
+          Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
@@ -175,6 +182,8 @@ export class TransactionRawMetricsQueries {
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
+        AND t.workplace_id = ?
+        AND a.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.workplace_id = ?
         AND j.status IN (${placeholders})
@@ -186,6 +195,8 @@ export class TransactionRawMetricsQueries {
       ...accountIds,
       startDate,
       endDate,
+      workplaceId,
+      workplaceId,
       workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
@@ -200,11 +211,13 @@ export class TransactionRawMetricsQueries {
     const [accounts, txs] = await Promise.all([
       database.collections
         .get<Account>('accounts')
-        .query(Q.where('id', Q.oneOf(accountIds)))
+        .query(Q.where('id', Q.oneOf(accountIds)), Q.where('workplace_id', workplaceId))
         .fetch(),
       database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.where('workplace_id', workplaceId),
+          Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
@@ -262,6 +275,8 @@ export class TransactionRawMetricsQueries {
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
+        AND t.workplace_id = ?
+        AND a.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.workplace_id = ?
         AND j.status IN (${placeholders})
@@ -273,6 +288,8 @@ export class TransactionRawMetricsQueries {
       startDate,
       endDate,
       workplaceId,
+      workplaceId,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
@@ -281,11 +298,13 @@ export class TransactionRawMetricsQueries {
     const [accounts, txs] = await Promise.all([
       database.collections
         .get<Account>('accounts')
-        .query(Q.where('id', Q.oneOf(accountIds)))
+        .query(Q.where('id', Q.oneOf(accountIds)), Q.where('workplace_id', workplaceId))
         .fetch(),
       database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.where('workplace_id', workplaceId),
+          Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
