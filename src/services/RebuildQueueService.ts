@@ -19,6 +19,17 @@ interface RebuildQueueConfig {
   retryDelayMs: number;
 }
 
+interface RebuildQueueItem {
+  id: string;
+  fromDate: number;
+}
+
+interface PendingRetry {
+  item: RebuildQueueItem;
+  timeoutId: ReturnType<typeof setTimeout>;
+  generation: number;
+}
+
 const DEFAULT_CONFIG: RebuildQueueConfig = {
   debounceMs: process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.debounceMs,
   maxBatchSize: AppConfig.performance.rebuild.queue.maxBatchSize,
@@ -43,6 +54,8 @@ class RebuildQueueService {
   private currentProcessingPromise: Promise<void> | null = null;
   private config: RebuildQueueConfig;
   private retryCounts: Map<string, number> = new Map();
+  private pendingRetries: Map<string, PendingRetry> = new Map();
+  private lifecycleGeneration = 0;
 
   constructor(config: Partial<RebuildQueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -109,9 +122,12 @@ class RebuildQueueService {
    * @param fromDate Optional earliest date of change. Defaults to current time.
    */
   enqueue(accountId: AccountId, fromDate: number = Date.now(), workplaceId: WorkplaceId): void {
-    const existingDate = this.queue.get(createQueueKey(accountId, workplaceId));
-    if (existingDate === undefined || fromDate < existingDate) {
-      this.queue.set(createQueueKey(accountId, workplaceId), fromDate);
+    const key = createQueueKey(accountId, workplaceId);
+    const pendingRetry = this.takePendingRetry(key);
+    const effectiveFromDate = Math.min(fromDate, pendingRetry?.fromDate ?? fromDate);
+    const existingDate = this.queue.get(key);
+    if (existingDate === undefined || effectiveFromDate < existingDate) {
+      this.queue.set(key, effectiveFromDate);
       this.syncQueueToDisk();
     }
     this.scheduleProcessing();
@@ -130,9 +146,12 @@ class RebuildQueueService {
     const ids = Array.isArray(accountIds) ? accountIds : Array.from(accountIds);
     let changed = false;
     for (const id of ids) {
-      const existingDate = this.queue.get(createQueueKey(id, workplaceId));
-      if (existingDate === undefined || fromDate < existingDate) {
-        this.queue.set(createQueueKey(id, workplaceId), fromDate);
+      const key = createQueueKey(id, workplaceId);
+      const pendingRetry = this.takePendingRetry(key);
+      const effectiveFromDate = Math.min(fromDate, pendingRetry?.fromDate ?? fromDate);
+      const existingDate = this.queue.get(key);
+      if (existingDate === undefined || effectiveFromDate < existingDate) {
+        this.queue.set(key, effectiveFromDate);
         changed = true;
       }
     }
@@ -147,19 +166,25 @@ class RebuildQueueService {
    * Useful for critical operations where we need balances ASAP.
    */
   async flush(): Promise<void> {
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
+    const generation = this.lifecycleGeneration;
 
-    // Wait for current process if any
-    if (this.currentProcessingPromise) {
-      await this.currentProcessingPromise;
-    }
+    while (generation === this.lifecycleGeneration) {
+      this.clearProcessingTimer();
+      this.promotePendingRetries(generation);
 
-    // Keep processing batches until the queue is empty
-    while (this.queue.size > 0) {
-      await this.processQueue();
+      if (this.currentProcessingPromise) {
+        await this.currentProcessingPromise;
+        continue;
+      }
+
+      if (this.queue.size > 0) {
+        await this.processQueue();
+        continue;
+      }
+
+      if (this.pendingRetries.size === 0) {
+        return;
+      }
     }
   }
 
@@ -170,10 +195,9 @@ class RebuildQueueService {
    * they MUST be unsubscribed here to prevent memory leaks.
    */
   stop(): void {
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
+    this.lifecycleGeneration += 1;
+    this.clearProcessingTimer();
+    this.clearRetryTimers();
     this.queue.clear();
     this.retryCounts.clear();
     this.syncQueueToDisk();
@@ -190,17 +214,96 @@ class RebuildQueueService {
    * Check if there are pending rebuilds.
    */
   get hasPending(): boolean {
-    return this.queue.size > 0 || this.isProcessing;
+    return this.queue.size > 0 || this.isProcessing || this.pendingRetries.size > 0;
   }
 
   private scheduleProcessing(): void {
+    this.clearProcessingTimer();
+    const generation = this.lifecycleGeneration;
+    this.timeoutId = setTimeout(() => {
+      this.timeoutId = null;
+      if (generation === this.lifecycleGeneration) {
+        void this.processQueue();
+      }
+    }, this.config.debounceMs);
+  }
+
+  private clearProcessingTimer(): void {
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
-    this.timeoutId = setTimeout(() => {
-      this.processQueue();
-    }, this.config.debounceMs);
-    // Note: React Native handles timeout lifecycle automatically
+  }
+
+  private clearRetryTimers(): void {
+    for (const retry of this.pendingRetries.values()) {
+      clearTimeout(retry.timeoutId);
+    }
+    this.pendingRetries.clear();
+  }
+
+  private takePendingRetry(id: string): RebuildQueueItem | null {
+    const retry = this.pendingRetries.get(id);
+    if (!retry) {
+      return null;
+    }
+    clearTimeout(retry.timeoutId);
+    this.pendingRetries.delete(id);
+    return retry.item;
+  }
+
+  private addToQueue(item: RebuildQueueItem): void {
+    const existingDate = this.queue.get(item.id);
+    if (existingDate === undefined || item.fromDate < existingDate) {
+      this.queue.set(item.id, item.fromDate);
+    }
+  }
+
+  private scheduleRetry(item: RebuildQueueItem, retryCount: number, generation: number): void {
+    if (generation !== this.lifecycleGeneration) {
+      return;
+    }
+
+    const existing = this.pendingRetries.get(item.id);
+    if (existing) {
+      clearTimeout(existing.timeoutId);
+      item = { ...item, fromDate: Math.min(item.fromDate, existing.item.fromDate) };
+    }
+
+    const delay = this.config.retryDelayMs * retryCount;
+    const timeoutId = setTimeout(() => {
+      const pending = this.pendingRetries.get(item.id);
+      if (!pending || pending.timeoutId !== timeoutId) {
+        return;
+      }
+
+      this.pendingRetries.delete(item.id);
+      if (pending.generation !== this.lifecycleGeneration) {
+        return;
+      }
+
+      this.addToQueue(pending.item);
+      this.syncQueueToDisk();
+      this.scheduleProcessing();
+    }, delay);
+
+    this.pendingRetries.set(item.id, { item, timeoutId, generation });
+  }
+
+  private promotePendingRetries(generation: number): void {
+    let promoted = false;
+    for (const [id, retry] of this.pendingRetries) {
+      if (retry.generation !== generation) {
+        continue;
+      }
+      clearTimeout(retry.timeoutId);
+      this.pendingRetries.delete(id);
+      this.addToQueue(retry.item);
+      promoted = true;
+    }
+    if (promoted) {
+      this.syncQueueToDisk();
+    }
   }
 
   private async processQueue(): Promise<void> {
@@ -208,12 +311,13 @@ class RebuildQueueService {
       return;
     }
 
+    const generation = this.lifecycleGeneration;
     this.currentProcessingPromise = (async () => {
       const start = Date.now();
       this.isProcessing = true;
       try {
         // Take up to maxBatchSize items from the queue
-        const batch: { id: string; fromDate: number }[] = [];
+        const batch: RebuildQueueItem[] = [];
         const entries = Array.from(this.queue.entries());
         for (const [accountId, fromDate] of entries) {
           batch.push({ id: accountId, fromDate });
@@ -256,7 +360,7 @@ class RebuildQueueService {
           .map((result, index) => ({ result, item: batch[index] }))
           .filter(entry => entry.result.status === 'rejected');
 
-        if (failures.length > 0) {
+        if (failures.length > 0 && generation === this.lifecycleGeneration) {
           logger.warn(`[RebuildQueue] ${failures.length}/${batch.length} rebuilds failed`);
 
           for (const failure of failures) {
@@ -265,11 +369,7 @@ class RebuildQueueService {
             this.retryCounts.set(item.id, retryCount);
 
             if (retryCount <= this.config.retryLimit) {
-              const delay = this.config.retryDelayMs * retryCount;
-              setTimeout(() => {
-                const [workplaceId, accountId] = parseQueueKey(item.id);
-                this.enqueue(accountId, item.fromDate, workplaceId as WorkplaceId);
-              }, delay);
+              this.scheduleRetry(item, retryCount, generation);
             } else {
               logger.error(
                 `[RebuildQueue] Giving up on account ${item.id} after ${retryCount} attempts`,
@@ -279,19 +379,23 @@ class RebuildQueueService {
         }
 
         // Clear processing batch storage after completion
-        storage.remove(RebuildQueueService.PROCESSING_KEY);
+        if (generation === this.lifecycleGeneration) {
+          storage.remove(RebuildQueueService.PROCESSING_KEY);
+        }
 
         // Clear retry counts for successes
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            this.retryCounts.delete(batch[index].id);
-          }
-        });
+        if (generation === this.lifecycleGeneration) {
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              this.retryCounts.delete(batch[index].id);
+            }
+          });
+        }
 
         logger.debug(`[RebuildQueue] Batch complete. ${this.queue.size} remaining in queue.`);
 
         // If there are more items, schedule another processing
-        if (this.queue.size > 0) {
+        if (generation === this.lifecycleGeneration && this.queue.size > 0) {
           this.scheduleProcessing();
         }
       } catch (error) {
@@ -299,6 +403,9 @@ class RebuildQueueService {
       } finally {
         this.isProcessing = false;
         this.currentProcessingPromise = null;
+        if (this.queue.size > 0 && !this.timeoutId) {
+          this.scheduleProcessing();
+        }
         logger.info(`[Trace] RebuildQueueService.processQueue: ${Date.now() - start}ms`, {
           queueSize: this.queue.size,
         });
