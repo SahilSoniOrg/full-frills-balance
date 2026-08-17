@@ -26,11 +26,16 @@ export async function enrichTransactionInboxRecords(
 
   return records.map((record): TransactionInboxItem => {
     const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
+    const duplicateJournal = record.duplicateJournalId
+      ? journalMap.get(record.duplicateJournalId)
+      : undefined;
     const duplicateCandidate: TransactionDuplicateCandidate | undefined = record.duplicateJournalId
       ? {
           journalId: record.duplicateJournalId,
-          journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.inputDate,
-          description: journalMap.get(record.duplicateJournalId)?.description,
+          journalDate: duplicateJournal?.journalDate || record.inputDate,
+          description: duplicateJournal?.description,
+          totalAmount: duplicateJournal?.totalAmount,
+          currencyCode: duplicateJournal?.currencyCode,
           score: record.duplicateConfidence || 0,
           reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
         }

@@ -3,6 +3,10 @@ import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionInboxItem } from '@/src/types/domain';
 
+export interface TransactionInboxImportOptions {
+  mode?: 'simple' | 'split' | 'advanced';
+}
+
 export interface TransactionInboxImportNavigation {
   smsId?: string;
   smsRecordId: string;
@@ -97,6 +101,7 @@ export function buildTransactionInboxImportNavigation(
   item: TransactionInboxItem,
   accounts: Account[],
   matchedRule: TransactionAutoPostRule | null,
+  options?: TransactionInboxImportOptions,
 ): TransactionInboxImportNavigation {
   const { bankAccountId, counterpartyId, customDescription } = resolveRuleAccounts(
     item,
@@ -113,6 +118,7 @@ export function buildTransactionInboxImportNavigation(
     type,
     amount: String(item.parsedAmount || ''),
     notes: buildNotes(item, customDescription),
+    ...(options?.mode ? { mode: options.mode } : {}),
   };
 
   if (item.direction === 'debit') {

@@ -312,6 +312,8 @@ export interface TransactionDuplicateCandidate {
   journalId: JournalId;
   journalDate: number;
   description?: string;
+  totalAmount?: number;
+  currencyCode?: string;
   score: number;
   reasons: string[];
 }

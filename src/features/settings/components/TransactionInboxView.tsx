@@ -1,6 +1,8 @@
 import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Shape, Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
+import { DuplicateConflictResolutionModal } from '@/src/features/settings/components/DuplicateConflictResolutionModal';
+import { EditReparseSmsModal } from '@/src/features/settings/components/EditReparseSmsModal';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
@@ -27,8 +29,17 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     handleDismiss,
     handleUndismiss,
     handleImport,
-    handleCompareDuplicate,
     handleOpenJournal,
+    selectedDuplicateItem,
+    selectedEditReparseItem,
+    handleOpenDuplicateModal,
+    handleCloseDuplicateModal,
+    handleOpenEditReparseModal,
+    handleCloseEditReparseModal,
+    handleMergeDuplicate,
+    handleCreateRuleFromItem,
+    handleSplitImport,
+    handleViewJournalFromDuplicate,
     filterButtons,
     defaultCurrencyCode,
   } = vm;
@@ -87,8 +98,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 handleDismiss={handleDismiss}
                 handleUndismiss={handleUndismiss}
                 handleImport={handleImport}
-                onCompareDuplicate={handleCompareDuplicate}
+                onCompareDuplicate={handleOpenDuplicateModal}
                 onOpenJournal={handleOpenJournal}
+                onCreateRule={handleCreateRuleFromItem}
+                onSplitImport={handleSplitImport}
+                onEditReparse={handleOpenEditReparseModal}
                 testID={`inbox-item-${item.deviceSourceId}`}
               />
             )}
@@ -134,6 +148,25 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
           />
         </View>
       </SettingsLayout>
+
+      <DuplicateConflictResolutionModal
+        visible={Boolean(selectedDuplicateItem)}
+        item={selectedDuplicateItem}
+        defaultCurrencyCode={defaultCurrencyCode}
+        onClose={handleCloseDuplicateModal}
+        onMarkDuplicateAndDismiss={handleDismiss}
+        onMerge={handleMergeDuplicate}
+        onPostAnyway={handleImport}
+        onViewJournal={handleViewJournalFromDuplicate}
+      />
+
+      <EditReparseSmsModal
+        visible={Boolean(selectedEditReparseItem)}
+        item={selectedEditReparseItem}
+        defaultCurrencyCode={defaultCurrencyCode}
+        onClose={handleCloseEditReparseModal}
+        onImportParsed={handleImport}
+      />
     </View>
   );
 }
@@ -148,7 +181,7 @@ const styles = StyleSheet.create({
   },
   platformNotice: {
     padding: Spacing.md,
-    borderRadius: 8,
+    borderRadius: Shape.radius.md,
     borderWidth: 1,
     marginHorizontal: Spacing.xs,
     marginBottom: Spacing.sm,

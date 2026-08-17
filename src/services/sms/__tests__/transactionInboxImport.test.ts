@@ -58,4 +58,15 @@ describe('buildTransactionInboxImportNavigation', () => {
     expect(navigation.params.destinationAccountId).toBe('salary');
     expect(navigation.params.notes).toContain('Imported from SMS');
   });
+
+  it('passes mode option when provided', () => {
+    const navigation = buildTransactionInboxImportNavigation(
+      item,
+      [account('bank-1', 'Card 1990')],
+      null,
+      { mode: 'split' },
+    );
+
+    expect(navigation.params.mode).toBe('split');
+  });
 });

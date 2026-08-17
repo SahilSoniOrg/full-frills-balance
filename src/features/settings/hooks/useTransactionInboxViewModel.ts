@@ -5,6 +5,10 @@ import TransactionInboxRecord, {
 import { useAccounts } from '@/src/features/accounts';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { useTransactionInboxImport } from '@/src/features/settings/hooks/useTransactionInboxImport';
+import {
+  TransactionInboxModals,
+  useTransactionInboxModals,
+} from '@/src/features/settings/hooks/useTransactionInboxModals';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { smsService } from '@/src/services/sms-service';
@@ -17,7 +21,7 @@ export type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates'
 
 const PAGE_SIZE = 25;
 
-export interface TransactionInboxViewModel {
+export interface TransactionInboxViewModel extends TransactionInboxModals {
   filter: InboxFilter;
   setFilter: (filter: InboxFilter) => void;
   items: TransactionInboxItem[];
@@ -31,7 +35,6 @@ export interface TransactionInboxViewModel {
   handleDismiss: (item: TransactionInboxItem) => Promise<void>;
   handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
   handleImport: (item: TransactionInboxItem) => void;
-  handleCompareDuplicate: (item: TransactionInboxItem) => void;
   handleOpenJournal: (item: TransactionInboxItem) => void;
   filterButtons: { key: InboxFilter; label: string }[];
   defaultCurrencyCode: string;
@@ -46,6 +49,12 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const [scanCursor, setScanCursor] = useState(PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScanningOlder, setIsScanningOlder] = useState(false);
+
+  const modals = useTransactionInboxModals({
+    workplaceId,
+    defaultCurrencyCode,
+    handleImport,
+  });
 
   const observe = useCallback(
     (limit: number) => smsService.observeInbox(workplaceId, limit, { status: filter }),
@@ -140,21 +149,6 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     [workplaceId],
   );
 
-  const handleCompareDuplicate = useCallback(
-    (item: TransactionInboxItem) => {
-      if (!item.duplicateCandidate) return;
-      AppNavigation.toJournalDetails(item.duplicateCandidate.journalId, {
-        title:
-          item.duplicateCandidate.description || item.parsedMerchant || item.senderAddress || '',
-        amount: item.parsedAmount || 0,
-        currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
-        date: item.duplicateCandidate.journalDate,
-        displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
-      });
-    },
-    [defaultCurrencyCode],
-  );
-
   const handleOpenJournal = useCallback(
     (item: TransactionInboxItem) => {
       if (!item.linkedJournal) return;
@@ -197,9 +191,9 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     handleDismiss,
     handleUndismiss,
     handleImport,
-    handleCompareDuplicate,
     handleOpenJournal,
     filterButtons,
     defaultCurrencyCode,
+    ...modals,
   };
 }

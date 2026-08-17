@@ -1,6 +1,9 @@
 import { TransactionInboxItem, WorkplaceId } from '@/src/types/domain';
 import { smsService } from '@/src/services/sms-service';
-import { buildTransactionInboxImportNavigation } from '@/src/services/sms/transactionInboxImport';
+import {
+  buildTransactionInboxImportNavigation,
+  TransactionInboxImportOptions,
+} from '@/src/services/sms/transactionInboxImport';
 import Account from '@/src/data/models/Account';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
@@ -8,6 +11,8 @@ import { InboxParseStatus } from '@/src/data/models/TransactionInboxRecord';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
+
+export type { TransactionInboxImportOptions };
 
 interface UseTransactionInboxImportProps {
   accounts: Account[];
@@ -19,7 +24,7 @@ export function useTransactionInboxImport({
   workplaceId,
 }: UseTransactionInboxImportProps) {
   return useCallback(
-    async (item: TransactionInboxItem) => {
+    async (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => {
       let matchedRule: TransactionAutoPostRule | null = null;
       try {
         const parsedTx: ParsedTransaction = {
@@ -37,7 +42,7 @@ export function useTransactionInboxImport({
           address: item.senderAddress || '',
           accountSource: item.parsedAccountSource,
           confidence: item.parseConfidence ?? 0,
-          parseStatus: item.parseStatus as InboxParseStatus,
+          parseStatus: (item.parseStatus as InboxParseStatus) || InboxParseStatus.PARSED,
           parseReason: item.parseReason || '',
         };
         matchedRule = await smsService.getMatchingRule(
@@ -50,9 +55,13 @@ export function useTransactionInboxImport({
         logger.error('Failed to search matching rules in handleImport', { error });
       }
 
-      AppNavigation.toJournalEntry(
-        buildTransactionInboxImportNavigation(item, accounts, matchedRule),
+      const navigation = buildTransactionInboxImportNavigation(
+        item,
+        accounts,
+        matchedRule,
+        options,
       );
+      AppNavigation.toJournalEntry(navigation);
     },
     [accounts, workplaceId],
   );

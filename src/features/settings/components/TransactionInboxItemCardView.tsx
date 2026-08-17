@@ -16,6 +16,9 @@ interface TransactionInboxItemCardViewProps {
   handleImport: (item: TransactionInboxItem) => void;
   onCompareDuplicate: (item: TransactionInboxItem) => void;
   onOpenJournal: (item: TransactionInboxItem) => void;
+  onCreateRule: (item: TransactionInboxItem) => void;
+  onSplitImport: (item: TransactionInboxItem) => void;
+  onEditReparse: (item: TransactionInboxItem) => void;
   testID?: string;
 }
 
@@ -27,6 +30,9 @@ export function TransactionInboxItemCardView({
   handleImport,
   onCompareDuplicate,
   onOpenJournal,
+  onCreateRule,
+  onSplitImport,
+  onEditReparse,
   testID,
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
@@ -129,13 +135,26 @@ export function TransactionInboxItemCardView({
             Open Journal
           </AppButton>
         ) : (
-          <AppButton
-            size="sm"
-            onPress={() => handleImport(item)}
-            disabled={item.processingStatus === InboxProcessingStatus.PARSE_FAILED}
-          >
-            Import / Review
-          </AppButton>
+          <>
+            <AppButton
+              size="sm"
+              onPress={() => handleImport(item)}
+              disabled={item.processingStatus === InboxProcessingStatus.PARSE_FAILED}
+            >
+              Import / Review
+            </AppButton>
+
+            {item.parsedAmount ? (
+              <AppButton
+                size="sm"
+                variant="outline"
+                onPress={() => onSplitImport(item)}
+                testID={`inbox-split-btn-${item.deviceSourceId}`}
+              >
+                Split
+              </AppButton>
+            ) : null}
+          </>
         )}
 
         {item.processingStatus === InboxProcessingStatus.DISMISSED ? (
@@ -147,6 +166,28 @@ export function TransactionInboxItemCardView({
             Dismiss
           </AppButton>
         )}
+
+        {item.channel === 'sms' ? (
+          <AppButton
+            size="sm"
+            variant="ghost"
+            onPress={() => onCreateRule(item)}
+            testID={`inbox-create-rule-btn-${item.deviceSourceId}`}
+          >
+            Create Rule
+          </AppButton>
+        ) : null}
+
+        {item.channel === 'sms' && !item.linkedJournal ? (
+          <AppButton
+            size="sm"
+            variant="ghost"
+            onPress={() => onEditReparse(item)}
+            testID={`inbox-edit-reparse-btn-${item.deviceSourceId}`}
+          >
+            Edit & Re-parse
+          </AppButton>
+        ) : null}
 
         <AppButton
           size="sm"
