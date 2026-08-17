@@ -5,6 +5,7 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { getAccountActivityFlowLabels } from '@/src/features/accounts/helpers/accountActivityFlowLabels';
 import type { AccountActivitySectionModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatShortDate } from '@/src/utils/dateUtils';
@@ -39,6 +40,7 @@ export function AccountActivitySection({
       : reconciledAtMs != null
         ? theme.success
         : theme.textSecondary;
+  const flowLabels = getAccountActivityFlowLabels(accountType);
 
   return (
     <>
@@ -146,11 +148,7 @@ export function AccountActivitySection({
       <View style={styles.metricsContainer}>
         <View style={styles.metricItem}>
           <AppText variant="caption" color="secondary">
-            {accountType === 'ASSET'
-              ? 'Total In'
-              : accountType === 'LIABILITY' || accountType === 'CREDIT_CARD'
-                ? 'Total Spent'
-                : 'Total In'}
+            {flowLabels.increaseLabel}
           </AppText>
           <MoneyText
             amount={periodMetrics.totalIncrease}
@@ -162,11 +160,7 @@ export function AccountActivitySection({
         </View>
         <View style={styles.metricItem}>
           <AppText variant="caption" color="secondary">
-            {accountType === 'ASSET'
-              ? 'Total Out'
-              : accountType === 'LIABILITY' || accountType === 'CREDIT_CARD'
-                ? 'Total Paid'
-                : 'Total Out'}
+            {flowLabels.decreaseLabel}
           </AppText>
           <MoneyText
             amount={periodMetrics.totalDecrease}

@@ -112,4 +112,57 @@ describe('AccountCard', () => {
 
     expect(getByTestId('account-card-selection-indicator')).toBeTruthy();
   });
+
+  it('renders MONEY IN and MONEY OUT for an asset account', () => {
+    const { getByText } = render(
+      <AccountCard
+        account={mockAccount}
+        onPress={jest.fn()}
+        dividerColor="divider"
+        surfaceColor="surface"
+      />,
+    );
+
+    expect(getByText('MONEY IN')).toBeTruthy();
+    expect(getByText('MONEY OUT')).toBeTruthy();
+  });
+
+  it('renders MONTH SPENT and REFUNDS / CREDITS for an expense account', () => {
+    const expenseAccount: AccountCardViewModel = {
+      ...mockAccount,
+      name: 'Food & Drink',
+      accountType: AccountType.EXPENSE,
+      monthlyIncome: 1341,
+      monthlyExpenses: 0,
+    };
+    const { getByText } = render(
+      <AccountCard
+        account={expenseAccount}
+        onPress={jest.fn()}
+        dividerColor="divider"
+        surfaceColor="surface"
+      />,
+    );
+
+    expect(getByText('MONTH SPENT')).toBeTruthy();
+    expect(getByText('REFUNDS / CREDITS')).toBeTruthy();
+  });
+
+  it.each([
+    [AccountType.INCOME, 'MONTH EARNED', 'ADJUSTMENTS'],
+    [AccountType.LIABILITY, 'PAYMENTS MADE', 'NEW CHARGES'],
+    [AccountType.EQUITY, 'ADDITIONS', 'REDUCTIONS'],
+  ] as const)('renders %s card labels', (accountType, leftLabel, rightLabel) => {
+    const { getByText } = render(
+      <AccountCard
+        account={{ ...mockAccount, name: accountType, accountType }}
+        onPress={jest.fn()}
+        dividerColor="divider"
+        surfaceColor="surface"
+      />,
+    );
+
+    expect(getByText(leftLabel)).toBeTruthy();
+    expect(getByText(rightLabel)).toBeTruthy();
+  });
 });

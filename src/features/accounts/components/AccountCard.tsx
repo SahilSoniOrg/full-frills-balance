@@ -4,8 +4,9 @@ import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccoun
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/domain';
 
+import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountCardStatsConfig';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
@@ -24,51 +25,6 @@ interface AccountCardProps {
   surfaceColor: ColorKey;
   isSelected?: boolean;
   isSelectionModeActive?: boolean;
-}
-
-function getAccountStatsConfig(
-  accountType: AccountType | undefined,
-  monthlyIncome: number,
-  monthlyExpense: number,
-) {
-  switch (accountType) {
-    case AccountType.EXPENSE:
-      return {
-        leftLabel: 'MONTH SPENT',
-        leftAmount: monthlyExpense,
-        rightLabel: 'REFUNDS / CREDITS',
-        rightAmount: monthlyIncome,
-      };
-    case AccountType.INCOME:
-      return {
-        leftLabel: 'MONTH EARNED',
-        leftAmount: monthlyIncome,
-        rightLabel: 'ADJUSTMENTS',
-        rightAmount: monthlyExpense,
-      };
-    case AccountType.LIABILITY:
-      return {
-        leftLabel: 'PAYMENTS MADE',
-        leftAmount: monthlyExpense,
-        rightLabel: 'NEW CHARGES',
-        rightAmount: monthlyIncome,
-      };
-    case AccountType.EQUITY:
-      return {
-        leftLabel: 'ADDITIONS',
-        leftAmount: monthlyIncome,
-        rightLabel: 'REDUCTIONS',
-        rightAmount: monthlyExpense,
-      };
-    case AccountType.ASSET:
-    default:
-      return {
-        leftLabel: 'MONEY IN',
-        leftAmount: monthlyIncome,
-        rightLabel: 'MONEY OUT',
-        rightAmount: monthlyExpense,
-      };
-  }
 }
 
 export function AccountCardBase({

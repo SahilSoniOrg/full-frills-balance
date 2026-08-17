@@ -30,6 +30,39 @@ describe('accountingHelpers aggregates', () => {
       expect(flows.totalDecrease).toBe(200);
       expect(flows.netFlow).toBe(800);
     });
+
+    it('treats expense debits as period increase and credits as period decrease', () => {
+      const txs = [
+        { amount: 1341, transactionType: TransactionType.DEBIT },
+        { amount: 50, transactionType: TransactionType.CREDIT },
+      ];
+      const flows = calculateAccountPeriodFlows(AccountType.EXPENSE, txs);
+      expect(flows.totalIncrease).toBe(1341);
+      expect(flows.totalDecrease).toBe(50);
+      expect(flows.netFlow).toBe(1291);
+    });
+
+    it('treats income credits as period increase and debits as period decrease', () => {
+      const txs = [
+        { amount: 2000, transactionType: TransactionType.CREDIT },
+        { amount: 25, transactionType: TransactionType.DEBIT },
+      ];
+      const flows = calculateAccountPeriodFlows(AccountType.INCOME, txs);
+      expect(flows.totalIncrease).toBe(2000);
+      expect(flows.totalDecrease).toBe(25);
+      expect(flows.netFlow).toBe(1975);
+    });
+
+    it('treats equity credits as period increase and debits as period decrease', () => {
+      const txs = [
+        { amount: 400, transactionType: TransactionType.CREDIT },
+        { amount: 50, transactionType: TransactionType.DEBIT },
+      ];
+      const flows = calculateAccountPeriodFlows(AccountType.EQUITY, txs);
+      expect(flows.totalIncrease).toBe(400);
+      expect(flows.totalDecrease).toBe(50);
+      expect(flows.netFlow).toBe(350);
+    });
   });
 
   describe('calculateIncomeVsExpenseSummary', () => {
