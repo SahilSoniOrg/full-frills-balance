@@ -237,7 +237,9 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-16 | WP-1 | Journal model-instance writer workplace validation | `faa4a91c` |
 | 2026-08-16 | WP-1 | Raw rebuild, recurring-pattern, account-list, and repository-metrics isolation | `3878b5dc`, `926f10dd`, `16bbf6f7`, `5edf606a` |
 | 2026-08-16 | WP-1 | SMS rule-history transaction isolation | `adf1378f` |
-| 2026-08-16 | WP-2 | Bootstrap lifecycle audit and generation `AbortSignal` foundation | `889dec2f`, `0969745b` |
+| 2026-08-18 | WP-4 | Atomic journal reversal (one writer) | `a526aec6` |
+| 2026-08-18 | WP-4 | Atomic account create with opening balance | `d345336b` |
+| 2026-08-18 | WP-4 | Batch account/SMS/planned-payment mutations with audit and schedule | `4202cc34` |
 
 ## Audit Evidence Index
 
