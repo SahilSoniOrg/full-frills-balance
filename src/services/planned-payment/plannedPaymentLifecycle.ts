@@ -1,4 +1,4 @@
-import { database } from '@/src/data/database/Database';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
@@ -43,31 +43,29 @@ export async function togglePlannedPaymentStatus(
     }
   }
 
-  await database.write(async () => {
-    const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
-      record.status = newStatus;
-      if (!isPausing) {
-        record.nextOccurrence = updatedNextOccurrence;
+  const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
+    record.status = newStatus;
+    if (!isPausing) {
+      record.nextOccurrence = updatedNextOccurrence;
+    }
+    record.updatedAt = new Date();
+  });
+
+  const journalUpdates = targetJournals.map(j =>
+    j.prepareUpdate(record => {
+      if (isPausing) {
+        record.status = JournalStatus.PAUSED;
+      } else {
+        record.status =
+          normalizeToStartOfDay(j.journalDate) >= nowMidnight
+            ? JournalStatus.PLANNED
+            : JournalStatus.SKIPPED;
       }
       record.updatedAt = new Date();
-    });
+    }),
+  );
 
-    const journalUpdates = targetJournals.map(j =>
-      j.prepareUpdate(record => {
-        if (isPausing) {
-          record.status = JournalStatus.PAUSED;
-        } else {
-          record.status =
-            normalizeToStartOfDay(j.journalDate) >= nowMidnight
-              ? JournalStatus.PLANNED
-              : JournalStatus.SKIPPED;
-        }
-        record.updatedAt = new Date();
-      }),
-    );
-
-    await database.batch([ppUpdate, ...journalUpdates]);
-  });
+  await persistBatch([ppUpdate, ...journalUpdates]);
 
   if (!isPausing) {
     await processDuePlannedPayments(workplaceId);

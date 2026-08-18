@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
@@ -92,7 +93,5 @@ export async function deletePlannedPayment(
   const journalOps = await prepareSoftDeleteJournalsAndTransactions(workplaceId, unpostedJournals);
   const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
 
-  await database.write(async () => {
-    await database.batch([ppOp, ...journalOps]);
-  });
+  await persistBatch([ppOp, ...journalOps]);
 }

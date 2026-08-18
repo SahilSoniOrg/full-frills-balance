@@ -575,6 +575,7 @@ export class AccountRepository {
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
+    extraOps?: (account: Account) => Model[],
   ): Promise<Account> {
     const { normalizedUpdates, existingMetadata } = await this.planUpdate(
       account,
@@ -584,14 +585,19 @@ export class AccountRepository {
 
     return await this.db.write(async () => {
       const batchOps = this.prepareUpdateBatchOps(account, normalizedUpdates, existingMetadata);
-      if (batchOps.length > 0) {
-        await this.db.batch(...batchOps);
+      const extras = extraOps?.(account) ?? [];
+      if (batchOps.length + extras.length > 0) {
+        await this.db.batch(...batchOps, ...extras);
       }
       return account;
     });
   }
 
-  async delete(workplaceId: WorkplaceId, account: Account): Promise<void> {
+  async delete(
+    workplaceId: WorkplaceId,
+    account: Account,
+    extraOps?: (account: Account) => Model[],
+  ): Promise<void> {
     //get account by id
     const existingAccount = await this.find(workplaceId, account.id);
     if (!existingAccount) {
@@ -603,10 +609,30 @@ export class AccountRepository {
       throw new Error('Cannot delete account with children. Please delete or move children first.');
     }
     await this.db.write(async () => {
-      await account.update(record => {
+      const deleteOp = account.prepareUpdate(record => {
         record.deletedAt = new Date();
         record.updatedAt = new Date();
       });
+      const extras = extraOps?.(account) ?? [];
+      await this.db.batch(deleteOp, ...extras);
+    });
+  }
+
+  async recover(
+    workplaceId: WorkplaceId,
+    account: Account,
+    extraOps?: (account: Account) => Model[],
+  ): Promise<void> {
+    if (account.workplaceId !== workplaceId) {
+      throw new Error('Account does not belong to the specified workplace');
+    }
+    await this.db.write(async () => {
+      const recoverOp = account.prepareUpdate(record => {
+        record.deletedAt = undefined;
+        record.updatedAt = new Date();
+      });
+      const extras = extraOps?.(account) ?? [];
+      await this.db.batch(recoverOp, ...extras);
     });
   }
 

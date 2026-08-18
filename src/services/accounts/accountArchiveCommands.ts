@@ -1,4 +1,4 @@
-import { database } from '@/src/data/database/Database';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
@@ -87,12 +87,10 @@ export async function applyAccountArchiveChanges(
   if (!prepared) return false;
 
   const { archiveTargets, unarchiveTargets, now } = prepared.plan;
-  await database.write(async () => {
-    await database.batch(
-      ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
-      ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
-    );
-  });
+  await persistBatch([
+    ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
+    ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
+  ]);
 
   trackArchiveAnalytics(archiveTargets, unarchiveTargets);
   invalidateAccountArchiveCaches();

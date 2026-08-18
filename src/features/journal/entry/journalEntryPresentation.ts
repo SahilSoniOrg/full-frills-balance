@@ -165,22 +165,8 @@ export function isJournalEntrySubmitDisabled(input: {
 
 export function createSmsJournalAfterSaveHandler(input: {
   smsId?: string;
-  smsRecordId?: string;
-  finalizeManualImport: (smsRecordId: string, journalId: JournalId) => Promise<void>;
   markSmsAsProcessed: (smsId: string) => Promise<void>;
 }): ((result: { journalId?: JournalId; success?: boolean }) => Promise<void>) | undefined {
-  if (input.smsRecordId) {
-    return async result => {
-      if (result.journalId) {
-        await input.finalizeManualImport(input.smsRecordId!, result.journalId);
-      }
-      if (input.smsId) {
-        await input.markSmsAsProcessed(input.smsId);
-      }
-    };
-  }
-  if (input.smsId) {
-    return async () => input.markSmsAsProcessed(input.smsId!);
-  }
-  return undefined;
+  if (!input.smsId) return undefined;
+  return async () => input.markSmsAsProcessed(input.smsId!);
 }

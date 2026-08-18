@@ -142,7 +142,7 @@ Exit: concurrent triggers produce one deterministic final result.
 Goal: remove competing write protocols.
 
 - [x] Inventory and classify direct database writes, batches, raw model mutation, and private adapter access.
-- [ ] Move service-owned database mechanics into repositories.
+- [x] Move account, SMS inbox, and planned-payment command writers into repositories (`persistBatch` / inbox persist). Remaining service writers: ledger, integrity repair, rebuild, audit cleanup.
 - [ ] Define transaction coordinators for journal, account, planned-payment, SMS, and import flows.
 - [ ] Isolate raw SQL and private adapter access behind named infrastructure interfaces.
 - [x] Document atomicity ownership for cross-domain mutations.

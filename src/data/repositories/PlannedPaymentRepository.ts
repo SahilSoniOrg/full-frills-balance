@@ -117,6 +117,20 @@ export class PlannedPaymentRepository {
     });
   }
 
+  prepareUpdate(
+    workplaceId: WorkplaceId,
+    pp: PlannedPayment,
+    updates: Partial<PlannedPaymentPersistenceInput>,
+  ): Model {
+    if (pp.workplaceId !== workplaceId) {
+      throw new Error('Planned payment not found or does not belong to the workplace');
+    }
+    return pp.prepareUpdate(record => {
+      Object.assign(record, updates);
+      record.updatedAt = new Date();
+    });
+  }
+
   prepareDelete(workplaceId: WorkplaceId, pp: PlannedPayment): Model {
     if (pp.workplaceId !== workplaceId) {
       throw new Error('Planned payment not found or does not belong to the workplace');

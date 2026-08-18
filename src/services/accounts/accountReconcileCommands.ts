@@ -1,7 +1,7 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 export async function reconcileAccount(accountId: AccountId, date: Date, workplaceId: WorkplaceId) {
@@ -12,16 +12,17 @@ export async function reconcileAccount(accountId: AccountId, date: Date, workpla
     account,
     { reconciledAt: date },
     workplaceId,
-  );
-
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: accountId,
-      action: AuditAction.UPDATE,
-      changes: { reconciledAt: date },
-    },
-    workplaceId,
+    () => [
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: accountId,
+          action: AuditAction.UPDATE,
+          changes: { reconciledAt: date },
+        },
+        workplaceId,
+      ),
+    ],
   );
 
   analytics.trackFeatureUsage('account', 'reconcile', {

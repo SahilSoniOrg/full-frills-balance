@@ -39,6 +39,10 @@ describe('PlannedPaymentService', () => {
     (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.countOnDay as jest.Mock).mockResolvedValue(0);
+    (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockReturnValue([]);
+    (plannedPaymentRepository.prepareUpdate as jest.Mock).mockImplementation(
+      (_workplaceId, _pp, updates) => ({ updates }),
+    );
   });
 
   describe('calculateNextOccurrence', () => {
@@ -350,9 +354,12 @@ describe('PlannedPaymentService', () => {
         expect.any(Number),
       );
       // Promote existing PLANNED journal via canonical ledger write path
-      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1');
+      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', [
+        expect.objectContaining({ updates: expect.any(Object) }),
+      ]);
       expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
-      expect(updatePpSpy).toHaveBeenCalled();
+      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
+      expect(updatePpSpy).not.toHaveBeenCalled();
     });
 
     test('Creates new POSTED journal if no PLANNED journal exists', async () => {
@@ -375,7 +382,8 @@ describe('PlannedPaymentService', () => {
       );
 
       expect(createJournalSpy).toHaveBeenCalled();
-      expect(updatePpSpy).toHaveBeenCalled();
+      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
+      expect(updatePpSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -403,13 +411,7 @@ describe('PlannedPaymentService', () => {
         mockJournal,
       );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
-      (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockImplementation(
-        async (_workplaceId: WorkplaceId, journals: any[], status: JournalStatus) => {
-          for (const journal of journals) {
-            journal.status = status;
-          }
-        },
-      );
+      (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockReturnValue([mockJournal]);
 
       await plannedPaymentService.skipOccurrence(
         'wp-1' as WorkplaceId,
@@ -427,15 +429,13 @@ describe('PlannedPaymentService', () => {
         expect.any(Number),
         expect.any(Number),
       );
-      expect(journalPlannedQueries.batchUpdateStatus).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
         'wp-1',
         [mockJournal],
         JournalStatus.SKIPPED,
       );
-      expect(mockJournal.status).toBe('SKIPPED');
-      expect(plannedPaymentRepository.update).toHaveBeenCalled();
-
-      const nextOcc = (plannedPaymentRepository.update as jest.Mock).mock.calls[0][2]
+      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
+      const nextOcc = (plannedPaymentRepository.prepareUpdate as jest.Mock).mock.calls[0][2]
         .nextOccurrence as number;
       expect(new Date(nextOcc).getMonth()).toBe(1); // Feb
     });

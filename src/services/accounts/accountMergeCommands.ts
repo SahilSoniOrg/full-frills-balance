@@ -1,7 +1,8 @@
-import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -15,7 +16,6 @@ import {
   assertMergeAccountsCompatible,
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
-import { auditService } from '@/src/services/audit-service';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -117,78 +117,72 @@ export async function mergeAccounts(
 
   const prepareKinds = mergePrepareKindsFromSites();
 
-  await database.write(async () => {
-    const prepareTasks: Promise<Model[]>[] = [];
+  const prepareTasks: Promise<Model[]>[] = [];
 
-    if (prepareKinds.has('transactions')) {
-      prepareTasks.push(
-        (async () => {
-          const transactions = await transactionRepository.findAllByAccountIds(
-            workplaceId,
-            filteredSourceIds,
-          );
-          return transactions.map(tx =>
-            tx.prepareUpdate(r => {
-              r.accountId = targetAccountId;
-              r.runningBalance = null;
-              r.updatedAt = new Date();
-            }),
-          );
-        })(),
-      );
-    }
-    if (prepareKinds.has('plannedPayments')) {
-      prepareTasks.push(
-        plannedPaymentService.prepareMergeOperations(
+  if (prepareKinds.has('transactions')) {
+    prepareTasks.push(
+      (async () => {
+        const transactions = await transactionRepository.findAllByAccountIds(
           workplaceId,
           filteredSourceIds,
-          targetAccountId,
-        ) as Promise<Model[]>,
-      );
-    }
-    if (prepareKinds.has('smsRules')) {
-      prepareTasks.push(
-        transactionAutoPostRuleRepository.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ) as Promise<Model[]>,
-      );
-    }
-    if (prepareKinds.has('budgets')) {
-      prepareTasks.push(
-        budgetWriteService.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ) as Promise<Model[]>,
-      );
-    }
-    if (prepareKinds.has('accounts')) {
-      prepareTasks.push(
-        accountRepository.prepareMergeOperations(
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-        ) as Promise<Model[]>,
-      );
-    }
-    if (prepareKinds.has('snapshots')) {
-      prepareTasks.push(
-        balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
-          ...filteredSourceIds,
-          targetAccountId,
-        ]) as Promise<Model[]>,
-      );
-    }
+        );
+        return transactions.map(tx =>
+          tx.prepareUpdate(r => {
+            r.accountId = targetAccountId;
+            r.runningBalance = null;
+            r.updatedAt = new Date();
+          }),
+        );
+      })(),
+    );
+  }
+  if (prepareKinds.has('plannedPayments')) {
+    prepareTasks.push(
+      plannedPaymentService.prepareMergeOperations(
+        workplaceId,
+        filteredSourceIds,
+        targetAccountId,
+      ) as Promise<Model[]>,
+    );
+  }
+  if (prepareKinds.has('smsRules')) {
+    prepareTasks.push(
+      transactionAutoPostRuleRepository.prepareMergeOperations(
+        workplaceId,
+        filteredSourceIds,
+        targetAccountId,
+      ) as Promise<Model[]>,
+    );
+  }
+  if (prepareKinds.has('budgets')) {
+    prepareTasks.push(
+      budgetWriteService.prepareMergeOperations(
+        workplaceId,
+        filteredSourceIds,
+        targetAccountId,
+      ) as Promise<Model[]>,
+    );
+  }
+  if (prepareKinds.has('accounts')) {
+    prepareTasks.push(
+      accountRepository.prepareMergeOperations(
+        workplaceId,
+        filteredSourceIds,
+        targetAccountId,
+      ) as Promise<Model[]>,
+    );
+  }
+  if (prepareKinds.has('snapshots')) {
+    prepareTasks.push(
+      balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
+        ...filteredSourceIds,
+        targetAccountId,
+      ]) as Promise<Model[]>,
+    );
+  }
 
-    const opGroups = await Promise.all(prepareTasks);
-    await database.batch(opGroups.flat());
-  });
-
-  rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
-
-  await auditService.log(
+  const opGroups = await Promise.all(prepareTasks);
+  const auditOp = auditRepository.prepareLog(
     {
       entityType: 'account',
       entityId: targetAccountId,
@@ -200,6 +194,10 @@ export async function mergeAccounts(
     },
     workplaceId,
   );
+
+  await persistBatch([...opGroups.flat(), auditOp], () => {
+    rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
+  });
 
   analytics.trackFeatureUsage('account', 'merge', {
     source_count: filteredSourceIds.length,

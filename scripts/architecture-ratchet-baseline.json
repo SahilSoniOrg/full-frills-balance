@@ -117,18 +117,10 @@
     },
     "direct_database_write": {
       "src/services/AccountingRebuildService.ts": 2,
-      "src/services/accounts/accountArchiveCommands.ts": 2,
-      "src/services/accounts/accountDeleteCommands.ts": 1,
-      "src/services/accounts/accountHierarchyCommands.ts": 2,
-      "src/services/accounts/accountMergeCommands.ts": 2,
       "src/services/audit-service.ts": 2,
       "src/services/integrity-service.ts": 3,
       "src/services/integrity/integrityMaintenance.ts": 1,
       "src/services/ledger/ledgerWriteService.ts": 12,
-      "src/services/planned-payment/plannedPaymentCommands.ts": 2,
-      "src/services/planned-payment/plannedPaymentLifecycle.ts": 2,
-      "src/services/sms-service.ts": 2,
-      "src/services/sms/SmsSyncPipeline.ts": 2,
       "src/testing/e2eSeed.ts": 1,
       "src/testing/smsTestHarness.ts": 2
     }

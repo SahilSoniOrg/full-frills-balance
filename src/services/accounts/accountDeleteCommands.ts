@@ -1,14 +1,10 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
-import { database } from '@/src/data/database/Database';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import {
-  deleteBlockers,
-  type DeleteBlocker,
-} from '@/src/services/accounts/accountReferenceGraph';
+import { deleteBlockers, type DeleteBlocker } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 /** Format structured graph blockers into the user-facing delete Error message. */
@@ -38,25 +34,25 @@ export async function deleteAccount(
     throw formatAccountDeleteBlockersError(account.name, blockers);
   }
 
-  await accountRepository.delete(workplaceId, account);
-
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: account.id,
-      action: AuditAction.DELETE,
-      changes: {
-        before: {
-          name: account.name,
-          deletedAt: account.deletedAt,
-        },
-        after: {
-          deletedAt: new Date(),
+  await accountRepository.delete(workplaceId, account, () => [
+    auditRepository.prepareLog(
+      {
+        entityType: 'account',
+        entityId: account.id,
+        action: AuditAction.DELETE,
+        changes: {
+          before: {
+            name: account.name,
+            deletedAt: account.deletedAt,
+          },
+          after: {
+            deletedAt: new Date(),
+          },
         },
       },
-    },
-    workplaceId,
-  );
+      workplaceId,
+    ),
+  ]);
 
   analytics.trackFeatureUsage('account', 'delete', {
     account_type: account.accountType,
@@ -71,25 +67,20 @@ export async function recoverAccount(
   const account = await accountRepository.findWithDeleted(workplaceId, accountId);
   if (!account) return;
 
-  await database.write(async () => {
-    await account.update(record => {
-      record.deletedAt = undefined;
-      record.updatedAt = new Date();
-    });
-  });
-
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: accountId,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: { deletedAt: account.deletedAt },
-        after: { action: 'RECOVERED', deletedAt: undefined },
+  await accountRepository.recover(workplaceId, account, () => [
+    auditRepository.prepareLog(
+      {
+        entityType: 'account',
+        entityId: accountId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { deletedAt: account.deletedAt },
+          after: { action: 'RECOVERED', deletedAt: undefined },
+        },
       },
-    },
-    workplaceId,
-  );
+      workplaceId,
+    ),
+  ]);
 
   analytics.trackFeatureUsage('account', 'recover', {
     account_type: account.accountType,

@@ -90,16 +90,25 @@ export class LedgerWriteService {
     return { journal, ops, accountsToRebuild: prepared.accountsToRebuild };
   }
 
-  async createJournal(data: CreateJournalData, workplaceId: WorkplaceId): Promise<Journal> {
+  async createJournal(
+    data: CreateJournalData,
+    workplaceId: WorkplaceId,
+    options?: {
+      extraOps?: (journal: Journal) => Model[];
+      afterBatch?: () => void;
+    },
+  ): Promise<Journal> {
     const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data, workplaceId);
+    const extras = options?.extraOps?.(journal) ?? [];
 
     await database.write(async () => {
-      await database.batch(ops);
+      await database.batch([...ops, ...extras]);
 
       const activeStatus = isRebuildEligibleJournalStatus(data.status);
       if (activeStatus && accountsToRebuild.size > 0) {
         rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate, workplaceId);
       }
+      options?.afterBatch?.();
     });
 
     return journal;
@@ -348,7 +357,11 @@ export class LedgerWriteService {
     return journal;
   }
 
-  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+  async postJournal(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    extraOps: Model[] = [],
+  ): Promise<Journal> {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.PLANNED) {
@@ -395,7 +408,7 @@ export class LedgerWriteService {
         workplaceId,
       );
 
-      await database.batch([metadataOp, journalOp, ...txOps, auditOp]);
+      await database.batch([metadataOp, journalOp, ...txOps, auditOp, ...extraOps]);
 
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);

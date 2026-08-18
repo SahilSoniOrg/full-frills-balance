@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
@@ -13,6 +14,7 @@ import {
 import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { Model } from '@nozbe/watermelondb';
 
 export interface PlannedOccurrenceContext {
   normalizedDate: number;
@@ -51,25 +53,17 @@ export async function resolvePlannedOccurrenceContext(
   return { normalizedDate, dayEnd, existingPlanned };
 }
 
-async function advancePlannedPaymentSchedule(
+function prepareScheduleAdvance(
   workplaceId: WorkplaceId,
   pp: PlannedPayment,
   normalizedOccurrenceDate: number,
-): Promise<void> {
+): Model | null {
   const nextOcc = calculateNextOccurrence(normalizedOccurrenceDate, pp);
-
-  if (nextOcc > pp.nextOccurrence) {
-    if (pp.endDate && nextOcc > pp.endDate) {
-      await plannedPaymentRepository.update(workplaceId, pp, {
-        nextOccurrence: nextOcc,
-        status: PlannedPaymentStatus.COMPLETED,
-      });
-    } else {
-      await plannedPaymentRepository.update(workplaceId, pp, {
-        nextOccurrence: nextOcc,
-      });
-    }
-  }
+  if (nextOcc <= pp.nextOccurrence) return null;
+  return plannedPaymentRepository.prepareUpdate(workplaceId, pp, {
+    nextOccurrence: nextOcc,
+    ...(pp.endDate && nextOcc > pp.endDate ? { status: PlannedPaymentStatus.COMPLETED } : {}),
+  });
 }
 
 export async function postPlannedPaymentOccurrence(
@@ -87,9 +81,15 @@ export async function postPlannedPaymentOccurrence(
     );
 
     const postTime = Date.now();
+    const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
+    const extraOps = scheduleOp ? () => [scheduleOp] : undefined;
 
     if (existingPlanned.length > 0) {
-      await ledgerWriteService.postJournal(existingPlanned[0].id, workplaceId);
+      await ledgerWriteService.postJournal(
+        existingPlanned[0].id,
+        workplaceId,
+        scheduleOp ? [scheduleOp] : [],
+      );
     } else {
       if (!pp.toAccountId) {
         throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
@@ -105,10 +105,9 @@ export async function postPlannedPaymentOccurrence(
           plannedPaymentId: pp.id as PlannedPaymentId,
         },
         workplaceId,
+        { extraOps },
       );
     }
-
-    await advancePlannedPaymentSchedule(workplaceId, pp, normalizedDate);
 
     logger.info(
       `Manually posted occurrence for planned payment ${pp.id} at ${new Date(postTime).toLocaleString()}`,
@@ -137,36 +136,39 @@ export async function skipPlannedPaymentOccurrence(
       occurrenceDate,
     );
 
-    await journalPlannedQueries.batchUpdateStatus(
-      workplaceId,
-      existingPlanned,
-      JournalStatus.SKIPPED,
-    );
+    const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
 
-    if (existingPlanned.length === 0) {
-      if (!pp.toAccountId) {
-        logger.warn(
-          `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
-        );
-      } else {
-        await ledgerWriteService.createJournal(
-          {
-            journalDate: normalizedDate,
-            description: pp.name,
-            currencyCode: pp.currencyCode,
-            transactions: buildPlannedPaymentTransferLines(pp, {
-              includeNotes: false,
-              includeCurrency: false,
-            }),
-            status: JournalStatus.SKIPPED,
-            plannedPaymentId: pp.id as PlannedPaymentId,
-          },
+    if (existingPlanned.length > 0) {
+      await persistBatch([
+        ...journalPlannedQueries.prepareStatusUpdates(
           workplaceId,
-        );
-      }
+          existingPlanned,
+          JournalStatus.SKIPPED,
+        ),
+        ...(scheduleOp ? [scheduleOp] : []),
+      ]);
+    } else if (!pp.toAccountId) {
+      logger.warn(
+        `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
+      );
+      if (scheduleOp) await persistBatch([scheduleOp]);
+    } else {
+      await ledgerWriteService.createJournal(
+        {
+          journalDate: normalizedDate,
+          description: pp.name,
+          currencyCode: pp.currencyCode,
+          transactions: buildPlannedPaymentTransferLines(pp, {
+            includeNotes: false,
+            includeCurrency: false,
+          }),
+          status: JournalStatus.SKIPPED,
+          plannedPaymentId: pp.id as PlannedPaymentId,
+        },
+        workplaceId,
+        { extraOps: scheduleOp ? () => [scheduleOp] : undefined },
+      );
     }
-
-    await advancePlannedPaymentSchedule(workplaceId, pp, normalizedDate);
 
     logger.info(
       `Skipped occurrence for planned payment ${pp.id} at ${new Date(normalizedDate).toLocaleDateString()}`,
@@ -235,7 +237,11 @@ export async function processDuePlannedPayments(
         );
 
         if (dbExists === 0) {
-          await generatePlannedJournalForPayment(pp, nextOcc);
+          const scheduleOp = prepareScheduleAdvance(workplaceId, pp, nextOcc);
+          const created = await generatePlannedJournalForPayment(pp, nextOcc, {
+            extraOps: scheduleOp ? () => [scheduleOp] : undefined,
+          });
+          if (!created) break;
           if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
           journalledDays.get(pp.id)!.add(nextOcc);
         } else {

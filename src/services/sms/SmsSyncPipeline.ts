@@ -12,6 +12,7 @@ import TransactionInboxRecord, {
 } from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -284,95 +285,99 @@ export class SmsSyncPipeline {
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
-      await database.write(async () => {
-        if (signal?.aborted) return;
-        const messageIds = analysisResults.map(result => result.message.id);
-        const fingerprints = analysisResults.map(result => result.fingerprint);
-        const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
-          this.inbox
-            .query(
-              Q.where('workplace_id', workplaceId),
-              Q.where('channel', 'sms'),
-              Q.where('device_source_id', Q.oneOf(messageIds)),
-            )
-            .fetch(),
-          smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-          smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
-        ]);
-        const latestRecordsByMessageId = new Map(
-          latestRecords.map(record => [record.deviceSourceId, record]),
-        );
-        const latestProcessedIds = new Set(this.getProcessedSmsIds());
-        const allOps: Model[] = [];
-
-        for (const result of analysisResults) {
-          const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
-          const latestJournal =
-            latestJournalsById.get(result.message.id) ??
-            latestJournalsByFingerprint.get(result.fingerprint) ??
-            null;
-          let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
-          let finalStatus = this.resolveProcessingStatus({
-            parsed: result.parsed,
-            processedIds: latestProcessedIds,
-            exactJournalId: linkedJournalId,
-            duplicate: result.duplicate,
-            existingStatus: latestRecord?.processingStatus,
-          });
-
-          if (
-            result.finalStatus === InboxProcessingStatus.DISMISSED &&
-            finalStatus === InboxProcessingStatus.PENDING
-          ) {
-            finalStatus = InboxProcessingStatus.DISMISSED;
-          }
-
-          if (
-            result.autoPost &&
-            !linkedJournalId &&
-            finalStatus === InboxProcessingStatus.PENDING
-          ) {
-            const { journal, ops, accountsToRebuild } =
-              ledgerWriteService.prepareCreateJournalFromPreparedData(
-                result.autoPost.journalData,
-                result.autoPost.preparedJournal,
-                workplaceId,
-              );
-
-            allOps.push(...ops);
-            accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-            linkedJournalId = journal.id;
-            finalStatus = InboxProcessingStatus.AUTO_POSTED;
-            importedCount += 1;
-            processedMessageIds.push(result.message.id);
-            triggeredRuleIds.push(result.autoPost.ruleId);
-          }
-
-          const { ops: upsertOps, record } = this.prepareUpsertInboxRecord(
-            result.message,
-            result.parsed,
-            result.fingerprint,
-            latestRecord,
-            finalStatus,
-            workplaceId,
-            linkedJournalId,
-            result.duplicate || undefined,
+      await transactionInboxRepository.persistScanBatch(
+        async () => {
+          if (signal?.aborted) return [];
+          const messageIds = analysisResults.map(result => result.message.id);
+          const fingerprints = analysisResults.map(result => result.fingerprint);
+          const [latestRecords, latestJournalsById, latestJournalsByFingerprint] =
+            await Promise.all([
+              this.inbox
+                .query(
+                  Q.where('workplace_id', workplaceId),
+                  Q.where('channel', 'sms'),
+                  Q.where('device_source_id', Q.oneOf(messageIds)),
+                )
+                .fetch(),
+              smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+              smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+            ]);
+          const latestRecordsByMessageId = new Map(
+            latestRecords.map(record => [record.deviceSourceId, record]),
           );
-          allOps.push(...upsertOps);
-          latestRecordsByMessageId.set(result.message.id, record);
-        }
+          const latestProcessedIds = new Set(this.getProcessedSmsIds());
+          const allOps: Model[] = [];
 
-        await database.batch(allOps);
-        totalOps = allOps.length;
-      });
+          for (const result of analysisResults) {
+            const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
+            const latestJournal =
+              latestJournalsById.get(result.message.id) ??
+              latestJournalsByFingerprint.get(result.fingerprint) ??
+              null;
+            let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
+            let finalStatus = this.resolveProcessingStatus({
+              parsed: result.parsed,
+              processedIds: latestProcessedIds,
+              exactJournalId: linkedJournalId,
+              duplicate: result.duplicate,
+              existingStatus: latestRecord?.processingStatus,
+            });
+
+            if (
+              result.finalStatus === InboxProcessingStatus.DISMISSED &&
+              finalStatus === InboxProcessingStatus.PENDING
+            ) {
+              finalStatus = InboxProcessingStatus.DISMISSED;
+            }
+
+            if (
+              result.autoPost &&
+              !linkedJournalId &&
+              finalStatus === InboxProcessingStatus.PENDING
+            ) {
+              const { journal, ops, accountsToRebuild } =
+                ledgerWriteService.prepareCreateJournalFromPreparedData(
+                  result.autoPost.journalData,
+                  result.autoPost.preparedJournal,
+                  workplaceId,
+                );
+
+              allOps.push(...ops);
+              accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+              linkedJournalId = journal.id;
+              finalStatus = InboxProcessingStatus.AUTO_POSTED;
+              importedCount += 1;
+              processedMessageIds.push(result.message.id);
+              triggeredRuleIds.push(result.autoPost.ruleId);
+            }
+
+            const { ops: upsertOps, record } = this.prepareUpsertInboxRecord(
+              result.message,
+              result.parsed,
+              result.fingerprint,
+              latestRecord,
+              finalStatus,
+              workplaceId,
+              linkedJournalId,
+              result.duplicate || undefined,
+            );
+            allOps.push(...upsertOps);
+            latestRecordsByMessageId.set(result.message.id, record);
+          }
+
+          totalOps = allOps.length;
+          return allOps;
+        },
+        () => {
+          if (allAccountsToRebuild.size > 0) {
+            const latestDate = Math.max(...messages.map(m => m.date));
+            rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
+          }
+        },
+      );
 
       processedMessageIds.forEach(messageId => this.markSmsAsProcessed(messageId));
       triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
-
-      if (allAccountsToRebuild.size > 0) {
-        const latestDate = Math.max(...messages.map(m => m.date));
-        rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
-      }
     }
 
     logger.info(`[Trace] SmsSyncPipeline.scanInbox: ${Date.now() - start}ms`, {

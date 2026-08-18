@@ -22,13 +22,12 @@ Inventory status: **COMPLETE**. No mutation path found by the scoped primitive a
 
 **Fixable.** The codebase has real repositories and several good atomic batches. The failure is competing ownership: services, repositories, and command modules can each open transactions, while audit, rebuild, cache, preferences, and external SMS acknowledgement are inconsistently inside or outside the durable commit.
 
-The highest-risk concrete failures are:
+The highest-risk remaining failures are:
 
-1. SMS marks an external message processed before its database batch commits.
-2. Account merge commits cross-domain rewrites before audit and rebuild obligations complete.
-3. Planned-payment occurrence posting and schedule advancement are separate commits.
-4. The staged-import raw swap is called atomic, but executes sequential private-adapter deletes and updates without a proved rollback contract.
-5. Rebuild follow-up model queries omit workplace predicates even though the raw source query is scoped.
+1. The staged-import raw swap is called atomic, but executes sequential private-adapter deletes and updates without a proved rollback contract.
+2. Rebuild follow-up model queries omit workplace predicates even though the raw source query is scoped.
+3. Integrity force-repair still audits and refreshes in later writes.
+4. Rebuild enqueue is still an in-memory queue, not a durable outbox.
 
 ## Target ownership model
 
@@ -69,11 +68,11 @@ Existing evidence: `src/services/ledger/__tests__/ledgerWriteService.write.test.
 | Path | Initiator | Tables | Current transaction owner | Audit/rebuild behavior | Rollback gap | Recommended owner |
 | --- | --- | --- | --- | --- | --- | --- |
 | Create, optional opening balance | Account form, onboarding, system-account lookup | `accounts`, optional `account_metadata`, `audit_logs`; optionally opening-balances equity plus `journals`/`transactions`/ledger audit | `AccountRepository.persistCreatedAccount` at `src/data/repositories/AccountRepository.ts`; command intent at `src/services/accounts/accountCommands.ts` | Account CREATE audit is batched with the account; opening journal is a follow-up batch in the same writer; rebuild enqueued after batch | Durable rows roll back together; rebuild intent is still not durable. `getOpeningBalancesAccountId` / balance-correction lookup can still create equity in a separate write when used outside `createAccount` | Keep `AccountRepository.persistCreatedAccount` as owner until a named coordinator exists; next gap is durable rebuild/outbox and remaining system-account creates |
-| Update/order/reconcile | Account forms, list reorder, reconciliation | `accounts`, optional `account_metadata`, then `audit_logs` | Repository write at `AccountRepository.ts:534-552`; commands at `accountHierarchyCommands.ts:222-246`, `314-334`, and `accountReconcileCommands.ts:7-32` | Audit follows in a separate write; account-type rebuild follows commit | Mutation survives audit failure; rebuild intent can be lost | `AccountTransactionCoordinator.update/reorder/reconcile` |
-| Bulk update | Account list/hierarchy | `accounts`, `account_metadata`, `audit_logs` | Command layer opens writer at `accountHierarchyCommands.ts:259-308` and uses repository preparers | Audit is correctly in the batch; rebuild occurs after commit | Correct atomic shape in the wrong layer; rebuild remains non-durable | `AccountTransactionCoordinator.bulkUpdate` |
-| Archive/unarchive | Account list/archive modal | `accounts`, `audit_logs` | Command layer at `src/services/accounts/accountArchiveCommands.ts:81-99` | Audit is correctly batched; cache invalidation follows commit | Cache invalidation failure leaves stale presentation state; persistence mechanics live in service | `AccountTransactionCoordinator.archive` with after-commit cache invalidation |
-| Delete/recover | Account actions/audit revert | `accounts`, then `audit_logs` | Delete uses `AccountRepository.delete`; recover directly opens a writer at `src/services/accounts/accountDeleteCommands.ts:26-96` | Audit is always a later independent write | Deleted/recovered account may have no audit record; recovery bypasses repository mutation API | `AccountTransactionCoordinator.delete/recover` |
-| Merge accounts | Account merge action | `transactions`, `planned_payments`, `transaction_auto_post_rules`, `budget_scopes`, `budgets`, `accounts`, `account_metadata`, `balance_snapshots` | `src/services/accounts/accountMergeCommands.ts:88-212` opens the cross-domain writer; preparers come from repositories and services | Rebuild at `:189`; audit at `:191-202`; analytics afterward | Cross-domain rewrite commits before audit/rebuild. Async reads occur inside the writer at `:120-185`, widening lock time. A failure leaves stale balances or missing audit | `AccountMergeTransactionCoordinator` |
+| Update/order/reconcile | Account forms, list reorder, reconciliation | `accounts`, optional `account_metadata`, `audit_logs` | `AccountRepository.update` at `src/data/repositories/AccountRepository.ts` with audit `extraOps` from commands | Account UPDATE audit is batched with the row | Durable rows roll back together; rebuild enqueue after type-change remains non-durable | Keep repository `update` as owner; next gap is durable rebuild/outbox |
+| Bulk update | Account list/hierarchy | `accounts`, `account_metadata`, `audit_logs` | Command prepares ops; `persistBatch` at `src/data/repositories/persistBatch.ts` owns the writer | Audit is in the same batch | Rebuild remains non-durable | Keep `persistBatch` as owner |
+| Archive/unarchive | Account list/archive modal | `accounts`, `audit_logs` | Command prepares ops; `persistBatch` owns the writer | Audit is batched; cache invalidation follows commit | Cache invalidation failure leaves stale presentation state | Keep `persistBatch` as owner with after-commit cache invalidation |
+| Delete/recover | Account actions/audit revert | `accounts`, `audit_logs` | `AccountRepository.delete` / `recover` with audit `extraOps` | Audit is batched with the row | Durable rows roll back together | Keep repository delete/recover as owner |
+| Merge accounts | Account merge action | `transactions`, `planned_payments`, `transaction_auto_post_rules`, `budget_scopes`, `budgets`, `accounts`, `account_metadata`, `balance_snapshots`, `audit_logs` | Command preloads and prepares outside the writer; `persistBatch` commits rewrite + audit; rebuild in `afterBatch` | Audit is in the same batch as the rewrite; rebuild enqueued after batch | Durable rows roll back together; rebuild intent is still not durable. Prepare still happens outside the writer (same as archive) | Keep `persistBatch` as owner until a named coordinator exists; next gap is durable rebuild/outbox |
 | Balance adjustment | Account details/form | ledger tables | Delegates correctly to ledger at `src/services/accounts/accountAdjustCommands.ts:21-90` | Ledger audit/rebuild policy applies | No separate account mutation; retain as domain command | `JournalTransactionCoordinator` remains owner |
 
 Merge preparers are distributed across `src/data/repositories/account/AccountMergeOperations.ts:17-100`, `src/services/planned-payment/plannedPaymentMergeOperations.ts:8-47`, `src/data/repositories/TransactionAutoPostRuleRepository.ts:142-162`, `src/services/budget/budgetWriteService.ts:73-112`, and `src/data/repositories/BalanceSnapshotRepository.ts:151-159`. The service-owned budget/planned-payment preparers are persistence mechanics and should move to their repositories.
@@ -94,10 +93,10 @@ The scoped hard-delete behavior has repository coverage in `src/data/repositorie
 | Path | Initiator | Tables | Current transaction owner | Audit/rebuild behavior | Rollback gap | Recommended owner |
 | --- | --- | --- | --- | --- | --- | --- |
 | Create/update | Planned-payment form | `planned_payments`; create then may generate ledger rows | `PlannedPaymentRepository` at `src/data/repositories/PlannedPaymentRepository.ts:86-124`; command at `src/services/planned-payment/plannedPaymentCommands.ts:18-43` | No planned-payment audit; due processing follows create | Payment can commit while due-journal generation fails | `PlannedPaymentTransactionCoordinator.create/update` |
-| Delete and dependent unposted journals | Planned-payment details | `planned_payments`, `journals`, `transactions` | Service command at `plannedPaymentCommands.ts:45-94` | One local batch; no audit/rebuild intent | Correct atomic rows, wrong layer; lifecycle obligation is implicit | `PlannedPaymentTransactionCoordinator.delete` |
-| Pause/resume | Planned-payment details | `planned_payments`, `journals` | Service at `src/services/planned-payment/plannedPaymentLifecycle.ts:16-73` | Status rows are batched; resume invokes due processing afterward | Resume may commit ACTIVE state while generation fails | `PlannedPaymentTransactionCoordinator.setStatus` plus resumable occurrence processing |
-| Post/skip occurrence | Planned-payment scheduler/details | ledger tables, then `planned_payments` | Sequence at `src/services/planned-payment/plannedPaymentOrchestration.ts:72-168` | Ledger path audits/rebuilds; schedule advance is separate at `:106` or `:158` | Crash after journal creation/posting but before schedule advance enables replay/duplicate occurrence | `PlannedPaymentOccurrenceCoordinator` |
-| Generate due horizon | Bootstrap/scheduler | repeated ledger commits and planned-payment updates | Loop at `plannedPaymentOrchestration.ts:173-245` | Duplicate check is read-before-write; schedule advances separately | Concurrent runs can both pass `countOnDay` and generate the same occurrence; partial progress is not recorded as a workflow | `PlannedPaymentOccurrenceCoordinator`, idempotent by workplace/payment/day |
+| Delete and dependent unposted journals | Planned-payment details | `planned_payments`, `journals`, `transactions` | Command prepares ops; `persistBatch` owns the writer | One local batch; no audit/rebuild intent | Correct atomic rows | Keep `persistBatch` as owner |
+| Pause/resume | Planned-payment details | `planned_payments`, `journals` | Command prepares ops; `persistBatch` owns the writer | Status rows are batched; resume invokes due processing afterward | Resume may commit ACTIVE state while generation fails | Keep `persistBatch` as owner plus resumable occurrence processing |
+| Post/skip occurrence | Planned-payment scheduler/details | ledger tables and `planned_payments` | `LedgerWriteService.createJournal/postJournal` extra ops, or `persistBatch` for skip-of-existing, at `plannedPaymentOrchestration.ts` | Ledger path audits/rebuilds; schedule advance is in the same batch | Durable rows roll back together; rebuild intent is still not durable | Keep ledger/`persistBatch` as owner; next gap is durable rebuild/outbox |
+| Generate due horizon | Bootstrap/scheduler | repeated ledger commits and planned-payment updates | Loop at `plannedPaymentOrchestration.ts`; each generated journal batches its schedule advance | Duplicate check is still read-before-write; already-existing days still get a trailing schedule write | Concurrent runs can both pass `countOnDay`; trailing update remains for already-journalled days | Keep per-occurrence extra ops; add durable idempotency by workplace/payment/day |
 
 Existing evidence: `src/services/planned-payment/__tests__/plannedPaymentCommands.integration.test.ts:57-192` and `src/services/__tests__/PlannedPaymentService.test.ts:253-509`. Add concurrency and failure-between-ledger-and-schedule tests.
 
@@ -106,9 +105,10 @@ Existing evidence: `src/services/planned-payment/__tests__/plannedPaymentCommand
 | Path | Initiator | Tables | Current transaction owner | Audit/rebuild/external effects | Rollback gap | Recommended owner |
 | --- | --- | --- | --- | --- | --- | --- |
 | Rule save/delete | Settings SMS rules | `transaction_auto_post_rules` | `TransactionAutoPostRuleRepository` at `src/data/repositories/TransactionAutoPostRuleRepository.ts:50-114` | No audit; repository-scoped CRUD | Legitimate single-aggregate seam | Retain repository; decide audit policy |
-| Dismiss/status/link manual import | Settings inbox and journal editor | `transaction_inbox_records`; manual journal is an earlier ledger commit | `SmsService` directly opens writers at `src/services/sms-service.ts:144-183`; UI continuation at `src/features/journal/entry/journalEntryPresentation.ts:168-179` | Manual journal audits/rebuilds, then inbox link is separate | Journal can commit while SMS remains pending; retry may create another journal. Persistence mechanics live in service | `SmsIngestionTransactionCoordinator.linkManualImport`; repository owns inbox prepare ops |
-| Scan/upsert | SMS foreground/background scan | `transaction_inbox_records` | `SmsSyncPipeline` at `src/services/sms/SmsSyncPipeline.ts:250-297` | External processed cache and analytics may run before DB commit | Failed batch can leave MMKV saying processed with no inbox row | `SmsIngestionTransactionCoordinator.scan` |
-| Auto-post | Same scan | inbox plus `journals`, `transactions`, optional metadata, `audit_logs` | Pipeline composes ledger preparers at `SmsSyncPipeline.ts:259-286`, then batches at `:289-291` | Audit is batched; rebuild at `:293-296`; MMKV marker at `:272-274` | Concurrent scans can both analyze then prepare a journal. Final write boundary does not recheck idempotency. External marker precedes commit | `SmsIngestionTransactionCoordinator.autoPost`, per-workplace single-flight and durable idempotency |
+| Dismiss/status/link existing journal | Settings inbox (duplicate accept / dismiss) | `transaction_inbox_records` | `TransactionInboxRepository.persistStatus/persistLink` | Inbox row only; journal already exists | Legitimate single-row seam after the journal commit | Keep inbox repository |
+| Manual journal import | Journal editor launched from inbox | `journals`, `transactions`, optional metadata, `audit_logs`, `transaction_inbox_records` | `JournalService.saveJournalEntry` loads the inbox row and passes link ops into `LedgerWriteService.createJournal` extra ops | Journal audit/rebuild and inbox IMPORTED link are one writer; MMKV processed-id is after commit | Durable rows roll back together; MMKV ack can still be lost after commit (retry is idempotent via linked journal / fingerprint) | Keep `LedgerWriteService.createJournal` as owner; next gap is durable processed-id outbox |
+| Scan/upsert | SMS foreground/background scan | `transaction_inbox_records` | `TransactionInboxRepository.persistScanBatch`; pipeline builds ops including final idempotency recheck | Rebuild enqueue is `afterBatch`; MMKV and analytics run after the write resolves | Failed batch cannot mark MMKV processed | Keep inbox repository persistScanBatch |
+| Auto-post | Same scan | inbox plus `journals`, `transactions`, optional metadata, `audit_logs` | Pipeline composes ledger preparers inside `persistScanBatch` | Audit is batched with inbox upsert; rebuild after batch; MMKV after commit | Concurrent scans are single-flight per workplace; final write rechecks journals/inbox/processed ids. Rebuild intent is still not durable | Keep scan persist as owner; next gap is durable rebuild/outbox |
 
 The initial pipeline lookup at `SmsSyncPipeline.ts:143` and rebuild follow-up queries require explicit workplace predicates. Add concurrent same-message, batch-failure-before-ack, retry-after-crash, and same-device-ID-across-two-workplaces tests. Existing tests at `src/services/sms/__tests__/SmsSyncPipeline.integration.test.ts:88-516`, `src/services/sms/__tests__/SmsSyncPipeline.test.ts:33-303`, and `src/services/__tests__/sms-service-batch.test.ts:94-210` cover duplicate classification and batch composition, not the failure interleavings.
 
@@ -173,44 +173,37 @@ The Cashew plugin opens a copied external SQLite backup for read-only conversion
 
 ### Slice 1 — P0 SMS commit and idempotency boundary
 
-Owner: `SmsIngestionTransactionCoordinator`.
+Landed without a new coordinator class: `TransactionInboxRepository` + `LedgerWriteService.createJournal` extra ops.
 
-- Move MMKV acknowledgement and analytics after successful database commit.
-- Add a final workplace/message idempotency check at the write boundary.
-- Commit inbox, auto-post journal/transactions/metadata, audit, and durable rebuild intent together.
-- Make inbox mutation preparation repository-owned.
+- [x] Move MMKV acknowledgement and analytics after successful database commit.
+- [x] Recheck workplace/message idempotency at the write boundary (existing scan recheck, now inside `persistScanBatch`).
+- [x] Commit inbox with auto-post journal/transactions/metadata/audit in one writer; rebuild enqueue after batch.
+- [x] Make inbox mutation preparation repository-owned.
+- [ ] Durable rebuild/processed-id outbox.
 
-Tests: concurrent same-message scans; same device ID in two workplaces; batch failure before acknowledgement; retry after crash; manual-import journal/link rollback; final duplicate check race.
+### Slice 2 — P0 account merge
 
-### Slice 2 — P0 account merge and rebuild scope
+Landed without a new coordinator class: preload + `persistBatch` of rewrite ops and audit.
 
-Owners: `AccountMergeTransactionCoordinator`, `BalanceRebuildPersistenceRepository`.
+- [x] Preload all merge records before entering the writer.
+- [x] Batch audit with the cross-domain rewrite.
+- [ ] Persist or otherwise make rebuild delivery recoverable.
+- [ ] Add workplace predicates to rebuild transaction/snapshot/account follow-up reads.
 
-- Preload all merge records before entering the writer.
-- Batch audit with the cross-domain rewrite.
-- Persist or otherwise make rebuild delivery recoverable.
-- Add workplace predicates to rebuild transaction/snapshot/account follow-up reads.
+### Slice 3 — P0 planned-payment occurrence
 
-Tests: fault after each preparer; no surviving source references; audit atomicity; rebuild delivery retry; two workplaces with colliding IDs/references; snapshot invalidation isolation.
+Landed without a new coordinator class: schedule advance is extra ops on the journal/post/skip writer.
 
-### Slice 3 — P0 planned-payment occurrence coordinator
+- [x] Atomically create/post/skip the journal and advance the schedule.
+- [ ] Make occurrence identity explicit and concurrent due-processing idempotent.
+- [ ] Durable rebuild obligations.
 
-Owner: `PlannedPaymentOccurrenceCoordinator`.
+### Slice 4 — P1 account command audit batching
 
-- Make occurrence identity explicit: workplace + payment + normalized day.
-- Atomically create/post/skip the journal and advance the schedule.
-- Serialize or make concurrent due-processing idempotent.
-- Include audit and durable rebuild obligations.
+Landed on `AccountRepository` extra ops / `persistBatch`.
 
-Tests: crash between journal and schedule; concurrent generators; retry after partial failure; pause/resume during generation; no duplicate day.
-
-### Slice 4 — P1 account command coordinator
-
-Owner: `AccountTransactionCoordinator`.
-
-- Migrate create-with-opening-balance, update/order/reconcile, delete/recover, archive, and bulk update.
-- Batch account audit with mutations.
-- Define opening-balance behavior as all-or-nothing or persist an explicit recoverable initialization state.
+- [x] Create-with-opening-balance, update/order/reconcile, delete/recover, archive, and bulk update batch their audit rows.
+- [ ] Durable rebuild/outbox after type-change.
 - Run analytics/cache invalidation only after commit.
 
 Tests: injected audit and ledger failures for every command; cache invalidation ordering; type-change rebuild delivery; recovery parity.

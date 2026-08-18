@@ -5,6 +5,7 @@ import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
@@ -119,12 +120,7 @@ class SmsService {
     workplaceId: WorkplaceId,
     id: string,
   ): Promise<TransactionInboxRecord | null> {
-    try {
-      const record = await this.inbox.find(id);
-      return record.workplaceId === workplaceId ? record : null;
-    } catch {
-      return null;
-    }
+    return transactionInboxRepository.find(workplaceId, id);
   }
 
   async findByLinkedJournalId(
@@ -146,15 +142,7 @@ class SmsService {
     id: string,
     status: InboxProcessingStatus,
   ): Promise<void> {
-    const record = await this.getInboxRecord(workplaceId, id);
-    if (!record) return;
-
-    await database.write(async () => {
-      await record.update(entry => {
-        entry.processingStatus = status;
-        entry.processedAt = this.isProcessedStatus(status) ? Date.now() : undefined;
-      });
-    });
+    await transactionInboxRepository.persistStatus(workplaceId, id, status);
   }
 
   async linkSmsToJournal(
@@ -163,16 +151,7 @@ class SmsService {
     journalId: JournalId,
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Promise<void> {
-    const record = await this.getInboxRecord(workplaceId, recordId);
-    if (!record) return;
-
-    await database.write(async () => {
-      await record.update(entry => {
-        entry.linkedJournalId = journalId;
-        entry.processingStatus = disposition;
-        entry.processedAt = Date.now();
-      });
-    });
+    await transactionInboxRepository.persistLink(workplaceId, recordId, journalId, disposition);
   }
 
   async finalizeManualImport(
@@ -247,14 +226,6 @@ class SmsService {
       default:
         return [];
     }
-  }
-
-  private isProcessedStatus(status: InboxProcessingStatus): boolean {
-    return [
-      InboxProcessingStatus.IMPORTED,
-      InboxProcessingStatus.AUTO_POSTED,
-      InboxProcessingStatus.DISMISSED,
-    ].includes(status);
   }
 }
 

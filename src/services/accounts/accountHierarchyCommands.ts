@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
-import { database } from '@/src/data/database/Database';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import {
   AccountPersistenceInput,
   accountRepository,
@@ -8,7 +8,6 @@ import {
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import { CreateAccountData } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,
@@ -230,16 +229,17 @@ export async function updateAccount(
     ctx.account,
     ctx.updatePayload,
     workplaceId,
-  );
-
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: accountId,
-      action: AuditAction.UPDATE,
-      changes: buildAccountUpdateAuditChanges(ctx, updates),
-    },
-    workplaceId,
+    () => [
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: accountId,
+          action: AuditAction.UPDATE,
+          changes: buildAccountUpdateAuditChanges(ctx, updates),
+        },
+        workplaceId,
+      ),
+    ],
   );
 
   emitAccountUpdateSideEffects(ctx, updates, workplaceId);
@@ -278,15 +278,15 @@ export async function updateAccounts(
     })),
   );
 
-  await database.write(async () => {
-    const operations = planned.flatMap(({ context, update }) =>
+  await persistBatch([
+    ...planned.flatMap(({ context, update }) =>
       accountRepository.prepareUpdateBatchOps(
         context.account,
         update.normalizedUpdates,
         update.existingMetadata,
       ),
-    );
-    const auditLogs = planned.map(({ context, update }) =>
+    ),
+    ...planned.map(({ context, update }) =>
       auditRepository.prepareLog(
         {
           entityType: 'account',
@@ -296,10 +296,8 @@ export async function updateAccounts(
         },
         workplaceId,
       ),
-    );
-
-    await database.batch(...operations, ...auditLogs);
-  });
+    ),
+  ]);
 
   planned.forEach(({ context, update }) => {
     emitAccountUpdateSideEffects(context, update.normalizedUpdates, workplaceId);
@@ -318,18 +316,18 @@ export async function updateAccountOrder(
 ): Promise<void> {
   const previousOrderNum = account.orderNum;
 
-  await accountRepository.update(account, { orderNum: newOrder }, workplaceId);
-
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: account.id,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: { orderNum: previousOrderNum },
-        after: { orderNum: newOrder },
+  await accountRepository.update(account, { orderNum: newOrder }, workplaceId, () => [
+    auditRepository.prepareLog(
+      {
+        entityType: 'account',
+        entityId: account.id,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { orderNum: previousOrderNum },
+          after: { orderNum: newOrder },
+        },
       },
-    },
-    workplaceId,
-  );
+      workplaceId,
+    ),
+  ]);
 }

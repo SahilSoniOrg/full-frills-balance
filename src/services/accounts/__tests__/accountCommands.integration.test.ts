@@ -189,6 +189,19 @@ describe('account commands (integration)', () => {
     expect(audits.some(a => a.action === AuditAction.UPDATE)).toBe(true);
   });
 
+  it('reconcile uses one write', async () => {
+    const account = await createAccount(WP, {
+      name: 'One Write Recon',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const writeSpy = jest.spyOn(database, 'write');
+    await reconcileAccount(account.id as AccountId, new Date(2026, 1, 1), WP);
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    writeSpy.mockRestore();
+  });
+
   it('mergeAccounts rejects incompatible account types', async () => {
     const asset = await createAccount(WP, {
       name: 'Asset',
@@ -206,6 +219,30 @@ describe('account commands (integration)', () => {
     await expect(
       mergeAccounts(WP, asset.id as AccountId, [expense.id as AccountId]),
     ).rejects.toThrow('different categories');
+  });
+
+  it('mergeAccounts rewrites and audits in one write', async () => {
+    const target = await createAccount(WP, {
+      name: 'Keep',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const source = await createAccount(WP, {
+      name: 'Fold',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const writeSpy = jest.spyOn(database, 'write');
+    await mergeAccounts(WP, target.id as AccountId, [source.id as AccountId]);
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    writeSpy.mockRestore();
+
+    const audits = await auditRepository.findByEntity('account', target.id, WP);
+    expect(audits.some(a => a.action === AuditAction.UPDATE)).toBe(true);
+    const deletedSource = await accountRepository.findWithDeleted(WP, source.id as AccountId);
+    expect(deletedSource?.deletedAt).toBeInstanceOf(Date);
   });
 
   it('applyAccountArchiveChanges archives primary + child in one write', async () => {

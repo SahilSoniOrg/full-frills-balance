@@ -1,4 +1,7 @@
 import Journal from '@/src/data/models/Journal';
+import TransactionInboxRecord, {
+  InboxProcessingStatus,
+} from '@/src/data/models/TransactionInboxRecord';
 import { JournalEntryLine, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -7,6 +10,7 @@ import {
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import type { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -23,8 +27,23 @@ export interface SubmitJournalResult {
 }
 
 export class JournalService {
-  async createJournal(data: CreateJournalData, workplaceId: WorkplaceId): Promise<Journal> {
-    return ledgerWriteService.createJournal(data, workplaceId);
+  async createJournal(
+    data: CreateJournalData,
+    workplaceId: WorkplaceId,
+    smsRecord?: TransactionInboxRecord | null,
+  ): Promise<Journal> {
+    if (!smsRecord) {
+      return ledgerWriteService.createJournal(data, workplaceId);
+    }
+    return ledgerWriteService.createJournal(data, workplaceId, {
+      extraOps: journal => [
+        transactionInboxRepository.prepareLink(
+          smsRecord,
+          journal.id as JournalId,
+          InboxProcessingStatus.IMPORTED,
+        ),
+      ],
+    });
   }
 
   async updateJournal(
@@ -158,7 +177,10 @@ export class JournalService {
         return { success: true, action: 'updated', journalId: updatedJournal.id };
       }
 
-      const createdJournal = await this.createJournal(journalData, workplaceId);
+      const smsRecord = params.smsRecordId
+        ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
+        : null;
+      const createdJournal = await this.createJournal(journalData, workplaceId, smsRecord);
       analytics.logTransactionCreated(mode, 'create', currencyCode);
       analytics.trackFeatureUsage('journal', 'create', {
         mode,
