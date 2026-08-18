@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
+import { keepProjectablePlannedJournals } from './keepProjectablePlannedJournals';
 import { FlowResolver } from './FlowResolver';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
@@ -73,10 +74,14 @@ export class CashFlowSimulationService {
     const liquidAccountIdsSet = new Set(liquidAssetIds);
     const liabilityAccountIdsSet = new Set(liabilityAccountBalances.map(lb => lb.account.id));
     const accountMap = new Map(allAccounts.map(a => [a.id, a]));
+    const projectablePlannedJournals = keepProjectablePlannedJournals(
+      plannedJournals,
+      plannedPayments,
+    );
 
     // Execute independent fetches in parallel
     const [journalTxsMap, metadataMap] = await Promise.all([
-      this.fetchJournalTransactions(plannedJournals, workplaceId),
+      this.fetchJournalTransactions(projectablePlannedJournals, workplaceId),
       this.fetchMetadata(liabilityAccountBalances, workplaceId),
     ]);
 
@@ -225,7 +230,7 @@ export class CashFlowSimulationService {
     const { flows: plannedFlows } = PlannedFlowGenerator.generate(
       context,
       normalizedPlannedPayments,
-      plannedJournals,
+      projectablePlannedJournals,
       expenseAccountIds,
       journalTxsMap,
     );

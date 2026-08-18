@@ -214,6 +214,31 @@ export function mapSmsJournalMetadataDisplay(input: {
   };
 }
 
+export function isOrphanedPendingJournal(input: {
+  status?: string | null;
+  plannedPaymentId?: string | null;
+  plannedPaymentExists: boolean;
+}): boolean {
+  return (
+    input.status === 'PLANNED' && Boolean(input.plannedPaymentId) && !input.plannedPaymentExists
+  );
+}
+
+export function orphanedPendingJournalConfirmCopy(): {
+  title: string;
+  message: string;
+  confirmText: string;
+  cancelText: string;
+} {
+  return {
+    title: 'Planned payment was deleted',
+    message:
+      'This scheduled journal is still pending, but its planned payment no longer exists. Delete it, or post it as a regular transaction.',
+    confirmText: 'Delete journal',
+    cancelText: 'Post anyway',
+  };
+}
+
 export function resolveRevertPlannedActionLabels(status: JournalDetailsStatus): {
   actionLabel: string;
   statusLabel: string;

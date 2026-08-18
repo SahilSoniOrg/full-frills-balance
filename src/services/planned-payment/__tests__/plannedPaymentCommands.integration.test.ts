@@ -10,8 +10,15 @@ import {
   deletePlannedPayment,
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { AccountType, AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountType,
+  AccountId,
+  JournalId,
+  PlannedPaymentId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
@@ -175,6 +182,28 @@ describe('planned payment commands (integration)', () => {
       JournalStatus.PLANNED,
     );
     expect(remainingPlanned.length).toBe(0);
+  });
+
+  it('refuses to revert a posted journal to scheduled after its planned payment is deleted', async () => {
+    const created = await createPlannedPayment(WP, baseInput());
+    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
+      created.id as PlannedPaymentId,
+    ]);
+    const postedJournal = plannedJournals[0];
+    await database.write(async () => {
+      await postedJournal.update(record => {
+        record.status = JournalStatus.POSTED;
+      });
+    });
+
+    await deletePlannedPayment(WP, created);
+
+    await expect(journalService.revertToPlanned(postedJournal.id as JournalId, WP)).rejects.toThrow(
+      /planned payment was deleted/,
+    );
+
+    const reloaded = await database.collections.get<Journal>('journals').find(postedJournal.id);
+    expect(reloaded.status).toBe(JournalStatus.POSTED);
   });
 
   it('pause and resume go through service façade', async () => {

@@ -4,11 +4,15 @@ import { useJournalActions } from '@/src/features/journal/hooks/useJournalAction
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
-import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
+import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import { useCallback } from 'react';
-import { resolveRevertPlannedActionLabels } from '@/src/services/journal/journalDetailsHelpers';
+import { useCallback, useRef } from 'react';
+import {
+  isOrphanedPendingJournal,
+  orphanedPendingJournalConfirmCopy,
+  resolveRevertPlannedActionLabels,
+} from '@/src/services/journal/journalDetailsHelpers';
 
 interface UseTransactionDetailsActionsProps {
   workplaceId: WorkplaceId;
@@ -136,5 +140,67 @@ export function useJournalDetailsActions({
     );
   }, [displayAmount, journalDate, plannedPaymentId, status, workplaceId]);
 
-  return { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip };
+  const orphanPromptedRef = useRef(false);
+  const promptOrphanIfNeeded = useCallback(async () => {
+    if (orphanPromptedRef.current || status !== 'PLANNED' || !plannedPaymentId) return;
+
+    const plannedPayment = await plannedPaymentReadService.find(
+      workplaceId,
+      plannedPaymentId as PlannedPaymentId,
+    );
+    if (
+      !isOrphanedPendingJournal({
+        status,
+        plannedPaymentId,
+        plannedPaymentExists: Boolean(plannedPayment),
+      })
+    ) {
+      return;
+    }
+
+    orphanPromptedRef.current = true;
+    const copy = orphanedPendingJournalConfirmCopy();
+    confirm.show({
+      ...copy,
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          const found = await findJournal(journalId);
+          if (!found) {
+            showErrorAlert('Transaction not found. It may have already been deleted.');
+            AppNavigation.back();
+            return;
+          }
+          await deleteJournal(found);
+          toast.success('Orphaned scheduled journal deleted.');
+          AppNavigation.back();
+        } catch (error) {
+          logger.error('Failed to delete orphaned planned journal:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showErrorAlert(`Could not delete transaction: ${errorMessage}`);
+        }
+      },
+      onCancel: async () => {
+        try {
+          await postJournal(journalId);
+          toast.success('Transaction has been marked as posted.');
+          AppNavigation.back();
+        } catch (error) {
+          logger.error('Failed to post orphaned planned journal:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showErrorAlert(`Could not post transaction: ${errorMessage}`);
+        }
+      },
+      onClose: () => {},
+    });
+  }, [deleteJournal, findJournal, journalId, plannedPaymentId, postJournal, status, workplaceId]);
+
+  return {
+    handleDelete,
+    handleCopy,
+    handlePost,
+    handleRevertToScheduled,
+    handleSkip,
+    promptOrphanIfNeeded,
+  };
 }

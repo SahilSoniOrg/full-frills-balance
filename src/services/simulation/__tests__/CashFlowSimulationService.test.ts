@@ -595,6 +595,94 @@ describe('CashFlowSimulationService', () => {
     expect(allPlannedFlows[1].label).toBe('Monthly Rent'); // From Template
   });
 
+  it('does not project a planned journal whose planned payment was deleted', async () => {
+    const orphanJournal = {
+      id: 'j-orphan-rent',
+      description: 'Ghost rent',
+      journalDate: dayjs('2026-04-05T12:00:00Z').valueOf(),
+      plannedPaymentId: 'pp-deleted',
+      status: 'PLANNED',
+    } as any;
+
+    transactionRepository.findByJournals = jest.fn().mockResolvedValue([
+      {
+        journalId: orphanJournal.id,
+        accountId: liquidAccountId,
+        transactionType: 'CREDIT',
+        amount: 1000,
+        currencyCode: 'USD',
+      },
+      {
+        journalId: orphanJournal.id,
+        accountId: 'landlord',
+        transactionType: 'DEBIT',
+        amount: 1000,
+        currencyCode: 'USD',
+      },
+    ]);
+
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 5000]]),
+      plannedPayments: [],
+      plannedJournals: [orphanJournal],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
+
+    expect(result.simulationResult.summary.safeToSpend).toBe(5000);
+    expect(
+      result.allFlows!.filter(
+        (flow: { origin: FlowSource }) => flow.origin === FlowSource.PLANNED_JOURNAL,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('still projects a planned journal that is not linked to a planned payment', async () => {
+    const manualJournal = {
+      id: 'j-manual-planned',
+      description: 'Manual planned bill',
+      journalDate: dayjs('2026-04-05T12:00:00Z').valueOf(),
+      status: 'PLANNED',
+    } as any;
+
+    transactionRepository.findByJournals = jest.fn().mockResolvedValue([
+      {
+        journalId: manualJournal.id,
+        accountId: liquidAccountId,
+        transactionType: 'CREDIT',
+        amount: 250,
+        currencyCode: 'USD',
+      },
+    ]);
+
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [manualJournal],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 60,
+    });
+
+    expect(result.simulationResult.summary.safeToSpend).toBe(750);
+    expect(
+      result.allFlows!.filter(
+        (flow: { origin: FlowSource }) => flow.origin === FlowSource.PLANNED_JOURNAL,
+      ),
+    ).toHaveLength(1);
+  });
+
   it('pulls forward overdue payments to the simulation start date', async () => {
     // Today is April 1st.
     // Payment was due March 25th (offset -7).

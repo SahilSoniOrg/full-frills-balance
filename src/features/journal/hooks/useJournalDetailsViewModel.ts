@@ -21,7 +21,7 @@ import { JournalId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 export interface JournalDetailsViewModel {
   isLoading: boolean;
   isMissing: boolean;
@@ -157,16 +157,26 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     AppNavigation.back();
   }, []);
 
-  const { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip } =
-    useJournalDetailsActions({
-      workplaceId,
-      journalId,
-      amount,
-      currencyCode,
-      status: journalInfo?.status,
-      plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
-      journalDate: journalInfo?.journalDate,
-    });
+  const {
+    handleDelete,
+    handleCopy,
+    handlePost,
+    handleRevertToScheduled,
+    handleSkip,
+    promptOrphanIfNeeded,
+  } = useJournalDetailsActions({
+    workplaceId,
+    journalId,
+    amount,
+    currencyCode,
+    status: journalInfo?.status,
+    plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
+    journalDate: journalInfo?.journalDate,
+  });
+
+  useEffect(() => {
+    void promptOrphanIfNeeded();
+  }, [promptOrphanIfNeeded]);
 
   const splitItems = useMemo(() => {
     return buildJournalSplitItems(transactions, AppNavigation.toAccountDetails);
