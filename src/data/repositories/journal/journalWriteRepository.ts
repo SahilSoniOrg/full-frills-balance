@@ -346,21 +346,35 @@ export class JournalWriteRepository {
     return { journal, transactions: associatedTransactions };
   }
 
-  async markReversed(
-    originalJournalId: JournalId,
+  prepareMarkReversed(
+    journal: Journal,
     reversingJournalId: JournalId,
     workplaceId: WorkplaceId,
-  ): Promise<void> {
-    const journal = await journalQueryRepository.find(workplaceId, originalJournalId);
-    if (!journal) return;
+  ): Model {
+    this.assertModelOwnership(workplaceId, [journal]);
+    return journal.prepareUpdate(record => {
+      record.reversingJournalId = reversingJournalId;
+      record.status = JournalStatus.REVERSED;
+      record.updatedAt = new Date();
+    });
+  }
+
+  async persistReversal(params: {
+    workplaceId: WorkplaceId;
+    originalJournal: Journal;
+    reversingJournalId: JournalId;
+    reversalOps: Model[];
+    afterBatch?: () => void;
+  }): Promise<void> {
+    const reverseOp = this.prepareMarkReversed(
+      params.originalJournal,
+      params.reversingJournalId,
+      params.workplaceId,
+    );
 
     await database.write(async () => {
-      const update = journal.prepareUpdate(record => {
-        record.reversingJournalId = reversingJournalId;
-        record.status = JournalStatus.REVERSED;
-        record.updatedAt = new Date();
-      });
-      await database.batch([update]);
+      await database.batch([...params.reversalOps, reverseOp]);
+      params.afterBatch?.();
     });
   }
 

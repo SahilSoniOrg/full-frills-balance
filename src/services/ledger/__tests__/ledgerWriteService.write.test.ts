@@ -7,6 +7,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 
+import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -158,5 +159,67 @@ describe('ledgerWriteService write paths', () => {
         workplaceId,
       ),
     ).rejects.toThrow(/Journal not found/);
+  });
+
+  it('creates a reversal and marks the original reversed in one write', async () => {
+    const original = await ledgerWriteService.createJournal(
+      {
+        description: 'Lunch',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+
+    const writeSpy = jest.spyOn(database, 'write');
+    const reversal = await ledgerWriteService.createReversalJournal(
+      original.id as JournalId,
+      'Refund',
+      workplaceId,
+    );
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    writeSpy.mockRestore();
+
+    const reversed = await journalQueryRepository.find(workplaceId, original.id as JournalId);
+    expect(reversed?.status).toBe(JournalStatus.REVERSED);
+    expect(reversed?.reversingJournalId).toBe(reversal.id);
+    expect(reversal.originalJournalId).toBe(original.id);
+    expect(reversal.description).toContain('Reversal of:');
+    expect(reversal.description).toContain('Refund');
+  });
+
+  it('does not commit a reversal when the original journal is missing', async () => {
+    await expect(
+      ledgerWriteService.createReversalJournal('missing' as JournalId, 'Refund', workplaceId),
+    ).rejects.toThrow(/Original journal not found/);
+
+    const listed = await journalListQueryRepository.findAll(workplaceId);
+    expect(listed).toEqual([]);
+  });
+
+  it('does not commit a reversal for a foreign workplace journal', async () => {
+    const original = await ledgerWriteService.createJournal(
+      {
+        description: 'Lunch',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+
+    await expect(
+      ledgerWriteService.createReversalJournal(
+        original.id as JournalId,
+        'Refund',
+        'wp-other' as WorkplaceId,
+      ),
+    ).rejects.toThrow(/Original journal not found/);
+
+    const listed = await journalListQueryRepository.findAll(workplaceId);
+    expect(listed).toHaveLength(1);
+    expect(listed[0].id).toBe(original.id);
+    expect(listed[0].status).not.toBe(JournalStatus.REVERSED);
   });
 });

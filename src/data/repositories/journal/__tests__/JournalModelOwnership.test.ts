@@ -119,6 +119,17 @@ describe('journal model-instance writer workplace ownership', () => {
     );
   });
 
+  it('rejects a foreign journal before opening the reversal writer', async () => {
+    await expectRejectedBeforeWrite(() =>
+      journalWriteRepository.persistReversal({
+        workplaceId: WORKPLACE_ONE,
+        originalJournal: workplaceTwoJournal,
+        reversingJournalId: workplaceOneJournal.id as JournalId,
+        reversalOps: [],
+      }),
+    );
+  });
+
   it('rejects foreign reversal source models before opening the writer', async () => {
     await expectRejectedBeforeWrite(() =>
       journalWriteRepository.replaceJournalWithReversal({

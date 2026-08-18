@@ -14,7 +14,13 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId, mapTransactionToAudit } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalId,
+  TransactionType,
+  WorkplaceId,
+  mapTransactionToAudit,
+} from '@/src/types/domain';
 import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -137,6 +143,59 @@ export class LedgerWriteService {
     });
 
     return journals;
+  }
+
+  async createReversalJournal(
+    originalJournalId: JournalId,
+    reason: string,
+    workplaceId: WorkplaceId,
+  ): Promise<Journal> {
+    const originalJournal = await journalQueryRepository.find(workplaceId, originalJournalId);
+    if (!originalJournal) throw new Error('Original journal not found');
+
+    const originalTransactions = await transactionRepository.findByJournal(
+      workplaceId,
+      originalJournalId,
+    );
+    const reversedTxs = originalTransactions.map(tx => ({
+      accountId: tx.accountId,
+      amount: tx.amount,
+      transactionType:
+        tx.transactionType === TransactionType.DEBIT
+          ? TransactionType.CREDIT
+          : TransactionType.DEBIT,
+      notes: `Reversal: ${tx.notes || ''}`,
+      exchangeRate: tx.exchangeRate || 1,
+    }));
+
+    const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(
+      {
+        journalDate: Date.now(),
+        description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
+        currencyCode: originalJournal.currencyCode,
+        transactions: reversedTxs,
+        originalJournalId,
+      },
+      workplaceId,
+    );
+
+    await journalWriteRepository.persistReversal({
+      workplaceId,
+      originalJournal,
+      reversingJournalId: journal.id as JournalId,
+      reversalOps: ops,
+      afterBatch: () => {
+        if (accountsToRebuild.size > 0) {
+          rebuildQueueService.enqueueMany(
+            accountsToRebuild,
+            originalJournal.journalDate,
+            workplaceId,
+          );
+        }
+      },
+    });
+
+    return journal;
   }
 
   async updateJournal(

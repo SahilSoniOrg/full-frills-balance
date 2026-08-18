@@ -6,10 +6,7 @@ import {
   journalEnrichmentQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
-import {
-  CreateJournalData,
-  journalWriteRepository,
-} from '@/src/data/repositories/journal/journalWriteModule';
+import type { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -109,42 +106,17 @@ export class JournalService {
     reason: string = 'Reversal',
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalQueryRepository.find(workplaceId, originalJournalId);
-    if (!originalJournal) throw new Error('Original journal not found');
-
-    const originalTransactions = await transactionRepository.findByJournal(
-      workplaceId,
+    const reversalJournal = await ledgerWriteService.createReversalJournal(
       originalJournalId,
+      reason,
+      workplaceId,
     );
-    const reversedTxs = originalTransactions.map(tx => ({
-      accountId: tx.accountId,
-      amount: tx.amount,
-      transactionType:
-        tx.transactionType === TransactionType.DEBIT
-          ? TransactionType.CREDIT
-          : TransactionType.DEBIT,
-      notes: `Reversal: ${tx.notes || ''}`,
-      exchangeRate: tx.exchangeRate || 1,
-    }));
-
-    const reversalJournal = await ledgerWriteService.createJournal(
-      {
-        journalDate: Date.now(),
-        description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
-        currencyCode: originalJournal.currencyCode,
-        transactions: reversedTxs,
-        originalJournalId: originalJournalId,
-      },
-      originalJournal.workplaceId,
-    );
-
-    await journalWriteRepository.markReversed(originalJournalId, reversalJournal.id, workplaceId);
 
     analytics.trackFeatureUsage('journal', 'reversal', {
       original_journal_id: originalJournalId,
       reversal_journal_id: reversalJournal.id,
       reason,
-      currency: originalJournal.currencyCode,
+      currency: reversalJournal.currencyCode,
     });
 
     return reversalJournal;
