@@ -23,26 +23,39 @@ export async function findAccountByName(
   return accountRepository.findByName(workplaceId, name);
 }
 
+export function getOpeningBalancesAccountInput(
+  currencyCode: string,
+  workplaceId: WorkplaceId,
+): {
+  name: string;
+  accountType: AccountType;
+  accountSubtype: AccountSubtype;
+  currencyCode: string;
+  description: string;
+  icon: IconName;
+  workplaceId: WorkplaceId;
+} {
+  const { openingBalances } = AppConfig.systemAccounts;
+  return {
+    name: `${openingBalances.namePrefix} (${currencyCode})`,
+    accountType: AccountType.EQUITY,
+    accountSubtype: getDefaultSubtypeForType(AccountType.EQUITY),
+    currencyCode,
+    description: openingBalances.description,
+    icon: openingBalances.icon as IconName,
+    workplaceId,
+  };
+}
+
 export async function getOpeningBalancesAccountId(
   currencyCode: string,
   workplaceId: WorkplaceId,
 ): Promise<AccountId> {
-  const { openingBalances } = AppConfig.systemAccounts;
-  const name = `${openingBalances.namePrefix} (${currencyCode})`;
-  const existing = await findAccountByName(workplaceId, name);
+  const input = getOpeningBalancesAccountInput(currencyCode, workplaceId);
+  const existing = await findAccountByName(workplaceId, input.name);
   if (existing) return existing.id as AccountId;
 
-  return (
-    await accountRepository.create({
-      name,
-      accountType: AccountType.EQUITY,
-      accountSubtype: getDefaultSubtypeForType(AccountType.EQUITY),
-      currencyCode,
-      description: openingBalances.description,
-      icon: openingBalances.icon as IconName,
-      workplaceId,
-    })
-  ).id as AccountId;
+  return (await accountRepository.create(input)).id as AccountId;
 }
 
 export async function findOrCreateBalanceCorrectionAccount(

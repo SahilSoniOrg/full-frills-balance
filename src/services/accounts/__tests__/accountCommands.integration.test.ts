@@ -56,6 +56,19 @@ describe('account commands (integration)', () => {
     expect(journals.some(j => j.description?.includes('Initial Balance'))).toBe(true);
   });
 
+  it('create with opening balance uses one write', async () => {
+    const writeSpy = jest.spyOn(database, 'write');
+    await createAccount(WP, {
+      name: 'Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      initialBalance: 500,
+      workplaceId: WP,
+    });
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    writeSpy.mockRestore();
+  });
+
   it('create stores metadata on the account', async () => {
     const created = await createAccount(WP, {
       name: 'Rewards Card',

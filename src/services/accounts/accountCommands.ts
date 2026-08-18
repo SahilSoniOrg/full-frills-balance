@@ -1,10 +1,10 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import {
   AccountId,
@@ -20,8 +20,12 @@ import {
   resolveAccountSubtype,
   shouldPostInitialBalance,
 } from '@/src/services/accounts/accountRules';
-import { getOpeningBalancesAccountId } from '@/src/services/accounts/accountSystemAccounts';
+import {
+  findAccountByName,
+  getOpeningBalancesAccountInput,
+} from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
+import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
 import { roundToPrecision } from '@/src/utils/money';
@@ -78,7 +82,9 @@ export async function createAccount(
     );
   }
 
-  const account = await accountRepository.create({
+  const precision = await currencyReadService.getPrecision(currencyCode);
+  const postOpening = shouldPostInitialBalance(input.initialBalance, precision);
+  const payload = {
     name: input.name,
     accountType: input.accountType,
     accountSubtype: resolveAccountSubtype(input.accountType, input.accountSubtype),
@@ -90,63 +96,94 @@ export async function createAccount(
     parentAccountId: input.parentAccountId || undefined,
     workplaceId: input.workplaceId,
     metadata: input.metadata,
+  };
+
+  let existingOpeningId: AccountId | undefined;
+  let companionPayloads: ReturnType<typeof getOpeningBalancesAccountInput>[] | undefined;
+  if (postOpening) {
+    const openingInput = getOpeningBalancesAccountInput(currencyCode, input.workplaceId);
+    const existingOpening = await findAccountByName(workplaceId, openingInput.name);
+    if (existingOpening) {
+      existingOpeningId = existingOpening.id as AccountId;
+    } else {
+      companionPayloads = [openingInput];
+    }
+  }
+
+  const journalDate = Date.now();
+  let accountsToRebuild: Set<AccountId> | undefined;
+
+  const account = await accountRepository.persistCreatedAccount({
+    payload,
+    companionPayloads,
+    extraOps: ({ account: created }) => [
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: created.id,
+          action: AuditAction.CREATE,
+          changes: {
+            after: {
+              name: created.name,
+              accountType: created.accountType,
+              accountSubtype: created.accountSubtype,
+              currencyCode: created.currencyCode,
+              description: created.description,
+              icon: created.icon,
+              color: created.color,
+              orderNum: created.orderNum,
+              parentAccountId: created.parentAccountId,
+              initialBalance: input.initialBalance,
+            },
+          },
+        },
+        workplaceId,
+      ),
+    ],
+    followUpBatch: postOpening
+      ? async ({ account: created, companions }) => {
+          const roundedAmount = roundToPrecision(Math.abs(input.initialBalance!), precision);
+          const balancingAccountId = (existingOpeningId ?? companions[0]?.id) as
+            AccountId | undefined;
+          if (!balancingAccountId) {
+            throw new Error('Opening balances account missing');
+          }
+          const { accountTxType, balancingTxType } = journalLegTypesForSignedAmount(
+            input.accountType,
+            input.initialBalance!,
+          );
+          const prepared = await ledgerWriteService.prepareCreateJournal(
+            {
+              journalDate,
+              description: `Initial Balance: ${input.name}`,
+              currencyCode,
+              transactions: [
+                {
+                  accountId: created.id as AccountId,
+                  amount: roundedAmount,
+                  transactionType: accountTxType,
+                },
+                {
+                  accountId: balancingAccountId,
+                  amount: roundedAmount,
+                  transactionType: balancingTxType,
+                },
+              ],
+            },
+            input.workplaceId,
+          );
+          accountsToRebuild = prepared.accountsToRebuild;
+          return prepared.ops;
+        }
+      : undefined,
+    afterBatch: () => {
+      if (accountsToRebuild && accountsToRebuild.size > 0) {
+        rebuildQueueService.enqueueMany(accountsToRebuild, journalDate, workplaceId);
+      }
+    },
   });
 
-  const precision = await currencyReadService.getPrecision(currencyCode);
-  await auditService.log(
-    {
-      entityType: 'account',
-      entityId: account.id,
-      action: AuditAction.CREATE,
-      changes: {
-        after: {
-          name: account.name,
-          accountType: account.accountType,
-          accountSubtype: account.accountSubtype,
-          currencyCode: account.currencyCode,
-          description: account.description,
-          icon: account.icon,
-          color: account.color,
-          orderNum: account.orderNum,
-          parentAccountId: account.parentAccountId,
-          initialBalance: input.initialBalance,
-        },
-      },
-    },
-    workplaceId,
-  );
-
   analytics.logAccountCreated(account.accountType, account.currencyCode);
-
-  if (shouldPostInitialBalance(input.initialBalance, precision)) {
-    const roundedAmount = roundToPrecision(Math.abs(input.initialBalance!), precision);
-    const balancingAccountId = await getOpeningBalancesAccountId(currencyCode, input.workplaceId);
-    const { accountTxType, balancingTxType } = journalLegTypesForSignedAmount(
-      input.accountType,
-      input.initialBalance!,
-    );
-
-    await ledgerWriteService.createJournal(
-      {
-        journalDate: Date.now(),
-        description: `Initial Balance: ${input.name}`,
-        currencyCode,
-        transactions: [
-          {
-            accountId: account.id as AccountId,
-            amount: roundedAmount,
-            transactionType: accountTxType,
-          },
-          {
-            accountId: balancingAccountId as AccountId,
-            amount: roundedAmount,
-            transactionType: balancingTxType,
-          },
-        ],
-      },
-      input.workplaceId,
-    );
-  }
 
   return account;
 }

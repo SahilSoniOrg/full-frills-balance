@@ -390,26 +390,30 @@ export class AccountRepository {
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {
+    return this.persistCreatedAccount({ payload: data });
+  }
+
+  prepareCreateOps(data: AccountPersistenceInput): { account: Account; ops: Model[] } {
     if (!data.workplaceId) {
       throw new ValidationError('workplaceId is required to create an account');
     }
-    await this.ensureUniqueName(data.name, data.workplaceId, undefined);
     const payload: AccountPersistenceInput = {
       ...data,
       accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType),
     };
     this.validateSubtype(payload.accountType, payload.accountSubtype);
 
-    return await this.db.write(async () => {
-      const account = await this.accounts.create(acc => {
-        const { metadata, ...accountData } = payload;
-        Object.assign(acc, accountData);
-        acc.createdAt = new Date();
-        acc.updatedAt = new Date();
-      });
+    const account = this.accounts.prepareCreate(acc => {
+      const { metadata, ...accountData } = payload;
+      Object.assign(acc, accountData);
+      acc.createdAt = new Date();
+      acc.updatedAt = new Date();
+    });
 
-      if (data.metadata) {
-        await this.metadata.create(meta => {
+    const ops: Model[] = [account];
+    if (data.metadata) {
+      ops.push(
+        this.metadata.prepareCreate(meta => {
           Object.assign(meta, data.metadata);
           meta.account.set(account);
           if (payload.workplaceId) {
@@ -417,9 +421,51 @@ export class AccountRepository {
           }
           meta.createdAt = new Date();
           meta.updatedAt = new Date();
-        });
-      }
+        }),
+      );
+    }
 
+    return { account, ops };
+  }
+
+  /**
+   * One writer for a new account plus optional companion rows, extra ops, and a
+   * follow-up batch (e.g. opening-balance journal after the account is visible).
+   */
+  async persistCreatedAccount(params: {
+    payload: AccountPersistenceInput;
+    companionPayloads?: AccountPersistenceInput[];
+    extraOps?: (created: { account: Account; companions: Account[] }) => Model[];
+    followUpBatch?: (created: { account: Account; companions: Account[] }) => Promise<Model[]>;
+    afterBatch?: () => void;
+  }): Promise<Account> {
+    if (!params.payload.workplaceId) {
+      throw new ValidationError('workplaceId is required to create an account');
+    }
+    await this.ensureUniqueName(params.payload.name, params.payload.workplaceId);
+    for (const companion of params.companionPayloads ?? []) {
+      if (!companion.workplaceId) {
+        throw new ValidationError('workplaceId is required to create an account');
+      }
+      await this.ensureUniqueName(companion.name, companion.workplaceId);
+    }
+
+    return this.db.write(async () => {
+      const { account, ops } = this.prepareCreateOps(params.payload);
+      const companions: Account[] = [];
+      for (const companion of params.companionPayloads ?? []) {
+        const prepared = this.prepareCreateOps(companion);
+        companions.push(prepared.account);
+        ops.push(...prepared.ops);
+      }
+      const extras = params.extraOps?.({ account, companions }) ?? [];
+      await this.db.batch(...ops, ...extras);
+
+      const followUp = (await params.followUpBatch?.({ account, companions })) ?? [];
+      if (followUp.length > 0) {
+        await this.db.batch(...followUp);
+      }
+      params.afterBatch?.();
       return account;
     });
   }
