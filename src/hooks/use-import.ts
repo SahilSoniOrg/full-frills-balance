@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import {
   decodeContent,
@@ -19,7 +19,7 @@ import { useCallback, useState } from 'react';
 export type ImportFormat = string;
 
 export function useImport() {
-  const { requireRestart } = useUI();
+  const { requireRestart } = useAppRestart();
 
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);

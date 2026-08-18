@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -26,7 +26,7 @@ import { LatestGenerationCoordinator } from './latestGeneration';
  * Optimized for fast initial render and background readiness.
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
-  const { isAppReady, setDataHydrated } = useUI();
+  const { isAppReady, setDataHydrated } = useAppReady();
   const hydrationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
   const stabilizationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
 

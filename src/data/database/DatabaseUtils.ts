@@ -1,24 +1,37 @@
 import { Database } from '@nozbe/watermelondb';
 
+export type RawSqlArg = string | number | boolean | null;
+
+/** Named seam for Watermelon JSI `unsafeQueryRaw`. Callers must not reach the private adapter. */
+export interface RawSqlAdapter {
+  queryRaw: (sql: string, args: RawSqlArg[], table?: string) => Promise<unknown>;
+}
+
+interface WatermelonJsiDispatcher {
+  _db?: {
+    unsafeQueryRaw?: (sql: string, args: RawSqlArg[]) => Promise<unknown>;
+  };
+}
+
+interface WatermelonPrivateAdapter {
+  underlyingAdapter?: WatermelonPrivateAdapter;
+  _dispatcher?: WatermelonJsiDispatcher;
+}
+
 /**
  * Utility to safely access the underlying raw SQL adapter for WatermelonDB.
  */
-export function getRawAdapter(database: Database): any {
-  const adapter = database.adapter as any;
+export function getRawAdapter(database: Database): RawSqlAdapter | null {
+  const adapter = database.adapter as WatermelonPrivateAdapter;
   const underlying = adapter.underlyingAdapter || adapter;
   const dispatcher = underlying?._dispatcher;
   const db = dispatcher?._db;
 
-  /**
-   * GOD MODE BRIDGE
-   * Diagnostics confirm the JSI dispatcher has a native _db object
-   * with a direct unsafeQueryRaw method.
-   */
   if (db && typeof db.unsafeQueryRaw === 'function') {
+    const unsafeQueryRaw = db.unsafeQueryRaw;
     return {
-      queryRaw: async (sql: string, args: any[]) => {
-        // DIRECT native call: discrete (sql, args)
-        return db.unsafeQueryRaw(sql, args);
+      queryRaw: async (sql: string, args: RawSqlArg[], _table?: string) => {
+        return unsafeQueryRaw(sql, args);
       },
     };
   }
@@ -26,13 +39,19 @@ export function getRawAdapter(database: Database): any {
   return null;
 }
 
+/** Normalize JSI array results and SQLite `{ rows }` payloads. */
+export function rowsFromQueryRaw(result: unknown): unknown[] {
+  if (Array.isArray(result)) return result;
+  if (result && typeof result === 'object' && 'rows' in result) {
+    const rows = Reflect.get(result, 'rows');
+    if (Array.isArray(rows)) return rows;
+  }
+  return [];
+}
+
 /**
  * Checks if the database adapter supports raw SQL queries.
  */
 export function supportsRawSql(database: Database): boolean {
-  const adapter = getRawAdapter(database);
-  return (
-    adapter &&
-    (typeof adapter.queryRaw === 'function' || typeof adapter.unsafeQueryRaw === 'function')
-  );
+  return getRawAdapter(database) !== null;
 }

@@ -1,5 +1,5 @@
 import { FontIds } from '@/src/constants/design-tokens';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
 import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';
@@ -50,7 +50,7 @@ const FONT_MAP: Record<string, Record<string, any>> = {
  */
 export function useFonts() {
   const { fontId } = useThemePrefs();
-  const { setFontsReady } = useUI();
+  const { setFontsReady } = useAppReady();
   const loadedFontSetsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {

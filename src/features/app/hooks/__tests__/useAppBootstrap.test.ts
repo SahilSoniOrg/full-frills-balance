@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
@@ -8,7 +8,7 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 
-jest.mock('@/src/contexts/UIContext', () => ({ useUI: jest.fn() }));
+jest.mock('@/src/contexts/UIContext', () => ({ useAppReady: jest.fn() }));
 jest.mock('@/src/features/app/bootstrap', () => ({ runAppBootstrapSideEffects: jest.fn() }));
 jest.mock('@/src/services/analytics-service', () => ({
   analytics: {
@@ -83,7 +83,7 @@ describe('useAppBootstrap generation safety', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    (useUI as jest.Mock).mockReturnValue({ isAppReady: true, setDataHydrated });
+    (useAppReady as jest.Mock).mockReturnValue({ isAppReady: true, setDataHydrated });
   });
 
   afterEach(() => {

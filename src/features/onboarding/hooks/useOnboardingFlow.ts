@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useOnboardingSession } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
@@ -33,7 +33,7 @@ export interface OnboardingFlowViewModel {
 const ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
 
 export function useOnboardingFlow(): OnboardingFlowViewModel {
-  const ui = useUI();
+  const { completeOnboarding } = useOnboardingSession();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState<string>(AppConfig.defaultCurrency);
@@ -195,7 +195,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
 
       // Then update UI state & preferences via Context
-      await ui.completeOnboarding(name, 'balance-glancer');
+      await completeOnboarding(name, 'balance-glancer');
 
       analytics.trackFeatureUsage('onboarding', 'completed', {
         accounts_count: selectedAccounts.length + customAccounts.length,
@@ -225,7 +225,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     selectedAccounts,
     selectedCategories,
     selectedCurrency,
-    ui,
+    completeOnboarding,
   ]);
 
   return {

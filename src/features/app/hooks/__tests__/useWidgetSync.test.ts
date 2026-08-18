@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppLock, useAppReady } from '@/src/contexts/UIContext';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 import { loadWidgetModule } from '@/src/features/app/hooks/loadWidgetModule';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
@@ -9,7 +9,10 @@ import { WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 import expoWidgetsModule from '@/modules/expo-widgets';
 
-jest.mock('@/src/contexts/UIContext', () => ({ useUI: jest.fn() }));
+jest.mock('@/src/contexts/UIContext', () => ({
+  useAppLock: jest.fn(),
+  useAppReady: jest.fn(),
+}));
 jest.mock('@/src/hooks/usePrivacyPrefs', () => ({ usePrivacyPrefs: jest.fn() }));
 jest.mock('@/src/hooks/useThemePrefs', () => ({ useThemePrefs: jest.fn() }));
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: jest.fn() }));
@@ -24,10 +27,8 @@ describe('useWidgetSync generation ordering', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    (useUI as jest.Mock).mockReturnValue({
-      isAppCurrentlyLocked: false,
-      isAppReady: true,
-    });
+    (useAppLock as jest.Mock).mockReturnValue({ isAppCurrentlyLocked: false });
+    (useAppReady as jest.Mock).mockReturnValue({ isAppReady: true });
     (usePrivacyPrefs as jest.Mock).mockReturnValue({ isWidgetPrivacyEnabled: false });
     (useThemePrefs as jest.Mock).mockReturnValue({ themeId: 'default' });
     (useTheme as jest.Mock).mockReturnValue({

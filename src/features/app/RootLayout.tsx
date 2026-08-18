@@ -3,7 +3,7 @@ import { AlertContainer } from '@/src/components/common/AlertContainer';
 import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { UIProvider, useUI } from '@/src/contexts/UIContext';
+import { UIProvider, useAppReady, useOnboardingSession } from '@/src/contexts/UIContext';
 import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
@@ -96,7 +96,8 @@ function WorkplaceBootstrap() {
  * Manages the transition from Native Splash to application UI.
  */
 function SplashOrchestrator() {
-  const { isAppReady, isDataHydrated, hasCompletedOnboarding } = useUI();
+  const { isAppReady, isDataHydrated } = useAppReady();
+  const { hasCompletedOnboarding } = useOnboardingSession();
   const hasTrackedColdStartRef = React.useRef(false);
 
   // If onboarding is done, we wait for both UI and Data hydration.

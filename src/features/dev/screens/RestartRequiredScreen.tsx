@@ -1,6 +1,6 @@
 import { AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import { logger } from '@/src/utils/logger';
@@ -14,7 +14,7 @@ import { Platform, StyleSheet, View } from 'react-native';
  */
 export const RestartRequiredScreen = () => {
   const { theme } = useTheme();
-  const { restartType, importStats } = useUI();
+  const { restartType, importStats } = useAppRestart();
 
   const handleRestart = useCallback(async () => {
     if (Platform.OS === 'web') {

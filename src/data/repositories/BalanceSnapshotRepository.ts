@@ -4,7 +4,7 @@ import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '@/src/data/models/Transaction';
-import { getRawAdapter } from '../database/DatabaseUtils';
+import { getRawAdapter, rowsFromQueryRaw } from '../database/DatabaseUtils';
 
 /**
  * Repository for Balance Snapshots.
@@ -108,9 +108,11 @@ export class BalanceSnapshotRepository {
 
     try {
       const rows = await sqlAdapter.queryRaw(sql, [workplaceId, workplaceId, ...accountIds, date]);
-      const data = Array.isArray(rows) ? rows : rows?.rows || [];
+      const data = rowsFromQueryRaw(rows);
       for (const row of data) {
-        result.set(row.accountId, row as SnapshotData);
+        if (!row || typeof row !== 'object') continue;
+        const snapshot = row as SnapshotData;
+        result.set(snapshot.accountId, snapshot);
       }
       return result;
     } catch (error) {

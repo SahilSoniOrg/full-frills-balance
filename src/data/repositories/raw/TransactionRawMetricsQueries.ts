@@ -5,7 +5,7 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { getRawAdapter } from '../../database/DatabaseUtils';
+import { getRawAdapter, rowsFromQueryRaw } from '../../database/DatabaseUtils';
 import Account from '../../models/Account';
 import Transaction from '../../models/Transaction';
 import { AccountDelta, DailyDelta, RawSQLArg } from '../TransactionTypes';
@@ -48,10 +48,11 @@ export class TransactionRawMetricsQueries {
 
     try {
       const result = await sqlAdapter.queryRaw(sql, args, table);
-      const rawRows = Array.isArray(result) ? result : result?.rows || [];
+      const rawRows = rowsFromQueryRaw(result);
       if (rawRows.length === 0) return [];
 
       const sampleRow = rawRows[0];
+      if (!sampleRow || typeof sampleRow !== 'object') return [];
       const keys = Object.keys(sampleRow);
       const schemaSignature = keys.join('|');
 

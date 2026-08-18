@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { exportService } from '@/src/services/export-service';
 import { integrityService } from '@/src/services/integrity-service';
@@ -7,7 +7,7 @@ import { useCallback } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 
 export function useSettingsActions(workplaceId: WorkplaceId) {
-  const { requireRestart } = useUI();
+  const { requireRestart } = useAppRestart();
 
   const exportToJSON = useCallback(
     async (onProgress?: (message: string, progress: number) => void) => {

@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady, useOnboardingSession } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import * as Linking from 'expo-linking';
 import { Redirect } from 'expo-router';
@@ -14,7 +14,8 @@ import { View } from 'react-native';
  * the deeplink path directly.
  */
 export function RootIndexScreen() {
-  const { isAppReady, hasCompletedOnboarding } = useUI();
+  const { isAppReady } = useAppReady();
+  const { hasCompletedOnboarding } = useOnboardingSession();
   const { theme } = useTheme();
   // undefined = still loading, null = no initial URL
   const [initialUrl, setInitialUrl] = useState<string | null | undefined>(undefined);

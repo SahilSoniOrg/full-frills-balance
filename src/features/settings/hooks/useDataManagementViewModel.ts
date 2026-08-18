@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useDataMaintenanceActions';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
@@ -43,7 +43,7 @@ export interface DataManagementViewModel {
 
 export function useDataManagementViewModel(): DataManagementViewModel {
   const { workplaceId } = useWorkplace();
-  const { requireRestart } = useUI();
+  const { requireRestart } = useAppRestart();
   const { defaultShareFormat, setDefaultShareFormat } = useSharePrefs();
   const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } =
     useSettingsActions(workplaceId);

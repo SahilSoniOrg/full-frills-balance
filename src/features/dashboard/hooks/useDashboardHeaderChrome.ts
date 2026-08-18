@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
@@ -24,7 +24,7 @@ export type DashboardHeaderChrome = {
 export function useDashboardHeaderChrome(): DashboardHeaderChrome {
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
-  const { isAppReady } = useUI();
+  const { isAppReady } = useAppReady();
   const { isSmsImportEnabled } = useSmsPrefs();
   const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);

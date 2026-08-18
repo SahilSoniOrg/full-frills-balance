@@ -1,5 +1,5 @@
 import { Typography } from '@/src/constants/design-tokens';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { processTextChildren, resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
@@ -30,7 +30,7 @@ export const AppText = memo(function AppText({
 }: AppTextProps) {
   const { fonts, getVariantColors, theme, themeMode } = useTheme();
   const { fontId } = useThemePrefs();
-  const { fontsReady, loadedFontId } = useUI();
+  const { fontsReady, loadedFontId } = useAppReady();
 
   const processedChildren = useMemo(() => processTextChildren(children), [children]);
 

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
@@ -89,7 +89,7 @@ export function useJournalEntryList({
   baseCurrency: baseCurrencyOverride,
   expandScopedLegs,
 }: UseJournalEntryListParams): JournalEntryListCore {
-  const { isInitialized } = useUI();
+  const { isInitialized } = useAppReady();
   const { defaultShareFormat } = useSharePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const baseCurrency = baseCurrencyOverride ?? workplaceCurrency;

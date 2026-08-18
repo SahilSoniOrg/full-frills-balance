@@ -144,7 +144,7 @@ Goal: remove competing write protocols.
 - [x] Inventory and classify direct database writes, batches, raw model mutation, and private adapter access.
 - [x] Move account, SMS inbox, and planned-payment command writers into repositories (`persistBatch` / inbox persist). Remaining service writers: ledger, integrity repair, rebuild, audit cleanup.
 - [x] Skip named transaction coordinators; `persistBatch` / `LedgerWriteService` remain the commit owners.
-- [ ] Isolate raw SQL and private adapter access behind named infrastructure interfaces.
+- [x] Isolate raw SQL and private adapter access behind named infrastructure interfaces (`RawSqlAdapter` / `getRawAdapter`).
 - [x] Document atomicity ownership for cross-domain mutations.
 - [x] Batch integrity repair audit with rebuild; SAVEPOINT staged-import swap; document MMKV rebuild queue + startup integrity as the recovery path.
 - [x] Skip named coordinators; existing `persistBatch` / ledger writers are the commit owners (ponytail).
@@ -176,11 +176,11 @@ Exit: presentation code uses plain data and does not depend on WatermelonDB iden
 
 Goal: give each state machine a cohesive owner.
 
-- [ ] Split app readiness, lock/session, restart/import, and onboarding state.
-- [ ] Split accounts-list data, interaction, and command/modal state.
+- [x] Split app readiness, lock/session, restart/import, and onboarding state (`useAppReady` / `useAppLock` / `useAppRestart` / `useOnboardingSession`).
+- [x] Split accounts-list data, interaction, and command/modal state (`useAccountsListViewModel` / `useAccountsListUiState` / `useAccountsListActions`).
 - [ ] Extract budget and planned-payment form views from route/controller screens.
-- [ ] Centralize journal selection and bulk-action state behind neutral contracts.
-- [ ] Move import-selection orchestration into settings.
+- [x] Centralize journal selection and bulk-action state behind neutral contracts (`useJournalsBulkOperations`).
+- [x] Keep import-selection UI in settings; shared `useImport` stays in `src/hooks` so onboarding does not import settings.
 - [ ] Give telemetry and navigation one owner per feature.
 
 Exit: screens orchestrate; view-model contracts are cohesive; cross-feature UI internals are not imported.
@@ -244,7 +244,8 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-4         | Batch account/SMS/planned-payment mutations with audit and schedule            | `4202cc34`                                     |
 | 2026-08-18 | WP-4         | Integrity repair audit in the rebuild write; SAVEPOINT import swap             | `39bfb467`                                     |
 | 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
-| 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | (this commit)                                  |
+| 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | `74f8bf46`                                     |
+| 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | (this commit)                                  |
 
 ## Audit Evidence Index
 

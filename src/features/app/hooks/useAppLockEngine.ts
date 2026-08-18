@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppLock } from '@/src/contexts/UIContext';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppConfig } from '@/src/constants/app-config';
 import * as LocalAuthentication from '@/src/utils/auth';
@@ -10,7 +10,7 @@ const AUTH_COOLDOWN_MS = 2000;
 export function useAppLockEngine() {
   const { isAppLockEnabled } = usePrivacyPrefs();
   const { isUnlocked, isAppActive, authenticateSession, setIsAppActive, setIsLockAuthenticating } =
-    useUI();
+    useAppLock();
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);

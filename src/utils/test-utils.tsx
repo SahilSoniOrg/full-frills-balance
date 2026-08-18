@@ -1,12 +1,11 @@
-import { AppConfig } from '@/src/constants';
 import { render, RenderOptions } from '@testing-library/react-native';
 import React, { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { UIContext } from '@/src/contexts/UIContext';
+import { AppShellTestProvider, type AppShellValue } from '@/src/contexts/UIContext';
 import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 
-const mockUIContext: any = {
+const mockUIContext: AppShellValue = {
   hasCompletedOnboarding: true,
   isLoading: false,
   isInitialized: true,
@@ -22,7 +21,6 @@ const mockUIContext: any = {
   isLockAuthenticating: false,
   isAppCurrentlyLocked: false,
   isAppReady: true,
-  defaultCurrency: AppConfig.defaultCurrency,
   completeOnboarding: async () => Promise.resolve(),
   setFontsReady: () => {},
   setDataHydrated: () => {},
@@ -42,7 +40,7 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
       }}
     >
       <PrivacyScopeProvider>
-        <UIContext.Provider value={mockUIContext}>{children}</UIContext.Provider>
+        <AppShellTestProvider value={mockUIContext}>{children}</AppShellTestProvider>
       </PrivacyScopeProvider>
     </SafeAreaProvider>
   );

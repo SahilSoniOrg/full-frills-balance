@@ -33,7 +33,7 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 
 jest.mock('@/src/contexts/UIContext', () => ({
-  useUI: () => ({ defaultCurrency: 'USD', isInitialized: true }),
+  useAppReady: () => ({ isInitialized: true }),
 }));
 
 jest.mock('@/src/hooks/useSharePrefs', () => ({

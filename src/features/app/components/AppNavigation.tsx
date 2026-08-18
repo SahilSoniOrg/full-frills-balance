@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/UIContext';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { Stack } from 'expo-router';
 
@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
  * Orchestrates the main app content based on onboarding and restart state.
  */
 export function AppContent() {
-  const { isRestartRequired } = useUI();
+  const { isRestartRequired } = useAppRestart();
 
   if (isRestartRequired) {
     return <RestartRequiredScreen />;

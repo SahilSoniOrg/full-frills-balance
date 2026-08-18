@@ -2,7 +2,7 @@ import { AppButton, AppText, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppLock } from '@/src/contexts/UIContext';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAppLockEngine } from '@/src/features/app/hooks/useAppLockEngine';
@@ -13,7 +13,7 @@ import { Modal, Platform, StyleSheet, View } from 'react-native';
 
 export function AppLockInterceptor({ children }: { children: React.ReactNode }) {
   const { isAppLockEnabled } = usePrivacyPrefs();
-  const { hasUnlockedThisSession, isAppCurrentlyLocked } = useUI();
+  const { hasUnlockedThisSession, isAppCurrentlyLocked } = useAppLock();
   const { theme } = useTheme();
 
   // Use the extracted logic engine

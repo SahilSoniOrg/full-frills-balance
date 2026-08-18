@@ -1,6 +1,6 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useAppReady, useOnboardingSession } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import {
@@ -42,7 +42,8 @@ type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 
 export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId } = useWorkplace();
-  const { hasCompletedOnboarding, isInitialized, isAppReady } = useUI();
+  const { isInitialized, isAppReady } = useAppReady();
+  const { hasCompletedOnboarding } = useOnboardingSession();
   const { showSafeToSpendChart } = useDashboardPreferences();
 
   const mountTimeRef = useRef<number>(0);
