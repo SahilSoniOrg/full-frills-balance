@@ -28,6 +28,7 @@ export class AccountingRebuildService {
     workplaceId: WorkplaceId,
     accountId: AccountId,
     fromDate?: number,
+    extraOps: Model[] = [],
   ): Promise<void> {
     const lockKey = REBUILD_LOCK_PREFIX + accountId;
 
@@ -43,7 +44,13 @@ export class AccountingRebuildService {
     storage.set(lockKey, String(Date.now()));
     try {
       await database.write(async () => {
-        await this.rebuildAccountBalancesInternal(workplaceId, accountId, fromDate);
+        await this.rebuildAccountBalancesInternal(
+          workplaceId,
+          accountId,
+          fromDate,
+          false,
+          extraOps,
+        );
       });
     } finally {
       storage.remove(lockKey);
@@ -59,6 +66,7 @@ export class AccountingRebuildService {
     accountId: AccountId,
     fromDate?: number,
     silent: boolean = false,
+    extraOps: Model[] = [],
   ): Promise<void> {
     logger.debug(
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
@@ -141,6 +149,8 @@ export class AccountingRebuildService {
     }
 
     // 4. Fetch all data needed for rebuilding asynchronously first
+    const finalBatch: Model[] = [...extraOps];
+
     if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0) {
       const idsArray = Array.from(idsNeedingUpdate.keys());
       const BATCH_SIZE = AppConfig.performance.rebuild.batchSize;
@@ -166,7 +176,6 @@ export class AccountingRebuildService {
         .fetch();
 
       // 5. Finalize inside the existing parent write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
-      const finalBatch: Model[] = [];
 
       // Prepare updates for transaction running balances
       for (const m of allModelsToUpdate) {
@@ -207,10 +216,10 @@ export class AccountingRebuildService {
           }),
         );
       }
+    }
 
-      if (finalBatch.length > 0) {
-        await database.batch(finalBatch);
-      }
+    if (finalBatch.length > 0) {
+      await database.batch(finalBatch);
     }
   }
 }

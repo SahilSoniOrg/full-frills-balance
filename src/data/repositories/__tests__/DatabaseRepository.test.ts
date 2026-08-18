@@ -109,6 +109,7 @@ describe('DatabaseRepository', () => {
       'accounts',
     ]);
 
+    expect(queryRaw).toHaveBeenCalledWith('SAVEPOINT import_swap', []);
     expect(queryRaw).toHaveBeenCalledWith('DELETE FROM accounts WHERE workplace_id = ?', [
       'target',
     ]);
@@ -116,6 +117,7 @@ describe('DatabaseRepository', () => {
       'UPDATE accounts SET workplace_id = ? WHERE workplace_id = ?',
       ['target', 'staging'],
     );
+    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
     expect(cacheDelete).toHaveBeenCalledWith(targetCached);
     expect(cacheMap.has('old-acc')).toBe(false);
     expect(stagingCached._raw.workplace_id).toBe('target');
@@ -123,6 +125,33 @@ describe('DatabaseRepository', () => {
       { record: targetCached, type: 'destroyed' },
       { record: stagingCached, type: 'updated' },
     ]);
+  });
+
+  it('rolls the raw staged import swap back to a savepoint when a later UPDATE fails', async () => {
+    const queryRaw = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.startsWith('UPDATE')) {
+        throw new Error('update failed');
+      }
+    });
+    mockGetRawAdapter.mockReturnValue({ queryRaw });
+
+    const targetCached = { id: 'old-acc', _raw: { workplace_id: 'target' } };
+    const cacheMap = new Map([[targetCached.id, targetCached]]);
+    mockDatabase.collections.get.mockReturnValue({
+      _cache: { map: cacheMap, delete: jest.fn() },
+      _notify: jest.fn(),
+    });
+
+    await expect(
+      repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
+        'accounts',
+      ]),
+    ).rejects.toThrow('update failed');
+
+    expect(queryRaw).toHaveBeenCalledWith('SAVEPOINT import_swap', []);
+    expect(queryRaw).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT import_swap', []);
+    expect(queryRaw).not.toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
+    expect(cacheMap.get('old-acc')).toBe(targetCached);
   });
 
   it('drops purged workplace rows from RecordCache after raw SQL purge', async () => {

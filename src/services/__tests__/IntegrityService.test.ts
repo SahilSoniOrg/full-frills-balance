@@ -1,21 +1,14 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
 
-import { AuditAction } from '@/src/data/models/AuditLog';
+import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { IntegrityService } from '@/src/services/integrity-service';
-import { auditService } from '@/src/services/audit-service';
 import { Q } from '@nozbe/watermelondb';
-
-jest.mock('@/src/services/audit-service', () => ({
-  auditService: {
-    log: jest.fn(),
-  },
-}));
 
 describe('IntegrityService', () => {
   let service: IntegrityService;
@@ -184,25 +177,23 @@ describe('IntegrityService', () => {
       expect(result.matches).toBe(true);
       expect(result.computedBalance).toBe(500);
 
-      expect(auditService.log).toHaveBeenCalledTimes(1);
-      expect(auditService.log).toHaveBeenCalledWith(
+      const auditLogs = await database.collections.get<AuditLog>('audit_logs').query().fetch();
+      expect(auditLogs).toHaveLength(1);
+      expect(auditLogs[0].entityType).toBe('account');
+      expect(auditLogs[0].entityId).toBe(cashAccountId);
+      expect(auditLogs[0].action).toBe(AuditAction.UPDATE);
+      expect(JSON.parse(auditLogs[0].changes)).toEqual(
         expect.objectContaining({
-          entityType: 'account',
-          entityId: cashAccountId,
-          action: AuditAction.UPDATE,
-          changes: expect.objectContaining({
-            before: expect.objectContaining({
-              cachedBalance: 9999,
-              computedBalance: 500,
-            }),
-            after: expect.objectContaining({
-              repairType: 'running_balance',
-              trigger: 'repair',
-              balanceAfterRepair: 500,
-            }),
+          before: expect.objectContaining({
+            cachedBalance: 9999,
+            computedBalance: 500,
+          }),
+          after: expect.objectContaining({
+            repairType: 'running_balance',
+            trigger: 'repair',
+            balanceAfterRepair: 500,
           }),
         }),
-        'wp-1',
       );
     });
   });

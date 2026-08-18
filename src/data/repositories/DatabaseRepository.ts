@@ -177,35 +177,58 @@ export class DatabaseRepository {
     await database.write(async () => {
       const adapter = getRawAdapter(database);
       if (adapter && typeof adapter.queryRaw === 'function') {
-        for (const table of tables) {
-          try {
-            await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [
-              targetWorkplaceId,
-            ]);
-          } catch (err) {
-            const errorMsg = String(err);
-            if (!errorMsg.includes('no such table')) {
-              logger.error(`[DatabaseRepository] Failed to purge ${table} before import swap`, err);
-              throw err;
+        const savepoint = 'import_swap';
+        let savepointOpen = false;
+        try {
+          await adapter.queryRaw(`SAVEPOINT ${savepoint}`, []);
+          savepointOpen = true;
+          for (const table of tables) {
+            try {
+              await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [
+                targetWorkplaceId,
+              ]);
+            } catch (err) {
+              const errorMsg = String(err);
+              if (!errorMsg.includes('no such table')) {
+                logger.error(
+                  `[DatabaseRepository] Failed to purge ${table} before import swap`,
+                  err,
+                );
+                throw err;
+              }
             }
           }
-        }
-        for (const table of tables) {
-          try {
-            await adapter.queryRaw(`UPDATE ${table} SET workplace_id = ? WHERE workplace_id = ?`, [
-              targetWorkplaceId,
-              stagingWorkplaceId,
-            ]);
-          } catch (err) {
-            const errorMsg = String(err);
-            if (!errorMsg.includes('no such table')) {
-              logger.error(
-                `[DatabaseRepository] Failed to reassign ${table} during import swap`,
-                err,
+          for (const table of tables) {
+            try {
+              await adapter.queryRaw(
+                `UPDATE ${table} SET workplace_id = ? WHERE workplace_id = ?`,
+                [targetWorkplaceId, stagingWorkplaceId],
               );
-              throw err;
+            } catch (err) {
+              const errorMsg = String(err);
+              if (!errorMsg.includes('no such table')) {
+                logger.error(
+                  `[DatabaseRepository] Failed to reassign ${table} during import swap`,
+                  err,
+                );
+                throw err;
+              }
             }
           }
+          await adapter.queryRaw(`RELEASE SAVEPOINT ${savepoint}`, []);
+          savepointOpen = false;
+        } catch (err) {
+          if (savepointOpen) {
+            try {
+              await adapter.queryRaw(`ROLLBACK TO SAVEPOINT ${savepoint}`, []);
+            } catch (rollbackErr) {
+              logger.error(
+                '[DatabaseRepository] Failed to roll back staged import swap savepoint',
+                rollbackErr,
+              );
+            }
+          }
+          throw err;
         }
         this.syncCachesAfterRawWorkplaceMutation(tables, {
           deletedWorkplaceId: targetWorkplaceId,

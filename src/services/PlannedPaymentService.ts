@@ -48,7 +48,7 @@ export class PlannedPaymentService {
     return computeFirstPlannedOccurrence(startDate, pp);
   }
 
-  async generatePlannedJournal(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
+  async generatePlannedJournal(pp: PlannedPayment, occurrenceDate: number): Promise<boolean> {
     return generatePlannedJournalForPayment(pp, occurrenceDate);
   }
 

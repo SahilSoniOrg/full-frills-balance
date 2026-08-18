@@ -13,13 +13,14 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
-import { auditService } from '@/src/services/audit-service';
 import {
   cleanupDatabase as runDatabaseCleanup,
   resetDatabase as runFactoryReset,
@@ -256,14 +257,14 @@ export class IntegrityService {
   }
 
   /**
-   * Records a successful running-balance integrity repair in the audit trail.
+   * Prepares a successful running-balance integrity repair for the same writer as the rebuild.
    */
-  private async logRunningBalanceRepair(
+  private prepareRunningBalanceRepair(
     workplaceId: WorkplaceId,
     discrepancy: BalanceVerificationResult,
     trigger: 'startup' | 'manual' | 'repair',
-  ): Promise<void> {
-    await auditService.log(
+  ): AuditLog {
+    return auditRepository.prepareLog(
       {
         entityType: 'account',
         entityId: discrepancy.accountId,
@@ -300,11 +301,13 @@ export class IntegrityService {
     const hadIssue = !discrepancy.matches || discrepancy.snapshotCorrupted;
 
     try {
-      await accountingRebuildService.rebuildAccountBalances(workplaceId, accountId);
+      await accountingRebuildService.rebuildAccountBalances(
+        workplaceId,
+        accountId,
+        undefined,
+        hadIssue ? [this.prepareRunningBalanceRepair(workplaceId, discrepancy, auditTrigger)] : [],
+      );
       logger.info(`[IntegrityService] Repaired running balances for account ${accountId}`);
-      if (hadIssue) {
-        await this.logRunningBalanceRepair(workplaceId, discrepancy, auditTrigger);
-      }
       return true;
     } catch (error) {
       logger.error(`[IntegrityService] Failed to repair account ${accountId}`, error);
@@ -410,6 +413,7 @@ export class IntegrityService {
             discrepancy.accountId,
             undefined,
             true,
+            [this.prepareRunningBalanceRepair(workplaceId, discrepancy, 'manual')],
           );
           repairSucceeded = true;
           repairedAccountIds.push(discrepancy.accountId);
@@ -417,7 +421,6 @@ export class IntegrityService {
 
         if (repairSucceeded) {
           repairsSuccessful++;
-          await this.logRunningBalanceRepair(workplaceId, discrepancy, 'manual');
         }
 
         // CRITICAL: Yield to allow bridge events (taps) to process
@@ -432,14 +435,13 @@ export class IntegrityService {
           .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(repairedAccountIds)))
           .fetch();
 
-        await database.write(async () => {
-          const updateOps = accountsToNotify.map(a =>
+        await persistBatch(
+          accountsToNotify.map(a =>
             a.prepareUpdate((record: Account) => {
               record.updatedAt = new Date();
             }),
-          );
-          await database.batch(updateOps);
-        });
+          ),
+        );
       }
     } else {
       onProgress?.('No discrepancies found. All balances correct.', 0.9);
