@@ -246,7 +246,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
 | 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | `74f8bf46`                                     |
 | 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | `3cae2814`                                     |
-| 2026-08-19 | WP-6/7       | Form views, feature nav/telemetry owners, delete PlannedPaymentService façade  | (this commit)                                  |
+| 2026-08-19 | WP-6/7       | Form views, feature nav/telemetry owners, delete PlannedPaymentService façade  | `1684df24`                                     |
 
 ## Audit Evidence Index
 
