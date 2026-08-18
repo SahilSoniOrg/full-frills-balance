@@ -1,46 +1,56 @@
 import { AccountType } from '@/src/types/domain';
 
+type FlowSide = 'increase' | 'decrease';
+
+interface CardFlowConfig {
+  left: FlowSide;
+  leftLabel: string;
+  rightLabel: string;
+}
+
+const CARD_FLOW: Record<AccountType, CardFlowConfig> = {
+  [AccountType.ASSET]: {
+    left: 'increase',
+    leftLabel: 'MONEY IN',
+    rightLabel: 'MONEY OUT',
+  },
+  [AccountType.EXPENSE]: {
+    left: 'increase',
+    leftLabel: 'MONTH SPENT',
+    rightLabel: 'REFUNDS / CREDITS',
+  },
+  [AccountType.INCOME]: {
+    left: 'increase',
+    leftLabel: 'MONTH EARNED',
+    rightLabel: 'ADJUSTMENTS',
+  },
+  [AccountType.EQUITY]: {
+    left: 'increase',
+    leftLabel: 'ADDITIONS',
+    rightLabel: 'REDUCTIONS',
+  },
+  [AccountType.LIABILITY]: {
+    left: 'decrease',
+    leftLabel: 'PAYMENTS MADE',
+    rightLabel: 'NEW CHARGES',
+  },
+};
+
+const DEFAULT_CARD_FLOW = CARD_FLOW[AccountType.ASSET];
+
 export function getAccountStatsConfig(
   accountType: AccountType | undefined,
-  monthlyIncome: number,
-  monthlyExpense: number,
+  increase: number,
+  decrease: number,
 ) {
-  switch (accountType) {
-    case AccountType.EXPENSE:
-      return {
-        leftLabel: 'MONTH SPENT',
-        leftAmount: monthlyIncome,
-        rightLabel: 'REFUNDS / CREDITS',
-        rightAmount: monthlyExpense,
-      };
-    case AccountType.INCOME:
-      return {
-        leftLabel: 'MONTH EARNED',
-        leftAmount: monthlyIncome,
-        rightLabel: 'ADJUSTMENTS',
-        rightAmount: monthlyExpense,
-      };
-    case AccountType.LIABILITY:
-      return {
-        leftLabel: 'PAYMENTS MADE',
-        leftAmount: monthlyExpense,
-        rightLabel: 'NEW CHARGES',
-        rightAmount: monthlyIncome,
-      };
-    case AccountType.EQUITY:
-      return {
-        leftLabel: 'ADDITIONS',
-        leftAmount: monthlyIncome,
-        rightLabel: 'REDUCTIONS',
-        rightAmount: monthlyExpense,
-      };
-    case AccountType.ASSET:
-    default:
-      return {
-        leftLabel: 'MONEY IN',
-        leftAmount: monthlyIncome,
-        rightLabel: 'MONEY OUT',
-        rightAmount: monthlyExpense,
-      };
-  }
+  const config = accountType ? (CARD_FLOW[accountType] ?? DEFAULT_CARD_FLOW) : DEFAULT_CARD_FLOW;
+  const leftAmount = config.left === 'increase' ? increase : decrease;
+  const rightAmount = config.left === 'increase' ? decrease : increase;
+
+  return {
+    leftLabel: config.leftLabel,
+    leftAmount,
+    rightLabel: config.rightLabel,
+    rightAmount,
+  };
 }
