@@ -29,7 +29,7 @@ export function useJournalDetailsActions({
   plannedPaymentId,
   journalDate,
 }: UseTransactionDetailsActionsProps) {
-  const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
+  const { deleteJournal, duplicateJournal, postJournal, revertToPlanned } =
     useJournalActions(workplaceId);
   const isPrivacyMode = useEffectivePrivacyMode();
   const displayAmount = formatMoneyAmount(amount, currencyCode, isPrivacyMode);
@@ -40,13 +40,7 @@ export function useJournalDetailsActions({
       'Are you sure you want to delete this transaction? This action cannot be undone.',
       async () => {
         try {
-          const found = await findJournal(journalId);
-          if (!found) {
-            showErrorAlert('Transaction not found. It may have already been deleted.');
-            AppNavigation.back();
-            return;
-          }
-          await deleteJournal(found);
+          await deleteJournal(journalId);
           toast.success('Transaction has been deleted.');
           AppNavigation.back();
         } catch (error) {
@@ -56,7 +50,7 @@ export function useJournalDetailsActions({
         }
       },
     );
-  }, [deleteJournal, findJournal, journalId]);
+  }, [deleteJournal, journalId]);
 
   const handleCopy = useCallback(async () => {
     try {

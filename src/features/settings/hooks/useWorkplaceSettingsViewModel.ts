@@ -1,8 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { AccountType } from '@/src/types/domain';
-
-import Workplace from '@/src/data/models/Workplace';
+import { AccountType, PlainWorkplace } from '@/src/types/domain';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { analytics } from '@/src/services/analytics-service';
@@ -11,11 +9,11 @@ import { toast } from '@/src/utils/alerts';
 import { useCallback, useState } from 'react';
 
 export interface WorkplaceSettingsViewModel {
-  workplaces: Workplace[];
-  activeWorkplace: Workplace | undefined;
+  workplaces: PlainWorkplace[];
+  activeWorkplace: PlainWorkplace | undefined;
   isCreating: boolean;
   isCreatingWorkplace: boolean;
-  setActiveWorkplace: (workplace: Workplace) => void;
+  setActiveWorkplace: (workplace: PlainWorkplace) => void;
   createWorkplace: (
     name: string,
     icon: IconName,
@@ -25,7 +23,7 @@ export interface WorkplaceSettingsViewModel {
       currencyCode: string;
     },
   ) => Promise<boolean>;
-  updateWorkplaceIcon: (workplace: Workplace, icon: IconName) => Promise<void>;
+  updateWorkplaceIcon: (workplace: PlainWorkplace, icon: IconName) => Promise<void>;
   startCreateWorkplace: () => void;
   cancelCreateWorkplace: () => void;
 }
@@ -44,7 +42,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   const { data: activeWorkplace } = useWorkplaceSnapshot(activeWorkplaceId);
 
   const setActiveWorkplace = useCallback(
-    (workplace: Workplace) => {
+    (workplace: PlainWorkplace) => {
       setActiveWorkplaceId(workplace.id);
       analytics.trackFeatureUsage('settings', 'switch_workplace');
       toast.info(`Switched to ${workplace.name}`);
@@ -93,7 +91,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     [cancelCreateWorkplace, setActiveWorkplace],
   );
 
-  const updateWorkplaceIcon = useCallback(async (workplace: Workplace, icon: IconName) => {
+  const updateWorkplaceIcon = useCallback(async (workplace: PlainWorkplace, icon: IconName) => {
     try {
       await workplaceService.updateWorkplace(workplace.id, { icon });
       analytics.trackFeatureUsage('settings', 'update_workplace_icon', { icon });

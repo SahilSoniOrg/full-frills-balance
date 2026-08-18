@@ -1,4 +1,4 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountId } from '@/src/types/domain';
 import {
   AuditLogEntry,
   computeCanRevert,
@@ -6,7 +6,6 @@ import {
   hasBeforeAfterChanges,
   parseAuditChanges,
 } from '@/src/features/audit/auditLogTypes';
-import { AccountId } from '@/src/types/domain';
 
 describe('auditLogTypes', () => {
   describe('parseAuditChanges', () => {

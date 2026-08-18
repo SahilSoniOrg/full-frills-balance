@@ -7,7 +7,7 @@ import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval } from '@/src/types/domain';
 import { FadeIn, Stack } from '@/src/design-system';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';

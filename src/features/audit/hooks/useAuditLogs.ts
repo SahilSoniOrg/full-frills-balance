@@ -1,9 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditLogEntry } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
-import { WorkplaceId } from '@/src/types/domain';
+import { AuditEntityType, PlainAuditLog, WorkplaceId } from '@/src/types/domain';
 
 export function useAuditLogs(params: {
   entityType?: AuditEntityType;
@@ -24,7 +23,7 @@ export function useAuditLogs(params: {
         ? auditService.observeAuditTrail(entityType!, entityId!, workplaceId)
         : auditService.observeRecentLogs(AppConfig.pagination.auditScreenLimit, workplaceId),
     [entityType, entityId, isFiltered, workplaceId],
-    [] as AuditLog[],
+    [] as PlainAuditLog[],
   );
 
   const logs: AuditLogEntry[] = (rawLogs || []).map(log => ({

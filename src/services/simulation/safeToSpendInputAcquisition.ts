@@ -157,7 +157,7 @@ export function observeSafeToSpendInputSnapshot(
       );
 
       const budgetUsageObservables = mapped.budgets.map(b =>
-        budgetReadService.observeBudgetUsage(workplaceId, b),
+        budgetReadService.observeBudgetUsage(workplaceId, b.id),
       );
       const budgetUsage$ =
         budgetUsageObservables.length > 0

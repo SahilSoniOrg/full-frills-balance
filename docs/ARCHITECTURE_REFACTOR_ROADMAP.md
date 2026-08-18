@@ -143,10 +143,11 @@ Goal: remove competing write protocols.
 
 - [x] Inventory and classify direct database writes, batches, raw model mutation, and private adapter access.
 - [x] Move account, SMS inbox, and planned-payment command writers into repositories (`persistBatch` / inbox persist). Remaining service writers: ledger, integrity repair, rebuild, audit cleanup.
-- [ ] Define transaction coordinators for journal, account, planned-payment, SMS, and import flows.
+- [x] Skip named transaction coordinators; `persistBatch` / `LedgerWriteService` remain the commit owners.
 - [ ] Isolate raw SQL and private adapter access behind named infrastructure interfaces.
 - [x] Document atomicity ownership for cross-domain mutations.
 - [x] Batch integrity repair audit with rebuild; SAVEPOINT staged-import swap; document MMKV rebuild queue + startup integrity as the recovery path.
+- [x] Skip named coordinators; existing `persistBatch` / ledger writers are the commit owners (ponytail).
 
 Exit: every mutation has one obvious transaction owner and cannot bypass audit/rebuild obligations.
 
@@ -165,9 +166,9 @@ Migration order:
 
 - [x] Define feature-owned DTOs.
 - [x] Map models at read-service/controller boundaries.
-- [ ] Remove `src/data/models` imports from presentation code.
+- [x] Remove `src/data/models` imports from presentation code.
 - [x] Relocate pure enums and helpers into domain modules.
-- [ ] Remove ORM relation access from hooks and components.
+- [x] Remove ORM relation access from hooks and components.
 
 Exit: presentation code uses plain data and does not depend on WatermelonDB identity or relations.
 
@@ -243,6 +244,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-4         | Batch account/SMS/planned-payment mutations with audit and schedule            | `4202cc34`                                     |
 | 2026-08-18 | WP-4         | Integrity repair audit in the rebuild write; SAVEPOINT import swap             | `39bfb467`                                     |
 | 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
+| 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | (this commit)                                  |
 
 ## Audit Evidence Index
 
@@ -254,7 +256,7 @@ Primary confirmed risks:
 - rebuild retries not represented in flush completion;
 - SMS ingestion lacking single-flight/idempotency;
 - direct database and ORM access across multiple service boundaries;
-- WatermelonDB models leaking through feature and component contracts;
+- WatermelonDB models leaking through feature and component contracts (closed in WP-5; `presentation_model_import` is 0);
 - architecture checks and documented boundaries diverging from CI enforcement;
 - large contexts/view-models owning unrelated state machines.
 

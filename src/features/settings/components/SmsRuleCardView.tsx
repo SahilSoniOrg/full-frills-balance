@@ -1,17 +1,17 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import { PlainSmsRule } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRuleCardViewProps {
-  item: TransactionAutoPostRule;
+  item: PlainSmsRule;
   accountMap: Map<string, string>;
-  onPress: (item: TransactionAutoPostRule) => void;
+  onPress: (item: PlainSmsRule) => void;
 }
 
-export function getConditions(rule: TransactionAutoPostRule): SmsRuleCondition[] {
+export function getConditions(rule: PlainSmsRule): SmsRuleCondition[] {
   if (!rule.conditionsJson) return [];
   try {
     const parsed = JSON.parse(rule.conditionsJson);
@@ -21,7 +21,7 @@ export function getConditions(rule: TransactionAutoPostRule): SmsRuleCondition[]
   }
 }
 
-export function getActionLabel(rule: TransactionAutoPostRule) {
+export function getActionLabel(rule: PlainSmsRule) {
   if (!rule.actionsJson) return 'Auto-post';
   try {
     const parsed = JSON.parse(rule.actionsJson);
@@ -33,7 +33,7 @@ export function getActionLabel(rule: TransactionAutoPostRule) {
   return 'Auto-post';
 }
 
-export function getConditionSummary(rule: TransactionAutoPostRule) {
+export function getConditionSummary(rule: PlainSmsRule) {
   const conditions = getConditions(rule);
   if (conditions.length === 0) {
     return rule.bodyMatch

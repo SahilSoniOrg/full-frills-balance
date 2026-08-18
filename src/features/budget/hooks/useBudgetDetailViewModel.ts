@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Budget from '@/src/data/models/Budget';
 import {
   buildBudgetDetailPreview,
   buildBudgetUsagePreview,
@@ -20,7 +19,7 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections';
-import { AccountId, BudgetId, JournalId, PlainBudget } from '@/src/types/domain';
+import { BudgetId, JournalId, PlainBudget } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -31,7 +30,7 @@ import { combineLatest, of, switchMap } from 'rxjs';
 import { JournalListItem } from '@/src/types/ui';
 
 export interface BudgetDetailViewModel {
-  budget: Budget | PlainBudget | null;
+  budget: PlainBudget | null;
   usage: BudgetUsage | null;
   items: JournalListItem[];
   isLoading: boolean;
@@ -78,7 +77,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
         if (!budget) return of(null);
         return combineLatest([
           of(budget),
-          budgetReadService.observeBudgetUsage(workplaceId, budget, refTimestamp),
+          budgetReadService.observeBudgetUsage(workplaceId, budget.id, refTimestamp),
         ]);
       }),
     );
@@ -113,7 +112,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     [baseCurrency, budgetId, pAmount, pCurrency, pName, pPeriod],
   );
 
-  const budget: Budget | PlainBudget | null = dbBudgetData
+  const budget: PlainBudget | null = dbBudgetData
     ? dbBudgetData[0]
     : buildBudgetDetailPreview(previewInput);
 
@@ -121,10 +120,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
 
   const isLoading = dbLoading && !pName;
 
-  const scopeAccountIds = useMemo(
-    () => scopeRecords.map(scope => scope.account.id as AccountId),
-    [scopeRecords],
-  );
+  const scopeAccountIds = useMemo(() => scopeRecords.map(scope => scope.accountId), [scopeRecords]);
 
   const budgetDateRange = useMemo(() => {
     if (!budget) return undefined;
@@ -208,16 +204,16 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
       destructive: true,
       onConfirm: async () => {
         try {
-          if (budget && 'destroyPermanently' in budget) {
-            await budgetWriteService.deleteBudget(workplaceId, budget);
-            analytics.trackFeatureUsage('budget', 'delete', {
-              budget_id: budget.id,
-              currency: budget.currencyCode,
-            });
-            AppNavigation.back();
-          } else {
+          if (!dbBudgetData) {
             logger.warn('Cannot delete preview/mock budget');
+            return;
           }
+          await budgetWriteService.deleteBudget(workplaceId, budget.id);
+          analytics.trackFeatureUsage('budget', 'delete', {
+            budget_id: budget.id,
+            currency: budget.currencyCode,
+          });
+          AppNavigation.back();
         } catch (error: unknown) {
           logger.error(
             'Failed to delete budget',
@@ -226,7 +222,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
         }
       },
     });
-  }, [budget, workplaceId]);
+  }, [budget, dbBudgetData, workplaceId]);
 
   const handleEdit = useCallback(() => {
     if (!budget) return;

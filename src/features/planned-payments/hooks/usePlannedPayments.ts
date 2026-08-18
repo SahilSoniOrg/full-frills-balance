@@ -1,8 +1,7 @@
-import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { useMemo } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
+import { PlainPlannedPayment, WorkplaceId } from '@/src/types/domain';
 
 export function usePlannedPayments(workplaceId: WorkplaceId) {
   const observable = useMemo(
@@ -10,10 +9,10 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
-  const { data: items, isLoading } = useObservable<PlannedPayment[]>(
+  const { data: items, isLoading } = useObservable<PlainPlannedPayment[]>(
     () => observable,
     [workplaceId],
-    [] as PlannedPayment[],
+    [] as PlainPlannedPayment[],
   );
 
   return {

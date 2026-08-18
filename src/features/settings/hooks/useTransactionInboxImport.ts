@@ -5,7 +5,6 @@ import {
   TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
 import type { AccountFields as Account } from '@/src/types/domain';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -24,7 +23,7 @@ export function useTransactionInboxImport({
 }: UseTransactionInboxImportProps) {
   return useCallback(
     async (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => {
-      let matchedRule: TransactionAutoPostRule | null = null;
+      let matchedRule: Awaited<ReturnType<typeof smsService.getMatchingRule>> = null;
       try {
         const parsedTx: ParsedTransaction = {
           id: item.deviceSourceId,

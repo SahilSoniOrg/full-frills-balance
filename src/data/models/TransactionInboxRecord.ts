@@ -1,26 +1,18 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import { InboxParseStatus, JournalId, TransactionChannel } from '@/src/types/domain';
+import {
+  InboxParseStatus,
+  InboxProcessingStatus,
+  JournalId,
+  PlainInboxRecord,
+  TransactionChannel,
+  TransactionDirection,
+} from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 
 export type { TransactionChannel };
-export { InboxParseStatus };
-
-export enum InboxProcessingStatus {
-  PENDING = 'pending',
-  IMPORTED = 'imported',
-  AUTO_POSTED = 'auto_posted',
-  DISMISSED = 'dismissed',
-  DUPLICATE_FLAGGED = 'duplicate_flagged',
-  PARSE_FAILED = 'parse_failed',
-}
-
-export enum TransactionDirection {
-  DEBIT = 'debit',
-  CREDIT = 'credit',
-  UNKNOWN = 'unknown',
-}
+export { InboxParseStatus, InboxProcessingStatus, TransactionDirection };
 
 export default class TransactionInboxRecord extends BaseScopedModel {
   static table = 'transaction_inbox_records';
@@ -56,4 +48,29 @@ export default class TransactionInboxRecord extends BaseScopedModel {
   @readonly @date('updated_at') updatedAt!: Date;
 
   @relation('journals', 'linked_journal_id') linkedJournal!: Relation<Journal>;
+}
+
+export function toPlainInboxRecord(record: TransactionInboxRecord): PlainInboxRecord {
+  return {
+    id: record.id,
+    channel: record.channel,
+    deviceSourceId: record.deviceSourceId,
+    senderAddress: record.senderAddress,
+    rawBody: record.rawBody,
+    inputDate: record.inputDate,
+    parseStatus: record.parseStatus,
+    parsedAmount: record.parsedAmount,
+    parsedCurrencyCode: record.parsedCurrencyCode,
+    parsedMerchant: record.parsedMerchant,
+    parsedAccountSource: record.parsedAccountSource,
+    referenceNumber: record.referenceNumber,
+    direction: record.direction,
+    processingStatus: record.processingStatus,
+    linkedJournalId: record.linkedJournalId,
+    duplicateJournalId: record.duplicateJournalId,
+    duplicateConfidence: record.duplicateConfidence,
+    parseConfidence: record.parseConfidence,
+    parseReason: record.parseReason,
+    metadataJson: record.metadataJson,
+  };
 }

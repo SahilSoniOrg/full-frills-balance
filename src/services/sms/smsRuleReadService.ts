@@ -1,15 +1,18 @@
+import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import { WorkplaceId } from '@/src/types/domain';
-import { Observable } from 'rxjs';
+import { PlainSmsRule, WorkplaceId } from '@/src/types/domain';
+import { map, Observable } from 'rxjs';
 
 export class SmsRuleReadService {
-  observeAll(workplaceId: WorkplaceId): Observable<TransactionAutoPostRule[]> {
-    return transactionAutoPostRuleRepository.observeAllByWorkplace(workplaceId);
+  observeAll(workplaceId: WorkplaceId): Observable<PlainSmsRule[]> {
+    return transactionAutoPostRuleRepository
+      .observeAllByWorkplace(workplaceId)
+      .pipe(map(rules => rules.map(toPlainSmsRule)));
   }
 
-  find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | undefined> {
-    return transactionAutoPostRuleRepository.find(workplaceId, id);
+  async find(workplaceId: WorkplaceId, id: string): Promise<PlainSmsRule | undefined> {
+    const rule = await transactionAutoPostRuleRepository.find(workplaceId, id);
+    return rule ? toPlainSmsRule(rule) : undefined;
   }
 }
 

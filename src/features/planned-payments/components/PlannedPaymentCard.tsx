@@ -2,18 +2,18 @@ import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppSurface, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
-import PlannedPayment, {
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/data/models/PlannedPayment';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import {
+  PlainPlannedPayment,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+} from '@/src/types/domain';
 import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
-import { withObservables } from '@nozbe/watermelondb/react';
 import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentCardProps {
-  item: PlannedPayment;
+  item: PlainPlannedPayment;
   onPress: () => void;
 }
 
@@ -35,7 +35,7 @@ export interface PlannedPaymentCardViewModel {
 }
 
 export function presentPlannedPaymentCard(
-  item: PlannedPayment,
+  item: PlainPlannedPayment,
   theme: Theme,
 ): PlannedPaymentCardViewModel {
   const getIntervalLabel = () => {
@@ -180,8 +180,4 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
   );
 }
 
-const enhance = withObservables(['item'], ({ item }) => ({
-  item: item.observe(),
-}));
-
-export const PlannedPaymentCard = enhance(PlannedPaymentCardComponent);
+export const PlannedPaymentCard = PlannedPaymentCardComponent;

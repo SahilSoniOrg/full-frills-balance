@@ -1,7 +1,4 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import TransactionInboxRecord, {
-  InboxProcessingStatus,
-} from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { useTransactionInboxImport } from '@/src/features/settings/hooks/useTransactionInboxImport';
@@ -12,7 +9,7 @@ import {
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { smsService } from '@/src/services/sms-service';
-import { TransactionInboxItem } from '@/src/types/domain';
+import { InboxProcessingStatus, PlainInboxRecord, TransactionInboxItem } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -62,12 +59,12 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   );
 
   const enrich = useCallback(
-    (records: TransactionInboxRecord[]) => enrichTransactionInboxRecords(workplaceId, records),
+    (records: PlainInboxRecord[]) => enrichTransactionInboxRecords(workplaceId, records),
     [workplaceId],
   );
 
   const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<
-    TransactionInboxRecord,
+    PlainInboxRecord,
     TransactionInboxItem
   >({
     pageSize: PAGE_SIZE,

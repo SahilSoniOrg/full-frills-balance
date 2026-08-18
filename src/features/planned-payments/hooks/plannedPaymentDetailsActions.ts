@@ -1,7 +1,7 @@
 import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { AppConfig } from '@/src/constants/app-config';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { confirm } from '@/src/utils/alerts';
+import { PlainPlannedPayment } from '@/src/types/domain';
 
 interface PlannedPaymentDetailsActionHandlers {
   handleEdit: () => void;
@@ -11,7 +11,7 @@ interface PlannedPaymentDetailsActionHandlers {
 }
 
 export function buildPlannedPaymentDetailsActions(
-  item: PlannedPayment,
+  item: PlainPlannedPayment,
   handlers: PlannedPaymentDetailsActionHandlers,
   options: { isPrivacyMode?: boolean } = {},
 ) {

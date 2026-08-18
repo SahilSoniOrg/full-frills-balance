@@ -1,8 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval, AccountId } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
-import { AccountId } from '@/src/types/domain';
 import { useCallback, useMemo, useState } from 'react';
 
 export function usePlannedPaymentFormScreen(id?: string) {

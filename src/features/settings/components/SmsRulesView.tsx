@@ -2,7 +2,7 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { AppCard, AppText, EmptyStateView } from '@/src/components/core';
 import type { ScreenFabChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Spacing } from '@/src/constants';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import { PlainSmsRule } from '@/src/types/domain';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
 import type { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
@@ -11,14 +11,14 @@ import { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRulesViewProps {
-  rules: TransactionAutoPostRule[];
+  rules: PlainSmsRule[];
   suggestions: SmsRuleSuggestion[];
   accountMap: Map<string, string>;
   fab?: ScreenFabChrome;
 }
 
 export function SmsRulesView({ rules, suggestions, accountMap, fab }: SmsRulesViewProps) {
-  const handleRulePress = useCallback((item: TransactionAutoPostRule) => {
+  const handleRulePress = useCallback((item: PlainSmsRule) => {
     AppNavigation.toSmsRuleForm(item.id);
   }, []);
 

@@ -1,7 +1,7 @@
 import type Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Budget from '@/src/data/models/Budget';
-import { AccountId, BudgetId } from '@/src/types/domain';
+import { AccountId, BudgetId, PlainBudgetScope } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
@@ -20,4 +20,11 @@ export default class BudgetScope extends BaseScopedModel {
 
   @field('budget_id') budgetId!: BudgetId;
   @field('account_id') accountId!: AccountId;
+}
+
+export function toPlainBudgetScope(scope: BudgetScope): PlainBudgetScope {
+  return {
+    budgetId: scope.budgetId,
+    accountId: scope.accountId,
+  };
 }

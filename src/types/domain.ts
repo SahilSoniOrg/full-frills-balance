@@ -152,6 +152,138 @@ export interface PlainBudget {
   recurrenceDay?: number;
   recurrenceMonth?: number;
   createdAt?: Date | number;
+  startMonth?: string;
+  assetAccountIds?: string;
+  active?: boolean;
+}
+
+export interface PlainBudgetScope {
+  budgetId: BudgetId;
+  accountId: AccountId;
+}
+
+export enum JournalStatus {
+  DRAFT = 'DRAFT',
+  POSTED = 'POSTED',
+  REVERSED = 'REVERSED',
+  PLANNED = 'PLANNED',
+  SKIPPED = 'SKIPPED',
+  PAUSED = 'PAUSED',
+}
+
+export enum PlannedPaymentInterval {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
+}
+
+export enum PlannedPaymentStatus {
+  ACTIVE = 'ACTIVE',
+  PAUSED = 'PAUSED',
+  COMPLETED = 'COMPLETED',
+}
+
+export interface PlainPlannedPayment {
+  id: PlannedPaymentId;
+  name: string;
+  description?: string;
+  amount: number;
+  currencyCode: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
+  intervalN: number;
+  intervalType: PlannedPaymentInterval;
+  startDate: number;
+  endDate?: number;
+  nextOccurrence: number;
+  status: PlannedPaymentStatus;
+  isAutoPost: boolean;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
+}
+
+export interface PlainWorkplace {
+  id: WorkplaceId;
+  name: string;
+  icon: string;
+  defaultCurrencyCode: string;
+}
+
+export interface PlainExchangeRate {
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  effectiveDate: number;
+}
+
+export enum AuditAction {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+}
+
+export type AuditEntityType = 'account' | 'journal' | 'transaction';
+
+export interface PlainAuditLog {
+  id: string;
+  entityType: AuditEntityType;
+  entityId: string;
+  action: AuditAction;
+  changes: string;
+  timestamp: number;
+  canRevert: boolean;
+}
+
+export interface PlainSmsRule {
+  id: string;
+  channelsJson?: string;
+  senderMatch?: string;
+  bodyMatch?: string;
+  conditionsJson?: string;
+  actionsJson?: string;
+  priority?: number;
+  sourceAccountId: AccountId;
+  categoryAccountId: AccountId;
+  isActive: boolean;
+}
+
+export enum InboxProcessingStatus {
+  PENDING = 'pending',
+  IMPORTED = 'imported',
+  AUTO_POSTED = 'auto_posted',
+  DISMISSED = 'dismissed',
+  DUPLICATE_FLAGGED = 'duplicate_flagged',
+  PARSE_FAILED = 'parse_failed',
+}
+
+export enum TransactionDirection {
+  DEBIT = 'debit',
+  CREDIT = 'credit',
+  UNKNOWN = 'unknown',
+}
+
+export interface PlainInboxRecord {
+  id: string;
+  channel: 'sms' | 'voice';
+  deviceSourceId: string;
+  senderAddress?: string;
+  rawBody?: string;
+  inputDate: number;
+  parseStatus: string;
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  parsedMerchant?: string;
+  parsedAccountSource?: string;
+  referenceNumber?: string;
+  direction: TransactionDirection | 'debit' | 'credit' | 'unknown';
+  processingStatus: string;
+  linkedJournalId?: JournalId;
+  duplicateJournalId?: JournalId;
+  duplicateConfidence?: number;
+  parseConfidence?: number;
+  parseReason?: string;
+  metadataJson?: string;
 }
 
 export enum JournalDisplayType {

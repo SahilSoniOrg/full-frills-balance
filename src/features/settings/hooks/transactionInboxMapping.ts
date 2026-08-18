@@ -1,7 +1,7 @@
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import {
   JournalId,
+  PlainInboxRecord,
   TransactionDuplicateCandidate,
   TransactionInboxItem,
   WorkplaceId,
@@ -10,7 +10,7 @@ import {
 /** Maps inbox DB records to list items, joining linked/duplicate journals. */
 export async function enrichTransactionInboxRecords(
   workplaceId: WorkplaceId,
-  records: TransactionInboxRecord[],
+  records: PlainInboxRecord[],
 ): Promise<TransactionInboxItem[]> {
   const linkedIds = Array.from(
     new Set(records.map(record => record.linkedJournalId).filter(Boolean) as JournalId[]),

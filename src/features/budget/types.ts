@@ -1,9 +1,8 @@
-import Budget from '@/src/data/models/Budget'
-import { BudgetUsage } from '@/src/services/budget/budgetReadService'
+import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { PlainBudget } from '@/src/types/domain';
 
-// Represents a budget along with its reactive usage stats
 export interface BudgetItem {
-    budget: Budget
-    usage: BudgetUsage
-    previousUsage?: BudgetUsage
+  budget: PlainBudget;
+  usage: BudgetUsage;
+  previousUsage?: BudgetUsage;
 }

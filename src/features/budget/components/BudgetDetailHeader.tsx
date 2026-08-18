@@ -3,7 +3,6 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
-import Budget from '@/src/data/models/Budget';
 import { BudgetPeriodStepper } from '@/src/features/budget/components/BudgetPeriodStepper';
 import { BudgetUsageSummary } from '@/src/features/budget/components/BudgetUsageSummary';
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
@@ -16,7 +15,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface BudgetDetailHeaderProps {
-  budget: Budget | PlainBudget;
+  budget: PlainBudget;
   usage: BudgetUsage;
   periodLabel: string;
   isCurrentMonth: boolean;

@@ -1,6 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields as Account } from '@/src/types/domain';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics-service';
@@ -14,7 +13,7 @@ import {
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, PlainInboxRecord } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -64,7 +63,7 @@ export interface SmsRuleFormViewModel {
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
   accounts: Account[];
-  previewMatches: TransactionInboxRecord[];
+  previewMatches: PlainInboxRecord[];
   showAccountMapping: boolean;
 }
 

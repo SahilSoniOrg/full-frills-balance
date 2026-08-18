@@ -1,8 +1,8 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, PlainWorkplace, WorkplaceId } from '@/src/types/domain';
 
-import Workplace from '@/src/data/models/Workplace';
+import Workplace, { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
@@ -172,15 +172,17 @@ export class WorkplaceService {
     }
   }
 
-  observeAllWorkplaces(): Observable<Workplace[]> {
-    return workplaceRepository.observeAll();
+  observeAllWorkplaces(): Observable<PlainWorkplace[]> {
+    return workplaceRepository
+      .observeAll()
+      .pipe(map(workplaces => workplaces.map(toPlainWorkplace)));
   }
 
-  observeWorkplace(id: WorkplaceId): Observable<Workplace> {
+  observeWorkplace(id: WorkplaceId): Observable<PlainWorkplace> {
     return workplaceRepository.observeById(id).pipe(
       map(w => {
         if (!w) throw new Error(`Workplace not found: ${id}`);
-        return w;
+        return toPlainWorkplace(w);
       }),
     );
   }

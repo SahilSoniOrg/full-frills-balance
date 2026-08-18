@@ -1,11 +1,10 @@
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { PlainInboxRecord, WorkplaceId } from '@/src/types/domain';
 import { SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
   buildSmsRulePreviewInput,
   smsRulePreviewHasConditions,
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsService } from '@/src/services/sms-service';
-import { WorkplaceId } from '@/src/types/domain';
 import { useEffect, useMemo, useState } from 'react';
 
 export function useSmsRulePreview(
@@ -14,8 +13,8 @@ export function useSmsRulePreview(
   structuredConditions: SmsRuleCondition[],
   legacySenderMatch: string,
   legacyBodyMatch: string,
-): TransactionInboxRecord[] {
-  const [previewMatches, setPreviewMatches] = useState<TransactionInboxRecord[]>([]);
+): PlainInboxRecord[] {
+  const [previewMatches, setPreviewMatches] = useState<PlainInboxRecord[]>([]);
   const hasConditions = smsRulePreviewHasConditions(mode, structuredConditions, legacySenderMatch);
 
   useEffect(() => {

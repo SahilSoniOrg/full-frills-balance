@@ -1,13 +1,13 @@
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
+import { PlainPlannedPayment } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 
 export type PlannedPaymentListViewProps = {
-  items: PlannedPayment[];
+  items: PlainPlannedPayment[];
   isLoading: boolean;
 };
 

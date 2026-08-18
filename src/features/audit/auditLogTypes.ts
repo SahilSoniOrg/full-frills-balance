@@ -1,5 +1,4 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
-import { AccountId } from '@/src/types/domain';
+import { AuditAction, AccountId } from '@/src/types/domain';
 
 export interface EntityStatus {
   exists: boolean;

@@ -1,11 +1,11 @@
-import { JournalStatus } from '@/src/data/models/Journal';
+import { JournalStatus, WorkplaceId } from '@/src/types/domain';
 import { useJournals } from '@/src/features/journal';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const { item, isLoading: isItemLoading } = usePlannedPaymentRecord(workplaceId, id);
@@ -38,7 +38,9 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleToggleStatus = useCallback(async () => {
     if (!item) return;
-    const newStatus = await plannedPaymentService.toggleStatus(workplaceId, item);
+    const record = await plannedPaymentReadService.find(workplaceId, item.id);
+    if (!record) return;
+    const newStatus = await plannedPaymentService.toggleStatus(workplaceId, record);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'toggle_status', {
@@ -50,7 +52,9 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleDelete = useCallback(async () => {
     if (!item) return;
-    await plannedPaymentService.delete(workplaceId, item);
+    const record = await plannedPaymentReadService.find(workplaceId, item.id);
+    if (!record) return;
+    await plannedPaymentService.delete(workplaceId, record);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'delete', {
@@ -65,7 +69,9 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const handlePostNow = useCallback(async () => {
     if (!item) return;
     try {
-      await plannedPaymentService.postOccurrence(workplaceId, item, item.nextOccurrence);
+      const record = await plannedPaymentReadService.find(workplaceId, item.id);
+      if (!record) return;
+      await plannedPaymentService.postOccurrence(workplaceId, record, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'post_now', {
@@ -84,7 +90,9 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const handleSkip = useCallback(async () => {
     if (!item) return;
     try {
-      await plannedPaymentService.skipOccurrence(workplaceId, item, item.nextOccurrence);
+      const record = await plannedPaymentReadService.find(workplaceId, item.id);
+      if (!record) return;
+      await plannedPaymentService.skipOccurrence(workplaceId, record, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'skip', {

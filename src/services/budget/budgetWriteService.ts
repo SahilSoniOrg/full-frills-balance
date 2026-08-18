@@ -7,7 +7,7 @@ import {
   parseFundingAccountIds,
 } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { BudgetId, AccountId, WorkplaceId } from '@/src/types/domain';
 
 export class BudgetWriteService {
   /**
@@ -37,14 +37,17 @@ export class BudgetWriteService {
    */
   async updateBudget(
     workplaceId: WorkplaceId,
-    budget: Budget,
+    budgetId: BudgetId,
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
     await assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget');
+    const budget = await budgetRepository.find(workplaceId, budgetId);
+    if (!budget) {
+      throw new Error('Budget not found');
+    }
     const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
 
-    // Track Analytics
     analytics.trackFeatureUsage('budget', 'update', {
       budget_id: budget.id,
       amount_changed: data.amount !== undefined && data.amount !== budget.amount,
@@ -57,10 +60,13 @@ export class BudgetWriteService {
   /**
    * Hard-deletes a budget and all its scopes.
    */
-  async deleteBudget(workplaceId: WorkplaceId, budget: Budget): Promise<void> {
+  async deleteBudget(workplaceId: WorkplaceId, budgetId: BudgetId): Promise<void> {
+    const budget = await budgetRepository.find(workplaceId, budgetId);
+    if (!budget) {
+      throw new Error('Budget not found');
+    }
     await budgetRepository.delete(workplaceId, budget);
 
-    // Track Analytics
     analytics.trackFeatureUsage('budget', 'delete', {
       budget_id: budget.id,
       budget_name: budget.name,

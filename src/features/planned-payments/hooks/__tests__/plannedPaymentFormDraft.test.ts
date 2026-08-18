@@ -3,8 +3,7 @@ import {
   mapPlannedPaymentToForm,
   shouldSeedPlannedPaymentDraft,
 } from '../plannedPaymentFormDraft';
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { AccountId, PlannedPaymentId } from '@/src/types/domain';
+import { PlannedPaymentInterval, AccountId, PlannedPaymentId } from '@/src/types/domain';
 
 describe('plannedPaymentFormDraft', () => {
   describe('shouldSeedPlannedPaymentDraft', () => {

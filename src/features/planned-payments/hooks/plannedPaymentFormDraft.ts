@@ -1,5 +1,10 @@
-import PlannedPayment, { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { AccountId, EMPTY_ACCOUNT_ID, PlannedPaymentId } from '@/src/types/domain';
+import {
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  PlainPlannedPayment,
+  PlannedPaymentId,
+  PlannedPaymentInterval,
+} from '@/src/types/domain';
 
 export interface PlannedPaymentFormState {
   name: string;
@@ -32,7 +37,7 @@ export function createEmptyPlannedPaymentForm(currencyCode: string): PlannedPaym
   };
 }
 
-export function mapPlannedPaymentToForm(pp: PlannedPayment): PlannedPaymentFormState {
+export function mapPlannedPaymentToForm(pp: PlainPlannedPayment): PlannedPaymentFormState {
   return {
     name: pp.name,
     amount: pp.amount.toString(),
@@ -56,7 +61,7 @@ export function mapPlannedPaymentToForm(pp: PlannedPayment): PlannedPaymentFormS
 export function shouldSeedPlannedPaymentDraft(args: {
   id: string | undefined;
   seededId: string | null;
-  item: PlannedPayment | null;
+  item: PlainPlannedPayment | null;
 }): boolean {
   const { id, seededId, item } = args;
   if (!id || !item) return false;

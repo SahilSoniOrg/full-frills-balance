@@ -3,20 +3,15 @@ import Journal from '@/src/data/models/Journal';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
-import { AccountId, PlannedPaymentId } from '@/src/types/domain';
+import {
+  AccountId,
+  PlainPlannedPayment,
+  PlannedPaymentId,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+} from '@/src/types/domain';
 
-export enum PlannedPaymentInterval {
-  DAILY = 'DAILY',
-  WEEKLY = 'WEEKLY',
-  MONTHLY = 'MONTHLY',
-  YEARLY = 'YEARLY',
-}
-
-export enum PlannedPaymentStatus {
-  ACTIVE = 'ACTIVE',
-  PAUSED = 'PAUSED',
-  COMPLETED = 'COMPLETED',
-}
+export { PlannedPaymentInterval, PlannedPaymentStatus };
 
 export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   static table = 'planned_payments';
@@ -45,4 +40,25 @@ export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   @date('deleted_at') deletedAt?: Date;
 
   @children('journals') journals!: Query<Journal>;
+}
+
+export function toPlainPlannedPayment(pp: PlannedPayment): PlainPlannedPayment {
+  return {
+    id: pp.id,
+    name: pp.name,
+    description: pp.description,
+    amount: pp.amount,
+    currencyCode: pp.currencyCode,
+    fromAccountId: pp.fromAccountId,
+    toAccountId: pp.toAccountId,
+    intervalN: pp.intervalN,
+    intervalType: pp.intervalType,
+    startDate: pp.startDate,
+    endDate: pp.endDate,
+    nextOccurrence: pp.nextOccurrence,
+    status: pp.status,
+    isAutoPost: pp.isAutoPost,
+    recurrenceDay: pp.recurrenceDay,
+    recurrenceMonth: pp.recurrenceMonth,
+  };
 }

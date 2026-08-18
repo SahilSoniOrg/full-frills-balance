@@ -1,4 +1,3 @@
-import Journal from '@/src/data/models/Journal';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
@@ -22,8 +21,8 @@ type BulkJournalEntry = {
  */
 export function useJournalActions(workplaceId: WorkplaceId) {
   const deleteJournal = useCallback(
-    async (journal: Journal) => {
-      return journalService.deleteJournal(journal.id, workplaceId);
+    async (journalId: JournalId) => {
+      return journalService.deleteJournal(journalId, workplaceId);
     },
     [workplaceId],
   );

@@ -1,7 +1,11 @@
 import type { AccountFields } from '@/src/types/domain';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountId, EMPTY_ACCOUNT_ID, TransactionInboxItem } from '@/src/types/domain';
+import {
+  AccountId,
+  EMPTY_ACCOUNT_ID,
+  PlainSmsRule,
+  TransactionInboxItem,
+} from '@/src/types/domain';
 
 export interface TransactionInboxImportOptions {
   mode?: 'simple' | 'split' | 'advanced';
@@ -23,7 +27,7 @@ function normalizeForMatch(value?: string): string {
 function resolveRuleAccounts(
   item: TransactionInboxItem,
   accounts: AccountFields[],
-  matchedRule: TransactionAutoPostRule | null,
+  matchedRule: PlainSmsRule | null,
 ): { bankAccountId?: AccountId; counterpartyId?: AccountId; customDescription?: string } {
   let bankAccountId = matchedRule?.sourceAccountId;
   let counterpartyId = matchedRule?.categoryAccountId;
@@ -100,7 +104,7 @@ function buildNotes(item: TransactionInboxItem, customDescription?: string): str
 export function buildTransactionInboxImportNavigation(
   item: TransactionInboxItem,
   accounts: AccountFields[],
-  matchedRule: TransactionAutoPostRule | null,
+  matchedRule: PlainSmsRule | null,
   options?: TransactionInboxImportOptions,
 ): TransactionInboxImportNavigation {
   const { bankAccountId, counterpartyId, customDescription } = resolveRuleAccounts(

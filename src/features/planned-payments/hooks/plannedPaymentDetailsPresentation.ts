@@ -1,7 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { PlannedPaymentInterval, EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 
 interface PlannedPaymentRecurrence {
   intervalN: number;

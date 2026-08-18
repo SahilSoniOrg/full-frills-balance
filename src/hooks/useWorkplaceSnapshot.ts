@@ -1,7 +1,6 @@
-import Workplace from '@/src/data/models/Workplace';
 import { useObservable, UseObservableResult } from '@/src/hooks/useObservable';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId } from '@/src/types/domain';
+import { PlainWorkplace, WorkplaceId } from '@/src/types/domain';
 import { of } from 'rxjs';
 
 /**
@@ -10,8 +9,8 @@ import { of } from 'rxjs';
  */
 export function useWorkplaceSnapshot(
   workplaceId: WorkplaceId | undefined | null,
-): UseObservableResult<Workplace | null> {
-  return useObservable<Workplace | null>(
+): UseObservableResult<PlainWorkplace | null> {
+  return useObservable<PlainWorkplace | null>(
     () => (workplaceId ? workplaceService.observeWorkplace(workplaceId) : of(null)),
     [workplaceId],
     null,

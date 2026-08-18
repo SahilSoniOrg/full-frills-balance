@@ -1,9 +1,10 @@
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
+import AuditLog, { toPlainAuditLog, AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
 import { WorkplaceId } from '@/src/types/domain';
+import { map } from 'rxjs';
 
 /**
  * Audit Service
@@ -79,7 +80,9 @@ export class AuditService {
    * Observe audit trail for a specific entity
    */
   observeAuditTrail(entityType: AuditEntityType, entityId: string, workplaceId: WorkplaceId) {
-    return auditRepository.observeByEntity(entityType, entityId, workplaceId);
+    return auditRepository
+      .observeByEntity(entityType, entityId, workplaceId)
+      .pipe(map(logs => logs.map(toPlainAuditLog)));
   }
 
   /**
@@ -89,7 +92,9 @@ export class AuditService {
     limit: number = AppConfig.pagination.auditRecentLimit,
     workplaceId: WorkplaceId,
   ) {
-    return auditRepository.observeRecent(limit, workplaceId);
+    return auditRepository
+      .observeRecent(limit, workplaceId)
+      .pipe(map(logs => logs.map(toPlainAuditLog)));
   }
 
   /**

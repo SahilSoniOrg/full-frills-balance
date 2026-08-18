@@ -1,7 +1,7 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { AppIcon } from '@/src/components/core';
 import { isValidIconName } from '@/src/components/core/AppIcon';
-import Workplace from '@/src/data/models/Workplace';
+import { PlainWorkplace } from '@/src/types/domain';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
@@ -27,7 +27,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
         <Stack space="xl">
           {vm.workplaces.length > 0 ? (
             <SettingsMenu header="Available Workplaces">
-              {vm.workplaces.map((workplace: Workplace) => {
+              {vm.workplaces.map((workplace: PlainWorkplace) => {
                 const isActive = vm.activeWorkplace?.id === workplace.id;
                 return (
                   <SettingsMenuItem

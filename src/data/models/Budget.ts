@@ -1,6 +1,6 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type BudgetScope from '@/src/data/models/BudgetScope';
-import { BudgetId } from '@/src/types/domain';
+import { BudgetId, PlainBudget } from '@/src/types/domain';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
@@ -27,4 +27,23 @@ export default class Budget extends BaseScopedModel<BudgetId> {
 
   // Relations with proper types
   @children('budget_scopes') scopes!: Query<BudgetScope>;
+}
+
+export function toPlainBudget(budget: Budget): PlainBudget {
+  return {
+    id: budget.id,
+    name: budget.name,
+    amount: budget.amount,
+    currencyCode: budget.currencyCode,
+    intervalType: budget.intervalType,
+    periodType: budget.intervalType,
+    intervalN: budget.intervalN,
+    startDate: budget.startDate,
+    recurrenceDay: budget.recurrenceDay,
+    recurrenceMonth: budget.recurrenceMonth,
+    createdAt: budget.createdAt?.getTime(),
+    startMonth: budget.startMonth,
+    assetAccountIds: budget.assetAccountIds,
+    active: budget.active,
+  };
 }

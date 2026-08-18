@@ -1,13 +1,9 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import { AuditAction, AuditEntityType, PlainAuditLog } from '@/src/types/domain';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
-export enum AuditAction {
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
-}
-
-export type AuditEntityType = 'account' | 'journal' | 'transaction';
+export { AuditAction };
+export type { AuditEntityType };
 
 export type ParsedAuditChanges = {
   before?: Record<string, unknown>;
@@ -55,4 +51,16 @@ export default class AuditLog extends BaseScopedModel {
     // Reverting CREATE just deletes the new entity
     return true;
   }
+}
+
+export function toPlainAuditLog(log: AuditLog): PlainAuditLog {
+  return {
+    id: log.id,
+    entityType: log.entityType,
+    entityId: log.entityId,
+    action: log.action,
+    changes: log.changes,
+    timestamp: log.timestamp,
+    canRevert: log.canRevert,
+  };
 }

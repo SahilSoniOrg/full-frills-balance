@@ -1,13 +1,16 @@
 import { AppConfig } from '@/src/constants';
 import type { AccountFields as Account } from '@/src/types/domain';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { Flow } from '@/src/services/simulation/types';
-import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
+import {
+  EnrichedJournal,
+  JournalStatus,
+  PlainPlannedPayment,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { useMemo } from 'react';
 import {
   mapLiabilityFlowsToPlannedOccurrences,
@@ -54,7 +57,7 @@ export function usePlannedOccurrences({
 
   const plannedJournals = plannedJournalsOverride ?? fetchedPlannedJournals;
 
-  const { data: activePlannedPayments } = useObservable<PlannedPayment[]>(
+  const { data: activePlannedPayments } = useObservable<PlainPlannedPayment[]>(
     () => plannedPaymentReadService.observeActive(workplaceId),
     [workplaceId],
     [],

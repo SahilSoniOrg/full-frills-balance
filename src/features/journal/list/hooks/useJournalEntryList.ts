@@ -1,7 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
 import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
@@ -14,7 +13,13 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { sharingService } from '@/src/services/SharingService';
 import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  EnrichedJournal,
+  JournalId,
+  JournalStatus,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListItem } from '@/src/types/ui';
 import { logger } from '@/src/utils/logger';

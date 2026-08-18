@@ -1,4 +1,3 @@
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import {
   SmsRuleActions,
   SmsRuleCondition,
@@ -6,7 +5,7 @@ import {
   SmsRuleMode,
 } from '@/src/utils/sms/RuleMatcher';
 import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlainSmsRule } from '@/src/types/domain';
 
 export type SmsRuleAmountOperator = '' | 'eq' | 'gt' | 'lt' | 'between';
 export type SmsRuleDirection = '' | 'debit' | 'credit';
@@ -53,7 +52,7 @@ export interface SmsRuleValidationInput {
 
 type ConditionField = SmsRuleCondition['field'];
 
-export function parseSmsRuleConditions(rule: TransactionAutoPostRule): SmsRuleCondition[] {
+export function parseSmsRuleConditions(rule: PlainSmsRule): SmsRuleCondition[] {
   if (!rule.conditionsJson) return [];
   try {
     const parsed = JSON.parse(rule.conditionsJson);
@@ -63,7 +62,7 @@ export function parseSmsRuleConditions(rule: TransactionAutoPostRule): SmsRuleCo
   }
 }
 
-export function parseSmsRuleActions(rule: TransactionAutoPostRule): SmsRuleActions {
+export function parseSmsRuleActions(rule: PlainSmsRule): SmsRuleActions {
   if (rule.actionsJson) {
     try {
       const parsed = JSON.parse(rule.actionsJson);
@@ -90,7 +89,7 @@ export function parseSmsRuleActions(rule: TransactionAutoPostRule): SmsRuleActio
   };
 }
 
-export function hydrateSmsRuleForm(rule: TransactionAutoPostRule): SmsRuleFormHydration {
+export function hydrateSmsRuleForm(rule: PlainSmsRule): SmsRuleFormHydration {
   const conditions = parseSmsRuleConditions(rule);
   const actions = parseSmsRuleActions(rule);
   const amountCondition = getSmsRuleConditionValue(conditions, 'amount');

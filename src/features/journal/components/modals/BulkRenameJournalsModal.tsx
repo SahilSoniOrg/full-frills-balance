@@ -2,21 +2,20 @@ import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppButton, AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import Journal from '@/src/data/models/Journal';
-import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal, JournalDisplayType, JournalId } from '@/src/types/domain';
+import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export interface BulkRenameJournalsModalProps {
   visible: boolean;
-  journals: (Journal | EnrichedJournal)[];
+  journals: EnrichedJournal[];
   onClose: () => void;
   onSave: (namesByJournalId: Record<JournalId, string>) => Promise<void> | void;
 }
 
-function buildInitialNames(journals: (Journal | EnrichedJournal)[]): Record<JournalId, string> {
+function buildInitialNames(journals: EnrichedJournal[]): Record<JournalId, string> {
   const initial: Record<JournalId, string> = {};
   for (const journal of journals) {
     initial[journal.id as JournalId] =

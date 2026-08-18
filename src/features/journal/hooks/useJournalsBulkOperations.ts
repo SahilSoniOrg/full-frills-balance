@@ -1,5 +1,4 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
-import Journal from '@/src/data/models/Journal';
 import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
 import { useSelection } from '@/src/hooks/useSelection';
 import {
@@ -15,14 +14,14 @@ import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo, useState } from 'react';
 
 export type JournalActiveModal =
-  | { type: 'bulkRename'; journals: (Journal | EnrichedJournal)[] }
+  | { type: 'bulkRename'; journals: EnrichedJournal[] }
   | { type: 'merge'; journalIds: JournalId[] }
   | { type: 'bulkChangeAccount'; journalIds: JournalId[] }
   | null;
 
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
-  journals: (Journal | EnrichedJournal)[];
+  journals: EnrichedJournal[];
   selection: ReturnType<typeof useSelection<JournalId>>;
   onShareSelected: () => void;
 }
@@ -36,7 +35,7 @@ export function useJournalsBulkOperations({
   const [activeModal, setActiveModal] = useState<JournalActiveModal>(null);
 
   const journalsById = useMemo(
-    () => new Map<JournalId, Journal | EnrichedJournal>(journals.map(j => [j.id as JournalId, j])),
+    () => new Map<JournalId, EnrichedJournal>(journals.map(j => [j.id as JournalId, j])),
     [journals],
   );
 
@@ -44,7 +43,7 @@ export function useJournalsBulkOperations({
     () =>
       Array.from(selection.selectedIds)
         .map(id => journalsById.get(id))
-        .filter((j): j is Journal | EnrichedJournal => Boolean(j)),
+        .filter((j): j is EnrichedJournal => Boolean(j)),
     [selection.selectedIds, journalsById],
   );
 

@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import { JournalStatus } from '@/src/data/models/Journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import {
@@ -13,7 +12,13 @@ import {
   JournalTimelineRowsOptions,
 } from '@/src/services/journal/journalTimelineRows';
 import { transactionService } from '@/src/services/transaction-ingestion';
-import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
+import {
+  DisplayTransaction,
+  EnrichedJournal,
+  JournalId,
+  JournalStatus,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
 

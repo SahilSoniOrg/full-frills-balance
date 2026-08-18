@@ -116,7 +116,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget, month)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, month)
       .subscribe(u => {
         // We want the most recent emission.
         // It will emit several times initially as observables resolve.
@@ -173,7 +173,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget, previousMonth)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, previousMonth)
       .subscribe(u => {
         if (u && u.budgetAmount === 500) {
           lastUsage = u;
@@ -202,7 +202,7 @@ describe('budgetReadService', () => {
 
     let emitted: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, foreignBudget, '2023-10')
+      .observeBudgetUsage('wp-1' as WorkplaceId, foreignBudget.id, '2023-10')
       .subscribe(u => {
         emitted = u;
       });
@@ -255,7 +255,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget, month)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, month)
       .subscribe(u => {
         if (u && u.budgetAmount === 500) {
           lastUsage = u;

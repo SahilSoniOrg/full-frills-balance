@@ -1,4 +1,4 @@
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval } from '@/src/types/domain';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 
 describe('formatPlannedPaymentInterval', () => {

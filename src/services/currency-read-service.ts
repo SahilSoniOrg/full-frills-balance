@@ -1,5 +1,7 @@
 import Currency from '@/src/data/models/Currency';
+import { toPlainExchangeRate } from '@/src/data/models/ExchangeRate';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { PlainCurrency } from '@/src/types/domain';
 import { map } from 'rxjs';
 
@@ -20,6 +22,12 @@ export class CurrencyReadService {
 
   observeAll() {
     return currencyRepository.observeAll().pipe(map(currencies => currencies.map(toPlainCurrency)));
+  }
+
+  observeLatestRates(fromCurrency: string) {
+    return exchangeRateRepository
+      .observeLatestRates(fromCurrency)
+      .pipe(map(rates => rates.map(toPlainExchangeRate)));
   }
 
   async getAllPrecisions(): Promise<Map<string, number>> {

@@ -1,12 +1,11 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { AuditEntityType } from '@/src/data/models/AuditLog';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
-import { AccountId, JournalId } from '@/src/types/domain';
+import { AccountId, AuditEntityType, JournalId } from '@/src/types/domain';
 import * as Alerts from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';

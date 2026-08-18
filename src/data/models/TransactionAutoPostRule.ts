@@ -1,5 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlainSmsRule } from '@/src/types/domain';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 import { Relation } from '@nozbe/watermelondb';
 import Account from './Account';
@@ -25,4 +25,19 @@ export default class TransactionAutoPostRule extends BaseScopedModel {
 
   @relation('accounts', 'source_account_id') sourceAccount!: Relation<Account>;
   @relation('accounts', 'category_account_id') categoryAccount!: Relation<Account>;
+}
+
+export function toPlainSmsRule(rule: TransactionAutoPostRule): PlainSmsRule {
+  return {
+    id: rule.id,
+    channelsJson: rule.channelsJson,
+    senderMatch: rule.senderMatch,
+    bodyMatch: rule.bodyMatch,
+    conditionsJson: rule.conditionsJson,
+    actionsJson: rule.actionsJson,
+    priority: rule.priority,
+    sourceAccountId: rule.sourceAccountId,
+    categoryAccountId: rule.categoryAccountId,
+    isActive: rule.isActive,
+  };
 }

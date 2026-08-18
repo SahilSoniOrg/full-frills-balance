@@ -1,17 +1,10 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
-import { JournalDisplayType, JournalId, PlannedPaymentId } from '@/src/types/domain';
+import { JournalDisplayType, JournalId, JournalStatus, PlannedPaymentId } from '@/src/types/domain';
 import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
-export enum JournalStatus {
-  DRAFT = 'DRAFT',
-  POSTED = 'POSTED',
-  REVERSED = 'REVERSED',
-  PLANNED = 'PLANNED',
-  SKIPPED = 'SKIPPED',
-  PAUSED = 'PAUSED',
-}
+export { JournalStatus };
 
 export default class Journal extends BaseScopedModel<JournalId> {
   static table = 'journals';

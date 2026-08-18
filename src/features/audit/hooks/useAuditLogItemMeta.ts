@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig, ColorKey } from '@/src/constants';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction } from '@/src/types/domain';
 import {
   AuditLogEntry,
   EntityStatus,

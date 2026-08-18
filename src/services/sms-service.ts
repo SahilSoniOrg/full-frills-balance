@@ -1,8 +1,9 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionAutoPostRule, { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
+  toPlainInboxRecord,
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
@@ -18,7 +19,7 @@ import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 export interface SmsInboxFilterOptions {
   status?: 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
@@ -103,7 +104,8 @@ class SmsService {
         'parse_reason',
         'processed_at',
         'input_date',
-      ]);
+      ])
+      .pipe(map(records => records.map(toPlainInboxRecord)));
   }
 
   observeUnprocessedCount(workplaceId: WorkplaceId): Observable<number> {
@@ -174,8 +176,9 @@ class SmsService {
     workplaceId: WorkplaceId,
     inputOrSender: SmsRulePreviewInput | string,
     bodyMatch?: string,
-  ): Promise<TransactionInboxRecord[]> {
-    return smsRuleEngine.previewRuleMatches(workplaceId, inputOrSender, bodyMatch);
+  ) {
+    const records = await smsRuleEngine.previewRuleMatches(workplaceId, inputOrSender, bodyMatch);
+    return records.map(toPlainInboxRecord);
   }
 
   async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
@@ -199,8 +202,9 @@ class SmsService {
     body: string,
     parsed: ParsedTransaction,
     workplaceId: WorkplaceId,
-  ): Promise<TransactionAutoPostRule | null> {
-    return smsRuleEngine.getMatchingRule(address, body, parsed, workplaceId);
+  ) {
+    const rule = await smsRuleEngine.getMatchingRule(address, body, parsed, workplaceId);
+    return rule ? toPlainSmsRule(rule) : null;
   }
 
   async prepareMergeOperations(

@@ -1,6 +1,4 @@
-import Budget from '@/src/data/models/Budget';
-import BudgetScope from '@/src/data/models/BudgetScope';
-import { AccountId, BudgetId } from '@/src/types/domain';
+import { AccountId, BudgetId, PlainBudget, PlainBudgetScope } from '@/src/types/domain';
 
 export interface BudgetEditDraft {
   name: string;
@@ -37,11 +35,11 @@ export function createEmptyBudgetDraft(preview: {
 }
 
 export function mapBudgetToEditDraft(
-  budget: Budget,
-  scopes: BudgetScope[],
+  budget: PlainBudget,
+  scopes: PlainBudgetScope[],
   fallbackCurrency: string,
 ): BudgetEditDraft {
-  const [year, month] = budget.startMonth.split('-');
+  const [year, month] = (budget.startMonth ?? '').split('-');
   return {
     name: budget.name,
     amount: budget.amount.toString(),
@@ -66,7 +64,7 @@ export function mapBudgetToEditDraft(
 export function shouldSeedBudgetDraft(args: {
   budgetId: BudgetId | undefined;
   seededBudgetId: BudgetId | null;
-  observedBudget: Budget | null;
+  observedBudget: PlainBudget | null;
   scopesReady: boolean;
 }): boolean {
   const { budgetId, seededBudgetId, observedBudget, scopesReady } = args;

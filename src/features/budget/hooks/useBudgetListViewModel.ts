@@ -16,8 +16,8 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
 
       const itemObservables = budgets.map(budget =>
         combineLatest([
-          budgetReadService.observeBudgetUsage(workplaceId, budget, currentMonth),
-          budgetReadService.observeBudgetUsage(workplaceId, budget, previousMonth),
+          budgetReadService.observeBudgetUsage(workplaceId, budget.id, currentMonth),
+          budgetReadService.observeBudgetUsage(workplaceId, budget.id, previousMonth),
         ]).pipe(map(([usage, previousUsage]) => ({ budget, usage, previousUsage }) as BudgetItem)),
       );
       return combineLatest(itemObservables);

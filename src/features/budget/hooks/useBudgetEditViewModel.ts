@@ -1,8 +1,12 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { AccountType, AccountId, BudgetId } from '@/src/types/domain';
+import {
+  AccountType,
+  AccountId,
+  BudgetId,
+  PlainBudget,
+  PlainBudgetScope,
+} from '@/src/types/domain';
 
-import Budget from '@/src/data/models/Budget';
-import BudgetScope from '@/src/data/models/BudgetScope';
 import {
   BudgetEditDraft,
   createEmptyBudgetDraft,
@@ -55,13 +59,13 @@ export function useBudgetEditViewModel() {
   const pAmount = params.pAmount || '';
   const pCurrency = params.pCurrency || workplaceCurrency;
 
-  const { data: observedBudget, isLoading: budgetLoading } = useObservable<Budget | null>(
+  const { data: observedBudget, isLoading: budgetLoading } = useObservable<PlainBudget | null>(
     () => (budgetId ? budgetReadService.observeById(workplaceId, budgetId) : of(null)),
     [workplaceId, budgetId],
     null,
   );
 
-  const { data: scopes = [], isLoading: scopesLoading } = useObservable<BudgetScope[]>(
+  const { data: scopes = [], isLoading: scopesLoading } = useObservable<PlainBudgetScope[]>(
     () => (budgetId ? budgetReadService.observeScopes(workplaceId, budgetId) : of([])),
     [workplaceId, budgetId],
     [],
@@ -164,7 +168,7 @@ export function useBudgetEditViewModel() {
       if (observedBudget) {
         await budgetWriteService.updateBudget(
           workplaceId,
-          observedBudget,
+          observedBudget.id,
           input,
           draft.selectedAccountIds,
         );

@@ -23,7 +23,7 @@ describe('useJournalActions', () => {
     const journal = { id: 'id1' } as any;
 
     await act(async () => {
-      await result.current.deleteJournal(journal);
+      await result.current.deleteJournal(journal.id);
     });
 
     expect(journalService.deleteJournal).toHaveBeenCalledWith(

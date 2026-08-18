@@ -1,4 +1,4 @@
-import { WorkplaceId } from '@/src/types/domain';
+import { PlainWorkplace, WorkplaceId } from '@/src/types/domain';
 import { Model } from '@nozbe/watermelondb';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
@@ -16,4 +16,13 @@ export default class Workplace extends Model {
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
+}
+
+export function toPlainWorkplace(workplace: Workplace): PlainWorkplace {
+  return {
+    id: workplace.id,
+    name: workplace.name,
+    icon: workplace.icon,
+    defaultCurrencyCode: workplace.defaultCurrencyCode,
+  };
 }
