@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import { getAccountSubtypesForType } from '@/src/data/models/Account';
+import { getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { AccountFormCoreDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';

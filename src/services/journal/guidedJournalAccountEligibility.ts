@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { TransactionType, AccountId, EMPTY_ACCOUNT_ID, TabType } from '@/src/types/domain';
 
 import {
@@ -8,23 +8,23 @@ import {
 } from '@/src/utils/accountCategory';
 
 /** Postable accounts only — excludes parents that have child accounts. */
-export function filterToLeafAccounts(accounts: Account[]): Account[] {
+export function filterToLeafAccounts(accounts: AccountFields[]): AccountFields[] {
   const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
   return accounts.filter(a => !parentIds.has(a.id));
 }
 
 /** Accounts eligible for one guided leg, aligned with full account browse policy. */
 export function filterGuidedLegAccounts(
-  leafAccounts: Account[],
+  leafAccounts: AccountFields[],
   tab: TabType,
   side: TransactionType,
-): Account[] {
+): AccountFields[] {
   const allowedTypes = getAllowedAccountTypes(tab, side);
   return leafAccounts.filter(a => allowedTypes.includes(a.accountType));
 }
 
 export function isAccountAllowedOnGuidedLeg(
-  account: Account,
+  account: AccountFields,
   tab: TabType,
   side: TransactionType,
 ): boolean {
@@ -37,7 +37,7 @@ export function isAccountAllowedOnGuidedLeg(
  */
 export function resolveGuidedAccountsAfterTabChange(
   newType: TabType,
-  accountsById: Map<string, Account>,
+  accountsById: Map<string, AccountFields>,
   sourceAccountId: AccountId,
   destinationAccountId: AccountId,
 ): { sourceAccountId: AccountId; destinationAccountId: AccountId } {

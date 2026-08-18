@@ -1,5 +1,5 @@
 import { CreateAccountIntent } from '@/src/features/accounts';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { AccountId, AccountType } from '@/src/types/domain';
 import {

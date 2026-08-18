@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {

@@ -1,5 +1,4 @@
-import Account from '@/src/data/models/Account';
-import { AccountId, AccountSubtype } from '@/src/types/domain';
+import { AccountFields, AccountId, AccountSubtype } from '@/src/types/domain';
 
 export enum FlowCategory {
   INCOME = 'INCOME',
@@ -101,7 +100,7 @@ export interface SimulationContext {
   liquidAccountIds: Set<AccountId>;
   orderedLiquidAccountIds: AccountId[];
   liabilityAccountIds: Set<AccountId>;
-  accountMap: Map<AccountId, Account>;
+  accountMap: Map<AccountId, AccountFields>;
   convert: (amount: number, from: string) => number;
 }
 
@@ -157,8 +156,8 @@ export interface SimulationRunResult {
   allFlows: Flow[];
   startingBalances: Map<string, number>;
   liquidAccountIdsSet: Set<string>;
-  liabilityAccountBalances: { account: Account; balance: number }[];
-  accountMap: Map<string, Account>;
+  liabilityAccountBalances: { account: AccountFields; balance: number }[];
+  accountMap: Map<string, AccountFields>;
 }
 
 // --- UI / Presentation Types ---

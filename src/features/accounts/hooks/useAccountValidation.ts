@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { findDuplicateAccountNameError } from '@/src/features/accounts/services/accountFormValidationPolicy';
 import { validateAccountName } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';

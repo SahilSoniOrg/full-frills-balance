@@ -1,5 +1,4 @@
-import { AccountId, PlainAccount } from '@/src/types/domain';
-import type Account from '@/src/data/models/Account';
+import { AccountFields, AccountId } from '@/src/types/domain';
 
 export type ArchiveAccountLike = {
   id: AccountId | string;
@@ -60,7 +59,7 @@ export function getVisibleRoots<T extends { id: string; parentAccountId?: string
 }
 
 export interface ArchiveCascadeNode {
-  account: Account | PlainAccount;
+  account: AccountFields;
   depth: number;
 }
 
@@ -72,12 +71,12 @@ export type AccountArchiveChanges = {
 /** Root-first flat list of an account and all descendants, preserving hierarchy depth. */
 export function buildArchiveCascadeNodes(
   rootId: AccountId,
-  allAccounts: (Account | PlainAccount)[],
+  allAccounts: AccountFields[],
 ): ArchiveCascadeNode[] {
   const root = allAccounts.find(account => account.id === rootId);
   if (!root) return [];
 
-  const byParent = new Map<string | null, (Account | PlainAccount)[]>();
+  const byParent = new Map<string | null, AccountFields[]>();
   for (const account of allAccounts) {
     const parentId = account.parentAccountId ?? null;
     const siblings = byParent.get(parentId) ?? [];
@@ -87,7 +86,7 @@ export function buildArchiveCascadeNodes(
 
   const nodes: ArchiveCascadeNode[] = [];
   const visited = new Set<string>();
-  const walk = (account: Account | PlainAccount, depth: number) => {
+  const walk = (account: AccountFields, depth: number) => {
     if (visited.has(account.id)) return;
     visited.add(account.id);
     nodes.push({ account, depth });

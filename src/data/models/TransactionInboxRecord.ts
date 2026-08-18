@@ -1,15 +1,11 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import { JournalId, TransactionChannel } from '@/src/types/domain';
+import { InboxParseStatus, JournalId, TransactionChannel } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 
 export type { TransactionChannel };
-export enum InboxParseStatus {
-  PARSED = 'parsed',
-  PARSE_FAILED = 'parse_failed',
-  IGNORED = 'ignored',
-}
+export { InboxParseStatus };
 
 export enum InboxProcessingStatus {
   PENDING = 'pending',

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
   AccountType,
@@ -142,17 +142,17 @@ export function buildSimpleCrossCurrencyLineUpdates(
 
 export interface SimpleFormSectionConfig {
   title: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   selectedId: AccountId;
   role: AccountRole;
 }
 
 /** Keep the active picker choice visible even when archive filtering hides it from the default set. */
 export function ensureSelectedAccountVisible(
-  sectionAccounts: Account[],
+  sectionAccounts: AccountFields[],
   selectedId: AccountId,
-  accountPool: Account[],
-): Account[] {
+  accountPool: AccountFields[],
+): AccountFields[] {
   if (!selectedId || selectedId === EMPTY_ACCOUNT_ID) return sectionAccounts;
   if (sectionAccounts.some(account => account.id === selectedId)) return sectionAccounts;
 
@@ -163,8 +163,8 @@ export function ensureSelectedAccountVisible(
 export function buildSimpleFormAccountSections(
   type: TabType,
   options: {
-    leafAccounts: Account[];
-    accountPool: Account[];
+    leafAccounts: AccountFields[];
+    accountPool: AccountFields[];
     sourceId: AccountId;
     destinationId: AccountId;
   },
@@ -234,8 +234,8 @@ export function buildSimpleFormAccountSections(
 
 export function buildSimpleDefaultDescription(
   type: TabType,
-  sourceAccount: Account | undefined,
-  destAccount: Account | undefined,
+  sourceAccount: AccountFields | undefined,
+  destAccount: AccountFields | undefined,
 ): string {
   if (type === 'expense' && destAccount) {
     return AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.expense(

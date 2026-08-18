@@ -1,13 +1,12 @@
-import { TransactionInboxItem, WorkplaceId } from '@/src/types/domain';
+import { TransactionInboxItem, WorkplaceId, InboxParseStatus } from '@/src/types/domain';
 import { smsService } from '@/src/services/sms-service';
 import {
   buildTransactionInboxImportNavigation,
   TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { InboxParseStatus } from '@/src/data/models/TransactionInboxRecord';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';

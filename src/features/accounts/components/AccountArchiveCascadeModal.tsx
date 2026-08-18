@@ -1,7 +1,7 @@
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   ArchiveCascadeNode,

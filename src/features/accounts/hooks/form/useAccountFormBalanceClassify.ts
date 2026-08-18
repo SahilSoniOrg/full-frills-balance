@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountFormBalanceClassifyDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormCoreApi } from '@/src/features/accounts/hooks/form/useAccountFormCore';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';

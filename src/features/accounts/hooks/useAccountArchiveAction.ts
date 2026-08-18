@@ -6,7 +6,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
   buildArchiveCascadeNodes,

@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import {
   accountIdsMatch,
   applyPendingOrder,

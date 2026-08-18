@@ -6,7 +6,7 @@ import {
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';

@@ -3,7 +3,7 @@ import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountChipColors } from '@/src/utils/accountChipColors';

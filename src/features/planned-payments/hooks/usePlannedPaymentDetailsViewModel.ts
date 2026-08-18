@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useAccount } from '@/src/features/accounts';
 import { useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
 import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';

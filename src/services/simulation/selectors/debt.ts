@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId } from '@/src/types/domain';
 import { DebtEntry, DebtType, Flow, FlowCategory, FlowSource } from '../types';
 import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
@@ -8,7 +8,7 @@ import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
  */
 export const selectDebtEntries = (
   allFlows: Flow[],
-  accountMap: Map<string, Account>,
+  accountMap: Map<string, AccountFields>,
 ): DebtEntry[] => {
   const debtMap = new Map<AccountId, DebtEntry>();
 

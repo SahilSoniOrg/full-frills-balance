@@ -3,7 +3,7 @@ import type { SelectionAction } from '@/src/components/common/SelectionActionBar
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, JournalId } from '@/src/types/domain';

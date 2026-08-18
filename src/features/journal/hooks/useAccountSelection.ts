@@ -1,5 +1,5 @@
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, AccountType } from '@/src/types/domain';
 import { getAccountSections, isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';

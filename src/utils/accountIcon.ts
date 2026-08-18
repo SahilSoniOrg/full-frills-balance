@@ -1,7 +1,6 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
-import { PlainAccount, AccountType } from '@/src/types/domain';
+import { AccountFields, AccountType } from '@/src/types/domain';
 import { toAccountType } from '@/src/utils/accountCategory';
 
 /**
@@ -18,8 +17,7 @@ export function getAccountFallbackIcon(accountType?: AccountType | string | null
 }
 
 export type AccountLikeForIcon =
-  | Account
-  | PlainAccount
+  | AccountFields
   | {
       name?: string;
       icon?: IconName | string | null;

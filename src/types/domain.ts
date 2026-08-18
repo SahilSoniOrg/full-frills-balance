@@ -78,6 +78,24 @@ export type AccountRole = 'source' | 'destination';
  * PlainAccount - Plain JSON object representation of an Account model.
  * Used for high-performance snapshot serialization (MMKV) and type safety.
  */
+export interface AccountFields {
+  id: AccountId;
+  name: string;
+  accountType: AccountType;
+  accountSubtype?: AccountSubtype;
+  currencyCode: string;
+  parentAccountId?: AccountId;
+  description?: string;
+  icon?: IconName;
+  color?: string;
+  orderNum?: number;
+  reconciledAt?: Date | number;
+  createdAt?: Date | number;
+  updatedAt?: Date | number;
+  deletedAt?: Date | number;
+  archivedAt?: Date | number;
+}
+
 export interface PlainAccount {
   id: AccountId;
   name: string;
@@ -94,6 +112,32 @@ export interface PlainAccount {
   updatedAt?: number;
   deletedAt?: number;
   archivedAt?: number;
+}
+
+export interface PlainAccountMetadata {
+  accountId: AccountId;
+  statementDay?: number;
+  dueDay?: number;
+  minimumPaymentAmount?: number;
+  minimumBalanceAmount?: number;
+  creditLimitAmount?: number;
+  aprBps?: number;
+  emiDay?: number;
+  loanTenureMonths?: number;
+  autopayEnabled?: boolean;
+  gracePeriodDays?: number;
+  payFromAccountId?: AccountId;
+  minPaymentOnly?: boolean;
+  minimumPaymentPercent?: number;
+  notes?: string;
+}
+
+export interface PlainCurrency {
+  id: string;
+  code: string;
+  symbol: string;
+  name: string;
+  precision: number;
 }
 
 export interface PlainBudget {
@@ -326,6 +370,12 @@ export interface TransactionLinkedJournalInfo {
 }
 
 export type TransactionChannel = 'sms' | 'voice';
+
+export enum InboxParseStatus {
+  PARSED = 'parsed',
+  PARSE_FAILED = 'parse_failed',
+  IGNORED = 'ignored',
+}
 
 export interface TransactionInboxItem {
   id: string; // Internal record ID

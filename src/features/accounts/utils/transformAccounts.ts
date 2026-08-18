@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import {
   getAccountSections,

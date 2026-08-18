@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { Flow, FlowSource, Outflow } from '@/src/services/simulation/types';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import {

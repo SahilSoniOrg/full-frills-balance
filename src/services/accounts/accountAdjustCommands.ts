@@ -1,4 +1,3 @@
-import Account from '@/src/data/models/Account';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { balanceService } from '@/src/services/BalanceService';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
@@ -9,7 +8,7 @@ import {
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { findOrCreateBalanceCorrectionAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
@@ -20,7 +19,7 @@ import { roundToPrecision } from '@/src/utils/money';
  */
 export async function adjustAccountBalance(
   workplaceId: WorkplaceId,
-  account: Account,
+  account: { id: AccountId; name: string; currencyCode: string; accountType: AccountType },
   targetBalance: number,
   counterparty: BalanceChangeCounterparty = { kind: 'adjustment' },
 ): Promise<void> {
@@ -46,11 +45,7 @@ export async function adjustAccountBalance(
       : await findOrCreateBalanceCorrectionAccount(account.currencyCode, workplaceId);
 
   if (counterparty.kind === 'account') {
-    await assertWritable(
-      workplaceId,
-      [counterparty.accountId],
-      'Balance change counterparty',
-    );
+    await assertWritable(workplaceId, [counterparty.accountId], 'Balance change counterparty');
   }
 
   if (balancingAccountId === (account.id as AccountId)) {

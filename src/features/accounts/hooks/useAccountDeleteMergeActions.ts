@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountId, PlainAccount } from '@/src/types/domain';

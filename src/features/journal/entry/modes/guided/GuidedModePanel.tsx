@@ -12,7 +12,7 @@ import {
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, AccountRole, TabType, WorkplaceId } from '@/src/types/domain';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';

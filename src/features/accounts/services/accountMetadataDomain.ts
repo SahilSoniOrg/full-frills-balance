@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
+import type { PlainAccountMetadata as AccountMetadata } from '@/src/types/domain';
 import {
   AccountId,
   AccountType,

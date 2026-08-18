@@ -1,6 +1,9 @@
 import { IconName } from '@/src/components/core';
-import Account, { getDefaultSubtypeForType } from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
+import type {
+  AccountFields as Account,
+  PlainAccountMetadata as AccountMetadata,
+} from '@/src/types/domain';
+import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { AccountId, AccountSubtype, AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import {

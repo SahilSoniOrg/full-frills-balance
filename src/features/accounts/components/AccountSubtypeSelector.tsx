@@ -1,5 +1,5 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
-import { formatAccountSubtypeLabel, getAccountSubtypesForType } from '@/src/data/models/Account';
+import { formatAccountSubtypeLabel, getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
 import React, { useMemo } from 'react';

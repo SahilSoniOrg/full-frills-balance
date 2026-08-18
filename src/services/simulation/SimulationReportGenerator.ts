@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account from '@/src/data/models/Account';
-import { AccountId, AccountSubtype } from '@/src/types/domain';
+import { AccountFields, AccountId, AccountSubtype } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay, getLiquidImpact, isCommitmentFlow } from './utils/FlowPolicy';
@@ -9,8 +8,8 @@ import { assertGlobalIntegrity } from './utils/SimulationIntegrity';
 export class SimulationReportGenerator {
   static generate(
     allFlows: Flow[],
-    accountMap: Map<string, Account>,
-    liabilityAccountBalances: { account: Account; balance: number }[],
+    accountMap: Map<string, AccountFields>,
+    liabilityAccountBalances: { account: AccountFields; balance: number }[],
     liquidAccountIdsSet: Set<string>,
   ): SimulationReport {
     assertGlobalIntegrity(allFlows);
@@ -100,8 +99,8 @@ export class SimulationReportGenerator {
 
   private static generateLiabilities(
     allFlows: Flow[],
-    accountMap: Map<string, Account>,
-    liabilityAccountBalances: { account: Account; balance: number }[],
+    accountMap: Map<string, AccountFields>,
+    liabilityAccountBalances: { account: AccountFields; balance: number }[],
   ) {
     let totalLiabilities = 0;
     let totalCreditCard = 0;
@@ -154,7 +153,7 @@ export class SimulationReportGenerator {
   }: {
     allFlows: Flow[];
     liquidAccountIdsSet: Set<AccountId> | Set<string>;
-    accountMap: Map<string, Account>;
+    accountMap: Map<string, AccountFields>;
     normalizedStartingBalances: Map<string, number>;
     accountMinBalancesBeforeIncome: Map<string, number>;
     accountMinBalances: Map<string, number>;

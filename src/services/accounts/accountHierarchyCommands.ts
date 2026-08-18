@@ -311,9 +311,11 @@ export async function updateAccounts(
  */
 export async function updateAccountOrder(
   workplaceId: WorkplaceId,
-  account: Account,
+  accountId: AccountId,
   newOrder: number,
 ): Promise<void> {
+  const account = await accountRepository.find(workplaceId, accountId);
+  if (!account) return;
   const previousOrderNum = account.orderNum;
 
   await accountRepository.update(account, { orderNum: newOrder }, workplaceId, () => [

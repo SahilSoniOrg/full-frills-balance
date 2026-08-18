@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal';

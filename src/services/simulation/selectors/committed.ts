@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId } from '@/src/types/domain';
 import { AccountCommitment, DebtType, Flow, FlowCategory } from '../types';
 import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
@@ -9,7 +9,7 @@ import { isCommitmentFlow } from '../utils/FlowPolicy';
  */
 export const selectCommittedEntries = (
   allFlows: Flow[],
-  accountMap: Map<string, Account>,
+  accountMap: Map<string, AccountFields>,
   firstMajorInflowDay: number | null,
 ): AccountCommitment[] => {
   const committedMap = new Map<string, AccountCommitment>();

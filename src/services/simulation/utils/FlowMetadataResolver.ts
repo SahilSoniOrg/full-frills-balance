@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { Flow, FlowCategory } from '../types';
 
 /**
@@ -15,7 +15,7 @@ import { Flow, FlowCategory } from '../types';
  *   - Physical source: Checking
  *   - Semantic target: Groceries (Budget ID)
  */
-export function resolveFlowSemanticTarget(flow: Flow, accountMap: Map<string, Account>) {
+export function resolveFlowSemanticTarget(flow: Flow, accountMap: Map<string, AccountFields>) {
   // 1. Debt flows always target the liability account (referenceId)
   if (flow.category === FlowCategory.DEBT) {
     const targetId =

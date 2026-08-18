@@ -3,7 +3,7 @@ import {
   AccountArchiveCascadeModal,
   type AccountArchiveCascadeModalProps,
 } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 
 export type AccountMergePickerModalProps = {

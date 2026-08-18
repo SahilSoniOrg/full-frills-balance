@@ -1,5 +1,5 @@
 import { AppConfig, Spacing } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
 import { AccountId, AccountRole as DomainAccountRole } from '@/src/types/domain';
 import { StyleSheet, View } from 'react-native';

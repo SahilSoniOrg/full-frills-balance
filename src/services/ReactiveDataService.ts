@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account, { toPlainAccounts } from '@/src/data/models/Account';
+import { toPlainAccount, toPlainAccounts } from '@/src/data/models/Account';
 import {
   clearReactiveAggregatedBalancesCache,
   observeAggregatedAccountBalances,
@@ -32,23 +32,23 @@ type ReactiveCacheEntry<T> = DisposableReplay<T> & { workplaceId: WorkplaceId };
  * Eliminates duplicate subscriptions by providing a single source of truth.
  */
 export interface DashboardData {
-  accounts: (Account | PlainAccount)[];
+  accounts: PlainAccount[];
   enrichedJournals: EnrichedJournal[];
   balances: AccountBalance[];
   wealthSummary: WealthSummary;
 }
 
 export interface LiveAccountsSummaryData {
-  accounts: (Account | PlainAccount)[];
+  accounts: PlainAccount[];
   balances: AccountBalance[];
   wealthSummary: WealthSummary;
 }
 
 export interface AccountDashboardData {
-  account: Account | PlainAccount | null;
+  account: PlainAccount | null;
   balance: AccountBalance | null;
   subAccounts: AccountBalance[];
-  allAccounts: (Account | PlainAccount)[];
+  allAccounts: PlainAccount[];
 }
 
 /**
@@ -286,10 +286,16 @@ class ReactiveDataService {
 
     const obs$ = observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
       switchMap(async ({ accounts, balancesMap }) => {
-        const targetAccount = accounts.find(a => a.id === accountId);
+        const plainAccounts = toPlainAccounts(accounts);
+        const targetAccount = plainAccounts.find(a => a.id === accountId);
         if (!targetAccount) {
           const deletedAccount = await accountRepository.findWithDeleted(workplaceId, accountId);
-          return { account: deletedAccount, balance: null, subAccounts: [], allAccounts: accounts };
+          return {
+            account: deletedAccount ? toPlainAccount(deletedAccount) : null,
+            balance: null,
+            subAccounts: [],
+            allAccounts: plainAccounts,
+          };
         }
 
         const balance = balancesMap.get(accountId) || null;
@@ -303,7 +309,7 @@ class ReactiveDataService {
           account: targetAccount,
           balance,
           subAccounts: subBalances,
-          allAccounts: accounts,
+          allAccounts: plainAccounts,
         };
       }),
     );

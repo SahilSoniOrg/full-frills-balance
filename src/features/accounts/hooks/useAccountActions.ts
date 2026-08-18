@@ -3,7 +3,6 @@ import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types
  * Account mutation hooks — thin wrappers over named command modules (ADR-0008).
  */
 import { IconName } from '@/src/components/core';
-import Account from '@/src/data/models/Account';
 import {
   deleteAccount as deleteAccountCommand,
   recoverAccount as recoverAccountCommand,
@@ -42,7 +41,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
 
   const updateAccount = useCallback(
     async (
-      account: Account,
+      account: { id: AccountId },
       data: {
         name?: string;
         accountType?: AccountType;
@@ -55,7 +54,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
         metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
       },
     ) => {
-      return updateAccountCommand(workplaceId, account.id as AccountId, data);
+      return updateAccountCommand(workplaceId, account.id, data);
     },
     [workplaceId],
   );
@@ -68,8 +67,8 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   );
 
   const deleteAccount = useCallback(
-    async (account: Account) => {
-      return deleteAccountCommand(account, workplaceId);
+    async (account: { id: AccountId }) => {
+      return deleteAccountCommand(account.id, workplaceId);
     },
     [workplaceId],
   );
@@ -82,14 +81,18 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   );
 
   const updateAccountOrder = useCallback(
-    async (account: Account, newOrder: number) => {
-      return updateAccountOrderCommand(workplaceId, account, newOrder);
+    async (account: { id: AccountId }, newOrder: number) => {
+      return updateAccountOrderCommand(workplaceId, account.id, newOrder);
     },
     [workplaceId],
   );
 
   const adjustBalance = useCallback(
-    async (account: Account, targetBalance: number, counterparty?: BalanceChangeCounterparty) => {
+    async (
+      account: { id: AccountId; name: string; currencyCode: string; accountType: AccountType },
+      targetBalance: number,
+      counterparty?: BalanceChangeCounterparty,
+    ) => {
       return adjustAccountBalance(workplaceId, account, targetBalance, counterparty);
     },
     [workplaceId],

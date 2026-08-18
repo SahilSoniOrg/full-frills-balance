@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';

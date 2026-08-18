@@ -1,6 +1,6 @@
 import { ListRow } from '@/src/components/core';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountChipColors } from '@/src/utils/accountChipColors';

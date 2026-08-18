@@ -12,7 +12,7 @@ import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHa
 import { Spacing } from '@/src/constants';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId } from '@/src/types/domain';
 
 export type AdvancedModePanelProps = {

@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId } from '@/src/types/domain';
 import { ACCOUNT_TYPE_ORDER } from '@/src/utils/accountCategory';
 

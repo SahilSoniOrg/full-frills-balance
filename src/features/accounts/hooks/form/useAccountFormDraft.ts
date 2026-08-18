@@ -1,5 +1,7 @@
-import Account from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
+import type {
+  AccountFields as Account,
+  PlainAccountMetadata as AccountMetadata,
+} from '@/src/types/domain';
 import {
   AccountFormDraftAction,
   AccountFormDraftState,

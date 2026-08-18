@@ -7,7 +7,7 @@ import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor
 import { BulkEntryRow } from './BulkEntryRow';
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AccountPickerModal } from '@/src/features/accounts';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import dayjs from 'dayjs';
 
 interface BulkEntryGridProps {

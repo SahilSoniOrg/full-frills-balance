@@ -1,7 +1,6 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
-import Account from '@/src/data/models/Account';
-import { TransactionType, PlainAccount, TabType, AccountType } from '@/src/types/domain';
+import { AppConfig } from '@/src/constants/app-config';
+import { AccountFields, TransactionType, TabType, AccountType } from '@/src/types/domain';
 
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
@@ -135,9 +134,9 @@ export function getAllowedAccountTypes(tab: TabType, side: TransactionType): Acc
 }
 
 export function groupAccountsByType(
-  accounts: (Account | PlainAccount)[],
-): Record<AccountType, (Account | PlainAccount)[]> {
-  const groups = createAccountTypeRecord<(Account | PlainAccount)[]>(() => []);
+  accounts: AccountFields[],
+): Record<AccountType, AccountFields[]> {
+  const groups = createAccountTypeRecord<AccountFields[]>(() => []);
 
   accounts.forEach(account => {
     const type = toAccountType(account.accountType);
@@ -150,11 +149,11 @@ export function groupAccountsByType(
 export type AccountSection = {
   key: string;
   title: string;
-  data: (Account | PlainAccount)[];
+  data: AccountFields[];
   type?: AccountType;
 };
 
-export function getAccountSections(accounts: (Account | PlainAccount)[]): AccountSection[] {
+export function getAccountSections(accounts: AccountFields[]): AccountSection[] {
   const groups = groupAccountsByType(accounts);
   const sections: AccountSection[] = [];
 

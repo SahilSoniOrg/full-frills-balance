@@ -1,19 +1,19 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account, { formatAccountSubtypeLabel, isAccountType } from '@/src/data/models/Account';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { formatAccountSubtypeLabel, isAccountType } from '@/src/types/accountSubtype';
 import {
   AccountBalance,
   AccountId,
-  PlainAccount,
-  WorkplaceId,
   AccountType,
+  type AccountFields as Account,
+  WorkplaceId,
 } from '@/src/types/domain';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -25,9 +25,9 @@ export interface AccountDetailsData {
   accountId: AccountId;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  account: Account | PlainAccount | null;
+  account: Account | null;
   balanceData: AccountBalance | null;
-  accounts: (Account | PlainAccount)[];
+  accounts: Account[];
   rawSubBalances: AccountBalance[];
   dashboardLoading: boolean;
   accountLoading: boolean;
@@ -123,7 +123,7 @@ export function useAccountDetailsData(): AccountDetailsData {
   const pType = params.pType;
   const pColor = params.pColor;
 
-  const account = useMemo<Account | PlainAccount | null>(
+  const account = useMemo<Account | null>(
     () =>
       dbAccount ||
       (pName
@@ -133,7 +133,7 @@ export function useAccountDetailsData(): AccountDetailsData {
             accountType: pType && isAccountType(pType) ? pType : AccountType.ASSET,
             currencyCode: pCurrency || workplaceCurrency,
             icon: (pIcon || getAccountFallbackIcon(pType)) as IconName,
-            colorKey: pColor,
+            color: pColor,
             deletedAt: undefined,
           }
         : null),

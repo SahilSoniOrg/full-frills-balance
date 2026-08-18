@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import {
   TransactionType,
   AccountId,
@@ -28,7 +28,7 @@ export interface BuildSplitJournalLinesInput {
   sourceAccountId: AccountId;
   sourceAmount: string;
   splits: { id: string; accountId: AccountId; amount: string }[];
-  accounts?: Account[];
+  accounts?: AccountFields[];
 }
 
 export type SplitValidationError =
@@ -59,7 +59,7 @@ export function computeSplitTotals(totalAmount: string, splits: SplitRowState[])
 
 function resolveAccountFields(
   accountId: AccountId,
-  accounts: Account[] | undefined,
+  accounts: AccountFields[] | undefined,
 ): Pick<JournalEntryLine, 'accountName' | 'accountType' | 'accountCurrency'> {
   const account = accounts?.find(a => a.id === accountId);
   return {

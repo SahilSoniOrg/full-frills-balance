@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';

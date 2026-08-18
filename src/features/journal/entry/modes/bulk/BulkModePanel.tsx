@@ -9,7 +9,7 @@ import {
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { WorkplaceId } from '@/src/types/domain';
 import { MutableRefObject, useCallback, useEffect, useMemo } from 'react';
 

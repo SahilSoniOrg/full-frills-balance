@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 import { getVisibleRoots } from '@/src/utils/accountArchive';
 import { AccountId } from '@/src/types/domain';

@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core';
-import Account, { getDefaultSubtypeForType } from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
+import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import {
   AccountId,
   AccountSubtype,

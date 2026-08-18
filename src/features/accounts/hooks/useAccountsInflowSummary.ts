@@ -6,7 +6,7 @@ import {
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import { reportService } from '@/src/services/report-service';
 import { AccountBalance, PlainAccount, WorkplaceId } from '@/src/types/domain';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

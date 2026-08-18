@@ -1,6 +1,6 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { IconName } from '@/src/components/core';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import {
   getBulkHierarchyCandidates,
   type HierarchyCandidateAccount,

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountId, AccountType } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 

@@ -284,6 +284,12 @@ export class AccountRepository {
     }
   }
 
+  observeMetadata(workplaceId: WorkplaceId, accountId: AccountId) {
+    return this.metadata
+      .query(Q.where('account_id', accountId), Q.where('workplace_id', workplaceId))
+      .observe();
+  }
+
   async findMetadataByAccountIds(
     workplaceId: WorkplaceId,
     accountIds: AccountId[],

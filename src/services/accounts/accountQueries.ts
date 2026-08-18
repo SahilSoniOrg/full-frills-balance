@@ -1,6 +1,12 @@
 import { AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { map } from 'rxjs';
+import {
+  toPlainAccount,
+  toPlainAccountMetadata,
+  toPlainAccounts,
+} from '@/src/services/accounts/accountPlainMap';
 
 /**
  * Curated reactive/read entry points for feature hooks.
@@ -8,11 +14,13 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
  */
 export const accountQueries = {
   observeAll(workplaceId: WorkplaceId) {
-    return accountRepository.observeAll(workplaceId);
+    return accountRepository.observeAll(workplaceId).pipe(map(toPlainAccounts));
   },
 
   observeById(workplaceId: WorkplaceId, accountId: AccountId) {
-    return accountRepository.observeById(workplaceId, accountId);
+    return accountRepository
+      .observeById(workplaceId, accountId)
+      .pipe(map(account => (account ? toPlainAccount(account) : null)));
   },
 
   observeArchivedAt(workplaceId: WorkplaceId, accountId: AccountId) {
@@ -24,7 +32,7 @@ export const accountQueries = {
   },
 
   observeByType(workplaceId: WorkplaceId, accountType: AccountType) {
-    return accountRepository.observeByType(workplaceId, accountType);
+    return accountRepository.observeByType(workplaceId, accountType).pipe(map(toPlainAccounts));
   },
 
   observeHasChildren(workplaceId: WorkplaceId, accountId: AccountId) {
@@ -36,7 +44,15 @@ export const accountQueries = {
   },
 
   observeByIdsWithDeleted(workplaceId: WorkplaceId, accountIds: AccountId[]) {
-    return accountRepository.observeByIdsWithDeleted(workplaceId, accountIds);
+    return accountRepository
+      .observeByIdsWithDeleted(workplaceId, accountIds)
+      .pipe(map(toPlainAccounts));
+  },
+
+  observeMetadata(workplaceId: WorkplaceId, accountId: AccountId) {
+    return accountRepository
+      .observeMetadata(workplaceId, accountId)
+      .pipe(map(records => records.map(toPlainAccountMetadata)));
   },
 
   findAll(workplaceId: WorkplaceId) {

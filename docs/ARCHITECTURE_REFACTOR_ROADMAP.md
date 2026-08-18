@@ -146,6 +146,7 @@ Goal: remove competing write protocols.
 - [ ] Define transaction coordinators for journal, account, planned-payment, SMS, and import flows.
 - [ ] Isolate raw SQL and private adapter access behind named infrastructure interfaces.
 - [x] Document atomicity ownership for cross-domain mutations.
+- [x] Batch integrity repair audit with rebuild; SAVEPOINT staged-import swap; document MMKV rebuild queue + startup integrity as the recovery path.
 
 Exit: every mutation has one obvious transaction owner and cannot bypass audit/rebuild obligations.
 
@@ -162,10 +163,10 @@ Migration order:
 5. settings/workplaces;
 6. dashboard/reports.
 
-- [ ] Define feature-owned DTOs.
-- [ ] Map models at read-service/controller boundaries.
+- [x] Define feature-owned DTOs.
+- [x] Map models at read-service/controller boundaries.
 - [ ] Remove `src/data/models` imports from presentation code.
-- [ ] Relocate pure enums and helpers into domain modules.
+- [x] Relocate pure enums and helpers into domain modules.
 - [ ] Remove ORM relation access from hooks and components.
 
 Exit: presentation code uses plain data and does not depend on WatermelonDB identity or relations.
@@ -211,35 +212,37 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 
 ## Progress Ledger
 
-| Date | Work package | Result | Commit |
-| --- | --- | --- | --- |
-| 2026-08-16 | Roadmap | Execution plan and invariants recorded | `2ed8cb7f` |
-| 2026-08-16 | WP-0 | Canonical architecture gate and explicit feature-edge ratchet | `91c755da` |
-| 2026-08-16 | WP-1 | Raw rebuild and transaction-count workplace isolation | `2f759d9e` |
-| 2026-08-16 | WP-1 | Recurring insight acquisition workplace isolation | `40fed24d` |
-| 2026-08-16 | WP-1 | SMS and budget workplace isolation | `b37695c0` |
-| 2026-08-16 | WP-0 | Ratchets for raw scope, presentation models, and direct writes | `337946e4` |
-| 2026-08-16 | WP-1 | Exhaustive workplace-isolation inventory | `679b5739` |
-| 2026-08-16 | WP-2 | Disposable reactive caches and inactive insight timers | `ec8a34d3` |
-| 2026-08-16 | WP-2/3 | Bootstrap start gates and ordered widget writes | `54f24099`, `b3b7f003` |
-| 2026-08-16 | WP-3 | Tracked rebuild retries, truthful flush, and batch recovery | `c5cb34b9`, `076f2401` |
-| 2026-08-16 | WP-1 | SMS device-ID collision isolation | `cb26cd9a` |
-| 2026-08-16 | WP-3 | Ordered notification scheduling | `cdf0d91e` |
-| 2026-08-16 | WP-3 | Per-workplace SMS single-flight and final-write idempotency | `3dcef98` |
-| 2026-08-16 | WP-1 | Scoped export fallback and large transaction chunks | `1564593`, `4f43602` |
-| 2026-08-16 | WP-4 | Persistence ownership and atomicity inventory | `ccc40651` |
-| 2026-08-16 | WP-1 | Account-merge source mutation isolation | `e87e9063` |
-| 2026-08-16 | WP-1 | Raw transaction metrics workplace isolation | `80f6d793` |
-| 2026-08-16 | WP-1 | Removed unused unscoped repository escape hatches | `3284437d` |
-| 2026-08-16 | WP-1 | Journal enrichment and suggestion isolation; raw-query ratchet at zero | `042a629`, `32462018` |
-| 2026-08-16 | WP-1 | Rebuild/integrity mutation isolation | `73d56859` |
-| 2026-08-16 | WP-1 | Planned-payment workplace/model agreement | `53874cd2` |
-| 2026-08-16 | WP-1 | Journal model-instance writer workplace validation | `faa4a91c` |
-| 2026-08-16 | WP-1 | Raw rebuild, recurring-pattern, account-list, and repository-metrics isolation | `3878b5dc`, `926f10dd`, `16bbf6f7`, `5edf606a` |
-| 2026-08-16 | WP-1 | SMS rule-history transaction isolation | `adf1378f` |
-| 2026-08-18 | WP-4 | Atomic journal reversal (one writer) | `a526aec6` |
-| 2026-08-18 | WP-4 | Atomic account create with opening balance | `d345336b` |
-| 2026-08-18 | WP-4 | Batch account/SMS/planned-payment mutations with audit and schedule | `4202cc34` |
+| Date       | Work package | Result                                                                         | Commit                                         |
+| ---------- | ------------ | ------------------------------------------------------------------------------ | ---------------------------------------------- |
+| 2026-08-16 | Roadmap      | Execution plan and invariants recorded                                         | `2ed8cb7f`                                     |
+| 2026-08-16 | WP-0         | Canonical architecture gate and explicit feature-edge ratchet                  | `91c755da`                                     |
+| 2026-08-16 | WP-1         | Raw rebuild and transaction-count workplace isolation                          | `2f759d9e`                                     |
+| 2026-08-16 | WP-1         | Recurring insight acquisition workplace isolation                              | `40fed24d`                                     |
+| 2026-08-16 | WP-1         | SMS and budget workplace isolation                                             | `b37695c0`                                     |
+| 2026-08-16 | WP-0         | Ratchets for raw scope, presentation models, and direct writes                 | `337946e4`                                     |
+| 2026-08-16 | WP-1         | Exhaustive workplace-isolation inventory                                       | `679b5739`                                     |
+| 2026-08-16 | WP-2         | Disposable reactive caches and inactive insight timers                         | `ec8a34d3`                                     |
+| 2026-08-16 | WP-2/3       | Bootstrap start gates and ordered widget writes                                | `54f24099`, `b3b7f003`                         |
+| 2026-08-16 | WP-3         | Tracked rebuild retries, truthful flush, and batch recovery                    | `c5cb34b9`, `076f2401`                         |
+| 2026-08-16 | WP-1         | SMS device-ID collision isolation                                              | `cb26cd9a`                                     |
+| 2026-08-16 | WP-3         | Ordered notification scheduling                                                | `cdf0d91e`                                     |
+| 2026-08-16 | WP-3         | Per-workplace SMS single-flight and final-write idempotency                    | `3dcef98`                                      |
+| 2026-08-16 | WP-1         | Scoped export fallback and large transaction chunks                            | `1564593`, `4f43602`                           |
+| 2026-08-16 | WP-4         | Persistence ownership and atomicity inventory                                  | `ccc40651`                                     |
+| 2026-08-16 | WP-1         | Account-merge source mutation isolation                                        | `e87e9063`                                     |
+| 2026-08-16 | WP-1         | Raw transaction metrics workplace isolation                                    | `80f6d793`                                     |
+| 2026-08-16 | WP-1         | Removed unused unscoped repository escape hatches                              | `3284437d`                                     |
+| 2026-08-16 | WP-1         | Journal enrichment and suggestion isolation; raw-query ratchet at zero         | `042a629`, `32462018`                          |
+| 2026-08-16 | WP-1         | Rebuild/integrity mutation isolation                                           | `73d56859`                                     |
+| 2026-08-16 | WP-1         | Planned-payment workplace/model agreement                                      | `53874cd2`                                     |
+| 2026-08-16 | WP-1         | Journal model-instance writer workplace validation                             | `faa4a91c`                                     |
+| 2026-08-16 | WP-1         | Raw rebuild, recurring-pattern, account-list, and repository-metrics isolation | `3878b5dc`, `926f10dd`, `16bbf6f7`, `5edf606a` |
+| 2026-08-16 | WP-1         | SMS rule-history transaction isolation                                         | `adf1378f`                                     |
+| 2026-08-18 | WP-4         | Atomic journal reversal (one writer)                                           | `a526aec6`                                     |
+| 2026-08-18 | WP-4         | Atomic account create with opening balance                                     | `d345336b`                                     |
+| 2026-08-18 | WP-4         | Batch account/SMS/planned-payment mutations with audit and schedule            | `4202cc34`                                     |
+| 2026-08-18 | WP-4         | Integrity repair audit in the rebuild write; SAVEPOINT import swap             | `39bfb467`                                     |
+| 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | follow-up                                      |
 
 ## Audit Evidence Index
 

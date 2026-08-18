@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useDebounce } from '@/src/hooks/useDebounce';
 import { AccountId, PlainAccount } from '@/src/types/domain';

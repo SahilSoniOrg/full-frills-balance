@@ -1,7 +1,7 @@
 import { AppConfig, Opacity, withOpacity } from '@/src/constants';
 import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import Currency from '@/src/data/models/Currency';
+import type { PlainCurrency as Currency } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
 
 interface CurrencyPreferenceViewProps {

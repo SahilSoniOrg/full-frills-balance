@@ -1,4 +1,3 @@
-import Transaction from '@/src/data/models/Transaction';
 import { AccountType, AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import { AppConfig } from '@/src/constants';
@@ -91,14 +90,21 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     [periodMetricsResult, metricsLoading],
   );
 
-  const { data: chartTransactions } = useObservable<Transaction[]>(
+  const { data: chartTransactions } = useObservable<RunningBalanceTx[]>(
     () => {
       const MS_PER_DAY = AppConfig.time.msPerDay;
       const start =
         (dateRange ? dateRange.startDate : dayjs().startOf('month').valueOf()) - 7 * MS_PER_DAY;
       const end =
         (dateRange ? dateRange.endDate : dayjs().endOf('month').valueOf()) + 7 * MS_PER_DAY;
-      return observeAccountChartTransactions(workplaceId, accountId, start, end);
+      return observeAccountChartTransactions(workplaceId, accountId, start, end).pipe(
+        map(transactions =>
+          transactions.map(transaction => ({
+            transactionDate: transaction.transactionDate,
+            runningBalance: transaction.runningBalance,
+          })),
+        ),
+      );
     },
     [workplaceId, accountId, dateRange],
     [],

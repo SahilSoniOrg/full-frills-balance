@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import {
   resolveAccountListPressAction,
   type AccountsListTab,

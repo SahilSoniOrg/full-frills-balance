@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';

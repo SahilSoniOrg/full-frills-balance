@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';

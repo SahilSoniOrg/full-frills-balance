@@ -1,15 +1,15 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { confirm, type ConfirmOptions } from '@/src/utils/alerts';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/domain';
 
 export type ArchiveIntent = {
   archiving: boolean;
   account: Account;
   accountId: AccountId;
-  accounts: (Account | PlainAccount)[];
+  accounts: Account[];
   hasDescendants: boolean;
   proceed: () => void;
   openCascade: (archiving: boolean, rootId: AccountId) => void;

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { AccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
 import { AccountId } from '@/src/types/domain';

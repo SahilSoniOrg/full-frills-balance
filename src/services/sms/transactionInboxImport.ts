@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionInboxItem } from '@/src/types/domain';
@@ -22,7 +22,7 @@ function normalizeForMatch(value?: string): string {
 
 function resolveRuleAccounts(
   item: TransactionInboxItem,
-  accounts: Account[],
+  accounts: AccountFields[],
   matchedRule: TransactionAutoPostRule | null,
 ): { bankAccountId?: AccountId; counterpartyId?: AccountId; customDescription?: string } {
   let bankAccountId = matchedRule?.sourceAccountId;
@@ -99,7 +99,7 @@ function buildNotes(item: TransactionInboxItem, customDescription?: string): str
 
 export function buildTransactionInboxImportNavigation(
   item: TransactionInboxItem,
-  accounts: Account[],
+  accounts: AccountFields[],
   matchedRule: TransactionAutoPostRule | null,
   options?: TransactionInboxImportOptions,
 ): TransactionInboxImportNavigation {

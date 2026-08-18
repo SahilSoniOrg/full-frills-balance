@@ -1,10 +1,14 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
-import Currency from '@/src/data/models/Currency';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountSubtype,
+  AccountType,
+  type AccountFields as Account,
+  type PlainAccountMetadata as AccountMetadata,
+  type PlainCurrency as Currency,
+} from '@/src/types/domain';
 import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
@@ -138,8 +142,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const { currencies } = useCurrencies();
   const { data: metadataRecords, isLoading: isMetadataLoading } = useObservable(
-    () => (existingAccount ? existingAccount.metadataRecords.observe() : of([])),
-    [existingAccount],
+    () => (accountId ? accountQueries.observeMetadata(workplaceId, accountId) : of([])),
+    [accountId, workplaceId],
     [] as AccountMetadata[],
   );
   const existingMetadata = metadataRecords[0];

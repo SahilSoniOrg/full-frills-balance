@@ -3,7 +3,7 @@ import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccoun
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import {
   getAccountIcon,
   getArchivedAccountTilePresentation,

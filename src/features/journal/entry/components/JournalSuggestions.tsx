@@ -2,7 +2,7 @@ import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountType, TabType } from '@/src/types/domain';

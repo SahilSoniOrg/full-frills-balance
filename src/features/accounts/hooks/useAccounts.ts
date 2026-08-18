@@ -3,7 +3,6 @@
  * Mutations: `useAccountActions`. Details composite: `useAccountDashboard`.
  */
 import { Animation } from '@/src/constants';
-import Account from '@/src/data/models/Account';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
   observeAccountBalance,
@@ -13,7 +12,7 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 /**
@@ -29,7 +28,7 @@ export function useAccounts(workplaceId: WorkplaceId, loadData: boolean = true) 
   } = useObservable(
     () => (loadData && workplaceId ? accountQueries.observeAll(workplaceId) : of([])),
     [loadData, workplaceId],
-    [] as Account[],
+    [] as PlainAccount[],
   );
   return { accounts, isLoading, version, error };
 }
@@ -46,7 +45,7 @@ export function useAccount(accountId: AccountId | null, workplaceId: WorkplaceId
   } = useObservable(
     () => (accountId ? accountQueries.observeById(workplaceId, accountId) : of(null)),
     [accountId, workplaceId],
-    null as Account | null,
+    null as PlainAccount | null,
   );
   return { account, isLoading, version, error };
 }
@@ -80,7 +79,7 @@ export function useAccountBalance(
  */
 export function useAccountBalances(
   workplaceId: WorkplaceId,
-  accounts: Account[],
+  accounts: PlainAccount[],
   currencyCode: string,
 ) {
   const {

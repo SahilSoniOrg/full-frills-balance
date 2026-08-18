@@ -1,7 +1,7 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';

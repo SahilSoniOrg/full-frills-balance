@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
@@ -16,7 +16,7 @@ export interface UseAccountDetailsActionsOptions {
   isDeleted: boolean;
   dateRange: DateRange | null;
   recoverAction: (id: AccountId) => Promise<void>;
-  reconcileAccount: (id: AccountId, date: Date) => Promise<Account | null>;
+  reconcileAccount: (id: AccountId, date: Date) => Promise<unknown>;
 }
 
 export function useAccountDetailsActions(options: UseAccountDetailsActionsOptions) {

@@ -9,7 +9,7 @@ import {
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import Account from '@/src/data/models/Account';
+import type { AccountFields as Account } from '@/src/types/domain';
 import { WorkplaceId } from '@/src/types/domain';
 import { MutableRefObject } from 'react';
 

@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { AccountId, AccountSubtype } from '@/src/types/domain';
 import {
@@ -42,7 +42,7 @@ export interface SafeToSpendDashboard {
   liquidAssetSubtypes: AccountSubtype[];
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
-  accountMap: Map<string, Account>;
+  accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
 }
 
