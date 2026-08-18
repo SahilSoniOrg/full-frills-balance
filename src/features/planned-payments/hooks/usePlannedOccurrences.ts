@@ -1,7 +1,11 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal';
+import { useObservable } from '@/src/hooks/useObservable';
+import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { Flow } from '@/src/services/simulation/types';
 import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
 import { useMemo } from 'react';
@@ -50,10 +54,20 @@ export function usePlannedOccurrences({
 
   const plannedJournals = plannedJournalsOverride ?? fetchedPlannedJournals;
 
+  const { data: activePlannedPayments } = useObservable<PlannedPayment[]>(
+    () => plannedPaymentReadService.observeActive(workplaceId),
+    [workplaceId],
+    [],
+  );
+
+  const projectablePlannedJournals = useMemo(
+    () => keepProjectablePlannedJournals(plannedJournals || [], activePlannedPayments),
+    [plannedJournals, activePlannedPayments],
+  );
+
   const items = useMemo(() => {
-    const planned = plannedJournals || [];
     if (!allFlows?.length) {
-      return mergePlannedOccurrences(planned, []);
+      return mergePlannedOccurrences(projectablePlannedJournals, []);
     }
 
     const simulated = mapLiabilityFlowsToPlannedOccurrences({
@@ -62,8 +76,8 @@ export function usePlannedOccurrences({
       currencyCode: currencyCode || 'INR',
     });
 
-    return mergePlannedOccurrences(planned, simulated);
-  }, [plannedJournals, allFlows, accountMap, currencyCode]);
+    return mergePlannedOccurrences(projectablePlannedJournals, simulated);
+  }, [projectablePlannedJournals, allFlows, accountMap, currencyCode]);
 
   const { onPlannedJournalPress } = usePlannedOccurrenceActions(workplaceId);
 

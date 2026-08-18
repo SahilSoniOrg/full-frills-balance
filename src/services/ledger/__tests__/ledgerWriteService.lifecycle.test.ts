@@ -137,6 +137,36 @@ describe('ledgerWriteService lifecycle', () => {
       expect(updated!.journalDate).toBe(plannedDate);
     });
 
+    it('rejects reverting a posted journal whose planned payment no longer exists', async () => {
+      const postedAt = Date.UTC(2024, 5, 15, 12, 0, 0);
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Orphaned planned payment journal',
+          journalDate: postedAt,
+          currencyCode: 'USD',
+          status: JournalStatus.POSTED,
+          plannedPaymentId: 'pp-missing',
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        workplaceId,
+      );
+
+      await expect(
+        ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId),
+      ).rejects.toThrow(/planned payment was deleted/);
+    });
+
     it('rejects reverting a journal that is not POSTED or SKIPPED', async () => {
       const journal = await createPlannedJournal(Date.now());
       expect(journal.status).toBe(JournalStatus.PLANNED);

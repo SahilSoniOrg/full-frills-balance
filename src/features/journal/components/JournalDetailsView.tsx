@@ -1,5 +1,6 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { LoadingView } from '@/src/components/common/LoadingView';
+import { AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Inset, Separator, Stack } from '@/src/design-system';
@@ -78,6 +79,12 @@ export function JournalDetailsView({
                   onOpenSmsInbox={readyVm.onOpenSmsInbox}
                 />
               </>
+            )}
+
+            {readyVm.statusNotice && (
+              <AppText variant="caption" color="warning">
+                {readyVm.statusNotice}
+              </AppText>
             )}
 
             <JournalDetailsActions

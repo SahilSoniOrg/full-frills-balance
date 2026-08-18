@@ -12,6 +12,7 @@ import {
 } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId, mapTransactionToAudit } from '@/src/types/domain';
 import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
@@ -352,6 +353,16 @@ export class LedgerWriteService {
       throw new Error(
         `Cannot revert journal with status ${journal.status}. Only POSTED or SKIPPED journals can be reverted.`,
       );
+    }
+
+    if (journal.plannedPaymentId) {
+      const plannedPayment = await plannedPaymentReadService.find(
+        workplaceId,
+        journal.plannedPaymentId,
+      );
+      if (!plannedPayment) {
+        throw new Error('Cannot revert to scheduled because the planned payment was deleted.');
+      }
     }
 
     const currentJournalDate = journal.journalDate;

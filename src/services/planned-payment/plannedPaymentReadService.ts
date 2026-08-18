@@ -7,6 +7,10 @@ export class PlannedPaymentReadService {
     return plannedPaymentRepository.observeAll(workplaceId);
   }
 
+  observeActive(workplaceId: WorkplaceId) {
+    return plannedPaymentRepository.observeActive(workplaceId);
+  }
+
   observeById(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
     return plannedPaymentRepository.observeById(workplaceId, plannedPaymentId);
   }

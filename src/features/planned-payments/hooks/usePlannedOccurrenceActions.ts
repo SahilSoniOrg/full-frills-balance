@@ -1,15 +1,10 @@
 import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
-import { journalService } from '@/src/services/journal/journalDomainService';
-import {
-  isOrphanedPendingJournal,
-  orphanedPendingJournalConfirmCopy,
-} from '@/src/services/journal/journalDetailsHelpers';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { analytics } from '@/src/services/analytics-service';
-import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
@@ -52,40 +47,6 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
 
       if (!isSimulated && item.origin === 'PLANNED_JOURNAL' && item.plannedPaymentId) {
         const plannedPaymentId = item.plannedPaymentId as PlannedPaymentId;
-        const plannedPayment = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
-        if (
-          isOrphanedPendingJournal({
-            status: 'PLANNED',
-            plannedPaymentId,
-            plannedPaymentExists: Boolean(plannedPayment),
-          }) &&
-          item.journalId
-        ) {
-          const copy = orphanedPendingJournalConfirmCopy();
-          confirm.show({
-            ...copy,
-            destructive: true,
-            onConfirm: async () => {
-              try {
-                await journalService.deleteJournal(item.journalId as JournalId, workplaceId);
-                toast.success('Orphaned scheduled journal deleted.');
-              } catch (err) {
-                showErrorAlert(err);
-              }
-            },
-            onCancel: async () => {
-              try {
-                await journalService.postJournal(item.journalId as JournalId, workplaceId);
-                toast.success('Transaction has been marked as posted.');
-              } catch (err) {
-                showErrorAlert(err);
-              }
-            },
-            onClose: () => {},
-          });
-          return;
-        }
-
         confirm.show({
           title: dialogTitle,
           message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,

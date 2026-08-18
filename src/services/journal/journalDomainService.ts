@@ -13,7 +13,6 @@ import {
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
@@ -65,17 +64,6 @@ export class JournalService {
   }
 
   async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const existing = await journalQueryRepository.find(workplaceId, journalId);
-    if (existing?.plannedPaymentId) {
-      const plannedPayment = await plannedPaymentReadService.find(
-        workplaceId,
-        existing.plannedPaymentId,
-      );
-      if (!plannedPayment) {
-        throw new Error('Cannot revert to scheduled because the planned payment was deleted.');
-      }
-    }
-
     const journal = await ledgerWriteService.revertToPlanned(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'revert_to_planned', {
       journal_id: journalId,

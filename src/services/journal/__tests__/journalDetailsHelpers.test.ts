@@ -5,8 +5,6 @@ import {
   resolveJournalDetailsInfo,
   resolveJournalStatusChipVariant,
   resolveJournalAmountPresentation,
-  isOrphanedPendingJournal,
-  orphanedPendingJournalConfirmCopy,
 } from '../journalDetailsHelpers';
 
 describe('journalDetailsHelpers', () => {
@@ -90,44 +88,5 @@ describe('journalDetailsHelpers', () => {
     });
     expect(info.sender).toBe('BANK');
     expect(info.amount).toBeUndefined();
-  });
-
-  it('detects a planned journal whose planned payment is gone', () => {
-    expect(
-      isOrphanedPendingJournal({
-        status: 'PLANNED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: false,
-      }),
-    ).toBe(true);
-    expect(
-      isOrphanedPendingJournal({
-        status: 'PLANNED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: true,
-      }),
-    ).toBe(false);
-    expect(
-      isOrphanedPendingJournal({
-        status: 'PLANNED',
-        plannedPaymentId: null,
-        plannedPaymentExists: false,
-      }),
-    ).toBe(false);
-    expect(
-      isOrphanedPendingJournal({
-        status: 'POSTED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: false,
-      }),
-    ).toBe(false);
-  });
-
-  it('explains that the planned payment was deleted and offers delete or post', () => {
-    const copy = orphanedPendingJournalConfirmCopy();
-    expect(copy.title).toBe('Planned payment was deleted');
-    expect(copy.message).toMatch(/no longer exists/);
-    expect(copy.confirmText).toBe('Delete journal');
-    expect(copy.cancelText).toBe('Post anyway');
   });
 });

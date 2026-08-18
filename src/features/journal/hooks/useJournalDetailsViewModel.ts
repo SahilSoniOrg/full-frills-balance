@@ -5,11 +5,14 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalLegs } from '@/src/features/journal/hooks/useJournals';
 import { useJournalDetailsSmsInfo } from '@/src/features/journal/hooks/useJournalDetailsSmsInfo';
-import { useJournalDetailsActions } from '@/src/features/journal/hooks/useJournalDetailsActions';
+import { useObservable } from '@/src/hooks/useObservable';
 import {
   buildJournalSplitItems,
   JournalSplitItemViewModel,
 } from '@/src/features/journal/hooks/journalDetailsSplitItems';
+import { useJournalDetailsActions } from '@/src/features/journal/hooks/useJournalDetailsActions';
+import { ORPHANED_PLANNED_JOURNAL_NOTICE } from '@/src/services/planned-payment/projectablePlannedJournals';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import {
   JournalStatusChipVariant,
   resolveJournalDetailsInfo,
@@ -17,11 +20,13 @@ import {
   resolveRevertPlannedActionLabels,
   resolveJournalAmountPresentation,
 } from '@/src/services/journal/journalDetailsHelpers';
-import { JournalId } from '@/src/types/domain';
+import { JournalId, PlannedPaymentId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { of } from 'rxjs';
+
 export interface JournalDetailsViewModel {
   isLoading: boolean;
   isMissing: boolean;
@@ -42,6 +47,7 @@ export interface JournalDetailsViewModel {
   statusLabel: string;
   statusVariant: JournalStatusChipVariant;
   displayTypeLabel?: string;
+  statusNotice?: string;
   formattedDate: string;
   journalIdShort: string;
   onHistoryPress: () => void;
@@ -157,26 +163,34 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     AppNavigation.back();
   }, []);
 
-  const {
-    handleDelete,
-    handleCopy,
-    handlePost,
-    handleRevertToScheduled,
-    handleSkip,
-    promptOrphanIfNeeded,
-  } = useJournalDetailsActions({
-    workplaceId,
-    journalId,
-    amount,
-    currencyCode,
-    status: journalInfo?.status,
-    plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
-    journalDate: journalInfo?.journalDate,
-  });
+  const { data: linkedPlannedPayment, isLoading: isLoadingPP } = useObservable(
+    () =>
+      journalInfo?.plannedPaymentId
+        ? plannedPaymentReadService.observeById(
+            workplaceId,
+            journalInfo.plannedPaymentId as PlannedPaymentId,
+          )
+        : of(null),
+    [workplaceId, journalInfo?.plannedPaymentId],
+    null,
+  );
 
-  useEffect(() => {
-    void promptOrphanIfNeeded();
-  }, [promptOrphanIfNeeded]);
+  const isOrphaned =
+    journalInfo?.status === 'PLANNED' &&
+    !!journalInfo.plannedPaymentId &&
+    linkedPlannedPayment === null &&
+    !isLoadingPP;
+
+  const { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip } =
+    useJournalDetailsActions({
+      workplaceId,
+      journalId,
+      amount,
+      currencyCode,
+      status: journalInfo?.status,
+      plannedPaymentId: journalInfo?.plannedPaymentId ?? undefined,
+      journalDate: journalInfo?.journalDate,
+    });
 
   const splitItems = useMemo(() => {
     return buildJournalSplitItems(transactions, AppNavigation.toAccountDetails);
@@ -211,6 +225,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     onHistoryPress,
     smsInfo,
     onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toTransactionInbox : undefined,
+    statusNotice: isOrphaned ? ORPHANED_PLANNED_JOURNAL_NOTICE : undefined,
     onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
     onRevertToScheduled:
       (journalInfo?.status === 'POSTED' || journalInfo?.status === 'SKIPPED') &&
@@ -219,7 +234,9 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
         : undefined,
     revertButtonLabel: revertLabels?.revertButtonLabel,
     onSkip:
-      journalInfo?.status === 'PLANNED' && !!journalInfo?.plannedPaymentId ? handleSkip : undefined,
+      journalInfo?.status === 'PLANNED' && !!journalInfo?.plannedPaymentId && !isOrphaned
+        ? handleSkip
+        : undefined,
     splitItems,
     isExpense,
     displayIcon: (paramTypeIcon as IconName) || (isExpense ? 'receipt' : 'receiptLong'),
