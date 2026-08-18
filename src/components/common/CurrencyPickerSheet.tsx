@@ -1,6 +1,6 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import type { PlainCurrency as Currency } from '@/src/types/domain';
+import type { PlainCurrency } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { FlatList, Keyboard, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -8,7 +8,7 @@ import { FlatList, Keyboard, Modal, StyleSheet, TouchableOpacity, View } from 'r
 interface CurrencyPickerSheetProps {
   visible: boolean;
   title: string;
-  currencies: Currency[];
+  currencies: PlainCurrency[];
   selectedCode: string;
   searchPlaceholder?: string;
   selectedBackgroundColor?: string;

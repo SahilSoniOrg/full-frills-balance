@@ -1,4 +1,4 @@
-import { useAppRestart } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { analytics } from '@/src/services/analytics-service';
 import {
   decodeContent,

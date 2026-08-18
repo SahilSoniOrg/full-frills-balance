@@ -1,4 +1,4 @@
-import { useAppRestart } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useDataMaintenanceActions';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';

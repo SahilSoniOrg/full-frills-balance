@@ -32,7 +32,7 @@ function BulkRenameAccountsModalContent({
   const handleSave = async () => {
     const finalNames: Record<AccountId, string> = {};
     accounts.forEach(account => {
-      const accountId = account.id as AccountId;
+      const accountId = account.id;
       finalNames[accountId] = namesOverride[accountId] ?? account.name;
     });
     try {
@@ -77,7 +77,7 @@ function BulkRenameAccountsModalContent({
       }
     >
       {accounts.map(account => {
-        const accountId = account.id as AccountId;
+        const accountId = account.id;
         const currentName = namesOverride[accountId] ?? account.name;
 
         return (

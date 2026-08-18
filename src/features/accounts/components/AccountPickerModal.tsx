@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
@@ -8,7 +8,7 @@ export type { CreateAccountIntent };
 
 type AccountPickerModalBaseProps = {
   visible: boolean;
-  accounts: (Account | PlainAccount)[];
+  accounts: (AccountFields | PlainAccount)[];
   title?: string;
   onClose: () => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
@@ -21,7 +21,7 @@ export type AccountPickerModalProps = AccountPickerModalBaseProps & {
 };
 
 export type MultiAccountPickerModalProps = AccountPickerModalBaseProps & {
-  accounts: Account[];
+  accounts: AccountFields[];
   selectedIds: AccountId[];
   onSelect: (accountIds: AccountId[]) => void;
 };

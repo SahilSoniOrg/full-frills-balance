@@ -9,13 +9,13 @@ import {
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { WorkplaceId } from '@/src/types/domain';
 import { MutableRefObject } from 'react';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
-  accounts: Account[];
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;

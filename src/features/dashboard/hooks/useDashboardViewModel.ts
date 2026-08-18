@@ -1,6 +1,7 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
-import { useAppReady, useOnboardingSession } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import {

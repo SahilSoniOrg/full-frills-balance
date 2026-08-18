@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId } from '@/src/types/domain';
 import { ACCOUNT_TYPE_ORDER } from '@/src/utils/accountCategory';
 
@@ -6,9 +6,9 @@ export type AccountReorderFilterMode = 'accounts' | 'categories';
 
 /** Filter + sort live accounts into the reorder screen's read-only base list. */
 export function buildSortedAccounts(
-  accounts: Account[],
+  accounts: AccountFields[],
   filterMode: AccountReorderFilterMode,
-): Account[] {
+): AccountFields[] {
   const filtered = accounts.filter(a => {
     const isCategory = a.accountType === 'INCOME' || a.accountType === 'EXPENSE';
     return filterMode === 'categories' ? isCategory : !isCategory;
@@ -28,13 +28,13 @@ export function buildSortedAccounts(
  * are appended in source order so observe ticks never drop rows.
  */
 export function applyPendingOrder(
-  baseSorted: Account[],
+  baseSorted: AccountFields[],
   pendingOrder: AccountId[] | null,
-): Account[] {
+): AccountFields[] {
   if (!pendingOrder || pendingOrder.length === 0) return baseSorted;
 
-  const byId = new Map(baseSorted.map(a => [a.id as AccountId, a]));
-  const result: Account[] = [];
+  const byId = new Map(baseSorted.map(a => [a.id, a]));
+  const result: AccountFields[] = [];
   const used = new Set<AccountId>();
 
   for (const id of pendingOrder) {
@@ -46,7 +46,7 @@ export function applyPendingOrder(
   }
 
   for (const account of baseSorted) {
-    const id = account.id as AccountId;
+    const id = account.id;
     if (!used.has(id)) {
       result.push(account);
     }
@@ -61,10 +61,10 @@ export function accountIdsMatch(a: AccountId[], b: AccountId[]): boolean {
 }
 
 export function computeReorderMove(
-  accounts: Account[],
+  accounts: AccountFields[],
   index: number,
   direction: 'up' | 'down',
-): { nextAccounts: Account[]; item: Account; newOrderNum: number } | null {
+): { nextAccounts: AccountFields[]; item: AccountFields; newOrderNum: number } | null {
   const newIndex = direction === 'up' ? index - 1 : index + 1;
   if (newIndex < 0 || newIndex >= accounts.length) return null;
 
@@ -79,7 +79,7 @@ export function computeReorderMove(
 
   const itemBefore = nextAccounts[newIndex - 1];
   const itemAfter = nextAccounts[newIndex + 1];
-  const getOrder = (acc?: Account) => acc?.orderNum || 0;
+  const getOrder = (acc?: AccountFields) => acc?.orderNum || 0;
 
   let newOrderNum = 0;
   if (

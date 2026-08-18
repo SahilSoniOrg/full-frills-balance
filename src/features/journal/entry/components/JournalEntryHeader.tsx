@@ -1,23 +1,20 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalEntryHeaderProps {
   title: string;
-  onClose?: () => void;
+  onClose: () => void;
 }
 
 export const JournalEntryHeader = ({ title, onClose }: JournalEntryHeaderProps) => {
   const { theme, fonts } = useTheme();
 
-  const handleClose = onClose || (() => AppNavigation.back());
-
   return (
     <View style={[styles.header, { backgroundColor: theme.background }]}>
       <TouchableOpacity
-        onPress={handleClose}
+        onPress={onClose}
         style={styles.backButton}
         accessibilityLabel={AppConfig.strings.common.cancel}
         accessibilityRole="button"

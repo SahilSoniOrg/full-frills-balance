@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   resolveAccountListPressAction,
   type AccountsListTab,
@@ -15,7 +15,7 @@ import { confirm, showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { Dispatch, SetStateAction, useCallback } from 'react';
 
-type AccountListItem = Account | PlainAccount;
+type AccountListItem = AccountFields | PlainAccount;
 
 interface UseAccountsListActionsInput {
   workplaceId?: WorkplaceId;
@@ -92,8 +92,8 @@ export function useAccountsListActions({
 
   const onNavigateToAccountDetails = useCallback(
     (account: AccountCardViewModel) => {
-      const balance = balancesByAccountId.get(account.id as AccountId);
-      AppNavigation.toAccountDetails(account.id as AccountId, {
+      const balance = balancesByAccountId.get(account.id);
+      AppNavigation.toAccountDetails(account.id, {
         preview: {
           name: account.name,
           balance: balance?.balance ?? account.balance,
@@ -120,8 +120,8 @@ export function useAccountsListActions({
       const isArchiving = !account.isArchived;
       try {
         await applyArchiveChanges({
-          toArchive: isArchiving ? [account.id as AccountId] : [],
-          toUnarchive: isArchiving ? [] : [account.id as AccountId],
+          toArchive: isArchiving ? [account.id] : [],
+          toUnarchive: isArchiving ? [] : [account.id],
         });
       } catch (error) {
         showErrorAlert(error, 'Failed to update account archive status');
@@ -140,7 +140,7 @@ export function useAccountsListActions({
         confirmText: 'Delete',
         onConfirm: async () => {
           try {
-            await deleteAccountCommand(account.id as AccountId, workplaceId);
+            await deleteAccountCommand(account.id, workplaceId);
           } catch (error) {
             showErrorAlert(error, 'Failed to delete account');
           }
@@ -160,7 +160,7 @@ export function useAccountsListActions({
   const onAppearanceUpdate = useCallback(
     async (updates: { icon?: IconName; color?: string }) => {
       if (!workplaceId || activeModal?.type !== 'appearance') return;
-      const accountId = activeModal.account.id as AccountId;
+      const accountId = activeModal.account.id;
       try {
         await updateAccountsCommand(workplaceId, [{ accountId, updates }]);
         closeModal?.();

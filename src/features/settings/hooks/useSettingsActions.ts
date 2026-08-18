@@ -1,4 +1,4 @@
-import { useAppRestart } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { analytics } from '@/src/services/analytics-service';
 import { exportService } from '@/src/services/export-service';
 import { integrityService } from '@/src/services/integrity-service';

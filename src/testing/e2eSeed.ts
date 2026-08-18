@@ -1,13 +1,16 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import TransactionInboxRecord, {
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+  AccountType,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { AccountType, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { onboardingService } from '@/src/features/onboarding/services/OnboardingService';
@@ -130,7 +133,7 @@ async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
       record.referenceNumber = '121554846690';
       record.direction = TransactionDirection.DEBIT;
       record.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
-      record.duplicateJournalId = journal.id as JournalId;
+      record.duplicateJournalId = journal.id;
       record.duplicateConfidence = AppConfig.input.sms.duplicateDetection.referenceMatchScore;
       record.metadataJson = JSON.stringify({
         duplicateReasons: ['Matching reference number (121554846690)'],

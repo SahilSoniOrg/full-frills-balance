@@ -2,7 +2,6 @@ import {
   AccountSubtype,
   AccountType,
   TransactionType,
-  AccountId,
   JournalDisplayType,
   WorkplaceId,
 } from '@/src/types/domain';
@@ -117,18 +116,18 @@ describe('AccountRepository', () => {
         accountSubtype: AccountSubtype.CASH,
         currencyCode: 'USD',
         workplaceId,
-        parentAccountId: account.id as AccountId,
+        parentAccountId: account.id,
       });
 
       const applied = await applyAccountArchiveChanges(workplaceId, {
-        toArchive: [account.id as AccountId, child.id as AccountId],
+        toArchive: [account.id, child.id],
         toUnarchive: [],
       });
       expect(applied).toBe(true);
 
-      const updated = await accountRepository.find(workplaceId, account.id as AccountId);
+      const updated = await accountRepository.find(workplaceId, account.id);
       expect(updated?.archivedAt).toBeTruthy();
-      const refreshedChild = await accountRepository.find(workplaceId, child.id as AccountId);
+      const refreshedChild = await accountRepository.find(workplaceId, child.id);
       expect(refreshedChild?.archivedAt).toBeTruthy();
     });
 
@@ -145,7 +144,7 @@ describe('AccountRepository', () => {
       expect(updated.archivedAt?.toISOString()).toBe(now.toISOString());
 
       await accountRepository.update(updated, { archivedAt: null }, workplaceId);
-      const refreshed = await accountRepository.find(workplaceId, account.id as AccountId);
+      const refreshed = await accountRepository.find(workplaceId, account.id);
       expect(refreshed?.archivedAt == null).toBe(true);
     });
   });
@@ -188,12 +187,12 @@ describe('AccountRepository', () => {
           displayType: JournalDisplayType.INCOME,
           transactions: [
             {
-              accountId: asset.id as AccountId,
+              accountId: asset.id,
               amount: 1000,
               transactionType: TransactionType.DEBIT,
             },
             {
-              accountId: equity.id as AccountId,
+              accountId: equity.id,
               amount: 1000,
               transactionType: TransactionType.CREDIT,
             },
@@ -216,12 +215,12 @@ describe('AccountRepository', () => {
           displayType: JournalDisplayType.EXPENSE,
           transactions: [
             {
-              accountId: asset.id as AccountId,
+              accountId: asset.id,
               amount: 300,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: equity.id as AccountId,
+              accountId: equity.id,
               amount: 300,
               transactionType: TransactionType.DEBIT,
             },
@@ -265,12 +264,12 @@ describe('AccountRepository', () => {
           displayType: JournalDisplayType.INCOME,
           transactions: [
             {
-              accountId: asset.id as AccountId,
+              accountId: asset.id,
               amount: 500,
               transactionType: TransactionType.DEBIT,
             },
             {
-              accountId: equity.id as AccountId,
+              accountId: equity.id,
               amount: 500,
               transactionType: TransactionType.CREDIT,
             },
@@ -292,12 +291,12 @@ describe('AccountRepository', () => {
           displayType: JournalDisplayType.INCOME,
           transactions: [
             {
-              accountId: asset.id as AccountId,
+              accountId: asset.id,
               amount: 200,
               transactionType: TransactionType.DEBIT,
             },
             {
-              accountId: equity.id as AccountId,
+              accountId: equity.id,
               amount: 200,
               transactionType: TransactionType.CREDIT,
             },
@@ -348,12 +347,12 @@ describe('AccountRepository', () => {
           displayType: JournalDisplayType.INCOME,
           transactions: [
             {
-              accountId: asset.id as AccountId,
+              accountId: asset.id,
               amount: 100,
               transactionType: TransactionType.DEBIT,
             },
             {
-              accountId: equity.id as AccountId,
+              accountId: equity.id,
               amount: 100,
               transactionType: TransactionType.CREDIT,
             },
@@ -366,7 +365,7 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      await expect(deleteAccount(asset, workplaceId)).rejects.toThrow(
+      await expect(deleteAccount(asset.id, workplaceId)).rejects.toThrow(
         'cannot be deleted while referenced by 1 transaction(s)',
       );
 
@@ -382,7 +381,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      await deleteAccount(account, workplaceId);
+      await deleteAccount(account.id, workplaceId);
 
       const found = await accountRepository.find(workplaceId, account.id);
       expect(found).toBeNull();

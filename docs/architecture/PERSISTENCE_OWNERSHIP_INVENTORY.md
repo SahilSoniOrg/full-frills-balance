@@ -128,7 +128,7 @@ Existing evidence: `src/data/repositories/__tests__/TransactionRepository.test.t
 | Path                     | Initiator                          | Tables                                                                                                                                                           | Current transaction owner                                                                                                                       | Side effects                                                                         | Rollback gap                                                                                                                                                                                                                        | Recommended owner                                                                                                    |
 | ------------------------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Stage full import        | Import feature/plugin              | 12 workplace-scoped tables: accounts, journals, transactions, audit logs, budgets/scopes, account/journal metadata, planned payments, SMS rules/inbox, snapshots | `ImportRepository.batchInsert` at `src/data/repositories/ImportRepository.ts:110-430`                                                           | Calculates imported balances, writes `_raw` IDs/status, chunks batches at `:408-425` | Later chunk failure leaves a partial staging workplace; target is protected only if best-effort discard succeeds at `src/services/import/ImportService.ts:127-131`                                                                  | `ImportStagingRepository`                                                                                            |
-| Commit staged import     | Import service                     | every workplace-scoped table                                                                                                                                     | `DatabaseRepository.swapStagedWorkplaceInto` at `src/data/repositories/DatabaseRepository.ts`; caller `src/services/import/importStaging.ts`    | Raw path manually repairs Watermelon cache                                           | Raw DELETE/UPDATE steps run inside a SQL `SAVEPOINT import_swap` (released on success, rolled back on failure) plus the Watermelon writer. ORM fallback remains one `batch`. Native adapter still not integration-tested end-to-end | Keep `DatabaseRepository.swapStagedWorkplaceInto`; next gap is native-adapter fault injection, not a new coordinator |
+| Commit staged import     | Import service                     | every workplace-scoped table                                                                                                                                     | `DatabaseRepository.swapStagedWorkplaceInto` at `src/data/repositories/DatabaseRepository.ts`; caller `src/services/import/importStaging.ts`    | Raw path manually repairs Watermelon cache                                           | Raw DELETE/UPDATE steps run inside a SQL `SAVEPOINT import_swap` (released on success, rolled back on failure) plus the Watermelon writer. ORM fallback remains one `batch`. Native adapter still not integration-tested end-to-end | Keep `DatabaseRepository.swapStagedWorkplaceInto`; native-adapter fault injection is deferred, not a new coordinator |
 | Post-import finalization | Import service                     | workplace row, exchange-rate cache, derived balances/snapshots, preferences                                                                                      | `ImportService` sequence at `src/services/import/ImportService.ts:134-223`                                                                      | Rebuild failure is warning-only at `:202-205`; preferences update last               | Target ledger has committed; later failure leaves a partially finalized but potentially usable import with no durable resume marker                                                                                                 | `PostImportFinalizationCoordinator` with persisted phase/retry state                                                 |
 | Incremental apply        | No production caller               | accounts, journals, transactions, audit logs                                                                                                                     | `ImportRepository.applyChanges` at `ImportRepository.ts:436-610`                                                                                | One batch                                                                            | Dead public mutation surface can drift from full import and bypass orchestration                                                                                                                                                    | Delete until needed, or expose only through import coordinator                                                       |
 | Create/delete workplace  | Onboarding/settings/import staging | `workplaces`, system accounts, optional initial ledger; all workplace tables on delete                                                                           | `WorkplaceRepository`, `WorkplaceService`, and integrity maintenance split ownership at `src/services/WorkplaceService.ts:13-78` and `:156-173` | Analytics/preferences follow persistence                                             | Creation can leave an empty/partially bootstrapped workplace. Deletion purges data then destroys workplace in a second write                                                                                                        | `WorkplaceLifecycleCoordinator`                                                                                      |
@@ -136,7 +136,7 @@ Existing evidence: `src/data/repositories/__tests__/TransactionRepository.test.t
 
 The staging architecture is sound in intent: parse, backup, stage, verify, swap (`ImportService.ts:73-126`). The target ledger is not exposed to chunk failures. The unproved raw swap—not chunking itself—is the target-integrity risk.
 
-Existing evidence: `src/services/import/__tests__/ImportService.workflow.test.ts:127-326`, `src/data/repositories/__tests__/ImportRepository.test.ts:15-121`, and `src/data/repositories/__tests__/DatabaseRepository.test.ts:31-158`. Current tests mock orchestration or cover happy-path fallback/cache behavior; none fault-inject every raw swap step on the native adapter.
+Existing evidence: `src/services/import/__tests__/ImportService.workflow.test.ts:127-326`, `src/data/repositories/__tests__/ImportRepository.test.ts:15-121`, and `src/data/repositories/__tests__/DatabaseRepository.test.ts:31-158`. Mocked SAVEPOINT rollback is covered. Native-adapter fault injection (every DELETE/UPDATE step, cache coherence, second-chunk failure) is deferred.
 
 ## Approved persistence seams
 
@@ -180,7 +180,7 @@ Landed without a new coordinator class: `TransactionInboxRepository` + `LedgerWr
 - [x] Recheck workplace/message idempotency at the write boundary (existing scan recheck, now inside `persistScanBatch`).
 - [x] Commit inbox with auto-post journal/transactions/metadata/audit in one writer; rebuild enqueue after batch.
 - [x] Make inbox mutation preparation repository-owned.
-- [ ] Durable rebuild/processed-id outbox.
+- Rebuild/processed-id delivery stays MMKV after commit; a durable outbox is deferred (startup integrity is crash recovery).
 
 ### Slice 2 — P0 account merge
 
@@ -188,23 +188,23 @@ Landed without a new coordinator class: preload + `persistBatch` of rewrite ops 
 
 - [x] Preload all merge records before entering the writer.
 - [x] Batch audit with the cross-domain rewrite.
-- [ ] Persist or otherwise make rebuild delivery recoverable.
 - [x] Add workplace predicates to rebuild transaction/snapshot/account follow-up reads.
+- Rebuild enqueue stays MMKV; durable rebuild delivery is deferred.
 
 ### Slice 3 — P0 planned-payment occurrence
 
 Landed without a new coordinator class: schedule advance is extra ops on the journal/post/skip writer.
 
 - [x] Atomically create/post/skip the journal and advance the schedule.
-- [ ] Make occurrence identity explicit and concurrent due-processing idempotent.
-- [ ] Durable rebuild obligations.
+- Concurrent due-horizon generate still has a read-before-write window (`countOnDay`); explicit occurrence identity is deferred until a real double-post shows up.
+- Rebuild enqueue stays MMKV; durable rebuild delivery is deferred.
 
 ### Slice 4 — P1 account command audit batching
 
 Landed on `AccountRepository` extra ops / `persistBatch`.
 
 - [x] Create-with-opening-balance, update/order/reconcile, delete/recover, archive, and bulk update batch their audit rows.
-- [ ] Durable rebuild/outbox after type-change.
+- Rebuild enqueue after type-change stays MMKV; durable outbox is deferred.
 - Run analytics/cache invalidation only after commit.
 
 Tests: injected audit and ledger failures for every command; cache invalidation ordering; type-change rebuild delivery; recovery parity.
@@ -225,12 +225,12 @@ Tests: batch failure for create/update/delete/post/revert/reversal; audit presen
 
 Owners: `DatabaseRepository.swapStagedWorkplaceInto` (no new coordinator).
 
-- Type the raw adapter capability.
+- Type the raw adapter capability (`RawSqlAdapter`).
 - [x] Wrap raw DELETE/UPDATE swap in a SQL `SAVEPOINT` with rollback on failure; ORM fallback remains one batch.
-- Persist import phase/finalization state so restart can resume.
+- Import phase/finalization resume across process death is deferred; discard stays the recovery path.
 - Keep chunked inserts isolated to staging; make discard reliable and observable.
 
-Tests: fault every raw DELETE/UPDATE step; raw/fallback parity across all workplace tables; cache coherence on failure; second-chunk failure; discard failure; restart after swap before metadata/preferences/rebuild. Mocked savepoint rollback is covered in `DatabaseRepository.test.ts`.
+Tests: mocked savepoint rollback is covered in `DatabaseRepository.test.ts`. Native-adapter fault injection (every DELETE/UPDATE step, cache coherence, second-chunk failure) is deferred.
 
 ### Slice 7 — P2 projections, repair, and maintenance
 
@@ -257,7 +257,7 @@ Tests: interrupted repair/retry; audit failure; reset post-cleanup failure; raw 
 - Every application mutation has exactly one named repository or transaction coordinator owner.
 - No service or command module calls `database.write`, `database.batch`, model `update`, or model `prepare*`.
 - Audit rows that define the business mutation are in the same durable batch.
-- Mandatory rebuild/repair work is recoverable after process death; callbacks and in-memory queue calls are not treated as durable delivery.
-- Raw SQL mutation is available only through a typed infrastructure capability.
-- Import and reset semantics are verified against the native adapter, including failure injection.
+- Rebuild/repair crash recovery is startup integrity plus the MMKV rebuild queue; a SQL outbox is deferred.
+- Raw SQL mutation is available only through a typed infrastructure capability (`RawSqlAdapter`).
+- Import swap rollback is covered by a SQL `SAVEPOINT` (mocked in unit tests); native-adapter failure injection is deferred.
 - Architecture ratchets decrease from the current baseline and reject new bypasses.

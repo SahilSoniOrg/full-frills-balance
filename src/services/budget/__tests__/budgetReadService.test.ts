@@ -36,7 +36,7 @@ describe('budgetReadService', () => {
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      parentAccountId: parent.id as AccountId,
+      parentAccountId: parent.id,
       workplaceId: 'wp-1' as WorkplaceId,
     });
     expenseChildId = child.id;

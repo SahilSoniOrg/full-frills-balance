@@ -18,7 +18,7 @@ export interface BulkRenameJournalsModalProps {
 function buildInitialNames(journals: EnrichedJournal[]): Record<JournalId, string> {
   const initial: Record<JournalId, string> = {};
   for (const journal of journals) {
-    initial[journal.id as JournalId] =
+    initial[journal.id] =
       journal.description || ('semanticLabel' in journal ? journal.semanticLabel : '') || '';
   }
   return initial;
@@ -71,7 +71,7 @@ function BulkRenameJournalsModalContent({
       }
     >
       {journals.map(journal => {
-        const id = journal.id as JournalId;
+        const id = journal.id;
         const dateStr = formatDate(journal.journalDate, { includeTime: false });
         const displayType = (journal.displayType || 'expense') as JournalDisplayType;
 

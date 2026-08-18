@@ -345,7 +345,7 @@ export class BalanceService {
     workplaceId: WorkplaceId,
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<AccountBalance> {
-    const account = await accountRepository.find(workplaceId, accountId as AccountId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const latestTx = await transactionRepository.findLatestForAccount(

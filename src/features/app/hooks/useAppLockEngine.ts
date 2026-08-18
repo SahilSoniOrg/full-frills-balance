@@ -1,4 +1,4 @@
-import { useAppLock } from '@/src/contexts/UIContext';
+import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppConfig } from '@/src/constants/app-config';
 import * as LocalAuthentication from '@/src/utils/auth';

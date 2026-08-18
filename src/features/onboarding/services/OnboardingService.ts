@@ -63,7 +63,7 @@ export class OnboardingService {
       logger.info(`[Onboarding] Created new target workplace: ${targetWorkplace.id}`);
     }
 
-    const targetWorkplaceId = targetWorkplace.id as WorkplaceId;
+    const targetWorkplaceId = targetWorkplace.id;
 
     // IMPORTANT: Set the newly created/updated workplace as the active one so the rest of the app points to it.
     preferences.setActiveWorkplaceId(targetWorkplaceId);

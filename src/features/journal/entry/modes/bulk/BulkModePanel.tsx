@@ -9,14 +9,14 @@ import {
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { WorkplaceId } from '@/src/types/domain';
 import { MutableRefObject, useCallback, useEffect, useMemo } from 'react';
 
 export type BulkModePanelProps = {
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   onSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
   bulkActionsRef?: MutableRefObject<{ clearRows: () => void } | null>;
 };

@@ -1,11 +1,11 @@
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, AccountType } from '@/src/types/domain';
 import { getAccountSections, isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface UseAccountSelectionOptions {
-  accounts: Account[];
+  accounts: AccountFields[];
   pinnedAccountIds?: ReadonlySet<AccountId>;
 }
 

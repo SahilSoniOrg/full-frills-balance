@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
@@ -20,8 +20,8 @@ export interface SubAccountViewModel {
 
 export interface UseAccountHierarchyTreeOptions {
   accountId: AccountId;
-  account: Account | PlainAccount | null;
-  accounts: (Account | PlainAccount)[];
+  account: AccountFields | PlainAccount | null;
+  accounts: (AccountFields | PlainAccount)[];
   rawSubBalances: AccountBalance[];
   workplaceCurrency: string;
   dashboardLoading: boolean;
@@ -55,8 +55,8 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
     const buildSubTree = (
       parentId: string,
       level: number,
-    ): { account: Account | PlainAccount; level: number }[] => {
-      const result: { account: Account | PlainAccount; level: number }[] = [];
+    ): { account: AccountFields | PlainAccount; level: number }[] => {
+      const result: { account: AccountFields | PlainAccount; level: number }[] = [];
       const children = accounts
         .filter(a => a.parentAccountId === parentId && a.deletedAt === null)
         .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));

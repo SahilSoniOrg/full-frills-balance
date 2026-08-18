@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountId, PlainAccount } from '@/src/types/domain';
@@ -12,13 +12,13 @@ export type DeleteMergeEntityLabel = 'Account' | 'Category';
 
 export interface UseAccountDeleteMergeActionsOptions {
   accountId?: AccountId;
-  account: Account | null;
-  accounts: (Account | PlainAccount)[];
+  account: AccountFields | null;
+  accounts: (AccountFields | PlainAccount)[];
   transactionCount: number;
   isDeleted: boolean;
   enabled: boolean;
   entityLabel: DeleteMergeEntityLabel;
-  deleteAccount: (account: Account) => Promise<void>;
+  deleteAccount: (accountId: AccountId) => Promise<void>;
   recoverAction?: (id: AccountId) => Promise<void>;
   mergeAccounts: (targetId: AccountId, sourceIds: AccountId[]) => Promise<void>;
 }
@@ -64,7 +64,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
       requiredConfirmationValue: account.name,
       onConfirm: async () => {
         try {
-          await deleteAccount(account);
+          await deleteAccount(accountId);
           toast.success(`${entityLabel} has been deleted.`, {
             action: recoverAction
               ? {

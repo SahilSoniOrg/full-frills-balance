@@ -36,6 +36,7 @@ function AccountDetailsScreen() {
         phase,
         readyTitle: accountDetailsScreenTitle(titleVm),
         loadingTitle: 'Account Details',
+        onBack: vm.onBack,
         headerActions: (
           <MoneyDetailHeaderActions
             privacyVariant="surface"
@@ -68,6 +69,7 @@ function AccountDetailsScreen() {
     isParent,
     isSelectionModeActive,
     onAddPress,
+    vm.onBack,
   ]);
 
   return <AccountDetailsView {...vm} chrome={chrome} />;

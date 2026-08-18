@@ -1,7 +1,4 @@
-import type {
-  AccountFields as Account,
-  PlainAccountMetadata as AccountMetadata,
-} from '@/src/types/domain';
+import type { AccountFields, PlainAccountMetadata } from '@/src/types/domain';
 import {
   AccountFormDraftAction,
   AccountFormDraftState,
@@ -29,9 +26,9 @@ export type AccountFormDraftDispatch = Dispatch<AccountFormDraftAction>;
  */
 export function useAccountFormDraft(args: {
   accountId: AccountId | undefined;
-  existingAccount: Account | null | undefined;
+  existingAccount: AccountFields | null | undefined;
   balanceData: { balance: number } | null | undefined;
-  existingMetadata: AccountMetadata | undefined;
+  existingMetadata: PlainAccountMetadata | undefined;
   routeContext: AccountFormRouteContext;
   workplaceCurrency: string;
   createFormDefaults: AccountFormDefaults;

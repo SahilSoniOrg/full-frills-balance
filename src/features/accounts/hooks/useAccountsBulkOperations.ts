@@ -1,6 +1,6 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { IconName } from '@/src/components/core';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   getBulkHierarchyCandidates,
   type HierarchyCandidateAccount,
@@ -21,7 +21,7 @@ import { getAccountIcon } from '@/src/utils/accountIcon';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 
-type AccountListItem = Account | PlainAccount;
+type AccountListItem = AccountFields | PlainAccount;
 
 interface UseAccountsBulkOperationsInput {
   workplaceId?: WorkplaceId;
@@ -49,7 +49,7 @@ function buildInverseBulkUpdates(
         if (key === 'color') undoUpdates.color = original.color ?? '';
         if (key === 'icon') undoUpdates.icon = original.icon as IconName;
         if (key === 'parentAccountId') {
-          undoUpdates.parentAccountId = (original.parentAccountId as AccountId) ?? null;
+          undoUpdates.parentAccountId = original.parentAccountId ?? null;
         }
       }
     }
@@ -68,16 +68,14 @@ export function useAccountsBulkOperations({
 }: UseAccountsBulkOperationsInput) {
   const { theme, onContrast } = useTheme();
   const accountsById = useMemo(
-    () => new Map<AccountId, AccountListItem>(accounts.map(a => [a.id as AccountId, a])),
+    () => new Map<AccountId, AccountListItem>(accounts.map(a => [a.id, a])),
     [accounts],
   );
 
   const handleBulkArchive = useCallback(async () => {
     if (!workplaceId || selection.selectedIds.size === 0) return;
     const selectedArray = Array.from(selection.selectedIds);
-    const selectedAccountModels = accounts.filter(a =>
-      selection.selectedIds.has(a.id as AccountId),
-    );
+    const selectedAccountModels = accounts.filter(a => selection.selectedIds.has(a.id));
     const anyUnarchived = selectedAccountModels.some(a => !a.archivedAt);
     const toArchive = anyUnarchived ? selectedArray : [];
     const toUnarchive = anyUnarchived ? [] : selectedArray;
@@ -267,11 +265,11 @@ export function useAccountsBulkOperations({
     if (selection.selectedIds.size === 0) return [];
     const result: AccountCardViewModel[] = [];
     for (const account of accounts) {
-      if (!selection.selectedIds.has(account.id as AccountId)) continue;
+      if (!selection.selectedIds.has(account.id)) continue;
       const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(account, theme);
       const textColor = onContrast(accountColor);
       result.push({
-        id: account.id as AccountId,
+        id: account.id,
         name: account.name,
         icon: getAccountIcon(account),
         accountType: account.accountType,

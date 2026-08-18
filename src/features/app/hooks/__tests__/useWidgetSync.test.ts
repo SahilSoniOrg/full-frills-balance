@@ -1,4 +1,5 @@
-import { useAppLock, useAppReady } from '@/src/contexts/UIContext';
+import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 import { loadWidgetModule } from '@/src/features/app/hooks/loadWidgetModule';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
@@ -9,8 +10,10 @@ import { WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 import expoWidgetsModule from '@/modules/expo-widgets';
 
-jest.mock('@/src/contexts/UIContext', () => ({
+jest.mock('@/src/contexts/app-shell/AppLockProvider', () => ({
   useAppLock: jest.fn(),
+}));
+jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({
   useAppReady: jest.fn(),
 }));
 jest.mock('@/src/hooks/usePrivacyPrefs', () => ({ usePrivacyPrefs: jest.fn() }));

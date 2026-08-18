@@ -11,9 +11,6 @@ import {
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 
-export type { TransactionChannel };
-export { InboxParseStatus, InboxProcessingStatus, TransactionDirection };
-
 export default class TransactionInboxRecord extends BaseScopedModel {
   static table = 'transaction_inbox_records';
   static associations = {

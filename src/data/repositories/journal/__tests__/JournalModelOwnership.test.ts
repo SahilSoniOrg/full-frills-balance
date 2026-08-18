@@ -1,11 +1,7 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import Journal from '@/src/data/models/Journal';
 import {
+  JournalStatus,
   AccountId,
   AccountType,
   JournalDisplayType,
@@ -13,6 +9,11 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
+import Transaction from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 
 const WORKPLACE_ONE = 'wp-journal-owner-one' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-journal-owner-two' as WorkplaceId;

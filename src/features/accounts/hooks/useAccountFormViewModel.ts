@@ -5,9 +5,9 @@ import {
   AccountId,
   AccountSubtype,
   AccountType,
-  type AccountFields as Account,
-  type PlainAccountMetadata as AccountMetadata,
-  type PlainCurrency as Currency,
+  type AccountFields,
+  type PlainAccountMetadata,
+  type PlainCurrency,
 } from '@/src/types/domain';
 import {
   filterPayFromAccountOptions,
@@ -59,7 +59,7 @@ export interface AccountFormViewModel {
   availableSubtypes: readonly AccountSubtype[];
   allowedAccountTypes?: readonly AccountType[];
   selectedCurrency: string;
-  currencies: Currency[];
+  currencies: PlainCurrency[];
   setSelectedCurrency: (value: string) => void;
   selectedIcon: IconName;
   setSelectedIcon: (value: IconName) => void;
@@ -80,8 +80,8 @@ export interface AccountFormViewModel {
   parentAccountId: AccountId;
   parentAccountName: string;
   setParentAccountId: (value: AccountId) => void;
-  potentialParents: Account[];
-  payFromAccountOptions: Account[];
+  potentialParents: AccountFields[];
+  payFromAccountOptions: AccountFields[];
   isParentPickerVisible: boolean;
   setIsParentPickerVisible: (visible: boolean) => void;
   isParent: boolean;
@@ -90,7 +90,7 @@ export interface AccountFormViewModel {
   isLoading: boolean;
   balanceClassify: {
     visible: boolean;
-    accounts: Account[];
+    accounts: AccountFields[];
     editedAccountId: AccountId;
     editedAccountName: string;
     editedAccountType: AccountType;
@@ -104,7 +104,7 @@ export interface AccountFormViewModel {
 }
 
 /**
- * Account create/edit form composer.
+ * AccountFields create/edit form composer.
  * Draft is id-keyed (`useAccountFormDraft`); field concerns live in
  * core / metadata / pickers / balanceClassify hooks.
  */
@@ -144,7 +144,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const { data: metadataRecords, isLoading: isMetadataLoading } = useObservable(
     () => (accountId ? accountQueries.observeMetadata(workplaceId, accountId) : of([])),
     [accountId, workplaceId],
-    [] as AccountMetadata[],
+    [] as PlainAccountMetadata[],
   );
   const existingMetadata = metadataRecords[0];
 

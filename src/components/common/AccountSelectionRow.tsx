@@ -1,6 +1,6 @@
 import { ListRow } from '@/src/components/core';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
@@ -9,7 +9,7 @@ import { StyleProp, ViewStyle } from 'react-native';
 
 type AccountSelectionRowProps = {
   title: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   selectedAccountId?: string;
   selectedAccountIds?: string[];
   placeholder: string;
@@ -31,14 +31,14 @@ export function AccountSelectionRow({
   const { theme } = useTheme();
 
   const accountMap = useMemo(() => {
-    const map = new Map<string, Account>();
+    const map = new Map<string, AccountFields>();
     accounts.forEach(acc => map.set(acc.id, acc));
     return map;
   }, [accounts]);
 
   const subtitle = useMemo(() => {
     // Resolve selected accounts — either from multi or single selection
-    const resolvedAccounts: Account[] = [];
+    const resolvedAccounts: AccountFields[] = [];
 
     if (selectedAccountIds && selectedAccountIds.length > 0) {
       selectedAccountIds.forEach(id => {

@@ -7,7 +7,6 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { NotificationSettingsViewModel } from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useState } from 'react';
 import { Platform } from 'react-native';
 
@@ -65,7 +64,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
               leftIcon="messageSquare"
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
-              onPress={AppNavigation.toTransactionInbox}
+              onPress={vm.onOpenInbox}
               testID="settings-sms-inbox"
             />
             {vm.isSmsImportEnabled && (
@@ -74,7 +73,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
                   leftIcon="terminal"
                   title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
                   description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
-                  onPress={AppNavigation.toSmsRules}
+                  onPress={vm.onOpenSmsRules}
                 />
               </>
             )}
@@ -132,7 +131,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
             leftIcon="zap"
             title="AI Dev Lab"
             description="Chat and benchmark litert-lm on-device"
-            onPress={AppNavigation.toAiExample}
+            onPress={vm.onOpenAiLab}
           />
         </SettingsMenu>
 

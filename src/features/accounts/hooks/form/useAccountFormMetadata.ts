@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { AccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
 import { AccountId } from '@/src/types/domain';
@@ -39,7 +39,7 @@ export function useAccountFormMetadata(args: {
   metadataValues: AccountMetadataValues;
   isPayFromPickerVisible: boolean;
   setIsPayFromPickerVisible: (visible: boolean) => void;
-  accounts: Account[];
+  accounts: AccountFields[];
   localFormError: string | null;
 }): AccountMetadataFormModel {
   const {

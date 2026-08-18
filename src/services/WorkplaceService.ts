@@ -27,7 +27,7 @@ export class WorkplaceService {
       defaultCurrencyCode: options.currencyCode,
     });
 
-    await this.bootstrapWorkplace(workplace.id as WorkplaceId, options);
+    await this.bootstrapWorkplace(workplace.id, options);
     analytics.logWorkplaceCreated(name, icon);
     return workplace;
   }
@@ -100,7 +100,7 @@ export class WorkplaceService {
           const workplaces = await this.getAllWorkplaces();
           if (workplaces.length > 0) {
             result = workplaces[0];
-            preferences.setActiveWorkplaceId(result.id as WorkplaceId);
+            preferences.setActiveWorkplaceId(result.id);
           }
         }
 
@@ -110,7 +110,7 @@ export class WorkplaceService {
             id: forceId,
             currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
           });
-          preferences.setActiveWorkplaceId(result.id as WorkplaceId);
+          preferences.setActiveWorkplaceId(result.id);
         }
 
         // 4. Migration: Ensure legacy currency is applied to ALL workplaces if found
@@ -160,14 +160,14 @@ export class WorkplaceService {
     }
 
     const { integrityService } = await import('@/src/services/integrity-service');
-    await integrityService.resetWorkplace(id as WorkplaceId);
+    await integrityService.resetWorkplace(id);
     analytics.logWorkplaceDeleted();
 
     // If we just deleted the active one, switch to another
     if (preferences.activeWorkplaceId === id) {
       const remaining = await this.getAllWorkplaces();
       if (remaining.length > 0) {
-        preferences.setActiveWorkplaceId(remaining[0].id as WorkplaceId);
+        preferences.setActiveWorkplaceId(remaining[0].id);
       }
     }
   }

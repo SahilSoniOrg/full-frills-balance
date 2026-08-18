@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   SplitRowState,
   SplitTotals,
@@ -14,9 +14,9 @@ export interface SplitJournalState {
   totals: SplitTotals;
   isValid: boolean;
   validationError: SplitValidationError | null;
-  transactionAccounts: Account[];
-  expenseAccounts: Account[];
-  sourceAccount: Account | undefined;
+  transactionAccounts: AccountFields[];
+  expenseAccounts: AccountFields[];
+  sourceAccount: AccountFields | undefined;
   displayCurrency: string;
   isSubmitting: boolean;
   isValidTotal: boolean;

@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccount } from '@/src/features/accounts';
 import { useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
 import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
@@ -43,8 +43,8 @@ export interface PlannedPaymentDetailsViewModel {
   nextOccurrenceText?: string;
   isAutoPost?: boolean;
 
-  fromAccount?: Account | null;
-  toAccount?: Account | null;
+  fromAccount?: AccountFields | null;
+  toAccount?: AccountFields | null;
   fromAccountColorKey?: string;
   toAccountColorKey?: string;
 
@@ -60,6 +60,7 @@ export interface PlannedPaymentDetailsViewModel {
   onPost?: () => void;
   onSkip?: () => void;
   onToggleStatus?: () => void;
+  onOpenJournal: (journalId: JournalId) => void;
 
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
@@ -116,13 +117,13 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
   const selectAll = useCallback(() => {
     if (!history) return;
-    selectionControl.selectAll(history.map(j => j.id as JournalId));
+    selectionControl.selectAll(history.map(j => j.id));
   }, [history, selectionControl]);
 
   const onShareSelected = useCallback(async () => {
     if (selectedIds.size === 0 || !history) return;
     try {
-      const selectedJournals = history.filter(j => selectedIds.has(j.id as JournalId));
+      const selectedJournals = history.filter(j => selectedIds.has(j.id));
       const provider = new JournalShareProvider(
         selectedJournals.map(j => ({
           id: j.id,
@@ -152,6 +153,10 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     onShareSelected,
   });
 
+  const onOpenJournal = useCallback((journalId: JournalId) => {
+    AppNavigation.toJournalDetails(journalId);
+  }, []);
+
   const selectionProps = useMemo(
     () => ({
       selectedIds,
@@ -164,6 +169,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onShareSelected,
       actions: bulkOperations.actions,
       modals: bulkOperations.modals,
+      onOpenJournal,
     }),
     [
       selectedIds,
@@ -176,6 +182,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onShareSelected,
       bulkOperations.actions,
       bulkOperations.modals,
+      onOpenJournal,
     ],
   );
 
@@ -280,7 +287,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       nextOccurrenceText: new Date(item.nextOccurrence).toLocaleDateString(),
       isAutoPost: item.isAutoPost,
 
-      // Account Flow
+      // Account flow
       fromAccount,
       toAccount,
       fromAccountColorKey: fromAccount

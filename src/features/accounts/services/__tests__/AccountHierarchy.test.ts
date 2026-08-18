@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
@@ -78,12 +78,12 @@ describe('Account Hierarchy Integration', () => {
         currencyCode: 'USD',
         transactions: [
           {
-            accountId: child.id as AccountId,
+            accountId: child.id,
             amount: 50,
             transactionType: TransactionType.DEBIT,
           },
           {
-            accountId: other.id as AccountId,
+            accountId: other.id,
             amount: 50,
             transactionType: TransactionType.CREDIT,
           },
@@ -136,12 +136,12 @@ describe('Account Hierarchy Integration', () => {
         currencyCode: 'USD',
         transactions: [
           {
-            accountId: c.id as AccountId,
+            accountId: c.id,
             amount: 10,
             transactionType: TransactionType.DEBIT,
           },
           {
-            accountId: other.id as AccountId,
+            accountId: other.id,
             amount: 10,
             transactionType: TransactionType.CREDIT,
           },
@@ -250,11 +250,11 @@ describe('Account Hierarchy Integration', () => {
         currencyCode: 'USD',
         transactions: [
           {
-            accountId: nonEmptyAccount.id as AccountId,
+            accountId: nonEmptyAccount.id,
             amount: 10,
             transactionType: TransactionType.DEBIT,
           },
-          { accountId: other.id as AccountId, amount: 10, transactionType: TransactionType.CREDIT },
+          { accountId: other.id, amount: 10, transactionType: TransactionType.CREDIT },
         ],
       },
       workplaceId,

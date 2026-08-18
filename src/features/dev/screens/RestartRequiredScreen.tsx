@@ -1,6 +1,6 @@
 import { AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
-import { useAppRestart } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import { logger } from '@/src/utils/logger';

@@ -100,7 +100,7 @@ export class IntegrityService {
     workplaceId: WorkplaceId,
     cutoffDate?: number,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId as AccountId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const effectiveCutoff = cutoffDate ?? Date.now();
@@ -140,7 +140,7 @@ export class IntegrityService {
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
     const start = Date.now();
-    const account = await accountRepository.find(workplaceId, accountId as AccountId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -220,7 +220,7 @@ export class IntegrityService {
     cutoffDate: number,
     limitTransactionId?: TransactionId,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId as AccountId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)

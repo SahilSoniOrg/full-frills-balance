@@ -1,4 +1,3 @@
-import Account from '@/src/data/models/Account';
 import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
@@ -18,17 +17,11 @@ export function formatAccountDeleteBlockersError(
   );
 }
 
-export async function deleteAccount(
-  accountOrId: Account | AccountId,
-  workplaceId: WorkplaceId,
-): Promise<void> {
-  const account =
-    typeof accountOrId === 'string'
-      ? await accountRepository.find(workplaceId, accountOrId)
-      : accountOrId;
+export async function deleteAccount(accountId: AccountId, workplaceId: WorkplaceId): Promise<void> {
+  const account = await accountRepository.find(workplaceId, accountId);
   if (!account) return;
 
-  const blockers = await deleteBlockers(workplaceId, account.id as AccountId);
+  const blockers = await deleteBlockers(workplaceId, account.id);
   if (blockers.length > 0) {
     throw formatAccountDeleteBlockersError(account.name, blockers);
   }

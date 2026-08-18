@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import Journal from '@/src/data/models/Journal';
+import { JournalStatus, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { Model, Q } from '@nozbe/watermelondb';
 
 /** Planned-payment journal lookups and status batch helpers. */

@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics-service';
@@ -62,7 +62,7 @@ export interface SmsRuleFormViewModel {
   isValid: boolean;
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
-  accounts: Account[];
+  accounts: AccountFields[];
   previewMatches: PlainInboxRecord[];
   showAccountMapping: boolean;
 }

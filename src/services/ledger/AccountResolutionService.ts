@@ -3,7 +3,7 @@ import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { AccountId, WorkplaceId, AccountType } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId, AccountType } from '@/src/types/domain';
 import { LocalTransactionClassifier } from '@/src/utils/nlp/BayesClassifier';
 import { getStringSimilarity } from '@/src/utils/stringDistance';
 import { Q } from '@nozbe/watermelondb';
@@ -107,7 +107,7 @@ export class AccountResolutionService {
       // If using the fallback hint (destinationHint), require a slightly more conservative threshold (e.g. >= 0.70)
       const threshold = sourceHint ? 0.85 : 0.7;
       if (bestSource && bestSource.score >= threshold) {
-        resolvedSourceId = bestSource.account.id as AccountId;
+        resolvedSourceId = bestSource.account.id;
         sourceScore = bestSource.score;
         sourceStrategy = 'fuzzy';
       }
@@ -123,7 +123,7 @@ export class AccountResolutionService {
       // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
       const threshold = destinationHint ? 0.85 : 0.7;
       if (bestCategory && bestCategory.score >= threshold) {
-        resolvedCategoryId = bestCategory.account.id as AccountId;
+        resolvedCategoryId = bestCategory.account.id;
         categoryScore = bestCategory.score;
         categoryStrategy = 'fuzzy';
       } else {
@@ -140,7 +140,7 @@ export class AccountResolutionService {
               unconstrained ? accounts : categoryAccounts,
             );
             if (bestSynonymMatch && bestSynonymMatch.score >= 0.85) {
-              resolvedCategoryId = bestSynonymMatch.account.id as AccountId;
+              resolvedCategoryId = bestSynonymMatch.account.id;
               categoryScore = bestSynonymMatch.score * 0.9; // Small penalty for synonym indirection
               categoryStrategy = 'fuzzy';
               break;
@@ -221,14 +221,13 @@ export class AccountResolutionService {
 
     const defaultCategory =
       direction === 'credit'
-        ? incomeAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId)
-        : expenseAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId);
+        ? incomeAccounts[0]?.id || categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID
+        : expenseAccounts[0]?.id || categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID;
 
     const fallbackSource =
-      resolvedSourceId || (unconstrained ? undefined : assetAccounts[0]?.id) || ('' as AccountId);
-    const fallbackCategory = (resolvedCategoryId ||
-      (unconstrained ? undefined : defaultCategory) ||
-      ('' as AccountId)) as AccountId;
+      resolvedSourceId || (unconstrained ? undefined : assetAccounts[0]?.id) || EMPTY_ACCOUNT_ID;
+    const fallbackCategory =
+      resolvedCategoryId || (unconstrained ? undefined : defaultCategory) || EMPTY_ACCOUNT_ID;
 
     // Penalize strategy and confidence if only one of the sides resolved successfully
     const finalStrategy =

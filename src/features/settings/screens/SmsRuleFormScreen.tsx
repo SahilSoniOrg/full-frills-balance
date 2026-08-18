@@ -4,6 +4,7 @@ import { SmsRuleFormView } from '@/src/features/settings/components/SmsRuleFormV
 import { useSmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
@@ -28,6 +29,7 @@ export default function SmsRuleFormScreen() {
       screenTitle: params.id ? 'Edit SMS Rule' : 'New SMS Rule',
       showBack: true,
       backIcon: 'back',
+      onBack: AppNavigation.back,
       headerActions: params.id ? (
         <ScreenHeaderActions
           actions={[

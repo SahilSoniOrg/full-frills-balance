@@ -507,7 +507,7 @@ describe('Journal ledger integration', () => {
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: accountC.id as AccountId,
+              accountId: accountC.id,
               amount: 10,
               transactionType: TransactionType.DEBIT,
             },
@@ -587,7 +587,7 @@ describe('Journal ledger integration', () => {
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: accountC.id as AccountId,
+              accountId: accountC.id,
               amount: 10,
               transactionType: TransactionType.DEBIT,
             },
@@ -668,7 +668,7 @@ describe('Journal ledger integration', () => {
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: accountC.id as AccountId,
+              accountId: accountC.id,
               amount: 10,
               transactionType: TransactionType.DEBIT,
             },
@@ -704,7 +704,7 @@ describe('Journal ledger integration', () => {
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: accountC.id as AccountId,
+              accountId: accountC.id,
               amount: 10,
               transactionType: TransactionType.DEBIT,
             },

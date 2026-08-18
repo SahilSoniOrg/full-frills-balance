@@ -1,5 +1,5 @@
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { mapEnrichedLinesToEditorState } from '@/src/services/journal/journalEditorHelpers';
+import { journalReadService } from '@/src/services/journal/journalReadService';
 import { transactionService } from '@/src/services/transaction-ingestion';
 import { JournalEntryLine, JournalId, TabType, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
@@ -41,7 +41,7 @@ export function useJournalEditorLoader({
 
     const loadData = async () => {
       try {
-        const journal = await journalQueryRepository.find(workplaceId, journalId);
+        const journal = await journalReadService.find(workplaceId, journalId);
         if (!isActive) return;
 
         if (journal) {

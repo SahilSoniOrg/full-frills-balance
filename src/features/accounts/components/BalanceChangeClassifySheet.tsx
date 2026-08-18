@@ -3,7 +3,7 @@ import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
@@ -27,7 +27,7 @@ type PendingConfirmation = {
 
 export interface BalanceChangeClassifySheetProps {
   visible: boolean;
-  accounts: (Account | PlainAccount)[];
+  accounts: (AccountFields | PlainAccount)[];
   editedAccountId: AccountId;
   editedAccountName: string;
   editedAccountType: AccountType;
@@ -66,7 +66,7 @@ export function BalanceChangeClassifySheet({
       mode === 'suggested'
         ? filterSuggestedCounterparties(accounts, input)
         : filterEligibleCounterparties(accounts, input);
-    return filtered as (Account | PlainAccount)[];
+    return filtered as (AccountFields | PlainAccount)[];
   }, [accounts, currencyCode, discrepancy, editedAccountId, editedAccountType, mode]);
 
   const beginConfirm = (

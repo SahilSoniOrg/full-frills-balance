@@ -1,6 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import Journal from '@/src/data/models/Journal';
+import {
+  JournalStatus,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+  AccountType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
@@ -12,7 +20,6 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
-import { AccountType, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
@@ -38,8 +45,8 @@ describe('planned payment commands (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    fromAccountId = from.id as AccountId;
-    toAccountId = to.id as AccountId;
+    fromAccountId = from.id;
+    toAccountId = to.id;
   }, 15000);
 
   const baseInput = () => ({

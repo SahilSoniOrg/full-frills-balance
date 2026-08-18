@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { findDuplicateAccountNameError } from '@/src/features/accounts/services/accountFormValidationPolicy';
 import { validateAccountName } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';
@@ -11,7 +11,7 @@ export interface UseAccountValidationResult {
 
 export function useAccountValidation(
   accountName: string,
-  accounts: Account[],
+  accounts: AccountFields[],
   currentAccountId?: string,
 ): UseAccountValidationResult {
   const [formError, setFormError] = useState<string | null>(null);

@@ -1,29 +1,35 @@
 import { database } from '@/src/data/database/Database';
-import Account, {
+import Account from '@/src/data/models/Account';
+import {
   getDefaultSubtypeForTypeLike,
   isAccountSubtype,
   isAccountType,
-} from '@/src/data/models/Account';
+} from '@/src/types/accountSubtype';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
-import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
-import Budget from '@/src/data/models/Budget';
-import BudgetScope from '@/src/data/models/BudgetScope';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import JournalMetadata from '@/src/data/models/JournalMetadata';
-import PlannedPayment, {
+import AuditLog from '@/src/data/models/AuditLog';
+import {
+  AuditAction,
+  JournalStatus,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-} from '@/src/data/models/PlannedPayment';
-import Transaction from '@/src/data/models/Transaction';
-import { AccountSubtype, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord, {
+  AccountSubtype,
+  AccountType,
+  TransactionType,
+  WorkplaceId,
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionChannel,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+} from '@/src/types/domain';
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+import Budget from '@/src/data/models/Budget';
+import BudgetScope from '@/src/data/models/BudgetScope';
+import Journal from '@/src/data/models/Journal';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
+import Transaction from '@/src/data/models/Transaction';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { IconName } from '@/src/types/domainIcons';
 import { logger } from '@/src/utils/logger';
 import {

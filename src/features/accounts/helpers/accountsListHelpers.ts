@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
@@ -25,11 +25,11 @@ export function filterAccountsBySearch<T extends { name: string }>(
   return accounts.filter(a => a.name.toLowerCase().includes(lowercaseQuery));
 }
 
-export function isCategoryAccount(account: Pick<Account, 'accountType'>): boolean {
+export function isCategoryAccount(account: Pick<AccountFields, 'accountType'>): boolean {
   return account.accountType === AccountType.INCOME || account.accountType === AccountType.EXPENSE;
 }
 
-export function filterAccountsForListTab<T extends Pick<Account, 'accountType'>>(
+export function filterAccountsForListTab<T extends Pick<AccountFields, 'accountType'>>(
   accounts: T[],
   activeTab: AccountsListTab,
 ): T[] {
@@ -69,7 +69,7 @@ export type AccountListPressAction = 'expand' | 'navigate';
 
 export function resolveAccountListPressAction(
   accountId: AccountId,
-  accounts: Pick<Account, 'id' | 'parentAccountId'>[],
+  accounts: Pick<AccountFields, 'id' | 'parentAccountId'>[],
   expandedAccountIds: Set<string>,
 ): AccountListPressAction {
   const hasChildren = accounts.some(a => a.parentAccountId === accountId);
@@ -80,7 +80,7 @@ export function resolveAccountListPressAction(
 
 /** Month-to-date income/expense from the shared account-list balance stream (see observeAggregatedAccountBalances). */
 export function aggregateLeafPeriodIncomeExpense(
-  accounts: Pick<Account, 'id' | 'parentAccountId'>[],
+  accounts: Pick<AccountFields, 'id' | 'parentAccountId'>[],
   balances: AccountBalance[],
 ): { income: number; expense: number } {
   const parentIds = new Set(

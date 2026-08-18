@@ -25,6 +25,7 @@ export function PlannedPaymentFormView({
   isValid,
   isSubmitting,
   handleSave,
+  onBack,
   setField,
   pickerState,
 }: PlannedPaymentFormViewProps) {
@@ -37,8 +38,9 @@ export function PlannedPaymentFormView({
         : AppConfig.strings.plannedPayments.formTitleNew,
       showBack: true,
       backIcon: 'back',
+      onBack,
     }),
-    [id],
+    [id, onBack],
   );
 
   return (

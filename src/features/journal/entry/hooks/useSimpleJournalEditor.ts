@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   AccountType,
   TransactionType,
@@ -28,14 +28,14 @@ import { useJournalEditor } from './useJournalEditor';
 import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
 
 export interface UseSimpleJournalEditorProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   onSelectAccountRequest: (role: AccountRole) => void;
 }
 
 export interface SimpleFormSection {
   title: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   selectedId: AccountId;
   onSelect: (id: AccountId) => void;
   role: AccountRole;

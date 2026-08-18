@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval, AccountId } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
 export function usePlannedPaymentFormScreen(id?: string) {
@@ -95,6 +96,7 @@ export function usePlannedPaymentFormScreen(id?: string) {
     isValid: vm.isValid,
     isSubmitting: vm.isSubmitting,
     handleSave: vm.handleSave,
+    onBack: AppNavigation.back,
     setField,
     cycleIntervalType,
     setRecurrenceDayFromInput,

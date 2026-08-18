@@ -19,6 +19,7 @@ function JournalDetailsScreen() {
       phase,
       readyTitle: vm.title,
       missingBackIcon: 'close',
+      onBack: vm.onBack,
       headerActions: (
         <MoneyDetailHeaderActions
           actions={[
@@ -55,6 +56,7 @@ function JournalDetailsScreen() {
     vm.headerActions.onEdit,
     vm.isLoading,
     vm.isMissing,
+    vm.onBack,
     vm.title,
   ]);
 

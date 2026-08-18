@@ -104,7 +104,7 @@ export async function createAccount(
     const openingInput = getOpeningBalancesAccountInput(currencyCode, input.workplaceId);
     const existingOpening = await findAccountByName(workplaceId, openingInput.name);
     if (existingOpening) {
-      existingOpeningId = existingOpening.id as AccountId;
+      existingOpeningId = existingOpening.id;
     } else {
       companionPayloads = [openingInput];
     }
@@ -143,8 +143,7 @@ export async function createAccount(
     followUpBatch: postOpening
       ? async ({ account: created, companions }) => {
           const roundedAmount = roundToPrecision(Math.abs(input.initialBalance!), precision);
-          const balancingAccountId = (existingOpeningId ?? companions[0]?.id) as
-            AccountId | undefined;
+          const balancingAccountId = existingOpeningId ?? companions[0]?.id;
           if (!balancingAccountId) {
             throw new Error('Opening balances account missing');
           }
@@ -159,7 +158,7 @@ export async function createAccount(
               currencyCode,
               transactions: [
                 {
-                  accountId: created.id as AccountId,
+                  accountId: created.id,
                   amount: roundedAmount,
                   transactionType: accountTxType,
                 },

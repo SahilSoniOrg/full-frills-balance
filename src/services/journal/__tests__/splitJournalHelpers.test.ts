@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, AccountType, TransactionType } from '@/src/types/domain';
 
 import {
@@ -22,7 +22,7 @@ const accounts = [
     accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
   },
-] as unknown as Account[];
+] as unknown as AccountFields[];
 
 describe('splitJournalHelpers', () => {
   describe('computeSplitTotals', () => {

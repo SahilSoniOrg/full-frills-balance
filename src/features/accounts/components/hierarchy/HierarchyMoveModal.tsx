@@ -1,7 +1,7 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
@@ -18,8 +18,8 @@ import {
 
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
-  selectedAccount: Account | undefined;
-  parentCandidates: Account[];
+  selectedAccount: AccountFields | undefined;
+  parentCandidates: AccountFields[];
   onSelectAccount: (accountId: AccountId | null) => void;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
 }

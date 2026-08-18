@@ -1,4 +1,4 @@
-import { getDefaultSubtypeForType } from '@/src/data/models/Account';
+import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import {
   TransactionType,
   AccountId,

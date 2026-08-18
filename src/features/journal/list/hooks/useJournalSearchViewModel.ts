@@ -3,7 +3,7 @@ import type { SelectionAction } from '@/src/components/common/SelectionActionBar
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, JournalId } from '@/src/types/domain';
@@ -44,7 +44,7 @@ export interface JournalSearchViewModel {
   clearFilters: () => void;
 
   hasMore: boolean;
-  accounts: Account[];
+  accounts: AccountFields[];
 
   // Filter chrome (picker visibility)
   isAccountPickerVisible: boolean;

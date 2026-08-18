@@ -6,7 +6,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
   buildArchiveCascadeNodes,
@@ -20,8 +20,8 @@ export type UseAccountArchiveActionArgs = {
   enabled: boolean;
   workplaceId?: WorkplaceId;
   accountId?: AccountId;
-  account?: Account | null;
-  accounts: Account[];
+  account?: AccountFields | null;
+  accounts: AccountFields[];
 };
 
 export function useAccountArchiveAction({

@@ -67,7 +67,7 @@ function resolveRuleAccounts(
       }
       return name.includes(normalizedSource) || description.includes(normalizedSource);
     });
-    bankAccountId = bestAccount?.id as AccountId | undefined;
+    bankAccountId = bestAccount?.id;
   }
 
   if (!counterpartyId && item.parsedMerchant) {
@@ -77,7 +77,7 @@ function resolveRuleAccounts(
       return name.includes(normalizedMerchant) || normalizedMerchant.includes(name);
     });
     if (bestAccount && bestAccount.id !== bankAccountId) {
-      counterpartyId = bestAccount.id as AccountId;
+      counterpartyId = bestAccount.id;
     }
   }
 

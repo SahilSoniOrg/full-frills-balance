@@ -25,6 +25,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     onAddCustomCategory,
     isCompleting,
     onContinue,
+    onImport,
     onBack,
     onFinish,
   } = vm;
@@ -38,6 +39,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             name={name}
             setName={setName}
             onContinue={onContinue}
+            onImport={onImport}
             isCompleting={isCompleting}
           />
         );

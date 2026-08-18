@@ -11,8 +11,6 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/domain';
 
-export { PlannedPaymentInterval, PlannedPaymentStatus };
-
 export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   static table = 'planned_payments';
   static associations = {

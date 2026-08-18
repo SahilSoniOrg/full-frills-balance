@@ -1,19 +1,18 @@
 import ExpoSmsInbox, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
-import TransactionInboxRecord, {
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import {
   AccountType,
   AccountId,
   JournalId,
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
@@ -91,7 +90,7 @@ export async function seedExpenseJournal(params: {
     workplaceId,
   );
   await rebuildQueueService.flush();
-  return { id: journal.id as JournalId, totalAmount: journal.totalAmount };
+  return { id: journal.id, totalAmount: journal.totalAmount };
 }
 
 export async function seedInboxRecord(params: {

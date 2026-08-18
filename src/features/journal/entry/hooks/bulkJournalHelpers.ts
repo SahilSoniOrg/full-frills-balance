@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   TransactionType,
   JournalEntryLine,
@@ -29,7 +29,7 @@ export function validateBulkJournalRow(row: BulkJournalRow): string | undefined 
 
 export function buildBulkJournalEntries(
   rows: BulkJournalRow[],
-  accounts: Account[],
+  accounts: AccountFields[],
   workplaceCurrency: string,
   workplaceId: WorkplaceId,
 ) {

@@ -1,4 +1,4 @@
-import { useAppReady } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';

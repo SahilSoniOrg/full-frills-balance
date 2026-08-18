@@ -6,8 +6,6 @@ import { PlainSmsRule } from '@/src/types/domain';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
 import type { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
-import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRulesViewProps {
@@ -15,13 +13,18 @@ interface SmsRulesViewProps {
   suggestions: SmsRuleSuggestion[];
   accountMap: Map<string, string>;
   fab?: ScreenFabChrome;
+  onOpenRule: (item: PlainSmsRule) => void;
+  onOpenSuggestion: (suggestion: SmsRuleSuggestion) => void;
 }
 
-export function SmsRulesView({ rules, suggestions, accountMap, fab }: SmsRulesViewProps) {
-  const handleRulePress = useCallback((item: PlainSmsRule) => {
-    AppNavigation.toSmsRuleForm(item.id);
-  }, []);
-
+export function SmsRulesView({
+  rules,
+  suggestions,
+  accountMap,
+  fab,
+  onOpenRule,
+  onOpenSuggestion,
+}: SmsRulesViewProps) {
   const renderHeader = () => {
     if (suggestions.length === 0) return null;
 
@@ -32,7 +35,7 @@ export function SmsRulesView({ rules, suggestions, accountMap, fab }: SmsRulesVi
           <TouchableOpacity
             key={`${suggestion.senderMatch}-${suggestion.categoryAccountId}`}
             activeOpacity={Opacity.heavy}
-            onPress={() => AppNavigation.toSmsRuleForm(undefined, suggestion)}
+            onPress={() => onOpenSuggestion(suggestion)}
           >
             <AppCard elevation="sm" style={styles.card}>
               <AppText variant="body" weight="semibold">
@@ -70,7 +73,7 @@ export function SmsRulesView({ rules, suggestions, accountMap, fab }: SmsRulesVi
         }
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <SmsRuleCardView item={item} accountMap={accountMap} onPress={handleRulePress} />
+          <SmsRuleCardView item={item} accountMap={accountMap} onPress={onOpenRule} />
         )}
       />
     </SettingsLayout>

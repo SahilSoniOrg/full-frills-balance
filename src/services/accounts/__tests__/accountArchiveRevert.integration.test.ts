@@ -1,4 +1,4 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
@@ -6,7 +6,6 @@ import { serializeArchiveAuditChanges } from '@/src/services/accounts/accountArc
 import { collectArchiveAuditEntries } from '@/src/services/accounts/accountArchiveMutations';
 import { auditService } from '@/src/services/audit-service';
 import { revertRegistry } from '@/src/services/revert-registry';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/AuditRepository');
 jest.mock('@/src/data/repositories/AccountRepository');

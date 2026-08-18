@@ -1,4 +1,5 @@
-import { useAppReady, useOnboardingSession } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useTheme } from '@/src/hooks/use-theme';
 import * as Linking from 'expo-linking';
 import { Redirect } from 'expo-router';

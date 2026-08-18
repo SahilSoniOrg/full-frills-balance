@@ -1,8 +1,8 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
+import { JournalStatus, WorkplaceId } from '@/src/types/domain';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';

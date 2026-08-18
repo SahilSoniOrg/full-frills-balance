@@ -94,7 +94,7 @@ class RebuildQueueService {
               continue;
             }
             const [workplaceId, accountId] = parseQueueKey(id);
-            this.enqueue(accountId, date, workplaceId as WorkplaceId);
+            this.enqueue(accountId, date, workplaceId);
           }
           storage.remove(RebuildQueueService.PROCESSING_KEY);
         }
@@ -360,7 +360,7 @@ class RebuildQueueService {
           try {
             const [workplaceId, accountId] = parseQueueKey(item.id);
             await accountingRebuildService.rebuildAccountBalances(
-              workplaceId as WorkplaceId,
+              workplaceId,
               accountId,
               item.fromDate,
             );

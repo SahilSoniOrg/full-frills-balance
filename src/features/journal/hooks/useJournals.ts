@@ -101,15 +101,11 @@ export function useJournals(
     if (journalIds.length === 0) return 'empty';
     return journalIds.join('|');
   }, [journalIds]);
-  const stableJournalIds = useMemo(
-    () =>
-      journalIdsKey === 'none'
-        ? undefined
-        : journalIdsKey === 'empty'
-          ? ([] as JournalId[])
-          : (journalIdsKey.split('|') as JournalId[]),
-    [journalIdsKey],
-  );
+  const stableJournalIds = useMemo((): JournalId[] | undefined => {
+    if (journalIdsKey === 'none') return undefined;
+    if (journalIdsKey === 'empty') return [];
+    return journalIds;
+  }, [journalIds, journalIdsKey]);
 
   const effectiveRange: JournalFilterRange | undefined = useMemo(() => {
     if (

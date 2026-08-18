@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { Flow, FlowSource, Outflow } from '@/src/services/simulation/types';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import {
@@ -9,7 +9,7 @@ import {
 
 export interface MapSimulatedLiabilityInput {
   allFlows: Flow[];
-  accountMap: Map<string, Account>;
+  accountMap: Map<string, AccountFields>;
   currencyCode: string;
   /** Epoch ms for start-of-day used to resolve dayOffset → occurrenceDate. Defaults to local today. */
   todayStartMs?: number;

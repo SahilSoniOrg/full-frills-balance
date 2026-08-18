@@ -1,8 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import Account, {
-  getDefaultSubtypeForType,
-  isSubtypeAllowedForType,
-} from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
+import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { accountMergeOperations } from '@/src/data/repositories/account/AccountMergeOperations';

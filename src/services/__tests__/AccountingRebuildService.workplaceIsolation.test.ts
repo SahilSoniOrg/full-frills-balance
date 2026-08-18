@@ -73,11 +73,7 @@ describe('AccountingRebuildService workplace isolation', () => {
       },
     ]);
 
-    await accountingRebuildService.rebuildAccountBalances(
-      WORKPLACE_ONE,
-      targetAccount.id as AccountId,
-      0,
-    );
+    await accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, targetAccount.id, 0);
 
     const unchangedForeignTransaction = await database.collections
       .get<Transaction>('transactions')

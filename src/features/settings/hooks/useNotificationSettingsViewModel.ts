@@ -8,6 +8,7 @@ import {
   notificationService,
   NotificationCadence,
 } from '@/src/services/notification/NotificationService';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface NotificationSettingsViewModel {
@@ -27,6 +28,9 @@ export interface NotificationSettingsViewModel {
   aiInferenceMode: 'single' | 'multi';
   setAiInferenceMode: (mode: 'single' | 'multi') => void;
   downloadedModels: AIModelMetadata[];
+  onOpenInbox: () => void;
+  onOpenSmsRules: () => void;
+  onOpenAiLab: () => void;
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
@@ -143,5 +147,8 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     aiInferenceMode,
     setAiInferenceMode,
     downloadedModels,
+    onOpenInbox: AppNavigation.toTransactionInbox,
+    onOpenSmsRules: AppNavigation.toSmsRules,
+    onOpenAiLab: AppNavigation.toAiExample,
   };
 }

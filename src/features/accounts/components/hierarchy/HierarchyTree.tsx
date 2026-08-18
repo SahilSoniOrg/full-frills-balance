@@ -2,7 +2,7 @@ import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { Layout, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
@@ -11,13 +11,13 @@ import { isAccountArchived } from '@/src/utils/accountArchive';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface HierarchyTreeProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   balancesByAccountId: Map<string, { transactionCount?: number; directTransactionCount?: number }>;
   selectedAccountId: AccountId | null;
   collapsedCategories: Set<string>;
   expandedAccountIds: Set<string>;
-  accountsByParent: Map<string | null, Account[]>;
-  visibleRootAccountsByCategory: Record<string, Account[]>;
+  accountsByParent: Map<string | null, AccountFields[]>;
+  visibleRootAccountsByCategory: Record<string, AccountFields[]>;
   onCreateParent: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
   onRequestAddChild: (parentId: AccountId) => void;

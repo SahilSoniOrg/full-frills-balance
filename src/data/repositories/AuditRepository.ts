@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
-import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog';
+import AuditLog from '@/src/data/models/AuditLog';
+import { AuditAction, AuditEntityType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface AuditEntry<T = unknown> {
   entityType: AuditEntityType;

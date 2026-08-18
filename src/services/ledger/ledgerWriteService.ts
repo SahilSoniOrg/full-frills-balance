@@ -192,7 +192,7 @@ export class LedgerWriteService {
     await journalWriteRepository.persistReversal({
       workplaceId,
       originalJournal,
-      reversingJournalId: journal.id as JournalId,
+      reversingJournalId: journal.id,
       reversalOps: ops,
       afterBatch: () => {
         if (accountsToRebuild.size > 0) {

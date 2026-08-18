@@ -1,11 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import TransactionInboxRecord, {
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+  AccountId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { assembleCreateJournalData } from '@/src/services/journal/journalSaveHelpers';
-import { AccountId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

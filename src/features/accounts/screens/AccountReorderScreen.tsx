@@ -12,9 +12,10 @@ function AccountReorderScreen() {
       screenTitle: vm.title,
       showBack: true,
       backIcon: 'close',
+      onBack: vm.onBack,
       headerActions: <ShowArchivedButton accounts={vm.accountsForArchiveToggle} />,
     }),
-    [vm.accountsForArchiveToggle, vm.title],
+    [vm.accountsForArchiveToggle, vm.onBack, vm.title],
   );
   return <AccountReorderView {...vm} chrome={chrome} />;
 }

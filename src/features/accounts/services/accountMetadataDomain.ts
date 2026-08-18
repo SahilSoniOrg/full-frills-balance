@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import type { PlainAccountMetadata as AccountMetadata } from '@/src/types/domain';
+import type { PlainAccountMetadata } from '@/src/types/domain';
 import {
   AccountId,
   AccountType,
@@ -23,7 +23,7 @@ export interface AccountMetadataValues {
 }
 
 export function createDefaultAccountMetadataValues(
-  existingMetadata?: AccountMetadata | null,
+  existingMetadata?: PlainAccountMetadata | null,
 ): AccountMetadataValues {
   if (!existingMetadata) {
     return {

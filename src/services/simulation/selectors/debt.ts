@@ -1,5 +1,4 @@
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, type AccountFields } from '@/src/types/domain';
 import { DebtEntry, DebtType, Flow, FlowCategory, FlowSource } from '../types';
 import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
 

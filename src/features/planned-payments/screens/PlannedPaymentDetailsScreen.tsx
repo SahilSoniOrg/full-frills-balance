@@ -23,6 +23,7 @@ function PlannedPaymentDetailsScreen() {
     return buildDetailNavChrome({
       phase,
       readyTitle: vm.title ?? AppConfig.strings.plannedPayments.details.screenTitle,
+      onBack: vm.onBack,
       headerActions: vm.headerActions ? (
         <MoneyDetailHeaderActions
           actions={moneyDetailEditDeleteActions(
@@ -33,7 +34,7 @@ function PlannedPaymentDetailsScreen() {
         />
       ) : undefined,
     });
-  }, [theme, vm.headerActions, vm.isLoading, vm.isMissing, vm.title]);
+  }, [theme, vm.headerActions, vm.isLoading, vm.isMissing, vm.onBack, vm.title]);
 
   return <PlannedPaymentDetailsView {...vm} chrome={chrome} />;
 }

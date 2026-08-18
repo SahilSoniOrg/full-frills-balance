@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   TransactionType,
   AccountId,
@@ -13,12 +13,12 @@ import { useEffect } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 
 interface UseSimpleJournalAccountSyncProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   type: TabType;
   sourceId: AccountId;
   destinationId: AccountId;
-  transactionAccounts: Account[];
+  transactionAccounts: AccountFields[];
 }
 
 /** Keeps guided account defaults and line metadata aligned with the account list. */
@@ -89,7 +89,7 @@ export function useSimpleJournalAccountSync({
 function withAccountDetails(
   line: JournalEntryLine,
   accountId: AccountId,
-  account: Account | undefined,
+  account: AccountFields | undefined,
 ): JournalEntryLine {
   return {
     ...line,

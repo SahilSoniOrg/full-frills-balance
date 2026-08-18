@@ -1,10 +1,4 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalId, WorkplaceId } from '@/src/types/domain';
 /**
  * End-to-End Workflow Tests
  * Tests complete user workflows across multiple repositories
@@ -71,12 +65,12 @@ describe('E2E Workflows', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: wallet.id as AccountId,
+              accountId: wallet.id,
               amount: 5.5,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: food.id as AccountId,
+              accountId: food.id,
               amount: 5.5,
               transactionType: TransactionType.DEBIT,
             },
@@ -93,12 +87,12 @@ describe('E2E Workflows', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: wallet.id as AccountId,
+              accountId: wallet.id,
               amount: 15.0,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: food.id as AccountId,
+              accountId: food.id,
               amount: 15.0,
               transactionType: TransactionType.DEBIT,
             },
@@ -115,12 +109,12 @@ describe('E2E Workflows', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: wallet.id as AccountId,
+              accountId: wallet.id,
               amount: 2.5,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: transport.id as AccountId,
+              accountId: transport.id,
               amount: 2.5,
               transactionType: TransactionType.DEBIT,
             },
@@ -211,12 +205,12 @@ describe('E2E Workflows', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: cash.id as AccountId,
+              accountId: cash.id,
               amount: 100,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: expense.id as AccountId,
+              accountId: expense.id,
               amount: 100,
               transactionType: TransactionType.DEBIT,
             },
@@ -275,12 +269,12 @@ describe('E2E Workflows', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: usdCash.id as AccountId,
+              accountId: usdCash.id,
               amount: 110,
               transactionType: TransactionType.CREDIT,
             },
             {
-              accountId: eurExpense.id as AccountId,
+              accountId: eurExpense.id,
               amount: 100,
               transactionType: TransactionType.DEBIT,
               exchangeRate: 1.1,

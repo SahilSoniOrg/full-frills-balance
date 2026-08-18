@@ -75,7 +75,7 @@ export class AccountingRebuildService {
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
-    const account = await accountRepository.find(workplaceId, accountId as AccountId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
 
     const precision = await currencyReadService.getPrecision(account.currencyCode);

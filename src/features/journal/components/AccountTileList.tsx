@@ -3,7 +3,7 @@ import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccoun
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   getAccountIcon,
   getArchivedAccountTilePresentation,
@@ -18,7 +18,7 @@ import { TouchableOpacity, View } from 'react-native';
 
 export interface AccountTileListProps {
   title?: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   selectedId: AccountId;
   onSelect: (id: AccountId) => void;
   onSearchRequest?: () => void;

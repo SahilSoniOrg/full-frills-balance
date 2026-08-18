@@ -1,7 +1,8 @@
-import PlannedPayment, {
+import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-} from '@/src/data/models/PlannedPayment';
+  type PlainPlannedPayment,
+} from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 import { buildPlannedPaymentDetailsActions } from '../plannedPaymentDetailsActions';
 
@@ -17,7 +18,7 @@ describe('plannedPaymentDetailsActions', () => {
     intervalN: 1,
     intervalType: PlannedPaymentInterval.MONTHLY,
     status: PlannedPaymentStatus.ACTIVE,
-  } as PlannedPayment;
+  } as PlainPlannedPayment;
   const handlers = {
     handleEdit: jest.fn(),
     handleDelete: jest.fn().mockResolvedValue(undefined),

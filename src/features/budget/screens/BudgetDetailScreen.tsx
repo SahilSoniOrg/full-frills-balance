@@ -9,6 +9,7 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { BudgetDetailView } from '@/src/features/budget/components/BudgetDetailView';
 import { useBudgetDetailViewModel } from '@/src/features/budget/hooks/useBudgetDetailViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 
 function BudgetDetailScreenInner() {
@@ -22,6 +23,7 @@ function BudgetDetailScreenInner() {
       phase,
       readyTitle: AppConfig.strings.budget.details.screenTitle,
       loadingTitle: AppConfig.strings.budget.details.screenTitle,
+      onBack: AppNavigation.back,
       headerActions: (
         <MoneyDetailHeaderActions
           actions={moneyDetailEditDeleteActions(vm.handleEdit, vm.handleDelete, theme)}

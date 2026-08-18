@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, WorkplaceId } from '@/src/types/domain';
 
 const WORKPLACE_A = 'wp-account-merge-a' as WorkplaceId;
 const WORKPLACE_B = 'wp-account-merge-b' as WorkplaceId;
@@ -36,15 +36,15 @@ describe('AccountMergeOperations', () => {
     await database.write(async () => {
       const operations = await accountRepository.prepareMergeOperations(
         WORKPLACE_A,
-        [localSource.id as AccountId, foreignSource.id as AccountId],
-        target.id as AccountId,
+        [localSource.id, foreignSource.id],
+        target.id,
       );
       await database.batch(operations);
     });
 
     const [deletedLocalSource, unchangedForeignSource] = await Promise.all([
-      accountRepository.findWithDeleted(WORKPLACE_A, localSource.id as AccountId),
-      accountRepository.findWithDeleted(WORKPLACE_B, foreignSource.id as AccountId),
+      accountRepository.findWithDeleted(WORKPLACE_A, localSource.id),
+      accountRepository.findWithDeleted(WORKPLACE_B, foreignSource.id),
     ]);
 
     expect(deletedLocalSource?.deletedAt).toBeInstanceOf(Date);

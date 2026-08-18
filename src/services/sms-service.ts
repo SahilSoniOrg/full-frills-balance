@@ -4,8 +4,8 @@ import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule, { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   toPlainInboxRecord,
-  InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
+import { InboxProcessingStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
@@ -16,7 +16,6 @@ import {
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
 import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 import { map, Observable } from 'rxjs';

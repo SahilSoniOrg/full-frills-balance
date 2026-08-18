@@ -6,6 +6,7 @@ export type DetailNavChromePhase = 'loading' | 'missing' | 'ready';
 type BuildDetailNavChromeParams = {
   phase: DetailNavChromePhase;
   readyTitle: string;
+  onBack: () => void;
   loadingTitle?: string;
   missingBackIcon?: ScreenNavChrome['backIcon'];
   headerActions?: ReactNode;
@@ -15,6 +16,7 @@ type BuildDetailNavChromeParams = {
 export function buildDetailNavChrome({
   phase,
   readyTitle,
+  onBack,
   loadingTitle = 'Details',
   missingBackIcon = 'back',
   headerActions,
@@ -27,6 +29,7 @@ export function buildDetailNavChrome({
     screenTitle,
     showBack: true,
     backIcon,
+    onBack,
     headerActions: phase === 'ready' ? headerActions : undefined,
     fab: phase === 'ready' ? fab : undefined,
   };

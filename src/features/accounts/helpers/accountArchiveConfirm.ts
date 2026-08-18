@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { confirm, type ConfirmOptions } from '@/src/utils/alerts';
@@ -7,9 +7,9 @@ import { AccountId } from '@/src/types/domain';
 
 export type ArchiveIntent = {
   archiving: boolean;
-  account: Account;
+  account: AccountFields;
   accountId: AccountId;
-  accounts: Account[];
+  accounts: AccountFields[];
   hasDescendants: boolean;
   proceed: () => void;
   openCascade: (archiving: boolean, rootId: AccountId) => void;
@@ -50,7 +50,7 @@ export function resolveArchiveConfirmOptions(
         message: AppConfig.strings.accounts.archive.parentArchivedMessage(parent.name),
         confirmText: AppConfig.strings.accounts.archive.unarchiveParent,
         cancelText: AppConfig.strings.accounts.archive.thisAccountOnly,
-        onConfirm: () => intent.openCascade(false, parent.id as AccountId),
+        onConfirm: () => intent.openCascade(false, parent.id),
         onCancel: () => void intent.commitArchive([accountId], false),
       };
     }

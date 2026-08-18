@@ -4,7 +4,7 @@ import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
 import dayjs from 'dayjs';
@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 interface BulkEntryRowProps {
   row: BulkJournalRow;
   index: number;
-  accounts: Account[];
+  accounts: AccountFields[];
   onUpdateField: (id: string, field: keyof BulkJournalRow, value: BulkRowFieldValue) => void;
   onRemove: (id: string) => void;
   onDatePickerRequest: (id: string) => void;
@@ -50,7 +50,7 @@ export const BulkEntryRow = React.memo(
     }, [row.journalDate]);
 
     const getAccountStyles = useCallback(
-      (account: Account | undefined, hasConflictError: boolean): AccountChipColors => {
+      (account: AccountFields | undefined, hasConflictError: boolean): AccountChipColors => {
         if (hasConflictError) {
           return {
             bg: 'transparent',

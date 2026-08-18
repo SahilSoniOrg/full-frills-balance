@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';
@@ -28,7 +28,7 @@ interface PersistenceResult {
 
 export function useAccountPersistence(
   workplaceId: WorkplaceId,
-  existingAccount: Account | null | undefined,
+  existingAccount: AccountFields | null | undefined,
   currentAccountId: AccountId | undefined,
   hasExistingAccounts: boolean,
 ): PersistenceResult {

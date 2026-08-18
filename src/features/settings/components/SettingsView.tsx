@@ -3,9 +3,28 @@ import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { AppNavigation } from '@/src/utils/navigation';
 
-export function SettingsView() {
+export interface SettingsViewProps {
+  onPersonalization: () => void;
+  onWorkplace: () => void;
+  onAppearance: () => void;
+  onAutomation: () => void;
+  onPrivacy: () => void;
+  onDataManagement: () => void;
+  onMaintenance: () => void;
+  onAbout: () => void;
+}
+
+export function SettingsView({
+  onPersonalization,
+  onWorkplace,
+  onAppearance,
+  onAutomation,
+  onPrivacy,
+  onDataManagement,
+  onMaintenance,
+  onAbout,
+}: SettingsViewProps) {
   return (
     <SettingsLayout title="Settings" showBack={false}>
       <Stack space="xl">
@@ -14,14 +33,14 @@ export function SettingsView() {
             leftIcon="user"
             title={AppConfig.strings.settings.sections.personalization}
             description="Name, default currency, and Safe-to-Spend forecast"
-            onPress={AppNavigation.toPersonalizationSettings}
+            onPress={onPersonalization}
             prominent
           />
           <SettingsMenuItem
             leftIcon="briefcase"
             title="Workplace"
             description="Create and switch between workplaces"
-            onPress={AppNavigation.toWorkplaceSettings}
+            onPress={onWorkplace}
             prominent
           />
         </SettingsMenu>
@@ -31,14 +50,14 @@ export function SettingsView() {
             leftIcon="palette"
             title={AppConfig.strings.settings.sections.appearance}
             description="Theme, typography, mode, and account card details"
-            onPress={AppNavigation.toAppearanceSettings}
+            onPress={onAppearance}
             prominent
           />
           <SettingsMenuItem
             leftIcon="notifications"
             title={AppConfig.strings.settings.sections.remindersAndAutomation}
             description="Review reminders, SMS inbox, and auto-post rules"
-            onPress={AppNavigation.toAutomationSettings}
+            onPress={onAutomation}
             prominent
             testID="settings-automation"
           />
@@ -49,7 +68,7 @@ export function SettingsView() {
             leftIcon="shieldCheck"
             title={AppConfig.strings.settings.sections.privacyAndSecurity}
             description="Hide balances, protect widgets, and lock the app"
-            onPress={AppNavigation.toPrivacySecuritySettings}
+            onPress={onPrivacy}
             prominent
           />
         </SettingsMenu>
@@ -59,14 +78,14 @@ export function SettingsView() {
             leftIcon="database"
             title={AppConfig.strings.settings.sections.dataManagement}
             description="Back up, restore, share, and review your ledger"
-            onPress={AppNavigation.toDataManagementSettings}
+            onPress={onDataManagement}
             prominent
           />
           <SettingsMenuItem
             leftIcon="wrench"
             title={AppConfig.strings.settings.sections.maintenanceAndReset}
             description="Verify books, purge deleted records, or reset the app"
-            onPress={AppNavigation.toMaintenanceSettings}
+            onPress={onMaintenance}
             prominent
           />
         </SettingsMenu>
@@ -76,7 +95,7 @@ export function SettingsView() {
             leftIcon="info"
             title={AppConfig.strings.settings.sections.aboutAndSupport}
             description="Community, ratings, source code, and version"
-            onPress={AppNavigation.toAboutSupportSettings}
+            onPress={onAbout}
             prominent
           />
         </SettingsMenu>

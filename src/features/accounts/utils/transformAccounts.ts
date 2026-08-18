@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import {
   getAccountSections,
@@ -92,7 +92,7 @@ let oldBucket = new Map<string, AccountCardViewModel>();
 const BUCKET_LIMIT = 1000;
 
 export function transformAccountsToSections(
-  accounts: (Account | PlainAccount)[],
+  accounts: (AccountFields | PlainAccount)[],
   options: TransformOptions,
 ): AccountSectionViewModel[] {
   const startTime = Date.now();
@@ -128,7 +128,7 @@ export function transformAccountsToSections(
     else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
 
     const typeAccounts = section.data;
-    const accountsByParent = new Map<string, (Account | PlainAccount)[]>();
+    const accountsByParent = new Map<string, (AccountFields | PlainAccount)[]>();
     typeAccounts.forEach(a => {
       if (a.parentAccountId) {
         const children = accountsByParent.get(a.parentAccountId) || [];
@@ -140,7 +140,7 @@ export function transformAccountsToSections(
     const rootAccounts = getVisibleRoots(typeAccounts);
     const flattenedData: AccountCardViewModel[] = [];
 
-    const flatten = (account: Account | PlainAccount, depth: number) => {
+    const flatten = (account: AccountFields | PlainAccount, depth: number) => {
       totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;
@@ -203,7 +203,7 @@ export function transformAccountsToSections(
           account,
           theme,
         );
-        // Account cards use accountColor as their solid surface, so derive
+        // AccountFields cards use accountColor as their solid surface, so derive
         // readable foreground text from that surface.
         const textColor = onContrast(accountColor);
         const categoryIconBg = withOpacity(categoryColor, Opacity.soft);
@@ -271,7 +271,7 @@ export function transformAccountsToSections(
       totalColor: sectionColor,
       isCollapsed,
       data: isCollapsed ? [] : flattenedData,
-      accountIds: typeAccounts.map(a => a.id as AccountId),
+      accountIds: typeAccounts.map(a => a.id),
       type: section.type,
     };
   });

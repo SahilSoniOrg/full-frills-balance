@@ -1,10 +1,8 @@
-import TransactionInboxRecord, {
-  InboxProcessingStatus,
-} from '@/src/data/models/TransactionInboxRecord';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { InboxProcessingStatus, JournalId } from '@/src/types/domain';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { AppConfig } from '@/src/constants';
 import { smsService } from '@/src/services/sms-service';
-import { JournalId } from '@/src/types/domain';
 import {
   resetSmsTestDb,
   seedExpenseJournal,

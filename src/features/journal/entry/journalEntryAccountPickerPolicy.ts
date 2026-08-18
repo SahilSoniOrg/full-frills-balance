@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   AccountType,
   TransactionType,
@@ -19,7 +19,7 @@ type SplitRowPick = { id: string; accountId?: AccountId };
 
 export function buildJournalLineAccountPatch(
   accountId: AccountId,
-  account: Account | undefined,
+  account: AccountFields | undefined,
 ): Partial<JournalEntryLine> {
   return {
     accountId,
@@ -33,7 +33,7 @@ export function buildJournalLineAccountPatch(
 export function applyJournalLineAccountSelection(input: {
   lineId: string;
   accountId: AccountId;
-  accounts: Account[];
+  accounts: AccountFields[];
   updateLine: (lineId: string, patch: Partial<JournalEntryLine>) => void;
 }): void {
   const { lineId, accountId, accounts, updateLine } = input;
@@ -43,12 +43,12 @@ export function applyJournalLineAccountSelection(input: {
 }
 
 export function resolveJournalEntrySelectableAccounts(input: {
-  accounts: Account[];
+  accounts: AccountFields[];
   activeLineId: string | null;
   activeMode: JournalEntryScreenMode;
   transactionType: TabType;
   lines: JournalEntryLine[];
-}): Account[] {
+}): AccountFields[] {
   const { accounts, activeLineId, activeMode, transactionType, lines } = input;
   if (!activeLineId) return accounts;
 

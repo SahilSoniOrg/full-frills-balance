@@ -1,10 +1,9 @@
-import Account from '@/src/data/models/Account';
+import { AccountId, type AccountFields } from '@/src/types/domain';
 import {
   resolveArchiveConfirmOptions,
   runArchiveIntentWithConfirmation,
   showArchiveIntentConfirmation,
 } from '@/src/features/accounts/helpers/accountArchiveConfirm';
-import { AccountId } from '@/src/types/domain';
 import { confirm } from '@/src/utils/alerts';
 
 jest.mock('@/src/utils/alerts', () => ({
@@ -23,7 +22,7 @@ describe('accountArchiveConfirm', () => {
     id: accountId,
     name: 'Checking',
     parentAccountId: null,
-  } as unknown as Account;
+  } as unknown as AccountFields;
 
   const proceed = jest.fn();
   const openCascade = jest.fn();
@@ -50,7 +49,7 @@ describe('accountArchiveConfirm', () => {
   }
 
   it('shows system-account confirm when archiving a system account', () => {
-    const systemAccount = { ...baseAccount, name: 'System Account' } as Account;
+    const systemAccount = { ...baseAccount, name: 'System Account' } as AccountFields;
     const options = resolveArchiveConfirmOptions(
       buildIntent({ account: systemAccount, archiving: true }),
     );
@@ -67,11 +66,11 @@ describe('accountArchiveConfirm', () => {
       name: 'Parent',
       archivedAt: Date.now(),
       parentAccountId: null,
-    } as unknown as Account;
+    } as unknown as AccountFields;
     const child = {
       ...baseAccount,
       parentAccountId: parentId,
-    } as Account;
+    } as AccountFields;
 
     const options = resolveArchiveConfirmOptions(
       buildIntent({

@@ -9,6 +9,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import {
   AccountId,
   AccountType,
+  brandedKeys,
   JournalDisplayType,
   JournalId,
   TransactionType,
@@ -24,7 +25,7 @@ import { safeAdd } from '@/src/utils/money';
 function groupTransactionsByJournal(transactions: Transaction[]): Map<JournalId, Transaction[]> {
   const map = new Map<JournalId, Transaction[]>();
   for (const tx of transactions) {
-    const key = tx.journalId as JournalId;
+    const key = tx.journalId;
     const list = map.get(key) ?? [];
     list.push(tx);
     map.set(key, list);
@@ -60,7 +61,7 @@ export async function bulkRenameJournals(
   workplaceId: WorkplaceId,
   renames: Record<JournalId, string>,
 ): Promise<BulkRenameResult> {
-  const journalIds = Object.keys(renames) as JournalId[];
+  const journalIds = brandedKeys(renames);
   if (journalIds.length === 0) {
     return { renamedCount: 0, inverseRenames: {} };
   }
@@ -70,7 +71,7 @@ export async function bulkRenameJournals(
   const effectiveRenames: Record<JournalId, string> = {};
 
   for (const journal of journals) {
-    const id = journal.id as JournalId;
+    const id = journal.id;
     const newName = renames[id];
     if (newName !== undefined && newName !== (journal.description ?? '')) {
       inverseRenames[id] = journal.description ?? '';
@@ -107,7 +108,7 @@ export async function bulkDuplicateJournals(
 
   const now = Date.now();
   const createItems = journals.map(journal => {
-    const txs = txByJournal.get(journal.id as JournalId) ?? [];
+    const txs = txByJournal.get(journal.id) ?? [];
     return {
       journalDate: now,
       description: journal.description ? `${journal.description}` : undefined,
@@ -115,7 +116,7 @@ export async function bulkDuplicateJournals(
       totalAmount: journal.totalAmount,
       displayType: journal.displayType as JournalDisplayType,
       transactions: txs.map(tx => ({
-        accountId: tx.accountId as AccountId,
+        accountId: tx.accountId,
         amount: tx.amount,
         transactionType: tx.transactionType as TransactionType,
         notes: tx.notes,
@@ -198,7 +199,7 @@ export async function analyzeJournalsForMerge(
     });
   }
 
-  const journalMap = new Map(journals.map(j => [j.id as JournalId, j]));
+  const journalMap = new Map(journals.map(j => [j.id, j]));
   const orderedJournals = journalIds
     .map(id => journalMap.get(id))
     .filter((j): j is Journal => Boolean(j));
@@ -245,7 +246,7 @@ export async function analyzeJournalsForMerge(
       existing.amount = safeAdd(existing.amount, tx.amount, 2);
     } else {
       lineMap.set(key, {
-        accountId: tx.accountId as AccountId,
+        accountId: tx.accountId,
         transactionType: txType,
         amount: tx.amount,
       });
@@ -369,13 +370,13 @@ function evaluateEligibility(
     if (debits.length !== 1) {
       allHaveSingleDebit = false;
     } else {
-      debitAccounts.add(debits[0].accountId as AccountId);
+      debitAccounts.add(debits[0].accountId);
     }
 
     if (credits.length !== 1) {
       allHaveSingleCredit = false;
     } else {
-      creditAccounts.add(credits[0].accountId as AccountId);
+      creditAccounts.add(credits[0].accountId);
     }
   }
 
@@ -431,8 +432,8 @@ export async function bulkChangeJournalAccount(
   const originalAccountIdByTransactionId: Record<string, AccountId> = {};
 
   for (const tx of transactionsToUpdate) {
-    originalAccountIdByTransactionId[tx.id] = tx.accountId as AccountId;
-    affectedAccounts.add(tx.accountId as AccountId);
+    originalAccountIdByTransactionId[tx.id] = tx.accountId;
+    affectedAccounts.add(tx.accountId);
     minDate = Math.min(minDate, tx.transactionDate);
   }
 
@@ -442,7 +443,7 @@ export async function bulkChangeJournalAccount(
     workplaceId,
     journals,
     allTransactions,
-    tx => (tx.transactionType === transactionType ? newAccountId : (tx.accountId as AccountId)),
+    tx => (tx.transactionType === transactionType ? newAccountId : tx.accountId),
   );
 
   await journalWriteRepository.bulkReassignTransactionAccounts({
@@ -475,7 +476,7 @@ export async function undoBulkChangeJournalAccount(
   const transactions = await transactionRepository.findByIds(workplaceId, txIds);
   if (transactions.length === 0) return;
 
-  const journalIds = Array.from(new Set(transactions.map(t => t.journalId as JournalId)));
+  const journalIds = Array.from(new Set(transactions.map(t => t.journalId)));
   const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
 
@@ -486,7 +487,7 @@ export async function undoBulkChangeJournalAccount(
     const originalAccId = originalAccountIdByTransactionId[tx.id];
     if (originalAccId) {
       affectedAccounts.add(originalAccId);
-      affectedAccounts.add(tx.accountId as AccountId);
+      affectedAccounts.add(tx.accountId);
       minDate = Math.min(minDate, tx.transactionDate);
     }
   }
@@ -495,7 +496,7 @@ export async function undoBulkChangeJournalAccount(
     workplaceId,
     journals,
     allTransactions,
-    tx => originalAccountIdByTransactionId[tx.id] ?? (tx.accountId as AccountId),
+    tx => originalAccountIdByTransactionId[tx.id] ?? tx.accountId,
   );
 
   // Single atomic batch — each transaction goes back to its own original account and parent journals are updated
@@ -521,7 +522,7 @@ async function computeSimulatedDisplayTypes(
 ): Promise<Map<JournalId, JournalDisplayType>> {
   const allAccountIds = new Set<AccountId>();
   for (const tx of allTransactions) {
-    allAccountIds.add(tx.accountId as AccountId);
+    allAccountIds.add(tx.accountId);
     allAccountIds.add(resolveAccountId(tx));
   }
 
@@ -534,14 +535,14 @@ async function computeSimulatedDisplayTypes(
   const displayTypeByJournalId = new Map<JournalId, JournalDisplayType>();
 
   for (const journal of journals) {
-    const txs = txByJournal.get(journal.id as JournalId) ?? [];
+    const txs = txByJournal.get(journal.id) ?? [];
     const simulatedTxs: TransactionLike[] = txs.map(t => ({
       accountId: resolveAccountId(t),
       amount: t.amount,
       transactionType: t.transactionType as TransactionType,
     }));
     const newDisplayType = journalPresenter.getJournalDisplayType(simulatedTxs, accountTypeMap);
-    displayTypeByJournalId.set(journal.id as JournalId, newDisplayType);
+    displayTypeByJournalId.set(journal.id, newDisplayType);
   }
 
   return displayTypeByJournalId;

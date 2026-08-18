@@ -5,9 +5,9 @@ import {
   AccountId,
   JournalId,
   WorkplaceId,
+  JournalStatus,
 } from '@/src/types/domain';
 
-import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -370,7 +370,7 @@ describe('TransactionRepository', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: secondLocalAccount.id as AccountId,
+              accountId: secondLocalAccount.id,
               amount: 30,
               transactionType: TransactionType.DEBIT,
             },
@@ -390,12 +390,12 @@ describe('TransactionRepository', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: foreignAccount.id as AccountId,
+              accountId: foreignAccount.id,
               amount: 25,
               transactionType: TransactionType.DEBIT,
             },
             {
-              accountId: foreignEquity.id as AccountId,
+              accountId: foreignEquity.id,
               amount: 25,
               transactionType: TransactionType.CREDIT,
             },
@@ -410,7 +410,7 @@ describe('TransactionRepository', () => {
           currencyCode: 'USD',
           transactions: [
             {
-              accountId: secondLocalAccount.id as AccountId,
+              accountId: secondLocalAccount.id,
               amount: 35,
               transactionType: TransactionType.DEBIT,
             },

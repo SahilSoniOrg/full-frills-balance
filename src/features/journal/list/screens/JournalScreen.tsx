@@ -38,7 +38,12 @@ function JournalScreen() {
         {
           screenTitle: AppConfig.strings.journal.transactions,
           showBack: false,
-          headerActions: <JournalListHeaderActions />,
+          headerActions: (
+            <JournalListHeaderActions
+              onOpenReports={AppNavigation.toReports}
+              onOpenSearch={() => AppNavigation.toJournalSearch()}
+            />
+          ),
         },
         {
           active: journalList.isSelectionModeActive,

@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import Account, { isAccountSubtype, isAccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
+import { isAccountSubtype, isAccountType } from '@/src/types/accountSubtype';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';

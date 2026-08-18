@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { ledgerWriteService } from '@/src/services/ledger';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
-import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
+import { InboxProcessingStatus } from '@/src/types/domain';
 
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,

@@ -1,12 +1,11 @@
 import { database } from '@/src/data/database/Database';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceService } from '@/src/services/BalanceService';
-import { AccountId, AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
 import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
 import { firstValueFrom } from 'rxjs';
 
@@ -34,14 +33,14 @@ describe('applyAccountArchiveChanges (integration)', () => {
 
     expect(
       await applyAccountArchiveChanges(WP, {
-        toArchive: [account.id as AccountId],
+        toArchive: [account.id],
         toUnarchive: [],
       }),
     ).toBe(true);
 
     expect(
       await applyAccountArchiveChanges(WP, {
-        toArchive: [account.id as AccountId],
+        toArchive: [account.id],
         toUnarchive: [],
       }),
     ).toBe(false);
@@ -58,7 +57,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
     expect(
       await applyAccountArchiveChanges(WP, {
         toArchive: [],
-        toUnarchive: [account.id as AccountId],
+        toUnarchive: [account.id],
       }),
     ).toBe(false);
   });
@@ -74,13 +73,13 @@ describe('applyAccountArchiveChanges (integration)', () => {
 
     const balanceBefore = await balanceService.getAccountBalance(account.id, WP);
     const applied = await applyAccountArchiveChanges(WP, {
-      toArchive: [account.id as AccountId],
+      toArchive: [account.id],
       toUnarchive: [],
     });
 
     expect(applied).toBe(true);
 
-    const refreshed = await accountRepository.find(WP, account.id as AccountId);
+    const refreshed = await accountRepository.find(WP, account.id);
     expect(refreshed?.archivedAt).toBeTruthy();
 
     const balanceAfter = await balanceService.getAccountBalance(account.id, WP);
@@ -99,17 +98,17 @@ describe('applyAccountArchiveChanges (integration)', () => {
     });
 
     await applyAccountArchiveChanges(WP, {
-      toArchive: [account.id as AccountId],
+      toArchive: [account.id],
       toUnarchive: [],
     });
 
     const applied = await applyAccountArchiveChanges(WP, {
       toArchive: [],
-      toUnarchive: [account.id as AccountId],
+      toUnarchive: [account.id],
     });
 
     expect(applied).toBe(true);
-    const refreshed = await accountRepository.find(WP, account.id as AccountId);
+    const refreshed = await accountRepository.find(WP, account.id);
     expect(refreshed?.archivedAt == null).toBe(true);
   });
 
@@ -127,18 +126,18 @@ describe('applyAccountArchiveChanges (integration)', () => {
       accountSubtype: AccountSubtype.CASH,
       currencyCode: 'USD',
       workplaceId: WP,
-      parentAccountId: parent.id as AccountId,
+      parentAccountId: parent.id,
     });
 
     const applied = await applyAccountArchiveChanges(WP, {
-      toArchive: [parent.id as AccountId, child.id as AccountId],
+      toArchive: [parent.id, child.id],
       toUnarchive: [],
     });
 
     expect(applied).toBe(true);
 
-    const refreshedParent = await accountRepository.find(WP, parent.id as AccountId);
-    const refreshedChild = await accountRepository.find(WP, child.id as AccountId);
+    const refreshedParent = await accountRepository.find(WP, parent.id);
+    const refreshedChild = await accountRepository.find(WP, child.id);
     expect(refreshedParent?.archivedAt).toBeTruthy();
     expect(refreshedChild?.archivedAt).toBeTruthy();
   });
@@ -155,16 +154,16 @@ describe('applyAccountArchiveChanges (integration)', () => {
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WP,
-      parentAccountId: parent.id as AccountId,
+      parentAccountId: parent.id,
     });
 
     await applyAccountArchiveChanges(WP, {
-      toArchive: [parent.id as AccountId],
+      toArchive: [parent.id],
       toUnarchive: [],
     });
 
-    const refreshedParent = await accountRepository.find(WP, parent.id as AccountId);
-    const refreshedChild = await accountRepository.find(WP, child.id as AccountId);
+    const refreshedParent = await accountRepository.find(WP, parent.id);
+    const refreshedChild = await accountRepository.find(WP, child.id);
     expect(refreshedParent?.archivedAt).toBeTruthy();
     expect(refreshedChild?.archivedAt == null).toBe(true);
   });
@@ -176,7 +175,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    const accountId = account.id as AccountId;
+    const accountId = account.id;
 
     expect(await firstValueFrom(accountQueries.observeArchivedAt(WP, accountId))).toBeNull();
 
@@ -202,7 +201,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
       workplaceId: WP,
     });
     await applyAccountArchiveChanges(WP, {
-      toArchive: [archived.id as AccountId],
+      toArchive: [archived.id],
       toUnarchive: [],
     });
 
@@ -211,9 +210,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
     expect(hiddenIds).toContain(active.id);
     expect(hiddenIds).not.toContain(archived.id);
 
-    const pinnedIds = filterAccountsForDisplay(all, false, new Set([archived.id as AccountId])).map(
-      a => a.id,
-    );
+    const pinnedIds = filterAccountsForDisplay(all, false, new Set([archived.id])).map(a => a.id);
     expect(pinnedIds).toEqual(expect.arrayContaining([active.id, archived.id]));
   });
 });

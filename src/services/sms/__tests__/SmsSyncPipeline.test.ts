@@ -3,10 +3,11 @@ import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+  JournalId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { AppConfig } from '@/src/constants';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 
 jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({

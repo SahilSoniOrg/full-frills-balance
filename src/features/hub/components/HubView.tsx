@@ -7,7 +7,6 @@ import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
-import { AppNavigation } from '@/src/utils/navigation';
 
 export function HubView({
   activeTab,
@@ -20,6 +19,9 @@ export function HubView({
   strings,
   dismissInsight,
   restoreInsight,
+  onOpenInbox,
+  onOpenInsight,
+  onCreateEmergencyAccount,
   chrome,
 }: HubViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
@@ -33,7 +35,7 @@ export function HubView({
       <Box padding="lg" flex={1}>
         {unreadSmsCount > 0 && activeTab === 'active' ? (
           <ListRow
-            onPress={AppNavigation.toTransactionInbox}
+            onPress={onOpenInbox}
             leading={<AppIcon name="notifications" size={Size.md} color={theme.primary} />}
             title={strings.unreadSmsTitle(unreadSmsCount)}
             subtitle={strings.unreadSmsSubtitle}
@@ -52,6 +54,8 @@ export function HubView({
               insights={activeInsights}
               currencyCode={currencyCode}
               onDismiss={dismissInsight}
+              onOpenInsight={onOpenInsight}
+              onCreateEmergencyAccount={onCreateEmergencyAccount}
               hideManageDismissed
             />
           ) : unreadSmsCount === 0 ? (

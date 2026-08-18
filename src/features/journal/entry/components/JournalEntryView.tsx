@@ -14,7 +14,6 @@ import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournal
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useModeSubmitBar } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -67,7 +66,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
   if (isLoading) {
     return (
-      <Page header={<JournalEntryHeader title={headerTitle} />}>
+      <Page header={<JournalEntryHeader title={headerTitle} onClose={vm.onClose} />}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -86,7 +85,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }}
       header={
         <>
-          <JournalEntryHeader title={headerTitle} />
+          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} />
           <JournalModeBar
             mode={activeMode}
             onToggleMode={onToggleMode}
@@ -156,7 +155,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
         }}
         onDone={() => {
           setSavedSummary(null);
-          AppNavigation.back();
+          vm.onClose();
         }}
       />
     </Page>

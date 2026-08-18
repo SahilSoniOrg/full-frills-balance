@@ -4,6 +4,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { JournalSearchView } from '@/src/features/journal/list/components/JournalSearchView';
 import { useJournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 
 function JournalSearchScreen() {
@@ -11,7 +12,7 @@ function JournalSearchScreen() {
 
   const chrome = useMemo<ScreenNavChrome>(
     () =>
-      applySelectionChrome(privacyNavChrome('Search'), {
+      applySelectionChrome(privacyNavChrome('Search', AppNavigation.back), {
         active: vm.isSelectionModeActive,
         onExit: vm.exitSelectionMode,
       }),

@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
-import Account from '@/src/data/models/Account';
 import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId, AccountType, type AccountFields } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 
@@ -35,7 +34,7 @@ describe('useAccountDeleteMergeActions', () => {
     accountSubtype: 'CHECKING',
     currencyCode: 'USD',
     deletedAt: null,
-  } as unknown as Account;
+  } as unknown as AccountFields;
 
   const targetAccount = {
     id: targetId,
@@ -44,7 +43,7 @@ describe('useAccountDeleteMergeActions', () => {
     accountSubtype: 'CHECKING',
     currencyCode: 'USD',
     deletedAt: null,
-  } as unknown as Account;
+  } as unknown as AccountFields;
 
   const deleteAccount = jest.fn().mockResolvedValue(undefined);
   const recoverAction = jest.fn().mockResolvedValue(undefined);
@@ -170,7 +169,7 @@ describe('useAccountDeleteMergeActions', () => {
       await confirmCall.onConfirm();
     });
 
-    expect(deleteAccount).toHaveBeenCalledWith(sourceAccount);
+    expect(deleteAccount).toHaveBeenCalledWith(accountId);
     expect(toast.success).toHaveBeenCalledWith('Account has been deleted.', expect.any(Object));
     expect(AppNavigation.toAccounts).toHaveBeenCalled();
   });

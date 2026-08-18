@@ -1,14 +1,18 @@
-import TransactionInboxRecord, {
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+  AccountType,
+  JournalId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
-import { AccountType, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,

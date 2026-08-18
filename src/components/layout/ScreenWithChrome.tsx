@@ -14,16 +14,19 @@ type ScreenWithChromeProps = Omit<
 export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChromeProps) {
   const fab = chrome.fab;
 
+  const showBack = chrome.showBack ?? false;
+
   return (
     <Screen
       {...rest}
       title={chrome.screenTitle}
-      showBack={chrome.showBack ?? false}
       backIcon={chrome.backIcon}
       headerActions={chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
-      onBack={chrome.onBack}
       headerStyle={chrome.headerStyle}
+      {...(showBack && chrome.onBack
+        ? { showBack: true as const, onBack: chrome.onBack }
+        : { showBack: false as const })}
     >
       {children}
       {fab ? (

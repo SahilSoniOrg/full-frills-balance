@@ -1,11 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import PlannedPayment, {
+import PlannedPayment from '@/src/data/models/PlannedPayment';
+import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-} from '@/src/data/models/PlannedPayment';
+  AccountId,
+  PlannedPaymentId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
-import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 export interface PlannedPaymentPersistenceInput {
   name: string;

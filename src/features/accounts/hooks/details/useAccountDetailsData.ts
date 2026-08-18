@@ -10,7 +10,7 @@ import {
   AccountBalance,
   AccountId,
   AccountType,
-  type AccountFields as Account,
+  type AccountFields,
   WorkplaceId,
 } from '@/src/types/domain';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
@@ -25,9 +25,9 @@ export interface AccountDetailsData {
   accountId: AccountId;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  account: Account | null;
+  account: AccountFields | null;
   balanceData: AccountBalance | null;
-  accounts: Account[];
+  accounts: AccountFields[];
   rawSubBalances: AccountBalance[];
   dashboardLoading: boolean;
   accountLoading: boolean;
@@ -123,7 +123,7 @@ export function useAccountDetailsData(): AccountDetailsData {
   const pType = params.pType;
   const pColor = params.pColor;
 
-  const account = useMemo<Account | null>(
+  const account = useMemo<AccountFields | null>(
     () =>
       dbAccount ||
       (pName

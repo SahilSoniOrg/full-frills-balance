@@ -6,8 +6,8 @@ import { useMemo } from 'react';
 export default function CategoryCreationScreen() {
   const vm = useAccountFormViewModel();
   const chrome = useMemo(
-    () => buildAccountFormScreenChrome(vm.heroTitle, vm.formChrome.headerActionItems),
-    [vm.heroTitle, vm.formChrome.headerActionItems],
+    () => buildAccountFormScreenChrome(vm.heroTitle, vm.formChrome.headerActionItems, vm.onBack),
+    [vm.heroTitle, vm.formChrome.headerActionItems, vm.onBack],
   );
   return <AccountFormView {...vm} chrome={chrome} />;
 }

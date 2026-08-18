@@ -1,4 +1,4 @@
-import { useAppRestart } from '@/src/contexts/UIContext';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { Stack } from 'expo-router';
 

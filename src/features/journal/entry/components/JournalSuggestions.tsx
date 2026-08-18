@@ -2,7 +2,7 @@ import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountType, TabType } from '@/src/types/domain';
@@ -14,16 +14,16 @@ import { Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-
 
 interface JournalSuggestionsProps {
   suggestions: JournalAutofillSuggestion[];
-  accounts?: Account[];
+  accounts?: AccountFields[];
   onSelect: (suggestion: JournalAutofillSuggestion) => void;
   activeTabType?: TabType;
 }
 
 function resolveVisibleAccount(
   suggestion: JournalAutofillSuggestion,
-  accountsMap: Map<string, Account>,
+  accountsMap: Map<string, AccountFields>,
   tabType?: TabType,
-): Account | undefined {
+): AccountFields | undefined {
   if (!suggestion.targetAccountId || !suggestion.targetAccountType) return undefined;
 
   if (tabType === 'expense' && suggestion.targetAccountType !== AccountType.EXPENSE) {
@@ -52,7 +52,7 @@ export function JournalSuggestions({
   const { theme } = useTheme();
 
   const accountsMap = useMemo(() => {
-    return new Map<string, Account>(accounts.map(a => [a.id, a]));
+    return new Map<string, AccountFields>(accounts.map(a => [a.id, a]));
   }, [accounts]);
 
   if (suggestions.length === 0) return null;

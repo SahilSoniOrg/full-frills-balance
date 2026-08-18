@@ -41,7 +41,7 @@ describe('journalBulkCommands', () => {
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
     });
-    assetAccId = assetAcc.id as AccountId;
+    assetAccId = assetAcc.id;
 
     const expAcc = await accountRepository.create({
       workplaceId: WP,
@@ -49,7 +49,7 @@ describe('journalBulkCommands', () => {
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
     });
-    expenseAccId = expAcc.id as AccountId;
+    expenseAccId = expAcc.id;
 
     const newExpAcc = await accountRepository.create({
       workplaceId: WP,
@@ -57,7 +57,7 @@ describe('journalBulkCommands', () => {
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
     });
-    newExpenseAccId = newExpAcc.id as AccountId;
+    newExpenseAccId = newExpAcc.id;
   });
 
   it('bulkRenameJournals updates descriptions and supports undo', async () => {

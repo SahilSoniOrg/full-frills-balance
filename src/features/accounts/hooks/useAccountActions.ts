@@ -67,8 +67,8 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   );
 
   const deleteAccount = useCallback(
-    async (account: { id: AccountId }) => {
-      return deleteAccountCommand(account.id, workplaceId);
+    async (accountId: AccountId) => {
+      return deleteAccountCommand(accountId, workplaceId);
     },
     [workplaceId],
   );

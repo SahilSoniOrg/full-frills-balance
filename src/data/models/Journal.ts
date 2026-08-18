@@ -10,8 +10,6 @@ import {
 import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
-export { JournalStatus };
-
 export default class Journal extends BaseScopedModel<JournalId> {
   static table = 'journals';
   static associations = {

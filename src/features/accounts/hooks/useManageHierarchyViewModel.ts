@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   collectDescendantIds,
   getAddChildCandidates,
@@ -20,18 +20,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation } from 'react-native';
 
 export interface ManageHierarchyViewModel {
-  accounts: Account[];
+  accounts: AccountFields[];
   balancesByAccountId: Map<string, { transactionCount?: number; directTransactionCount?: number }>;
   selectedAccountId: AccountId | null;
-  selectedAccount: Account | undefined;
+  selectedAccount: AccountFields | undefined;
   addChildParentId: AccountId | null;
   collapsedCategories: Set<string>;
   expandedAccountIds: Set<string>;
-  accountsByParent: Map<AccountId | null, Account[]>;
-  visibleRootAccountsByCategory: Record<string, Account[]>;
-  addChildCandidates: Account[];
-  parentCandidates: Account[];
-  accountsForArchiveToggle: Account[];
+  accountsByParent: Map<AccountId | null, AccountFields[]>;
+  visibleRootAccountsByCategory: Record<string, AccountFields[]>;
+  addChildCandidates: AccountFields[];
+  parentCandidates: AccountFields[];
+  accountsForArchiveToggle: AccountFields[];
   onCreateParent: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
   onRequestAddChild: (parentId: AccountId) => void;
@@ -40,6 +40,7 @@ export interface ManageHierarchyViewModel {
   onToggleCategory: (category: string) => void;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
   onAddChild: (childId: AccountId) => Promise<void>;
+  onBack: () => void;
 }
 
 export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
@@ -74,15 +75,15 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     if (!initialFocusedId || filteredAccounts.length === 0) return;
 
     const expanded = new Set<string>();
-    let current = filteredAccounts.find((a: Account) => a.id === initialFocusedId);
+    let current = filteredAccounts.find((a: AccountFields) => a.id === initialFocusedId);
 
     while (current?.parentAccountId) {
       expanded.add(current.parentAccountId);
       const parentId = current.parentAccountId;
-      current = filteredAccounts.find((a: Account) => a.id === parentId);
+      current = filteredAccounts.find((a: AccountFields) => a.id === parentId);
     }
 
-    const focusedAccount = filteredAccounts.find((a: Account) => a.id === initialFocusedId);
+    const focusedAccount = filteredAccounts.find((a: AccountFields) => a.id === initialFocusedId);
 
     const frameId = requestAnimationFrame(() => {
       if (expanded.size > 0) {
@@ -168,7 +169,9 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
 
   const onAssignParent = useCallback(
     async (accountId: AccountId, parentId: AccountId | null) => {
-      const account = filteredAccounts.find((candidate: Account) => candidate.id === accountId);
+      const account = filteredAccounts.find(
+        (candidate: AccountFields) => candidate.id === accountId,
+      );
       if (!account) {
         toast.error('Account not found');
         return;
@@ -192,7 +195,9 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       const parentId = addChildParentId;
       if (!parentId) return;
 
-      const childAccount = filteredAccounts.find((candidate: Account) => candidate.id === childId);
+      const childAccount = filteredAccounts.find(
+        (candidate: AccountFields) => candidate.id === childId,
+      );
       if (!childAccount) {
         toast.error('Account not found');
         return;
@@ -253,5 +258,6 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     onToggleCategory,
     onAssignParent,
     onAddChild,
+    onBack: AppNavigation.back,
   };
 }

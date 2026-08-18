@@ -16,14 +16,15 @@ jest.mock('@/src/components/layout/NavigationBar', () => ({
 }));
 
 // Mock View component
-const MockView = ({ children, testID, ...props }: any) => React.createElement('mock-view', { testID, ...props }, children);
+const MockView = ({ children, testID, ...props }: any) =>
+  React.createElement('mock-view', { testID, ...props }, children);
 
 describe('Screen', () => {
   it('renders correctly with children', () => {
     render(
       <Screen>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -33,7 +34,7 @@ describe('Screen', () => {
     render(
       <Screen title="Test Screen">
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('navigation-bar')).toBeTruthy();
@@ -44,7 +45,7 @@ describe('Screen', () => {
     render(
       <Screen title="Test Screen" subtitle="Test Subtitle">
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('nav-title')).toHaveTextContent('Test Screen');
@@ -53,9 +54,9 @@ describe('Screen', () => {
 
   it('renders with back button', () => {
     render(
-      <Screen title="Test Screen" showBack>
+      <Screen title="Test Screen" showBack onBack={() => {}}>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('nav-back')).toHaveTextContent('back');
@@ -67,18 +68,17 @@ describe('Screen', () => {
     render(
       <Screen title="Test Screen" headerActions={<TestActions />}>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('nav-actions')).toHaveTextContent('actions');
   });
 
-
   it('renders non-scrollable content when scrollable is false', () => {
     render(
       <Screen scrollable={false}>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(() => screen.UNSAFE_root.findByType(ScrollView)).toThrow();
@@ -88,7 +88,7 @@ describe('Screen', () => {
     render(
       <Screen withPadding>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     const child = screen.getByTestId('test-child');
@@ -102,7 +102,7 @@ describe('Screen', () => {
         expect.objectContaining({
           paddingHorizontal: expect.any(Number),
         }),
-      ])
+      ]),
     );
   });
 
@@ -110,16 +110,14 @@ describe('Screen', () => {
     render(
       <Screen style={{ backgroundColor: 'red' }}>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     const child = screen.getByTestId('test-child');
     const parent = child.parent?.parent;
 
     expect(parent?.props.style).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ backgroundColor: 'red' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ backgroundColor: 'red' })]),
     );
   });
 
@@ -127,7 +125,7 @@ describe('Screen', () => {
     render(
       <Screen testID="custom-screen">
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByTestId('custom-screen')).toBeTruthy();
@@ -137,7 +135,7 @@ describe('Screen', () => {
     render(
       <Screen>
         <MockView testID="test-child" />
-      </Screen>
+      </Screen>,
     );
 
     expect(() => screen.getByTestId('navigation-bar')).toThrow();

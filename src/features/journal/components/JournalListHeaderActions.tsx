@@ -1,10 +1,15 @@
 import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { Size } from '@/src/constants';
-import { AppNavigation } from '@/src/utils/navigation';
 
 /** Primary nav actions only — period lives in the secondary filter bar. */
-export function JournalListHeaderActions() {
+export function JournalListHeaderActions({
+  onOpenReports,
+  onOpenSearch,
+}: {
+  onOpenReports: () => void;
+  onOpenSearch: () => void;
+}) {
   return (
     <ScreenHeaderActions
       actions={[
@@ -12,14 +17,14 @@ export function JournalListHeaderActions() {
           name: 'reports',
           size: Size.iconSm,
           variant: 'surface',
-          onPress: AppNavigation.toReports,
+          onPress: onOpenReports,
           accessibilityLabel: 'View Analytics',
         },
         {
           name: 'search',
           size: Size.iconSm,
           variant: 'surface',
-          onPress: () => AppNavigation.toJournalSearch(),
+          onPress: onOpenSearch,
           accessibilityLabel: 'Search and Filter',
         },
       ]}

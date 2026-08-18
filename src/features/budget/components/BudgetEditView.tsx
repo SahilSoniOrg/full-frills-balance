@@ -50,6 +50,7 @@ export function BudgetEditView({
       screenTitle: AppConfig.strings.common.loading,
       showBack: true,
       backIcon: 'back',
+      onBack: onCancel,
       headerActions: (
         <AppButton variant="ghost" onPress={onCancel}>
           {AppConfig.strings.common.cancel}
@@ -66,8 +67,9 @@ export function BudgetEditView({
         : AppConfig.strings.budget.formTitleNew,
       showBack: true,
       backIcon: 'back',
+      onBack: onCancel,
     }),
-    [budget],
+    [budget, onCancel],
   );
 
   if (loading) {

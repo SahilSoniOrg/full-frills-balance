@@ -1,8 +1,12 @@
 import Journal from '@/src/data/models/Journal';
-import TransactionInboxRecord, {
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import {
   InboxProcessingStatus,
-} from '@/src/data/models/TransactionInboxRecord';
-import { JournalEntryLine, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
+  JournalEntryLine,
+  JournalId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
@@ -39,7 +43,7 @@ export class JournalService {
       extraOps: journal => [
         transactionInboxRepository.prepareLink(
           smsRecord,
-          journal.id as JournalId,
+          journal.id,
           InboxProcessingStatus.IMPORTED,
         ),
       ],

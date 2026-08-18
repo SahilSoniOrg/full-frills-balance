@@ -35,7 +35,7 @@ export function useJournalsBulkOperations({
   const [activeModal, setActiveModal] = useState<JournalActiveModal>(null);
 
   const journalsById = useMemo(
-    () => new Map<JournalId, EnrichedJournal>(journals.map(j => [j.id as JournalId, j])),
+    () => new Map<JournalId, EnrichedJournal>(journals.map(j => [j.id, j])),
     [journals],
   );
 

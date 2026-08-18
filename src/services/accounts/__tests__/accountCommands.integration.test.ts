@@ -2,17 +2,15 @@ import {
   AccountSubtype,
   AccountType,
   TransactionType,
-  AccountId,
   JournalDisplayType,
   WorkplaceId,
+  AuditAction,
 } from '@/src/types/domain';
 /**
  * Account command lifecycle (integration).
  */
 
 import { database } from '@/src/data/database/Database';
-
-import { AuditAction } from '@/src/data/models/AuditLog';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
@@ -79,7 +77,7 @@ describe('account commands (integration)', () => {
       metadata: { creditLimitAmount: 10_000, statementDay: 15 },
     });
 
-    const meta = await accountRepository.findMetadata(WP, created.id as AccountId);
+    const meta = await accountRepository.findMetadata(WP, created.id);
     expect(meta?.creditLimitAmount).toBe(10_000);
     expect(meta?.statementDay).toBe(15);
   });
@@ -97,7 +95,7 @@ describe('account commands (integration)', () => {
         name: 'Nested',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
-        parentAccountId: expenseParent.id as AccountId,
+        parentAccountId: expenseParent.id,
         workplaceId: WP,
       }),
     ).rejects.toThrow('Parent account must be of the same type');
@@ -126,12 +124,12 @@ describe('account commands (integration)', () => {
         displayType: JournalDisplayType.INCOME,
         transactions: [
           {
-            accountId: asset.id as AccountId,
+            accountId: asset.id,
             amount: 100,
             transactionType: TransactionType.DEBIT,
           },
           {
-            accountId: equity.id as AccountId,
+            accountId: equity.id,
             amount: 100,
             transactionType: TransactionType.CREDIT,
           },
@@ -165,7 +163,7 @@ describe('account commands (integration)', () => {
 
     await adjustAccountBalance(WP, asset, 75, {
       kind: 'account',
-      accountId: income.id as AccountId,
+      accountId: income.id,
     });
 
     const balance = await balanceService.getAccountBalance(asset.id, WP);
@@ -181,7 +179,7 @@ describe('account commands (integration)', () => {
     });
 
     const reconcileDate = new Date(2026, 0, 31);
-    const updated = await reconcileAccount(account.id as AccountId, reconcileDate, WP);
+    const updated = await reconcileAccount(account.id, reconcileDate, WP);
 
     expect(updated.reconciledAt?.getTime()).toBe(reconcileDate.getTime());
 
@@ -197,7 +195,7 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
     const writeSpy = jest.spyOn(database, 'write');
-    await reconcileAccount(account.id as AccountId, new Date(2026, 1, 1), WP);
+    await reconcileAccount(account.id, new Date(2026, 1, 1), WP);
     expect(writeSpy).toHaveBeenCalledTimes(1);
     writeSpy.mockRestore();
   });
@@ -216,9 +214,7 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
 
-    await expect(
-      mergeAccounts(WP, asset.id as AccountId, [expense.id as AccountId]),
-    ).rejects.toThrow('different categories');
+    await expect(mergeAccounts(WP, asset.id, [expense.id])).rejects.toThrow('different categories');
   });
 
   it('mergeAccounts rewrites and audits in one write', async () => {
@@ -235,13 +231,13 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
     const writeSpy = jest.spyOn(database, 'write');
-    await mergeAccounts(WP, target.id as AccountId, [source.id as AccountId]);
+    await mergeAccounts(WP, target.id, [source.id]);
     expect(writeSpy).toHaveBeenCalledTimes(1);
     writeSpy.mockRestore();
 
     const audits = await auditRepository.findByEntity('account', target.id, WP);
     expect(audits.some(a => a.action === AuditAction.UPDATE)).toBe(true);
-    const deletedSource = await accountRepository.findWithDeleted(WP, source.id as AccountId);
+    const deletedSource = await accountRepository.findWithDeleted(WP, source.id);
     expect(deletedSource?.deletedAt).toBeInstanceOf(Date);
   });
 
@@ -258,19 +254,19 @@ describe('account commands (integration)', () => {
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WP,
-      parentAccountId: parent.id as AccountId,
+      parentAccountId: parent.id,
       icon: 'wallet',
     });
 
     const applied = await applyAccountArchiveChanges(WP, {
-      toArchive: [parent.id as AccountId, child.id as AccountId],
+      toArchive: [parent.id, child.id],
       toUnarchive: [],
     });
 
     expect(applied).toBe(true);
-    const updated = await accountRepository.find(WP, parent.id as AccountId);
+    const updated = await accountRepository.find(WP, parent.id);
     expect(updated?.archivedAt).toBeTruthy();
-    const refreshedChild = await accountRepository.find(WP, child.id as AccountId);
+    const refreshedChild = await accountRepository.find(WP, child.id);
     expect(refreshedChild?.archivedAt).toBeTruthy();
   });
 });

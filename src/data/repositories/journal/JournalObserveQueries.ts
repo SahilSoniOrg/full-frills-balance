@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
+import { JournalStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';

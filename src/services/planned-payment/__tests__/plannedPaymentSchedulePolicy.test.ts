@@ -1,10 +1,9 @@
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval, PlannedPaymentStatus, AccountId } from '@/src/types/domain';
 import {
   buildCreatePersistenceInput,
   buildUpdatePersistenceInput,
   isPlannedPaymentScheduleChange,
 } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
-import { AccountId } from '@/src/types/domain';
 
 describe('plannedPaymentSchedulePolicy', () => {
   const baseInput = {

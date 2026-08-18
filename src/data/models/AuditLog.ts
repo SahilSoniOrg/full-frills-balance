@@ -2,9 +2,6 @@ import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { AuditAction, AuditEntityType, PlainAuditLog } from '@/src/types/domain';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
-export { AuditAction };
-export type { AuditEntityType };
-
 export type ParsedAuditChanges = {
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;

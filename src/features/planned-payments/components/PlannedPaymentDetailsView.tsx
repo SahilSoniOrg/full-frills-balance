@@ -9,10 +9,8 @@ import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/compo
 import { getPlannedPaymentHistoryPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
-import { JournalId } from '@/src/types/domain';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getNow } from '@/src/utils/dateHelpers';
-import { AppNavigation } from '@/src/utils/navigation';
 
 export function PlannedPaymentDetailsView({
   chrome,
@@ -275,7 +273,7 @@ export function PlannedPaymentDetailsView({
               <Column marginBottom="lg">
                 {history?.map(journal => {
                   const presentation = getPlannedPaymentHistoryPresentation(journal, getNow());
-                  const isSelected = selectedIds.has(journal.id as JournalId);
+                  const isSelected = selectedIds.has(journal.id);
 
                   return (
                     <PlannedPaymentHistoryCard
@@ -291,11 +289,11 @@ export function PlannedPaymentDetailsView({
                       isOverdue={presentation.isOverdue}
                       isSelected={isSelected}
                       isSelectionModeActive={isSelectionModeActive}
-                      onLongPress={() => onLongPressItem(journal.id as JournalId)}
+                      onLongPress={() => onLongPressItem(journal.id)}
                       onPress={() =>
                         isSelectionModeActive
-                          ? toggleSelection(journal.id as JournalId)
-                          : AppNavigation.toJournalDetails(journal.id)
+                          ? toggleSelection(journal.id)
+                          : vm.onOpenJournal(journal.id)
                       }
                     />
                   );

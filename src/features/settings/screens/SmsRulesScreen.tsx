@@ -12,6 +12,8 @@ export default function SmsRulesScreen() {
       rules={rules}
       suggestions={suggestions}
       accountMap={accountMap}
+      onOpenRule={item => AppNavigation.toSmsRuleForm(item.id)}
+      onOpenSuggestion={suggestion => AppNavigation.toSmsRuleForm(undefined, suggestion)}
       fab={{
         onPress: () => AppNavigation.toSmsRuleForm(),
         label: 'Create Rule',

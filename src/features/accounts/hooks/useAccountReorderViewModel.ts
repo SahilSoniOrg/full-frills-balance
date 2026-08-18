@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import {
   accountIdsMatch,
   applyPendingOrder,
@@ -22,11 +22,11 @@ import { useCallback, useMemo, useState } from 'react';
 
 export interface AccountReorderViewModel {
   theme: ReturnType<typeof useTheme>['theme'];
-  accounts: Account[];
+  accounts: AccountFields[];
   isLoading: boolean;
   /** False while archived siblings are hidden — orderNums must use the full set. */
   canReorder: boolean;
-  accountsForArchiveToggle: Account[];
+  accountsForArchiveToggle: AccountFields[];
   onMove: (index: number, direction: 'up' | 'down') => void;
   onBack: () => void;
   title: string;
@@ -50,7 +50,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
   );
 
   // Canonical sibling order (includes archived). Moves always use this set.
-  const sourceIds = useMemo(() => baseSorted.map(a => a.id as AccountId), [baseSorted]);
+  const sourceIds = useMemo(() => baseSorted.map(a => a.id), [baseSorted]);
 
   // Live list caught up: clear overlay via render-time adjust (not a sync effect).
   // See https://react.dev/reference/react/useState#storing-information-from-previous-renders
@@ -80,7 +80,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
       const move = computeReorderMove(orderedAccounts, index, direction);
       if (!move) return;
 
-      setPendingOrder(move.nextAccounts.map(a => a.id as AccountId));
+      setPendingOrder(move.nextAccounts.map(a => a.id));
 
       try {
         await updateAccountOrder(move.item, move.newOrderNum);

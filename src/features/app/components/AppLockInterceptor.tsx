@@ -2,7 +2,7 @@ import { AppButton, AppText, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import { useAppLock } from '@/src/contexts/UIContext';
+import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAppLockEngine } from '@/src/features/app/hooks/useAppLockEngine';

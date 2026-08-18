@@ -1,7 +1,7 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
@@ -20,7 +20,7 @@ interface JournalMetaCardProps {
   setDescription: (desc: string) => void;
   onSelectSuggestion?: (suggestion: JournalAutofillSuggestion) => void;
   activeTabType?: TabType;
-  accounts?: Account[];
+  accounts?: AccountFields[];
   notes?: string;
   setNotes?: (notes: string) => void;
   style?: StyleProp<ViewStyle>;

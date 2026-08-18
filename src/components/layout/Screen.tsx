@@ -66,12 +66,13 @@ export function Screen({
         <NavigationBar
           title={title || ''}
           subtitle={subtitle}
-          onBack={onBack}
-          showBack={showBack}
           backIcon={backIcon}
           rightActions={headerActions}
           isSearchActive={isSearchActive}
           style={headerStyle}
+          {...(showBack && onBack
+            ? { showBack: true as const, onBack }
+            : { showBack: false as const })}
         />
       )}
       {content}

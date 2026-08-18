@@ -1,5 +1,5 @@
 import { FontIds } from '@/src/constants/design-tokens';
-import { useAppReady } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
 import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';

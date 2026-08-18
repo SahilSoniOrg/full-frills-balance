@@ -1,5 +1,5 @@
 import { RuleMatcher, ResolvedSmsRule, SmsMatchData } from '../RuleMatcher';
-import { TransactionDirection } from '@/src/data/models/TransactionInboxRecord';
+import { TransactionDirection } from '@/src/types/domain';
 
 describe('RuleMatcher', () => {
   const sampleData: SmsMatchData = {

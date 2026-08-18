@@ -1,5 +1,4 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
-import { JournalStatus } from '@/src/data/models/Journal';
+import { AuditAction, JournalStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
@@ -7,7 +6,6 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { auditService } from '@/src/services/audit-service';
 
 import { revertRegistry } from '@/src/services/revert-registry';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');

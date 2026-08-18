@@ -3,7 +3,7 @@ import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
@@ -23,7 +23,7 @@ type SplitFormProps = SplitJournalController;
 const AMOUNT_COL_WIDTH = 116;
 const DELETE_COL_WIDTH = 28;
 
-function accountChipStyles(account: Account | undefined, theme: Theme) {
+function accountChipStyles(account: AccountFields | undefined, theme: Theme) {
   return resolveAccountChipColors(account, theme);
 }
 
@@ -32,7 +32,7 @@ interface SplitRowItemProps {
   index: number;
   isLast: boolean;
   canRemove: boolean;
-  categoryAccount?: Account;
+  categoryAccount?: AccountFields;
   theme: Theme;
   str: typeof AppConfig.strings.transactionFlow.splitEntry;
   hairlineStyle: StyleProp<ViewStyle>;

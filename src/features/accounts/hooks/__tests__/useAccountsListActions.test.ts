@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccountsListActions } from '../useAccountsListActions';
 import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -24,8 +24,8 @@ describe('useAccountsListActions', () => {
       name: id,
       currencyCode: 'USD',
       accountType: AccountType.ASSET,
-      icon: null,
-    }) as unknown as Account;
+      icon: undefined,
+    }) as unknown as AccountFields;
 
   const balance = {
     accountId: childId,

@@ -1,5 +1,5 @@
 import { Typography } from '@/src/constants/design-tokens';
-import { useAppReady } from '@/src/contexts/UIContext';
+import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { processTextChildren, resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';

@@ -1,8 +1,5 @@
 import { IconName } from '@/src/components/core';
-import type {
-  AccountFields as Account,
-  PlainAccountMetadata as AccountMetadata,
-} from '@/src/types/domain';
+import type { AccountFields, PlainAccountMetadata } from '@/src/types/domain';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { AccountId, AccountSubtype, AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
@@ -49,9 +46,9 @@ export interface AccountFormBalanceClassifyDraft {
 export interface AccountFormDraftState {
   /** Entity id last seeded into core; `null` means create-mode defaults. */
   seededAccountId: AccountId | null;
-  /** Account id whose balance was injected; `null` = not yet. */
+  /** AccountFields id whose balance was injected; `null` = not yet. */
   seededBalanceAccountId: AccountId | null;
-  /** Account id whose metadata was injected; `null` = not yet. */
+  /** AccountFields id whose metadata was injected; `null` = not yet. */
   seededMetadataAccountId: AccountId | null;
   core: AccountFormCoreDraft;
   metadata: AccountMetadataValues;
@@ -115,7 +112,7 @@ export function createAccountFormDraft(defaults: AccountFormDefaults): AccountFo
 }
 
 export function mapAccountToCoreDraft(
-  account: Account,
+  account: AccountFields,
   route: AccountFormRouteContext,
   workplaceCurrency: string,
 ): AccountFormCoreDraft {
@@ -127,7 +124,7 @@ export function mapBalanceToDraftBalance(balanceData?: { balance: number } | nul
   return resolveAccountInitialBalance(balanceData);
 }
 
-export function mapMetadataToDraft(metadata?: AccountMetadata | null): AccountMetadataValues {
+export function mapMetadataToDraft(metadata?: PlainAccountMetadata | null): AccountMetadataValues {
   return createDefaultAccountMetadataValues(metadata ?? null);
 }
 
@@ -138,7 +135,7 @@ export function mapMetadataToDraft(metadata?: AccountMetadata | null): AccountMe
 export function shouldSeedAccountCoreDraft(args: {
   accountId: AccountId | undefined;
   seededAccountId: AccountId | null;
-  existingAccount: Account | null | undefined;
+  existingAccount: AccountFields | null | undefined;
 }): boolean {
   const { accountId, seededAccountId, existingAccount } = args;
   if (!accountId || !existingAccount) return false;
@@ -165,7 +162,7 @@ export function shouldSeedAccountBalanceDraft(args: {
 export function shouldSeedAccountMetadataDraft(args: {
   accountId: AccountId | undefined;
   seededMetadataAccountId: AccountId | null;
-  existingMetadata: AccountMetadata | undefined;
+  existingMetadata: PlainAccountMetadata | undefined;
 }): boolean {
   const { accountId, seededMetadataAccountId, existingMetadata } = args;
   if (!accountId || !existingMetadata) return false;

@@ -1,7 +1,6 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
-import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
@@ -10,6 +9,7 @@ interface StepSplashProps {
   name: string;
   setName: (name: string) => void;
   onContinue: () => void;
+  onImport: () => void;
   isCompleting: boolean;
 }
 
@@ -17,6 +17,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
   name,
   setName,
   onContinue,
+  onImport,
   isCompleting,
 }) => {
   const { isImporting } = useImport();
@@ -82,7 +83,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
             <AppButton
               variant="ghost"
               size="md"
-              onPress={AppNavigation.toImportSelection}
+              onPress={onImport}
               loading={isImporting}
               disabled={isImporting || isCompleting}
               accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}

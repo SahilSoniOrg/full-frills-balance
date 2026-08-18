@@ -1,17 +1,17 @@
-import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { analytics } from '@/src/services/analytics-service';
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { analytics } from '@/src/services/analytics-service';
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface WorkplaceContextType {
   readonly workplaceId: WorkplaceId;
   readonly defaultCurrencyCode: string;
-  setWorkplaceId: (id: string) => void;
+  setWorkplaceId: (id: WorkplaceId) => void;
 }
 
 export const WorkplaceContext = createContext<WorkplaceContextType | undefined>(undefined);
@@ -70,12 +70,12 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     prevWorkplaceIdRef.current = activeWorkplaceId;
   }, [activeWorkplaceId]);
 
-  const setWorkplaceId = useCallback((id: string) => {
+  const setWorkplaceId = useCallback((id: WorkplaceId) => {
     if (!id) {
       throw new Error('Invalid workplaceId');
     }
     const oldId = preferences.activeWorkplaceId;
-    preferences.setActiveWorkplaceId(id as WorkplaceId);
+    preferences.setActiveWorkplaceId(id);
     if (oldId && oldId !== id) {
       analytics.logWorkplaceSwitched(oldId, id);
     }

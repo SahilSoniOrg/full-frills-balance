@@ -7,14 +7,13 @@ import {
   AccountId,
   JournalStatus,
   WorkplaceId,
-} from '@/src/types/domain';
-
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord, {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-} from '@/src/data/models/TransactionInboxRecord';
+} from '@/src/types/domain';
+
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';

@@ -2,6 +2,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { AuditLogView } from '@/src/features/audit/components/AuditLogView';
 import { useAuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
 
 export default function AuditLogScreen() {
@@ -13,6 +14,7 @@ export default function AuditLogScreen() {
         : AppConfig.strings.audit.logTitle,
       showBack: true,
       backIcon: 'back',
+      onBack: AppNavigation.back,
     }),
     [vm.isFiltered],
   );

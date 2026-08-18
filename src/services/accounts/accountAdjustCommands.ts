@@ -48,7 +48,7 @@ export async function adjustAccountBalance(
     await assertWritable(workplaceId, [counterparty.accountId], 'Balance change counterparty');
   }
 
-  if (balancingAccountId === (account.id as AccountId)) {
+  if (balancingAccountId === account.id) {
     throw new Error('Balance change counterparty cannot be the same account');
   }
 
@@ -70,7 +70,7 @@ export async function adjustAccountBalance(
       currencyCode: account.currencyCode,
       transactions: [
         {
-          accountId: account.id as AccountId,
+          accountId: account.id,
           amount: amount,
           transactionType: accountTxType,
         },

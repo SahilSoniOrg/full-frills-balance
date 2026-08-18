@@ -1,7 +1,7 @@
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   ArchiveCascadeNode,
@@ -16,7 +16,7 @@ export type AccountArchiveCascadeModalProps = {
   visible: boolean;
   archiving: boolean;
   rootAccountId: AccountId;
-  allAccounts: (Account | PlainAccount)[];
+  allAccounts: (AccountFields | PlainAccount)[];
   onClose: () => void;
   onConfirm: (selectedIds: AccountId[]) => void;
 };

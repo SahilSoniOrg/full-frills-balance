@@ -1,7 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
-import { AccountId } from '@/src/types/domain';
 
 export type ArchiveAuditEntry = {
   entityId: string;
@@ -24,10 +23,10 @@ export function partitionArchiveTargets(
   const toUnarchive = new Set(changes.toUnarchive);
 
   const archiveTargets = accounts.filter(
-    account => toArchive.has(account.id as AccountId) && !account.archivedAt,
+    account => toArchive.has(account.id) && !account.archivedAt,
   );
   const unarchiveTargets = accounts.filter(
-    account => toUnarchive.has(account.id as AccountId) && !!account.archivedAt,
+    account => toUnarchive.has(account.id) && !!account.archivedAt,
   );
 
   return { archiveTargets, unarchiveTargets };

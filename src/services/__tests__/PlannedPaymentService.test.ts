@@ -1,6 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import {
+  JournalStatus,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+  AccountId,
+  PlannedPaymentId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -16,7 +22,6 @@ import {
   calculateNextOccurrence,
   computeFirstOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');

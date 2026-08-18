@@ -169,7 +169,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const allSelectableAccountIds = useMemo(() => {
     const tabAccounts = filterAccountsForListTab(displayAccounts, activeTab);
-    return tabAccounts.map(a => a.id as AccountId);
+    return tabAccounts.map(a => a.id);
   }, [displayAccounts, activeTab]);
 
   const onAccountPress = useCallback(
@@ -185,7 +185,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const onAccountLongPress = useCallback(
     (account: AccountCardViewModel) => {
-      selection.onLongPressItem(account.id as AccountId);
+      selection.onLongPressItem(account.id);
     },
     [selection],
   );

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
@@ -25,7 +25,7 @@ export interface UsePlannedOccurrencesParams {
   workplaceId: WorkplaceId;
   /** STS liability flows to merge as simulated occurrences. */
   allFlows?: Flow[];
-  accountMap?: Map<string, Account>;
+  accountMap?: Map<string, AccountFields>;
   currencyCode?: string;
   /** When provided, skips the planned-journal fetch and uses these instead. */
   plannedJournals?: EnrichedJournal[];

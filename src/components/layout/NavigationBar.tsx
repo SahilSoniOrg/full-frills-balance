@@ -9,40 +9,32 @@
 
 import { AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
-import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-export type NavigationBarProps = {
+type NavigationBarShared = {
   title: string;
   subtitle?: string;
-  onBack?: () => void;
-  showBack?: boolean;
   backIcon?: 'back' | 'close';
   rightActions?: React.ReactNode;
   isSearchActive?: boolean;
   style?: ViewStyle;
 };
 
+export type NavigationBarProps = NavigationBarShared &
+  ({ showBack: true; onBack: () => void } | { showBack?: false; onBack?: undefined });
+
 export function NavigationBar({
   title,
   subtitle,
   onBack,
-  showBack = true,
+  showBack = false,
   backIcon = 'back',
   rightActions,
   isSearchActive = false,
   style,
 }: NavigationBarProps) {
   const alignTitle = showBack ? 'center' : 'left';
-
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      AppNavigation.back();
-    }
-  };
 
   return (
     <View style={[styles.container, style]}>
@@ -51,7 +43,7 @@ export function NavigationBar({
           {!isSearchActive ? (
             <IconButton
               name={backIcon}
-              onPress={handleBack}
+              onPress={onBack}
               variant="surface"
               style={styles.backButton}
               testID="nav-back-button"

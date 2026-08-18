@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
@@ -17,7 +17,7 @@ export interface SafeToSpendMapperInput {
   totalLiquidAssets: number;
   accountSummaries: SafeToSpendDashboard['accountSummaries'];
   liquidAssetSubtypes: SafeToSpendDashboard['liquidAssetSubtypes'];
-  accountMap: Map<string, Account>;
+  accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
 }
 

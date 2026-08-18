@@ -4,7 +4,7 @@ import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useStsPreferences } from '@/src/hooks/useStsPreferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
-import type { PlainCurrency as Currency } from '@/src/types/domain';
+import type { PlainCurrency } from '@/src/types/domain';
 import { analytics } from '@/src/services/analytics-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { useCallback } from 'react';
@@ -15,7 +15,7 @@ export interface PersonalizationViewModel {
   archetype: string;
   onUpdateArchetype: (id: string) => Promise<void>;
   workplaceCurrency: string;
-  currencies: Currency[];
+  currencies: PlainCurrency[];
   workplaceName: string;
   onUpdateCurrency: (code: string) => Promise<void>;
   safeToSpendDays: number;

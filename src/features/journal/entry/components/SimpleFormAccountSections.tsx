@@ -1,5 +1,5 @@
 import { AppConfig, Spacing } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
 import { AccountId, AccountRole as DomainAccountRole } from '@/src/types/domain';
 import { StyleSheet, View } from 'react-native';
@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 interface SimpleFormAccountSectionsProps {
   sections: {
     title: string;
-    accounts: Account[];
+    accounts: AccountFields[];
     selectedId: AccountId;
     onSelect: (id: AccountId) => void;
     role: 'source' | 'destination';

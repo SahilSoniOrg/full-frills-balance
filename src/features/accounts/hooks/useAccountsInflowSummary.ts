@@ -6,14 +6,14 @@ import {
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import { reportService } from '@/src/services/report-service';
 import { AccountBalance, PlainAccount, WorkplaceId } from '@/src/types/domain';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface UseAccountsInflowSummaryArgs {
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  accounts: (Account | PlainAccount)[];
+  accounts: (AccountFields | PlainAccount)[];
   balances: AccountBalance[];
   totalIncome: number;
   totalExpense: number;

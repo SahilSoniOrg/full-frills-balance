@@ -1,5 +1,4 @@
-import Account from '@/src/data/models/Account';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId, AccountType, type AccountFields } from '@/src/types/domain';
 import {
   collectDescendantIds,
   getAddChildCandidates,
@@ -19,7 +18,7 @@ describe('hierarchyHelpers', () => {
       name: id,
       parentAccountId: parentAccountId as AccountId,
       accountType,
-    }) as unknown as Account;
+    }) as AccountFields;
 
   it('groups accounts and collects descendants across multiple levels', () => {
     const root = makeAccount('root');

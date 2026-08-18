@@ -1,4 +1,4 @@
-import Account from '@/src/data/models/Account';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, AccountType, EMPTY_ACCOUNT_ID, TransactionType } from '@/src/types/domain';
 import {
   filterGuidedLegAccounts,
@@ -6,12 +6,14 @@ import {
   resolveGuidedAccountsAfterTabChange,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
 
-function acct(partial: Partial<Account> & Pick<Account, 'id' | 'name' | 'accountType'>): Account {
+function acct(
+  partial: Partial<AccountFields> & Pick<AccountFields, 'id' | 'name' | 'accountType'>,
+): AccountFields {
   return {
     currencyCode: 'USD',
     parentAccountId: null,
     ...partial,
-  } as Account;
+  } as AccountFields;
 }
 
 describe('guidedJournalAccountEligibility', () => {

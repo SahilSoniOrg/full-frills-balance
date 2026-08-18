@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
-import { useOnboardingSession } from '@/src/contexts/UIContext';
+import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { analytics } from '@/src/services/analytics-service';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
@@ -26,6 +26,7 @@ export interface OnboardingFlowViewModel {
   onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
   isCompleting: boolean;
   onContinue: () => void;
+  onImport: () => void;
   onBack: () => void;
   onFinish: () => void;
 }
@@ -244,6 +245,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     onAddCustomCategory,
     isCompleting,
     onContinue,
+    onImport: AppNavigation.toImportSelection,
     onBack,
     onFinish,
   };

@@ -84,7 +84,7 @@ export function BulkHierarchyMoveModal({
         <TouchableOpacity
           key={candidate.id}
           style={[styles.destinationItem, { borderBottomColor: theme.divider }]}
-          onPress={() => void assignParent(candidate.id as AccountId)}
+          onPress={() => void assignParent(candidate.id)}
           disabled={isAssigning}
           accessibilityRole="button"
           accessibilityLabel={candidate.name}

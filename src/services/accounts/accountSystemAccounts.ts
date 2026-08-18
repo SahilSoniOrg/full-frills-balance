@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { getDefaultSubtypeForType } from '@/src/data/models/Account';
+import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId, AccountSubtype, AccountType } from '@/src/types/domain';
@@ -53,9 +53,9 @@ export async function getOpeningBalancesAccountId(
 ): Promise<AccountId> {
   const input = getOpeningBalancesAccountInput(currencyCode, workplaceId);
   const existing = await findAccountByName(workplaceId, input.name);
-  if (existing) return existing.id as AccountId;
+  if (existing) return existing.id;
 
-  return (await accountRepository.create(input)).id as AccountId;
+  return (await accountRepository.create(input)).id;
 }
 
 export async function findOrCreateBalanceCorrectionAccount(
@@ -71,13 +71,13 @@ export async function findOrCreateBalanceCorrectionAccount(
   for (const legacyName of balanceCorrections.legacyNames) {
     const legacy = await findAccountByName(workplaceId, legacyName);
     if (legacy && (legacy.currencyCode === targetCurrency || !legacy.currencyCode)) {
-      return legacy.id as AccountId;
+      return legacy.id;
     }
   }
 
   const name = `${balanceCorrections.namePrefix} (${targetCurrency})`;
   const existing = await findAccountByName(workplaceId, name);
-  if (existing) return existing.id as AccountId;
+  if (existing) return existing.id;
 
   const allAccounts = await accountRepository.findAll(workplaceId);
   const fallback = allAccounts.find(
@@ -86,7 +86,7 @@ export async function findOrCreateBalanceCorrectionAccount(
       a.currencyCode === targetCurrency &&
       !a.deletedAt,
   );
-  if (fallback) return fallback.id as AccountId;
+  if (fallback) return fallback.id;
 
   return (
     await accountRepository.create({
@@ -98,5 +98,5 @@ export async function findOrCreateBalanceCorrectionAccount(
       icon: balanceCorrections.icon as IconName,
       workplaceId,
     })
-  ).id as AccountId;
+  ).id;
 }

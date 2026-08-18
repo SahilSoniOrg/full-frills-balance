@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import {
   AccountId,
@@ -42,7 +42,7 @@ export interface AccountFormDefaults {
 export function resolveAccountFormDefaults(
   route: AccountFormRouteContext,
   workplaceCurrency: string,
-  existingAccount?: Account | null,
+  existingAccount?: AccountFields | null,
 ): AccountFormDefaults {
   const initialType = resolveInitialAccountType({
     pathname: route.pathname,

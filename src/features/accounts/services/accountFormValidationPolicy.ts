@@ -1,12 +1,12 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { sanitizeInput } from '@/src/utils/validation';
 
 /**
- * Account form validation policy (commit 46) — pure checks without React.
+ * AccountFields form validation policy (commit 46) — pure checks without React.
  */
 export function findDuplicateAccountNameError(
   accountName: string,
-  accounts: Account[],
+  accounts: AccountFields[],
   currentAccountId?: string,
 ): string | null {
   const trimmed = accountName.trim();
@@ -22,7 +22,7 @@ export function findDuplicateAccountNameError(
 
 export function isDuplicateAccountName(
   name: string,
-  accounts: Account[],
+  accounts: AccountFields[],
   currentAccountId?: string,
 ): boolean {
   return findDuplicateAccountNameError(name, accounts, currentAccountId) !== null;

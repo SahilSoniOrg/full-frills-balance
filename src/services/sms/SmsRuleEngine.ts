@@ -1,11 +1,15 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountType,
+  AccountId,
+  JournalId,
+  WorkplaceId,
+  InboxProcessingStatus,
+} from '@/src/types/domain';
 
 import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord, {
-  InboxProcessingStatus,
-} from '@/src/data/models/TransactionInboxRecord';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import {
@@ -314,17 +318,11 @@ export class SmsRuleEngine {
         if (
           [AccountType.ASSET, AccountType.LIABILITY].includes(account.accountType as AccountType)
         ) {
-          sourceCounts.set(
-            account.id as AccountId,
-            (sourceCounts.get(account.id as AccountId) || 0) + 1,
-          );
+          sourceCounts.set(account.id, (sourceCounts.get(account.id) || 0) + 1);
         } else if (
           [AccountType.EXPENSE, AccountType.INCOME].includes(account.accountType as AccountType)
         ) {
-          categoryCounts.set(
-            account.id as AccountId,
-            (categoryCounts.get(account.id as AccountId) || 0) + 1,
-          );
+          categoryCounts.set(account.id, (categoryCounts.get(account.id) || 0) + 1);
         }
       }
     }

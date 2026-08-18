@@ -4,7 +4,6 @@ import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants'
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
-import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
@@ -13,6 +12,9 @@ interface HubWidgetProps {
   insights: Insight[];
   currencyCode: string;
   onDismiss: (id: string) => void;
+  onOpenInsight: (insight: Insight) => void;
+  onCreateEmergencyAccount: () => void;
+  onManageDismissed?: () => void;
   hideManageDismissed?: boolean;
 }
 
@@ -20,6 +22,9 @@ export const HubWidget = ({
   insights,
   currencyCode,
   onDismiss,
+  onOpenInsight,
+  onCreateEmergencyAccount,
+  onManageDismissed,
   hideManageDismissed = false,
 }: HubWidgetProps) => {
   const { theme, fonts } = useTheme();
@@ -29,16 +34,7 @@ export const HubWidget = ({
   const isEmergencyFundInsight = (insight: Insight) => insight.id === 'no_emergency_fund';
 
   const handleOpenInsightDetails = (insight: Insight) => {
-    AppNavigation.toInsightDetails({
-      id: insight.id,
-      message: insight.message,
-      description: insight.description,
-      suggestion: insight.suggestion,
-      journalIds: insight.journalIds,
-      severity: insight.severity,
-      amount: insight.amount,
-      currencyCode: insight.currencyCode,
-    });
+    onOpenInsight(insight);
   };
 
   const handleEmergencyFundPress = () => setEmergencyFundInfoVisible(true);
@@ -54,7 +50,7 @@ export const HubWidget = ({
   if (insights.length === 0) return null;
 
   const handleManageDismissed = () => {
-    AppNavigation.toHub();
+    onManageDismissed?.();
   };
 
   const hubSeverityLabels = {
@@ -276,7 +272,7 @@ export const HubWidget = ({
         onClose={() => setEmergencyFundInfoVisible(false)}
         onCreateAccount={() => {
           setEmergencyFundInfoVisible(false);
-          AppNavigation.toAccountCreation('ASSET');
+          onCreateEmergencyAccount();
         }}
       />
     </>

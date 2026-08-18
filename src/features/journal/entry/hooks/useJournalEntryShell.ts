@@ -1,7 +1,7 @@
 import { CreateAccountIntent, useAccounts } from '@/src/features/accounts';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
@@ -53,10 +53,11 @@ export interface JournalEntryShell {
   editBannerText: string;
   showAccountPicker: boolean;
   onCloseAccountPicker: () => void;
+  onClose: () => void;
   onSelectAccountRequest: (lineId: string) => void;
   onAccountSelected: (accountId: AccountId) => void;
   selectedAccountId?: AccountId;
-  selectableAccounts: Account[];
+  selectableAccounts: AccountFields[];
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   suggestions: JournalAutofillSuggestion[];
@@ -250,6 +251,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,
     showAccountPicker,
     onCloseAccountPicker,
+    onClose: onSuccess,
     onSelectAccountRequest,
     onAccountSelected,
     selectedAccountId,

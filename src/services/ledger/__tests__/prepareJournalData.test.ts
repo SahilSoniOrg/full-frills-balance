@@ -1,6 +1,10 @@
-import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
-
-import { JournalStatus } from '@/src/data/models/Journal';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  WorkplaceId,
+  JournalStatus,
+} from '@/src/types/domain';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';

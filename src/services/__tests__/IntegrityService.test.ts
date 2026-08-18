@@ -1,7 +1,13 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountType,
+  TransactionType,
+  AccountId,
+  WorkplaceId,
+  AuditAction,
+} from '@/src/types/domain';
 
-import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
+import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';

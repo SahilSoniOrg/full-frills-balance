@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { isAccountType } from '@/src/data/models/Account';
+import { isAccountType } from '@/src/types/accountSubtype';
 import Currency from '@/src/data/models/Currency';
 import { AccountType, TransactionType } from '@/src/types/domain';
 import type { BatchImportData, ImportedTransaction } from '@/src/data/repositories/importTypes';

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, AccountType } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 
@@ -85,9 +85,9 @@ export function resolveAccountFormHeroCopy(input: {
 }
 
 export function filterPotentialParentAccounts(
-  accounts: Account[],
+  accounts: AccountFields[],
   input: { accountId?: AccountId; accountType: AccountType; selectedCurrency: string },
-): Account[] {
+): AccountFields[] {
   return accounts.filter(
     a =>
       a.id !== input.accountId &&
@@ -97,6 +97,9 @@ export function filterPotentialParentAccounts(
   );
 }
 
-export function filterPayFromAccountOptions(accounts: Account[], accountId?: AccountId): Account[] {
+export function filterPayFromAccountOptions(
+  accounts: AccountFields[],
+  accountId?: AccountId,
+): AccountFields[] {
   return accounts.filter(a => a.accountType === AccountType.ASSET && a.id !== accountId);
 }

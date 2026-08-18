@@ -1,7 +1,7 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
@@ -27,7 +27,7 @@ const AccountPickerRow = React.memo(
     isPinnedArchived,
     onPress,
   }: {
-    item: Account | PlainAccount;
+    item: AccountFields | PlainAccount;
     isSelected: boolean;
     isMultiple: boolean;
     isPinnedArchived: boolean;
@@ -83,7 +83,7 @@ const AccountPickerRow = React.memo(
 AccountPickerRow.displayName = 'AccountPickerRow';
 
 type AccountPickerListProps = {
-  accounts: (Account | PlainAccount)[];
+  accounts: (AccountFields | PlainAccount)[];
   selectedIds: Set<AccountId>;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   onClose: () => void;
@@ -224,7 +224,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
   );
   const renderItem = useCallback(
-    ({ item, section }: { item: Account | PlainAccount; section: any }) => {
+    ({ item, section }: { item: AccountFields | PlainAccount; section: any }) => {
       const { key } = section as AccountSection;
       if (collapsedSections.has(key) && !isSearchMode) return null;
       return (

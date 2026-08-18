@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountFormBalanceClassifyDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormCoreApi } from '@/src/features/accounts/hooks/form/useAccountFormCore';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
@@ -19,7 +19,7 @@ import { useCallback, useMemo } from 'react';
 
 export type AccountFormBalanceClassifyVm = {
   visible: boolean;
-  accounts: Account[];
+  accounts: AccountFields[];
   editedAccountId: AccountId;
   editedAccountName: string;
   editedAccountType: AccountType;
@@ -40,7 +40,7 @@ export function useAccountFormBalanceClassify(args: {
   balanceClassifyDraft: AccountFormBalanceClassifyDraft;
   existingMetadata: unknown;
   balanceData: { balance: number } | null | undefined;
-  accounts: Account[];
+  accounts: AccountFields[];
   handleSave: (input: AccountPersistenceSaveInput) => Promise<void>;
 }): {
   balanceClassify: AccountFormBalanceClassifyVm;

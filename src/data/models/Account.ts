@@ -12,18 +12,6 @@ import {
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
-export {
-  ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE,
-  ACCOUNT_SUBTYPES_BY_TYPE,
-  formatAccountSubtypeLabel,
-  getAccountSubtypesForType,
-  getDefaultSubtypeForType,
-  getDefaultSubtypeForTypeLike,
-  isAccountSubtype,
-  isAccountType,
-  isSubtypeAllowedForType,
-} from '@/src/types/accountSubtype';
-
 export default class Account extends BaseScopedModel<AccountId> {
   static table = 'accounts';
   static associations = {

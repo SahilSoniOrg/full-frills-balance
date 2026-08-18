@@ -1,6 +1,7 @@
-import { AuditEntityType } from '@/src/data/models/AuditLog';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import {
+  AuditEntityType,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
   AccountSubtype,
   AccountType,
   AccountId,

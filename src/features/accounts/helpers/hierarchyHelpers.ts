@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 import { getVisibleRoots } from '@/src/utils/accountArchive';
 import { AccountId } from '@/src/types/domain';
@@ -7,8 +7,10 @@ export interface HierarchyBalanceSummary {
   directTransactionCount?: number;
 }
 
-export function groupAccountsByParent(accounts: Account[]): Map<AccountId | null, Account[]> {
-  const groups = new Map<AccountId | null, Account[]>();
+export function groupAccountsByParent(
+  accounts: AccountFields[],
+): Map<AccountId | null, AccountFields[]> {
+  const groups = new Map<AccountId | null, AccountFields[]>();
   accounts.forEach(account => {
     const parentId = account.parentAccountId || null;
     const siblings = groups.get(parentId) || [];
@@ -19,7 +21,7 @@ export function groupAccountsByParent(accounts: Account[]): Map<AccountId | null
 }
 
 export function collectDescendantIds(
-  accountsByParent: ReadonlyMap<AccountId | null, Account[]>,
+  accountsByParent: ReadonlyMap<AccountId | null, AccountFields[]>,
   selectedAccountId: AccountId | null,
 ): Set<AccountId> {
   if (!selectedAccountId) return new Set();
@@ -37,11 +39,11 @@ export function collectDescendantIds(
 }
 
 export function getVisibleRootAccountsByCategory(
-  accounts: Account[],
-  accountsByParent: ReadonlyMap<AccountId | null, Account[]>,
+  accounts: AccountFields[],
+  accountsByParent: ReadonlyMap<AccountId | null, AccountFields[]>,
   balancesByAccountId: ReadonlyMap<string, HierarchyBalanceSummary>,
 ) {
-  const groups = createAccountTypeRecord<Account[]>(() => []);
+  const groups = createAccountTypeRecord<AccountFields[]>(() => []);
   const rootAccounts = getVisibleRoots(accounts);
 
   rootAccounts.forEach(account => {
@@ -58,10 +60,10 @@ export function getVisibleRootAccountsByCategory(
 }
 
 export function getAddChildCandidates(
-  accounts: Account[],
-  selectedAccount: Account | undefined,
+  accounts: AccountFields[],
+  selectedAccount: AccountFields | undefined,
   descendantIds: ReadonlySet<AccountId>,
-): Account[] {
+): AccountFields[] {
   if (!selectedAccount) return [];
 
   return accounts.filter(account => {
@@ -75,11 +77,11 @@ export function getAddChildCandidates(
 }
 
 export function getParentCandidates(
-  accounts: Account[],
-  selectedAccount: Account | undefined,
+  accounts: AccountFields[],
+  selectedAccount: AccountFields | undefined,
   descendantIds: ReadonlySet<AccountId>,
   balancesByAccountId: ReadonlyMap<string, HierarchyBalanceSummary>,
-): Account[] {
+): AccountFields[] {
   if (!selectedAccount) return [];
 
   return accounts.filter(account => {

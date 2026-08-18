@@ -1,5 +1,5 @@
 import { CreateAccountIntent } from '@/src/features/accounts';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { AccountId, AccountType } from '@/src/types/domain';
 import {
@@ -14,7 +14,7 @@ import { useCallback, useMemo, useState } from 'react';
 type SplitRowPick = { id: string; accountId?: AccountId };
 
 export interface UseJournalEntryAccountPickerOptions {
-  accounts: Account[];
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   activeMode: JournalEntryScreenMode;
   /** Mode-agnostic apply; parent routes via switch(activeMode). */
@@ -26,7 +26,7 @@ export interface UseJournalEntryAccountPickerOptions {
 }
 
 /**
- * Account picker UI state — mode-agnostic.
+ * AccountFields picker UI state — mode-agnostic.
  * Split / guided / advanced account application is injected via callback.
  */
 export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPickerOptions) {

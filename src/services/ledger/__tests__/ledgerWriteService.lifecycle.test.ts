@@ -6,10 +6,11 @@ import {
   JournalId,
   PlannedPaymentId,
   WorkplaceId,
+  JournalStatus,
 } from '@/src/types/domain';
 
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
@@ -40,8 +41,8 @@ describe('ledgerWriteService lifecycle', () => {
       currencyCode: 'USD',
       workplaceId,
     });
-    cashAccountId = cash.id as AccountId;
-    expenseAccountId = expense.id as AccountId;
+    cashAccountId = cash.id;
+    expenseAccountId = expense.id;
   }, 30000);
 
   afterAll(() => {

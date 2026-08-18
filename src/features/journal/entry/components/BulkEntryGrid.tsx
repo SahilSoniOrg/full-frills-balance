@@ -7,13 +7,13 @@ import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor
 import { BulkEntryRow } from './BulkEntryRow';
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AccountPickerModal } from '@/src/features/accounts';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import dayjs from 'dayjs';
 
 interface BulkEntryGridProps {
   rows: BulkJournalRow[];
   submitError: string | null;
-  accounts: Account[];
+  accounts: AccountFields[];
   addRow: () => void;
   removeRow: (id: string) => void;
   clearRows: () => void;
@@ -195,7 +195,7 @@ export const BulkEntryGrid = React.memo(
           onSelect={handleDateSelect}
         />
 
-        {/* Account Picker Modal */}
+        {/* AccountFields Picker Modal */}
         <AccountPickerModal
           visible={activePicker?.type === 'source' || activePicker?.type === 'destination'}
           accounts={accounts}

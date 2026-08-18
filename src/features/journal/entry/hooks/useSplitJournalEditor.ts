@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {
@@ -17,7 +17,7 @@ import { useJournalEditor } from './useJournalEditor';
 import { useSplitEntryState } from './useSplitEntryState';
 
 export interface UseSplitJournalEditorProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   onSelectAccountRequest: (lineId: string) => void;
   isActive: boolean;

@@ -181,7 +181,7 @@ Goal: give each state machine a cohesive owner.
 - [x] Split accounts-list data, interaction, and command/modal state (`useAccountsListViewModel` / `useAccountsListUiState` / `useAccountsListActions`).
 - [x] Centralize journal selection and bulk-action state behind neutral contracts (`useJournalsBulkOperations`).
 - [x] Keep import-selection UI in settings; shared `useImport` stays in `src/hooks` so onboarding does not import settings.
-- [x] Give telemetry and navigation one owner per feature for dashboard STS and budget/planned-payment lists (`useDashboardFeatureActions`, list `onItemPress`). Other features still call `AppNavigation` from some views.
+- [x] Give telemetry and navigation one owner per feature. Screens and view models call `AppNavigation`; views receive callbacks.
 
 Exit: screens orchestrate; view-model contracts are cohesive; cross-feature UI internals are not imported.
 
@@ -260,7 +260,7 @@ Original confirmed risks (closed or ratcheted unless noted):
 - competing write protocols — WP-4 (`persistBatch` / ledger remain commit owners; 21 named service/test writes remain);
 - Watermelon models in presentation — WP-5, `presentation_model_import` 0;
 - docs vs CI — `check:architecture` is on the CI path;
-- mixed app-shell state machines — WP-6 split; some views still navigate directly.
+- mixed app-shell state machines — WP-6 split; views receive nav callbacks from screens/view models.
 
 Stale “Open” rows in `docs/architecture/WP1_EXIT_AUDIT.md` described `adf1378f`; they were closed in later WP-1L–WP-1R work.
 

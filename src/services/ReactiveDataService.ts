@@ -302,7 +302,7 @@ class ReactiveDataService {
 
         const descendants = getAccountDescendants(accounts, accountId);
         const subBalances = descendants
-          .map(d => balancesMap.get(d.id as AccountId))
+          .map(d => balancesMap.get(d.id))
           .filter((b): b is AccountBalance => !!b);
 
         return {

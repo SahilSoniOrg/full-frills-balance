@@ -1,9 +1,7 @@
 import { database } from '@/src/data/database/Database';
-import TransactionInboxRecord, {
-  InboxProcessingStatus,
-} from '@/src/data/models/TransactionInboxRecord';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { InboxProcessingStatus, JournalId, WorkplaceId } from '@/src/types/domain';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { Model } from '@nozbe/watermelondb';
 
 function isProcessedStatus(status: InboxProcessingStatus): boolean {

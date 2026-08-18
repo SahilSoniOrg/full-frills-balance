@@ -6,6 +6,7 @@ import type {
 } from '@/src/components/layout/screenChrome';
 import { Inset, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import type { Edge } from 'react-native-safe-area-context';
 
@@ -37,7 +38,14 @@ export function SettingsLayout({
   hideFooter = false,
 }: SettingsLayoutProps) {
   const chrome: ScreenChrome = showBack
-    ? { screenTitle: title, showBack: true, backIcon, headerActions, fab }
+    ? {
+        screenTitle: title,
+        showBack: true,
+        backIcon,
+        onBack: AppNavigation.back,
+        headerActions,
+        fab,
+      }
     : { screenTitle: title, showBack: false, headerActions, fab };
 
   return (

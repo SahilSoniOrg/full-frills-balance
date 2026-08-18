@@ -13,9 +13,10 @@ function ManageHierarchyScreen() {
       screenTitle: AppConfig.strings.accounts.hierarchy.title,
       showBack: true,
       backIcon: 'back',
+      onBack: vm.onBack,
       headerActions: <ShowArchivedButton accounts={vm.accountsForArchiveToggle} />,
     }),
-    [vm.accountsForArchiveToggle],
+    [vm.accountsForArchiveToggle, vm.onBack],
   );
   return <ManageHierarchyView {...vm} chrome={chrome} />;
 }

@@ -1,4 +1,4 @@
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
@@ -15,13 +15,13 @@ export interface ReportFilters {
   onCloseDatePicker: () => void;
   onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
   dateLabel: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   periodFilter: PeriodFilter;
   onRefresh: () => void;
 }
 
 interface UseReportFiltersProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   workplaceId: WorkplaceId;
   dateRange: DateRange;
   periodFilter: PeriodFilter;

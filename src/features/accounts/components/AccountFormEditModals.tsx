@@ -3,13 +3,13 @@ import {
   AccountArchiveCascadeModal,
   type AccountArchiveCascadeModalProps,
 } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 
 export type AccountMergePickerModalProps = {
   visible: boolean;
   onClose: () => void;
-  accounts: (Account | PlainAccount)[];
+  accounts: (AccountFields | PlainAccount)[];
   onSelect: (targetAccountId: AccountId) => void;
   title: string;
 };

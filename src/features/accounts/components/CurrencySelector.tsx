@@ -1,14 +1,14 @@
 import { CurrencyPickerSheet } from '@/src/components/common/CurrencyPickerSheet';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import type { PlainCurrency as Currency } from '@/src/types/domain';
+import type { PlainCurrency } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface CurrencySelectorProps {
   selectedCurrency: string;
-  currencies: Currency[];
+  currencies: PlainCurrency[];
   onSelect: (currencyCode: string) => void;
   disabled?: boolean;
   variant?: 'default' | 'compact' | 'pill';

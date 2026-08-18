@@ -4,6 +4,7 @@ import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/use
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics-service';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
 export type HubTab = 'active' | 'dismissed';
@@ -19,6 +20,9 @@ export interface HubViewModel {
   strings: typeof AppConfig.strings.dashboard.hub;
   dismissInsight: (id: string) => Promise<void>;
   restoreInsight: (id: string) => Promise<void>;
+  onOpenInbox: () => void;
+  onOpenInsight: (insight: Insight) => void;
+  onCreateEmergencyAccount: () => void;
 }
 
 export function useHubViewModel(): HubViewModel {
@@ -43,6 +47,27 @@ export function useHubViewModel(): HubViewModel {
   const restoreInsight = useCallback(async (id: string) => {
     analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
     await insightService.undismissPattern(id);
+  }, []);
+
+  const onOpenInbox = useCallback(() => {
+    AppNavigation.toTransactionInbox();
+  }, []);
+
+  const onOpenInsight = useCallback((insight: Insight) => {
+    AppNavigation.toInsightDetails({
+      id: insight.id,
+      message: insight.message,
+      description: insight.description,
+      suggestion: insight.suggestion,
+      journalIds: insight.journalIds,
+      severity: insight.severity,
+      amount: insight.amount,
+      currencyCode: insight.currencyCode,
+    });
+  }, []);
+
+  const onCreateEmergencyAccount = useCallback(() => {
+    AppNavigation.toAccountCreation('ASSET');
   }, []);
 
   const tabOptions = useMemo(
@@ -72,5 +97,8 @@ export function useHubViewModel(): HubViewModel {
     strings: hubStrings,
     dismissInsight,
     restoreInsight,
+    onOpenInbox,
+    onOpenInsight,
+    onCreateEmergencyAccount,
   };
 }

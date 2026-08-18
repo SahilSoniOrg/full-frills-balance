@@ -1,4 +1,4 @@
-import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 /**
  * Migration regression harness (Phase 3.3).
  *
@@ -93,12 +93,12 @@ describe('database migrations (LokiJS)', () => {
         currencyCode: 'USD',
         transactions: [
           {
-            accountId: cash.id as AccountId,
+            accountId: cash.id,
             amount: 40,
             transactionType: TransactionType.CREDIT,
           },
           {
-            accountId: expense.id as AccountId,
+            accountId: expense.id,
             amount: 40,
             transactionType: TransactionType.DEBIT,
           },
@@ -109,10 +109,7 @@ describe('database migrations (LokiJS)', () => {
 
     await rebuildQueueService.flush();
 
-    const cashTransactions = await transactionRepository.findByAccount(
-      workplaceId,
-      cash.id as AccountId,
-    );
+    const cashTransactions = await transactionRepository.findByAccount(workplaceId, cash.id);
     expect(cashTransactions).toHaveLength(1);
     const { final: foldedCashBalance } = foldBalances(0, [
       {
@@ -123,13 +120,10 @@ describe('database migrations (LokiJS)', () => {
     ]);
     expect(foldedCashBalance).toBe(-40);
 
-    const cashBalance = await balanceService.getAccountBalance(cash.id as AccountId, workplaceId);
+    const cashBalance = await balanceService.getAccountBalance(cash.id, workplaceId);
     expect(cashBalance.balance).toBe(-40);
 
-    const expenseBalance = await balanceService.getAccountBalance(
-      expense.id as AccountId,
-      workplaceId,
-    );
+    const expenseBalance = await balanceService.getAccountBalance(expense.id, workplaceId);
     expect(expenseBalance.balance).toBe(40);
   });
 
@@ -143,7 +137,7 @@ describe('database migrations (LokiJS)', () => {
     });
 
     expect(coloredAccount.color).toBe('#3B82F6');
-    const fetched = await accountRepository.find(workplaceId, coloredAccount.id as AccountId);
+    const fetched = await accountRepository.find(workplaceId, coloredAccount.id);
     expect(fetched?.color).toBe('#3B82F6');
   });
 
@@ -156,7 +150,7 @@ describe('database migrations (LokiJS)', () => {
       color: '#F87171',
     });
 
-    const prepared = await prepareAccountFieldUpdate(workplaceId, coloredAccount.id as AccountId, {
+    const prepared = await prepareAccountFieldUpdate(workplaceId, coloredAccount.id, {
       color: '',
     });
 
@@ -167,7 +161,7 @@ describe('database migrations (LokiJS)', () => {
     );
 
     expect(updated.color).toBe('');
-    const fetched = await accountRepository.find(workplaceId, coloredAccount.id as AccountId);
+    const fetched = await accountRepository.find(workplaceId, coloredAccount.id);
     expect(fetched?.color).toBe('');
   });
 });

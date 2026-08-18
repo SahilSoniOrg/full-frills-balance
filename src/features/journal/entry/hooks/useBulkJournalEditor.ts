@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
@@ -36,7 +36,7 @@ export interface SavedJournalSummary {
 export interface UseBulkJournalEditorProps {
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  accounts: Account[];
+  accounts: AccountFields[];
   onSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
 }
 

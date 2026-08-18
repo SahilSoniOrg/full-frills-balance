@@ -5,9 +5,9 @@ import {
   AccountId,
   JournalId,
   WorkplaceId,
+  JournalStatus,
 } from '@/src/types/domain';
 
-import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -38,8 +38,8 @@ describe('ledgerWriteService write paths', () => {
       currencyCode: 'USD',
       workplaceId,
     });
-    cashAccountId = cash.id as AccountId;
-    expenseAccountId = expense.id as AccountId;
+    cashAccountId = cash.id;
+    expenseAccountId = expense.id;
   }, 30000);
 
   afterAll(() => {

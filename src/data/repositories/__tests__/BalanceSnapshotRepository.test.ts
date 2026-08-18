@@ -1,11 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountId,
-  AccountType,
-  TransactionId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, TransactionId, TransactionType, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -37,7 +31,7 @@ describe('BalanceSnapshotRepository', () => {
 
     const tx1 = await transactionRepository.create(
       {
-        accountId: acc1.id as AccountId,
+        accountId: acc1.id,
         amount: 100,
         transactionType: TransactionType.DEBIT,
         currencyCode: 'USD',
@@ -50,7 +44,7 @@ describe('BalanceSnapshotRepository', () => {
 
     const foreignTx = await transactionRepository.create(
       {
-        accountId: foreignAcc.id as AccountId,
+        accountId: foreignAcc.id,
         amount: 500,
         transactionType: TransactionType.DEBIT,
         currencyCode: 'USD',
@@ -62,7 +56,7 @@ describe('BalanceSnapshotRepository', () => {
     );
 
     await balanceSnapshotRepository.create(wp1, {
-      accountId: acc1.id as AccountId,
+      accountId: acc1.id,
       transactionId: tx1.id as TransactionId,
       transactionDate: 1000,
       absoluteBalance: 100,
@@ -70,7 +64,7 @@ describe('BalanceSnapshotRepository', () => {
     });
 
     await balanceSnapshotRepository.create(wp2, {
-      accountId: foreignAcc.id as AccountId,
+      accountId: foreignAcc.id,
       transactionId: foreignTx.id as TransactionId,
       transactionDate: 1000,
       absoluteBalance: 500,

@@ -1,4 +1,4 @@
-import { JournalStatus } from '@/src/data/models/Journal';
+import { JournalStatus } from '@/src/types/domain';
 import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
 import { isActiveJournalStatus, isJournalStatus } from '@/src/utils/journalStatus';
 

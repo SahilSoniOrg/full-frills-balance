@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
@@ -11,7 +11,7 @@ import { useCallback, useState } from 'react';
 
 export interface UseAccountDetailsActionsOptions {
   accountId: AccountId;
-  account: Account | PlainAccount | null;
+  account: AccountFields | PlainAccount | null;
   accountType: AccountType;
   isDeleted: boolean;
   dateRange: DateRange | null;

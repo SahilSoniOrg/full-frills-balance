@@ -17,8 +17,6 @@ type ScreenChromeShared = {
   isSearchActive?: boolean;
   /** Dim / style nav (e.g. selection mode). Owned by Screen. */
   headerStyle?: ViewStyle;
-  /** Override back (e.g. exit selection). Owned by Screen — not a ScreenWithChrome prop. */
-  onBack?: () => void;
 };
 
 /**
@@ -43,15 +41,15 @@ type ScreenChromeShared = {
 export type TabScreenChrome = ScreenChromeShared & {
   screenTitle: string;
   headerActions?: ReactNode;
-  showBack?: boolean;
   backIcon?: NavBackIcon;
-};
+} & ({ showBack?: false; onBack?: undefined } | { showBack: true; onBack: () => void });
 
-/** Detail / nav screens: back is always shown; title and back icon are required. */
+/** Detail / nav screens: back is always shown; title, back icon, and onBack are required. */
 export type ScreenNavChrome = ScreenChromeShared & {
   screenTitle: string;
   showBack: true;
   backIcon: NavBackIcon;
+  onBack: () => void;
   headerActions?: ReactNode;
 };
 

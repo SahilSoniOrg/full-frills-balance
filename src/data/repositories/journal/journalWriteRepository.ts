@@ -1,11 +1,7 @@
 import { database } from '@/src/data/database/Database';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import JournalMetadata from '@/src/data/models/JournalMetadata';
-import Transaction from '@/src/data/models/Transaction';
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
+import Journal from '@/src/data/models/Journal';
 import {
+  JournalStatus,
   AccountId,
   JournalDisplayType,
   JournalId,
@@ -13,6 +9,11 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
+import Transaction from '@/src/data/models/Transaction';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import { logger } from '@/src/utils/logger';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -503,7 +504,7 @@ export class JournalWriteRepository {
       const ops: Model[] = [];
 
       for (const journal of journals) {
-        const newName = renames[journal.id as JournalId];
+        const newName = renames[journal.id];
         if (newName !== undefined && newName !== journal.description) {
           ops.push(
             journal.prepareUpdate(record => {
@@ -544,7 +545,7 @@ export class JournalWriteRepository {
     let minDate = Infinity;
 
     for (const tx of transactions) {
-      affectedAccountIds.add(tx.accountId as AccountId);
+      affectedAccountIds.add(tx.accountId);
       minDate = Math.min(minDate, tx.transactionDate);
     }
 
@@ -601,7 +602,7 @@ export class JournalWriteRepository {
     let minDate = newJournalData.journalDate;
 
     for (const tx of sourceTransactions) {
-      affectedAccountIds.add(tx.accountId as AccountId);
+      affectedAccountIds.add(tx.accountId);
       minDate = Math.min(minDate, tx.transactionDate);
     }
     for (const tx of newJournalData.transactions) {
@@ -661,7 +662,7 @@ export class JournalWriteRepository {
       );
       const journalOps = journals.map(journal =>
         journal.prepareUpdate(record => {
-          const newDisplayType = displayTypeByJournalId.get(journal.id as JournalId);
+          const newDisplayType = displayTypeByJournalId.get(journal.id);
           if (newDisplayType !== undefined) {
             record.displayType = newDisplayType;
           }
@@ -699,7 +700,7 @@ export class JournalWriteRepository {
         );
       const journalOps = journals.map(journal =>
         journal.prepareUpdate(record => {
-          const newDisplayType = displayTypeByJournalId.get(journal.id as JournalId);
+          const newDisplayType = displayTypeByJournalId.get(journal.id);
           if (newDisplayType !== undefined) {
             record.displayType = newDisplayType;
           }

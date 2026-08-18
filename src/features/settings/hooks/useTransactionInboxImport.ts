@@ -4,7 +4,7 @@ import {
   buildTransactionInboxImportNavigation,
   TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
-import type { AccountFields as Account } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/domain';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -13,7 +13,7 @@ import { useCallback } from 'react';
 export type { TransactionInboxImportOptions };
 
 interface UseTransactionInboxImportProps {
-  accounts: Account[];
+  accounts: AccountFields[];
   workplaceId: WorkplaceId;
 }
 
