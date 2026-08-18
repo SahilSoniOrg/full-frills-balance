@@ -242,7 +242,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-4         | Atomic account create with opening balance                                     | `d345336b`                                     |
 | 2026-08-18 | WP-4         | Batch account/SMS/planned-payment mutations with audit and schedule            | `4202cc34`                                     |
 | 2026-08-18 | WP-4         | Integrity repair audit in the rebuild write; SAVEPOINT import swap             | `39bfb467`                                     |
-| 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | follow-up                                      |
+| 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
 
 ## Audit Evidence Index
 
