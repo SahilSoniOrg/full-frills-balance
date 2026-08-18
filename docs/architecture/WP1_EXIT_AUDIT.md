@@ -1,26 +1,28 @@
 # WP-1 Workplace Isolation Exit Audit
 
-Audit target: `adf1378f`
+Audit target: `adf1378f` (historical). Later WP-1L–WP-1R commits closed the open rows below.
 Coverage: 12/12 workplace-owned tables; 83/83 production persistence/access candidates; raw SQL and ORM fallbacks; 11 major call flows
-Status: complete static audit; exit rejected
+Status: historical exit rejection; **superseded**. Roadmap WP-1 is complete. `unscoped_raw_query` ratchet is 0.
 
-## Verdict
+## Current applicability (2026-08-19)
 
-**WP-1 is not complete.** The original audit closed its listed findings, but it did not cover every persistence path. This exit audit found one direct cross-workplace read and additional malformed-link, fallback-parity, mutation-contract, and generic-executor defects.
+The “Open” statuses below were true at `adf1378f`. They are **not** current:
 
-The target predates several fixes now on `main`. Current applicability is recorded below so this report remains useful without pretending old line-level findings are current.
-
-| Finding | Severity | Current status |
+| Finding | Then | Now |
 | --- | --- | --- |
-| Journal save reads an SMS inbox record globally by route ID | P0 | Open |
-| Three `TransactionRawRepository` metric joins/fallbacks | P1 | Fixed by `5edf606a` |
-| Budget usage trusts a supplied model and unscoped relations | P1 | Open |
-| Account-resolution follow-up transaction/account reads | P1 | Open |
-| Common transaction/journal ORM joins scope only the root row | P1 | Open |
-| Balance snapshot join and fallback are not equivalent | P1 | Open |
-| Public account/transaction/SMS model writers trust provenance | P2 | Open; journal writers fixed by `faa4a91c` |
-| Generic raw SQL remains exposed by transaction repositories | P2 | Open |
-| Integrity scan accepts an optional workplace boundary | P2 | Open |
+| Journal save SMS metadata | P0 Open | Closed: `resolveSmsMetadataJson` rejects `inboxRecord.workplaceId !== workplaceId`; create path uses `transactionInboxRepository.find(workplaceId, id)` |
+| Transaction raw metric joins | P1 | Fixed by `5edf606a` |
+| Budget usage unscoped relations | P1 Open | Closed: `observeBudgetUsage(workplaceId, budgetId, …)` asserts budget and scope-account workplace |
+| Account-resolution follow-ups | P1 Open | Closed: history/Bayes queries predicate `workplace_id` |
+| Common ORM join scope | P1 Open | Closed in WP-1O |
+| Balance snapshot join/fallback | P1 Open | Closed in WP-1P |
+| Model-writer provenance | P2 Open | Hardened in WP-1Q |
+| Generic `queryRaw` executor | P2 Open | Still a typed seam (`RawSqlAdapter` / transaction raw queries). Call SQL is ratcheted to include `workplace_id` |
+| Optional integrity workplace | P2 Open | Closed: `scanForNullAccountTransactions(workplaceId: WorkplaceId)` |
+
+## Verdict at audit target
+
+**WP-1 was not complete at `adf1378f`.** That snapshot missed persistence paths. Do not treat the narrative below as a live finding list.
 
 ## Open failure paths
 
@@ -62,4 +64,4 @@ Factory reset, explicit global synchronized-record cleanup, workplace purge, sta
 
 ## Exit requirement
 
-WP-1 can exit only after every open row above has focused malformed-link or two-workplace coverage and a repeat 12-table audit finds no unscoped operation. Passing architecture ratchets and the full test suite is necessary but not sufficient.
+At `adf1378f` this was not met. Subsequent WP-1L–WP-1R work and a zero `unscoped_raw_query` ratchet are the current exit. Passing architecture ratchets remains necessary; this file is not a live punch list.

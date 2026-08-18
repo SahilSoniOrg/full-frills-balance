@@ -4,6 +4,7 @@ import {
   TransactionType,
   AccountId,
   JournalId,
+  PlannedPaymentId,
   WorkplaceId,
 } from '@/src/types/domain';
 
@@ -145,7 +146,7 @@ describe('ledgerWriteService lifecycle', () => {
           journalDate: postedAt,
           currencyCode: 'USD',
           status: JournalStatus.POSTED,
-          plannedPaymentId: 'pp-missing',
+          plannedPaymentId: 'pp-missing' as PlannedPaymentId,
           transactions: [
             {
               accountId: cashAccountId,

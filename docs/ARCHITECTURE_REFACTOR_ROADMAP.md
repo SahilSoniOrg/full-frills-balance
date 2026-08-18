@@ -181,7 +181,7 @@ Goal: give each state machine a cohesive owner.
 - [x] Split accounts-list data, interaction, and command/modal state (`useAccountsListViewModel` / `useAccountsListUiState` / `useAccountsListActions`).
 - [x] Centralize journal selection and bulk-action state behind neutral contracts (`useJournalsBulkOperations`).
 - [x] Keep import-selection UI in settings; shared `useImport` stays in `src/hooks` so onboarding does not import settings.
-- [x] Give telemetry and navigation one owner per feature (feature view-models / `useDashboardFeatureActions`; lists receive `onItemPress`).
+- [x] Give telemetry and navigation one owner per feature for dashboard STS and budget/planned-payment lists (`useDashboardFeatureActions`, list `onItemPress`). Other features still call `AppNavigation` from some views.
 
 Exit: screens orchestrate; view-model contracts are cohesive; cross-feature UI internals are not imported.
 
@@ -194,7 +194,7 @@ Goal: remove residue and prove the architecture holds.
 - [x] Decide and document the authoritative mobile E2E contract (`docs/architecture/MOBILE_E2E.md`).
 - [x] Typecheck the selected mobile E2E code through a dedicated configuration (`tsconfig.e2e.json` / `typecheck:e2e`).
 - [x] Reduce the unsafe-type baseline with named owners for remaining exceptions (`ownersByPrefix` in `scripts/unsafe-type-baseline.json`).
-- [x] Repeat the exhaustive architecture audit and compare metrics (`docs/architecture/WP7_EXIT_AUDIT.md`).
+- [x] Repeat the architecture-audit **metrics** comparison (`docs/architecture/WP7_EXIT_AUDIT.md`). This is not a second file-by-file exhaustive pass; `docs/architecture/WP1_EXIT_AUDIT.md` is historical.
 
 Exit: documentation, CI, dependency rules, and implementation describe the same architecture.
 
@@ -250,16 +250,18 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 
 ## Audit Evidence Index
 
-Primary confirmed risks:
+Original confirmed risks (closed or ratcheted unless noted):
 
-- unscoped raw transaction, rebuild, recurring-pattern, SMS, and budget queries;
-- long-lived `shareReplay` streams and timers surviving cache eviction;
-- bootstrap, notification, and widget work lacking generation ordering;
-- rebuild retries not represented in flush completion;
-- SMS ingestion lacking single-flight/idempotency;
-- direct database and ORM access across multiple service boundaries;
-- WatermelonDB models leaking through feature and component contracts (closed in WP-5; `presentation_model_import` is 0);
-- architecture checks and documented boundaries diverging from CI enforcement;
-- large contexts/view-models owning unrelated state machines (closed in WP-6; app-shell and feature list/form owners).
+- unscoped raw queries — ratchet 0;
+- reactive cache/timer leaks across workplace switch — WP-2;
+- unordered bootstrap/notification/widget work — WP-2/3;
+- rebuild `flush()` omitting retries — WP-3;
+- SMS ingestion races — WP-3;
+- competing write protocols — WP-4 (`persistBatch` / ledger remain commit owners; 21 named service/test writes remain);
+- Watermelon models in presentation — WP-5, `presentation_model_import` 0;
+- docs vs CI — `check:architecture` is on the CI path;
+- mixed app-shell state machines — WP-6 split; some views still navigate directly.
+
+Stale “Open” rows in `docs/architecture/WP1_EXIT_AUDIT.md` described `adf1378f`; they were closed in later WP-1L–WP-1R work.
 
 The detailed evidence remains in the originating Codex architecture-audit task. This roadmap is the durable execution source of truth.
