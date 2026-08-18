@@ -245,7 +245,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-4         | Integrity repair audit in the rebuild write; SAVEPOINT import swap             | `39bfb467`                                     |
 | 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
 | 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | `74f8bf46`                                     |
-| 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | (this commit)                                  |
+| 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | `3cae2814`                                     |
 
 ## Audit Evidence Index
 
