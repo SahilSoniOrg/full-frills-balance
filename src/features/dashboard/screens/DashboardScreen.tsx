@@ -7,9 +7,9 @@ import { useDashboardHeaderChrome } from '@/src/features/dashboard/hooks/useDash
 import { useDashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { useScrollToTop } from 'expo-router/react-navigation';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 function DashboardScreen() {
   const vm = useDashboardViewModel();
@@ -42,11 +42,7 @@ function DashboardScreen() {
 
   useScrollToTop(listRef);
 
-  const handleNewEntryPress = useCallback(() => {
-    analytics.logEntrypointOpened('dashboard', 'bottom_action');
-    analytics.logEntrypointSelected('dashboard', 'bottom_action', 'journal_entry');
-    AppNavigation.toJournalEntry();
-  }, []);
+  const { openJournalEntry } = useDashboardFeatureActions();
 
   const chrome = useMemo<TabScreenChrome>(
     () =>
@@ -66,14 +62,14 @@ function DashboardScreen() {
         {
           active: vm.recentJournalEntries.isSelectionModeActive,
           fab: {
-            onPress: handleNewEntryPress,
+            onPress: openJournalEntry,
             label: 'New Entry',
             placement: 'end',
             accessibilityLabel: 'Open new entry options',
           },
         },
       ),
-    [handleNewEntryPress, header, vm.recentJournalEntries.isSelectionModeActive],
+    [openJournalEntry, header, vm.recentJournalEntries.isSelectionModeActive],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

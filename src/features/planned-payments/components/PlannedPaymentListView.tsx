@@ -2,16 +2,20 @@ import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { PlainPlannedPayment } from '@/src/types/domain';
-import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 
 export type PlannedPaymentListViewProps = {
   items: PlainPlannedPayment[];
   isLoading: boolean;
+  onItemPress: (item: PlainPlannedPayment) => void;
 };
 
-export function PlannedPaymentListView({ items, isLoading }: PlannedPaymentListViewProps) {
+export function PlannedPaymentListView({
+  items,
+  isLoading,
+  onItemPress,
+}: PlannedPaymentListViewProps) {
   if (isLoading && items.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -33,17 +37,7 @@ export function PlannedPaymentListView({ items, isLoading }: PlannedPaymentListV
         />
       }
       renderItem={({ item }) => (
-        <PlannedPaymentCard
-          item={item}
-          onPress={() =>
-            AppNavigation.toPlannedPaymentDetails(item.id, {
-              description: item.name,
-              amount: item.amount,
-              currency: item.currencyCode,
-              nextDate: item.nextOccurrence,
-            })
-          }
-        />
+        <PlannedPaymentCard item={item} onPress={() => onItemPress(item)} />
       )}
     />
   );

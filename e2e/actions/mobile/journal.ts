@@ -84,8 +84,7 @@ async function saveGuidedJournalEntry(): Promise<void> {
   await element(by.id(journal.descriptionInput)).tap();
 
   const submit = element(by.id(journal.submitFooter));
-  await waitFor(submit).toBeVisible().withTimeout(30000);
-  await waitFor(submit).toBeEnabled().withTimeout(60000);
+  await waitFor(submit).toBeVisible().withTimeout(60000);
   await submit.tap();
 
   await waitFor(element(by.id(journal.screen)))

@@ -33,6 +33,15 @@ if (fs.existsSync(FACADE_PATH)) {
   process.exit(1);
 }
 
+const PLANNED_PAYMENT_FACADE = path.join(ROOT, 'src/services/PlannedPaymentService.ts');
+if (fs.existsSync(PLANNED_PAYMENT_FACADE)) {
+  console.error(
+    'PlannedPaymentService façade check FAILED: src/services/PlannedPaymentService.ts has reappeared.\n' +
+      'Import planned-payment modules under src/services/planned-payment/ instead.',
+  );
+  process.exit(1);
+}
+
 let matches = '';
 try {
   matches = execSync(
@@ -58,5 +67,7 @@ if (offending.length > 0) {
   process.exit(1);
 }
 
-console.log('JournalRepository façade OK: façade deleted; callers use journal intent modules.');
+console.log(
+  'JournalRepository façade OK: façade deleted; callers use journal intent modules. PlannedPaymentService façade deleted.',
+);
 process.exit(0);

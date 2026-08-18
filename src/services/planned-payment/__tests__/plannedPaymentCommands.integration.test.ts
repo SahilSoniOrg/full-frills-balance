@@ -11,7 +11,7 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import {
   AccountType,
   AccountId,
@@ -208,13 +208,13 @@ describe('planned payment commands (integration)', () => {
 
   it('pause and resume go through service façade', async () => {
     const created = await createPlannedPayment(WP, baseInput());
-    const pausedStatus = await plannedPaymentService.toggleStatus(WP, created);
+    const pausedStatus = await togglePlannedPaymentStatus(WP, created);
     expect(pausedStatus).toBe(PlannedPaymentStatus.PAUSED);
 
     const paused = await plannedPaymentRepository.find(WP, created.id as PlannedPaymentId);
     expect(paused?.status).toBe(PlannedPaymentStatus.PAUSED);
 
-    const resumedStatus = await plannedPaymentService.toggleStatus(WP, paused!);
+    const resumedStatus = await togglePlannedPaymentStatus(WP, paused!);
     expect(resumedStatus).toBe(PlannedPaymentStatus.ACTIVE);
   });
 });

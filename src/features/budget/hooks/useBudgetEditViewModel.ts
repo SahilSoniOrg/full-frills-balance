@@ -22,22 +22,22 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
-import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { of } from 'rxjs';
+
+export type BudgetEditRouteParams = {
+  id?: BudgetId;
+  pName?: string;
+  pAmount?: string;
+  pCurrency?: string;
+};
 
 /**
  * Budget create/edit form.
  * Draft fields are intentional local state, seeded once per `budgetId` from
  * observeById + observeScopes. Later observe ticks never overwrite a dirty draft.
  */
-export function useBudgetEditViewModel() {
-  const params = useLocalSearchParams<{
-    id: BudgetId;
-    pName?: string;
-    pAmount?: string;
-    pCurrency?: string;
-  }>();
+export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const budgetId = params.id;
 
@@ -86,7 +86,7 @@ export function useBudgetEditViewModel() {
   });
 
   // Seed once per entity id during render — never on every observe tick.
-  if (canSeed && observedBudget) {
+  if (canSeed && observedBudget && budgetId) {
     setSeededBudgetId(budgetId);
     setDraft(mapBudgetToEditDraft(observedBudget, scopes, workplaceCurrency));
   } else if (!budgetId && seededBudgetId !== null) {
@@ -223,6 +223,8 @@ export function useBudgetEditViewModel() {
     save,
     loading,
     isSaving,
-    isFormValid: draft.name.trim() && draft.amount && draft.selectedAccountIds.length > 0,
+    isFormValid: Boolean(draft.name.trim() && draft.amount && draft.selectedAccountIds.length > 0),
   };
 }
+
+export type BudgetEditViewModel = ReturnType<typeof useBudgetEditViewModel>;

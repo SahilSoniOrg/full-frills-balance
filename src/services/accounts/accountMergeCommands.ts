@@ -17,7 +17,7 @@ import {
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
@@ -138,7 +138,7 @@ export async function mergeAccounts(
   }
   if (prepareKinds.has('plannedPayments')) {
     prepareTasks.push(
-      plannedPaymentService.prepareMergeOperations(
+      preparePlannedPaymentMergeOperations(
         workplaceId,
         filteredSourceIds,
         targetAccountId,

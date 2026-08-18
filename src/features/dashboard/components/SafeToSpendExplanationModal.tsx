@@ -4,9 +4,7 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
-import { PlannedPaymentId } from '@/src/types/domain';
-import { AppNavigation } from '@/src/utils/navigation';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
@@ -39,6 +37,7 @@ export const SafeToSpendExplanationModal = ({
   expandedSection,
   setExpandedSection,
 }: SafeToSpendExplanationModalProps) => {
+  const { openPlannedPayment } = useDashboardFeatureActions();
   const {
     info,
     labels,
@@ -241,11 +240,7 @@ export const SafeToSpendExplanationModal = ({
                       }}
                       onPress={() => {
                         if (inc.type === 'PLANNED_PAYMENT') {
-                          analytics.trackFeatureUsage('safe_to_spend', 'planned_payment_viewed', {
-                            id: inc.id,
-                            source: 'income_breakdown',
-                          });
-                          AppNavigation.toPlannedPaymentDetails(inc.id as PlannedPaymentId);
+                          openPlannedPayment(inc.id, 'income_breakdown');
                         }
                       }}
                       disabled={inc.type !== 'PLANNED_PAYMENT'}
@@ -360,15 +355,7 @@ export const SafeToSpendExplanationModal = ({
                               }}
                               onPress={() => {
                                 if (det.type === 'PLANNED_PAYMENT') {
-                                  analytics.trackFeatureUsage(
-                                    'safe_to_spend',
-                                    'planned_payment_viewed',
-                                    {
-                                      id: det.id,
-                                      source: 'committed_breakdown',
-                                    },
-                                  );
-                                  AppNavigation.toPlannedPaymentDetails(det.id);
+                                  openPlannedPayment(det.id, 'committed_breakdown');
                                 }
                               }}
                               disabled={det.type !== 'PLANNED_PAYMENT'}

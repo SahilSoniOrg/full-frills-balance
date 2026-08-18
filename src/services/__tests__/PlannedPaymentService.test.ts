@@ -4,8 +4,18 @@ import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
+import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
+import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import {
+  postPlannedPaymentOccurrence,
+  skipPlannedPaymentOccurrence,
+} from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import {
+  calculateNextOccurrence,
+  computeFirstOccurrence,
+} from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/ledger');
@@ -30,7 +40,7 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-describe('PlannedPaymentService', () => {
+describe('planned payment modules', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
@@ -51,7 +61,7 @@ describe('PlannedPaymentService', () => {
     const JAN_31_2024 = new Date(2024, 0, 31, 12, 0, 0).getTime();
 
     test('Daily: adds N days and normalizes to midnight', () => {
-      const next = plannedPaymentService.calculateNextOccurrence(JAN_31_2024, {
+      const next = calculateNextOccurrence(JAN_31_2024, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.DAILY,
       });
@@ -65,7 +75,7 @@ describe('PlannedPaymentService', () => {
     test('Weekly: aligns to specific recurrenceWeekday (Monday)', () => {
       // Jan 22, 2024 is a Monday
       const monday = new Date(2024, 0, 22).getTime();
-      const next = plannedPaymentService.calculateNextOccurrence(monday, {
+      const next = calculateNextOccurrence(monday, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.WEEKLY,
         recurrenceDay: 1, // Monday
@@ -76,7 +86,7 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Monthly: handles month-end overflow (31st to 29th in Leap Year)', () => {
-      const next = plannedPaymentService.calculateNextOccurrence(JAN_31_2024, {
+      const next = calculateNextOccurrence(JAN_31_2024, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 31,
@@ -89,7 +99,7 @@ describe('PlannedPaymentService', () => {
     test('Monthly: recovers to original recurrenceDay after shorter month', () => {
       // Feb 29, 2024
       const FEB_29_2024 = new Date(2024, 1, 29).getTime();
-      const next = plannedPaymentService.calculateNextOccurrence(FEB_29_2024, {
+      const next = calculateNextOccurrence(FEB_29_2024, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 31,
@@ -100,7 +110,7 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Yearly: aligns to specific recurrenceMonth and recurrenceDay', () => {
-      const next = plannedPaymentService.calculateNextOccurrence(JAN_31_2024, {
+      const next = calculateNextOccurrence(JAN_31_2024, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.YEARLY,
         recurrenceMonth: 12,
@@ -113,7 +123,7 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Weekly: just adds weeks if no specific weekday is set', () => {
-      const next = plannedPaymentService.calculateNextOccurrence(JAN_31_2024, {
+      const next = calculateNextOccurrence(JAN_31_2024, {
         intervalN: 2,
         intervalType: PlannedPaymentInterval.WEEKLY,
       });
@@ -125,7 +135,7 @@ describe('PlannedPaymentService', () => {
     test('Weekly: ensures N-week interval is respected even if target day is earlier in the week', () => {
       // Monday, Jan 22, 2024
       const monday = new Date(2024, 0, 22).getTime();
-      const next = plannedPaymentService.calculateNextOccurrence(monday, {
+      const next = calculateNextOccurrence(monday, {
         intervalN: 2,
         intervalType: PlannedPaymentInterval.WEEKLY,
         recurrenceDay: 0, // Sunday
@@ -144,7 +154,7 @@ describe('PlannedPaymentService', () => {
     const MAR_6_2026 = new Date(2026, 2, 6, 10, 30, 0).getTime();
 
     test('Daily: returns midnight of startDate', () => {
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.DAILY,
       });
@@ -156,7 +166,7 @@ describe('PlannedPaymentService', () => {
 
     test('Monthly: recurrenceDay in the future this month → same month', () => {
       // Mar 6, recurrenceDay = 20 → Mar 20
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 20,
@@ -167,7 +177,7 @@ describe('PlannedPaymentService', () => {
     });
 
     test('Monthly: recurrenceDay equals startDate day → same day', () => {
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 6,
@@ -179,7 +189,7 @@ describe('PlannedPaymentService', () => {
 
     test('Monthly: recurrenceDay already passed this month → next month', () => {
       // Mar 6, recurrenceDay = 5 → Apr 5
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 5,
@@ -191,7 +201,7 @@ describe('PlannedPaymentService', () => {
 
     test('Monthly: handles month-end overflow (recurrenceDay=31 in April → Apr 30)', () => {
       const APR_1_2026 = new Date(2026, 3, 1).getTime();
-      const result = plannedPaymentService.computeFirstOccurrence(APR_1_2026, {
+      const result = computeFirstOccurrence(APR_1_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.MONTHLY,
         recurrenceDay: 31,
@@ -203,7 +213,7 @@ describe('PlannedPaymentService', () => {
 
     test('Weekly: recurrenceDay ahead in week → returns correct upcoming day', () => {
       // Mar 6 is Friday (5), recurrenceDay = 0 (Sunday) → Mar 8
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.WEEKLY,
         recurrenceDay: 0, // Sunday
@@ -215,7 +225,7 @@ describe('PlannedPaymentService', () => {
 
     test('Weekly: recurrenceDay equals startDate weekday → same day', () => {
       // Mar 6 is Friday (5)
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.WEEKLY,
         recurrenceDay: 5, // Friday
@@ -227,7 +237,7 @@ describe('PlannedPaymentService', () => {
 
     test('Yearly: target month/day in future this year → same year', () => {
       // Mar 6, 2026, recurrenceMonth=12, recurrenceDay=25 → Dec 25, 2026
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.YEARLY,
         recurrenceMonth: 12,
@@ -241,7 +251,7 @@ describe('PlannedPaymentService', () => {
 
     test('Yearly: target month/day already passed this year → next year', () => {
       // Mar 6, 2026, recurrenceMonth=1, recurrenceDay=15 → Jan 15, 2027
-      const result = plannedPaymentService.computeFirstOccurrence(MAR_6_2026, {
+      const result = computeFirstOccurrence(MAR_6_2026, {
         intervalN: 1,
         intervalType: PlannedPaymentInterval.YEARLY,
         recurrenceMonth: 1,
@@ -270,22 +280,22 @@ describe('PlannedPaymentService', () => {
       [
         'post occurrence',
         (payment: ReturnType<typeof makeForeignPayment>) =>
-          plannedPaymentService.postOccurrence(workplaceId, payment as any, payment.nextOccurrence),
+          postPlannedPaymentOccurrence(workplaceId, payment as any, payment.nextOccurrence),
       ],
       [
         'skip occurrence',
         (payment: ReturnType<typeof makeForeignPayment>) =>
-          plannedPaymentService.skipOccurrence(workplaceId, payment as any, payment.nextOccurrence),
+          skipPlannedPaymentOccurrence(workplaceId, payment as any, payment.nextOccurrence),
       ],
       [
         'toggle status',
         (payment: ReturnType<typeof makeForeignPayment>) =>
-          plannedPaymentService.toggleStatus(workplaceId, payment as any),
+          togglePlannedPaymentStatus(workplaceId, payment as any),
       ],
       [
         'delete',
         (payment: ReturnType<typeof makeForeignPayment>) =>
-          plannedPaymentService.delete(workplaceId, payment as any),
+          deletePlannedPayment(workplaceId, payment as any),
       ],
     ])('rejects a foreign model before %s side effects', async (_name, invoke) => {
       const payment = makeForeignPayment();
@@ -337,7 +347,7 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence(
+      await postPlannedPaymentOccurrence(
         'wp-1' as WorkplaceId,
         mockPP as any,
         mockPP.nextOccurrence,
@@ -375,7 +385,7 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence(
+      await postPlannedPaymentOccurrence(
         'wp-1' as WorkplaceId,
         mockPP as any,
         mockPP.nextOccurrence,
@@ -413,7 +423,7 @@ describe('PlannedPaymentService', () => {
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
       (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockReturnValue([mockJournal]);
 
-      await plannedPaymentService.skipOccurrence(
+      await skipPlannedPaymentOccurrence(
         'wp-1' as WorkplaceId,
         mockPP as any,
         mockPP.nextOccurrence,
@@ -462,7 +472,7 @@ describe('PlannedPaymentService', () => {
       (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([mockPP]);
       (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([mockPP]);
 
-      const ops = await plannedPaymentService.prepareMergeOperations(
+      const ops = await preparePlannedPaymentMergeOperations(
         workplaceId,
         sourceAccountIds,
         targetAccountId,
@@ -502,10 +512,7 @@ describe('PlannedPaymentService', () => {
         mockJournal,
       ]);
 
-      const newStatus = await plannedPaymentService.toggleStatus(
-        'wp-1' as WorkplaceId,
-        mockPP as any,
-      );
+      const newStatus = await togglePlannedPaymentStatus('wp-1' as WorkplaceId, mockPP as any);
 
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
         'wp-1',
@@ -567,10 +574,7 @@ describe('PlannedPaymentService', () => {
         .mockResolvedValue(undefined);
 
       const oldNextOccurrence = mockPP.nextOccurrence;
-      const newStatus = await plannedPaymentService.toggleStatus(
-        'wp-1' as WorkplaceId,
-        mockPP as any,
-      );
+      const newStatus = await togglePlannedPaymentStatus('wp-1' as WorkplaceId, mockPP as any);
 
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).toHaveBeenCalledWith(
         'wp-1',

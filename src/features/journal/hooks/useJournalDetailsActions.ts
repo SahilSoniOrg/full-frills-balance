@@ -1,7 +1,7 @@
 import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
@@ -118,7 +118,7 @@ export function useJournalDetailsActions({
             plannedPaymentId as PlannedPaymentId,
           );
           if (!plannedPayment) throw new Error('Planned payment rule not found.');
-          await plannedPaymentService.skipOccurrence(workplaceId, plannedPayment, journalDate);
+          await skipPlannedPaymentOccurrence(workplaceId, plannedPayment, journalDate);
           toast.success('Transaction has been skipped.');
           AppNavigation.back();
         } catch (error) {

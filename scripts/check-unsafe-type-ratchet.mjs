@@ -75,6 +75,7 @@ function collect() {
     walk(path.join(ROOT, root), files);
   }
   const byPattern = Object.fromEntries(PATTERNS.map(p => [p.id, 0]));
+  const filesWithHits = [];
   let total = 0;
   for (const file of files) {
     const { total: t, byPattern: bp } = countFile(file);
@@ -82,14 +83,23 @@ function collect() {
     for (const [id, n] of Object.entries(bp)) {
       byPattern[id] += n;
     }
+    if (t > 0) filesWithHits.push(path.relative(ROOT, file));
   }
-  return { total, byPattern, fileCount: files.length };
+  return { total, byPattern, fileCount: files.length, filesWithHits };
+}
+
+function unmatchedOwnerFiles(filesWithHits, ownersByPrefix) {
+  const prefixes = Object.keys(ownersByPrefix || {});
+  return filesWithHits.filter(rel => !prefixes.some(prefix => rel.startsWith(prefix)));
 }
 
 const update = process.argv.includes('--update');
 const snapshot = collect();
 
 if (update) {
+  const previous = fs.existsSync(BASELINE_PATH)
+    ? JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'))
+    : {};
   const payload = {
     description:
       'Maximum allowed unsafe-type occurrences in production src/app (excludes tests). Decrease only via --update after cleanup.',
@@ -97,6 +107,7 @@ if (update) {
     fileCount: snapshot.fileCount,
     total: snapshot.total,
     byPattern: snapshot.byPattern,
+    ownersByPrefix: previous.ownersByPrefix || {},
   };
   fs.writeFileSync(BASELINE_PATH, `${JSON.stringify(payload, null, 2)}\n`);
   console.log(`Updated baseline: total=${snapshot.total}`, snapshot.byPattern);
@@ -120,7 +131,23 @@ if (snapshot.total > limit) {
   process.exit(1);
 }
 
+const unmatched = unmatchedOwnerFiles(snapshot.filesWithHits, baseline.ownersByPrefix);
+if (!baseline.ownersByPrefix || Object.keys(baseline.ownersByPrefix).length === 0) {
+  console.error(
+    'Unsafe-type ratchet FAILED: scripts/unsafe-type-baseline.json is missing ownersByPrefix.',
+  );
+  process.exit(1);
+}
+if (unmatched.length > 0) {
+  console.error(
+    'Unsafe-type ratchet FAILED: files with unsafe types lack a named owner prefix:\n  ' +
+      unmatched.join('\n  ') +
+      '\nAdd a ownersByPrefix entry in scripts/unsafe-type-baseline.json.',
+  );
+  process.exit(1);
+}
+
 console.log(
-  `Unsafe-type ratchet OK: ${snapshot.total}/${limit} (${snapshot.fileCount} production files scanned).`,
+  `Unsafe-type ratchet OK: ${snapshot.total}/${limit} (${snapshot.fileCount} production files scanned; ${snapshot.filesWithHits.length} owned files).`,
 );
 process.exit(0);

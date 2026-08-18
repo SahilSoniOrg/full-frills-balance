@@ -5,6 +5,8 @@ import { combineLatest, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
 import { WorkplaceId } from '@/src/types/domain';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useCallback } from 'react';
 
 export function useBudgetListViewModel(workplaceId: WorkplaceId) {
   const budgetsObservable = budgetReadService.observeAllActive(workplaceId).pipe(
@@ -30,5 +32,13 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
     [],
   );
 
-  return { items, isLoading };
+  const onItemPress = useCallback((item: BudgetItem) => {
+    AppNavigation.toBudgetDetail(item.budget.id, {
+      name: item.budget.name,
+      amount: item.budget.amount,
+      currency: item.budget.currencyCode,
+    });
+  }, []);
+
+  return { items, isLoading, onItemPress };
 }

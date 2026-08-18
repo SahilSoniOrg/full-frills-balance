@@ -5,12 +5,12 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 
 jest.mock('@/src/data/repositories/TransactionRepository');
-jest.mock('@/src/services/PlannedPaymentService');
+jest.mock('@/src/services/planned-payment/plannedPaymentMergeOperations');
 jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository');
 jest.mock('@/src/services/budget/budgetWriteService');
 jest.mock('@/src/data/repositories/BalanceSnapshotRepository');
@@ -25,7 +25,7 @@ describe('mergeAccounts command', () => {
     jest.clearAllMocks();
     // Default mock implementations to return empty arrays
     (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
-    (plannedPaymentService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
+    (preparePlannedPaymentMergeOperations as jest.Mock).mockResolvedValue([]);
     (transactionAutoPostRuleRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
     (budgetWriteService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
     (balanceSnapshotRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
@@ -95,7 +95,7 @@ describe('mergeAccounts command', () => {
     await mergeAccounts(workplaceId, targetId, sourceIds);
 
     expect(transactionRepository.findAllByAccountIds).toHaveBeenCalled();
-    expect(plannedPaymentService.prepareMergeOperations).toHaveBeenCalled();
+    expect(preparePlannedPaymentMergeOperations).toHaveBeenCalled();
     expect(transactionAutoPostRuleRepository.prepareMergeOperations).toHaveBeenCalled();
     expect(budgetWriteService.prepareMergeOperations).toHaveBeenCalled();
     expect(accountRepository.prepareMergeOperations).toHaveBeenCalled();

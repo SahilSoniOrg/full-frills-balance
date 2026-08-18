@@ -1,7 +1,10 @@
 import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import {
+  postPlannedPaymentOccurrence,
+  skipPlannedPaymentOccurrence,
+} from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { analytics } from '@/src/services/analytics-service';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
@@ -57,7 +60,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
             try {
               const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
               if (pp) {
-                await plannedPaymentService.postOccurrence(workplaceId, pp, item.occurrenceDate);
+                await postPlannedPaymentOccurrence(workplaceId, pp, item.occurrenceDate);
                 analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
                   payment_id: plannedPaymentId,
                   currency: item.currencyCode,
@@ -82,11 +85,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
                 try {
                   const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
                   if (pp) {
-                    await plannedPaymentService.skipOccurrence(
-                      workplaceId,
-                      pp,
-                      item.occurrenceDate,
-                    );
+                    await skipPlannedPaymentOccurrence(workplaceId, pp, item.occurrenceDate);
                     analytics.trackFeatureUsage('planned_payment', 'occurrence_skipped', {
                       payment_id: plannedPaymentId,
                       is_simulated: false,

@@ -3,7 +3,7 @@ import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { integrityService } from '@/src/services/integrity-service';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
@@ -36,8 +36,8 @@ jest.mock('@/src/services/integrity-service', () => ({
 jest.mock('@/src/services/notification/NotificationService', () => ({
   notificationService: { scheduleReminder: jest.fn().mockResolvedValue(undefined) },
 }));
-jest.mock('@/src/services/PlannedPaymentService', () => ({
-  plannedPaymentService: { processDuePayments: jest.fn().mockResolvedValue(undefined) },
+jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
+  processDuePlannedPayments: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/src/services/ReactiveDataService', () => ({
   reactiveDataService: { preWarm: jest.fn().mockResolvedValue(undefined) },
@@ -140,7 +140,7 @@ describe('useAppBootstrap generation safety', () => {
       'workplace-b' as WorkplaceId,
       expect.any(AbortSignal),
     );
-    expect(plannedPaymentService.processDuePayments).toHaveBeenCalledWith(
+    expect(processDuePlannedPayments).toHaveBeenCalledWith(
       'workplace-b' as WorkplaceId,
       expect.any(AbortSignal),
     );

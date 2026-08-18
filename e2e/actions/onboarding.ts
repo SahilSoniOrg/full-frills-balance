@@ -2,7 +2,7 @@ import { element, by, waitFor } from 'detox';
 import { onboarding as onboardingIds } from '../screens';
 import { ONBOARDING_TIMEOUT_MS } from '../constants/timeouts';
 import { waitForDashboard } from './launch';
-import { tapById, typeById } from './mobile/elementActions';
+import { tapById } from './mobile/elementActions';
 
 export async function completeOnboardingUi(userName: string): Promise<void> {
   await waitFor(element(by.id(onboardingIds.nameInput)))

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["jest", "node", "detox"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "e2e/specs/**/*.ts",
+    "e2e/actions/**/*.ts",
+    "e2e/constants/**/*.ts",
+    "e2e/utils/**/*.ts",
+    "e2e/screens/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

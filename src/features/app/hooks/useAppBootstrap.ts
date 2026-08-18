@@ -14,7 +14,7 @@ import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { sharingService } from '@/src/services/SharingService';
 import { integrityService } from '@/src/services/integrity-service';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
@@ -148,7 +148,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           await Promise.allSettled([
             insightService.preWarm(workplaceId),
             integrityService.runStartupCheck(workplaceId, lease.signal),
-            plannedPaymentService.processDuePayments(workplaceId, lease.signal),
+            processDuePlannedPayments(workplaceId, lease.signal),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),
             notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),

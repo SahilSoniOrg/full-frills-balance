@@ -4,7 +4,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import {
   SafeToSpendDataPoint,
   SafeToSpendProjection,
@@ -32,6 +32,7 @@ export const SafeToSpendChart = ({
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
   const formatSts = useStsMoneyFormat(isLoading);
 
+  const { trackChartPoint } = useDashboardFeatureActions();
   const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   React.useEffect(() => {
@@ -171,7 +172,7 @@ export const SafeToSpendChart = ({
             }
 
             analyticsTimeoutRef.current = setTimeout(() => {
-              analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', {
+              trackChartPoint({
                 dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
                 isHistory: point.isHistory,
                 hasDetails: (point.details?.length ?? 0) > 0,

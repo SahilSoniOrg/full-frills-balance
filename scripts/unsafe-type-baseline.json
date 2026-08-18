@@ -1,6 +1,6 @@
 {
   "description": "Maximum allowed unsafe-type occurrences in production src/app (excludes tests). Decrease only via --update after cleanup.",
-  "scannedAt": "2026-08-18",
+  "scannedAt": "2026-08-19",
   "fileCount": 883,
   "total": 61,
   "byPattern": {
@@ -8,5 +8,18 @@
     "as_any": 27,
     "ts_ignore": 0,
     "double_cast": 13
+  },
+  "ownersByPrefix": {
+    "src/data/": "persistence",
+    "src/services/": "domain services",
+    "src/features/accounts/": "accounts UI",
+    "src/features/journal/": "journal UI",
+    "src/features/dashboard/": "dashboard UI",
+    "src/features/settings/": "settings UI",
+    "src/design-system/": "design-system",
+    "src/components/": "shared UI",
+    "src/hooks/": "shared hooks",
+    "src/utils/": "shared utils",
+    "src/mocks/": "native mocks"
   }
 }

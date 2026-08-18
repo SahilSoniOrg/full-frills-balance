@@ -102,3 +102,5 @@ export function usePlannedPaymentFormScreen(id?: string) {
     pickerState,
   };
 }
+
+export type PlannedPaymentFormScreenModel = ReturnType<typeof usePlannedPaymentFormScreen>;

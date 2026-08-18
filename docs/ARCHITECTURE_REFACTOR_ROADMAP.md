@@ -177,11 +177,11 @@ Exit: presentation code uses plain data and does not depend on WatermelonDB iden
 Goal: give each state machine a cohesive owner.
 
 - [x] Split app readiness, lock/session, restart/import, and onboarding state (`useAppReady` / `useAppLock` / `useAppRestart` / `useOnboardingSession`).
+- [x] Extract budget and planned-payment form views from route/controller screens.
 - [x] Split accounts-list data, interaction, and command/modal state (`useAccountsListViewModel` / `useAccountsListUiState` / `useAccountsListActions`).
-- [ ] Extract budget and planned-payment form views from route/controller screens.
 - [x] Centralize journal selection and bulk-action state behind neutral contracts (`useJournalsBulkOperations`).
 - [x] Keep import-selection UI in settings; shared `useImport` stays in `src/hooks` so onboarding does not import settings.
-- [ ] Give telemetry and navigation one owner per feature.
+- [x] Give telemetry and navigation one owner per feature (feature view-models / `useDashboardFeatureActions`; lists receive `onItemPress`).
 
 Exit: screens orchestrate; view-model contracts are cohesive; cross-feature UI internals are not imported.
 
@@ -189,12 +189,12 @@ Exit: screens orchestrate; view-model contracts are cohesive; cross-feature UI i
 
 Goal: remove residue and prove the architecture holds.
 
-- [ ] Split responsibility-heavy repositories/services where ownership—not line count—demands it.
-- [ ] Delete obsolete façades and compatibility exports after callers migrate.
-- [ ] Decide and document the authoritative mobile E2E contract.
-- [ ] Typecheck the selected mobile E2E code through a dedicated configuration.
-- [ ] Reduce the unsafe-type baseline with named owners for remaining exceptions.
-- [ ] Repeat the exhaustive architecture audit and compare metrics.
+- [x] Split responsibility-heavy repositories/services where ownership—not line count—demands it. Remaining writers stay as named owners (see `docs/architecture/WP7_EXIT_AUDIT.md`).
+- [x] Delete obsolete façades and compatibility exports after callers migrate (`PlannedPaymentService`).
+- [x] Decide and document the authoritative mobile E2E contract (`docs/architecture/MOBILE_E2E.md`).
+- [x] Typecheck the selected mobile E2E code through a dedicated configuration (`tsconfig.e2e.json` / `typecheck:e2e`).
+- [x] Reduce the unsafe-type baseline with named owners for remaining exceptions (`ownersByPrefix` in `scripts/unsafe-type-baseline.json`).
+- [x] Repeat the exhaustive architecture audit and compare metrics (`docs/architecture/WP7_EXIT_AUDIT.md`).
 
 Exit: documentation, CI, dependency rules, and implementation describe the same architecture.
 
@@ -246,6 +246,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-5         | Accounts/currency presentation DTOs; subtype helpers in domain                 | `17c1f600`                                     |
 | 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | `74f8bf46`                                     |
 | 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | `3cae2814`                                     |
+| 2026-08-19 | WP-6/7       | Form views, feature nav/telemetry owners, delete PlannedPaymentService façade  | (this commit)                                  |
 
 ## Audit Evidence Index
 
@@ -259,6 +260,6 @@ Primary confirmed risks:
 - direct database and ORM access across multiple service boundaries;
 - WatermelonDB models leaking through feature and component contracts (closed in WP-5; `presentation_model_import` is 0);
 - architecture checks and documented boundaries diverging from CI enforcement;
-- large contexts/view-models owning unrelated state machines.
+- large contexts/view-models owning unrelated state machines (closed in WP-6; app-shell and feature list/form owners).
 
 The detailed evidence remains in the originating Codex architecture-audit task. This roadmap is the durable execution source of truth.

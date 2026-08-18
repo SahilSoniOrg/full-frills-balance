@@ -2,7 +2,7 @@ import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
-import { analytics } from '@/src/services/analytics-service';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
@@ -17,6 +17,7 @@ interface SafeToSpendLegendModalProps {
 
 export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
   const { visible, onClose, type, viewModel, onRequestExplanation } = props;
+  const { trackLegendToExplanation } = useDashboardFeatureActions();
   const {
     labels,
     committedTotal,
@@ -103,9 +104,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
           <AppButton
             variant="ghost"
             onPress={() => {
-              analytics.trackFeatureUsage('safe_to_spend', 'legend_to_explanation', {
-                slice: 'safe',
-              });
+              trackLegendToExplanation('safe');
               onRequestExplanation();
             }}
             accessibilityLabel={strings.safeToSpendExplanation.title}

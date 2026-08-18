@@ -122,9 +122,10 @@ Existing debt around unscoped raw queries, presentation imports of database mode
 ## Testing
 
 ```bash
-bun run verify                    # same as CI on PRs
+bun run verify                    # same as CI on PRs (includes architecture + typecheck:e2e)
 
-# E2E (Playwright, web export)
+# Mobile E2E (Detox, authoritative): see docs/architecture/MOBILE_E2E.md
+# Web E2E (Playwright)
 bun run test:e2e:build
 bun run serve:e2e
 bun run test:e2e

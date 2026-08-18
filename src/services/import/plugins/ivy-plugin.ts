@@ -129,7 +129,7 @@ function parseSerializedIds(serialized?: string): string[] {
 
 /**
  * Calculates the next occurrence based on interval and recurrence rules.
- * This is a standalone version of the logic in PlannedPaymentService.
+ * Recurrence logic aligned with planned-payment modules (interval + midnight normalization).
  */
 function advanceOccurrence(
   current: number,
@@ -506,7 +506,7 @@ export const ivyPlugin: ImportPlugin = {
         const recurrenceDay = startLocalDate.getDate();
         const recurrenceMonth = startLocalDate.getMonth() + 1; // 1-indexed
 
-        // Normalize occurrence date to midnight to align with PlannedPaymentService expectations
+        // Normalize occurrence date to midnight to align with planned-payment recurrence.
         const normalizedNextOcc = new Date(startDate);
         normalizedNextOcc.setHours(0, 0, 0, 0);
         let finalNextOcc = normalizedNextOcc.getTime();

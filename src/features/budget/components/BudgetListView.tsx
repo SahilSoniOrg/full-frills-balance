@@ -4,14 +4,14 @@ import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';
-import { AppNavigation } from '@/src/utils/navigation';
 
 export type BudgetListViewProps = {
   items: BudgetItem[];
   isLoading: boolean;
+  onItemPress: (item: BudgetItem) => void;
 };
 
-export function BudgetListView({ items, isLoading }: BudgetListViewProps) {
+export function BudgetListView({ items, isLoading, onItemPress }: BudgetListViewProps) {
   if (isLoading && items.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -20,26 +20,17 @@ export function BudgetListView({ items, isLoading }: BudgetListViewProps) {
     );
   }
 
-  const handlePress = (item: BudgetItem) => {
-    AppNavigation.toBudgetDetail(item.budget.id, {
-      name: item.budget.name,
-      amount: item.budget.amount,
-      currency: item.budget.currencyCode,
-    });
-  };
-
   return (
     <FlashList
       data={items}
       keyExtractor={item => item.budget.id}
-      renderItem={({ item }) => <BudgetCard item={item} onPress={handlePress} />}
+      renderItem={({ item }) => <BudgetCard item={item} onPress={onItemPress} />}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
         <EmptyStateView
           title={AppConfig.strings.budget.emptyTitle}
           subtitle={AppConfig.strings.budget.emptySubtitle}
-          icon="pieChart"
           style={styles.emptyState}
         />
       }

@@ -4,10 +4,9 @@ import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
-import { PlannedPaymentId, AccountSubtype } from '@/src/types/domain';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AccountSubtype } from '@/src/types/domain';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
 
@@ -28,6 +27,7 @@ export const SafeToSpendLedger = ({
 }: SafeToSpendLedgerProps) => {
   const { theme } = useTheme();
   const formatSts = useStsMoneyFormat(isLoading);
+  const { openAccount, openPlannedPayment } = useDashboardFeatureActions();
 
   return (
     <Stack gap="md">
@@ -109,19 +109,7 @@ export const SafeToSpendLedger = ({
                   >
                     <TouchableOpacity
                       style={{ flex: 1 }}
-                      onPress={() => {
-                        analytics.trackFeatureUsage('safe_to_spend', 'account_viewed', {
-                          id: acc.accountId,
-                        });
-                        AppNavigation.toAccountDetails(acc.accountId, {
-                          preview: {
-                            name: acc.accountName,
-                            balance: acc.startingBalance,
-                            currency: currencyCode,
-                            colorKey: acc.color,
-                          },
-                        });
-                      }}
+                      onPress={() => openAccount(acc, currencyCode)}
                       activeOpacity={Opacity.heavy}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -209,17 +197,7 @@ export const SafeToSpendLedger = ({
                                 }}
                                 onPress={() => {
                                   if (item.id && item.source === 'PLANNED_PAYMENT') {
-                                    analytics.trackFeatureUsage(
-                                      'safe_to_spend',
-                                      'planned_payment_viewed',
-                                      {
-                                        id: item.id,
-                                        source: 'ledger_usage',
-                                      },
-                                    );
-                                    AppNavigation.toPlannedPaymentDetails(
-                                      item.id as PlannedPaymentId,
-                                    );
+                                    openPlannedPayment(item.id, 'ledger_usage');
                                   }
                                 }}
                                 disabled={!item.id || item.source !== 'PLANNED_PAYMENT'}

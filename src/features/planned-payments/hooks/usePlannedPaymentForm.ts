@@ -6,7 +6,10 @@ import {
   shouldSeedPlannedPaymentDraft,
 } from '@/src/features/planned-payments/hooks/plannedPaymentFormDraft';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import {
+  createPlannedPayment,
+  updatePlannedPayment,
+} from '@/src/services/planned-payment/plannedPaymentCommands';
 import { analytics } from '@/src/services/analytics-service';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -76,7 +79,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
             item.intervalType !== data.intervalType ||
             item.intervalN !== data.intervalN;
 
-          await plannedPaymentService.update(workplaceId, id as PlannedPaymentId, data);
+          await updatePlannedPayment(workplaceId, id as PlannedPaymentId, data);
 
           analytics.trackFeatureUsage('planned_payment', 'update', {
             payment_id: id,
@@ -86,7 +89,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
           });
         }
       } else {
-        const newPayment = await plannedPaymentService.create(workplaceId, data);
+        const newPayment = await createPlannedPayment(workplaceId, data);
 
         analytics.trackFeatureUsage('planned_payment', 'create', {
           payment_id: newPayment.id,
