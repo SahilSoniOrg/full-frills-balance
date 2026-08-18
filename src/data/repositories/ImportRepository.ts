@@ -16,13 +16,7 @@ import PlannedPayment, {
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
-import {
-  AccountSubtype,
-  AccountType,
-  TransactionType,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountSubtype, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   InboxParseStatus,
@@ -173,7 +167,7 @@ export class ImportRepository {
           record.totalAmount = j.totalAmount;
           record.transactionCount = j.transactionCount;
           record.displayType = j.displayType;
-          if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
+          if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId;
           record._raw._status = 'synced';
           setRecordTimestamps(record, {
             createdAt: j.createdAt,
@@ -547,7 +541,7 @@ export class ImportRepository {
           record.transactionCount = j.transactionCount;
           record.displayType = j.displayType;
           if (j.plannedPaymentId) {
-            record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
+            record.plannedPaymentId = j.plannedPaymentId;
           }
           setRecordTimestamps(record, {
             createdAt: j.createdAt,

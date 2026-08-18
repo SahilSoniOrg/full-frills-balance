@@ -1,5 +1,5 @@
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
+import { journalReadService } from '@/src/services/journal/journalReadService';
 import { of } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -14,9 +14,7 @@ export function useJournal(
     version,
   } = useObservable(
     () =>
-      journalId
-        ? journalObserveQueries.observeById(workplaceId, journalId, includeDeleted)
-        : of(null),
+      journalId ? journalReadService.observeById(workplaceId, journalId, includeDeleted) : of(null),
     [workplaceId, journalId, includeDeleted],
     null,
   );

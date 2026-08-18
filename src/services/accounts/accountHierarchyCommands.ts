@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import {
   AccountPersistenceInput,
@@ -16,7 +16,6 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 

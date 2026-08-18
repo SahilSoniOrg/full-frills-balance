@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
@@ -7,7 +7,6 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import {
   AccountReferenceSiteKey,
   referenceSites,

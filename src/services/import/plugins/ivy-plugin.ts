@@ -7,6 +7,8 @@ import {
   JournalDisplayType,
   JournalId,
   PlannedPaymentId,
+  JournalStatus,
+  PlannedPaymentStatus,
   TransactionId,
 } from '@/src/types/domain';
 /**
@@ -17,9 +19,6 @@ import {
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-
-import { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 
 import {
   ImportedAccount,

@@ -1,4 +1,4 @@
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
+import { PlannedPaymentInterval } from '@/src/types/domain';
 
 export type PlannedPaymentRecurrenceRule = {
   intervalN: number;

@@ -1,10 +1,9 @@
-import { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { PlannedPaymentId } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
 
@@ -37,7 +36,7 @@ export async function generatePlannedJournalForPayment(
       currencyCode: pp.currencyCode,
       transactions: buildPlannedPaymentTransferLines(pp),
       status,
-      plannedPaymentId: pp.id as PlannedPaymentId,
+      plannedPaymentId: pp.id,
     };
 
     await ledgerWriteService.createJournal(data, pp.workplaceId, {

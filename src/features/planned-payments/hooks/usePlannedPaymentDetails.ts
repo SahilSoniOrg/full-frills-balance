@@ -1,7 +1,6 @@
 import { JournalStatus, WorkplaceId } from '@/src/types/domain';
 import { useJournals } from '@/src/features/journal';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import {
@@ -43,9 +42,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleToggleStatus = useCallback(async () => {
     if (!item) return;
-    const record = await plannedPaymentReadService.find(workplaceId, item.id);
-    if (!record) return;
-    const newStatus = await togglePlannedPaymentStatus(workplaceId, record);
+    const newStatus = await togglePlannedPaymentStatus(workplaceId, item.id);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'toggle_status', {
@@ -57,9 +54,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleDelete = useCallback(async () => {
     if (!item) return;
-    const record = await plannedPaymentReadService.find(workplaceId, item.id);
-    if (!record) return;
-    await deletePlannedPayment(workplaceId, record);
+    await deletePlannedPayment(workplaceId, item.id);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'delete', {
@@ -74,9 +69,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const handlePostNow = useCallback(async () => {
     if (!item) return;
     try {
-      const record = await plannedPaymentReadService.find(workplaceId, item.id);
-      if (!record) return;
-      await postPlannedPaymentOccurrence(workplaceId, record, item.nextOccurrence);
+      await postPlannedPaymentOccurrence(workplaceId, item.id, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'post_now', {
@@ -95,9 +88,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const handleSkip = useCallback(async () => {
     if (!item) return;
     try {
-      const record = await plannedPaymentReadService.find(workplaceId, item.id);
-      if (!record) return;
-      await skipPlannedPaymentOccurrence(workplaceId, record, item.nextOccurrence);
+      await skipPlannedPaymentOccurrence(workplaceId, item.id, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'skip', {

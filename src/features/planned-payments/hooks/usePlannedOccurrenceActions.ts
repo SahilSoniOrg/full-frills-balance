@@ -5,9 +5,8 @@ import {
   postPlannedPaymentOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { analytics } from '@/src/services/analytics-service';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
@@ -49,7 +48,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
             : 'Record Payment';
 
       if (!isSimulated && item.origin === 'PLANNED_JOURNAL' && item.plannedPaymentId) {
-        const plannedPaymentId = item.plannedPaymentId as PlannedPaymentId;
+        const plannedPaymentId = item.plannedPaymentId;
         confirm.show({
           title: dialogTitle,
           message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
@@ -58,18 +57,17 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
-              if (pp) {
-                await postPlannedPaymentOccurrence(workplaceId, pp, item.occurrenceDate);
-                analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
-                  payment_id: plannedPaymentId,
-                  currency: item.currencyCode,
-                  is_simulated: false,
-                });
-                toast.success('Payment recorded successfully');
-              } else {
-                toast.error('Planned payment details not found');
-              }
+              await postPlannedPaymentOccurrence(
+                workplaceId,
+                plannedPaymentId,
+                item.occurrenceDate,
+              );
+              analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
+                payment_id: plannedPaymentId,
+                currency: item.currencyCode,
+                is_simulated: false,
+              });
+              toast.success('Payment recorded successfully');
             } catch (err) {
               showErrorAlert(err);
             }
@@ -83,17 +81,16 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
               destructive: true,
               onConfirm: async () => {
                 try {
-                  const pp = await plannedPaymentReadService.find(workplaceId, plannedPaymentId);
-                  if (pp) {
-                    await skipPlannedPaymentOccurrence(workplaceId, pp, item.occurrenceDate);
-                    analytics.trackFeatureUsage('planned_payment', 'occurrence_skipped', {
-                      payment_id: plannedPaymentId,
-                      is_simulated: false,
-                    });
-                    toast.success('Payment skipped successfully');
-                  } else {
-                    toast.error('Planned payment details not found');
-                  }
+                  await skipPlannedPaymentOccurrence(
+                    workplaceId,
+                    plannedPaymentId,
+                    item.occurrenceDate,
+                  );
+                  analytics.trackFeatureUsage('planned_payment', 'occurrence_skipped', {
+                    payment_id: plannedPaymentId,
+                    is_simulated: false,
+                  });
+                  toast.success('Payment skipped successfully');
                 } catch (err) {
                   showErrorAlert(err);
                 }

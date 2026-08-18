@@ -38,6 +38,9 @@ export class AccountingRebuildService {
       logger.warn(
         `[AccountingRebuildService] Rebuild already in progress for ${accountId}, skipping.`,
       );
+      if (extraOps.length > 0) {
+        throw new Error(`Rebuild already in progress for ${accountId}; cannot attach extraOps`);
+      }
       return;
     }
 

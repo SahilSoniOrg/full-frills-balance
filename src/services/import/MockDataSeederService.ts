@@ -9,10 +9,9 @@ import {
   TransactionId,
   BudgetId,
   JournalDisplayType,
+  JournalStatus,
+  PlannedPaymentStatus,
 } from '@/src/types/domain';
-
-import { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import type {

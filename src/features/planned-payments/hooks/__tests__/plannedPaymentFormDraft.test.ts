@@ -3,11 +3,11 @@ import {
   mapPlannedPaymentToForm,
   shouldSeedPlannedPaymentDraft,
 } from '../plannedPaymentFormDraft';
-import { PlannedPaymentInterval, AccountId, PlannedPaymentId } from '@/src/types/domain';
+import { PlannedPaymentInterval, AccountId } from '@/src/types/domain';
 
 describe('plannedPaymentFormDraft', () => {
   describe('shouldSeedPlannedPaymentDraft', () => {
-    const item = { id: 'pp1' as PlannedPaymentId } as any;
+    const item = { id: 'pp1' } as any;
 
     it('seeds when first non-null record arrives for an id', () => {
       expect(
@@ -34,7 +34,7 @@ describe('plannedPaymentFormDraft', () => {
         shouldSeedPlannedPaymentDraft({
           id: 'pp2',
           seededId: 'pp1',
-          item: { id: 'pp2' as PlannedPaymentId } as any,
+          item: { id: 'pp2' } as any,
         }),
       ).toBe(true);
     });

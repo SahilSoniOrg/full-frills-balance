@@ -1,7 +1,8 @@
-import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { PlannedPaymentPersistenceInput } from '@/src/data/repositories/PlannedPaymentRepository';
 import { computeFirstOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
+import { PlannedPaymentStatus } from '@/src/types/domain';
 
 export function isPlannedPaymentScheduleChange(
   existing: PlannedPayment,

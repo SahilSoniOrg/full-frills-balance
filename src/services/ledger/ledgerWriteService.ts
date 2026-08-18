@@ -1,7 +1,6 @@
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
-import { AuditAction } from '@/src/data/models/AuditLog';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
@@ -12,11 +11,13 @@ import {
 } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import {
   AccountId,
+  AuditAction,
   JournalId,
+  JournalStatus,
   TransactionType,
   WorkplaceId,
   mapTransactionToAudit,
@@ -428,7 +429,7 @@ export class LedgerWriteService {
     }
 
     if (journal.plannedPaymentId) {
-      const plannedPayment = await plannedPaymentReadService.find(
+      const plannedPayment = await plannedPaymentRepository.find(
         workplaceId,
         journal.plannedPaymentId,
       );

@@ -1,5 +1,5 @@
 import { ColorKey } from '@/src/constants';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, PlannedPaymentId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { safeParseJSON } from '@/src/utils/serialization';
 
@@ -15,7 +15,7 @@ export interface JournalDetailsInfo {
   currency: string;
   displayType: JournalDisplayType;
   totalAmount: number;
-  plannedPaymentId?: string | null;
+  plannedPaymentId?: PlannedPaymentId | null;
   journalDate: number;
 }
 
@@ -44,7 +44,7 @@ export function resolveJournalDetailsInfo(input: {
     currencyCode: string;
     displayType: JournalDisplayType | string;
     totalAmount?: number | null;
-    plannedPaymentId?: string | null;
+    plannedPaymentId?: PlannedPaymentId | null;
   } | null;
   journalVersion?: number;
   routePreview?: {

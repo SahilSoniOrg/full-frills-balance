@@ -224,6 +224,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     loading,
     isSaving,
     isFormValid: Boolean(draft.name.trim() && draft.amount && draft.selectedAccountIds.length > 0),
+    onCancel: AppNavigation.back,
   };
 }
 

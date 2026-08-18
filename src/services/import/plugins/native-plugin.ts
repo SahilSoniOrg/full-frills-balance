@@ -6,7 +6,14 @@
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { AuditEntityType } from '@/src/data/models/AuditLog';
+import {
+  AuditEntityType,
+  AccountId,
+  BudgetId,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+} from '@/src/types/domain';
 import {
   ImportedAccount,
   ImportedAccountMetadata,
@@ -31,13 +38,6 @@ import {
   remapFundingAccountIdsCsv,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
-import {
-  AccountId,
-  BudgetId,
-  JournalId,
-  PlannedPaymentId,
-  TransactionId,
-} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { UIPreferences } from '@/src/utils/preferences';
 

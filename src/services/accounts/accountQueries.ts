@@ -2,11 +2,7 @@ import { AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { map } from 'rxjs';
-import {
-  toPlainAccount,
-  toPlainAccountMetadata,
-  toPlainAccounts,
-} from '@/src/services/accounts/accountPlainMap';
+import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/data/models/Account';
 
 /**
  * Curated reactive/read entry points for feature hooks.
@@ -55,7 +51,7 @@ export const accountQueries = {
       .pipe(map(records => records.map(toPlainAccountMetadata)));
   },
 
-  findAll(workplaceId: WorkplaceId) {
-    return accountRepository.findAll(workplaceId);
+  async findAll(workplaceId: WorkplaceId) {
+    return toPlainAccounts(await accountRepository.findAll(workplaceId));
   },
 };

@@ -2,7 +2,6 @@ import {
   AccountId,
   EMPTY_ACCOUNT_ID,
   PlainPlannedPayment,
-  PlannedPaymentId,
   PlannedPaymentInterval,
 } from '@/src/types/domain';
 
@@ -65,6 +64,6 @@ export function shouldSeedPlannedPaymentDraft(args: {
 }): boolean {
   const { id, seededId, item } = args;
   if (!id || !item) return false;
-  if (item.id !== (id as PlannedPaymentId)) return false;
+  if (item.id !== id) return false;
   return seededId !== id;
 }

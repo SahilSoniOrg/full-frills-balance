@@ -1,6 +1,12 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
-import { JournalDisplayType, JournalId, JournalStatus, PlannedPaymentId } from '@/src/types/domain';
+import {
+  JournalDisplayType,
+  JournalId,
+  JournalStatus,
+  PlainJournal,
+  PlannedPaymentId,
+} from '@/src/types/domain';
 import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
@@ -37,4 +43,21 @@ export default class Journal extends BaseScopedModel<JournalId> {
   @children('journal_metadata') metadata!: Query<any>; // Typings can be tricky with circular deps, we'll cast at point of use or keep generic for 1-to-1
   @relation('journals', 'original_journal_id') originalJournal!: Relation<Journal>;
   @relation('journals', 'reversing_journal_id') reversingJournal!: Relation<Journal>;
+}
+
+export function toPlainJournal(journal: Journal): PlainJournal {
+  return {
+    id: journal.id,
+    journalDate: journal.journalDate,
+    description: journal.description,
+    notes: journal.notes,
+    currencyCode: journal.currencyCode,
+    status: journal.status,
+    originalJournalId: journal.originalJournalId,
+    reversingJournalId: journal.reversingJournalId,
+    plannedPaymentId: journal.plannedPaymentId,
+    totalAmount: journal.totalAmount,
+    transactionCount: journal.transactionCount,
+    displayType: journal.displayType,
+  };
 }

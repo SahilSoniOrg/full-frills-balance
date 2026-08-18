@@ -1,5 +1,4 @@
-import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentInterval } from '@/src/types/domain';
 
 /** Caller-owned fields for creating or updating a planned payment (form data only). */
 export interface PlannedPaymentCommandInput {

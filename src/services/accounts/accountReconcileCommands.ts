@@ -1,8 +1,7 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AuditAction, WorkplaceId } from '@/src/types/domain';
 
 export async function reconcileAccount(accountId: AccountId, date: Date, workplaceId: WorkplaceId) {
   const account = await accountRepository.find(workplaceId, accountId);

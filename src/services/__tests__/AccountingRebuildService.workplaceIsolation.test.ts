@@ -7,7 +7,8 @@ import { journalWriteRepository } from '@/src/data/repositories/journal/journalW
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AccountId, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
-import { Q } from '@nozbe/watermelondb';
+import { storage } from '@/src/utils/storage';
+import { Q, Model } from '@nozbe/watermelondb';
 
 const WORKPLACE_ONE = 'wp-rebuild-isolation-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-rebuild-isolation-2' as WorkplaceId;
@@ -88,5 +89,33 @@ describe('AccountingRebuildService workplace isolation', () => {
     expect(unchangedForeignTransaction.runningBalance).toBe(777);
     expect(unchangedForeignSnapshot.absoluteBalance).toBe(777);
     expect(unchangedForeignSnapshot.workplaceId).toBe(WORKPLACE_TWO);
+  });
+});
+
+describe('AccountingRebuildService lock vs extraOps', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('throws when extraOps are attached while a rebuild lock is held', async () => {
+    jest.spyOn(storage, 'getString').mockReturnValue(String(Date.now()));
+    await expect(
+      accountingRebuildService.rebuildAccountBalances(
+        WORKPLACE_ONE,
+        'acc-locked' as AccountId,
+        undefined,
+        [{} as Model],
+      ),
+    ).rejects.toThrow(/cannot attach extraOps/);
+  });
+
+  it('skips silently when a rebuild lock is held without extraOps', async () => {
+    jest.spyOn(storage, 'getString').mockReturnValue(String(Date.now()));
+    await expect(
+      accountingRebuildService.rebuildAccountBalances(
+        WORKPLACE_ONE,
+        'acc-locked-empty' as AccountId,
+      ),
+    ).resolves.toBeUndefined();
   });
 });

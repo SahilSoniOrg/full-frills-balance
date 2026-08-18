@@ -293,6 +293,21 @@ export enum JournalDisplayType {
   MIXED = 'MIXED',
 }
 
+export interface PlainJournal {
+  id: JournalId;
+  journalDate: number;
+  description?: string;
+  notes?: string;
+  currencyCode: string;
+  status: JournalStatus;
+  originalJournalId?: JournalId;
+  reversingJournalId?: JournalId;
+  plannedPaymentId?: PlannedPaymentId;
+  totalAmount: number;
+  transactionCount: number;
+  displayType: JournalDisplayType;
+}
+
 export enum SemanticType {
   // Asset sourced
   TRANSFER = 'TRANSFER',

@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import AuditLog, { toPlainAuditLog, AuditEntityType } from '@/src/data/models/AuditLog';
+import AuditLog, { toPlainAuditLog } from '@/src/data/models/AuditLog';
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
-import { WorkplaceId } from '@/src/types/domain';
+import { AuditEntityType, WorkplaceId } from '@/src/types/domain';
 import { map } from 'rxjs';
 
 /**

@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import React, { useCallback, useMemo } from 'react';
 import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
@@ -24,6 +24,8 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   selectedLegendItem: 'safe' | 'committed' | 'debts' | null;
   setSelectedLegendItem: (i: 'safe' | 'committed' | 'debts' | null) => void;
 } {
+  const { trackInfoVisible, trackSectionExpanded, trackLegendPressed } =
+    useDashboardFeatureActions();
   const { currencyCode, isLoading: propsIsLoading } = props;
 
   // UI State management
@@ -84,35 +86,25 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   const handleSetInfoVisible = useCallback(
     (v: boolean) => {
       setInfoVisible(v);
-      if (v) {
-        analytics.trackFeatureUsage('safe_to_spend', 'opened', {
-          isOverCommitted: viewModel.isOverCommitted,
-        });
-      } else {
-        analytics.trackFeatureUsage('safe_to_spend', 'closed');
-      }
+      trackInfoVisible(v, viewModel.isOverCommitted);
     },
-    [setInfoVisible, viewModel.isOverCommitted],
+    [setInfoVisible, trackInfoVisible, viewModel.isOverCommitted],
   );
 
   const handleSetExpandedSection = useCallback(
     (s: 'assets' | 'income' | 'committed' | 'debts' | null) => {
       setExpandedSection(s);
-      if (s) {
-        analytics.trackFeatureUsage('safe_to_spend', 'section_expanded', { section: s });
-      }
+      if (s) trackSectionExpanded(s);
     },
-    [setExpandedSection],
+    [setExpandedSection, trackSectionExpanded],
   );
 
   const handleSetSelectedLegendItem = useCallback(
     (i: 'safe' | 'committed' | 'debts' | null) => {
       setSelectedLegendItem(i);
-      if (i) {
-        analytics.trackFeatureUsage('safe_to_spend', 'legend_pressed', { item: i });
-      }
+      if (i) trackLegendPressed(i);
     },
-    [setSelectedLegendItem],
+    [setSelectedLegendItem, trackLegendPressed],
   );
 
   return {

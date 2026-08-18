@@ -1,5 +1,3 @@
-import { AuditAction } from '@/src/data/models/AuditLog';
-import { JournalStatus } from '@/src/data/models/Journal';
 import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -7,8 +5,10 @@ import { revertRegistry } from '@/src/services/revert-registry';
 import {
   AccountAuditState,
   AccountId,
+  AuditAction,
   JournalAuditState,
   JournalId,
+  JournalStatus,
   WorkplaceId,
 } from '@/src/types/domain';
 

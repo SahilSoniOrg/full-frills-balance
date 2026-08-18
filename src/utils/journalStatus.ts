@@ -1,4 +1,4 @@
-import { JournalStatus } from '@/src/data/models/Journal';
+import { JournalStatus } from '@/src/types/domain';
 
 export const ACTIVE_JOURNAL_STATUSES = [JournalStatus.POSTED, JournalStatus.REVERSED] as const;
 

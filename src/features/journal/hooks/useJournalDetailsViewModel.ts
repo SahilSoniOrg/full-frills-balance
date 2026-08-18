@@ -20,7 +20,7 @@ import {
   resolveRevertPlannedActionLabels,
   resolveJournalAmountPresentation,
 } from '@/src/services/journal/journalDetailsHelpers';
-import { JournalId, PlannedPaymentId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -166,10 +166,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   const { data: linkedPlannedPayment, isLoading: isLoadingPP } = useObservable(
     () =>
       journalInfo?.plannedPaymentId
-        ? plannedPaymentReadService.observeById(
-            workplaceId,
-            journalInfo.plannedPaymentId as PlannedPaymentId,
-          )
+        ? plannedPaymentReadService.observeById(workplaceId, journalInfo.plannedPaymentId)
         : of(null),
     [workplaceId, journalInfo?.plannedPaymentId],
     null,

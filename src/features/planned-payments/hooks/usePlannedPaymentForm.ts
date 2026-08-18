@@ -11,7 +11,7 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { analytics } from '@/src/services/analytics-service';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
@@ -79,7 +79,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
             item.intervalType !== data.intervalType ||
             item.intervalN !== data.intervalN;
 
-          await updatePlannedPayment(workplaceId, id as PlannedPaymentId, data);
+          await updatePlannedPayment(workplaceId, item.id, data);
 
           analytics.trackFeatureUsage('planned_payment', 'update', {
             payment_id: id,

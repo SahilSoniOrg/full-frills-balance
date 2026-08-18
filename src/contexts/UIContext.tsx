@@ -98,16 +98,6 @@ export function useOnboardingSession(): AppOnboardingValue {
   return requireContext(useContext(AppOnboardingContext), 'useOnboardingSession');
 }
 
-/** Compatibility aggregate for tests and mixed shell reads. Prefer the focused hooks. */
-export function useUI(): AppShellValue {
-  return {
-    ...useAppReady(),
-    ...useAppLock(),
-    ...useAppRestart(),
-    ...useOnboardingSession(),
-  };
-}
-
 const ThemeOverrideContext = createContext<ThemeMode | null>(null);
 
 export function ThemeOverride({ mode, children }: { mode?: ThemeMode; children: React.ReactNode }) {

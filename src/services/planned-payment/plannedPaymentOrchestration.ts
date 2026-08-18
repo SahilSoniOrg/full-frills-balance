@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import Journal from '@/src/data/models/Journal';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -11,8 +11,13 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
+import {
+  JournalStatus,
+  PlannedPaymentId,
+  PlannedPaymentStatus,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
 
@@ -31,9 +36,7 @@ export async function resolvePlannedOccurrenceContext(
   pp: PlannedPayment,
   occurrenceDate: number,
 ): Promise<PlannedOccurrenceContext> {
-  assertPlannedPaymentWorkplace(workplaceId, pp);
-
-  const plannedPaymentId = pp.id as PlannedPaymentId;
+  const plannedPaymentId = pp.id;
   const earliestPlanned = await journalPlannedQueries.findEarliestPlannedByPayment(
     workplaceId,
     plannedPaymentId,
@@ -68,10 +71,10 @@ function prepareScheduleAdvance(
 
 export async function postPlannedPaymentOccurrence(
   workplaceId: WorkplaceId,
-  pp: PlannedPayment,
+  plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
 ): Promise<void> {
-  assertPlannedPaymentWorkplace(workplaceId, pp);
+  const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
     const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
@@ -102,7 +105,7 @@ export async function postPlannedPaymentOccurrence(
           currencyCode: pp.currencyCode,
           transactions: buildPlannedPaymentTransferLines(pp),
           status: JournalStatus.POSTED,
-          plannedPaymentId: pp.id as PlannedPaymentId,
+          plannedPaymentId: pp.id,
         },
         workplaceId,
         { extraOps },
@@ -124,10 +127,10 @@ export async function postPlannedPaymentOccurrence(
  */
 export async function skipPlannedPaymentOccurrence(
   workplaceId: WorkplaceId,
-  pp: PlannedPayment,
+  plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
 ): Promise<void> {
-  assertPlannedPaymentWorkplace(workplaceId, pp);
+  const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
     const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
@@ -163,7 +166,7 @@ export async function skipPlannedPaymentOccurrence(
             includeCurrency: false,
           }),
           status: JournalStatus.SKIPPED,
-          plannedPaymentId: pp.id as PlannedPaymentId,
+          plannedPaymentId: pp.id,
         },
         workplaceId,
         { extraOps: scheduleOp ? () => [scheduleOp] : undefined },
@@ -194,7 +197,7 @@ export async function processDuePlannedPayments(
   const nowTime = normalizeToStartOfDay(Date.now());
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
 
-  const allPlannedIds = activePayments.map(p => p.id as PlannedPaymentId);
+  const allPlannedIds = activePayments.map(p => p.id);
   const existingJournals = await journalPlannedQueries.findByPlannedPaymentIds(
     workplaceId,
     allPlannedIds,
@@ -231,7 +234,7 @@ export async function processDuePlannedPayments(
         const dayEnd = nextOcc + (AppConfig.time.msPerDay - 1);
         const dbExists = await journalPlannedQueries.countOnDay(
           workplaceId,
-          pp.id as PlannedPaymentId,
+          pp.id,
           nextOcc,
           dayEnd,
         );

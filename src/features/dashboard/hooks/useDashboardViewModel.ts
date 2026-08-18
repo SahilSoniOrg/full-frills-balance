@@ -8,7 +8,7 @@ import {
   useRecentJournalEntries,
 } from '@/src/features/dashboard/hooks/useRecentJournalEntries';
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
-import { analytics } from '@/src/services/analytics-service';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { useObservable } from '@/src/hooks/useObservable';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
@@ -78,20 +78,22 @@ export function useDashboardViewModel(): DashboardViewModel {
   const [expandedSection, setExpandedSection] = useState<DashboardExplanationSection | null>(null);
   const [selectedLegendItem, setSelectedLegendItem] = useState<DashboardLegendItem | null>(null);
 
+  const { trackExplanationVisible, trackExplanationSection } = useDashboardFeatureActions();
+
   const explanationModalState = useMemo(
     () => ({
       visible: isExplanationVisible,
       setVisible: (visible: boolean) => {
         setExplanationVisible(visible);
-        if (visible) analytics.logChartInteracted('safe_to_spend', 'explanation_open');
+        trackExplanationVisible(visible);
       },
       expandedSection,
       setExpandedSection: (section: DashboardExplanationSection | null) => {
         setExpandedSection(section);
-        if (section) analytics.logChartInteracted('safe_to_spend', `explanation_expand_${section}`);
+        if (section) trackExplanationSection(section);
       },
     }),
-    [isExplanationVisible, expandedSection],
+    [isExplanationVisible, expandedSection, trackExplanationVisible, trackExplanationSection],
   );
 
   const legendModalState = useMemo(

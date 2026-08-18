@@ -2,7 +2,6 @@ import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -16,7 +15,7 @@ interface UseTransactionDetailsActionsProps {
   amount: number;
   currencyCode: string;
   status?: string;
-  plannedPaymentId?: string;
+  plannedPaymentId?: PlannedPaymentId;
   journalDate?: number;
 }
 
@@ -113,12 +112,7 @@ export function useJournalDetailsActions({
       `Are you sure you want to skip this planned transaction for ${displayAmount}? The schedule will advance to the next occurrence.`,
       async () => {
         try {
-          const plannedPayment = await plannedPaymentReadService.find(
-            workplaceId,
-            plannedPaymentId as PlannedPaymentId,
-          );
-          if (!plannedPayment) throw new Error('Planned payment rule not found.');
-          await skipPlannedPaymentOccurrence(workplaceId, plannedPayment, journalDate);
+          await skipPlannedPaymentOccurrence(workplaceId, plannedPaymentId, journalDate);
           toast.success('Transaction has been skipped.');
           AppNavigation.back();
         } catch (error) {

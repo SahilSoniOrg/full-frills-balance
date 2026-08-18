@@ -1,18 +1,18 @@
-import { AuditEntityType } from '@/src/data/models/AuditLog';
 import {
   AccountSubtype,
   AccountType,
+  AuditEntityType,
   TransactionType,
   AccountId,
   BudgetId,
   JournalDisplayType,
   JournalId,
+  JournalStatus,
   PlannedPaymentId,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
   TransactionId,
 } from '@/src/types/domain';
-
-import { JournalStatus } from '@/src/data/models/Journal';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 
 import { IconName } from '@/src/types/domainIcons';
 import { UIPreferences } from '@/src/utils/preferences';

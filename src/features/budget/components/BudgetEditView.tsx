@@ -14,10 +14,6 @@ import { toast } from '@/src/utils/alerts';
 import { useMemo, useState } from 'react';
 import type { BudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
-export type BudgetEditViewProps = BudgetEditViewModel & {
-  onCancel: () => void;
-};
-
 export function BudgetEditView({
   expenseAccounts,
   liquidAssetAccounts,
@@ -44,7 +40,7 @@ export function BudgetEditView({
   isFormValid,
   budget,
   onCancel,
-}: BudgetEditViewProps) {
+}: BudgetEditViewModel) {
   const { theme } = useTheme();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);

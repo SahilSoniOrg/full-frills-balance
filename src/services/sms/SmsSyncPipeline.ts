@@ -1,8 +1,13 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import { JournalStatus } from '@/src/data/models/Journal';
-import { TransactionType, JournalId, AccountId, WorkplaceId } from '@/src/types/domain';
+import {
+  TransactionType,
+  JournalId,
+  AccountId,
+  JournalStatus,
+  WorkplaceId,
+} from '@/src/types/domain';
 
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {

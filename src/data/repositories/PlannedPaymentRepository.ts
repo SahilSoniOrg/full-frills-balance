@@ -104,7 +104,7 @@ export class PlannedPaymentRepository {
     updates: Partial<PlannedPaymentPersistenceInput>,
   ): Promise<PlannedPayment> {
     //get first to verify workplace scoping
-    const record = await this.find(workplaceId, pp.id as PlannedPaymentId);
+    const record = await this.find(workplaceId, pp.id);
     if (!record) {
       throw new Error('Planned payment not found');
     }

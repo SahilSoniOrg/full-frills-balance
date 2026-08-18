@@ -1,5 +1,5 @@
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
+import AuditLog from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
@@ -16,7 +16,7 @@ import {
 } from '@/src/services/accounts/accountAuditState';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { invalidateAccountArchiveCaches } from '@/src/services/reactive/invalidateAccountArchiveCaches';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AuditAction, WorkplaceId } from '@/src/types/domain';
 
 export type PreparedArchiveMutation = {
   plan: ArchiveMutationPlan;

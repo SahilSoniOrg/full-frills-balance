@@ -1,11 +1,10 @@
 import Account from '@/src/data/models/Account';
-import { AuditAction } from '@/src/data/models/AuditLog';
+import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { deleteBlockers, type DeleteBlocker } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 /** Format structured graph blockers into the user-facing delete Error message. */
 export function formatAccountDeleteBlockersError(

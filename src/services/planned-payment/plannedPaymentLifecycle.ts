@@ -1,14 +1,18 @@
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { JournalStatus } from '@/src/data/models/Journal';
-import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { assertPlannedPaymentWorkplace } from '@/src/services/planned-payment/plannedPaymentWorkplace';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
+import {
+  JournalStatus,
+  PlannedPaymentId,
+  PlannedPaymentStatus,
+  WorkplaceId,
+} from '@/src/types/domain';
 
 /**
  * Toggles planned-payment ACTIVE ↔ PAUSED.
@@ -16,9 +20,9 @@ import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
  */
 export async function togglePlannedPaymentStatus(
   workplaceId: WorkplaceId,
-  pp: PlannedPayment,
+  plannedPaymentId: PlannedPaymentId,
 ): Promise<PlannedPaymentStatus> {
-  assertPlannedPaymentWorkplace(workplaceId, pp);
+  const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   const newStatus =
     pp.status === PlannedPaymentStatus.ACTIVE
@@ -30,7 +34,7 @@ export async function togglePlannedPaymentStatus(
 
   const targetJournals = await journalPlannedQueries.findByPlannedPaymentAndStatus(
     workplaceId,
-    pp.id as PlannedPaymentId,
+    pp.id,
     targetStatus,
   );
 

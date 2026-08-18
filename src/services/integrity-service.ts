@@ -18,7 +18,7 @@ import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import AuditLog, { AuditAction } from '@/src/data/models/AuditLog';
+import AuditLog from '@/src/data/models/AuditLog';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
 import {
@@ -27,7 +27,7 @@ import {
   resetWorkplace as runWorkplaceReset,
 } from '@/src/services/integrity/integrityMaintenance';
 
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, AuditAction, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';

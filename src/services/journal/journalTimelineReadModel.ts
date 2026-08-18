@@ -1,10 +1,9 @@
-import { JournalStatus } from '@/src/data/models/Journal';
 import {
   journalEnrichmentQueries,
   journalsQuery,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import { enrichJournals, enrichedJournalsAreEqual } from '@/src/services/journal/enrichJournals';
-import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
+import { EnrichedJournal, JournalStatus, WorkplaceId } from '@/src/types/domain';
 import { JournalObserveFilter } from '@/src/types/journalTimeline';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';

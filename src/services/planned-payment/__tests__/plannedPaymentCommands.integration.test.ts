@@ -12,13 +12,7 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
-import {
-  AccountType,
-  AccountId,
-  JournalId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
@@ -67,12 +61,10 @@ describe('planned payment commands (integration)', () => {
     expect(created.status).toBe(PlannedPaymentStatus.ACTIVE);
     expect(created.nextOccurrence).toBeGreaterThan(0);
 
-    const reloaded = await plannedPaymentRepository.find(WP, created.id as PlannedPaymentId);
+    const reloaded = await plannedPaymentRepository.find(WP, created.id);
     expect(reloaded?.name).toBe('Monthly rent');
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     expect(journals.length).toBeGreaterThan(0);
     expect(journals.some(j => j.status === JournalStatus.PLANNED)).toBe(true);
   });
@@ -81,7 +73,7 @@ describe('planned payment commands (integration)', () => {
     const created = await createPlannedPayment(WP, baseInput());
     const beforeNext = created.nextOccurrence;
 
-    const updated = await updatePlannedPayment(WP, created.id as PlannedPaymentId, {
+    const updated = await updatePlannedPayment(WP, created.id, {
       ...baseInput(),
       name: 'Rent (updated)',
       amount: 1300,
@@ -95,7 +87,7 @@ describe('planned payment commands (integration)', () => {
     const created = await createPlannedPayment(WP, baseInput());
     const newStart = new Date(2026, 5, 1).getTime();
 
-    const updated = await updatePlannedPayment(WP, created.id as PlannedPaymentId, {
+    const updated = await updatePlannedPayment(WP, created.id, {
       ...baseInput(),
       startDate: newStart,
       intervalN: 2,
@@ -108,9 +100,7 @@ describe('planned payment commands (integration)', () => {
   it('delete soft-deletes active payment and cascades to unposted planned journals and transactions', async () => {
     const created = await createPlannedPayment(WP, baseInput());
 
-    const journalsBefore = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const journalsBefore = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     expect(journalsBefore.length).toBeGreaterThan(0);
     const journalIds = journalsBefore.map(j => j.id);
 
@@ -124,14 +114,12 @@ describe('planned payment commands (integration)', () => {
       .fetch();
     expect(txBefore.length).toBeGreaterThan(0);
 
-    await deletePlannedPayment(WP, created);
+    await deletePlannedPayment(WP, created.id);
 
-    const gone = await plannedPaymentRepository.find(WP, created.id as PlannedPaymentId);
+    const gone = await plannedPaymentRepository.find(WP, created.id);
     expect(gone).toBeNull();
 
-    const journalsAfter = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const journalsAfter = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     expect(journalsAfter.length).toBe(0);
 
     const txAfter = await database.collections
@@ -148,9 +136,7 @@ describe('planned payment commands (integration)', () => {
   it('delete preserves POSTED historical journals associated with the planned payment', async () => {
     const created = await createPlannedPayment(WP, baseInput());
 
-    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     expect(plannedJournals.length).toBeGreaterThan(0);
 
     // Simulate posting one of the journals
@@ -161,7 +147,7 @@ describe('planned payment commands (integration)', () => {
       });
     });
 
-    await deletePlannedPayment(WP, created);
+    await deletePlannedPayment(WP, created.id);
 
     // POSTED journal still exists and is not soft deleted
     const reloaded = await database.collections.get<Journal>('journals').find(postedJournal.id);
@@ -169,16 +155,14 @@ describe('planned payment commands (integration)', () => {
     expect(reloaded.status).toBe(JournalStatus.POSTED);
 
     // Only the POSTED journal remains; all PLANNED journals are deleted
-    const remaining = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const remaining = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     expect(remaining.length).toBe(1);
     expect(remaining[0].id).toBe(postedJournal.id);
     expect(remaining[0].status).toBe(JournalStatus.POSTED);
 
     const remainingPlanned = await journalPlannedQueries.findByPlannedPaymentAndStatus(
       WP,
-      created.id as PlannedPaymentId,
+      created.id,
       JournalStatus.PLANNED,
     );
     expect(remainingPlanned.length).toBe(0);
@@ -186,9 +170,7 @@ describe('planned payment commands (integration)', () => {
 
   it('refuses to revert a posted journal to scheduled after its planned payment is deleted', async () => {
     const created = await createPlannedPayment(WP, baseInput());
-    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [
-      created.id as PlannedPaymentId,
-    ]);
+    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
     const postedJournal = plannedJournals[0];
     await database.write(async () => {
       await postedJournal.update(record => {
@@ -196,7 +178,7 @@ describe('planned payment commands (integration)', () => {
       });
     });
 
-    await deletePlannedPayment(WP, created);
+    await deletePlannedPayment(WP, created.id);
 
     await expect(journalService.revertToPlanned(postedJournal.id as JournalId, WP)).rejects.toThrow(
       /planned payment was deleted/,
@@ -208,13 +190,13 @@ describe('planned payment commands (integration)', () => {
 
   it('pause and resume go through service façade', async () => {
     const created = await createPlannedPayment(WP, baseInput());
-    const pausedStatus = await togglePlannedPaymentStatus(WP, created);
+    const pausedStatus = await togglePlannedPaymentStatus(WP, created.id);
     expect(pausedStatus).toBe(PlannedPaymentStatus.PAUSED);
 
-    const paused = await plannedPaymentRepository.find(WP, created.id as PlannedPaymentId);
+    const paused = await plannedPaymentRepository.find(WP, created.id);
     expect(paused?.status).toBe(PlannedPaymentStatus.PAUSED);
 
-    const resumedStatus = await togglePlannedPaymentStatus(WP, paused!);
+    const resumedStatus = await togglePlannedPaymentStatus(WP, paused!.id);
     expect(resumedStatus).toBe(PlannedPaymentStatus.ACTIVE);
   });
 });

@@ -24,7 +24,8 @@ export class PlannedPaymentReadService {
   }
 
   async find(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
-    return plannedPaymentRepository.find(workplaceId, plannedPaymentId);
+    const item = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
+    return item ? toPlainPlannedPayment(item) : undefined;
   }
 }
 
