@@ -27,6 +27,11 @@ import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model } from '@nozbe/watermelondb';
 
+export interface BatchWriteOptions<T = Journal> {
+  extraOps?: Model[] | ((entity: T) => Model[]);
+  afterBatch?: () => void;
+}
+
 /**
  * Canonical journal write Module: prepare + audit + persist + rebuild enqueue.
  * Prefer this over calling JournalRepository create/update helpers directly.
@@ -94,13 +99,13 @@ export class LedgerWriteService {
   async createJournal(
     data: CreateJournalData,
     workplaceId: WorkplaceId,
-    options?: {
-      extraOps?: (journal: Journal) => Model[];
-      afterBatch?: () => void;
-    },
+    options?: BatchWriteOptions<Journal>,
   ): Promise<Journal> {
     const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data, workplaceId);
-    const extras = options?.extraOps?.(journal) ?? [];
+    const extras =
+      typeof options?.extraOps === 'function'
+        ? options.extraOps(journal)
+        : (options?.extraOps ?? []);
 
     await database.write(async () => {
       await database.batch([...ops, ...extras]);
@@ -361,7 +366,7 @@ export class LedgerWriteService {
   async postJournal(
     journalId: JournalId,
     workplaceId: WorkplaceId,
-    extraOps: Model[] = [],
+    options?: BatchWriteOptions<Journal> | Model[],
   ): Promise<Journal> {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
@@ -374,6 +379,11 @@ export class LedgerWriteService {
     const postTime = Date.now();
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
     const originalDate = journal.journalDate;
+    const batchOptions = Array.isArray(options) ? { extraOps: options } : options;
+    const extras =
+      typeof batchOptions?.extraOps === 'function'
+        ? batchOptions.extraOps(journal)
+        : (batchOptions?.extraOps ?? []);
 
     await database.write(async () => {
       const metadataOp = await journalMetadataRepository.preparePatch(
@@ -409,10 +419,11 @@ export class LedgerWriteService {
         workplaceId,
       );
 
-      await database.batch([metadataOp, journalOp, ...txOps, auditOp, ...extraOps]);
+      await database.batch([metadataOp, journalOp, ...txOps, auditOp, ...extras]);
 
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);
+      batchOptions?.afterBatch?.();
     });
 
     logger.info(`Manually posted journal ${journalId} at ${new Date(postTime).toLocaleString()}`);

@@ -12,6 +12,7 @@ import {
   TransactionDirection,
 } from '@/src/types/domain';
 
+import Journal from '@/src/data/models/Journal';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
@@ -318,54 +319,20 @@ export class SmsSyncPipeline {
               latestJournalsById.get(result.message.id) ??
               latestJournalsByFingerprint.get(result.fingerprint) ??
               null;
-            let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
-            let finalStatus = this.resolveProcessingStatus({
-              parsed: result.parsed,
-              processedIds: latestProcessedIds,
-              exactJournalId: linkedJournalId,
-              duplicate: result.duplicate,
-              existingStatus: latestRecord?.processingStatus,
+
+            const { ops, record, autoPosted } = this.processScanBatchItem({
+              result,
+              latestRecord,
+              latestJournal,
+              latestProcessedIds,
+              workplaceId,
+              allAccountsToRebuild,
+              processedMessageIds,
+              triggeredRuleIds,
             });
 
-            if (
-              result.finalStatus === InboxProcessingStatus.DISMISSED &&
-              finalStatus === InboxProcessingStatus.PENDING
-            ) {
-              finalStatus = InboxProcessingStatus.DISMISSED;
-            }
-
-            if (
-              result.autoPost &&
-              !linkedJournalId &&
-              finalStatus === InboxProcessingStatus.PENDING
-            ) {
-              const { journal, ops, accountsToRebuild } =
-                ledgerWriteService.prepareCreateJournalFromPreparedData(
-                  result.autoPost.journalData,
-                  result.autoPost.preparedJournal,
-                  workplaceId,
-                );
-
-              allOps.push(...ops);
-              accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-              linkedJournalId = journal.id;
-              finalStatus = InboxProcessingStatus.AUTO_POSTED;
-              importedCount += 1;
-              processedMessageIds.push(result.message.id);
-              triggeredRuleIds.push(result.autoPost.ruleId);
-            }
-
-            const { ops: upsertOps, record } = this.prepareUpsertInboxRecord(
-              result.message,
-              result.parsed,
-              result.fingerprint,
-              latestRecord,
-              finalStatus,
-              workplaceId,
-              linkedJournalId,
-              result.duplicate || undefined,
-            );
-            allOps.push(...upsertOps);
+            allOps.push(...ops);
+            if (autoPosted) importedCount += 1;
             latestRecordsByMessageId.set(result.message.id, record);
           }
 
@@ -543,6 +510,78 @@ export class SmsSyncPipeline {
     }
 
     return null;
+  }
+
+  private processScanBatchItem(params: {
+    result: SmsAnalysisResult;
+    latestRecord: TransactionInboxRecord | null;
+    latestJournal: Journal | null;
+    latestProcessedIds: Set<string>;
+    workplaceId: WorkplaceId;
+    allAccountsToRebuild: Set<AccountId>;
+    processedMessageIds: string[];
+    triggeredRuleIds: string[];
+  }): { ops: Model[]; record: TransactionInboxRecord; autoPosted: boolean } {
+    const {
+      result,
+      latestRecord,
+      latestJournal,
+      latestProcessedIds,
+      workplaceId,
+      allAccountsToRebuild,
+      processedMessageIds,
+      triggeredRuleIds,
+    } = params;
+
+    let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
+    let finalStatus = this.resolveProcessingStatus({
+      parsed: result.parsed,
+      processedIds: latestProcessedIds,
+      exactJournalId: linkedJournalId,
+      duplicate: result.duplicate,
+      existingStatus: latestRecord?.processingStatus,
+    });
+
+    if (
+      result.finalStatus === InboxProcessingStatus.DISMISSED &&
+      finalStatus === InboxProcessingStatus.PENDING
+    ) {
+      finalStatus = InboxProcessingStatus.DISMISSED;
+    }
+
+    const allOps: Model[] = [];
+    let autoPosted = false;
+
+    if (result.autoPost && !linkedJournalId && finalStatus === InboxProcessingStatus.PENDING) {
+      const { journal, ops, accountsToRebuild } =
+        ledgerWriteService.prepareCreateJournalFromPreparedData(
+          result.autoPost.journalData,
+          result.autoPost.preparedJournal,
+          workplaceId,
+        );
+
+      allOps.push(...ops);
+      accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+      linkedJournalId = journal.id;
+      finalStatus = InboxProcessingStatus.AUTO_POSTED;
+      autoPosted = true;
+      processedMessageIds.push(result.message.id);
+      triggeredRuleIds.push(result.autoPost.ruleId);
+    }
+
+    const { ops: upsertOps, record } = this.prepareUpsertInboxRecord(
+      result.message,
+      result.parsed,
+      result.fingerprint,
+      latestRecord,
+      finalStatus,
+      workplaceId,
+      linkedJournalId,
+      result.duplicate || undefined,
+    );
+    allOps.push(...upsertOps);
+
+    return { ops: allOps, record, autoPosted };
   }
 
   prepareUpsertInboxRecord(
