@@ -214,16 +214,23 @@ export const ivyPlugin: ImportPlugin = {
     }
     const data: IvyData = context.json as IvyData;
 
-    const UNKNOWN_CATEGORY_ID = 'ivy-unknown-category';
-    let needsUnknownCategory = false;
+    const UNKNOWN_EXPENSE_CATEGORY_ID = 'ivy-unknown-expense-category';
+    const UNKNOWN_INCOME_CATEGORY_ID = 'ivy-unknown-income-category';
+    let needsUnknownExpenseCategory = false;
+    let needsUnknownIncomeCategory = false;
 
     data.transactions.forEach(tx => {
       if (!tx.title && !tx.description) {
         tx.title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1).toLowerCase();
       }
       if (tx.type !== 'TRANSFER' && !tx.categoryId) {
-        tx.categoryId = UNKNOWN_CATEGORY_ID;
-        needsUnknownCategory = true;
+        if (tx.type === 'INCOME') {
+          tx.categoryId = UNKNOWN_INCOME_CATEGORY_ID;
+          needsUnknownIncomeCategory = true;
+        } else {
+          tx.categoryId = UNKNOWN_EXPENSE_CATEGORY_ID;
+          needsUnknownExpenseCategory = true;
+        }
       }
     });
 
@@ -233,16 +240,36 @@ export const ivyPlugin: ImportPlugin = {
           rule.title = rule.type.charAt(0).toUpperCase() + rule.type.slice(1).toLowerCase();
         }
         if (rule.type !== 'TRANSFER' && !rule.categoryId) {
-          rule.categoryId = UNKNOWN_CATEGORY_ID;
-          needsUnknownCategory = true;
+          if (rule.type === 'INCOME') {
+            rule.categoryId = UNKNOWN_INCOME_CATEGORY_ID;
+            needsUnknownIncomeCategory = true;
+          } else {
+            rule.categoryId = UNKNOWN_EXPENSE_CATEGORY_ID;
+            needsUnknownExpenseCategory = true;
+          }
         }
       });
     }
 
-    if (needsUnknownCategory && !data.categories.some(c => c.id === UNKNOWN_CATEGORY_ID)) {
+    if (
+      needsUnknownExpenseCategory &&
+      !data.categories.some(c => c.id === UNKNOWN_EXPENSE_CATEGORY_ID)
+    ) {
       data.categories.push({
-        id: UNKNOWN_CATEGORY_ID,
-        name: 'unknown',
+        id: UNKNOWN_EXPENSE_CATEGORY_ID,
+        name: 'Unknown Expense',
+        color: -984833, // Default grey color
+        icon: 'help-circle',
+      });
+    }
+
+    if (
+      needsUnknownIncomeCategory &&
+      !data.categories.some(c => c.id === UNKNOWN_INCOME_CATEGORY_ID)
+    ) {
+      data.categories.push({
+        id: UNKNOWN_INCOME_CATEGORY_ID,
+        name: 'Unknown Income',
         color: -984833, // Default grey color
         icon: 'help-circle',
       });
@@ -266,15 +293,16 @@ export const ivyPlugin: ImportPlugin = {
 
     const accountImports: ImportedAccount[] = [];
 
-    // 2. Pre-Scan Transactions for Category Usage (Per Currency)
+    // 2. Pre-Scan Transactions for Category Usage (Per Currency & Type)
     onProgress?.('Analyzing categories...', 0.1);
     interface CategoryStat {
-      expenseCount: number;
-      incomeCount: number;
+      count: number;
+      type: AccountType;
     }
 
     const categoryUsageMap = new Map<string, CategoryStat>();
     const categoryCurrencies = new Map<string, Set<string>>();
+    const categoryTypeUsages = new Map<string, Set<AccountType>>();
 
     const rawIvyAccountCurrency = new Map<string, string>();
     data.accounts.forEach(a => {
@@ -285,26 +313,30 @@ export const ivyPlugin: ImportPlugin = {
       if (tx.isDeleted) return;
       if (tx.dueDate) return;
       if (!tx.categoryId) return;
+      if (tx.type === 'TRANSFER') return;
 
       let currency = ivyBaseCurrency;
       if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
         currency = rawIvyAccountCurrency.get(tx.accountId)!;
       }
 
-      const key = `${tx.categoryId}:::${currency}`;
+      const usageType = tx.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
+      const key = `${tx.categoryId}:::${currency}:::${usageType}`;
 
       if (!categoryUsageMap.has(key)) {
-        categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+        categoryUsageMap.set(key, { count: 0, type: usageType });
       }
-      const stats = categoryUsageMap.get(key)!;
-
-      if (tx.type === 'EXPENSE') stats.expenseCount++;
-      if (tx.type === 'INCOME') stats.incomeCount++;
+      categoryUsageMap.get(key)!.count++;
 
       if (!categoryCurrencies.has(tx.categoryId)) {
         categoryCurrencies.set(tx.categoryId, new Set());
       }
       categoryCurrencies.get(tx.categoryId)!.add(currency);
+
+      if (!categoryTypeUsages.has(tx.categoryId)) {
+        categoryTypeUsages.set(tx.categoryId, new Set());
+      }
+      categoryTypeUsages.get(tx.categoryId)!.add(usageType);
     });
 
     // Add categories from budgets to ensure accounts are created for them
@@ -313,14 +345,20 @@ export const ivyPlugin: ImportPlugin = {
         if (budget.isDeleted || !budget.categoryIdsSerialized) return;
         const catIds = parseSerializedIds(budget.categoryIdsSerialized);
         catIds.forEach(catId => {
-          const key = `${catId}:::${ivyBaseCurrency}`;
+          const usageType = AccountType.EXPENSE;
+          const key = `${catId}:::${ivyBaseCurrency}:::${usageType}`;
           if (!categoryUsageMap.has(key)) {
-            categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+            categoryUsageMap.set(key, { count: 0, type: usageType });
           }
           if (!categoryCurrencies.has(catId)) {
             categoryCurrencies.set(catId, new Set());
           }
           categoryCurrencies.get(catId)!.add(ivyBaseCurrency);
+
+          if (!categoryTypeUsages.has(catId)) {
+            categoryTypeUsages.set(catId, new Set());
+          }
+          categoryTypeUsages.get(catId)!.add(usageType);
         });
       });
     }
@@ -329,26 +367,29 @@ export const ivyPlugin: ImportPlugin = {
     if (data.plannedPaymentRules) {
       data.plannedPaymentRules.forEach(rule => {
         if (rule.isDeleted || !rule.categoryId) return;
+        if (rule.type === 'TRANSFER') return;
 
         let currency = ivyBaseCurrency;
         if (rule.accountId && rawIvyAccountCurrency.has(rule.accountId)) {
           currency = rawIvyAccountCurrency.get(rule.accountId)!;
         }
 
-        const key = `${rule.categoryId}:::${currency}`;
+        const usageType = rule.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
+        const key = `${rule.categoryId}:::${currency}:::${usageType}`;
         if (!categoryUsageMap.has(key)) {
-          categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+          categoryUsageMap.set(key, { count: 0, type: usageType });
         }
-
-        // Track usage type for income/expense determination
-        const stats = categoryUsageMap.get(key)!;
-        if (rule.type === 'EXPENSE') stats.expenseCount++;
-        if (rule.type === 'INCOME') stats.incomeCount++;
+        categoryUsageMap.get(key)!.count++;
 
         if (!categoryCurrencies.has(rule.categoryId)) {
           categoryCurrencies.set(rule.categoryId, new Set());
         }
         categoryCurrencies.get(rule.categoryId)!.add(currency);
+
+        if (!categoryTypeUsages.has(rule.categoryId)) {
+          categoryTypeUsages.set(rule.categoryId, new Set());
+        }
+        categoryTypeUsages.get(rule.categoryId)!.add(usageType);
       });
     }
 
@@ -413,18 +454,24 @@ export const ivyPlugin: ImportPlugin = {
     });
 
     // Add Category Accounts
-    for (const [key, stats] of categoryUsageMap.entries()) {
+    for (const [key, { type }] of categoryUsageMap.entries()) {
       const [categoryId, currency] = key.split(':::');
       const ivyCat = ivyCategoryLookup.get(categoryId);
       if (!ivyCat) continue;
 
       const id = categoryAccountMap.get(key)!;
-      const name = `${ivyCat.name} (${currency})`;
+      const hasBothTypes = (categoryTypeUsages.get(categoryId)?.size ?? 0) > 1;
 
-      let type = AccountType.EXPENSE;
-      if (stats.incomeCount > stats.expenseCount) {
-        type = AccountType.INCOME;
+      let baseName = ivyCat.name;
+      if (categoryId === UNKNOWN_EXPENSE_CATEGORY_ID) {
+        baseName = 'Unknown Expense';
+      } else if (categoryId === UNKNOWN_INCOME_CATEGORY_ID) {
+        baseName = 'Unknown Income';
+      } else if (hasBothTypes) {
+        baseName = type === AccountType.INCOME ? `${ivyCat.name} Income` : `${ivyCat.name} Expense`;
       }
+
+      const name = `${baseName} (${currency})`;
 
       allPendingAccounts.push({
         id,
@@ -538,7 +585,8 @@ export const ivyPlugin: ImportPlugin = {
         }
 
         if (rule.categoryId) {
-          const key = `${rule.categoryId}:::${currencyCode}`;
+          const ruleUsageType = rule.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
+          const key = `${rule.categoryId}:::${currencyCode}:::${ruleUsageType}`;
           const catAccId = categoryAccountMap.get(key);
           if (catAccId) {
             if (rule.type === 'INCOME') {
@@ -660,8 +708,6 @@ export const ivyPlugin: ImportPlugin = {
         continue;
       }
 
-      const key = `${tx.categoryId}:::${currencyCode}`;
-
       if (tx.type === 'TRANSFER' && tx.toAccountId) {
         const sourceAccId = accountMap.get(tx.accountId);
         const destAccId = accountMap.get(tx.toAccountId);
@@ -713,25 +759,27 @@ export const ivyPlugin: ImportPlugin = {
         });
         continue;
       } else if (tx.type === 'EXPENSE') {
+        const expenseKey = `${tx.categoryId}:::${currencyCode}:::${AccountType.EXPENSE}`;
         sourceId = primaryAccId;
-        destId = categoryAccountMap.get(key);
+        destId = categoryAccountMap.get(expenseKey);
         displayType = JournalDisplayType.EXPENSE;
         if (!destId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing Category Account for Expense (${key})`,
+            reason: `Missing Category Account for Expense (${expenseKey})`,
             description: txDesc,
           });
         }
       } else {
         // INCOME
-        sourceId = categoryAccountMap.get(key);
+        const incomeKey = `${tx.categoryId}:::${currencyCode}:::${AccountType.INCOME}`;
+        sourceId = categoryAccountMap.get(incomeKey);
         destId = primaryAccId;
         displayType = JournalDisplayType.INCOME;
         if (!sourceId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing Category Account for Income (${key})`,
+            reason: `Missing Category Account for Income (${incomeKey})`,
             description: txDesc,
           });
         }

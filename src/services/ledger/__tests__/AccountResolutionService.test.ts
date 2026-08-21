@@ -133,4 +133,38 @@ describe('AccountResolutionService', () => {
     expect(result.sourceAccountId).not.toBe(foreignSource.id);
     expect(result.categoryAccountId).not.toBe(foreignCategory.id);
   });
+
+  it('does not resolve an Income account as the category for an Expense/Debit direction', async () => {
+    const workplaceId = 'wp-direction-test' as WorkplaceId;
+
+    // Create an Income account named "Other Income" and an Expense account named "Groceries"
+    const otherIncome = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Other Income',
+      accountType: AccountType.INCOME,
+      currencyCode: 'USD',
+    });
+    await accountWriteRepository.create({
+      workplaceId,
+      name: 'Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const groceries = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Groceries',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+    });
+
+    // Try resolving an expense with hint "Other" - should NOT pick "Other Income" because direction is debit
+    const result = await accountResolutionService.resolve({
+      destinationHint: 'Other',
+      direction: 'debit',
+      workplaceId,
+    });
+
+    expect(result.categoryAccountId).not.toBe(otherIncome.id);
+    expect(result.categoryAccountId).toBe(groceries.id); // Falls back to available expense account
+  });
 });

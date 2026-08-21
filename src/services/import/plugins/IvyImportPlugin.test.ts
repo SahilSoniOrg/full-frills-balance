@@ -424,5 +424,113 @@ describe('IvyImportPlugin', () => {
       expect(debitTx.accountId).toBe(abAcc.id);
       expect(creditTx.accountId).toContain('mock-id-'); // Mock id for asset
     });
+
+    it('creates distinct Unknown Expense and Unknown Income accounts for missing categories', async () => {
+      const dataWithMissingCategories = {
+        ...validIvyData,
+        transactions: [
+          {
+            id: 'ivy-t-exp-missing',
+            accountId: 'ivy-a1',
+            type: 'EXPENSE',
+            amount: 75,
+            dateTime: '2023-01-01T10:00:00Z',
+          },
+          {
+            id: 'ivy-t-inc-missing',
+            accountId: 'ivy-a1',
+            type: 'INCOME',
+            amount: 150,
+            dateTime: '2023-01-02T10:00:00Z',
+          },
+        ],
+        categories: [],
+      };
+
+      const context = { json: dataWithMissingCategories } as ImportFileContext;
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
+
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const unknownExpenseAcc = lastBatch.accounts.find(
+        (a: any) => a.name === 'Unknown Expense (USD)' && a.accountType === 'EXPENSE',
+      );
+      const unknownIncomeAcc = lastBatch.accounts.find(
+        (a: any) => a.name === 'Unknown Income (USD)' && a.accountType === 'INCOME',
+      );
+
+      expect(unknownExpenseAcc).toBeDefined();
+      expect(unknownIncomeAcc).toBeDefined();
+      expect(unknownExpenseAcc.id).not.toBe(unknownIncomeAcc.id);
+      expect(stats.transactions).toBe(4);
+
+      // Verify the expense transaction debits the Unknown Expense account
+      const expenseLegs = lastBatch.transactions.filter(
+        (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 75).id,
+      );
+      const expenseDebit = expenseLegs.find((t: any) => t.transactionType === 'DEBIT');
+      expect(expenseDebit.accountId).toBe(unknownExpenseAcc.id);
+
+      // Verify the income transaction credits the Unknown Income account
+      const incomeLegs = lastBatch.transactions.filter(
+        (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 150).id,
+      );
+      const incomeCredit = incomeLegs.find((t: any) => t.transactionType === 'CREDIT');
+      expect(incomeCredit.accountId).toBe(unknownIncomeAcc.id);
+    });
+
+    it('creates distinct expense and income accounts when a single category is shared across types', async () => {
+      const dataWithSharedCategory = {
+        ...validIvyData,
+        categories: [{ id: 'ivy-c-misc', name: 'Miscellaneous', color: 0, icon: 'misc-icon' }],
+        transactions: [
+          {
+            id: 'ivy-t-exp-misc',
+            accountId: 'ivy-a1',
+            type: 'EXPENSE',
+            amount: 30,
+            categoryId: 'ivy-c-misc',
+            dateTime: '2023-01-01T10:00:00Z',
+          },
+          {
+            id: 'ivy-t-inc-misc',
+            accountId: 'ivy-a1',
+            type: 'INCOME',
+            amount: 200,
+            categoryId: 'ivy-c-misc',
+            dateTime: '2023-01-02T10:00:00Z',
+          },
+        ],
+      };
+
+      const context = { json: dataWithSharedCategory } as ImportFileContext;
+      const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
+
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const miscExpenseAcc = lastBatch.accounts.find(
+        (a: any) => a.name === 'Miscellaneous Expense (USD)' && a.accountType === 'EXPENSE',
+      );
+      const miscIncomeAcc = lastBatch.accounts.find(
+        (a: any) => a.name === 'Miscellaneous Income (USD)' && a.accountType === 'INCOME',
+      );
+
+      expect(miscExpenseAcc).toBeDefined();
+      expect(miscIncomeAcc).toBeDefined();
+      expect(miscExpenseAcc.id).not.toBe(miscIncomeAcc.id);
+      expect(stats.transactions).toBe(4);
+
+      // Verify the expense transaction points to the expense account
+      const expenseLegs = lastBatch.transactions.filter(
+        (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 30).id,
+      );
+      const expenseDebit = expenseLegs.find((t: any) => t.transactionType === 'DEBIT');
+      expect(expenseDebit.accountId).toBe(miscExpenseAcc.id);
+
+      // Verify the income transaction points to the income account
+      const incomeLegs = lastBatch.transactions.filter(
+        (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 200).id,
+      );
+      const incomeCredit = incomeLegs.find((t: any) => t.transactionType === 'CREDIT');
+      expect(incomeCredit.accountId).toBe(miscIncomeAcc.id);
+    });
   });
 });

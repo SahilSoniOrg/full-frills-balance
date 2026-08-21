@@ -69,4 +69,35 @@ describe('buildTransactionInboxImportNavigation', () => {
 
     expect(navigation.params.mode).toBe('split');
   });
+
+  it('does not bind an expense debit to an income account counterparty', () => {
+    const expenseItem: TransactionInboxItem = {
+      ...item,
+      direction: 'debit',
+      parsedAccountSource: 'Card 1990',
+      parsedMerchant: 'Interest',
+    };
+
+    const accounts = [
+      account('bank-1', 'Card 1990'),
+      {
+        id: 'inc-interest',
+        name: 'Interest',
+        accountType: 'INCOME',
+        currencyCode: 'INR',
+      } as Account,
+      {
+        id: 'exp-general',
+        name: 'General',
+        accountType: 'EXPENSE',
+        currencyCode: 'INR',
+      } as Account,
+    ];
+
+    const navigation = buildTransactionInboxImportNavigation(expenseItem, accounts, null);
+
+    // Counterparty must NOT be the income account 'inc-interest'
+    expect(navigation.params.destinationAccountId).not.toBe('inc-interest');
+    expect(navigation.params.type).toBe('expense');
+  });
 });

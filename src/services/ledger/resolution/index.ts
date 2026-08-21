@@ -33,6 +33,14 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
   const categoryAccounts = accounts.filter(
     acc => acc.accountType === AccountType.EXPENSE || acc.accountType === AccountType.INCOME,
   );
+  const expenseAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.EXPENSE);
+  const incomeAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.INCOME);
+  const targetCategoryAccounts =
+    direction === 'credit'
+      ? incomeAccounts
+      : direction === 'debit'
+        ? expenseAccounts
+        : categoryAccounts;
 
   let resolvedSourceId: AccountId | undefined;
   let resolvedCategoryId: AccountId | undefined;
@@ -56,11 +64,9 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
 
   // 2. Fuzzy match for Category Account
   const primaryCategoryHint = destinationHint || sourceHint;
-  if (primaryCategoryHint && (unconstrained ? accounts : categoryAccounts).length > 0) {
-    const bestCategory = fuzzyMatch(
-      primaryCategoryHint,
-      unconstrained ? accounts : categoryAccounts,
-    );
+  const candidateCategoryAccounts = unconstrained ? accounts : targetCategoryAccounts;
+  if (primaryCategoryHint && candidateCategoryAccounts.length > 0) {
+    const bestCategory = fuzzyMatch(primaryCategoryHint, candidateCategoryAccounts);
     // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
     const threshold = destinationHint ? 0.85 : 0.7;
     if (bestCategory && bestCategory.score >= threshold) {
@@ -76,7 +82,7 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
       for (const word of words) {
         const synonym = SYNONYM_DICTIONARY[word];
         if (synonym) {
-          const bestSynonymMatch = fuzzyMatch(synonym, unconstrained ? accounts : categoryAccounts);
+          const bestSynonymMatch = fuzzyMatch(synonym, candidateCategoryAccounts);
           if (bestSynonymMatch && bestSynonymMatch.score >= 0.85) {
             resolvedCategoryId = bestSynonymMatch.account.id;
             categoryScore = bestSynonymMatch.score * 0.9; // Small penalty for synonym indirection
@@ -110,7 +116,7 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
         direction,
         workplaceId,
         assetAccounts,
-        categoryAccounts,
+        targetCategoryAccounts,
       );
       if (historyResult && historyResult.confidence > 0.75) {
         if (!resolvedSourceId && historyResult.sourceAccountId) {
@@ -155,13 +161,12 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
   }
 
   // 5. Default Fallbacks if still unresolved (filter by direction so Expenses get Expense accounts, not Income/Salary)
-  const expenseAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.EXPENSE);
-  const incomeAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.INCOME);
-
   const defaultCategory =
     direction === 'credit'
-      ? incomeAccounts[0]?.id || categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID
-      : expenseAccounts[0]?.id || categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID;
+      ? incomeAccounts[0]?.id || EMPTY_ACCOUNT_ID
+      : direction === 'debit'
+        ? expenseAccounts[0]?.id || EMPTY_ACCOUNT_ID
+        : categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID;
 
   const fallbackSource =
     resolvedSourceId || (unconstrained ? undefined : assetAccounts[0]?.id) || EMPTY_ACCOUNT_ID;

@@ -368,6 +368,37 @@ export const cashewPlugin: ImportPlugin = {
       onProgress?.('Processing transactions...', 0.6);
       const processedCashewPks = new Set<string>();
       let skippedTransactions = 0;
+      // Fallback categories for transactions with missing/unmapped category_fk
+      let fallbackExpenseCategoryId: AccountId | undefined;
+      let fallbackIncomeCategoryId: AccountId | undefined;
+
+      const getFallbackCategoryId = (isIncomeTx: boolean): AccountId => {
+        if (isIncomeTx) {
+          if (!fallbackIncomeCategoryId) {
+            fallbackIncomeCategoryId = generator() as AccountId;
+            data.accounts.push({
+              id: fallbackIncomeCategoryId,
+              name: `Unknown Income (${workplaceCurrency})`,
+              accountType: 'INCOME',
+              currencyCode: workplaceCurrency,
+              icon: 'help-circle',
+            });
+          }
+          return fallbackIncomeCategoryId;
+        } else {
+          if (!fallbackExpenseCategoryId) {
+            fallbackExpenseCategoryId = generator() as AccountId;
+            data.accounts.push({
+              id: fallbackExpenseCategoryId,
+              name: `Unknown Expense (${workplaceCurrency})`,
+              accountType: 'EXPENSE',
+              currencyCode: workplaceCurrency,
+              icon: 'help-circle',
+            });
+          }
+          return fallbackExpenseCategoryId;
+        }
+      };
 
       for (const t of allTransactions) {
         if (processedCashewPks.has(t.transaction_pk)) continue;
@@ -487,7 +518,10 @@ export const cashewPlugin: ImportPlugin = {
 
         // Case B: Normal Transaction or Correction or Recurring
         const accountId = accountsMap.get(t.wallet_fk);
-        const categoryId = categoriesMap.get(t.category_fk);
+        let categoryId = t.category_fk ? categoriesMap.get(t.category_fk) : undefined;
+        if (!categoryId) {
+          categoryId = getFallbackCategoryId(isIncome);
+        }
 
         if (!accountId || !categoryId) {
           skippedTransactions++;

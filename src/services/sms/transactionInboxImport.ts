@@ -1,7 +1,8 @@
-import type { AccountFields } from '@/src/types/domain';
 import { AppConfig } from '@/src/constants/app-config';
 import {
+  AccountFields,
   AccountId,
+  AccountType,
   EMPTY_ACCOUNT_ID,
   PlainSmsRule,
   TransactionInboxItem,
@@ -71,8 +72,15 @@ function resolveRuleAccounts(
   }
 
   if (!counterpartyId && item.parsedMerchant) {
+    const isCredit = item.direction === 'credit';
+    const compatibleAccounts = accounts.filter(account => {
+      if (isCredit) {
+        return account.accountType !== AccountType.EXPENSE;
+      }
+      return account.accountType !== AccountType.INCOME;
+    });
     const normalizedMerchant = normalizeForMatch(item.parsedMerchant);
-    const bestAccount = accounts.find(account => {
+    const bestAccount = compatibleAccounts.find(account => {
       const name = normalizeForMatch(account.name);
       return name.includes(normalizedMerchant) || normalizedMerchant.includes(name);
     });
