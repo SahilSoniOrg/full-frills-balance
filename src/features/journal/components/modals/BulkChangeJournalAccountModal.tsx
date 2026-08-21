@@ -6,7 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import {
   checkJournalAccountEditEligibility,
   JournalAccountEditEligibility,
-} from '@/src/services/journal/journalBulkCommands';
+} from '@/src/services/journal/bulk';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';

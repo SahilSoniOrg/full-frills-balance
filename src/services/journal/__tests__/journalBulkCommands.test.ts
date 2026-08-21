@@ -11,7 +11,7 @@ import {
   checkJournalAccountEditEligibility,
   mergeJournals,
   undoBulkChangeJournalAccount,
-} from '@/src/services/journal/journalBulkCommands';
+} from '@/src/services/journal/bulk';
 import { ledgerWriteService } from '@/src/services/ledger';
 import {
   AccountId,

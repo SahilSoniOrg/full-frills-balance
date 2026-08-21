@@ -4,10 +4,7 @@ import { AppButton, AppIcon, AppInput, AppText, Badge } from '@/src/components/c
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import {
-  analyzeJournalsForMerge,
-  MergeJournalsAnalysis,
-} from '@/src/services/journal/journalBulkCommands';
+import { analyzeJournalsForMerge, MergeJournalsAnalysis } from '@/src/services/journal/bulk';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
