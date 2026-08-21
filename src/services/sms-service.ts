@@ -15,7 +15,7 @@ import {
   SmsRulePreviewInput,
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
-import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 import { map, Observable } from 'rxjs';

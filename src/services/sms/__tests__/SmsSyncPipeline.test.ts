@@ -1,4 +1,4 @@
-import { SmsSyncPipeline } from '../SmsSyncPipeline';
+import { SmsSyncPipeline } from '../pipeline';
 import {
   InboxParseStatus,
   InboxProcessingStatus,

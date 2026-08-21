@@ -17,7 +17,7 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsService } from '@/src/services/sms-service';
-import { smsSyncPipeline } from '@/src/services/sms/SmsSyncPipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture, SmsFixtureKey } from './smsFixtures';

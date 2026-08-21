@@ -9,7 +9,7 @@ import {
   resolveDuplicateMatch,
   scoreFuzzyDuplicateMatch,
 } from '../smsDuplicateDetection';
-import { SmsSyncPipeline } from '../SmsSyncPipeline';
+import { SmsSyncPipeline } from '../pipeline';
 
 const makeParsedTx = (overrides: Partial<ParsedTransaction>): ParsedTransaction => ({
   id: 'sms-1',
