@@ -9,6 +9,7 @@ import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import {
   AuditAction,
   JournalId,
@@ -188,29 +189,14 @@ export class LedgerLifecycleService {
     }
 
     const currentJournalDate = journal.journalDate;
-    let revertTime: number;
 
     const metadata = await journalMetadataRepository.findByJournalId(journalId, workplaceId);
-    if (metadata?.metadataJson) {
-      try {
-        const json = safeParseJSON<Record<string, number>>(metadata.metadataJson, {});
-        if (json[MetadataKeys.ORIGINAL_PLANNED_DATE]) {
-          revertTime = json[MetadataKeys.ORIGINAL_PLANNED_DATE];
-        } else {
-          const date = new Date(currentJournalDate);
-          date.setHours(0, 0, 0, 0);
-          revertTime = date.getTime();
-        }
-      } catch {
-        const date = new Date(currentJournalDate);
-        date.setHours(0, 0, 0, 0);
-        revertTime = date.getTime();
-      }
-    } else {
-      const date = new Date(currentJournalDate);
-      date.setHours(0, 0, 0, 0);
-      revertTime = date.getTime();
-    }
+    const storedDate = metadata?.metadataJson
+      ? safeParseJSON<Record<string, number>>(metadata.metadataJson, {})[
+          MetadataKeys.ORIGINAL_PLANNED_DATE
+        ]
+      : undefined;
+    const revertTime = storedDate || normalizeToStartOfDay(currentJournalDate);
 
     const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 

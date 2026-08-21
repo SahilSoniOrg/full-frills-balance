@@ -24,7 +24,6 @@ export function prepareUpsertInboxRecord(
   workplaceId: WorkplaceId,
   linkedJournalId?: JournalId,
   duplicate?: { journalId: JournalId; score: number; reasons: string[] },
-  inboxCollection?: any,
 ): { ops: Model[]; record: TransactionInboxRecord } {
   const ops: Model[] = [];
   const now = Date.now();
@@ -70,7 +69,7 @@ export function prepareUpsertInboxRecord(
       }),
     );
   } else {
-    const col = inboxCollection ?? getInboxCollection();
+    const col = getInboxCollection();
     targetRecord = col.prepareCreate((record: TransactionInboxRecord) => {
       Object.assign(record, payload);
     });

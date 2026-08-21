@@ -1,4 +1,3 @@
-import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -27,8 +26,8 @@ import { storage } from '@/src/utils/storage';
 import { Model, Q } from '@nozbe/watermelondb';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
-import { computeSmsFingerprint, resolveProcessingStatus, toDirection } from './smsFingerprint';
-import { prepareUpsertInboxRecord, processScanBatchItem } from './smsInboxRecordPreparer';
+import { computeSmsFingerprint, resolveProcessingStatus } from './smsFingerprint';
+import { processScanBatchItem } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult } from './types';
 
 export class SmsSyncPipeline {
@@ -63,54 +62,6 @@ export class SmsSyncPipeline {
     } catch (error) {
       logger.error('Failed to mark SMS as processed in MMKV', error);
     }
-  }
-
-  computeSmsFingerprint(sender: string, body: string, date: number): string {
-    return computeSmsFingerprint(sender, body, date);
-  }
-
-  toDirection(type: 'debit' | 'credit' | 'unknown') {
-    return toDirection(type);
-  }
-
-  resolveProcessingStatus(params: {
-    parsed: any;
-    processedIds: Set<string>;
-    exactJournalId?: string;
-    duplicate: any;
-    existingStatus?: InboxProcessingStatus;
-  }): InboxProcessingStatus {
-    return resolveProcessingStatus(params);
-  }
-
-  findManyDuplicateCandidates(
-    parsedItems: { message: SmsMessage; parsed: any }[],
-    workplaceId: WorkplaceId,
-  ) {
-    return findManyDuplicateCandidates(parsedItems, workplaceId);
-  }
-
-  prepareUpsertInboxRecord(
-    sms: SmsMessage,
-    parsed: any,
-    fingerprint: string,
-    existingRecord: TransactionInboxRecord | null,
-    processingStatus: InboxProcessingStatus,
-    workplaceId: WorkplaceId,
-    linkedJournalId?: any,
-    duplicate?: any,
-  ) {
-    return prepareUpsertInboxRecord(
-      sms,
-      parsed,
-      fingerprint,
-      existingRecord,
-      processingStatus,
-      workplaceId,
-      linkedJournalId,
-      duplicate,
-      this.inbox,
-    );
   }
 
   async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
@@ -268,6 +219,8 @@ export class SmsSyncPipeline {
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
+      // Re-fetch records and journals inside the write transaction to guard
+      // against concurrent mutations that may have occurred since Phase 1.
       await transactionInboxRepository.persistScanBatch(
         async () => {
           if (signal?.aborted) return [];

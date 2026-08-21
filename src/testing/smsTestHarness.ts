@@ -18,6 +18,7 @@ import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtract
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture, SmsFixtureKey } from './smsFixtures';
@@ -177,7 +178,7 @@ export async function parseFixtureMessage(fixtureKey: SmsFixtureKey, date?: numb
 }
 
 export function fingerprintForMessage(message: SmsMessage): string {
-  return smsSyncPipeline.computeSmsFingerprint(message.address, message.body, message.date);
+  return computeSmsFingerprint(message.address, message.body, message.date);
 }
 
 export { smsJournalQueries, smsSyncPipeline };

@@ -9,6 +9,13 @@ import {
 import { AppConfig } from '@/src/constants';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import {
+  computeSmsFingerprint,
+  toDirection,
+  resolveProcessingStatus,
+} from '../pipeline/smsFingerprint';
+import { findManyDuplicateCandidates } from '../pipeline/smsDuplicateMatcher';
+import { prepareUpsertInboxRecord } from '../pipeline/smsInboxRecordPreparer';
 
 jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
   smsJournalQueries: {
@@ -16,6 +23,18 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
     findJournalsByReferenceNumbers: jest.fn().mockResolvedValue(new Map()),
     findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
     findJournalsBySmsFingerprints: jest.fn().mockResolvedValue(new Map()),
+  },
+}));
+
+const mockPrepareCreate = jest.fn();
+
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    collections: {
+      get: jest.fn(() => ({
+        prepareCreate: mockPrepareCreate,
+      })),
+    },
   },
 }));
 
@@ -123,12 +142,12 @@ describe('SmsSyncPipeline', () => {
 
   describe('computeSmsFingerprint', () => {
     it('normalizes sender, body, and dates into consistent fingerprint strings', () => {
-      const fp1 = pipeline.computeSmsFingerprint(
+      const fp1 = computeSmsFingerprint(
         ' +1 (800) 555-0199 ',
         'Spent $25.00 at Starbucks Coffee!',
         1700000000000,
       );
-      const fp2 = pipeline.computeSmsFingerprint(
+      const fp2 = computeSmsFingerprint(
         '18005550199',
         'spent $2500 at starbucks coffee',
         1700000000000,
@@ -142,13 +161,13 @@ describe('SmsSyncPipeline', () => {
     it('buckets fingerprints by fingerprintDayBucketMs config', () => {
       const dayMs = AppConfig.input.sms.duplicateDetection.fingerprintDayBucketMs;
       const baseDate = Math.floor(1700000000000 / dayMs) * dayMs;
-      const fpSameBucket = pipeline.computeSmsFingerprint('HDFCBK', 'test body', baseDate);
-      const fpStillSameBucket = pipeline.computeSmsFingerprint(
+      const fpSameBucket = computeSmsFingerprint('HDFCBK', 'test body', baseDate);
+      const fpStillSameBucket = computeSmsFingerprint(
         'HDFCBK',
         'test body',
         baseDate + 60 * 60 * 1000,
       );
-      const fpNextBucket = pipeline.computeSmsFingerprint('HDFCBK', 'test body', baseDate + dayMs);
+      const fpNextBucket = computeSmsFingerprint('HDFCBK', 'test body', baseDate + dayMs);
 
       expect(fpSameBucket).toBe(fpStillSameBucket);
       expect(fpSameBucket).not.toBe(fpNextBucket);
@@ -169,14 +188,14 @@ describe('SmsSyncPipeline', () => {
       const fuzzyWindowMs = AppConfig.input.sms.duplicateDetection.fuzzyWindowMs;
       const messageDate = 1700000000000;
 
-      await (pipeline as any).findManyDuplicateCandidates(
+      await findManyDuplicateCandidates(
         [
           {
             message: { id: 'sms-1', address: 'HDFCBK', body: 'test', date: messageDate },
             parsed: makeParsedTx({ amount: 100 }),
           },
         ],
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       expect(smsJournalQueries.findNearbyJournals).toHaveBeenCalledWith(
@@ -191,15 +210,15 @@ describe('SmsSyncPipeline', () => {
 
   describe('toDirection', () => {
     it('maps transaction string directions to domain enum', () => {
-      expect(pipeline.toDirection('debit')).toBe(TransactionDirection.DEBIT);
-      expect(pipeline.toDirection('credit')).toBe(TransactionDirection.CREDIT);
-      expect(pipeline.toDirection('unknown')).toBe(TransactionDirection.UNKNOWN);
+      expect(toDirection('debit')).toBe(TransactionDirection.DEBIT);
+      expect(toDirection('credit')).toBe(TransactionDirection.CREDIT);
+      expect(toDirection('unknown')).toBe(TransactionDirection.UNKNOWN);
     });
   });
 
   describe('resolveProcessingStatus', () => {
     it('returns PARSE_FAILED when parsing failed', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSE_FAILED, type: 'unknown' }),
         processedIds: new Set(),
         duplicate: null,
@@ -208,7 +227,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('returns DISMISSED when parseStatus is IGNORED', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.IGNORED, type: 'unknown' }),
         processedIds: new Set(),
         duplicate: null,
@@ -217,7 +236,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('returns IMPORTED when exactJournalId is provided', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         exactJournalId: 'journal-123',
@@ -227,7 +246,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('returns DUPLICATE_FLAGGED when score meets threshold', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         duplicate: {
@@ -240,7 +259,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('returns PENDING when no actionable duplicate is provided', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         duplicate: null,
@@ -249,7 +268,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('upgrades PENDING to DUPLICATE_FLAGGED on re-scan when duplicate is found', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         existingStatus: InboxProcessingStatus.PENDING,
@@ -263,7 +282,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('upgrades PENDING to IMPORTED when the final write recheck finds a journal', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         exactJournalId: 'journal-created-by-racing-scan',
@@ -275,7 +294,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('preserves IMPORTED status on re-scan even when duplicate is found', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         existingStatus: InboxProcessingStatus.IMPORTED,
@@ -289,7 +308,7 @@ describe('SmsSyncPipeline', () => {
     });
 
     it('returns PENDING for clean unprocessed messages', () => {
-      const status = pipeline.resolveProcessingStatus({
+      const status = resolveProcessingStatus({
         parsed: makeParsedTx({ parseStatus: InboxParseStatus.PARSED, type: 'debit', amount: 50 }),
         processedIds: new Set(),
         duplicate: null,
@@ -308,16 +327,12 @@ describe('SmsSyncPipeline', () => {
 
     it('persists duplicate metadata on the inbox model fields', () => {
       let createdRecord: Record<string, unknown> = {};
-      const mockInbox = {
-        prepareCreate: jest.fn((fn: (record: Record<string, unknown>) => void) => {
-          fn(createdRecord);
-          return createdRecord;
-        }),
-      };
+      mockPrepareCreate.mockImplementation((fn: (record: Record<string, unknown>) => void) => {
+        fn(createdRecord);
+        return createdRecord;
+      });
 
-      jest.spyOn(pipeline as any, 'inbox', 'get').mockReturnValue(mockInbox);
-
-      const { record } = pipeline.prepareUpsertInboxRecord(
+      const { record } = prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500, merchant: 'SWIGGY' }),
         'fingerprint-abc',
@@ -345,16 +360,12 @@ describe('SmsSyncPipeline', () => {
 
     it('persists referenceNumber from parsed SMS', () => {
       let createdRecord: Record<string, unknown> = {};
-      const mockInbox = {
-        prepareCreate: jest.fn((fn: (record: Record<string, unknown>) => void) => {
-          fn(createdRecord);
-          return createdRecord;
-        }),
-      };
+      mockPrepareCreate.mockImplementation((fn: (record: Record<string, unknown>) => void) => {
+        fn(createdRecord);
+        return createdRecord;
+      });
 
-      jest.spyOn(pipeline as any, 'inbox', 'get').mockReturnValue(mockInbox);
-
-      pipeline.prepareUpsertInboxRecord(
+      prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500, referenceNumber: 'UTR123456' }),
         'fingerprint-abc',
@@ -381,7 +392,7 @@ describe('SmsSyncPipeline', () => {
         }),
       };
 
-      pipeline.prepareUpsertInboxRecord(
+      prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500 }),
         'fingerprint-abc',

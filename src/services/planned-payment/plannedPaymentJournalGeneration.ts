@@ -9,7 +9,12 @@ import { Model } from '@nozbe/watermelondb';
 
 /**
  * Creates a PLANNED or POSTED journal for a planned payment occurrence.
- * Returns false when journal creation fails so callers can stop advancing.
+ *
+ * Returns `false` when journal creation fails. On failure the entire batch
+ * (including any `extraOps` such as schedule-advance mutations) is rolled back,
+ * so the planned payment's `nextOccurrence` stays unchanged. The caller's loop
+ * breaks, and the next `processDuePlannedPayments` run will retry from the
+ * same occurrence date.
  */
 export async function generatePlannedJournalForPayment(
   pp: PlannedPayment,

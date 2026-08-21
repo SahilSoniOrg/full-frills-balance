@@ -9,7 +9,7 @@ import {
   resolveDuplicateMatch,
   scoreFuzzyDuplicateMatch,
 } from '../smsDuplicateDetection';
-import { SmsSyncPipeline } from '../pipeline';
+import { resolveProcessingStatus } from '../pipeline/smsFingerprint';
 
 const makeParsedTx = (overrides: Partial<ParsedTransaction>): ParsedTransaction => ({
   id: 'sms-1',
@@ -71,7 +71,6 @@ describe('smsDuplicateDetection', () => {
     });
 
     it('flags DUPLICATE when reference matches linked journal', () => {
-      const pipeline = new SmsSyncPipeline();
       const journal = {
         id: 'journal-ref' as JournalId,
         totalAmount: 500,
@@ -83,7 +82,7 @@ describe('smsDuplicateDetection', () => {
 
       expect(match?.journalId).toBe('journal-ref');
       expect(
-        pipeline.resolveProcessingStatus({
+        resolveProcessingStatus({
           parsed: makeParsedTx({
             amount: 500,
             referenceNumber: '121554846690',
