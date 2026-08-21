@@ -137,6 +137,37 @@ export class AuditRepository {
   async countAll(workplaceId: WorkplaceId): Promise<number> {
     return this.auditLogs.query(Q.where('workplace_id', workplaceId)).fetchCount();
   }
+
+  /**
+   * Cleanup legacy entity types (convert to lowercase)
+   * This is an idempotent one-time migration.
+   */
+  async normalizeLegacyEntityTypes(workplaceId: WorkplaceId): Promise<number> {
+    const allLogs = await this.findAll(workplaceId);
+    const uppercaseLogs = allLogs.filter(log => log.entityType !== log.entityType.toLowerCase());
+
+    if (uppercaseLogs.length === 0) return 0;
+
+    await database.write(async () => {
+      const batches = [];
+      const batchSize = AppConfig.pagination.auditRecentLimit;
+      for (let i = 0; i < uppercaseLogs.length; i += batchSize) {
+        batches.push(uppercaseLogs.slice(i, i + batchSize));
+      }
+
+      for (const batch of batches) {
+        await database.batch(
+          batch.map(log =>
+            log.prepareUpdate(record => {
+              record.entityType = log.entityType.toLowerCase() as AuditEntityType;
+            }),
+          ),
+        );
+      }
+    });
+
+    return uppercaseLogs.length;
+  }
 }
 
 export const auditRepository = new AuditRepository();

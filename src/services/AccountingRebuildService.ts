@@ -1,16 +1,17 @@
 import { AppConfig } from '@/src/constants';
-import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
-import { Model, Q } from '@nozbe/watermelondb';
+import { Model } from '@nozbe/watermelondb';
 import { TransactionType, AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 
 import { storage } from '@/src/utils/storage';
@@ -46,15 +47,7 @@ export class AccountingRebuildService {
 
     storage.set(lockKey, String(Date.now()));
     try {
-      await database.write(async () => {
-        await this.rebuildAccountBalancesInternal(
-          workplaceId,
-          accountId,
-          fromDate,
-          false,
-          extraOps,
-        );
-      });
+      await this.rebuildAccountBalancesInternal(workplaceId, accountId, fromDate, false, extraOps);
     } finally {
       storage.remove(lockKey);
     }
@@ -161,22 +154,16 @@ export class AccountingRebuildService {
 
       for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
         const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
-        const models = await database.collections
-          .get<Transaction>('transactions')
-          .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(chunkIds)))
-          .fetch();
+        const models = await transactionQueryRepository.findByIds(workplaceId, chunkIds);
         allModelsToUpdate.push(...models);
       }
 
       // Fetch invalidated snapshots after the starting point
-      const invalidatedSnapshots = await database.collections
-        .get<BalanceSnapshot>('balance_snapshots')
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('account_id', accountId),
-          Q.where('transaction_date', Q.gt(startDate)),
-        )
-        .fetch();
+      const invalidatedSnapshots = await balanceSnapshotRepository.findAfterDate(
+        workplaceId,
+        accountId,
+        startDate,
+      );
 
       // 5. Finalize inside the existing parent write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
 
@@ -191,21 +178,21 @@ export class AccountingRebuildService {
 
       // Delete invalidated snapshots after the starting point
       if (invalidatedSnapshots.length > 0) {
-        finalBatch.push(...invalidatedSnapshots.map(s => s.prepareDestroyPermanently()));
+        finalBatch.push(
+          ...invalidatedSnapshots.map((s: BalanceSnapshot) => s.prepareDestroyPermanently()),
+        );
       }
 
       // Create new snapshots
       if (snapshotsToCreate.length > 0) {
-        const snapshotsCollection = database.collections.get<BalanceSnapshot>('balance_snapshots');
         finalBatch.push(
           ...snapshotsToCreate.map(data =>
-            snapshotsCollection.prepareCreate((snapshot: BalanceSnapshot) => {
-              snapshot.workplaceId = workplaceId;
-              snapshot.accountId = accountId;
-              snapshot.transactionId = data.transactionId;
-              snapshot.transactionDate = data.transactionDate;
-              snapshot.absoluteBalance = data.absoluteBalance;
-              snapshot.transactionCount = data.transactionCount;
+            balanceSnapshotRepository.prepareCreate(workplaceId, {
+              accountId,
+              transactionId: data.transactionId,
+              transactionDate: data.transactionDate,
+              absoluteBalance: data.absoluteBalance,
+              transactionCount: data.transactionCount,
             }),
           ),
         );
@@ -222,7 +209,7 @@ export class AccountingRebuildService {
     }
 
     if (finalBatch.length > 0) {
-      await database.batch(finalBatch);
+      await persistBatch(finalBatch);
     }
   }
 }

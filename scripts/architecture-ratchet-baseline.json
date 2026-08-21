@@ -4,8 +4,6 @@
     "unscoped_raw_query": {},
     "presentation_model_import": {},
     "direct_database_write": {
-      "src/services/AccountingRebuildService.ts": 2,
-      "src/services/audit-service.ts": 2,
       "src/testing/e2eSeed.ts": 1,
       "src/testing/smsTestHarness.ts": 2
     }

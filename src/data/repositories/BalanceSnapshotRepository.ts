@@ -61,6 +61,46 @@ export class BalanceSnapshotRepository {
   }
 
   /**
+   * Prepares a new balance snapshot record.
+   */
+  prepareCreate(
+    workplaceId: WorkplaceId,
+    data: {
+      accountId: AccountId;
+      transactionId: TransactionId;
+      transactionDate: number;
+      absoluteBalance: number;
+      transactionCount: number;
+    },
+  ): BalanceSnapshot {
+    return this.snapshots.prepareCreate(snapshot => {
+      snapshot.workplaceId = workplaceId;
+      snapshot.accountId = data.accountId;
+      snapshot.transactionId = data.transactionId;
+      snapshot.transactionDate = data.transactionDate;
+      snapshot.absoluteBalance = data.absoluteBalance;
+      snapshot.transactionCount = data.transactionCount;
+    });
+  }
+
+  /**
+   * Finds all snapshots after a given date for invalidation.
+   */
+  async findAfterDate(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    date: number,
+  ): Promise<BalanceSnapshot[]> {
+    return this.snapshots
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', accountId),
+        Q.where('transaction_date', Q.gt(date)),
+      )
+      .fetch();
+  }
+
+  /**
    * Finds the latest snapshots for multiple accounts as of a given date.
    * Returns a Map of accountId -> SnapshotData.
    */

@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import { database } from '@/src/data/database/Database';
 import AuditLog, { toPlainAuditLog } from '@/src/data/models/AuditLog';
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
@@ -102,30 +101,7 @@ export class AuditService {
    * This is an idempotent one-time migration.
    */
   async cleanupLegacyEntityTypes(workplaceId: WorkplaceId): Promise<number> {
-    const allLogs = await auditRepository.findAll(workplaceId);
-    const uppercaseLogs = allLogs.filter(log => log.entityType !== log.entityType.toLowerCase());
-
-    if (uppercaseLogs.length === 0) return 0;
-
-    await database.write(async () => {
-      const batches = [];
-      const batchSize = AppConfig.pagination.auditRecentLimit;
-      for (let i = 0; i < uppercaseLogs.length; i += batchSize) {
-        batches.push(uppercaseLogs.slice(i, i + batchSize));
-      }
-
-      for (const batch of batches) {
-        await database.batch(
-          batch.map(log =>
-            log.prepareUpdate(record => {
-              record.entityType = log.entityType.toLowerCase() as AuditEntityType;
-            }),
-          ),
-        );
-      }
-    });
-
-    return uppercaseLogs.length;
+    return auditRepository.normalizeLegacyEntityTypes(workplaceId);
   }
 }
 

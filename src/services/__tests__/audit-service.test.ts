@@ -129,56 +129,13 @@ describe('AuditService', () => {
   });
 
   describe('cleanupLegacyEntityTypes', () => {
-    it('should return 0 if no uppercase logs exist', async () => {
-      (auditRepository.findAll as jest.Mock).mockResolvedValue([
-        { entityType: 'account' },
-        { entityType: 'journal' },
-      ]);
-
-      const result = await auditService.cleanupLegacyEntityTypes('wp-1' as WorkplaceId);
-
-      expect(result).toBe(0);
-    });
-
-    it('should update uppercase logs to lowercase', async () => {
-      const mockPrepareUpdate = jest.fn(callback => {
-        const record = {
-          entityType: '',
-          // Mock properties to satisfy WatermelonDB batching/status checks
-          _status: 'updated',
-          _isEditing: false,
-          __initialized: true,
-        };
-        callback(record);
-        return record;
-      });
-
-      const uppercaseLogs = [
-        {
-          entityType: 'ACCOUNT',
-          prepareUpdate: mockPrepareUpdate,
-          _status: 'synced',
-          _isEditing: false,
-          __initialized: true,
-        },
-        {
-          entityType: 'Journal',
-          prepareUpdate: mockPrepareUpdate,
-          _status: 'synced',
-          _isEditing: false,
-          __initialized: true,
-        },
-      ];
-
-      (auditRepository.findAll as jest.Mock).mockResolvedValue([
-        ...uppercaseLogs,
-        { entityType: 'transaction' },
-      ]);
+    it('should delegate to auditRepository.normalizeLegacyEntityTypes', async () => {
+      (auditRepository.normalizeLegacyEntityTypes as jest.Mock).mockResolvedValue(2);
 
       const result = await auditService.cleanupLegacyEntityTypes('wp-1' as WorkplaceId);
 
       expect(result).toBe(2);
-      expect(mockPrepareUpdate).toHaveBeenCalledTimes(2);
+      expect(auditRepository.normalizeLegacyEntityTypes).toHaveBeenCalledWith('wp-1');
     });
   });
 
