@@ -7,11 +7,11 @@
  */
 
 import Account from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 
 export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
@@ -354,7 +354,7 @@ export async function assertWritable(
   ];
   if (unique.length === 0) return [];
 
-  const accounts = await accountRepository.findAllByIds(workplaceId, unique as AccountId[]);
+  const accounts = await accountQueryRepository.findAllByIds(workplaceId, unique as AccountId[]);
   const found = new Set(accounts.map(account => account.id as string));
   const missing = unique.filter(id => !found.has(id));
   if (missing.length > 0) {
@@ -382,13 +382,13 @@ export async function deleteBlockers(
     payFromMetadata,
     smsRules,
   ] = await Promise.all([
-    transactionRepository.findAllByAccountIds(workplaceId, [accountId]),
-    accountRepository.queryByParentId(workplaceId, accountId).fetch(),
+    transactionQueryRepository.findAllByAccountIds(workplaceId, [accountId]),
+    accountQueryRepository.queryByParentId(workplaceId, accountId).fetch(),
     budgetRepository.findAllScopesByAccountIds(workplaceId, [accountId]),
     budgetRepository.findAllReferencingAssetAccountId(workplaceId, accountId),
     plannedPaymentRepository.findAllByFromAccountIds(workplaceId, [accountId]),
     plannedPaymentRepository.findAllByToAccountIds(workplaceId, [accountId]),
-    accountRepository.findMetadataByPayFromAccountIds(workplaceId, [accountId]),
+    accountQueryRepository.findMetadataByPayFromAccountIds(workplaceId, [accountId]),
     transactionAutoPostRuleRepository.findAllReferencingAccountIds(workplaceId, [accountId]),
   ]);
 

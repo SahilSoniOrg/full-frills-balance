@@ -8,10 +8,10 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
@@ -38,14 +38,18 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findByJournals: jest.fn().mockResolvedValue([]),
   },
 }));
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+
+  accountQueryRepository: {
     findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -117,13 +121,13 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
     (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([]);
-    (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
+    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
       totalDecrease: 0,
       totalIncrease: 0,
     });
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -261,7 +265,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         ...(await lb.account.metadataRecords.fetch())[0],
       })),
     );
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
     const result = await cashFlowSimulationService.simulate({
       startingBalances: new Map<AccountId, number>([
@@ -345,7 +349,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         }) as any,
     );
 
-    (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(
+    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue(
       plannedJournals.flatMap((journal, index) => [
         {
           journalId: journal.id,

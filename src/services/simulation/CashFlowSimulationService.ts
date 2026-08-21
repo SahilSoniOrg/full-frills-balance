@@ -5,11 +5,11 @@ import BudgetScope from '@/src/data/models/BudgetScope';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
@@ -357,7 +357,7 @@ export class CashFlowSimulationService {
     if (lbs.length === 0) return map;
 
     const ids = lbs.map(lb => lb.account.id);
-    const metadataRecords = await accountRepository.findMetadataByAccountIds(workplaceId, ids);
+    const metadataRecords = await accountQueryRepository.findMetadataByAccountIds(workplaceId, ids);
 
     metadataRecords.forEach(meta => {
       map.set(meta.accountId, toLiabilityMetadata(meta));
@@ -454,7 +454,8 @@ export class CashFlowSimulationService {
 
   private async fetchJournalTransactions(journals: Journal[], workplaceId: WorkplaceId) {
     const ids = journals.map(j => j.id);
-    const txs = ids.length > 0 ? await transactionRepository.findByJournals(workplaceId, ids) : [];
+    const txs =
+      ids.length > 0 ? await transactionQueryRepository.findByJournals(workplaceId, ids) : [];
     const map = new Map<string, Transaction[]>();
     for (const tx of txs) {
       const list = map.get(tx.journalId) || [];

@@ -1,5 +1,5 @@
 import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { serializeArchiveAuditChanges } from '@/src/services/accounts/accountArchiveCommands';
@@ -8,7 +8,7 @@ import { auditService } from '@/src/services/audit-service';
 import { revertRegistry } from '@/src/services/revert-registry';
 
 jest.mock('@/src/data/repositories/AuditRepository');
-jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/account');
 
 describe('account archive revert integration', () => {
   const workplaceId = 'wp-1' as WorkplaceId;
@@ -41,8 +41,8 @@ describe('account archive revert integration', () => {
       archivedAt,
     };
 
-    (accountRepository.findWithDeleted as jest.Mock).mockResolvedValue(mockAccount);
-    (accountRepository.update as jest.Mock).mockImplementation(async (_account, payload) => {
+    (accountQueryRepository.findWithDeleted as jest.Mock).mockResolvedValue(mockAccount);
+    (accountWriteRepository.update as jest.Mock).mockImplementation(async (_account, payload) => {
       if ('archivedAt' in payload) {
         record.archivedAt = payload.archivedAt ?? undefined;
         record.updatedAt = new Date();
@@ -61,8 +61,8 @@ describe('account archive revert integration', () => {
     const result = await auditService.revertEntry('log-archive', workplaceId);
 
     expect(result.success).toBe(true);
-    expect(accountRepository.findWithDeleted).toHaveBeenCalledWith(workplaceId, accountId);
-    expect(accountRepository.update).toHaveBeenCalledWith(
+    expect(accountQueryRepository.findWithDeleted).toHaveBeenCalledWith(workplaceId, accountId);
+    expect(accountWriteRepository.update).toHaveBeenCalledWith(
       mockAccount,
       { archivedAt: null },
       workplaceId,
@@ -87,6 +87,6 @@ describe('account archive revert integration', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Invalid archivedAt in audit snapshot/);
-    expect(accountRepository.findWithDeleted).not.toHaveBeenCalled();
+    expect(accountQueryRepository.findWithDeleted).not.toHaveBeenCalled();
   });
 });

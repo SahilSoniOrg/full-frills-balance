@@ -3,7 +3,7 @@ import {
   findOrCreateBalanceCorrectionAccount,
   getOpeningBalancesAccountId,
 } from '@/src/services/accounts/accountSystemAccounts';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { onboardingService } from '../OnboardingService';
 
 jest.mock('@/src/services/accounts/accountSystemAccounts', () => ({
@@ -13,7 +13,7 @@ jest.mock('@/src/services/accounts/accountSystemAccounts', () => ({
 jest.mock('@/src/services/accounts/accountCommands', () => ({
   createAccount: jest.fn().mockResolvedValue({ id: 'new-account' }),
 }));
-jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     createWorkplace: jest
@@ -40,7 +40,7 @@ jest.mock('@/src/utils/preferences', () => ({
 describe('OnboardingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (accountRepository.findAll as jest.Mock).mockResolvedValue([]);
+    (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
   it('should complete onboarding by performing all steps transactionally', async () => {

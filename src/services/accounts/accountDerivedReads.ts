@@ -12,7 +12,7 @@ import Transaction from '@/src/data/models/Transaction';
 
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceService } from '@/src/services/BalanceService';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
@@ -79,7 +79,7 @@ export function observeAccountPeriodMetrics(
 
 /** Active transaction stream used to invalidate account balance projections. */
 export function observeActiveTransactions(workplaceId: WorkplaceId, columns: string[]) {
-  return transactionRepository.observeActiveWithColumns(workplaceId, columns);
+  return transactionObserveQueries.observeActiveWithColumns(workplaceId, columns);
 }
 
 /** Chart-range transactions with running balance for rolling-balance series. */
@@ -90,5 +90,5 @@ export function observeAccountChartTransactions(
   end: number,
 ): Observable<Transaction[]> {
   if (!accountId || !workplaceId) return of([]);
-  return transactionRepository.observeByAccountDateRange(workplaceId, accountId, start, end);
+  return transactionObserveQueries.observeByAccountDateRange(workplaceId, accountId, start, end);
 }

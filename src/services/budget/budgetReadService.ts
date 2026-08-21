@@ -4,7 +4,7 @@ import { AccountType, BudgetId, WorkplaceId } from '@/src/types/domain';
 import { toPlainBudget } from '@/src/data/models/Budget';
 import { toPlainBudgetScope } from '@/src/data/models/BudgetScope';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
@@ -16,13 +16,7 @@ import {
   resolveLeafExpenseAccountIds,
 } from './budgetCalculationHelpers';
 import { BudgetPeriodUtils } from './BudgetPeriodUtils';
-
-export interface BudgetUsage {
-  spent: number;
-  remaining: number;
-  budgetAmount: number;
-  usagePercent: number;
-}
+import { BudgetUsage } from './types';
 
 const EMPTY_BUDGET_USAGE: BudgetUsage = {
   spent: 0,
@@ -71,10 +65,10 @@ export class BudgetReadService {
             switchMap(scopes => {
               const accountIds = scopes.map(scope => scope.accountId);
               if (accountIds.length === 0) return of([]);
-              return accountRepository.observeByIds(workplaceId, accountIds);
+              return accountObserveQueries.observeByIds(workplaceId, accountIds);
             }),
           ),
-          accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
+          accountObserveQueries.observeByType(workplaceId, AccountType.EXPENSE),
         ]).pipe(
           switchMap(([scopeAccounts, allExpenses]) => {
             let ref: number;

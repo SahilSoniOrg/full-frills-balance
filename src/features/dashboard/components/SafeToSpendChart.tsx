@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -300,7 +300,7 @@ export const SafeToSpendChart = ({
                         const isCcDate = detail.type === 'CC_DATE';
 
                         // Map context/type to consistent icons
-                        let iconName: any = 'receipt';
+                        let iconName: IconName = 'receipt';
                         if (detail.context === 'BUDGET') iconName = 'pieChart';
                         else if (
                           detail.context === 'PLANNED' ||

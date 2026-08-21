@@ -1,7 +1,5 @@
-import {
-  AccountPersistenceInput,
-  accountRepository,
-} from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
 import { AccountAuditState, AccountId, WorkplaceId } from '@/src/types/domain';
 
@@ -15,7 +13,7 @@ export async function revertAccountFromAuditState(
   beforeRaw: AccountAuditState | Record<string, unknown>,
 ): Promise<void> {
   const before = normalizeAccountAuditState(beforeRaw);
-  const account = await accountRepository.findWithDeleted(workplaceId, accountId);
+  const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
   if (!account) {
     throw new Error('Account not found');
   }
@@ -39,5 +37,5 @@ export async function revertAccountFromAuditState(
 
   if (Object.keys(payload).length === 0) return;
 
-  await accountRepository.update(account, payload, workplaceId);
+  await accountWriteRepository.update(account, payload, workplaceId);
 }

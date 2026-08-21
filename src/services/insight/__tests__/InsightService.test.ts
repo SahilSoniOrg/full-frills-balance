@@ -1,23 +1,26 @@
 import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
 import { AppConfig } from '@/src/constants';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountObserveQueries } from '@/src/data/repositories/account';
 import {
   journalObserveQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import {
+  transactionObserveQueries,
+  transactionQueryRepository,
+} from '@/src/data/repositories/transaction';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
 import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { firstValueFrom, of } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 // Mock dependencies
-jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
-jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/utils/logger');
@@ -40,12 +43,12 @@ describe('PatternService', () => {
     patternService.clearCache();
 
     // Default simple mocks
-    (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
+    (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([]));
     (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
-    (transactionRepository.observeByDateRange as jest.Mock).mockReturnValue(of([]));
+    (transactionObserveQueries.observeByDateRange as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
-    (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
-    (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
+    (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(
       of({ count: 1, lastUpdatedAt: new Date() }),
     );
@@ -123,8 +126,8 @@ describe('PatternService', () => {
         ],
       ]);
 
-      (accountRepository.observeAll as jest.Mock).mockImplementation((workplaceId: WorkplaceId) =>
-        of(accountsByWorkplace.get(workplaceId) ?? []),
+      (accountObserveQueries.observeAll as jest.Mock).mockImplementation(
+        (workplaceId: WorkplaceId) => of(accountsByWorkplace.get(workplaceId) ?? []),
       );
       (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockImplementation(
         (workplaceId: WorkplaceId) =>
@@ -229,7 +232,7 @@ describe('PatternService', () => {
         },
       ];
 
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
       (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
@@ -260,7 +263,7 @@ describe('PatternService', () => {
         { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
       ];
 
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
       patternService
         .observePatterns('test-wp' as WorkplaceId)
@@ -321,7 +324,7 @@ describe('PatternService', () => {
         j6: { id: 'j6', description: 'Spotify' },
       };
 
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
       (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([
         {
           accountId: 'acc1',
@@ -342,7 +345,7 @@ describe('PatternService', () => {
           transactionDates: `${twoMonthsAgo - 5000},${oneMonthAgo - 5000},${now - 5000}`,
         },
       ]);
-      (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);
+      (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);
       (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue(
         Object.values(mockJournals),
       );
@@ -370,7 +373,7 @@ describe('PatternService', () => {
         { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.EMERGENCY_FUND },
       ];
 
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
       patternService
         .observePatterns('test-wp' as WorkplaceId)

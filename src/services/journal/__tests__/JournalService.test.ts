@@ -1,14 +1,14 @@
 import { TransactionType, JournalId, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 
 // Mock dependencies
-jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/journal/journalWriteModule');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
-jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/utils/logger');
@@ -40,8 +40,11 @@ describe('JournalService - saveJournalEntry', () => {
     service = new JournalService();
     jest.clearAllMocks();
 
-    (accountRepository.find as jest.Mock).mockResolvedValue({ id: 'acc1', currencyCode: 'USD' });
-    (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.find as jest.Mock).mockResolvedValue({
+      id: 'acc1',
+      currencyCode: 'USD',
+    });
+    (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
       { id: 'acc1', currencyCode: 'USD' },
       { id: 'acc2', currencyCode: 'USD' },
     ]);

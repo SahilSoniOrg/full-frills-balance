@@ -4,7 +4,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetProgressBar } from './BudgetProgressBar';
 

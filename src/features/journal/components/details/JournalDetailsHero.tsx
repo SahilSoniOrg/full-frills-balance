@@ -1,13 +1,14 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { AppIcon, AppText, Badge } from '@/src/components/core';
+import { AppIcon, AppText, Badge, type IconName } from '@/src/components/core';
 import { ColorKey, Size, Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { JournalStatusChipVariant } from '@/src/services/journal/journalDetailsHelpers';
+import type { ComponentVariant } from '@/src/utils/style-helpers';
 import React from 'react';
 
 interface JournalDetailsHeroProps {
-  displayIcon: string;
-  amountColor: ColorKey | string;
+  displayIcon: IconName;
+  amountColor: ColorKey;
   amount: number;
   currencyCode: string;
   amountPrefix: '+' | '-' | '';
@@ -32,7 +33,7 @@ export const JournalDetailsHero = React.memo(
     return (
       <Box alignItems="center" marginTop="md">
         <Box
-          background={amountColor as any}
+          background={amountColor}
           backgroundOpacity="soft"
           width={Size.avatarLg}
           height={Size.avatarLg}
@@ -41,7 +42,7 @@ export const JournalDetailsHero = React.memo(
           justifyContent="center"
           marginBottom="md"
         >
-          <AppIcon name={displayIcon as any} size={Size.xxl} color={amountColor} />
+          <AppIcon name={displayIcon} size={Size.xxl} color={amountColor} />
         </Box>
 
         <MoneyText
@@ -49,7 +50,7 @@ export const JournalDetailsHero = React.memo(
           currencyCode={currencyCode}
           prefix={amountPrefix || undefined}
           variant="title"
-          color={amountColor as any}
+          color={amountColor as ComponentVariant}
           style={{ fontSize: 32, fontWeight: '700', marginBottom: Spacing.xs }}
         />
 

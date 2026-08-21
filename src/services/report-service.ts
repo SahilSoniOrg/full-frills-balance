@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType, WorkplaceId, AccountId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import {
   calculateCalendarHeatmapFromHistory,
@@ -289,8 +289,8 @@ export class ReportService {
       currency = await workplaceService.getCurrency(workplaceId);
     }
     const [rawIncomeAccounts, rawExpenseAccounts] = await Promise.all([
-      accountRepository.findByType(workplaceId, AccountType.INCOME),
-      accountRepository.findByType(workplaceId, AccountType.EXPENSE),
+      accountQueryRepository.findByType(workplaceId, AccountType.INCOME),
+      accountQueryRepository.findByType(workplaceId, AccountType.EXPENSE),
     ]);
 
     const incomeAccounts = rawIncomeAccounts.map(account => ({

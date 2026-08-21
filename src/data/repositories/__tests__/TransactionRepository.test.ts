@@ -8,9 +8,9 @@ import {
   JournalStatus,
 } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -23,7 +23,7 @@ describe('TransactionRepository', () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    const account = await accountRepository.create({
+    const account = await accountWriteRepository.create({
       name: 'Test Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -32,7 +32,7 @@ describe('TransactionRepository', () => {
     accountId = account.id;
 
     // Create Equity account for balancing
-    const equity = await accountRepository.create({
+    const equity = await accountWriteRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
@@ -68,7 +68,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const transactions = await transactionRepository.findByJournal(
+      const transactions = await transactionQueryRepository.findByJournal(
         'wp-1' as WorkplaceId,
         journal.id as JournalId,
       );
@@ -111,7 +111,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const earliest = await transactionRepository.findEarliest('wp-1' as WorkplaceId);
+      const earliest = await transactionQueryRepository.findEarliest('wp-1' as WorkplaceId);
       expect(earliest?.journalId).toBe(posted.id);
       expect(earliest?.transactionDate).toBe(2_000);
     });
@@ -168,7 +168,7 @@ describe('TransactionRepository', () => {
         0,
       );
 
-      const txs = await transactionRepository.findByAccount(
+      const txs = await transactionQueryRepository.findByAccount(
         'wp-1' as WorkplaceId,
         accountId as AccountId,
       );
@@ -250,7 +250,7 @@ describe('TransactionRepository', () => {
         accountId as AccountId,
       );
 
-      const txs = await transactionRepository.findByAccount(
+      const txs = await transactionQueryRepository.findByAccount(
         'wp-1' as WorkplaceId,
         accountId as AccountId,
       );
@@ -310,7 +310,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const txs = await transactionRepository.findByAccountsAndDateRange(
+      const txs = await transactionQueryRepository.findByAccountsAndDateRange(
         'wp-1' as WorkplaceId,
         [accountId],
         1000,
@@ -324,19 +324,19 @@ describe('TransactionRepository', () => {
     it('keeps every account chunk scoped to the requested workplace', async () => {
       const workplaceOne = 'wp-1' as WorkplaceId;
       const workplaceTwo = 'wp-2' as WorkplaceId;
-      const secondLocalAccount = await accountRepository.create({
+      const secondLocalAccount = await accountWriteRepository.create({
         name: 'Second local account',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId: workplaceOne,
       });
-      const foreignAccount = await accountRepository.create({
+      const foreignAccount = await accountWriteRepository.create({
         name: 'Foreign account',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId: workplaceTwo,
       });
-      const foreignEquity = await accountRepository.create({
+      const foreignEquity = await accountWriteRepository.create({
         name: 'Foreign equity',
         accountType: AccountType.EQUITY,
         currencyCode: 'USD',
@@ -451,7 +451,7 @@ describe('TransactionRepository', () => {
         secondLocalAccount.id,
         foreignAccount.id,
       ];
-      const transactions = await transactionRepository.findByAccountsAndDateRange(
+      const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
         workplaceOne,
         accountIds,
         1_000,
@@ -511,7 +511,7 @@ describe('TransactionRepository', () => {
         workplaceTwo,
       );
 
-      const txs = await transactionRepository.findForAccountUpToDate(
+      const txs = await transactionQueryRepository.findForAccountUpToDate(
         workplaceOne,
         accountId as AccountId,
         5_000,

@@ -15,7 +15,7 @@ import {
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import type { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
@@ -96,7 +96,7 @@ export class JournalService {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
 
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
     const duplicated = await ledgerWriteService.createJournal(
       {

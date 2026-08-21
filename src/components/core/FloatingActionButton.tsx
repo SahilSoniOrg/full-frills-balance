@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     bottom: Spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Shape.elevation.lg as any),
+    ...(Shape.elevation.lg as ViewStyle),
     zIndex: ZIndex.fab,
   },
   endPlacement: {

@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
@@ -14,7 +14,7 @@ interface DeclarativeAction {
   key: string;
   variant: 'primary' | 'outline' | 'ghost';
   label: string;
-  icon?: string;
+  icon?: IconName;
   onPress: () => void;
   textColor?: string;
   iconColor?: string;
@@ -78,9 +78,7 @@ export const JournalDetailsActions = React.memo(
             style={{ width: '100%' }}
           >
             <Inline space="sm" alignItems="center">
-              {action.icon && (
-                <AppIcon name={action.icon as any} size={18} color={action.iconColor} />
-              )}
+              {action.icon && <AppIcon name={action.icon} size={18} color={action.iconColor} />}
               <AppText variant="body" weight="bold" style={{ color: action.textColor }}>
                 {action.label}
               </AppText>

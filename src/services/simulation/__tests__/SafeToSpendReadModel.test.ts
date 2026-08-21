@@ -1,11 +1,14 @@
 import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import {
+  transactionObserveQueries,
+  transactionQueryRepository,
+} from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -16,9 +19,9 @@ import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadM
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { BehaviorSubject, of } from 'rxjs';
 
-jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/BudgetRepository');
-jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
@@ -78,17 +81,17 @@ describe('SafeToSpendReadModel', () => {
     clearReactiveWorkplaceObservesCache();
     safeToSpendReadModel.clearCache();
 
-    (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
-    (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
+    (accountObserveQueries.observeByType as jest.Mock).mockReturnValue(of([]));
+    (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([]));
     (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeAll as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
     (journalObserveQueries.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
-    (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
-    (transactionRepository.observeActiveCount as jest.Mock).mockReturnValue(of(0));
-    (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
-    (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
+    (transactionObserveQueries.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
+    (transactionObserveQueries.observeActiveCount as jest.Mock).mockReturnValue(of(0));
+    (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
@@ -119,12 +122,14 @@ describe('SafeToSpendReadModel', () => {
         { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE },
       ];
 
-      (accountRepository.observeByType as jest.Mock).mockImplementation((_workplaceId, type) => {
-        if (type === AccountType.ASSET) return of(mockAssets);
-        if (type === AccountType.LIABILITY) return of(mockLiabilities);
-        return of([]);
-      });
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation(
+        (_workplaceId, type) => {
+          if (type === AccountType.ASSET) return of(mockAssets);
+          if (type === AccountType.LIABILITY) return of(mockLiabilities);
+          return of([]);
+        },
+      );
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(
         of([...mockAssets, ...mockLiabilities]),
       );
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
@@ -198,7 +203,7 @@ describe('SafeToSpendReadModel', () => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
@@ -257,7 +262,7 @@ describe('SafeToSpendReadModel', () => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
@@ -311,7 +316,7 @@ describe('SafeToSpendReadModel', () => {
       const nonLiquidAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(nonLiquidAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(nonLiquidAssets));
 
       safeToSpendReadModel
         .forWorkplace('test-wp' as WorkplaceId)
@@ -327,7 +332,7 @@ describe('SafeToSpendReadModel', () => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 100 },
       ]);
@@ -346,7 +351,7 @@ describe('SafeToSpendReadModel', () => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
@@ -375,7 +380,7 @@ describe('SafeToSpendReadModel', () => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
-      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);

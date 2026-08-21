@@ -1,7 +1,7 @@
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { mapJournalLegSplitPresentation } from '@/src/services/journal/journalDetailsHelpers';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { AccountId, DisplayTransaction } from '@/src/types/domain';
 
 export interface JournalSplitItemViewModel {
@@ -13,7 +13,7 @@ export interface JournalSplitItemViewModel {
   currencyCode: string;
   amountPrefix: '+' | '-';
   amountColor: ColorKey;
-  iconName: IconName | string | null;
+  iconName: IconName | null;
   fallbackIcon?: IconName;
   iconColor: ColorKey;
   iconBackground: ColorKey;

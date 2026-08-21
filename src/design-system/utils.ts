@@ -9,7 +9,7 @@ import {
 } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/utils/color-math';
 
-import { Platform } from 'react-native';
+import { Platform, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * processTextChildren
@@ -68,13 +68,18 @@ export function resolveThemeColor(
   return baseColor;
 }
 
-export function resolveStyleColors(theme: Theme, style: any): any {
+export function resolveStyleColors<T extends StyleProp<ViewStyle | TextStyle>>(
+  theme: Theme,
+  style: T,
+): T {
   if (!style) return style;
   if (Array.isArray(style)) {
-    return style.map(s => resolveStyleColors(theme, s));
+    return (style as unknown[]).map(s =>
+      resolveStyleColors(theme, s as StyleProp<ViewStyle | TextStyle>),
+    ) as unknown as T;
   }
 
-  const flattened = { ...style };
+  const flattened = { ...(style as Record<string, unknown>) };
   const colorKeys = [
     'color',
     'backgroundColor',
@@ -83,13 +88,13 @@ export function resolveStyleColors(theme: Theme, style: any): any {
     'textShadowColor',
   ];
 
-  colorKeys.forEach(key => {
-    if (flattened[key]) {
-      flattened[key] = resolveThemeColor(theme, flattened[key]);
+  for (const key of colorKeys) {
+    if (flattened[key] && typeof flattened[key] === 'string') {
+      flattened[key] = resolveThemeColor(theme, flattened[key] as string);
     }
-  });
+  }
 
-  return flattened;
+  return flattened as unknown as T;
 }
 
 export function negateSpace(value: SpacingKey | number | undefined): number | undefined {
@@ -226,14 +231,22 @@ export function extractBoxProps<T extends object>(
  * 1. Layout styles (margin, flex, width, position)
  * 2. Decoration styles (padding, background, border)
  */
-export function splitBoxStyles(style: any) {
-  const layoutStyle: any = {};
-  const decorationStyle: any = {};
+export function splitBoxStyles(style?: StyleProp<ViewStyle>): {
+  layoutStyle: ViewStyle;
+  decorationStyle: ViewStyle;
+} {
+  const layoutStyle: Record<string, unknown> = {};
+  const decorationStyle: Record<string, unknown> = {};
 
-  if (!style) return { layoutStyle, decorationStyle };
+  if (!style) {
+    return {
+      layoutStyle: layoutStyle as ViewStyle,
+      decorationStyle: decorationStyle as ViewStyle,
+    };
+  }
 
-  const processStyle = (s: any) => {
-    if (!s) return;
+  const processStyle = (s: unknown) => {
+    if (!s || typeof s !== 'object') return;
     if (Array.isArray(s)) {
       for (let i = 0; i < s.length; i++) {
         processStyle(s[i]);
@@ -241,16 +254,20 @@ export function splitBoxStyles(style: any) {
       return;
     }
 
-    for (const key in s) {
+    const styleObj = s as Record<string, unknown>;
+    for (const key in styleObj) {
       if (LAYOUT_STYLE_KEYS.has(key)) {
-        layoutStyle[key] = s[key];
+        layoutStyle[key] = styleObj[key];
       } else {
-        decorationStyle[key] = s[key];
+        decorationStyle[key] = styleObj[key];
       }
     }
   };
 
   processStyle(style);
 
-  return { layoutStyle, decorationStyle };
+  return {
+    layoutStyle: layoutStyle as ViewStyle,
+    decorationStyle: decorationStyle as ViewStyle,
+  };
 }

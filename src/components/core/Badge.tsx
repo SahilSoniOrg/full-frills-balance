@@ -12,7 +12,7 @@ export type BadgeProps = ViewProps & {
   variant?: ComponentVariant;
   size?: 'sm' | 'md';
   solid?: boolean;
-  icon?: IconName | string | null;
+  icon?: IconName | null;
   fallbackIcon?: IconName;
   backgroundColor?: string;
   textColor?: string;
@@ -60,7 +60,7 @@ export const Badge = memo(function Badge({
       <View style={styles.content}>
         {(icon || fallbackIcon) && (
           <AppIcon
-            name={icon as any}
+            name={icon || undefined}
             fallbackIcon={fallbackIcon}
             size={iconSize}
             color={finalTextColor}

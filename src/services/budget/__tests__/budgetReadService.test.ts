@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType, AccountId, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -16,7 +16,7 @@ describe('budgetReadService', () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    const asset = await accountRepository.create({
+    const asset = await accountWriteRepository.create({
       name: 'Checking',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -24,7 +24,7 @@ describe('budgetReadService', () => {
     });
     assetId = asset.id;
 
-    const parent = await accountRepository.create({
+    const parent = await accountWriteRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
@@ -32,7 +32,7 @@ describe('budgetReadService', () => {
     });
     expenseParentId = parent.id;
 
-    const child = await accountRepository.create({
+    const child = await accountWriteRepository.create({
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

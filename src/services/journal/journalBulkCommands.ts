@@ -1,9 +1,9 @@
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalPresenter, type TransactionLike } from '@/src/services/accounting/journalPresenter';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import {
@@ -103,7 +103,7 @@ export async function bulkDuplicateJournals(
   if (journalIds.length === 0) return [];
 
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-  const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const transactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   const txByJournal = groupTransactionsByJournal(transactions);
 
   const now = Date.now();
@@ -231,7 +231,7 @@ export async function analyzeJournalsForMerge(
   const maxDate = Math.max(...orderedJournals.map(j => j.journalDate));
 
   // Collect all transactions via canonical repository
-  const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
 
   // Aggregate legs by accountId and transactionType using canonical safeAdd
   const lineMap = new Map<string, MergeLine>();
@@ -346,7 +346,7 @@ export async function checkJournalAccountEditEligibility(
     return { canEditDebit: false, canEditCredit: false, debitAccounts: [], creditAccounts: [] };
   }
 
-  const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const transactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   return evaluateEligibility(transactions, journalIds);
 }
 
@@ -410,7 +410,7 @@ export async function bulkChangeJournalAccount(
   newAccountId: AccountId,
 ): Promise<BulkChangeAccountResult> {
   // Single fetch — verify eligibility inline from the same data
-  const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   const eligibility = evaluateEligibility(allTransactions, journalIds);
 
   if (targetType === 'debit' && !eligibility.canEditDebit) {
@@ -473,11 +473,11 @@ export async function undoBulkChangeJournalAccount(
   const txIds = Object.keys(originalAccountIdByTransactionId);
   if (txIds.length === 0) return;
 
-  const transactions = await transactionRepository.findByIds(workplaceId, txIds);
+  const transactions = await transactionQueryRepository.findByIds(workplaceId, txIds);
   if (transactions.length === 0) return;
 
   const journalIds = Array.from(new Set(transactions.map(t => t.journalId)));
-  const allTransactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+  const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
 
   const affectedAccounts = new Set<AccountId>();
@@ -526,7 +526,10 @@ async function computeSimulatedDisplayTypes(
     allAccountIds.add(resolveAccountId(tx));
   }
 
-  const accounts = await accountRepository.findAllByIds(workplaceId, Array.from(allAccountIds));
+  const accounts = await accountQueryRepository.findAllByIds(
+    workplaceId,
+    Array.from(allAccountIds),
+  );
   const accountTypeMap = new Map<string, AccountType>(
     accounts.map(a => [a.id, a.accountType as AccountType]),
   );

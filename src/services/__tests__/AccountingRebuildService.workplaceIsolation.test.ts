@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -22,7 +22,7 @@ describe('AccountingRebuildService workplace isolation', () => {
   });
 
   it('does not update foreign transactions or delete foreign snapshots from scoped repair data', async () => {
-    const targetAccount = await accountRepository.create({
+    const targetAccount = await accountWriteRepository.create({
       name: 'Target cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',

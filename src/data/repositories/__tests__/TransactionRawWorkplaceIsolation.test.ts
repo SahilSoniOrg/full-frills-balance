@@ -1,10 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import {
@@ -71,14 +71,14 @@ describe('TransactionRawRepository workplace isolation', () => {
       defaultCurrencyCode: 'USD',
     });
 
-    const account = await accountRepository.create({
+    const account = await accountWriteRepository.create({
       name: 'Shared legacy account reference',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WORKPLACE_ONE,
     });
     accountId = account.id;
-    const foreignAccount = await accountRepository.create({
+    const foreignAccount = await accountWriteRepository.create({
       name: 'Foreign account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -297,7 +297,7 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes unreconciled SQL to transaction, journal, and account workplaces', async () => {
-    jest.spyOn(transactionRepository, 'observeActiveCount').mockReturnValue(of(0));
+    jest.spyOn(transactionObserveQueries, 'observeActiveCount').mockReturnValue(of(0));
     const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
 
     await firstValueFrom(
@@ -315,7 +315,7 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('emits isolated unreconciled fallback metrics for local and foreign accounts', async () => {
-    jest.spyOn(transactionRepository, 'observeActiveCount').mockReturnValue(of(0));
+    jest.spyOn(transactionObserveQueries, 'observeActiveCount').mockReturnValue(of(0));
     jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
 
     const localMetrics = await firstValueFrom(

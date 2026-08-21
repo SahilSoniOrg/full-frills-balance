@@ -1,4 +1,4 @@
-const mockProxy: any = new Proxy(
+const mockProxy: Record<string, unknown> = new Proxy(
   {},
   {
     get: (_target, _prop) => {

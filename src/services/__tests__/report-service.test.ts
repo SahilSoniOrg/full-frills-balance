@@ -1,14 +1,14 @@
 import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
 
-jest.mock('@/src/data/repositories/AccountRepository');
-jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/account');
+jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
     getAccountDeltasGroupedRaw: jest.fn().mockResolvedValue([]),
@@ -27,27 +27,29 @@ jest.mock('@/src/utils/preferences', () => ({
 }));
 
 function mockIncomeExpenseAccounts() {
-  (accountRepository.findByType as jest.Mock).mockImplementation((_wpId: string, type: string) => {
-    if (type === AccountType.INCOME)
-      return Promise.resolve([
-        {
-          id: 'salary',
-          name: 'Salary',
-          accountType: AccountType.INCOME,
-          currencyCode: 'USD',
-        },
-      ]);
-    if (type === AccountType.EXPENSE)
-      return Promise.resolve([
-        {
-          id: 'food',
-          name: 'Food',
-          accountType: AccountType.EXPENSE,
-          currencyCode: 'USD',
-        },
-      ]);
-    return Promise.resolve([]);
-  });
+  (accountQueryRepository.findByType as jest.Mock).mockImplementation(
+    (_wpId: string, type: string) => {
+      if (type === AccountType.INCOME)
+        return Promise.resolve([
+          {
+            id: 'salary',
+            name: 'Salary',
+            accountType: AccountType.INCOME,
+            currencyCode: 'USD',
+          },
+        ]);
+      if (type === AccountType.EXPENSE)
+        return Promise.resolve([
+          {
+            id: 'food',
+            name: 'Food',
+            accountType: AccountType.EXPENSE,
+            currencyCode: 'USD',
+          },
+        ]);
+      return Promise.resolve([]);
+    },
+  );
 }
 
 describe('ReportService', () => {
@@ -84,7 +86,7 @@ describe('ReportService', () => {
           transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
       ];
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -115,7 +117,7 @@ describe('ReportService', () => {
           transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
       ];
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -127,11 +129,11 @@ describe('ReportService', () => {
       expect(result.incomeVsExpenseHistory.length).toBeGreaterThan(0);
       expect(result.dailyIncomeVsExpense.length).toBeGreaterThan(0);
 
-      expect(transactionRepository.findByAccountsAndDateRange).toHaveBeenCalledTimes(1);
+      expect(transactionQueryRepository.findByAccountsAndDateRange).toHaveBeenCalledTimes(1);
     });
 
     it('excludes negative net expense accounts from breakdown percentages', async () => {
-      (accountRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
+      (accountQueryRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
         if (type === AccountType.EXPENSE) {
           return Promise.resolve([
             { id: 'food', name: 'Food', currencyCode: 'USD', accountSubtype: 'food' },
@@ -157,7 +159,7 @@ describe('ReportService', () => {
           transactionDate: START_DATE,
         },
       ];
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -188,7 +190,7 @@ describe('ReportService', () => {
           delta: 100,
         },
       ]);
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const [totals, snapshot] = await Promise.all([
         service.getIncomeVsExpense('wp-1' as WorkplaceId, START_DATE, END_DATE),
@@ -221,7 +223,7 @@ describe('ReportService', () => {
           delta: 100,
         },
       ]);
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const result = await service.getReportSnapshot('wp-1' as WorkplaceId, START_DATE, END_DATE);
 

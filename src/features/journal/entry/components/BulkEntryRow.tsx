@@ -3,7 +3,7 @@ import { StyleSheet, View, TouchableOpacity, Keyboard, TextInput } from 'react-n
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
+import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/domain';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';

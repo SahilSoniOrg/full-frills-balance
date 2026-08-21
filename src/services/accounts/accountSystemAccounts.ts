@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId, AccountSubtype, AccountType } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
@@ -20,7 +20,7 @@ export async function findAccountByName(
   workplaceId: WorkplaceId,
   name: string,
 ): Promise<import('@/src/data/models/Account').default | null> {
-  return accountRepository.findByName(workplaceId, name);
+  return accountQueryRepository.findByName(workplaceId, name);
 }
 
 export function getOpeningBalancesAccountInput(
@@ -55,7 +55,7 @@ export async function getOpeningBalancesAccountId(
   const existing = await findAccountByName(workplaceId, input.name);
   if (existing) return existing.id;
 
-  return (await accountRepository.create(input)).id;
+  return (await accountWriteRepository.create(input)).id;
 }
 
 export async function findOrCreateBalanceCorrectionAccount(
@@ -79,7 +79,7 @@ export async function findOrCreateBalanceCorrectionAccount(
   const existing = await findAccountByName(workplaceId, name);
   if (existing) return existing.id;
 
-  const allAccounts = await accountRepository.findAll(workplaceId);
+  const allAccounts = await accountQueryRepository.findAll(workplaceId);
   const fallback = allAccounts.find(
     a =>
       a.name.includes(balanceCorrections.namePrefix) &&
@@ -89,7 +89,7 @@ export async function findOrCreateBalanceCorrectionAccount(
   if (fallback) return fallback.id;
 
   return (
-    await accountRepository.create({
+    await accountWriteRepository.create({
       name,
       accountType: AccountType.EQUITY,
       accountSubtype: AccountSubtype.OPENING_BALANCE,

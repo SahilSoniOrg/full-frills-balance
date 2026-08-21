@@ -12,7 +12,7 @@ import {
 
 import { database } from '@/src/data/database/Database';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -77,7 +77,7 @@ describe('account commands (integration)', () => {
       metadata: { creditLimitAmount: 10_000, statementDay: 15 },
     });
 
-    const meta = await accountRepository.findMetadata(WP, created.id);
+    const meta = await accountQueryRepository.findMetadata(WP, created.id);
     expect(meta?.creditLimitAmount).toBe(10_000);
     expect(meta?.statementDay).toBe(15);
   });
@@ -108,7 +108,7 @@ describe('account commands (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    const equity = await accountRepository.create({
+    const equity = await accountWriteRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
@@ -237,7 +237,7 @@ describe('account commands (integration)', () => {
 
     const audits = await auditRepository.findByEntity('account', target.id, WP);
     expect(audits.some(a => a.action === AuditAction.UPDATE)).toBe(true);
-    const deletedSource = await accountRepository.findWithDeleted(WP, source.id);
+    const deletedSource = await accountQueryRepository.findWithDeleted(WP, source.id);
     expect(deletedSource?.deletedAt).toBeInstanceOf(Date);
   });
 
@@ -264,9 +264,9 @@ describe('account commands (integration)', () => {
     });
 
     expect(applied).toBe(true);
-    const updated = await accountRepository.find(WP, parent.id);
+    const updated = await accountQueryRepository.find(WP, parent.id);
     expect(updated?.archivedAt).toBeTruthy();
-    const refreshedChild = await accountRepository.find(WP, child.id);
+    const refreshedChild = await accountQueryRepository.find(WP, child.id);
     expect(refreshedChild?.archivedAt).toBeTruthy();
   });
 });

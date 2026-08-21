@@ -5,8 +5,6 @@ export { default as JournalDetailsScreen } from './screens/JournalDetailsScreen'
 export { default as AiExampleScreen } from './screens/AiExampleScreen';
 export { useJournalEntryList } from './list/hooks/useJournalEntryList';
 export { useJournals } from './hooks/useJournals';
-export { JournalListModals, type JournalListModalsProps } from './components/JournalListModals';
-export {
-  useJournalsBulkOperations,
-  type JournalActiveModal,
-} from './hooks/useJournalsBulkOperations';
+export { JournalListModals } from './components/JournalListModals';
+export type { JournalListModalsProps, JournalActiveModal } from './types/modals';
+export { useJournalsBulkOperations } from './hooks/useJournalsBulkOperations';

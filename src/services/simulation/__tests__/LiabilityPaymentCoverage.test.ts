@@ -28,8 +28,10 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findByJournals: jest.fn().mockResolvedValue([]),
   },
 }));

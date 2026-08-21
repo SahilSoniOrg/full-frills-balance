@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountObserveQueries, accountQueryRepository } from '@/src/data/repositories/account';
 import {
   AccountType,
   AccountId,
@@ -14,7 +14,10 @@ import {
   journalObserveQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import {
+  transactionObserveQueries,
+  transactionQueryRepository,
+} from '@/src/data/repositories/transaction';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
@@ -27,10 +30,10 @@ export class TransactionService {
     journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
+    const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => {
@@ -67,10 +70,10 @@ export class TransactionService {
     journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
+    const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
@@ -87,7 +90,7 @@ export class TransactionService {
     if (!journalId) return of([] as DisplayTransaction[]);
 
     const journal$ = journalObserveQueries.observeById(workplaceId, journalId, includeDeleted);
-    const transactions$ = transactionRepository.observeByJournal(
+    const transactions$ = transactionObserveQueries.observeByJournal(
       workplaceId,
       journalId,
       includeDeleted,
@@ -101,7 +104,7 @@ export class TransactionService {
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
         if (!journal) return of([] as Account[]);
-        return accountRepository.observeByIds(journal.workplaceId, accountIds);
+        return accountObserveQueries.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 
@@ -147,7 +150,7 @@ export class TransactionService {
     if (!journalId) return of([] as DisplayTransaction[]);
 
     const journal$ = journalObserveQueries.observeById(workplaceId, journalId, includeDeleted);
-    const transactions$ = transactionRepository.observeByJournal(
+    const transactions$ = transactionObserveQueries.observeByJournal(
       workplaceId,
       journalId,
       includeDeleted,
@@ -161,7 +164,7 @@ export class TransactionService {
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
         if (!journal) return of([] as Account[]);
-        return accountRepository.observeByIds(journal.workplaceId, accountIds);
+        return accountObserveQueries.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 
@@ -233,7 +236,7 @@ export class TransactionService {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<Transaction[]> {
-    const transactions = await transactionRepository.findAllByAccountIds(
+    const transactions = await transactionQueryRepository.findAllByAccountIds(
       workplaceId,
       sourceAccountIds,
     );

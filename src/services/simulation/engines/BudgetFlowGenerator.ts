@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import { BudgetPeriodUtils } from '../../budget/BudgetPeriodUtils';

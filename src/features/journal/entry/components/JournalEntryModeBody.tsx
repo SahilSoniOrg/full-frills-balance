@@ -7,7 +7,7 @@ import {
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
-import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import type { AccountFields } from '@/src/types/domain';
 import { WorkplaceId } from '@/src/types/domain';

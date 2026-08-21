@@ -9,7 +9,7 @@ import {
 
 import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
@@ -29,13 +29,13 @@ describe('IntegrityService', () => {
 
     service = new IntegrityService();
 
-    const cash = await accountRepository.create({
+    const cash = await accountWriteRepository.create({
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: 'wp-1' as WorkplaceId,
     });
-    const equity = await accountRepository.create({
+    const equity = await accountWriteRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
@@ -291,7 +291,7 @@ describe('IntegrityService', () => {
     it('does not notify a foreign account when repair output contains its ID', async () => {
       jest.spyOn(service, 'scanForNullAccountTransactions').mockResolvedValue();
 
-      const foreignAccount = await accountRepository.create({
+      const foreignAccount = await accountWriteRepository.create({
         name: 'Foreign account',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -327,7 +327,7 @@ describe('IntegrityService', () => {
 
       await service.forceRunCheck('wp-1' as WorkplaceId);
 
-      const unchangedForeignAccount = await accountRepository.find(
+      const unchangedForeignAccount = await accountQueryRepository.find(
         'wp-2' as WorkplaceId,
         foreignAccount.id,
       );

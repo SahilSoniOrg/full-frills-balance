@@ -10,7 +10,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import {
@@ -33,13 +33,13 @@ describe('planned payment commands (integration)', () => {
       await database.unsafeResetDatabase();
     });
 
-    const from = await accountRepository.create({
+    const from = await accountWriteRepository.create({
       name: 'Checking',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    const to = await accountRepository.create({
+    const to = await accountWriteRepository.create({
       name: 'Rent',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

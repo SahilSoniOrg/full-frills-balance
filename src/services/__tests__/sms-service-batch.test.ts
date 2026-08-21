@@ -62,8 +62,9 @@ jest.mock('@/src/services/ledger/prepareJournalData', () => ({
   prepareJournalData: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+  accountQueryRepository: {
     find: jest.fn().mockImplementation(async (_workplaceId: string, id: string) => ({
       id,
       name: `Account ${id}`,

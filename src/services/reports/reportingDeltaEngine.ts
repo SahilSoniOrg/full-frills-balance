@@ -1,7 +1,7 @@
 import Transaction from '@/src/data/models/Transaction';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   ConvertedReportTransaction,
   ReportAccount,
@@ -191,7 +191,7 @@ export async function getScopedReportingDeltas<T extends ReportingDeltaInput>(
     rangeDays: dayjs(endDate).diff(dayjs(startDate), 'days'),
   });
 
-  const transactions = await transactionRepository.findByAccountsAndDateRange(
+  const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
     workplaceId,
     accountIds,
     startDate,

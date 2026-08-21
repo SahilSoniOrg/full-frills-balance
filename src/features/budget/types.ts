@@ -1,4 +1,4 @@
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { PlainBudget } from '@/src/types/domain';
 
 export interface BudgetItem {

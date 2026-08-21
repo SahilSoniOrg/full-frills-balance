@@ -1,11 +1,11 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics-service';
 import {
   AccountReferenceSiteKey,
@@ -64,9 +64,9 @@ async function validateMergeEligibility(
   targetAccount?: Account | null,
   sourceAccounts?: Account[],
 ): Promise<void> {
-  const target = targetAccount ?? (await accountRepository.find(workplaceId, targetAccountId));
+  const target = targetAccount ?? (await accountQueryRepository.find(workplaceId, targetAccountId));
   const sources =
-    sourceAccounts ?? (await accountRepository.findAllByIds(workplaceId, sourceAccountIds));
+    sourceAccounts ?? (await accountQueryRepository.findAllByIds(workplaceId, sourceAccountIds));
 
   assertMergeAccountsCompatible(
     workplaceId,
@@ -102,8 +102,8 @@ export async function mergeAccounts(
   }
 
   const [targetAccount, sourceAccounts] = await Promise.all([
-    accountRepository.find(workplaceId, targetAccountId),
-    accountRepository.findAllByIds(workplaceId, filteredSourceIds),
+    accountQueryRepository.find(workplaceId, targetAccountId),
+    accountQueryRepository.findAllByIds(workplaceId, filteredSourceIds),
   ]);
 
   await validateMergeEligibility(
@@ -121,7 +121,7 @@ export async function mergeAccounts(
   if (prepareKinds.has('transactions')) {
     prepareTasks.push(
       (async () => {
-        const transactions = await transactionRepository.findAllByAccountIds(
+        const transactions = await transactionQueryRepository.findAllByAccountIds(
           workplaceId,
           filteredSourceIds,
         );
@@ -164,7 +164,7 @@ export async function mergeAccounts(
   }
   if (prepareKinds.has('accounts')) {
     prepareTasks.push(
-      accountRepository.prepareMergeOperations(
+      accountWriteRepository.prepareMergeOperations(
         workplaceId,
         filteredSourceIds,
         targetAccountId,

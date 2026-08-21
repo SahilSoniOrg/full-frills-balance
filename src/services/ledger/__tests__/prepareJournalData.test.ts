@@ -6,17 +6,21 @@ import {
   JournalStatus,
 } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+
+  accountQueryRepository: {
     findAllByIds: jest.fn(),
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findLatestForAccountBeforeDate: jest.fn().mockResolvedValue(null),
   },
 }));
@@ -56,7 +60,7 @@ describe('prepareJournalData account validation', () => {
   });
 
   it('rejects journals that reference a missing account id', async () => {
-    (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
       { id: 'acc-cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
     ]);
 
@@ -69,11 +73,11 @@ describe('prepareJournalData account validation', () => {
     await expect(
       prepareJournalData(balancedPayload(['acc-cash', '']), workplaceId),
     ).rejects.toThrow(/must have a valid accountId/);
-    expect(accountRepository.findAllByIds).not.toHaveBeenCalled();
+    expect(accountQueryRepository.findAllByIds).not.toHaveBeenCalled();
   });
 
   it('accepts journals when every account id resolves', async () => {
-    (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
       { id: 'acc-cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
       { id: 'acc-expense', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
     ]);

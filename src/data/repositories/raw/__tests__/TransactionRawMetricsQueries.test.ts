@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
@@ -32,13 +32,13 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
       defaultCurrencyCode: 'USD',
     });
 
-    const localAccount = await accountRepository.create({
+    const localAccount = await accountWriteRepository.create({
       name: 'Local account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WORKPLACE_ONE,
     });
-    const foreignAccount = await accountRepository.create({
+    const foreignAccount = await accountWriteRepository.create({
       name: 'Foreign account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',

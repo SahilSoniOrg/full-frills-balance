@@ -10,7 +10,7 @@ import {
 import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import {
   SmsRuleDraftInput,
@@ -305,7 +305,7 @@ export class SmsRuleEngine {
       transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));
     }
 
-    const accounts = await accountRepository.findAllByIds(workplaceId, Array.from(accountIds));
+    const accounts = await accountQueryRepository.findAllByIds(workplaceId, Array.from(accountIds));
     const accountMap = new Map(accounts.map(account => [account.id, account]));
     const sourceCounts = new Map<AccountId, number>();
     const categoryCounts = new Map<AccountId, number>();

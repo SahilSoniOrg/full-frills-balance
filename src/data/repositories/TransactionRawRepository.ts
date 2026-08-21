@@ -18,7 +18,7 @@ import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
 import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries';
 import { transactionRawRebuildQueries } from './raw/TransactionRawRebuildQueries';
-import { transactionRepository } from './TransactionRepository';
+import { transactionObserveQueries } from './transaction';
 import {
   AccountDelta,
   DailyDelta,
@@ -492,10 +492,7 @@ export class TransactionRawRepository {
     endDate: number,
     accountType: AccountType,
   ): Observable<AccountPeriodMetrics> {
-    return from(import('./TransactionRepository')).pipe(
-      switchMap(({ transactionRepository }) =>
-        transactionRepository.observeActiveCount(workplaceId),
-      ),
+    return transactionObserveQueries.observeActiveCount(workplaceId).pipe(
       switchMap(() =>
         from(
           this.getAccountPeriodMetricsRaw(workplaceId, accountId, startDate, endDate, accountType),
@@ -514,14 +511,13 @@ export class TransactionRawRepository {
     startDate: number,
     endDate: number,
   ): Observable<AccountDelta[]> {
-    return from(import('./TransactionRepository')).pipe(
-      switchMap(({ transactionRepository }) =>
-        transactionRepository.observeActiveCount(workplaceId),
-      ),
-      switchMap(() =>
-        from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
-      ),
-    );
+    return transactionObserveQueries
+      .observeActiveCount(workplaceId)
+      .pipe(
+        switchMap(() =>
+          from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
+        ),
+      );
   }
 
   observeUnreconciledMetricsRaw(
@@ -532,7 +528,7 @@ export class TransactionRawRepository {
   ): Observable<{ count: number; total: number }> {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
     const { increaseCase, decreaseCase } = periodFlowSQL();
-    return transactionRepository.observeActiveCount(workplaceId).pipe(
+    return transactionObserveQueries.observeActiveCount(workplaceId).pipe(
       switchMap(async () => {
         const sql = `
           SELECT COUNT(*) as count, SUM(${increaseCase}) - SUM(${decreaseCase}) as total

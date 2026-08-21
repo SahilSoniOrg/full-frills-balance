@@ -1,4 +1,10 @@
-import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountSubtype,
+  AccountType,
+  AccountId,
+  SerializedAccountMetadataPayload,
+  WorkplaceId,
+} from '@/src/types/domain';
 /**
  * Account mutation hooks — thin wrappers over named command modules (ADR-0008).
  */
@@ -32,7 +38,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
       color?: string;
       initialBalance?: number;
       parentAccountId?: AccountId | null;
-      metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
+      metadata?: Partial<SerializedAccountMetadataPayload>;
     }) => {
       return createAccountCommand(workplaceId, { ...data, workplaceId });
     },
@@ -51,7 +57,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
         icon?: IconName;
         color?: string;
         parentAccountId?: AccountId | null;
-        metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
+        metadata?: Partial<SerializedAccountMetadataPayload>;
       },
     ) => {
       return updateAccountCommand(workplaceId, account.id, data);

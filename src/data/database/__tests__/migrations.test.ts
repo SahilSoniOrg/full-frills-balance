@@ -25,8 +25,8 @@ import type { AppSchema } from '@nozbe/watermelondb';
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -73,13 +73,13 @@ describe('database migrations (LokiJS)', () => {
   });
 
   it('supports journal + transaction writes and balance fold after reset', async () => {
-    const cash = await accountRepository.create({
+    const cash = await accountWriteRepository.create({
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId,
     });
-    const expense = await accountRepository.create({
+    const expense = await accountWriteRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
@@ -109,7 +109,7 @@ describe('database migrations (LokiJS)', () => {
 
     await rebuildQueueService.flush();
 
-    const cashTransactions = await transactionRepository.findByAccount(workplaceId, cash.id);
+    const cashTransactions = await transactionQueryRepository.findByAccount(workplaceId, cash.id);
     expect(cashTransactions).toHaveLength(1);
     const { final: foldedCashBalance } = foldBalances(0, [
       {
@@ -128,7 +128,7 @@ describe('database migrations (LokiJS)', () => {
   });
 
   it('supports persisting and reading custom account color (v31 schema)', async () => {
-    const coloredAccount = await accountRepository.create({
+    const coloredAccount = await accountWriteRepository.create({
       name: 'Custom Colored Asset',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -137,12 +137,12 @@ describe('database migrations (LokiJS)', () => {
     });
 
     expect(coloredAccount.color).toBe('#3B82F6');
-    const fetched = await accountRepository.find(workplaceId, coloredAccount.id);
+    const fetched = await accountQueryRepository.find(workplaceId, coloredAccount.id);
     expect(fetched?.color).toBe('#3B82F6');
   });
 
   it('clears custom color when updated back to auto (empty string)', async () => {
-    const coloredAccount = await accountRepository.create({
+    const coloredAccount = await accountWriteRepository.create({
       name: 'Red Asset',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -154,14 +154,14 @@ describe('database migrations (LokiJS)', () => {
       color: '',
     });
 
-    const updated = await accountRepository.update(
+    const updated = await accountWriteRepository.update(
       coloredAccount,
       prepared.updatePayload,
       workplaceId,
     );
 
     expect(updated.color).toBe('');
-    const fetched = await accountRepository.find(workplaceId, coloredAccount.id);
+    const fetched = await accountQueryRepository.find(workplaceId, coloredAccount.id);
     expect(fetched?.color).toBe('');
   });
 });

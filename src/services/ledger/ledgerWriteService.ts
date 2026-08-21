@@ -9,7 +9,7 @@ import {
   CreateJournalData,
   journalWriteRepository,
 } from '@/src/data/repositories/journal/journalWriteModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -168,7 +168,7 @@ export class LedgerWriteService {
     const originalJournal = await journalQueryRepository.find(workplaceId, originalJournalId);
     if (!originalJournal) throw new Error('Original journal not found');
 
-    const originalTransactions = await transactionRepository.findByJournal(
+    const originalTransactions = await transactionQueryRepository.findByJournal(
       workplaceId,
       originalJournalId,
     );
@@ -221,7 +221,10 @@ export class LedgerWriteService {
     const originalJournal = await journalQueryRepository.find(workplaceId, journalId);
     if (!originalJournal) throw new Error('Journal not found');
 
-    const originalTransactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const originalTransactions = await transactionQueryRepository.findByJournal(
+      workplaceId,
+      journalId,
+    );
     const prepared = await prepareJournalData(data, workplaceId);
 
     const extraOpCreator = () => {
@@ -377,7 +380,7 @@ export class LedgerWriteService {
     }
 
     const postTime = Date.now();
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
     const originalDate = journal.journalDate;
     const batchOptions = Array.isArray(options) ? { extraOps: options } : options;
     const extras =
@@ -474,7 +477,7 @@ export class LedgerWriteService {
       revertTime = date.getTime();
     }
 
-    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
+    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
     await database.write(async () => {
       const journalOp = journal.prepareUpdate((record: Journal) => {

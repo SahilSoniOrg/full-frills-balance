@@ -8,7 +8,7 @@ import {
   JournalStatus,
 } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -26,13 +26,13 @@ describe('ledgerWriteService write paths', () => {
       await database.unsafeResetDatabase();
     });
 
-    const cash = await accountRepository.create({
+    const cash = await accountWriteRepository.create({
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId,
     });
-    const expense = await accountRepository.create({
+    const expense = await accountWriteRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

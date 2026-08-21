@@ -2,10 +2,10 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { EntityStatus } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountFields, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
 export function useAuditAccounts(wokrplaceId: string) {
-  const { data: accounts, isLoading } = useObservable(
+  const { data: accounts = [], isLoading } = useObservable<AccountFields[]>(
     () => accountQueries.observeAll(wokrplaceId as WorkplaceId),
     [wokrplaceId],
     [],
@@ -35,7 +35,7 @@ export function useAuditEntityStatus(
     [idsByEntityType.journal],
   );
 
-  const { data: accounts } = useObservable(
+  const { data: accounts = [] } = useObservable<AccountFields[]>(
     () => accountQueries.observeByIdsWithDeleted(workplaceId, accountIds),
     [accountIds, workplaceId],
     [],

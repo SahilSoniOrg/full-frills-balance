@@ -22,7 +22,7 @@ import {
 export function observeEnrichedJournals(
   workplaceId: WorkplaceId,
   limit: number,
-  dateRange?: JournalObserveFilter,
+  dateRange?: Partial<JournalObserveFilter>,
   searchQuery?: string,
   status?: JournalStatus[],
   options?: { minAmount?: number; maxAmount?: number; displayType?: string },
@@ -119,7 +119,7 @@ export function observeEnrichedJournals(
 export function observeJournalTimelineRows(
   workplaceId: WorkplaceId,
   limit: number,
-  dateRange?: JournalObserveFilter,
+  dateRange?: Partial<JournalObserveFilter>,
   searchQuery?: string,
   status?: JournalStatus[],
   options?: { minAmount?: number; maxAmount?: number; displayType?: string },

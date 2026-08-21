@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { AuditAction, AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
@@ -79,7 +79,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
 
     expect(applied).toBe(true);
 
-    const refreshed = await accountRepository.find(WP, account.id);
+    const refreshed = await accountQueryRepository.find(WP, account.id);
     expect(refreshed?.archivedAt).toBeTruthy();
 
     const balanceAfter = await balanceService.getAccountBalance(account.id, WP);
@@ -108,7 +108,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
     });
 
     expect(applied).toBe(true);
-    const refreshed = await accountRepository.find(WP, account.id);
+    const refreshed = await accountQueryRepository.find(WP, account.id);
     expect(refreshed?.archivedAt == null).toBe(true);
   });
 
@@ -136,8 +136,8 @@ describe('applyAccountArchiveChanges (integration)', () => {
 
     expect(applied).toBe(true);
 
-    const refreshedParent = await accountRepository.find(WP, parent.id);
-    const refreshedChild = await accountRepository.find(WP, child.id);
+    const refreshedParent = await accountQueryRepository.find(WP, parent.id);
+    const refreshedChild = await accountQueryRepository.find(WP, child.id);
     expect(refreshedParent?.archivedAt).toBeTruthy();
     expect(refreshedChild?.archivedAt).toBeTruthy();
   });
@@ -162,8 +162,8 @@ describe('applyAccountArchiveChanges (integration)', () => {
       toUnarchive: [],
     });
 
-    const refreshedParent = await accountRepository.find(WP, parent.id);
-    const refreshedChild = await accountRepository.find(WP, child.id);
+    const refreshedParent = await accountQueryRepository.find(WP, parent.id);
+    const refreshedChild = await accountQueryRepository.find(WP, child.id);
     expect(refreshedParent?.archivedAt).toBeTruthy();
     expect(refreshedChild?.archivedAt == null).toBe(true);
   });
@@ -205,7 +205,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
       toUnarchive: [],
     });
 
-    const all = await accountRepository.findAll(WP);
+    const all = await accountQueryRepository.findAll(WP);
     const hiddenIds = filterAccountsForDisplay(all, false).map(a => a.id);
     expect(hiddenIds).toContain(active.id);
     expect(hiddenIds).not.toContain(archived.id);

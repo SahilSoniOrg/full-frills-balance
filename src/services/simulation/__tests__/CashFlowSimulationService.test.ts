@@ -9,10 +9,10 @@ import {
 } from '@/src/types/domain';
 
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
@@ -24,8 +24,10 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findByJournals: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -37,8 +39,10 @@ jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+
+  accountQueryRepository: {
     findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -245,8 +249,8 @@ describe('CashFlowSimulationService', () => {
       currencyCode: 'EUR',
       transactionType: TransactionType.CREDIT,
     } as Transaction;
-    const findByJournalsMock = transactionRepository.findByJournals as jest.MockedFunction<
-      typeof transactionRepository.findByJournals
+    const findByJournalsMock = transactionQueryRepository.findByJournals as jest.MockedFunction<
+      typeof transactionQueryRepository.findByJournals
     >;
     findByJournalsMock.mockResolvedValueOnce([journalTx]);
 
@@ -288,7 +292,7 @@ describe('CashFlowSimulationService', () => {
       metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]) }, // Still used for legacy/internal purposes
     } as any;
 
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
       { accountId: ccId, statementDay: 5, dueDay: 20 },
     ]);
 
@@ -423,7 +427,7 @@ describe('CashFlowSimulationService', () => {
       metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15 }]) },
     } as any;
 
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
       { accountId: ccId, statementDay: 1, dueDay: 15 },
     ]);
 
@@ -490,7 +494,7 @@ describe('CashFlowSimulationService', () => {
       metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15 }]) },
     } as any;
 
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
       { accountId: ccId, statementDay: 1, dueDay: 15 },
     ]);
 
@@ -559,7 +563,7 @@ describe('CashFlowSimulationService', () => {
     ];
 
     // Mock journal transactions
-    transactionRepository.findByJournals = jest
+    transactionQueryRepository.findByJournals = jest
       .fn()
       .mockResolvedValue(journalTxs.map(tx => ({ ...tx, journalId: journal.id })));
 
@@ -604,7 +608,7 @@ describe('CashFlowSimulationService', () => {
       status: 'PLANNED',
     } as any;
 
-    transactionRepository.findByJournals = jest.fn().mockResolvedValue([
+    transactionQueryRepository.findByJournals = jest.fn().mockResolvedValue([
       {
         journalId: orphanJournal.id,
         accountId: liquidAccountId,
@@ -651,7 +655,7 @@ describe('CashFlowSimulationService', () => {
       status: 'PLANNED',
     } as any;
 
-    transactionRepository.findByJournals = jest.fn().mockResolvedValue([
+    transactionQueryRepository.findByJournals = jest.fn().mockResolvedValue([
       {
         journalId: manualJournal.id,
         accountId: liquidAccountId,

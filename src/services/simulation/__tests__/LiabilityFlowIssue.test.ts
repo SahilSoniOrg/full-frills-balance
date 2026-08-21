@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
@@ -19,8 +19,10 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
     getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
   },
 }));
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: { findByJournals: jest.fn().mockResolvedValue([]) },
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: { findByJournals: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -41,8 +43,10 @@ jest.mock('@/src/services/currencyConversion', () => ({
   })),
 }));
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+
+  accountQueryRepository: {
     findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -72,7 +76,7 @@ describe('liability flow issue', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
   afterEach(() => {
     jest.useRealTimers();
@@ -102,7 +106,7 @@ describe('liability flow issue', () => {
       },
     ] as PlannedPayment[];
 
-    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+    (accountQueryRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
       {
         accountId: 'cc' as AccountId,
         statementDay: 1,

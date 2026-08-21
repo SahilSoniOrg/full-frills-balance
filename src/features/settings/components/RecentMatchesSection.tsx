@@ -8,14 +8,14 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
-import { Shape, Spacing, Typography } from '@/src/constants';
+import { Shape, Spacing, Typography, type Theme } from '@/src/constants';
 
 function highlightSmsBody(
   text: string,
   mode: 'builder' | 'regex',
   builderQueries: string[],
   regexBodyPattern: string,
-  theme: any,
+  theme: Theme,
 ) {
   if (!text)
     return (

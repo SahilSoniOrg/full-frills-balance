@@ -1,6 +1,6 @@
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import AuditLog from '@/src/data/models/AuditLog';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   ArchiveAuditEntry,
@@ -31,7 +31,7 @@ export async function prepareArchiveMutation(
   const allIds = [...new Set([...changes.toArchive, ...changes.toUnarchive])];
   if (allIds.length === 0) return null;
 
-  const accounts = await accountRepository.findAllByIds(workplaceId, allIds);
+  const accounts = await accountQueryRepository.findAllByIds(workplaceId, allIds);
   const foundIds = new Set(accounts.map(account => account.id));
   const missing = allIds.filter(id => !foundIds.has(id));
   if (missing.length > 0) {

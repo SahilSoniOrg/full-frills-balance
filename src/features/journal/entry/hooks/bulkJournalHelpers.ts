@@ -10,7 +10,7 @@ import {
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { sanitizeAmount } from '@/src/utils/validation';
-import type { BulkJournalRow } from './useBulkJournalEditor';
+import type { BulkJournalRow } from '../types/bulkJournal';
 
 export function validateBulkJournalRow(row: BulkJournalRow): string | undefined {
   if (!row.description.trim()) return 'Description is required';

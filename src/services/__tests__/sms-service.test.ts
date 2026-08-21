@@ -9,7 +9,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
@@ -257,13 +257,13 @@ describe('smsService workplace isolation', () => {
   it('excludes foreign transactions linked to local journals from rule suggestions', async () => {
     const workplaceId = 'wp-1' as WorkplaceId;
     const otherWorkplaceId = 'wp-2' as WorkplaceId;
-    const sourceAccount = await accountRepository.create({
+    const sourceAccount = await accountWriteRepository.create({
       name: 'Local card',
       accountType: AccountType.LIABILITY,
       currencyCode: 'USD',
       workplaceId,
     });
-    const categoryAccount = await accountRepository.create({
+    const categoryAccount = await accountWriteRepository.create({
       name: 'Local coffee',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

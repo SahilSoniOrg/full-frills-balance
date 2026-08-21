@@ -8,7 +8,7 @@ import { BudgetUsageSummary } from '@/src/features/budget/components/BudgetUsage
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { PlainBudget } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import React from 'react';

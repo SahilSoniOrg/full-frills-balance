@@ -1,5 +1,5 @@
 import { ProgressBar } from '@/src/components/common/ProgressBar';
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, StyleSheet, View } from 'react-native';
@@ -10,7 +10,7 @@ interface SettingsMaintenanceOverlayProps {
   progress: number;
   progressMessage?: string;
   hint?: string;
-  icon?: string;
+  icon?: IconName;
 }
 
 export function SettingsMaintenanceOverlay({
@@ -28,7 +28,7 @@ export function SettingsMaintenanceOverlay({
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
           <View style={styles.modalIconRow}>
-            <AppIcon name={icon as any} size={40} color={theme.primary} />
+            <AppIcon name={icon} size={40} color={theme.primary} />
           </View>
           <AppText variant="subheading" style={styles.modalTitle}>
             {title}

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { BudgetPeriodInput, BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import dayjs from 'dayjs';
 
 export interface BudgetCardInput extends BudgetPeriodInput {

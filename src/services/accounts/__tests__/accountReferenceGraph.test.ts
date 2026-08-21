@@ -1,8 +1,8 @@
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   assertWritable,
   deleteBlockers,
@@ -13,8 +13,10 @@ import {
 } from '@/src/services/accounts/accountReferenceGraph';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
 
-jest.mock('@/src/data/repositories/AccountRepository', () => ({
-  accountRepository: {
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+
+  accountQueryRepository: {
     findAllByIds: jest.fn(),
     queryByParentId: jest.fn(),
     findMetadataByPayFromAccountIds: jest.fn(),
@@ -41,8 +43,10 @@ jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findAllByAccountIds: jest.fn(),
   },
 }));
@@ -93,11 +97,7 @@ describe('Account reference graph', () => {
 
   describe('funding Account-id CSV helpers', () => {
     it('parses comma-separated ids with trim and empty-token drop', () => {
-      expect(parseFundingAccountIds('acc-1, acc-2,,acc-3 ,')).toEqual([
-        'acc-1',
-        'acc-2',
-        'acc-3',
-      ]);
+      expect(parseFundingAccountIds('acc-1, acc-2,,acc-3 ,')).toEqual(['acc-1', 'acc-2', 'acc-3']);
       expect(parseFundingAccountIds(undefined)).toEqual([]);
       expect(parseFundingAccountIds(null)).toEqual([]);
       expect(parseFundingAccountIds('')).toEqual([]);
@@ -124,23 +124,19 @@ describe('Account reference graph', () => {
 
     it('no-ops when all ids are empty', async () => {
       await expect(assertWritable(workplaceId, [undefined, null, ''])).resolves.toEqual([]);
-      expect(accountRepository.findAllByIds).not.toHaveBeenCalled();
+      expect(accountQueryRepository.findAllByIds).not.toHaveBeenCalled();
     });
 
     it('throws when any id is missing or soft-deleted', async () => {
-      (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([{ id: 'acc-1' }]);
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([{ id: 'acc-1' }]);
 
       await expect(
-        assertWritable(
-          workplaceId,
-          ['acc-1' as AccountId, 'acc-gone' as AccountId],
-          'Budget',
-        ),
+        assertWritable(workplaceId, ['acc-1' as AccountId, 'acc-gone' as AccountId], 'Budget'),
       ).rejects.toThrow('Budget references missing or deleted account(s): acc-gone');
     });
 
     it('returns resolved accounts when every id is live', async () => {
-      (accountRepository.findAllByIds as jest.Mock).mockResolvedValue([
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
         { id: 'acc-1' },
         { id: 'acc-2' },
       ]);
@@ -157,18 +153,18 @@ describe('Account reference graph', () => {
 
     beforeEach(() => {
       jest.clearAllMocks();
-      (accountRepository.queryByParentId as jest.Mock).mockReturnValue({
+      (accountQueryRepository.queryByParentId as jest.Mock).mockReturnValue({
         fetch: jest.fn().mockResolvedValue([]),
       });
       (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([]);
       (budgetRepository.findAllReferencingAssetAccountId as jest.Mock).mockResolvedValue([]);
       (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([]);
       (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([]);
-      (accountRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
-      (transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock).mockResolvedValue(
-        [],
-      );
-      (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
+      (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
+      (
+        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
+      ).mockResolvedValue([]);
+      (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     });
 
     it('returns empty when nothing blocks delete', async () => {
@@ -176,14 +172,16 @@ describe('Account reference graph', () => {
     });
 
     it('returns structured blockers including transactions with closed codes', async () => {
-      (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([
+      (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([
         { id: 'tx1' },
         { id: 'tx2' },
       ]);
-      (accountRepository.queryByParentId as jest.Mock).mockReturnValue({
+      (accountQueryRepository.queryByParentId as jest.Mock).mockReturnValue({
         fetch: jest.fn().mockResolvedValue([{ id: 'child' }]),
       });
-      (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([{ id: 'scope' }]);
+      (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'scope' },
+      ]);
       (budgetRepository.findAllReferencingAssetAccountId as jest.Mock).mockResolvedValue([
         { id: 'b1', assetAccountIds: 'acc-1,acc-2' },
       ]);
@@ -193,12 +191,12 @@ describe('Account reference graph', () => {
       (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([
         { id: 'pp1' },
       ]);
-      (accountRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([
+      (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([
         { id: 'meta' },
       ]);
-      (transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock).mockResolvedValue(
-        [{ id: 'rule' }],
-      );
+      (
+        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
+      ).mockResolvedValue([{ id: 'rule' }]);
 
       const blockers = await deleteBlockers(workplaceId, accountId);
       expect(blockers).toEqual([

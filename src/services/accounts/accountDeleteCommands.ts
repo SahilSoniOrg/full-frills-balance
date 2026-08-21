@@ -1,7 +1,7 @@
 import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { deleteBlockers, type DeleteBlocker } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics-service';
 
@@ -18,7 +18,7 @@ export function formatAccountDeleteBlockersError(
 }
 
 export async function deleteAccount(accountId: AccountId, workplaceId: WorkplaceId): Promise<void> {
-  const account = await accountRepository.find(workplaceId, accountId);
+  const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) return;
 
   const blockers = await deleteBlockers(workplaceId, account.id);
@@ -26,7 +26,7 @@ export async function deleteAccount(accountId: AccountId, workplaceId: Workplace
     throw formatAccountDeleteBlockersError(account.name, blockers);
   }
 
-  await accountRepository.delete(workplaceId, account, () => [
+  await accountWriteRepository.delete(workplaceId, account, () => [
     auditRepository.prepareLog(
       {
         entityType: 'account',
@@ -48,7 +48,7 @@ export async function deleteAccount(accountId: AccountId, workplaceId: Workplace
 
   analytics.trackFeatureUsage('account', 'delete', {
     account_type: account.accountType,
-    has_transactions: await transactionRepository.hasTransactions(workplaceId, account.id),
+    has_transactions: await transactionQueryRepository.hasTransactions(workplaceId, account.id),
   });
 }
 
@@ -56,10 +56,10 @@ export async function recoverAccount(
   accountId: AccountId,
   workplaceId: WorkplaceId,
 ): Promise<void> {
-  const account = await accountRepository.findWithDeleted(workplaceId, accountId);
+  const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
   if (!account) return;
 
-  await accountRepository.recover(workplaceId, account, () => [
+  await accountWriteRepository.recover(workplaceId, account, () => [
     auditRepository.prepareLog(
       {
         entityType: 'account',

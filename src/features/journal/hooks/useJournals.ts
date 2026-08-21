@@ -156,7 +156,7 @@ export function useJournals(
         return observeJournalTimelineRows(
           workplaceId,
           limit,
-          range as any,
+          range,
           query,
           stableStatus,
           effectiveOptions,
@@ -166,7 +166,7 @@ export function useJournals(
       return observeEnrichedJournals(
         workplaceId,
         limit,
-        range as any,
+        range,
         query,
         stableStatus,
         effectiveOptions,
@@ -181,7 +181,7 @@ export function useJournals(
   }, [initialItems, timelineRowOptions]);
 
   const { items, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<
-    any,
+    EnrichedJournal | JournalTimelineRow,
     EnrichedJournal | JournalTimelineRow,
     JournalFilterRange
   >({

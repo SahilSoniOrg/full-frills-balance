@@ -1,44 +1,17 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import type { AccountFields } from '@/src/types/domain';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
-import { AccountId, WorkplaceId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { buildBulkJournalEntries, validateBulkJournalRow } from './bulkJournalHelpers';
-
-export interface BulkJournalRow {
-  id: string;
-  description: string;
-  amount: string;
-  sourceId: AccountId;
-  destinationId: AccountId;
-  journalDate: number;
-  exchangeRate: string; // Cross-rate (source -> destination)
-  sourceBaseRate?: number; // Rate to workplace currency
-  destBaseRate?: number; // Rate to workplace currency
-  isCrossCurrency: boolean;
-  convertedAmount: number;
-  isLoadingRate: boolean;
-  error?: string;
-}
-
-export type BulkRowFieldValue = string | number | boolean;
-
-export interface SavedJournalSummary {
-  description: string;
-  amount: number;
-  currency: string;
-}
-
-export interface UseBulkJournalEditorProps {
-  workplaceId: WorkplaceId;
-  workplaceCurrency: string;
-  accounts: AccountFields[];
-  onSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
-}
+import type {
+  BulkJournalRow,
+  BulkRowFieldValue,
+  UseBulkJournalEditorProps,
+} from '../types/bulkJournal';
 
 const generateRowId = () => generateId();
 
@@ -294,9 +267,11 @@ export function useBulkJournalEditor({
       }
 
       onSaveSuccess(latestRowsRef.current.length, result.summaries);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to save bulk journals', err);
-      setSubmitError(err.message || 'An error occurred while saving the journals.');
+      const message =
+        err instanceof Error ? err.message : 'An error occurred while saving the journals.';
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }

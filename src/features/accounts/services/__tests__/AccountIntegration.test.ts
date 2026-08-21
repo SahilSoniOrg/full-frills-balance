@@ -12,7 +12,7 @@ import {
 
 import { database } from '@/src/data/database/Database';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
@@ -30,7 +30,7 @@ describe('AccountRepository', () => {
 
   describe('create', () => {
     it('should create a simple account', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Checking',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -43,7 +43,7 @@ describe('AccountRepository', () => {
     });
 
     it('should default subcategory based on account type when missing', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Emergency Fund',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -68,7 +68,7 @@ describe('AccountRepository', () => {
 
     it('should reject invalid subcategory for account type', async () => {
       await expect(
-        accountRepository.create({
+        accountWriteRepository.create({
           name: 'Invalid Asset',
           accountType: AccountType.ASSET,
           accountSubtype: AccountSubtype.CREDIT_CARD,
@@ -81,7 +81,7 @@ describe('AccountRepository', () => {
 
   describe('update', () => {
     it('should re-default subcategory when account type changes and current subcategory is incompatible', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Starter Asset',
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
@@ -89,7 +89,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      const updated = await accountRepository.update(
+      const updated = await accountWriteRepository.update(
         account,
         {
           accountType: AccountType.EQUITY,
@@ -102,7 +102,7 @@ describe('AccountRepository', () => {
     });
 
     it('archives primary + child via applyAccountArchiveChanges', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Cash',
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
@@ -110,7 +110,7 @@ describe('AccountRepository', () => {
         workplaceId,
         icon: 'wallet',
       });
-      const child = await accountRepository.create({
+      const child = await accountWriteRepository.create({
         name: 'Cash Sub',
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
@@ -125,14 +125,14 @@ describe('AccountRepository', () => {
       });
       expect(applied).toBe(true);
 
-      const updated = await accountRepository.find(workplaceId, account.id);
+      const updated = await accountQueryRepository.find(workplaceId, account.id);
       expect(updated?.archivedAt).toBeTruthy();
-      const refreshedChild = await accountRepository.find(workplaceId, child.id);
+      const refreshedChild = await accountQueryRepository.find(workplaceId, child.id);
       expect(refreshedChild?.archivedAt).toBeTruthy();
     });
 
     it('persists archivedAt as a first-class update field', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Vault',
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
@@ -140,18 +140,22 @@ describe('AccountRepository', () => {
         workplaceId,
       });
       const now = new Date('2026-08-07T22:04:32.000Z');
-      const updated = await accountRepository.update(account, { archivedAt: now }, workplaceId);
+      const updated = await accountWriteRepository.update(
+        account,
+        { archivedAt: now },
+        workplaceId,
+      );
       expect(updated.archivedAt?.toISOString()).toBe(now.toISOString());
 
-      await accountRepository.update(updated, { archivedAt: null }, workplaceId);
-      const refreshed = await accountRepository.find(workplaceId, account.id);
+      await accountWriteRepository.update(updated, { archivedAt: null }, workplaceId);
+      const refreshed = await accountQueryRepository.find(workplaceId, account.id);
       expect(refreshed?.archivedAt == null).toBe(true);
     });
   });
 
   describe('getAccountBalance', () => {
     it('should return zero for accounts with no transactions', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Empty',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -164,13 +168,13 @@ describe('AccountRepository', () => {
     });
 
     it('should calculate correct balance after multiple transactions', async () => {
-      const asset = await accountRepository.create({
+      const asset = await accountWriteRepository.create({
         name: 'Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId,
       });
-      const equity = await accountRepository.create({
+      const equity = await accountWriteRepository.create({
         name: 'Equity',
         accountType: AccountType.EQUITY,
         currencyCode: 'USD',
@@ -239,13 +243,13 @@ describe('AccountRepository', () => {
     });
 
     it('should calculate point-in-time balances correctly', async () => {
-      const asset = await accountRepository.create({
+      const asset = await accountWriteRepository.create({
         name: 'Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId,
       });
-      const equity = await accountRepository.create({
+      const equity = await accountWriteRepository.create({
         name: 'Equity',
         accountType: AccountType.EQUITY,
         currencyCode: 'USD',
@@ -325,13 +329,13 @@ describe('AccountRepository', () => {
 
   describe('deleteAccount', () => {
     it('should reject deleting an account that has transactions', async () => {
-      const asset = await accountRepository.create({
+      const asset = await accountWriteRepository.create({
         name: 'Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId,
       });
-      const equity = await accountRepository.create({
+      const equity = await accountWriteRepository.create({
         name: 'Equity',
         accountType: AccountType.EQUITY,
         currencyCode: 'USD',
@@ -369,12 +373,12 @@ describe('AccountRepository', () => {
         'cannot be deleted while referenced by 1 transaction(s)',
       );
 
-      const stillThere = await accountRepository.find(workplaceId, asset.id);
+      const stillThere = await accountQueryRepository.find(workplaceId, asset.id);
       expect(stillThere).not.toBeNull();
     });
 
     it('should soft-delete an account with no transactions', async () => {
-      const account = await accountRepository.create({
+      const account = await accountWriteRepository.create({
         name: 'Unused',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -383,33 +387,33 @@ describe('AccountRepository', () => {
 
       await deleteAccount(account.id, workplaceId);
 
-      const found = await accountRepository.find(workplaceId, account.id);
+      const found = await accountQueryRepository.find(workplaceId, account.id);
       expect(found).toBeNull();
     });
   });
 
   describe('findByType', () => {
     it('should filter accounts by type', async () => {
-      await accountRepository.create({
+      await accountWriteRepository.create({
         name: 'Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId,
       });
-      await accountRepository.create({
+      await accountWriteRepository.create({
         name: 'Card',
         accountType: AccountType.LIABILITY,
         currencyCode: 'USD',
         workplaceId,
       });
-      await accountRepository.create({
+      await accountWriteRepository.create({
         name: 'Bank',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId,
       });
 
-      const assets = await accountRepository.findByType(workplaceId, AccountType.ASSET);
+      const assets = await accountQueryRepository.findByType(workplaceId, AccountType.ASSET);
       expect(assets.length).toBe(2);
       expect(assets.every(a => a.accountType === AccountType.ASSET)).toBe(true);
     });

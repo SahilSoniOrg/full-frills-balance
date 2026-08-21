@@ -1,20 +1,12 @@
 import { BulkChangeJournalAccountModal } from '@/src/features/journal/components/modals/BulkChangeJournalAccountModal';
 import { BulkRenameJournalsModal } from '@/src/features/journal/components/modals/BulkRenameJournalsModal';
 import { MergeJournalsModal } from '@/src/features/journal/components/modals/MergeJournalsModal';
-import type { JournalActiveModal } from '@/src/features/journal/hooks/useJournalsBulkOperations';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import type {
+  JournalActiveModal,
+  JournalListModalsProps,
+} from '@/src/features/journal/types/modals';
 
-export interface JournalListModalsProps {
-  activeModal: JournalActiveModal;
-  workplaceId?: WorkplaceId;
-  onCloseModal: () => void;
-  onBulkRenameSave: (namesByJournalId: Record<JournalId, string>) => Promise<void> | void;
-  onMergeConfirm: (params: { description: string; journalDate: number }) => Promise<void> | void;
-  onBulkChangeAccountSelect: (
-    targetLeg: 'debit' | 'credit',
-    accountId: AccountId,
-  ) => Promise<void> | void;
-}
+export type { JournalActiveModal, JournalListModalsProps };
 
 export function JournalListModals({
   activeModal,

@@ -11,6 +11,7 @@ import {
   PlannedPaymentStatus,
   TransactionId,
 } from '@/src/types/domain';
+import type { IconName } from '@/src/types/domainIcons';
 /**
  * Ivy Wallet Import Plugin
  *
@@ -458,7 +459,7 @@ export const ivyPlugin: ImportPlugin = {
         accountType: acc.type,
         currencyCode: acc.currency,
         description: acc.description,
-        icon: acc.icon as any,
+        icon: acc.icon as IconName,
         orderNum: index + 1,
       });
     });

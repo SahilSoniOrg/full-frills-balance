@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import {
   computeDominantTargetAccount,
   journalEnrichmentQueries,
@@ -157,13 +157,13 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       defaultCurrencyCode: 'USD',
     });
 
-    const workplaceOneAccount = await accountRepository.create({
+    const workplaceOneAccount = await accountWriteRepository.create({
       name: 'Workplace One Checking',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: workplaceOne,
     });
-    const workplaceTwoAccount = await accountRepository.create({
+    const workplaceTwoAccount = await accountWriteRepository.create({
       name: 'Foreign Expense',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

@@ -331,8 +331,8 @@ export const SafeToSpendExplanationModal = ({
                     </View>
                     <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
                       {acc.details
-                        .filter((det: any) => det.amount !== 0)
-                        .map((det: any, di: number) => {
+                        .filter(det => det.amount !== 0)
+                        .map((det, di) => {
                           const firstMajorInflowDay = viewModel.insights.firstMajorInflowDay;
                           const isPostIncome =
                             firstMajorInflowDay !== null &&

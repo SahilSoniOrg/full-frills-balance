@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
@@ -8,7 +8,7 @@ export interface SelectionOption<T extends string | number = string> {
   id: T;
   label: string;
   description?: string;
-  icon?: string;
+  icon?: IconName;
 }
 
 interface SelectionPickerSheetProps<T extends string | number> {
@@ -96,7 +96,7 @@ export function SelectionPickerSheet<T extends string | number>({
                 >
                   {item.icon && (
                     <AppIcon
-                      name={item.icon as any}
+                      name={item.icon}
                       size={20}
                       color={isSelected ? theme.primary : theme.textSecondary}
                       style={{ marginRight: Spacing.md }}

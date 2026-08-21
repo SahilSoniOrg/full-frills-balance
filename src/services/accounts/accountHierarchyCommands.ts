@@ -1,12 +1,10 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import {
-  AccountPersistenceInput,
-  accountRepository,
-} from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics-service';
 import { CreateAccountData } from '@/src/services/accounts/accountCommands';
 import {
@@ -34,7 +32,7 @@ async function isDescendant(
     if (visited.has(currentParentId)) break;
     visited.add(currentParentId);
 
-    const parent = await accountRepository.find(workplaceId, currentParentId);
+    const parent = await accountQueryRepository.find(workplaceId, currentParentId);
     currentParentId = parent?.parentAccountId;
   }
 
@@ -45,7 +43,7 @@ async function getPlainMetadata(
   accountId: AccountId,
   workplaceId: WorkplaceId,
 ): Promise<Record<string, any> | undefined> {
-  const meta = await accountRepository.findMetadata(workplaceId, accountId);
+  const meta = await accountQueryRepository.findMetadata(workplaceId, accountId);
   if (!meta) return undefined;
 
   return {
@@ -107,7 +105,7 @@ export async function prepareAccountFieldUpdate(
   accountId: AccountId,
   updates: Partial<CreateAccountData>,
 ): Promise<AccountFieldUpdateContext> {
-  const account = await accountRepository.find(workplaceId, accountId);
+  const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
 
   const beforeState = {
@@ -123,7 +121,7 @@ export async function prepareAccountFieldUpdate(
     updates.accountType !== undefined && updates.accountType !== account.accountType;
 
   if (isTypeChanging) {
-    const children = await accountRepository.queryByParentId(workplaceId, accountId).fetch();
+    const children = await accountQueryRepository.queryByParentId(workplaceId, accountId).fetch();
     if (children.length > 0) {
       throw new Error('Cannot change category or type of an account that has sub-accounts.');
     }
@@ -146,7 +144,7 @@ export async function prepareAccountFieldUpdate(
         throw new Error('Circular parent relationship detected');
       }
 
-      const hasTransactions = await transactionRepository.hasTransactions(
+      const hasTransactions = await transactionQueryRepository.hasTransactions(
         workplaceId,
         updates.parentAccountId,
       );
@@ -224,7 +222,7 @@ export async function updateAccount(
 ): Promise<Account> {
   const ctx = await prepareAccountFieldUpdate(workplaceId, accountId, updates);
 
-  const updatedAccount = await accountRepository.update(
+  const updatedAccount = await accountWriteRepository.update(
     ctx.account,
     ctx.updatePayload,
     workplaceId,
@@ -269,7 +267,7 @@ export async function updateAccounts(
   const planned = await Promise.all(
     contexts.map(async context => ({
       context,
-      update: await accountRepository.planUpdate(
+      update: await accountWriteRepository.planUpdate(
         context.account,
         context.updatePayload,
         workplaceId,
@@ -279,7 +277,7 @@ export async function updateAccounts(
 
   await persistBatch([
     ...planned.flatMap(({ context, update }) =>
-      accountRepository.prepareUpdateBatchOps(
+      accountWriteRepository.prepareUpdateBatchOps(
         context.account,
         update.normalizedUpdates,
         update.existingMetadata,
@@ -313,11 +311,11 @@ export async function updateAccountOrder(
   accountId: AccountId,
   newOrder: number,
 ): Promise<void> {
-  const account = await accountRepository.find(workplaceId, accountId);
+  const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) return;
   const previousOrderNum = account.orderNum;
 
-  await accountRepository.update(account, { orderNum: newOrder }, workplaceId, () => [
+  await accountWriteRepository.update(account, { orderNum: newOrder }, workplaceId, () => [
     auditRepository.prepareLog(
       {
         entityType: 'account',

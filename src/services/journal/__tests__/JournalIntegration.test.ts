@@ -14,7 +14,7 @@ import { database } from '@/src/data/database/Database';
 
 import Journal from '@/src/data/models/Journal';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { balanceService } from '@/src/services/BalanceService';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -35,19 +35,19 @@ describe('Journal ledger integration', () => {
     });
 
     // Create test accounts
-    const cash = await accountRepository.create({
+    const cash = await accountWriteRepository.create({
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: 'wp-1' as WorkplaceId,
     });
-    const expense = await accountRepository.create({
+    const expense = await accountWriteRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
       workplaceId: 'wp-1' as WorkplaceId,
     });
-    const income = await accountRepository.create({
+    const income = await accountWriteRepository.create({
       name: 'Salary',
       accountType: AccountType.INCOME,
       currencyCode: 'USD',
@@ -485,7 +485,7 @@ describe('Journal ledger integration', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // 3. Create a new account C
-      const accountC = await accountRepository.create({
+      const accountC = await accountWriteRepository.create({
         name: 'Account C',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
@@ -552,7 +552,7 @@ describe('Journal ledger integration', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const accountC = await accountRepository.create({
+      const accountC = await accountWriteRepository.create({
         name: 'Account C',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
@@ -648,7 +648,7 @@ describe('Journal ledger integration', () => {
 
     it('still lists the journal for the replacement account after a counterparty swap', async () => {
       const journal = await createCashExpenseJournal('Replacement account filter');
-      const accountC = await accountRepository.create({
+      const accountC = await accountWriteRepository.create({
         name: 'Account C',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
@@ -684,7 +684,7 @@ describe('Journal ledger integration', () => {
 
     it('still lists the journal for an unchanged account after only the counterparty changes', async () => {
       const journal = await createCashExpenseJournal('Unchanged account filter');
-      const accountC = await accountRepository.create({
+      const accountC = await accountWriteRepository.create({
         name: 'Account C',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',

@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { AppButton, AppText, AppIcon } from '@/src/components/core';
 import { AppConfig, Spacing, Shape, Size, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { BulkJournalRow, BulkRowFieldValue } from '../hooks/useBulkJournalEditor';
+import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AccountPickerModal } from '@/src/features/accounts';

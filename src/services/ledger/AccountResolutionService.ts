@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId, AccountType } from '@/src/types/domain';
 import { LocalTransactionClassifier } from '@/src/utils/nlp/BayesClassifier';
 import { getStringSimilarity } from '@/src/utils/stringDistance';
@@ -80,7 +80,7 @@ export class AccountResolutionService {
     } = params;
 
     // Fetch active accounts in workspace
-    const accounts = await accountRepository.findAll(workplaceId);
+    const accounts = await accountQueryRepository.findAll(workplaceId);
 
     // Group active accounts by Asset/Liability (Source) and Income/Expense (Category)
     const assetAccounts = accounts.filter(

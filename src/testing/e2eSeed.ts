@@ -10,7 +10,7 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { onboardingService } from '@/src/features/onboarding/services/OnboardingService';
@@ -81,8 +81,8 @@ async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
 
 async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
-  const bank = await accountRepository.findByName(workplaceId, 'Bank');
-  const food = await accountRepository.findByName(workplaceId, 'Food & Drink');
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
   if (!bank || !food) {
     throw new Error('[E2E] sms-ready seed requires Bank and Food & Drink accounts');
   }
@@ -164,8 +164,8 @@ async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
 
 async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
-  const bank = await accountRepository.findByName(workplaceId, 'Bank');
-  const food = await accountRepository.findByName(workplaceId, 'Food & Drink');
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
   if (!bank || !food) {
     throw new Error('[E2E] sms-sync seed requires Bank and Food & Drink accounts');
   }

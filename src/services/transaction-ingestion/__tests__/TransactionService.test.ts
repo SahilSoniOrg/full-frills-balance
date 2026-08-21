@@ -7,7 +7,7 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { transactionService } from '@/src/services/transaction-ingestion';
 
@@ -20,7 +20,7 @@ describe('TransactionService', () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    const account = await accountRepository.create({
+    const account = await accountWriteRepository.create({
       name: 'Test Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -28,7 +28,7 @@ describe('TransactionService', () => {
     });
     accountId = account.id;
 
-    const equity = await accountRepository.create({
+    const equity = await accountWriteRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
@@ -36,7 +36,7 @@ describe('TransactionService', () => {
     });
     equityAccountId = equity.id;
 
-    const expense = await accountRepository.create({
+    const expense = await accountWriteRepository.create({
       name: 'Expense',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

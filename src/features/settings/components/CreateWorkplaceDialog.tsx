@@ -9,6 +9,7 @@ import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountType } from '@/src/types/domain';
 import { useState } from 'react';
 import { Modal } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,8 +21,8 @@ interface CreateWorkplaceDialogProps {
     name: string,
     icon: IconName,
     options: {
-      initialAccounts?: { name: string; type: any; icon: IconName }[];
-      initialCategories?: { name: string; type: any; icon: IconName }[];
+      initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
+      initialCategories?: { name: string; type: AccountType; icon: IconName }[];
       currencyCode: string;
     },
   ) => void;
@@ -74,19 +75,22 @@ function CreateWorkplaceDialogContent({
   const handleCreate = () => {
     const initialAccounts = selectedAccounts.map(accName => {
       const def = DEFAULT_ACCOUNTS.find(a => a.name === accName);
+      const custom = customAccounts.find(a => a.name === accName);
       return {
         name: accName,
-        type: def?.type || 'ASSET',
-        icon: (def?.icon || 'wallet') as IconName,
+        type: def?.type || AccountType.ASSET,
+        icon: (def?.icon || custom?.icon || 'wallet') as IconName,
       };
     });
 
     const initialCategories = selectedCategories.map(catName => {
       const def = DEFAULT_CATEGORIES.find(c => c.name === catName);
+      const custom = customCategories.find(c => c.name === catName);
+      const catType = def?.type || custom?.type;
       return {
         name: catName,
-        type: def?.type || 'EXPENSE',
-        icon: (def?.icon || 'tag') as IconName,
+        type: catType === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE,
+        icon: (def?.icon || custom?.icon || 'tag') as IconName,
       };
     });
 

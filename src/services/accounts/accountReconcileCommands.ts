@@ -1,13 +1,13 @@
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, AuditAction, WorkplaceId } from '@/src/types/domain';
 
 export async function reconcileAccount(accountId: AccountId, date: Date, workplaceId: WorkplaceId) {
-  const account = await accountRepository.find(workplaceId, accountId);
+  const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
 
-  const updatedAccount = await accountRepository.update(
+  const updatedAccount = await accountWriteRepository.update(
     account,
     { reconciledAt: date },
     workplaceId,

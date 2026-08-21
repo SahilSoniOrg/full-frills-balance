@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType, AccountBalance, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { convertAmount } from '@/src/services/currencyConversion';
@@ -117,7 +117,7 @@ export const wealthService = {
     const now = dayjs().endOf('day');
 
     // 1. Get current balances and filter for leaf accounts to prevent double-counting
-    const allAccounts = await accountRepository.findAll(workplaceId);
+    const allAccounts = await accountQueryRepository.findAll(workplaceId);
     const parentIds = new Set(
       allAccounts
         .map((a: { parentAccountId?: string }) => a.parentAccountId)
@@ -185,7 +185,7 @@ export const wealthService = {
 
     if (deltas.length === 0) {
       const accountTypeById = new Map(relevantBalances.map(a => [a.accountId, a.accountType]));
-      const transactions = await transactionRepository.findByAccountsAndDateRange(
+      const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
         workplaceId,
         activeIds,
         start.valueOf(),

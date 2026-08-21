@@ -162,7 +162,7 @@ const JournalEntryCardComponent = ({
                     borderRadius="full"
                     alignItems="center"
                     justifyContent="center"
-                    background={withOpacity(typeColor, Opacity.soft) as any}
+                    unsafe_backgroundRaw={withOpacity(typeColor, Opacity.soft)}
                   >
                     <AppIcon name={presentation.typeIcon} size={Size.iconXs} color={typeColor} />
                   </Box>

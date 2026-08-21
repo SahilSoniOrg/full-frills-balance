@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { AccountType, AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { Q } from '@nozbe/watermelondb';
 
@@ -14,7 +14,7 @@ describe('BudgetRepository', () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    const a1 = await accountRepository.create({
+    const a1 = await accountWriteRepository.create({
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
@@ -22,7 +22,7 @@ describe('BudgetRepository', () => {
     });
     accountId1 = a1.id;
 
-    const a2 = await accountRepository.create({
+    const a2 = await accountWriteRepository.create({
       name: 'Dining Out',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

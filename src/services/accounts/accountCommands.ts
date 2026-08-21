@@ -7,10 +7,10 @@ import {
   SerializedAccountMetadataPayload,
   WorkplaceId,
 } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics-service';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import {
@@ -55,7 +55,7 @@ export async function createAccount(
   workplaceId: WorkplaceId,
   input: CreateAccountCommandInput,
 ): Promise<Account> {
-  const orderNum = input.orderNum ?? (await accountRepository.countNonDeleted(workplaceId));
+  const orderNum = input.orderNum ?? (await accountQueryRepository.countNonDeleted(workplaceId));
 
   let currencyCode = input.currencyCode;
   if (!currencyCode) {
@@ -65,7 +65,7 @@ export async function createAccount(
   if (input.parentAccountId) {
     const [parent] = await assertWritable(workplaceId, [input.parentAccountId], 'Parent account');
     assertParentMatchesChildType(input.accountType, parent);
-    const hasTransactions = await transactionRepository.hasTransactions(
+    const hasTransactions = await transactionQueryRepository.hasTransactions(
       workplaceId,
       input.parentAccountId,
     );
@@ -113,7 +113,7 @@ export async function createAccount(
   const journalDate = Date.now();
   let accountsToRebuild: Set<AccountId> | undefined;
 
-  const account = await accountRepository.persistCreatedAccount({
+  const account = await accountWriteRepository.persistCreatedAccount({
     payload,
     companionPayloads,
     extraOps: ({ account: created }) => [

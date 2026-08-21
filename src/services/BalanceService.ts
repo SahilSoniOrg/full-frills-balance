@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -345,10 +345,10 @@ export class BalanceService {
     workplaceId: WorkplaceId,
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<AccountBalance> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountQueryRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
-    const latestTx = await transactionRepository.findLatestForAccount(
+    const latestTx = await transactionQueryRepository.findLatestForAccount(
       workplaceId,
       accountId,
       cutoffDate,
@@ -420,7 +420,7 @@ export class BalanceService {
     const start = performance.now();
     const trace = parentTrace || traceService.startTrace('BalanceService.getAccountBalances');
     try {
-      const accounts = await accountRepository.findAll(workplaceId);
+      const accounts = await accountQueryRepository.findAll(workplaceId);
       if (accounts.length === 0) return [];
       trace.metric('fetchAccounts');
 

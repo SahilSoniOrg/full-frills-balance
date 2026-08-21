@@ -9,7 +9,8 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
-import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import {

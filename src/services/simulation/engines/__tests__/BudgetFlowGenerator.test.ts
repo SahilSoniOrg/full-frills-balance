@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/domain';
 import { SimulationContext } from '../../types';
 import { BudgetFlowGenerator } from '../BudgetFlowGenerator';

@@ -6,9 +6,9 @@ import { AccountType, TransactionType, JournalId, WorkplaceId } from '@/src/type
 
 import { database } from '@/src/data/database/Database';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceService } from '@/src/services/BalanceService';
@@ -44,13 +44,13 @@ describe('E2E Workflows', () => {
       // Flush the initial balance journal creation
       await rebuildQueueService.flush();
 
-      const food = await accountRepository.create({
+      const food = await accountWriteRepository.create({
         name: 'Food',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         workplaceId: 'test-workplace' as WorkplaceId,
       });
-      const transport = await accountRepository.create({
+      const transport = await accountWriteRepository.create({
         name: 'Transport',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
@@ -176,7 +176,7 @@ describe('E2E Workflows', () => {
         await initialJournal.update(j => {
           j.journalDate = FIXED_DATE;
         });
-        const journalTransactions = await transactionRepository.findByJournal(
+        const journalTransactions = await transactionQueryRepository.findByJournal(
           'test-workplace' as WorkplaceId,
           initialJournal.id as JournalId,
         );
@@ -190,7 +190,7 @@ describe('E2E Workflows', () => {
       // Flush the initial balance journal creation
       await rebuildQueueService.flush();
 
-      const expense = await accountRepository.create({
+      const expense = await accountWriteRepository.create({
         name: 'Shopping',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
@@ -248,13 +248,13 @@ describe('E2E Workflows', () => {
 
   describe('Multi-currency workflow', () => {
     it('should handle transactions with exchange rates', async () => {
-      const usdCash = await accountRepository.create({
+      const usdCash = await accountWriteRepository.create({
         name: 'USD Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         workplaceId: 'test-workplace' as WorkplaceId,
       });
-      const eurExpense = await accountRepository.create({
+      const eurExpense = await accountWriteRepository.create({
         name: 'EUR Expense',
         accountType: AccountType.EXPENSE,
         currencyCode: 'EUR',

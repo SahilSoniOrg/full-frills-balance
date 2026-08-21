@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType, WorkplaceId } from '@/src/types/domain';
 
 const WORKPLACE_A = 'wp-account-merge-a' as WorkplaceId;
@@ -13,19 +13,19 @@ describe('AccountMergeOperations', () => {
   }, 15_000);
 
   it('does not delete a foreign source account included in a mixed-workplace ID list', async () => {
-    const target = await accountRepository.create({
+    const target = await accountWriteRepository.create({
       name: 'Target',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WORKPLACE_A,
     });
-    const localSource = await accountRepository.create({
+    const localSource = await accountWriteRepository.create({
       name: 'Local source',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WORKPLACE_A,
     });
-    const foreignSource = await accountRepository.create({
+    const foreignSource = await accountWriteRepository.create({
       name: 'Foreign source',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -34,7 +34,7 @@ describe('AccountMergeOperations', () => {
     const foreignUpdatedAt = foreignSource.updatedAt.getTime();
 
     await database.write(async () => {
-      const operations = await accountRepository.prepareMergeOperations(
+      const operations = await accountWriteRepository.prepareMergeOperations(
         WORKPLACE_A,
         [localSource.id, foreignSource.id],
         target.id,
@@ -43,8 +43,8 @@ describe('AccountMergeOperations', () => {
     });
 
     const [deletedLocalSource, unchangedForeignSource] = await Promise.all([
-      accountRepository.findWithDeleted(WORKPLACE_A, localSource.id),
-      accountRepository.findWithDeleted(WORKPLACE_B, foreignSource.id),
+      accountQueryRepository.findWithDeleted(WORKPLACE_A, localSource.id),
+      accountQueryRepository.findWithDeleted(WORKPLACE_B, foreignSource.id),
     ]);
 
     expect(deletedLocalSource?.deletedAt).toBeInstanceOf(Date);

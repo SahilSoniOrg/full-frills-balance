@@ -28,7 +28,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, total
                 alignItems="center"
                 justifyContent="center"
                 width={isActive ? Size.lg : Spacing.md}
-                background={(isActive ? 'primary' : isCompleted ? 'success' : 'border') as any}
+                background={isActive ? 'primary' : isCompleted ? 'success' : 'border'}
                 style={{
                   borderWidth: 1,
                   borderColor: isActive
@@ -53,7 +53,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, total
                   height={2}
                   marginHorizontal="xs"
                   borderRadius="r1"
-                  background={(isCompleted ? 'success' : 'border') as any}
+                  background={isCompleted ? 'success' : 'border'}
                 />
               )}
             </Inline>

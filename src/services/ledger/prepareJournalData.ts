@@ -7,7 +7,7 @@ import {
 } from '@/src/types/domain';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { checkJournal, effect } from '@/src/utils/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
@@ -78,7 +78,7 @@ export async function prepareJournalData(
     // Parallelize fetching latest transactions for all accounts involved
     await Promise.all(
       roundedTransactions.map(async tx => {
-        const latestTx = await transactionRepository.findLatestForAccountBeforeDate(
+        const latestTx = await transactionQueryRepository.findLatestForAccountBeforeDate(
           workplaceId,
           tx.accountId,
           data.journalDate,

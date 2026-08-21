@@ -1,5 +1,5 @@
 import { accountResolutionService } from '../AccountResolutionService';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { database } from '@/src/data/database/Database';
 import { AccountType, WorkplaceId } from '@/src/types/domain';
 
@@ -30,14 +30,14 @@ describe('AccountResolutionService', () => {
 
   it('performs fuzzy matching correctly', async () => {
     // Create test accounts using repository to ensure they are created correctly
-    const sourceAcc = await accountRepository.create({
+    const sourceAcc = await accountWriteRepository.create({
       workplaceId,
       name: 'HDFC Bank',
       accountType: AccountType.ASSET,
       currencyCode: 'INR',
     });
 
-    const categoryAcc = await accountRepository.create({
+    const categoryAcc = await accountWriteRepository.create({
       workplaceId,
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
@@ -60,13 +60,13 @@ describe('AccountResolutionService', () => {
   it('does not resolve from foreign workplace transaction history', async () => {
     // In wp-2, create accounts and journals
     const foreignWp = 'foreign-wp-id' as WorkplaceId;
-    const foreignSource = await accountRepository.create({
+    const foreignSource = await accountWriteRepository.create({
       workplaceId: foreignWp,
       name: 'Bank XYZ',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
     });
-    const foreignCategory = await accountRepository.create({
+    const foreignCategory = await accountWriteRepository.create({
       workplaceId: foreignWp,
       name: 'Electric Bill',
       accountType: AccountType.EXPENSE,
@@ -108,13 +108,13 @@ describe('AccountResolutionService', () => {
     });
 
     // In wp-1, create a generic account
-    await accountRepository.create({
+    await accountWriteRepository.create({
       workplaceId,
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
     });
-    await accountRepository.create({
+    await accountWriteRepository.create({
       workplaceId,
       name: 'General Expense',
       accountType: AccountType.EXPENSE,

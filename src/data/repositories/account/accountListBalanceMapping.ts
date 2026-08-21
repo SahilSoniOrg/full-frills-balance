@@ -1,4 +1,4 @@
-import type { AccountListItemRaw } from '@/src/data/repositories/AccountRepository';
+import type { AccountListItemRaw } from './types';
 import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
 
 type RawListRow = AccountListItemRaw | Record<string, unknown>;

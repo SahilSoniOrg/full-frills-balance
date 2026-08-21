@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
 
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 
 describe('ImportRepository', () => {
@@ -46,20 +46,23 @@ describe('ImportRepository', () => {
         transactions: [],
       });
 
-      const asset = await accountRepository.find('test-wp' as WorkplaceId, 'a_asset' as AccountId);
-      const liability = await accountRepository.find(
+      const asset = await accountQueryRepository.find(
+        'test-wp' as WorkplaceId,
+        'a_asset' as AccountId,
+      );
+      const liability = await accountQueryRepository.find(
         'test-wp' as WorkplaceId,
         'a_liability' as AccountId,
       );
-      const equity = await accountRepository.find(
+      const equity = await accountQueryRepository.find(
         'test-wp' as WorkplaceId,
         'a_equity' as AccountId,
       );
-      const income = await accountRepository.find(
+      const income = await accountQueryRepository.find(
         'test-wp' as WorkplaceId,
         'a_income' as AccountId,
       );
-      const expense = await accountRepository.find(
+      const expense = await accountQueryRepository.find(
         'test-wp' as WorkplaceId,
         'a_expense' as AccountId,
       );
@@ -80,7 +83,7 @@ describe('ImportRepository', () => {
         transactions: [],
       });
 
-      const unknown = await accountRepository.find(
+      const unknown = await accountQueryRepository.find(
         'test-wp' as WorkplaceId,
         'a_unknown' as AccountId,
       );

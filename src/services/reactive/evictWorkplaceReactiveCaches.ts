@@ -1,5 +1,6 @@
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -13,6 +14,7 @@ export function evictWorkplaceReactiveCaches(switchInfo?: {
   to: WorkplaceId;
 }): void {
   const departingWorkplaceId = switchInfo?.from;
+  clearReactiveWorkplaceObservesCache(departingWorkplaceId);
   reactiveDataService.clearCache(departingWorkplaceId);
   safeToSpendReadModel.clearCache();
   insightService.clearCache(departingWorkplaceId);

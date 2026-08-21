@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType, WorkplaceId } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
+import { transactionWriteRepository } from '@/src/data/repositories/transaction';
 import { ValidationError } from '@/src/utils/errors';
 
 describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
@@ -13,7 +13,7 @@ describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
 
   it('rejects account creation without workplaceId', async () => {
     await expect(
-      accountRepository.create({
+      accountWriteRepository.create({
         name: 'No WP Account',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
@@ -23,7 +23,7 @@ describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
   });
 
   it('rejects planUpdate and update when account workplace does not match caller workplace', async () => {
-    const acc1 = await accountRepository.create({
+    const acc1 = await accountWriteRepository.create({
       name: 'Account WP1',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -31,16 +31,16 @@ describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
     });
 
     await expect(
-      accountRepository.planUpdate(acc1, { name: 'New Name' }, 'wp-2' as WorkplaceId),
+      accountWriteRepository.planUpdate(acc1, { name: 'New Name' }, 'wp-2' as WorkplaceId),
     ).rejects.toThrow(/Account does not belong to the specified workplace/);
 
     await expect(
-      accountRepository.update(acc1, { name: 'New Name' }, 'wp-2' as WorkplaceId),
+      accountWriteRepository.update(acc1, { name: 'New Name' }, 'wp-2' as WorkplaceId),
     ).rejects.toThrow(/Account does not belong to the specified workplace/);
   });
 
   it('rejects planUpdate when update payload contains mismatched workplaceId', async () => {
-    const acc1 = await accountRepository.create({
+    const acc1 = await accountWriteRepository.create({
       name: 'Account WP1',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
@@ -48,7 +48,7 @@ describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
     });
 
     await expect(
-      accountRepository.planUpdate(
+      accountWriteRepository.planUpdate(
         acc1,
         { name: 'New Name', workplaceId: 'wp-2' as WorkplaceId },
         'wp-1' as WorkplaceId,
@@ -58,7 +58,7 @@ describe('Account and Transaction Model Ownership Hardening (WP-1Q)', () => {
 
   it('rejects transaction creation when payload workplaceId mismatches argument workplaceId', async () => {
     await expect(
-      transactionRepository.create(
+      transactionWriteRepository.create(
         {
           accountId: 'acc-1' as any,
           amount: 100,

@@ -63,8 +63,11 @@ export function AiExampleChatPanel({
 
       setChat(prev => [...prev, { role: 'model', text: reply }]);
       setStreaming('');
-    } catch (e: any) {
-      setChat(prev => [...prev, { role: 'model', text: `Error: ${e.message}` }]);
+    } catch (e: unknown) {
+      setChat(prev => [
+        ...prev,
+        { role: 'model', text: `Error: ${e instanceof Error ? e.message : String(e)}` },
+      ]);
       setStreaming('');
     } finally {
       setBusy(false);

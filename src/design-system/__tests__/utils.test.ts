@@ -64,7 +64,7 @@ describe('Design System Utilities', () => {
         marginTop: 10,
         padding: 20,
         backgroundColor: 'blue',
-        position: 'absolute',
+        position: 'absolute' as const,
       };
 
       const { layoutStyle, decorationStyle } = splitBoxStyles(style);

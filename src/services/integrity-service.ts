@@ -12,7 +12,7 @@ import { schema } from '@/src/data/database/schema';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
@@ -100,7 +100,7 @@ export class IntegrityService {
     workplaceId: WorkplaceId,
     cutoffDate?: number,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountQueryRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const effectiveCutoff = cutoffDate ?? Date.now();
@@ -140,7 +140,7 @@ export class IntegrityService {
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
     const start = Date.now();
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountQueryRepository.find(workplaceId, accountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -220,7 +220,7 @@ export class IntegrityService {
     cutoffDate: number,
     limitTransactionId?: TransactionId,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountQueryRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
@@ -238,7 +238,7 @@ export class IntegrityService {
    * Verifies all account balances.
    */
   async verifyAllAccountBalances(workplaceId: WorkplaceId): Promise<BalanceVerificationResult[]> {
-    const accounts = await accountRepository.findAll(workplaceId);
+    const accounts = await accountQueryRepository.findAll(workplaceId);
 
     const results: BalanceVerificationResult[] = [];
 
@@ -356,7 +356,7 @@ export class IntegrityService {
     onProgress?.('Scanning for orphaned transactions...', 0.02);
     await this.scanForNullAccountTransactions(workplaceId);
 
-    const accounts = await accountRepository.findAll(workplaceId);
+    const accounts = await accountQueryRepository.findAll(workplaceId);
     const total = accounts.length;
     const results: BalanceVerificationResult[] = [];
 
@@ -505,7 +505,7 @@ export class IntegrityService {
       };
     }
 
-    const accountsExist = await accountRepository.exists(workplaceId);
+    const accountsExist = await accountQueryRepository.exists(workplaceId);
     if (!accountsExist) {
       logger.info(
         '[IntegrityService] No accounts found. Skipping default seeding (onboarding handles data creation).',

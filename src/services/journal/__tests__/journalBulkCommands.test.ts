@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import {
   analyzeJournalsForMerge,
   bulkChangeJournalAccount,
@@ -35,7 +35,7 @@ describe('journalBulkCommands', () => {
       await database.unsafeResetDatabase();
     });
 
-    const assetAcc = await accountRepository.create({
+    const assetAcc = await accountWriteRepository.create({
       workplaceId: WP,
       name: 'Checking',
       accountType: AccountType.ASSET,
@@ -43,7 +43,7 @@ describe('journalBulkCommands', () => {
     });
     assetAccId = assetAcc.id;
 
-    const expAcc = await accountRepository.create({
+    const expAcc = await accountWriteRepository.create({
       workplaceId: WP,
       name: 'Food',
       accountType: AccountType.EXPENSE,
@@ -51,7 +51,7 @@ describe('journalBulkCommands', () => {
     });
     expenseAccId = expAcc.id;
 
-    const newExpAcc = await accountRepository.create({
+    const newExpAcc = await accountWriteRepository.create({
       workplaceId: WP,
       name: 'Travel',
       accountType: AccountType.EXPENSE,

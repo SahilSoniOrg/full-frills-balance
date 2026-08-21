@@ -11,7 +11,7 @@ import {
 import { getAccountDescendants } from '@/src/services/accounts/accountDescendants';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { WealthSummary } from '@/src/services/wealth-service';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import {
   AccountBalance,
   AccountId,
@@ -289,7 +289,10 @@ class ReactiveDataService {
         const plainAccounts = toPlainAccounts(accounts);
         const targetAccount = plainAccounts.find(a => a.id === accountId);
         if (!targetAccount) {
-          const deletedAccount = await accountRepository.findWithDeleted(workplaceId, accountId);
+          const deletedAccount = await accountQueryRepository.findWithDeleted(
+            workplaceId,
+            accountId,
+          );
           return {
             account: deletedAccount ? toPlainAccount(deletedAccount) : null,
             balance: null,

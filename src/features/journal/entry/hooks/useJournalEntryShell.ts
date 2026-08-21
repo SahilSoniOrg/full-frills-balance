@@ -3,7 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/domain';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';

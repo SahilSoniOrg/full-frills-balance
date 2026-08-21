@@ -5,6 +5,7 @@ import { Size, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { JournalSplitItemViewModel } from '@/src/features/journal/hooks/journalDetailsSplitItems';
 import { useTheme } from '@/src/hooks/use-theme';
+import type { ComponentVariant } from '@/src/utils/style-helpers';
 import React, { useMemo } from 'react';
 
 interface JournalBreakdownListProps {
@@ -43,7 +44,7 @@ export const JournalBreakdownList = React.memo(({ splitItems }: JournalBreakdown
           subtitle={item.subtitle}
           leading={
             <Box
-              background={item.iconBackground as any}
+              background={item.iconBackground}
               backgroundOpacity="soft"
               width={Size.lg}
               height={Size.lg}
@@ -52,7 +53,7 @@ export const JournalBreakdownList = React.memo(({ splitItems }: JournalBreakdown
               justifyContent="center"
             >
               <AppIcon
-                name={item.iconName as any}
+                name={item.iconName || undefined}
                 fallbackIcon={item.fallbackIcon}
                 size={16}
                 color={item.iconColor}
@@ -66,7 +67,7 @@ export const JournalBreakdownList = React.memo(({ splitItems }: JournalBreakdown
                 currencyCode={item.currencyCode}
                 prefix={item.amountPrefix}
                 variant="subheading"
-                color={item.amountColor as any}
+                color={item.amountColor as ComponentVariant}
               />
               <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
             </Inline>

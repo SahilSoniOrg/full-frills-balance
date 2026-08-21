@@ -5,12 +5,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
-import { BudgetUsage } from './budgetReadService';
-
-export interface BudgetPeriodRange {
-  startOfMonth: number;
-  endOfMonth: number;
-}
+import { BudgetUsage } from './types';
 
 /**
  * Resolve all leaf and descendant expense account IDs from the given scope accounts.

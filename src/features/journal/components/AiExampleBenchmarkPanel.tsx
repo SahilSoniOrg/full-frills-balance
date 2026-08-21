@@ -58,8 +58,8 @@ export function AiExampleBenchmarkPanel({
     try {
       model.resetConversation();
       await new Promise(r => setTimeout(r, 200));
-    } catch (e: any) {
-      console.warn('Initial resetConversation failed:', e.message);
+    } catch (e: unknown) {
+      console.warn('Initial resetConversation failed:', e instanceof Error ? e.message : String(e));
     }
 
     for (const transcript of TEST_TRANSCRIPTS) {
@@ -93,7 +93,7 @@ export function AiExampleBenchmarkPanel({
 
         model.resetConversation();
         await new Promise(r => setTimeout(r, 200));
-      } catch (e: any) {
+      } catch (e: unknown) {
         results.push({
           transcript,
           success: false,
@@ -101,7 +101,7 @@ export function AiExampleBenchmarkPanel({
           tokensPerSecond: 0,
           completionTokens: 0,
           timeToFirstToken: 0,
-          rawResponse: `Error: ${e.message}`,
+          rawResponse: `Error: ${e instanceof Error ? e.message : String(e)}`,
           parsed: null,
         });
 

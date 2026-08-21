@@ -1,8 +1,6 @@
 import { BulkEntryGrid } from '@/src/features/journal/entry/components/BulkEntryGrid';
-import {
-  SavedJournalSummary,
-  useBulkJournalEditor,
-} from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,

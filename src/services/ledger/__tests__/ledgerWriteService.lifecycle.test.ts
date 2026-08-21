@@ -12,7 +12,7 @@ import {
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Journal from '@/src/data/models/Journal';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -29,13 +29,13 @@ describe('ledgerWriteService lifecycle', () => {
       await database.unsafeResetDatabase();
     });
 
-    const cash = await accountRepository.create({
+    const cash = await accountWriteRepository.create({
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId,
     });
-    const expense = await accountRepository.create({
+    const expense = await accountWriteRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',

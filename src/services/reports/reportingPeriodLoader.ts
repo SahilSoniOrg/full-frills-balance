@@ -1,5 +1,5 @@
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   convertReportTransactions,
   getScopedReportingDeltas,
@@ -66,7 +66,7 @@ export async function loadReportingPeriodData(
   const [rawAccountRows, rawDailyRows, transactions] = await Promise.all([
     transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, allIds, startDate, endDate),
     transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, allIds, startDate, endDate),
-    transactionRepository.findByAccountsAndDateRange(workplaceId, allIds, startDate, endDate),
+    transactionQueryRepository.findByAccountsAndDateRange(workplaceId, allIds, startDate, endDate),
   ]);
 
   const convertedTransactions = await convertReportTransactions(

@@ -1,5 +1,8 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
-import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
+import type {
+  JournalActiveModal,
+  JournalListModalsProps,
+} from '@/src/features/journal/types/modals';
 import { useSelection } from '@/src/hooks/useSelection';
 import {
   bulkChangeJournalAccount as bulkChangeJournalAccountCommand,
@@ -12,12 +15,6 @@ import {
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo, useState } from 'react';
-
-export type JournalActiveModal =
-  | { type: 'bulkRename'; journals: EnrichedJournal[] }
-  | { type: 'merge'; journalIds: JournalId[] }
-  | { type: 'bulkChangeAccount'; journalIds: JournalId[] }
-  | null;
 
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;

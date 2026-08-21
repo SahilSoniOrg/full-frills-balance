@@ -76,7 +76,6 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
-              console.log('[Toast] Action pressed:', toast.action?.label);
               toast.action?.onPress();
             }}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}

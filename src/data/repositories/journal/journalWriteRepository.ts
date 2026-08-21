@@ -236,7 +236,7 @@ export class JournalWriteRepository {
         j.totalAmount = totalAmount ?? j.totalAmount;
         j.transactionCount = transactionData.length;
         j.displayType = displayType ?? j.displayType;
-        (j as any)._setRaw('updated_at', Date.now());
+        j.updatedAt = now;
       });
 
       const batchOps: Model[] = [journalUpdate, ...deleteUpdates, ...createUpdates];

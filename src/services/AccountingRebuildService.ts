@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -75,7 +75,7 @@ export class AccountingRebuildService {
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountQueryRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
 
     const precision = await currencyReadService.getPrecision(account.currencyCode);

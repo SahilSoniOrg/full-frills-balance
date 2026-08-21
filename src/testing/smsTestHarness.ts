@@ -11,7 +11,7 @@ import {
   TransactionType,
   WorkplaceId,
 } from '@/src/types/domain';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
@@ -37,13 +37,13 @@ export async function seedSmsTestAccounts(workplaceId: WorkplaceId = SMS_TEST_WO
   cashId: string;
   expenseId: string;
 }> {
-  const cash = await accountRepository.create({
+  const cash = await accountWriteRepository.create({
     name: 'Cash',
     accountType: AccountType.ASSET,
     currencyCode: 'INR',
     workplaceId,
   });
-  const expense = await accountRepository.create({
+  const expense = await accountWriteRepository.create({
     name: 'Food',
     accountType: AccountType.EXPENSE,
     currencyCode: 'INR',

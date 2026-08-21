@@ -1,7 +1,7 @@
 import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceService } from '@/src/services/BalanceService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -11,8 +11,8 @@ import dayjs from 'dayjs';
 // Mock dependencies
 jest.mock('@/src/services/currencyConversion');
 jest.mock('@/src/services/exchange-rate-service');
-jest.mock('@/src/data/repositories/AccountRepository');
-jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/account');
+jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
@@ -37,7 +37,7 @@ describe('WealthService', () => {
     (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
       Promise.resolve({ convertedAmount: amount, rate: 1 }),
     );
-    (accountRepository.findAll as jest.Mock).mockResolvedValue([]);
+    (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
   describe('calculateSummary', () => {
@@ -144,7 +144,7 @@ describe('WealthService', () => {
           currencyCode: 'USD',
         },
       ];
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -179,7 +179,7 @@ describe('WealthService', () => {
         },
         { id: 'child1', name: 'Child', accountType: AccountType.ASSET, parentAccountId: 'parent1' },
       ];
-      (accountRepository.findAll as jest.Mock).mockResolvedValue(mockAccounts);
+      (accountQueryRepository.findAll as jest.Mock).mockResolvedValue(mockAccounts);
 
       const mockBalances = [
         {
@@ -191,7 +191,7 @@ describe('WealthService', () => {
         { accountId: 'child1', accountType: AccountType.ASSET, balance: 1500, currencyCode: 'USD' }, // Leaf
       ];
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const history = await wealthService.getNetWorthHistory(
         'workplace-1' as WorkplaceId,

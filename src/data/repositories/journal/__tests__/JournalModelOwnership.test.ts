@@ -10,10 +10,10 @@ import {
   WorkplaceId,
 } from '@/src/types/domain';
 import Transaction from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 
 const WORKPLACE_ONE = 'wp-journal-owner-one' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-journal-owner-two' as WorkplaceId;
@@ -32,19 +32,19 @@ describe('journal model-instance writer workplace ownership', () => {
       await database.unsafeResetDatabase();
     });
 
-    const workplaceOneAccount = await accountRepository.create({
+    const workplaceOneAccount = await accountWriteRepository.create({
       workplaceId: WORKPLACE_ONE,
       name: 'Workplace One Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
     });
-    const workplaceOneReplacementAccount = await accountRepository.create({
+    const workplaceOneReplacementAccount = await accountWriteRepository.create({
       workplaceId: WORKPLACE_ONE,
       name: 'Workplace One Replacement',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
     });
-    const workplaceTwoAccount = await accountRepository.create({
+    const workplaceTwoAccount = await accountWriteRepository.create({
       workplaceId: WORKPLACE_TWO,
       name: 'Workplace Two Account',
       accountType: AccountType.ASSET,
@@ -84,11 +84,11 @@ describe('journal model-instance writer workplace ownership', () => {
       WORKPLACE_TWO,
     );
 
-    [workplaceOneTransaction] = await transactionRepository.findByJournal(
+    [workplaceOneTransaction] = await transactionQueryRepository.findByJournal(
       WORKPLACE_ONE,
       workplaceOneJournal.id,
     );
-    [workplaceTwoTransaction] = await transactionRepository.findByJournal(
+    [workplaceTwoTransaction] = await transactionQueryRepository.findByJournal(
       WORKPLACE_TWO,
       workplaceTwoJournal.id,
     );

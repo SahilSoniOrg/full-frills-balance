@@ -1,6 +1,6 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { SavedJournalSummary } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 

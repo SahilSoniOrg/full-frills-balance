@@ -6,7 +6,7 @@ import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { memo, useMemo } from 'react';
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
 export type AppTextProps = TextProps & {
   variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero';
@@ -95,7 +95,7 @@ export const AppText = memo(function AppText({
       textAlign: align,
       fontFamily: resolvedFontFamily,
       fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
-      fontVariant: (tabular ? ['tabular-nums'] : []) as any,
+      fontVariant: tabular ? (['tabular-nums'] as TextStyle['fontVariant']) : undefined,
       ...Typography.androidDefaults,
     };
 

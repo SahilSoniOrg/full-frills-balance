@@ -13,7 +13,7 @@ export const SafeToSpendPreferenceView = ({ days, onChange }: SafeToSpendPrefere
   const options = [
     { id: 30, label: '30 Days' },
     { id: 60, label: '60 Days' },
-  ] as const;
+  ];
 
   return (
     <Stack space="md" paddingHorizontal="md" paddingVertical="md">
@@ -28,7 +28,7 @@ export const SafeToSpendPreferenceView = ({ days, onChange }: SafeToSpendPrefere
 
       <Box>
         <AppSegmentedControl
-          options={options as any}
+          options={options}
           value={days}
           onChange={val => onChange(Number(val))}
           flex={true}

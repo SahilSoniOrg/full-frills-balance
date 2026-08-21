@@ -47,7 +47,7 @@ const AccountPickerRow = React.memo(
         title={item.name}
         accessibilityLabel={item.name}
         testID={`account-picker-option-${item.id}`}
-        titleColor={getAccountVariant(item.accountType) as any}
+        titleColor={getAccountVariant(item.accountType)}
         subtitle={subtitle}
         onPress={onPress}
         background={isSelected ? 'surfaceSecondary' : 'transparent'}
@@ -172,8 +172,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
     [isSearchMode, searchQuery, onCreateRequest, onClose, theme],
   );
   const renderSectionHeader = useCallback(
-    ({ section }: { section: any }) => {
-      const { title, data, type, key } = section as AccountSection;
+    ({ section }: { section: AccountSection }) => {
+      const { title, data, type, key } = section;
       const isCollapsed = collapsedSections.has(key) && !isSearchMode;
       return (
         <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
@@ -224,8 +224,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
     [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
   );
   const renderItem = useCallback(
-    ({ item, section }: { item: AccountFields | PlainAccount; section: any }) => {
-      const { key } = section as AccountSection;
+    ({ item, section }: { item: AccountFields | PlainAccount; section: AccountSection }) => {
+      const { key } = section;
       if (collapsedSections.has(key) && !isSearchMode) return null;
       return (
         <AccountPickerRow

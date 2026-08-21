@@ -124,8 +124,8 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
             {(() => {
               const flatCommitted = (committedBreakdown || []).flatMap(acc =>
                 (acc?.details || [])
-                  .filter((d: any) => d.amount !== 0)
-                  .map((d: any) => ({
+                  .filter(d => d.amount !== 0)
+                  .map(d => ({
                     ...d,
                     accountName: acc.accountName,
                   })),

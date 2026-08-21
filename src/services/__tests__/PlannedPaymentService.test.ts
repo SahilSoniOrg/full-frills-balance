@@ -27,8 +27,10 @@ jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalPlannedModule');
-jest.mock('@/src/data/repositories/TransactionRepository', () => ({
-  transactionRepository: {
+jest.mock('@/src/data/repositories/transaction', () => ({
+  ...jest.requireActual('@/src/data/repositories/transaction'),
+
+  transactionQueryRepository: {
     findByJournal: jest.fn().mockResolvedValue([]),
   },
 }));

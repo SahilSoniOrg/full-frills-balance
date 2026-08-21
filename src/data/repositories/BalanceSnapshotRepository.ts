@@ -155,7 +155,7 @@ export class BalanceSnapshotRepository {
           const tx = await transactionsTable.find(snap.transactionId);
           if (tx && tx.workplaceId === workplaceId && !tx.deletedAt) {
             txCreatedAt =
-              tx.createdAt instanceof Date ? tx.createdAt.getTime() : (tx.createdAt as any);
+              tx.createdAt instanceof Date ? tx.createdAt.getTime() : Number(tx.createdAt || 0);
           }
         } catch {
           // Transaction not found or deleted
@@ -170,9 +170,9 @@ export class BalanceSnapshotRepository {
         absoluteBalance: snap.absoluteBalance,
         transactionCount: snap.transactionCount,
         createdAt:
-          snap.createdAt instanceof Date ? snap.createdAt.getTime() : (snap.createdAt as any),
+          snap.createdAt instanceof Date ? snap.createdAt.getTime() : Number(snap.createdAt || 0),
         updatedAt:
-          snap.updatedAt instanceof Date ? snap.updatedAt.getTime() : (snap.updatedAt as any),
+          snap.updatedAt instanceof Date ? snap.updatedAt.getTime() : Number(snap.updatedAt || 0),
         transactionCreatedAt: txCreatedAt,
       });
     }
