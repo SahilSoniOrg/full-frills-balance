@@ -10,6 +10,7 @@
  */
 
 import { cashewPlugin } from '@/src/services/import/plugins/cashew-plugin';
+import { csvPlugin } from '@/src/services/import/plugins/csv-plugin';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importRegistry } from '@/src/services/import/registry';
@@ -18,6 +19,7 @@ import { importRegistry } from '@/src/services/import/registry';
 importRegistry.register(nativePlugin);
 importRegistry.register(ivyPlugin);
 importRegistry.register(cashewPlugin);
+importRegistry.register(csvPlugin);
 
 // Re-export public API
 export {

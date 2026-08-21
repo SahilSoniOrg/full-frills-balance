@@ -220,12 +220,12 @@ describe('IvyImportPlugin', () => {
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2);
 
-      // Check if exchange rate was calculated (100 USD / 85 EUR)
+      // Check if exchange rate was calculated (85 EUR / 100 USD = 0.85)
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const debitTx = lastBatch.transactions.find(
         (t: any) => t.transactionType === 'DEBIT' && t.exchangeRate !== undefined,
       );
-      expect(debitTx.exchangeRate).toBeCloseTo(100 / 85);
+      expect(debitTx.exchangeRate).toBeCloseTo(85 / 100);
       expect(debitTx.currencyCode).toBe('EUR');
     });
 
@@ -478,7 +478,7 @@ describe('IvyImportPlugin', () => {
       expect(incomeCredit.accountId).toBe(unknownIncomeAcc.id);
     });
 
-    it('creates distinct expense and income accounts when a single category is shared across types', async () => {
+    it('creates a single unified category account when a valid category is shared across types', async () => {
       const dataWithSharedCategory = {
         ...validIvyData,
         categories: [{ id: 'ivy-c-misc', name: 'Miscellaneous', color: 0, icon: 'misc-icon' }],
@@ -506,31 +506,27 @@ describe('IvyImportPlugin', () => {
       const stats = await importService.executeImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
-      const miscExpenseAcc = lastBatch.accounts.find(
-        (a: any) => a.name === 'Miscellaneous Expense (USD)' && a.accountType === 'EXPENSE',
-      );
-      const miscIncomeAcc = lastBatch.accounts.find(
-        (a: any) => a.name === 'Miscellaneous Income (USD)' && a.accountType === 'INCOME',
+      const miscAccounts = lastBatch.accounts.filter((a: any) =>
+        a.name.startsWith('Miscellaneous'),
       );
 
-      expect(miscExpenseAcc).toBeDefined();
-      expect(miscIncomeAcc).toBeDefined();
-      expect(miscExpenseAcc.id).not.toBe(miscIncomeAcc.id);
+      // Exactly ONE account for the valid category
+      expect(miscAccounts).toHaveLength(1);
+      expect(miscAccounts[0].name).toBe('Miscellaneous (USD)');
       expect(stats.transactions).toBe(4);
 
-      // Verify the expense transaction points to the expense account
+      // Verify both expense and income legs point to the single category account
       const expenseLegs = lastBatch.transactions.filter(
         (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 30).id,
       );
       const expenseDebit = expenseLegs.find((t: any) => t.transactionType === 'DEBIT');
-      expect(expenseDebit.accountId).toBe(miscExpenseAcc.id);
+      expect(expenseDebit.accountId).toBe(miscAccounts[0].id);
 
-      // Verify the income transaction points to the income account
       const incomeLegs = lastBatch.transactions.filter(
         (t: any) => t.journalId === lastBatch.journals.find((j: any) => j.totalAmount === 200).id,
       );
       const incomeCredit = incomeLegs.find((t: any) => t.transactionType === 'CREDIT');
-      expect(incomeCredit.accountId).toBe(miscIncomeAcc.id);
+      expect(incomeCredit.accountId).toBe(miscAccounts[0].id);
     });
   });
 });

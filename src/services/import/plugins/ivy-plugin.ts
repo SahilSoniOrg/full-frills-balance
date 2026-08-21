@@ -1,36 +1,11 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  BudgetId,
-  EMPTY_ACCOUNT_ID,
-  JournalDisplayType,
-  JournalId,
-  PlannedPaymentId,
-  JournalStatus,
-  PlannedPaymentStatus,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/domain';
 import type { IconName } from '@/src/types/domainIcons';
-/**
- * Ivy Wallet Import Plugin
- *
- * Handles import of Ivy Wallet backup format.
- * Refactored from ivy-import-service.ts to implement ImportPlugin interface.
- */
-
-import { generator as generateId } from '@/src/data/database/idGenerator';
-
+import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import {
-  ImportedAccount,
-  ImportedBudget,
-  ImportedBudgetScope,
-  ImportedJournal,
-  ImportedPlannedPayment,
-  ImportedTransaction,
-} from '@/src/data/repositories/importTypes';
-import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
-import { getOrCreateSystemEquityAccount } from '@/src/services/import/plugins/importPluginHelpers';
+  advanceOccurrence,
+  parseSerializedIds,
+  parseTimestampMs,
+} from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { logger } from '@/src/utils/logger';
 
@@ -71,7 +46,7 @@ interface IvyCategory {
 
 interface IvyTransaction {
   id: string;
-  accountId: AccountId;
+  accountId: string;
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
   amount: number;
   toAccountId?: string;
@@ -82,17 +57,17 @@ interface IvyTransaction {
   categoryId?: string;
   isDeleted?: boolean;
   dueDate?: string | number;
-  recurringRuleId?: PlannedPaymentId;
+  recurringRuleId?: string;
 }
 
 interface IvyPlannedPaymentRule {
-  id: PlannedPaymentId;
+  id: string;
   startDate?: string;
   intervalN?: number;
   intervalType?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
   oneTime: boolean;
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
-  accountId: AccountId;
+  accountId: string;
   amount: number;
   categoryId?: string;
   title?: string;
@@ -111,75 +86,6 @@ interface IvyData {
   plannedPaymentRules?: IvyPlannedPaymentRule[];
 }
 
-/**
- * Robustly parse serialized Ivy IDs which can be either a JSON array
- * or a raw ID string.
- */
-function parseSerializedIds(serialized?: string): string[] {
-  if (!serialized) return [];
-  try {
-    const parsed = JSON.parse(serialized);
-    if (Array.isArray(parsed)) return parsed;
-    return [String(parsed)];
-  } catch {
-    // If it's not JSON, it might be a raw ID string
-    return [serialized];
-  }
-}
-
-/**
- * Calculates the next occurrence based on interval and recurrence rules.
- * Recurrence logic aligned with planned-payment modules (interval + midnight normalization).
- */
-function advanceOccurrence(
-  current: number,
-  intervalN: number,
-  intervalType: string,
-  recurrenceDay?: number,
-  recurrenceMonth?: number,
-): number {
-  const date = new Date(current);
-  date.setHours(0, 0, 0, 0);
-
-  switch (intervalType) {
-    case 'DAILY':
-      date.setDate(date.getDate() + intervalN);
-      break;
-    case 'WEEKLY':
-      date.setDate(date.getDate() + intervalN * 7);
-      if (recurrenceDay !== undefined && recurrenceDay !== null) {
-        const currentDay = date.getDay();
-        const diff = (recurrenceDay - currentDay + 7) % 7;
-        date.setDate(date.getDate() + diff);
-      }
-      break;
-    case 'MONTHLY':
-      {
-        const targetDay = recurrenceDay ?? date.getDate();
-        date.setDate(1);
-        date.setMonth(date.getMonth() + intervalN);
-        const lastDayOfTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-        date.setDate(Math.min(targetDay, lastDayOfTargetMonth));
-      }
-      break;
-    case 'YEARLY':
-      {
-        const targetMonth =
-          recurrenceMonth !== undefined && recurrenceMonth !== null
-            ? recurrenceMonth - 1
-            : date.getMonth();
-        const targetDay = recurrenceDay ?? date.getDate();
-        date.setFullYear(date.getFullYear() + intervalN);
-        date.setDate(1);
-        date.setMonth(targetMonth);
-        const lastDayOfTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-        date.setDate(Math.min(targetDay, lastDayOfTargetMonth));
-      }
-      break;
-  }
-  return date.getTime();
-}
-
 export const ivyPlugin: ImportPlugin = {
   id: 'ivy',
   name: 'Ivy Wallet Backup',
@@ -190,9 +96,6 @@ export const ivyPlugin: ImportPlugin = {
     if (!context.json || typeof context.json !== 'object') return false;
 
     const obj = context.json as Record<string, unknown>;
-
-    // Ivy format has accounts, categories, and transactions
-    // The presence of 'categories' is the strongest differentiator from native format
     const hasAccounts = Array.isArray(obj.accounts);
     const hasCategories = Array.isArray(obj.categories);
     const hasTransactions = Array.isArray(obj.transactions);
@@ -214,67 +117,6 @@ export const ivyPlugin: ImportPlugin = {
     }
     const data: IvyData = context.json as IvyData;
 
-    const UNKNOWN_EXPENSE_CATEGORY_ID = 'ivy-unknown-expense-category';
-    const UNKNOWN_INCOME_CATEGORY_ID = 'ivy-unknown-income-category';
-    let needsUnknownExpenseCategory = false;
-    let needsUnknownIncomeCategory = false;
-
-    data.transactions.forEach(tx => {
-      if (!tx.title && !tx.description) {
-        tx.title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1).toLowerCase();
-      }
-      if (tx.type !== 'TRANSFER' && !tx.categoryId) {
-        if (tx.type === 'INCOME') {
-          tx.categoryId = UNKNOWN_INCOME_CATEGORY_ID;
-          needsUnknownIncomeCategory = true;
-        } else {
-          tx.categoryId = UNKNOWN_EXPENSE_CATEGORY_ID;
-          needsUnknownExpenseCategory = true;
-        }
-      }
-    });
-
-    if (data.plannedPaymentRules) {
-      data.plannedPaymentRules.forEach(rule => {
-        if (!rule.title && !rule.description) {
-          rule.title = rule.type.charAt(0).toUpperCase() + rule.type.slice(1).toLowerCase();
-        }
-        if (rule.type !== 'TRANSFER' && !rule.categoryId) {
-          if (rule.type === 'INCOME') {
-            rule.categoryId = UNKNOWN_INCOME_CATEGORY_ID;
-            needsUnknownIncomeCategory = true;
-          } else {
-            rule.categoryId = UNKNOWN_EXPENSE_CATEGORY_ID;
-            needsUnknownExpenseCategory = true;
-          }
-        }
-      });
-    }
-
-    if (
-      needsUnknownExpenseCategory &&
-      !data.categories.some(c => c.id === UNKNOWN_EXPENSE_CATEGORY_ID)
-    ) {
-      data.categories.push({
-        id: UNKNOWN_EXPENSE_CATEGORY_ID,
-        name: 'Unknown Expense',
-        color: -984833, // Default grey color
-        icon: 'help-circle',
-      });
-    }
-
-    if (
-      needsUnknownIncomeCategory &&
-      !data.categories.some(c => c.id === UNKNOWN_INCOME_CATEGORY_ID)
-    ) {
-      data.categories.push({
-        id: UNKNOWN_INCOME_CATEGORY_ID,
-        name: 'Unknown Income',
-        color: -984833, // Default grey color
-        icon: 'help-circle',
-      });
-    }
-
     onProgress?.('Parsing backup data...', 0.05);
     logger.info(
       `[IvyPlugin] Parsing backup: ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions`,
@@ -291,150 +133,24 @@ export const ivyPlugin: ImportPlugin = {
       );
     }
 
-    const accountImports: ImportedAccount[] = [];
-
-    // 2. Pre-Scan Transactions for Category Usage (Per Currency & Type)
-    onProgress?.('Analyzing categories...', 0.1);
-    interface CategoryStat {
-      count: number;
-      type: AccountType;
-    }
-
-    const categoryUsageMap = new Map<string, CategoryStat>();
-    const categoryCurrencies = new Map<string, Set<string>>();
-    const categoryTypeUsages = new Map<string, Set<AccountType>>();
+    const builder = new CanonicalImportBuilder(ivyBaseCurrency);
+    builder.setMetadata({
+      preferences: { userName: ivyUserName },
+      workplace: {
+        name: ivyUserName,
+        defaultCurrencyCode: ivyBaseCurrency,
+      },
+      pluginId: 'ivy',
+    });
 
     const rawIvyAccountCurrency = new Map<string, string>();
     data.accounts.forEach(a => {
       rawIvyAccountCurrency.set(a.id, a.currency || ivyBaseCurrency);
     });
 
-    data.transactions.forEach(tx => {
-      if (tx.isDeleted) return;
-      if (tx.dueDate) return;
-      if (!tx.categoryId) return;
-      if (tx.type === 'TRANSFER') return;
-
-      let currency = ivyBaseCurrency;
-      if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
-        currency = rawIvyAccountCurrency.get(tx.accountId)!;
-      }
-
-      const usageType = tx.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
-      const key = `${tx.categoryId}:::${currency}:::${usageType}`;
-
-      if (!categoryUsageMap.has(key)) {
-        categoryUsageMap.set(key, { count: 0, type: usageType });
-      }
-      categoryUsageMap.get(key)!.count++;
-
-      if (!categoryCurrencies.has(tx.categoryId)) {
-        categoryCurrencies.set(tx.categoryId, new Set());
-      }
-      categoryCurrencies.get(tx.categoryId)!.add(currency);
-
-      if (!categoryTypeUsages.has(tx.categoryId)) {
-        categoryTypeUsages.set(tx.categoryId, new Set());
-      }
-      categoryTypeUsages.get(tx.categoryId)!.add(usageType);
-    });
-
-    // Add categories from budgets to ensure accounts are created for them
-    if (data.budgets) {
-      data.budgets.forEach(budget => {
-        if (budget.isDeleted || !budget.categoryIdsSerialized) return;
-        const catIds = parseSerializedIds(budget.categoryIdsSerialized);
-        catIds.forEach(catId => {
-          const usageType = AccountType.EXPENSE;
-          const key = `${catId}:::${ivyBaseCurrency}:::${usageType}`;
-          if (!categoryUsageMap.has(key)) {
-            categoryUsageMap.set(key, { count: 0, type: usageType });
-          }
-          if (!categoryCurrencies.has(catId)) {
-            categoryCurrencies.set(catId, new Set());
-          }
-          categoryCurrencies.get(catId)!.add(ivyBaseCurrency);
-
-          if (!categoryTypeUsages.has(catId)) {
-            categoryTypeUsages.set(catId, new Set());
-          }
-          categoryTypeUsages.get(catId)!.add(usageType);
-        });
-      });
-    }
-
-    // Add categories from planned payment rules
-    if (data.plannedPaymentRules) {
-      data.plannedPaymentRules.forEach(rule => {
-        if (rule.isDeleted || !rule.categoryId) return;
-        if (rule.type === 'TRANSFER') return;
-
-        let currency = ivyBaseCurrency;
-        if (rule.accountId && rawIvyAccountCurrency.has(rule.accountId)) {
-          currency = rawIvyAccountCurrency.get(rule.accountId)!;
-        }
-
-        const usageType = rule.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
-        const key = `${rule.categoryId}:::${currency}:::${usageType}`;
-        if (!categoryUsageMap.has(key)) {
-          categoryUsageMap.set(key, { count: 0, type: usageType });
-        }
-        categoryUsageMap.get(key)!.count++;
-
-        if (!categoryCurrencies.has(rule.categoryId)) {
-          categoryCurrencies.set(rule.categoryId, new Set());
-        }
-        categoryCurrencies.get(rule.categoryId)!.add(currency);
-
-        if (!categoryTypeUsages.has(rule.categoryId)) {
-          categoryTypeUsages.set(rule.categoryId, new Set());
-        }
-        categoryTypeUsages.get(rule.categoryId)!.add(usageType);
-      });
-    }
-
-    // 3. Create Accounts
+    // 2. Register Accounts
     onProgress?.('Preparing accounts...', 0.2);
-    const accountMap = new Map<string, AccountId>();
-    const accountCurrencyMap = new Map<AccountId, string>();
-    const categoryAccountMap = new Map<string, AccountId>();
-    const journalMap = new Map<string, string>();
-    const plannedPaymentMap = new Map<string, PlannedPaymentId>();
-
-    data.accounts.forEach(a => {
-      const balanceId = generateId() as AccountId;
-      accountMap.set(a.id, balanceId);
-      accountCurrencyMap.set(balanceId, a.currency || ivyBaseCurrency);
-    });
-
-    for (const key of categoryUsageMap.keys()) {
-      const balanceId = generateId() as AccountId;
-      const [, currency] = key.split(':::');
-      categoryAccountMap.set(key, balanceId);
-      accountCurrencyMap.set(balanceId, currency);
-    }
-
-    // 4. Prepare ALL accounts for sorting
-    interface PendingAccount {
-      id: string;
-      name: string;
-      currency: string;
-      type: AccountType;
-      description: string;
-      icon?: string;
-      isOriginal: boolean;
-    }
-
-    const allPendingAccounts: PendingAccount[] = [];
-    const ivyCategoryLookup = new Map<string, IvyCategory>();
-    data.categories.forEach(c => ivyCategoryLookup.set(c.id, c));
-
-    // Add Original Accounts
     data.accounts.forEach(ivyAcc => {
-      const id = accountMap.get(ivyAcc.id)!;
-      const description = ivyAcc.archived
-        ? '[ARCHIVED] ' + (ivyAcc.name || '')
-        : 'Imported from Ivy Wallet';
       const cat = ivyAcc.accountCategory || 'ASSET';
       let mappedType = AccountType.ASSET;
       if (cat === 'LIABILITY') mappedType = AccountType.LIABILITY;
@@ -442,141 +158,75 @@ export const ivyPlugin: ImportPlugin = {
       else if (cat === 'INCOME') mappedType = AccountType.INCOME;
       else if (cat === 'EXPENSE') mappedType = AccountType.EXPENSE;
 
-      allPendingAccounts.push({
-        id,
+      builder.addAccount({
+        id: ivyAcc.id,
         name: ivyAcc.name,
-        currency: ivyAcc.currency || ivyBaseCurrency,
-        type: mappedType,
-        description,
-        icon: ivyAcc.icon,
-        isOriginal: true,
+        currencyCode: ivyAcc.currency || ivyBaseCurrency,
+        accountType: mappedType,
+        description: ivyAcc.archived
+          ? '[ARCHIVED] ' + (ivyAcc.name || '')
+          : 'Imported from Ivy Wallet',
+        icon: ivyAcc.icon as IconName,
       });
     });
 
-    // Add Category Accounts
-    for (const [key, { type }] of categoryUsageMap.entries()) {
-      const [categoryId, currency] = key.split(':::');
-      const ivyCat = ivyCategoryLookup.get(categoryId);
-      if (!ivyCat) continue;
-
-      const id = categoryAccountMap.get(key)!;
-      const hasBothTypes = (categoryTypeUsages.get(categoryId)?.size ?? 0) > 1;
-
-      let baseName = ivyCat.name;
-      if (categoryId === UNKNOWN_EXPENSE_CATEGORY_ID) {
-        baseName = 'Unknown Expense';
-      } else if (categoryId === UNKNOWN_INCOME_CATEGORY_ID) {
-        baseName = 'Unknown Income';
-      } else if (hasBothTypes) {
-        baseName = type === AccountType.INCOME ? `${ivyCat.name} Income` : `${ivyCat.name} Expense`;
-      }
-
-      const name = `${baseName} (${currency})`;
-
-      allPendingAccounts.push({
-        id,
-        name,
-        currency,
-        type,
-        description: 'Imported Category',
-        icon: ivyCat.icon,
-        isOriginal: false,
-      });
-    }
-
-    // Sort Accounts
-    allPendingAccounts.sort((a, b) => {
-      if (a.isOriginal && !b.isOriginal) return -1;
-      if (!a.isOriginal && b.isOriginal) return 1;
-
-      if (!a.isOriginal && !b.isOriginal) {
-        const nameCompare = a.name.localeCompare(b.name);
-        if (nameCompare !== 0) return nameCompare;
-        return a.currency.localeCompare(b.currency);
-      }
-
-      return 0;
-    });
-
-    // Create account actions
-    allPendingAccounts.forEach((acc, index) => {
-      accountImports.push({
-        id: acc.id,
-        name: acc.name,
-        accountType: acc.type,
-        currencyCode: acc.currency,
-        description: acc.description,
-        icon: acc.icon as IconName,
-        orderNum: index + 1,
+    // 3. Register Categories
+    const ivyCategoryLookup = new Map<string, IvyCategory>();
+    data.categories.forEach(c => {
+      ivyCategoryLookup.set(c.id, c);
+      builder.registerCategory({
+        id: c.id,
+        name: c.name,
+        icon: c.icon as IconName,
+        color: c.color,
       });
     });
 
-    // 5. Map Planned Payments (Pre-pass to establish ID mappings for journals)
+    // 4. Map Planned Payment Rules
     onProgress?.('Mapping planned payments...', 0.3);
-    const plannedPaymentImports: ImportedPlannedPayment[] = [];
-    const mapIvyInterval = (ivyInterval?: string): string => {
+    const mapIvyInterval = (ivyInterval?: string): PlannedPaymentInterval => {
       switch (ivyInterval) {
         case 'DAY':
-          return 'DAILY';
+          return PlannedPaymentInterval.DAILY;
         case 'WEEK':
-          return 'WEEKLY';
+          return PlannedPaymentInterval.WEEKLY;
         case 'MONTH':
-          return 'MONTHLY';
+          return PlannedPaymentInterval.MONTHLY;
         case 'YEAR':
-          return 'YEARLY';
+          return PlannedPaymentInterval.YEARLY;
         default:
-          return 'MONTHLY';
+          return PlannedPaymentInterval.MONTHLY;
       }
     };
 
-    const allRules = data.plannedPaymentRules || [];
-    if (allRules.length > 0) {
-      allRules.forEach(rule => {
+    if (data.plannedPaymentRules) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const today = now.getTime();
+
+      data.plannedPaymentRules.forEach(rule => {
         if (rule.isDeleted) return;
 
-        const fromAccountId = accountMap.get(rule.accountId);
-        if (!fromAccountId) {
-          logger.warn(
-            `[IvyPlugin] Skipping rule ${rule.id} (${rule.title}): Missing fromAccountId ${rule.accountId}`,
-          );
-          return;
-        }
-
-        const newRuleId = generateId() as PlannedPaymentId;
-        plannedPaymentMap.set(rule.id, newRuleId);
-
-        let currencyCode = accountCurrencyMap.get(fromAccountId) || ivyBaseCurrency;
-        let toAccountId = rule.toAccountId ? accountMap.get(rule.toAccountId) : undefined;
         const intervalType = mapIvyInterval(rule.intervalType);
         const startDate = rule.startDate ? new Date(rule.startDate).getTime() : Date.now();
         const startLocalDate = new Date(startDate);
         const recurrenceDay = startLocalDate.getDate();
-        const recurrenceMonth = startLocalDate.getMonth() + 1; // 1-indexed
+        const recurrenceMonth = startLocalDate.getMonth() + 1;
 
-        // Normalize occurrence date to midnight to align with planned-payment recurrence.
         const normalizedNextOcc = new Date(startDate);
         normalizedNextOcc.setHours(0, 0, 0, 0);
         let finalNextOcc = normalizedNextOcc.getTime();
 
-        // Advance to future logic
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const today = now.getTime();
-
         if (rule.oneTime) {
-          if (finalNextOcc < today) {
-            logger.info(
-              `[IvyPlugin] Skipping one-time rule ${rule.id} (${rule.title}) in the past: ${new Date(finalNextOcc).toLocaleDateString()}`,
-            );
-            return;
-          }
+          if (finalNextOcc < today) return;
         } else if (finalNextOcc < today) {
           let safetyCap = 0;
+          const intervalName = rule.intervalType ? `${rule.intervalType}LY` : 'MONTHLY';
           while (finalNextOcc < today && safetyCap < 1000) {
             finalNextOcc = advanceOccurrence(
               finalNextOcc,
               rule.intervalN || 1,
-              intervalType,
+              intervalName,
               recurrenceDay,
               recurrenceMonth,
             );
@@ -584,50 +234,18 @@ export const ivyPlugin: ImportPlugin = {
           }
         }
 
-        if (rule.categoryId) {
-          const ruleUsageType = rule.type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE;
-          const key = `${rule.categoryId}:::${currencyCode}:::${ruleUsageType}`;
-          const catAccId = categoryAccountMap.get(key);
-          if (catAccId) {
-            if (rule.type === 'INCOME') {
-              const catFrom = catAccId;
-              plannedPaymentImports.push({
-                id: newRuleId,
-                name: rule.title || 'Income Rule',
-                description: rule.description,
-                amount: Math.abs(rule.amount),
-                currencyCode,
-                fromAccountId: catFrom,
-                toAccountId: fromAccountId,
-                intervalN: rule.intervalN || 1,
-                intervalType,
-                startDate,
-                nextOccurrence: finalNextOcc,
-                status: PlannedPaymentStatus.ACTIVE,
-                isAutoPost: false,
-                recurrenceDay,
-                recurrenceMonth,
-                endDate: rule.oneTime ? finalNextOcc : undefined,
-              });
-              return;
-            } else if (rule.type === 'EXPENSE') {
-              toAccountId = catAccId;
-            }
-          } else {
-            logger.warn(
-              `[IvyPlugin] Category account missing for rule ${rule.id} (${rule.title}), category: ${rule.categoryId}`,
-            );
-          }
-        }
+        const currencyCode =
+          (rule.accountId && rawIvyAccountCurrency.get(rule.accountId)) || ivyBaseCurrency;
 
-        plannedPaymentImports.push({
-          id: newRuleId,
+        builder.addPlannedPayment({
+          id: rule.id,
           name: rule.title || (rule.type === 'TRANSFER' ? 'Transfer Rule' : 'Payment Rule'),
           description: rule.description,
           amount: Math.abs(rule.amount),
           currencyCode,
-          fromAccountId,
-          toAccountId: toAccountId || EMPTY_ACCOUNT_ID,
+          fromAccountId: rule.accountId,
+          toAccountId: rule.type === 'TRANSFER' ? rule.toAccountId : rule.categoryId,
+          type: rule.type,
           intervalN: rule.intervalN || 1,
           intervalType,
           startDate,
@@ -641,319 +259,106 @@ export const ivyPlugin: ImportPlugin = {
       });
     }
 
-    // 6. Create Journals & Transactions
-    onProgress?.('Mapping transactions...', 0.4);
-    const journalImports: ImportedJournal[] = [];
-    const transactionImports: ImportedTransaction[] = [];
+    // 5. Ingest Transactions
+    onProgress?.('Mapping transactions...', 0.5);
     const skippedItems: { id: string; reason: string; description?: string }[] = [];
 
-    const totalTransactions = data.transactions.length;
-    for (let i = 0; i < totalTransactions; i++) {
-      if (i % 500 === 0) {
-        // Yield to UI thread every so often
-        onProgress?.(
-          `Processing transactions (${i} of ${totalTransactions})...`,
-          0.4 + (i / totalTransactions) * 0.5,
-        );
-        await new Promise(r => setTimeout(r, 0));
-      }
-
-      const tx = data.transactions[i];
+    data.transactions.forEach(tx => {
       const txDesc = tx.title || tx.description || 'Unknown Transaction';
 
       if (tx.isDeleted) {
         skippedItems.push({ id: tx.id, reason: 'Deleted', description: txDesc });
-        continue;
+        return;
       }
-
       if (tx.dueDate) {
         skippedItems.push({ id: tx.id, reason: 'Planned Payment', description: txDesc });
-        continue;
+        return;
       }
 
-      const journalId = generateId() as JournalId;
-      journalMap.set(tx.id, journalId);
-      const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
-
-      const description = tx.title || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
+      const timestamp = parseTimestampMs(tx.dateTime);
+      const title = tx.title || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
       const notes = tx.description;
 
-      // Check for special system transactions
-      const descLower = description.toLowerCase();
+      const descLower = title.toLowerCase();
       const catLower = tx.categoryId
         ? ivyCategoryLookup.get(tx.categoryId)?.name?.toLowerCase() || ''
         : '';
 
       const isOpeningBalance =
         descLower.includes('opening balance') || catLower.includes('opening balance');
-      const isAdjustBalance =
+      const isBalanceCorrection =
         descLower.includes('adjust balance') || catLower.includes('adjust balance');
 
-      let sourceId: AccountId | undefined;
-      let destId: AccountId | undefined;
-      let displayType: JournalDisplayType;
-      let currencyCode = ivyBaseCurrency;
+      const currencyCode =
+        (tx.accountId && rawIvyAccountCurrency.get(tx.accountId)) || ivyBaseCurrency;
 
-      if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
-        currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
-      }
-
-      const primaryAccId = accountMap.get(tx.accountId);
-      if (!primaryAccId) {
-        skippedItems.push({
-          id: tx.id,
-          reason: `Primary account not found: ${tx.accountId}`,
-          description: txDesc,
-        });
-        continue;
-      }
-
-      if (tx.type === 'TRANSFER' && tx.toAccountId) {
-        const sourceAccId = accountMap.get(tx.accountId);
-        const destAccId = accountMap.get(tx.toAccountId);
-        if (!sourceAccId || !destAccId) {
-          skippedItems.push({
-            id: tx.id,
-            reason: `Invalid Transfer Accounts - source: ${tx.accountId} (mapped: ${sourceAccId}), dest: ${tx.toAccountId} (mapped: ${destAccId})`,
-            description: txDesc,
-          });
-          continue;
-        }
-        sourceId = sourceAccId;
-        destId = destAccId;
-        displayType = JournalDisplayType.TRANSFER;
-      } else if (isOpeningBalance || isAdjustBalance) {
-        const equityAccountId = getOrCreateSystemEquityAccount({
-          isOpeningBalance,
-          currencyCode,
-          categoryAccountMap,
-          accountCurrencyMap,
-          accountImports,
-        });
-
-        // For INCOME (positive adjustment): money comes FROM equity TO account
-        // For EXPENSE (negative adjustment): money goes FROM account TO equity
-        if (tx.type === 'INCOME') {
-          sourceId = equityAccountId;
-          destId = accountMap.get(tx.accountId);
-          displayType = JournalDisplayType.INCOME;
-        } else {
-          sourceId = accountMap.get(tx.accountId);
-          destId = equityAccountId;
-          displayType = JournalDisplayType.EXPENSE;
-        }
-
-        if (!sourceId || !destId) {
-          skippedItems.push({
-            id: tx.id,
-            reason: `Missing account mapping for system tx - source: ${sourceId}, dest: ${destId}`,
-            description: txDesc,
-          });
-        }
-      } else if (tx.type === 'TRANSFER') {
-        // Fallback for transfer with missing toAccountId - should have been caught above but just in case
-        skippedItems.push({
-          id: tx.id,
-          reason: 'Transfer missing toAccountId',
-          description: txDesc,
-        });
-        continue;
-      } else if (tx.type === 'EXPENSE') {
-        const expenseKey = `${tx.categoryId}:::${currencyCode}:::${AccountType.EXPENSE}`;
-        sourceId = primaryAccId;
-        destId = categoryAccountMap.get(expenseKey);
-        displayType = JournalDisplayType.EXPENSE;
-        if (!destId) {
-          skippedItems.push({
-            id: tx.id,
-            reason: `Missing Category Account for Expense (${expenseKey})`,
-            description: txDesc,
-          });
-        }
-      } else {
-        // INCOME
-        const incomeKey = `${tx.categoryId}:::${currencyCode}:::${AccountType.INCOME}`;
-        sourceId = categoryAccountMap.get(incomeKey);
-        destId = primaryAccId;
-        displayType = JournalDisplayType.INCOME;
-        if (!sourceId) {
-          skippedItems.push({
-            id: tx.id,
-            reason: `Missing Category Account for Income (${incomeKey})`,
-            description: txDesc,
-          });
-        }
-      }
-
-      if (!sourceId || !destId) {
-        skippedItems.push({
-          id: tx.id,
-          reason: `Missing generic account mapping (source: ${sourceId}, dest: ${destId})`,
-          description: txDesc,
-        });
-        continue;
-      }
-
-      const amount = Math.abs(tx.amount);
-      const toAmount = tx.toAmount !== undefined ? Math.abs(tx.toAmount) : amount;
-
-      journalImports.push({
-        id: journalId,
-        journalDate: timestamp,
-        description,
+      builder.addTransaction({
+        id: tx.id,
+        date: timestamp,
+        amount: Math.abs(tx.amount),
+        targetAmount: tx.toAmount !== undefined ? Math.abs(tx.toAmount) : undefined,
+        currencyCode,
+        type: tx.type,
+        sourceAccountId: tx.accountId,
+        targetAccountId: tx.toAccountId,
+        categoryId: tx.categoryId,
+        description: title,
         notes,
-        currencyCode,
-        status: JournalStatus.POSTED,
-        totalAmount: amount,
-        transactionCount: 2,
-        displayType,
-        plannedPaymentId: tx.recurringRuleId
-          ? plannedPaymentMap.get(tx.recurringRuleId)
-          : undefined,
+        isOpeningBalance,
+        isBalanceCorrection,
       });
+    });
 
-      // Transaction 1: SOURCE (Credit)
-      transactionImports.push({
-        id: generateId() as TransactionId,
-        journalId,
-        transactionDate: timestamp,
-        accountId: sourceId!,
-        amount,
-        transactionType: TransactionType.CREDIT,
-        currencyCode,
+    // 6. Ingest Budgets
+    onProgress?.('Mapping budgets...', 0.9);
+    if (data.budgets) {
+      data.budgets.forEach(b => {
+        if (b.isDeleted) return;
+        const catIds = b.categoryIdsSerialized ? parseSerializedIds(b.categoryIdsSerialized) : [];
+        builder.addBudget({
+          id: b.id,
+          name: b.name,
+          amount: b.amount,
+          currencyCode: ivyBaseCurrency,
+          startMonth: new Date().toISOString().substring(0, 7),
+          categoryIds: catIds,
+        });
       });
-
-      // Transaction 2: DEST (Debit)
-      const txRecord: ImportedTransaction = {
-        id: generateId(),
-        journalId,
-        transactionDate: timestamp,
-        accountId: destId!,
-        amount: toAmount,
-        transactionType: TransactionType.DEBIT,
-        currencyCode,
-      };
-
-      // Handle multi-currency transfers
-      if (tx.type === 'TRANSFER' && tx.toAccountId) {
-        const destAccId = accountMap.get(tx.toAccountId);
-        const destCurr = accountCurrencyMap.get(destAccId!);
-        if (destCurr) {
-          txRecord.currencyCode = destCurr;
-          if (amount !== 0 && toAmount !== 0) {
-            txRecord.exchangeRate = amount / toAmount;
-          }
-        }
-      }
-
-      transactionImports.push(txRecord);
     }
 
-    // 6. Map Budgets
-    onProgress?.('Mapping budgets...', 0.9);
-    const budgetImports: ImportedBudget[] = [];
-    const budgetScopeImports: ImportedBudgetScope[] = [];
-    const importedAccountIds = new Set(accountImports.map(account => account.id));
+    onProgress?.('Building canonical import...', 0.95);
+    const { canonical, issues } = builder.build();
 
-    if (data.budgets) {
-      data.budgets.forEach(ivyBudget => {
-        if (ivyBudget.isDeleted) return;
-
-        const budgetId = ivyBudget.id;
-        // Ivy amount is likely already in major units if it's a Double in Kotlin
-        // But let's be careful. Our Budget model expects "amount: number"
-        // IvyEntity says "amount: Double"
-        const amount = ivyBudget.amount; // Convert to minor units if needed
-
-        budgetImports.push({
-          id: budgetId,
-          name: ivyBudget.name,
-          amount: amount,
-          currencyCode: ivyBaseCurrency, // Use currency identified from settings
-          startMonth: new Date().toISOString().substring(0, 7), // Default to current month
-          active: true,
-        });
-
-        // Map category scopes
-        if (ivyBudget.categoryIdsSerialized) {
-          const catIds = parseSerializedIds(ivyBudget.categoryIdsSerialized);
-          catIds.forEach(catId => {
-            // Find all category-currency accounts for this category
-            for (const [key, balanceId] of categoryAccountMap.entries()) {
-              if (key.startsWith(`${catId}:::`)) {
-                if (!importedAccountIds.has(balanceId)) continue;
-                budgetScopeImports.push({
-                  id: generateId(),
-                  budgetId: budgetId as BudgetId,
-                  accountId: balanceId,
-                });
-              }
-            }
-          });
-        }
-
-        // Map account scopes
-        if (ivyBudget.accountIdsSerialized) {
-          const accIds = parseSerializedIds(ivyBudget.accountIdsSerialized);
-          accIds.forEach(accId => {
-            const balanceId = accountMap.get(accId);
-            if (balanceId) {
-              budgetScopeImports.push({
-                id: generateId(),
-                budgetId: budgetId as BudgetId,
-                accountId: balanceId,
-              });
-            }
-          });
-        }
+    for (const issue of issues) {
+      skippedItems.push({
+        id: issue.sourceId || 'builder-issue',
+        reason: issue.message,
+        description: issue.entity,
       });
     }
 
     onProgress?.('Parsing complete', 1.0);
     logger.info('[IvyPlugin] Parse successful.');
 
-    if (skippedItems.length > 0) {
-      logger.warn('[IvyPlugin] Skipped Items:', {
-        count: skippedItems.length,
-        items: skippedItems,
-      });
-    }
-
-    const workplace = {
-      name: ivyUserName || undefined,
-      defaultCurrencyCode: ivyBaseCurrency || accountCurrencyMap.values().next().value || undefined,
-    };
-    const preferences = ivyUserName ? { userName: ivyUserName } : undefined;
-    const batchData = {
-      accounts: accountImports,
-      journals: journalImports,
-      transactions: transactionImports,
-      budgets: budgetImports,
-      budgetScopes: budgetScopeImports,
-      plannedPayments: plannedPaymentImports,
-    };
-    const canonical = canonicalImportFromBatchImportData(batchData, {
-      importMetadata: {
-        pluginId: 'ivy',
-        preferences,
-        workplace,
-      },
-    });
-
     return {
       canonical,
+      preferences: {
+        userName: ivyUserName,
+      },
+      workplace: {
+        name: ivyUserName,
+        defaultCurrencyCode: ivyBaseCurrency,
+      },
       stats: {
-        accounts: accountImports.length,
-        journals: journalImports.length,
-        transactions: transactionImports.length,
-        budgets: budgetImports.length,
-        plannedPayments: plannedPaymentImports.length,
+        accounts: canonical.accounts.length,
+        journals: canonical.journals.length,
+        transactions: canonical.transactions.length,
+        budgets: canonical.budgets?.length || 0,
+        plannedPayments: canonical.plannedPayments?.length || 0,
         auditLogs: 0,
         skippedTransactions: skippedItems.length,
         skippedItems,
       },
-      workplace,
-      preferences,
     };
   },
 };

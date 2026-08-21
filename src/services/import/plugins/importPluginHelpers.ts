@@ -60,3 +60,69 @@ export function parseTimestampMs(
   const parsed = new Date(value).getTime();
   return isNaN(parsed) ? fallbackMs : parsed;
 }
+
+/**
+ * Robustly parse serialized JSON string IDs or single ID string into string array.
+ */
+export function parseSerializedIds(serialized?: string): string[] {
+  if (!serialized) return [];
+  try {
+    const parsed = JSON.parse(serialized);
+    if (Array.isArray(parsed)) return parsed;
+    return [String(parsed)];
+  } catch {
+    return [serialized];
+  }
+}
+
+/**
+ * Calculates the next occurrence timestamp based on interval and recurrence rules.
+ */
+export function advanceOccurrence(
+  current: number,
+  intervalN: number,
+  intervalType: string,
+  recurrenceDay?: number,
+  recurrenceMonth?: number,
+): number {
+  const date = new Date(current);
+  date.setHours(0, 0, 0, 0);
+
+  switch (intervalType) {
+    case 'DAILY':
+      date.setDate(date.getDate() + intervalN);
+      break;
+    case 'WEEKLY':
+      date.setDate(date.getDate() + intervalN * 7);
+      if (recurrenceDay !== undefined && recurrenceDay !== null) {
+        const currentDay = date.getDay();
+        const diff = (recurrenceDay - currentDay + 7) % 7;
+        date.setDate(date.getDate() + diff);
+      }
+      break;
+    case 'MONTHLY':
+      {
+        const targetDay = recurrenceDay ?? date.getDate();
+        date.setDate(1);
+        date.setMonth(date.getMonth() + intervalN);
+        const lastDayOfTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        date.setDate(Math.min(targetDay, lastDayOfTargetMonth));
+      }
+      break;
+    case 'YEARLY':
+      {
+        const targetMonth =
+          recurrenceMonth !== undefined && recurrenceMonth !== null
+            ? recurrenceMonth - 1
+            : date.getMonth();
+        const targetDay = recurrenceDay ?? date.getDate();
+        date.setFullYear(date.getFullYear() + intervalN);
+        date.setDate(1);
+        date.setMonth(targetMonth);
+        const lastDayOfTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        date.setDate(Math.min(targetDay, lastDayOfTargetMonth));
+      }
+      break;
+  }
+  return date.getTime();
+}
