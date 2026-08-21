@@ -1,9 +1,9 @@
-import { exportService } from '@/src/services/export-service';
+import { exportService } from '@/src/services/export';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
 import { WorkplaceId } from '@/src/types/domain';
 import { files } from '@/src/utils/files';
 
-jest.mock('@/src/services/export-service', () => ({
+jest.mock('@/src/services/export', () => ({
   exportService: {
     exportToJSON: jest.fn(),
   },

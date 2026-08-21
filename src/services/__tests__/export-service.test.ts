@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { exportService } from '@/src/services/export-service';
+import { exportService } from '@/src/services/export';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
