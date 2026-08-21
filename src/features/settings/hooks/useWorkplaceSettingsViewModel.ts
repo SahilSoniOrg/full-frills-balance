@@ -3,7 +3,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType, PlainWorkplace } from '@/src/types/domain';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useState } from 'react';

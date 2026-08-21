@@ -1,7 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';

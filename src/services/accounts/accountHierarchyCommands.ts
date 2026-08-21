@@ -5,7 +5,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { CreateAccountData } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,

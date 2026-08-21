@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 
 export type ArchiveAuditEntry = {

@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { BugReportService } from '@/src/services/BugReportService';
 import { useCallback } from 'react';
 import { Linking } from 'react-native';

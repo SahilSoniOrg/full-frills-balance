@@ -3,7 +3,7 @@ import 'react-native-get-random-values';
 
 // Stage 1: Early Bootstrap (Critical Error Tracking)
 import * as SplashScreen from 'expo-splash-screen';
-import { analytics } from './src/services/analytics-service';
+import { analytics, navigationIntegration } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';
 

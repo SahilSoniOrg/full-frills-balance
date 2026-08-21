@@ -7,7 +7,7 @@ import {
   postPlannedPaymentOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 

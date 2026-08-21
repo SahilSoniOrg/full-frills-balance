@@ -11,7 +11,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import {
   assertParentHasNoTransactions,

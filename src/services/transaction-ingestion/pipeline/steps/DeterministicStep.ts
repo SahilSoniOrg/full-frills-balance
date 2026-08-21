@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
 import { TransactionSemanticTag } from '../../types/ai-parsing';

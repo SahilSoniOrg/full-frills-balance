@@ -5,7 +5,7 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import {

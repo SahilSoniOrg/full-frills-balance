@@ -5,7 +5,7 @@ import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AccountId, JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';

@@ -8,7 +8,7 @@ import {
   getOpeningBalancesAccountId,
 } from '@/src/services/accounts/accountSystemAccounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';

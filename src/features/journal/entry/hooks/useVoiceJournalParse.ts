@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import type { ParserOutput } from '@/src/services/transaction-ingestion';
 import { transactionIngestionService } from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';

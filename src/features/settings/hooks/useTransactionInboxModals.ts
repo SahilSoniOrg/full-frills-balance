@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { TransactionInboxItem, WorkplaceId } from '@/src/types/domain';
 import { TransactionInboxImportOptions } from '@/src/services/sms/transactionInboxImport';
 import { smsService } from '@/src/services/sms-service';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 

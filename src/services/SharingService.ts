@@ -6,7 +6,7 @@ import { Platform, Share } from 'react-native';
 import { files } from '../utils/files';
 import { logger } from '../utils/logger';
 
-import { analytics } from './analytics-service';
+import { analytics } from './analytics';
 
 import { ShareFormat } from '@/src/types/sharing';
 

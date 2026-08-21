@@ -35,7 +35,7 @@ jest.mock('@/src/services/ai/ModelManagementService', () => ({
   modelManagementService: { getAllModels: () => [] },
 }));
 
-jest.mock('@/src/services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: {
     logNotificationPreferenceChanged: jest.fn(),
     logSmsImportSettingsChanged: jest.fn(),

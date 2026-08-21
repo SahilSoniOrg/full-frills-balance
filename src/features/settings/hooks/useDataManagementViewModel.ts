@@ -4,7 +4,7 @@ import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useData
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { sharingService } from '@/src/services/SharingService';
 import { ShareFormat } from '@/src/types/sharing';
 import { toast } from '@/src/utils/alerts';

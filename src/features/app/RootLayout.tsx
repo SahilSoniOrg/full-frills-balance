@@ -8,7 +8,7 @@ import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
-import { analytics, navigationIntegration } from '@/src/services/analytics-service';
+import { analytics, navigationIntegration } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';

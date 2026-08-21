@@ -1,145 +1,16 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { schema } from '@/src/data/database/schema';
 import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
-import * as Device from 'expo-device';
 import PostHog from 'posthog-react-native';
-import { Platform } from 'react-native';
-
-/**
- * Analytics Service
- *
- * Provides a privacy-first, lightweight wrapper for tracking usage patterns.
- * PostHog for product analytics; Sentry for errors (no session replay on either).
- */
-
-export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
-export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-const BUILD_TYPE = process.env.APP_VARIANT || 'development'; // 'development', 'preview', 'production'
-
-export const navigationIntegration = Sentry.reactNavigationIntegration();
-
-export type FeatureEventMap = {
-  journal:
-    | 'create'
-    | 'update'
-    | 'delete'
-    | 'recover'
-    | 'post'
-    | 'revert_to_planned'
-    | 'duplicate'
-    | 'reversal'
-    | 'bulk_create'
-    | 'suggestion_accepted';
-  account:
-    | 'create'
-    | 'update'
-    | 'delete'
-    | 'recover'
-    | 'merge'
-    | 'reconcile'
-    | 'reorder'
-    | 'archive'
-    | 'unarchive'
-    | 'convert_type'
-    | 'bulk_archive'
-    | 'bulk_rename'
-    | 'bulk_appearance'
-    | 'bulk_move_hierarchy';
-  import:
-    | 'file_selected'
-    | 'format_mismatch'
-    | 'cancelled'
-    | 'failed'
-    | 'picker_cancelled'
-    | 'picker_error'
-    | 'completed';
-  audit: 'view_entity' | 'revert_initiated' | 'revert_success' | 'revert_failed';
-  hub: 'change_tab' | 'dismiss_insight' | 'restore_insight';
-  reports: 'change_tab' | 'change_timeframe' | 'drilldown_transactions' | 'drilldown_category';
-  voice_journal:
-    | 'record_started'
-    | 'permission_denied'
-    | 'speech_error'
-    | 'template_selected'
-    | 'parsed'
-    | 'parse_failed'
-    | 'applied';
-  sms:
-    | 'rule_create'
-    | 'rule_update'
-    | 'rule_delete'
-    | 'rule_toggle'
-    | 'rule_test'
-    | 'inbox_accept'
-    | 'inbox_dismiss'
-    | 'inbox_bulk_sync';
-  budget: 'create' | 'update' | 'delete' | 'threshold_warning' | 'drilldown';
-  planned_payment:
-    | 'create'
-    | 'update'
-    | 'delete'
-    | 'pause'
-    | 'resume'
-    | 'toggle_status'
-    | 'post_now'
-    | 'skip'
-    | 'occurrence_paid'
-    | 'occurrence_skipped';
-  data_management:
-    | 'export_initiated'
-    | 'export_completed'
-    | 'database_vacuum'
-    | 'integrity_check'
-    | 'factory_reset_initiated'
-    | 'factory_reset_completed';
-  dashboard: 'safe_to_spend_toggle' | 'quick_action' | 'networth_visibility_toggle';
-  safe_to_spend:
-    | 'opened'
-    | 'closed'
-    | 'section_expanded'
-    | 'legend_pressed'
-    | 'chart_point_selected'
-    | 'planned_payment_viewed'
-    | 'account_viewed'
-    | 'legend_to_explanation';
-  search: 'query_executed' | 'filters_applied' | 'result_selected';
-  settings:
-    | 'change_theme'
-    | 'change_theme_preference'
-    | 'change_font'
-    | 'toggle_monthly_stats'
-    | 'toggle_privacy_mode'
-    | 'toggle_widget_privacy'
-    | 'toggle_app_lock'
-    | 'switch_workplace'
-    | 'create_workplace'
-    | 'update_workplace_icon'
-    | 'change_notification_cadence'
-    | 'change_notification_time'
-    | 'toggle_sms_import'
-    | 'export_data'
-    | 'integrity_check'
-    | 'cleanup_database'
-    | 'seed_mock_data'
-    | 'open_telegram'
-    | 'open_play_store'
-    | 'open_github'
-    | 'share_bug_report'
-    | 'save_bug_report'
-    | 'change_name'
-    | 'change_archetype'
-    | 'change_currency'
-    | 'change_safe_to_spend_days'
-    | 'toggle_safe_to_spend_chart';
-  onboarding: 'completed' | 'step_continue';
-  ai: 'model_load_success' | 'model_load_failure' | 'inference_completed' | 'inference_failed';
-};
-
-export type KnownFeature = keyof FeatureEventMap;
+import {
+  getGlobalProperties,
+  navigationIntegration,
+  POSTHOG_API_KEY,
+  POSTHOG_HOST,
+} from './analyticsConfig';
+import { FeatureEventMap, KnownFeature } from './types';
 
 export class AnalyticsService {
   private _posthog: PostHog | null = null;
@@ -193,7 +64,7 @@ export class AnalyticsService {
           enablePersistSessionIdAcrossRestart: true,
           customAppProperties: props => ({
             ...props,
-            ...this.getGlobalProperties(),
+            ...getGlobalProperties(),
           }),
           enableSessionReplay: false,
         });
@@ -242,39 +113,6 @@ export class AnalyticsService {
       logger.info('[Analytics] Sentry initialized');
     } catch (error) {
       logger.error('[Analytics] Failed to initialize Sentry', error);
-    }
-  }
-  /**
-   * Get global properties for event enrichment
-   */
-  private getGlobalProperties(): Record<string, any> {
-    try {
-      return {
-        $app_id: Application.applicationId || 'unknown',
-        $app_namespace: Application.applicationId || 'unknown',
-        $app_name: Application.applicationName || 'Full Frills Balance',
-        $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
-        $app_build: Application.nativeBuildVersion || '1',
-        $app_build_number: Application.nativeBuildVersion || '1', // Keep for backward compatibility
-        $device_name: Device.deviceName || 'unknown',
-        $device_model: Device.modelName || 'unknown',
-        $os_name: Platform.OS,
-        $os_version: Device.osVersion || 'unknown',
-        $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
-        $is_dev: __DEV__ || !Device.isDevice,
-        $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
-        $build_type: BUILD_TYPE || 'unknown',
-        $active_workplace_id: preferences.activeWorkplaceId || 'none',
-        $db_schema_version: schema.version,
-        is_test_build: BUILD_TYPE !== 'production',
-      };
-    } catch (error) {
-      logger.warn('[Analytics] Failed to collect some global properties', { error });
-      return {
-        $os_name: Platform.OS,
-        $is_dev: __DEV__,
-        $build_type: BUILD_TYPE || 'unknown',
-      };
     }
   }
 
@@ -327,7 +165,6 @@ export class AnalyticsService {
   }
 
   /**
-
    * Specialized events
    */
   logAppOpened() {
@@ -465,7 +302,7 @@ export class AnalyticsService {
     this.track('app_error', {
       name: error.name,
       message: error.message,
-      stack: error.stack?.slice(0, trimLimit) || 'no-stack', // Trim long stacks
+      stack: error.stack?.slice(0, trimLimit) || 'no-stack',
       componentStack: componentStack?.slice(0, trimLimit) || 'no-component-stack',
     });
 

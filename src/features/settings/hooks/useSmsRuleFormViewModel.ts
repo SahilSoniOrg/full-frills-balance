@@ -2,7 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/domain';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
   buildStructuredSmsRuleConditions,

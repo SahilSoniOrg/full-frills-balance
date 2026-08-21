@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import Workplace from '@/src/data/models/Workplace';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { serializeExportPayload } from '@/src/services/export/exportSerialization';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/domain';

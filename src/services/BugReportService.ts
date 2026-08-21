@@ -4,7 +4,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { compression } from '../utils/compression';
 import { logger } from '../utils/logger';
-import { analytics } from './analytics-service';
+import { analytics } from './analytics';
 import { ShareFormat, sharingService } from './SharingService';
 
 export class BugReportService {

@@ -3,7 +3,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { deleteBlockers, type DeleteBlocker } from '@/src/services/accounts/accountReferenceGraph';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 
 /** Format structured graph blockers into the user-facing delete Error message. */
 export function formatAccountDeleteBlockersError(

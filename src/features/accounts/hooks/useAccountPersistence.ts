@@ -2,7 +2,7 @@ import type { AccountFields } from '@/src/types/domain';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import {
   BalanceChangeCounterparty,
   resolveBalanceChangeRequirement,

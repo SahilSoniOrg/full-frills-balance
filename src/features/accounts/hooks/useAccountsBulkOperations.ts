@@ -9,7 +9,7 @@ import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/acco
 import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import {
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,

@@ -6,7 +6,7 @@ import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
 import {
   buildCreatePersistenceInput,

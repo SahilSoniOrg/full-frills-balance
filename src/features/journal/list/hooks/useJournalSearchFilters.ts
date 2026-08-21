@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AccountId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

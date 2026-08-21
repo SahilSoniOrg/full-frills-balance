@@ -1,7 +1,7 @@
 import { useAiPrefs } from '@/src/hooks/useAiPrefs';
 import { useNotificationPrefs } from '@/src/hooks/useNotificationPrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import { AIModelMetadata } from '@/src/services/ai/types';
 import {

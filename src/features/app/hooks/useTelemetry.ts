@@ -1,4 +1,4 @@
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import type { ExpoRouter } from 'expo-router';
 import { usePathname, useSegments } from 'expo-router';
 import React from 'react';

@@ -4,7 +4,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';

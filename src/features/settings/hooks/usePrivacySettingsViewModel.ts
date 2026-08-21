@@ -1,5 +1,5 @@
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { alert, confirm } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { useCallback } from 'react';

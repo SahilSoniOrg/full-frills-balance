@@ -5,7 +5,7 @@ import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { NetWorthTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { useTheme } from '@/src/hooks/use-theme';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

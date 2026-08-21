@@ -1,5 +1,5 @@
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { exportService } from '@/src/services/export';
 import { integrityService } from '@/src/services/integrity';
 

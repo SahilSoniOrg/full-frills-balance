@@ -71,7 +71,7 @@ export function prepareUpsertInboxRecord(
     );
   } else {
     const col = inboxCollection ?? getInboxCollection();
-    targetRecord = col.prepareCreate(record => {
+    targetRecord = col.prepareCreate((record: TransactionInboxRecord) => {
       Object.assign(record, payload);
     });
     ops.push(targetRecord);

@@ -72,7 +72,7 @@ jest.mock('@/src/data/repositories/account', () => ({
   },
 }));
 
-jest.mock('@/src/services/analytics-service');
+jest.mock('@/src/services/analytics');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

@@ -11,7 +11,7 @@ jest.mock('@/src/services/sms-service', () => ({
   },
 }));
 
-jest.mock('@/src/services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: {
     trackFeatureUsage: jest.fn(),
   },

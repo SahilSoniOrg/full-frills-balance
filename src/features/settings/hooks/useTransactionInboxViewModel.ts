@@ -7,7 +7,7 @@ import {
   useTransactionInboxModals,
 } from '@/src/features/settings/hooks/useTransactionInboxModals';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { smsService } from '@/src/services/sms-service';
 import { InboxProcessingStatus, PlainInboxRecord, TransactionInboxItem } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';

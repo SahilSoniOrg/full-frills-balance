@@ -5,7 +5,7 @@ import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useStsPreferences } from '@/src/hooks/useStsPreferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import type { PlainCurrency } from '@/src/types/domain';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { useCallback } from 'react';
 

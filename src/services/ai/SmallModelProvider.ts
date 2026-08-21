@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';

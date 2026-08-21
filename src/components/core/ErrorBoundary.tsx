@@ -9,7 +9,7 @@
  */
 
 import { Palette, Shape, Spacing, Typography } from '@/src/constants';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { BugReportService } from '@/src/services/BugReportService';
 import { logger } from '@/src/utils/logger';
 import React, { Component, ReactNode } from 'react';

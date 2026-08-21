@@ -21,7 +21,7 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'ios' },
 }));
 
-jest.mock('@/src/services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: {
     trackFeatureUsage: jest.fn(),
     logAiModelLoad: jest.fn(),

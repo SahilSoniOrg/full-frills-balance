@@ -16,7 +16,7 @@ import {
 import type { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';

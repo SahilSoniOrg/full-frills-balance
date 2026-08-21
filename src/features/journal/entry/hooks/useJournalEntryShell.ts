@@ -20,7 +20,7 @@ import {
 import { useModeAccountActions } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import {
   isSimpleTargetAccountUnset,
   resolveTargetAccountIdForSimpleTab,

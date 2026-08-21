@@ -3,7 +3,7 @@ import { schema } from '@/src/data/database/schema';
 import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';

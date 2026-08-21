@@ -10,7 +10,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({ useAppReady: jest.fn() }));
 jest.mock('@/src/features/app/bootstrap', () => ({ runAppBootstrapSideEffects: jest.fn() }));
-jest.mock('@/src/services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: {
     delayedInitializePostHog: jest.fn(),
     identify: jest.fn(),

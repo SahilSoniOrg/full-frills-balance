@@ -5,7 +5,7 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useCallback, useMemo } from 'react';

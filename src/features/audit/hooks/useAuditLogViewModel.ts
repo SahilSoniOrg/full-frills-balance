@@ -3,7 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { auditService } from '@/src/services/audit-service';
 import { AccountId, AuditEntityType, JournalId } from '@/src/types/domain';
 import * as Alerts from '@/src/utils/alerts';

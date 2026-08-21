@@ -24,11 +24,11 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   multiGet: jest.fn(),
 }));
 
-jest.mock('../../services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: {
     track: jest.fn(),
     screen: jest.fn(),
-    identify: jest.fn(),
+    trackFeatureUsage: jest.fn(),
   },
 }));
 

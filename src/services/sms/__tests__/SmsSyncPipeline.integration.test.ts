@@ -71,7 +71,7 @@ jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () => 
   },
 }));
 
-jest.mock('@/src/services/analytics-service');
+jest.mock('@/src/services/analytics');
 
 describe('SmsSyncPipeline integration', () => {
   const baseDate = 1_700_000_000_000;

@@ -15,7 +15,7 @@ jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository');
 jest.mock('@/src/services/budget/budgetWriteService');
 jest.mock('@/src/data/repositories/BalanceSnapshotRepository');
 jest.mock('@/src/services/RebuildQueueService');
-jest.mock('@/src/services/analytics-service');
+jest.mock('@/src/services/analytics');
 jest.mock('@/src/services/audit-service');
 
 describe('mergeAccounts command', () => {

@@ -24,7 +24,7 @@ jest.mock('@/src/services/reactive/evictWorkplaceReactiveCaches', () => ({
   evictWorkplaceReactiveCaches: jest.fn(),
 }));
 
-jest.mock('@/src/services/analytics-service', () => ({
+jest.mock('@/src/services/analytics', () => ({
   analytics: { logWorkplaceSwitched: jest.fn() },
 }));
 

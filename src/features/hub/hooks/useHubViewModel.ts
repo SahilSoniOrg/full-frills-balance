@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';

@@ -1,7 +1,7 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';

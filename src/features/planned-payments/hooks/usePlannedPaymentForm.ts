@@ -10,7 +10,7 @@ import {
   createPlannedPayment,
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';

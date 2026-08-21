@@ -1,5 +1,5 @@
 import { RestartOptions } from '@/src/contexts/app-shell/AppRestartProvider';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useState } from 'react';

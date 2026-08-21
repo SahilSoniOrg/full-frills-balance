@@ -15,7 +15,7 @@ import {
 } from '@/src/features/budget/hooks/budgetEditDraft';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';

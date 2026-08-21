@@ -1,7 +1,7 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics';
 import { useCallback } from 'react';
 
 export interface AppearanceSettingsViewModel {

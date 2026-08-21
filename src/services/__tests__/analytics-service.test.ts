@@ -1,4 +1,4 @@
-import { AnalyticsService } from '../analytics-service';
+import { AnalyticsService } from '../analytics';
 
 // Mock PostHog
 jest.mock('posthog-react-native', () => {
