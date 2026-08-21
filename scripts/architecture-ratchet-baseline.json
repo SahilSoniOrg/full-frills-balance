@@ -6,8 +6,8 @@
     "direct_database_write": {
       "src/services/AccountingRebuildService.ts": 2,
       "src/services/audit-service.ts": 2,
-      "src/services/integrity-service.ts": 1,
       "src/services/integrity/integrityMaintenance.ts": 1,
+      "src/services/integrity/integrityOrchestrator.ts": 1,
       "src/services/ledger/ledgerWriteService.ts": 12,
       "src/testing/e2eSeed.ts": 1,
       "src/testing/smsTestHarness.ts": 2
