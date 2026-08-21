@@ -8,7 +8,8 @@
       "src/services/audit-service.ts": 2,
       "src/services/integrity/integrityMaintenance.ts": 1,
       "src/services/integrity/integrityOrchestrator.ts": 1,
-      "src/services/ledger/ledgerWriteService.ts": 12,
+      "src/services/ledger/ledgerCreateService.ts": 4,
+      "src/services/ledger/ledgerLifecycleService.ts": 8,
       "src/testing/e2eSeed.ts": 1,
       "src/testing/smsTestHarness.ts": 2
     }
