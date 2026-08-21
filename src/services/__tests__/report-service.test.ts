@@ -15,7 +15,7 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
     getDailyDeltasGroupedRaw: jest.fn().mockResolvedValue([]),
   },
 }));
-jest.mock('@/src/services/BalanceService');
+jest.mock('@/src/services/balance');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

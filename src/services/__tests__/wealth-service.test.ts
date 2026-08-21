@@ -2,7 +2,7 @@ import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
@@ -13,7 +13,7 @@ jest.mock('@/src/services/currencyConversion');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/services/BalanceService');
+jest.mock('@/src/services/balance');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     getDefaultCurrency: jest.fn().mockResolvedValue('USD'),

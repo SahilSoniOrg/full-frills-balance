@@ -23,7 +23,7 @@ import type {
   ImportedBudgetScope,
   ImportedPlannedPayment,
 } from '@/src/data/repositories/importTypes';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { preferences } from '@/src/utils/preferences';

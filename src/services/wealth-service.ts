@@ -5,7 +5,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { effect } from '@/src/utils/accounting/BalanceEffects';

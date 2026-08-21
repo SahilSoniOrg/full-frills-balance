@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
 
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';

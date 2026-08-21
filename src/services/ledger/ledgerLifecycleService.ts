@@ -1,11 +1,11 @@
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
-import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -27,40 +27,37 @@ export class LedgerLifecycleService {
     if (!prepared) return;
 
     const { journal, transactions } = prepared;
+    const now = new Date();
+    const journalOp = journal.prepareUpdate(j => {
+      j.deletedAt = now;
+      j.updatedAt = now;
+    });
+    const txOps = transactions.map(tx =>
+      tx.prepareUpdate(t => {
+        t.deletedAt = now;
+        t.updatedAt = now;
+      }),
+    );
 
-    await database.write(async () => {
-      const now = new Date();
-      const journalOp = journal.prepareUpdate(j => {
-        j.deletedAt = now;
-        j.updatedAt = now;
-      });
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = now;
-          t.updatedAt = now;
-        }),
-      );
-
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.DELETE,
-          changes: {
-            before: {
-              description: journal.description,
-              totalAmount: journal.totalAmount,
-              currencyCode: journal.currencyCode,
-              transactions: transactions.map(t => mapTransactionToAudit(t)),
-            },
-            after: { deletedAt: now },
+    const auditOp = auditRepository.prepareLog(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.DELETE,
+        changes: {
+          before: {
+            description: journal.description,
+            totalAmount: journal.totalAmount,
+            currencyCode: journal.currencyCode,
+            transactions: transactions.map(t => mapTransactionToAudit(t)),
           },
+          after: { deletedAt: now },
         },
-        workplaceId,
-      );
+      },
+      workplaceId,
+    );
 
-      await database.batch([journalOp, ...txOps, auditOp]);
-
+    await persistBatch([journalOp, ...txOps, auditOp], () => {
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
     });
@@ -73,34 +70,32 @@ export class LedgerLifecycleService {
     const { journal, transactions } = prepared;
     const prevDeletedAt = journal.deletedAt ? new Date(journal.deletedAt.getTime()) : undefined;
 
-    await database.write(async () => {
-      const now = new Date();
-      const journalOp = journal.prepareUpdate(j => {
-        j.deletedAt = undefined;
-        j.updatedAt = now;
-      });
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = undefined;
-          t.updatedAt = now;
-        }),
-      );
+    const now = new Date();
+    const journalOp = journal.prepareUpdate(j => {
+      j.deletedAt = undefined;
+      j.updatedAt = now;
+    });
+    const txOps = transactions.map(tx =>
+      tx.prepareUpdate(t => {
+        t.deletedAt = undefined;
+        t.updatedAt = now;
+      }),
+    );
 
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: { deletedAt: prevDeletedAt },
-            after: { restoredAt: now },
-          },
+    const auditOp = auditRepository.prepareLog(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { deletedAt: prevDeletedAt },
+          after: { restoredAt: now },
         },
-        workplaceId,
-      );
+      },
+      workplaceId,
+    );
 
-      await database.batch([journalOp, ...txOps, auditOp]);
-
+    await persistBatch([journalOp, ...txOps, auditOp], () => {
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
     });
@@ -130,42 +125,40 @@ export class LedgerLifecycleService {
         ? batchOptions.extraOps(journal)
         : (batchOptions?.extraOps ?? []);
 
-    await database.write(async () => {
-      const metadataOp = await journalMetadataRepository.preparePatch(
-        workplaceId,
-        journalId,
-        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-        MetadataSources.MANUAL_POST,
-      );
+    const metadataOp = await journalMetadataRepository.preparePatch(
+      workplaceId,
+      journalId,
+      { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+      MetadataSources.MANUAL_POST,
+    );
 
-      const journalOp = journal.prepareUpdate((record: Journal) => {
-        record.status = JournalStatus.POSTED;
-        record.journalDate = postTime;
+    const journalOp = journal.prepareUpdate((record: Journal) => {
+      record.status = JournalStatus.POSTED;
+      record.journalDate = postTime;
+      record.updatedAt = new Date();
+    });
+
+    const txOps = transactions.map(tx =>
+      tx.prepareUpdate((record: Transaction) => {
+        record.transactionDate = postTime;
         record.updatedAt = new Date();
-      });
+      }),
+    );
 
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate((record: Transaction) => {
-          record.transactionDate = postTime;
-          record.updatedAt = new Date();
-        }),
-      );
-
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: { status: JournalStatus.PLANNED, journalDate: originalDate },
-            after: { status: JournalStatus.POSTED, journalDate: postTime },
-          },
+    const auditOp = auditRepository.prepareLog(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { status: JournalStatus.PLANNED, journalDate: originalDate },
+          after: { status: JournalStatus.POSTED, journalDate: postTime },
         },
-        workplaceId,
-      );
+      },
+      workplaceId,
+    );
 
-      await database.batch([metadataOp, journalOp, ...txOps, auditOp, ...extras]);
-
+    await persistBatch([metadataOp, journalOp, ...txOps, auditOp, ...extras], () => {
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);
       batchOptions?.afterBatch?.();
@@ -221,35 +214,33 @@ export class LedgerLifecycleService {
 
     const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
-    await database.write(async () => {
-      const journalOp = journal.prepareUpdate((record: Journal) => {
-        record.status = JournalStatus.PLANNED;
-        record.journalDate = revertTime;
+    const journalOp = journal.prepareUpdate((record: Journal) => {
+      record.status = JournalStatus.PLANNED;
+      record.journalDate = revertTime;
+      record.updatedAt = new Date();
+    });
+
+    const txOps = transactions.map(tx =>
+      tx.prepareUpdate((record: Transaction) => {
+        record.transactionDate = revertTime;
         record.updatedAt = new Date();
-      });
+      }),
+    );
 
-      const txOps = transactions.map(tx =>
-        tx.prepareUpdate((record: Transaction) => {
-          record.transactionDate = revertTime;
-          record.updatedAt = new Date();
-        }),
-      );
-
-      const auditOp = auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
-            after: { status: JournalStatus.PLANNED, journalDate: revertTime },
-          },
+    const auditOp = auditRepository.prepareLog(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
+          after: { status: JournalStatus.PLANNED, journalDate: revertTime },
         },
-        workplaceId,
-      );
+      },
+      workplaceId,
+    );
 
-      await database.batch([journalOp, ...txOps, auditOp]);
-
+    await persistBatch([journalOp, ...txOps, auditOp], () => {
       const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
       rebuildQueueService.enqueueMany(
         accountIds,

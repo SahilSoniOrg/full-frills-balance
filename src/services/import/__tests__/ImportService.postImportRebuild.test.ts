@@ -12,7 +12,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
   },
 }));
 
-jest.mock('@/src/services/integrity-service', () => ({
+jest.mock('@/src/services/integrity', () => ({
   integrityService: {
     forceRunCheck: jest.fn().mockResolvedValue({}),
   },

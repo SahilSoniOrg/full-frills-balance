@@ -21,7 +21,7 @@ import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchi
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 
 const WP = 'wp-acct-cmd' as WorkplaceId;
 

@@ -70,6 +70,14 @@ export class WorkplaceRepository {
     });
   }
 
+  async destroyPermanently(id: WorkplaceId): Promise<void> {
+    const workplace = await this.find(id);
+    if (!workplace) return;
+    await database.write(async () => {
+      await workplace.destroyPermanently();
+    });
+  }
+
   observeAll() {
     return this.workplaces.query().observe();
   }

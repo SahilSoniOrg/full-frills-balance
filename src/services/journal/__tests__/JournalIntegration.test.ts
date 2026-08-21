@@ -16,7 +16,7 @@ import Journal from '@/src/data/models/Journal';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { ledgerWriteService } from '@/src/services/ledger';

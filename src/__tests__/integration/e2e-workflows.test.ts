@@ -11,8 +11,8 @@ import { journalListQueryRepository } from '@/src/data/repositories/journal/jour
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { balanceService } from '@/src/services/BalanceService';
-import { IntegrityService } from '@/src/services/integrity-service';
+import { balanceService } from '@/src/services/balance';
+import { IntegrityService } from '@/src/services/integrity';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 

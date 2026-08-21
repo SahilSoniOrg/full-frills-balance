@@ -7,10 +7,6 @@ import { ledgerLifecycleService } from './ledgerLifecycleService';
 import { ledgerUpdateService } from './ledgerUpdateService';
 import { PreparedJournalData } from './prepareJournalData';
 
-export * from './ledgerCreateService';
-export * from './ledgerUpdateService';
-export * from './ledgerLifecycleService';
-
 /**
  * Canonical journal write Module: prepare + audit + persist + rebuild enqueue.
  * Delegating coordinator maintaining complete backward compatibility.

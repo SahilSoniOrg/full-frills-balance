@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/types/domain';
 
 import { analytics } from '@/src/services/analytics-service';
-import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
+import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';

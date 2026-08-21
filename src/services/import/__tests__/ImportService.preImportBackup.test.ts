@@ -11,7 +11,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
   },
 }));
 
-jest.mock('@/src/services/integrity-service', () => ({
+jest.mock('@/src/services/integrity', () => ({
   integrityService: {
     resetWorkplace: jest.fn().mockResolvedValue(true),
     forceRunCheck: jest.fn().mockResolvedValue({}),
@@ -70,7 +70,7 @@ import {
 } from '@/src/services/import/importStaging';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { WorkplaceId } from '@/src/types/domain';
 
 const mockPlugin: ImportPlugin = {

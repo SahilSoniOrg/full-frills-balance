@@ -20,7 +20,7 @@ import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImp
 import { beginImportRun } from '@/src/services/import/importRun';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';

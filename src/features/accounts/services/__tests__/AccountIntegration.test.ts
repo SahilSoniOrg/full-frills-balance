@@ -14,7 +14,7 @@ import { database } from '@/src/data/database/Database';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';

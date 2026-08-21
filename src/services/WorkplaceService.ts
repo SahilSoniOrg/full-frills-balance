@@ -159,7 +159,7 @@ export class WorkplaceService {
       throw new Error('Cannot delete the last remaining workplace');
     }
 
-    const { integrityService } = await import('@/src/services/integrity-service');
+    const { integrityService } = await import('@/src/services/integrity');
     await integrityService.resetWorkplace(id);
     analytics.logWorkplaceDeleted();
 

@@ -3,13 +3,12 @@ import { schema } from '@/src/data/database/schema';
 import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
-import { prepareRunningBalanceRepair, repairAccountBalance } from './integrityRepair';
+import { repairAccountBalance } from './integrityRepair';
 import {
   scanForNullAccountTransactions,
   verifyAccountBalance,
@@ -113,21 +112,16 @@ export async function forceRunCheck(
 
       // Perform repair in its own transaction and yield to JS event loop
       // This prevents UI lockup and allows reactive system to breathe
-      let repairSucceeded = false;
-      await database.write(async () => {
-        await accountingRebuildService.rebuildAccountBalancesInternal(
-          workplaceId,
-          discrepancy.accountId,
-          undefined,
-          true,
-          [prepareRunningBalanceRepair(workplaceId, discrepancy, 'manual')],
-        );
-        repairSucceeded = true;
-        repairedAccountIds.push(discrepancy.accountId);
-      });
+      const repairSucceeded = await repairAccountBalance(
+        workplaceId,
+        discrepancy.accountId,
+        discrepancy,
+        'manual',
+      );
 
       if (repairSucceeded) {
         repairsSuccessful++;
+        repairedAccountIds.push(discrepancy.accountId);
       }
 
       // CRITICAL: Yield to allow bridge events (taps) to process

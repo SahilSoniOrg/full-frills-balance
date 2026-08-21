@@ -8,7 +8,7 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';

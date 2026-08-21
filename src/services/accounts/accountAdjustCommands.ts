@@ -1,5 +1,5 @@
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import {
   isBalanceAdjustmentNeeded,

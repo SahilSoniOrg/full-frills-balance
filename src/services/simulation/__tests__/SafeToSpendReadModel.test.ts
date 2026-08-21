@@ -10,7 +10,7 @@ import {
   transactionQueryRepository,
 } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
@@ -31,7 +31,11 @@ jest.mock('@/src/services/currencyConversion', () => ({
   convertAmount: jest.fn(async ({ amount }: { amount: number }) => ({ ok: true, amount })),
 }));
 jest.mock('@/src/services/budget/budgetReadService');
-jest.mock('@/src/services/BalanceService');
+jest.mock('@/src/services/balance', () => ({
+  balanceService: {
+    getAccountBalances: jest.fn().mockResolvedValue([]),
+  },
+}));
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
 jest.mock('@/src/utils/SnapshotService', () => ({
   snapshotService: {

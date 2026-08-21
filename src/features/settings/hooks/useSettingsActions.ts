@@ -1,7 +1,7 @@
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { analytics } from '@/src/services/analytics-service';
 import { exportService } from '@/src/services/export-service';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 
 import { useCallback } from 'react';
 import { WorkplaceId } from '@/src/types/domain';

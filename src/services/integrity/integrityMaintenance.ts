@@ -5,8 +5,8 @@
 
 import { AppConfig } from '@/src/constants/app-config';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { smsService } from '@/src/services/sms-service';
-import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
@@ -21,13 +21,7 @@ export async function resetWorkplace(
     await databaseRepository.purgeWorkplaceData(workplaceId, [...WORKPLACE_SCOPED_TABLE_NAMES]);
 
     if (!keepWorkplaceRecord) {
-      const { database } = await import('@/src/data/database/Database');
-      await database.write(async () => {
-        const workplace = await workplaceService.getWorkplace(workplaceId);
-        if (workplace) {
-          await workplace.destroyPermanently();
-        }
-      });
+      await workplaceRepository.destroyPermanently(workplaceId);
       logger.info(`[IntegrityMaintenance] Workplace ${workplaceId} reset and deletion successful.`);
     } else {
       logger.info(`[IntegrityMaintenance] Workplace ${workplaceId} data reset (shell preserved).`);

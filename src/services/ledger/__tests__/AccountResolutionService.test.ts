@@ -1,4 +1,4 @@
-import { accountResolutionService } from '../AccountResolutionService';
+import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { database } from '@/src/data/database/Database';
 import { AccountType, WorkplaceId } from '@/src/types/domain';

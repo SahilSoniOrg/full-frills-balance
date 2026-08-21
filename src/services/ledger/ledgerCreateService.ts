@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -6,6 +5,7 @@ import {
   CreateJournalData,
   journalWriteRepository,
 } from '@/src/data/repositories/journal/journalWriteModule';
+import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import {
@@ -90,9 +90,7 @@ export class LedgerCreateService {
         ? options.extraOps(journal)
         : (options?.extraOps ?? []);
 
-    await database.write(async () => {
-      await database.batch([...ops, ...extras]);
-
+    await persistBatch([...ops, ...extras], () => {
       const activeStatus = isRebuildEligibleJournalStatus(data.status);
       if (activeStatus && accountsToRebuild.size > 0) {
         rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate, workplaceId);
@@ -117,24 +115,22 @@ export class LedgerCreateService {
     const allAccountsToRebuild = new Set<AccountId>();
     let minDate = Infinity;
 
-    await database.write(async () => {
-      const allOps: Model[] = [];
-      for (const item of items) {
-        const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
-          item.data,
-          item.prepared,
-          workplaceId,
-        );
-        journals.push(journal);
-        allOps.push(...ops);
-        for (const accountId of accountsToRebuild) {
-          allAccountsToRebuild.add(accountId);
-        }
-        minDate = Math.min(minDate, item.data.journalDate);
+    const allOps: Model[] = [];
+    for (const item of items) {
+      const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
+        item.data,
+        item.prepared,
+        workplaceId,
+      );
+      journals.push(journal);
+      allOps.push(...ops);
+      for (const accountId of accountsToRebuild) {
+        allAccountsToRebuild.add(accountId);
       }
+      minDate = Math.min(minDate, item.data.journalDate);
+    }
 
-      await database.batch(allOps);
-
+    await persistBatch(allOps, () => {
       if (allAccountsToRebuild.size > 0) {
         rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
       }

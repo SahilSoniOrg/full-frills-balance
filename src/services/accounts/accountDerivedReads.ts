@@ -14,7 +14,7 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 

@@ -13,7 +13,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { sharingService } from '@/src/services/SharingService';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';

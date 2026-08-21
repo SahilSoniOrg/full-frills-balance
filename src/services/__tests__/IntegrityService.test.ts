@@ -13,7 +13,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { IntegrityService } from '@/src/services/integrity-service';
+import { IntegrityService } from '@/src/services/integrity';
 import { Q } from '@nozbe/watermelondb';
 
 describe('IntegrityService', () => {

@@ -3,7 +3,7 @@ import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importService } from '@/src/services/import/ImportService';
 import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -20,7 +20,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
   },
 }));
 
-jest.mock('@/src/services/integrity-service', () => ({
+jest.mock('@/src/services/integrity', () => ({
   integrityService: {
     resetWorkplace: jest.fn().mockResolvedValue(true),
     forceRunCheck: jest.fn().mockResolvedValue({}),

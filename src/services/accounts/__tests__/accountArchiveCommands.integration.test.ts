@@ -5,7 +5,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
 import { firstValueFrom } from 'rxjs';
 

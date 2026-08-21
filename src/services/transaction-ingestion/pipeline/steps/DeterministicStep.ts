@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics-service';
-import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
+import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
 import { TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';

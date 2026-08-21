@@ -11,7 +11,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
   },
 }));
 
-jest.mock('@/src/services/integrity-service', () => ({
+jest.mock('@/src/services/integrity', () => ({
   integrityService: {
     forceRunCheck: jest.fn().mockResolvedValue({}),
   },
@@ -74,7 +74,7 @@ import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/impo
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/domain';

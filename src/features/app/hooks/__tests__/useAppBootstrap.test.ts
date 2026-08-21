@@ -2,7 +2,7 @@ import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
-import { integrityService } from '@/src/services/integrity-service';
+import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/domain';
@@ -30,7 +30,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
 jest.mock('@/src/services/insight/InsightService', () => ({
   insightService: { preWarm: jest.fn().mockResolvedValue(undefined) },
 }));
-jest.mock('@/src/services/integrity-service', () => ({
+jest.mock('@/src/services/integrity', () => ({
   integrityService: { runStartupCheck: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('@/src/services/notification/NotificationService', () => ({

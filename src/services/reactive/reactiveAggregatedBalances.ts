@@ -4,7 +4,7 @@ import { accountListMetricsQueries } from '@/src/data/repositories/account/Accou
 import { mapAccountListRowToBalance } from '@/src/data/repositories/account/accountListBalanceMapping';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceActiveTransactionCount,

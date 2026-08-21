@@ -28,7 +28,7 @@ import { schema } from '@/src/data/database/schema';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';

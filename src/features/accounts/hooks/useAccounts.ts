@@ -10,7 +10,7 @@ import {
 } from '@/src/services/accounts/accountDerivedReads';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
-import { balanceService } from '@/src/services/BalanceService';
+import { balanceService } from '@/src/services/balance';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
 import { combineLatest, of, switchMap } from 'rxjs';
