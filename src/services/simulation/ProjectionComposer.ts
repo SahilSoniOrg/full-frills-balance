@@ -1,3 +1,4 @@
+import Account from '@/src/data/models/Account';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { FlowResolver } from './FlowResolver';
 import { Flow, LiabilityMetadata, SimulationContext } from './types';
@@ -7,7 +8,7 @@ export interface ComposeInput {
   budgetFlows: Flow[];
   budgetCategoryMap?: Map<string, Set<string>>;
   liabilityInput?: {
-    liabilityBalances: { account: any; balance: number }[];
+    liabilityBalances: { account: Account; balance: number }[];
     metadataMap: Map<string, LiabilityMetadata>;
     statementBalances: Map<string, number>;
     settledSinceStatement: Map<string, number>;

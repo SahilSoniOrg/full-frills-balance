@@ -120,7 +120,7 @@ export interface SimulationPlannedPayment {
 
 export type ProjectionSourceType = 'budget' | 'planned_payment' | 'liability' | 'goal' | 'custom';
 
-export interface ProjectionProvider<TInput = any> {
+export interface ProjectionProvider<TInput = unknown> {
   readonly sourceType: ProjectionSourceType;
   generate(context: SimulationContext, input?: TInput): Promise<Flow[]> | Flow[];
 }
