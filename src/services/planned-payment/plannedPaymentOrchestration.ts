@@ -84,15 +84,15 @@ export async function postPlannedPaymentOccurrence(
     );
 
     const postTime = Date.now();
-    const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-    const extraOps = scheduleOp ? () => [scheduleOp] : undefined;
+    const getScheduleOp = () => {
+      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
+      return scheduleOp ? [scheduleOp] : [];
+    };
 
     if (existingPlanned.length > 0) {
-      await ledgerWriteService.postJournal(
-        existingPlanned[0].id,
-        workplaceId,
-        scheduleOp ? [scheduleOp] : [],
-      );
+      await ledgerWriteService.postJournal(existingPlanned[0].id, workplaceId, {
+        extraOps: getScheduleOp,
+      });
     } else {
       if (!pp.toAccountId) {
         throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
@@ -108,7 +108,7 @@ export async function postPlannedPaymentOccurrence(
           plannedPaymentId: pp.id,
         },
         workplaceId,
-        { extraOps },
+        { extraOps: getScheduleOp },
       );
     }
 
@@ -139,9 +139,8 @@ export async function skipPlannedPaymentOccurrence(
       occurrenceDate,
     );
 
-    const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-
     if (existingPlanned.length > 0) {
+      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
       await persistBatch([
         ...journalPlannedQueries.prepareStatusUpdates(
           workplaceId,
@@ -154,6 +153,7 @@ export async function skipPlannedPaymentOccurrence(
       logger.warn(
         `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
       );
+      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
       if (scheduleOp) await persistBatch([scheduleOp]);
     } else {
       await ledgerWriteService.createJournal(
@@ -169,7 +169,12 @@ export async function skipPlannedPaymentOccurrence(
           plannedPaymentId: pp.id,
         },
         workplaceId,
-        { extraOps: scheduleOp ? () => [scheduleOp] : undefined },
+        {
+          extraOps: () => {
+            const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
+            return scheduleOp ? [scheduleOp] : [];
+          },
+        },
       );
     }
 
@@ -240,10 +245,7 @@ export async function processDuePlannedPayments(
         );
 
         if (dbExists === 0) {
-          const scheduleOp = prepareScheduleAdvance(workplaceId, pp, nextOcc);
-          const created = await generatePlannedJournalForPayment(pp, nextOcc, {
-            extraOps: scheduleOp ? () => [scheduleOp] : undefined,
-          });
+          const created = await generatePlannedJournalForPayment(pp, nextOcc);
           if (!created) break;
           if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
           journalledDays.get(pp.id)!.add(nextOcc);

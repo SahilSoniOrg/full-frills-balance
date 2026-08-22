@@ -120,18 +120,18 @@ export class LedgerLifecycleService {
     const postTime = Date.now();
     const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
     const originalDate = journal.journalDate;
-    const batchOptions = Array.isArray(options) ? { extraOps: options } : options;
-    const extras =
-      typeof batchOptions?.extraOps === 'function'
-        ? batchOptions.extraOps(journal)
-        : (batchOptions?.extraOps ?? []);
-
     const metadataOp = await journalMetadataRepository.preparePatch(
       workplaceId,
       journalId,
       { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
       MetadataSources.MANUAL_POST,
     );
+
+    const batchOptions = Array.isArray(options) ? { extraOps: options } : options;
+    const extras =
+      typeof batchOptions?.extraOps === 'function'
+        ? batchOptions.extraOps(journal)
+        : (batchOptions?.extraOps ?? []);
 
     const journalOp = journal.prepareUpdate((record: Journal) => {
       record.status = JournalStatus.POSTED;

@@ -347,11 +347,18 @@ describe('planned payment modules', () => {
         expect.any(Number),
       );
       // Promote existing PLANNED journal via canonical ledger write path
-      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', [
-        expect.objectContaining({ updates: expect.any(Object) }),
-      ]);
+      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', {
+        extraOps: expect.any(Function),
+      });
       expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
+
+      // Trigger lazy extraOps to verify schedule advance
+      const postOptions = (ledgerWriteService.postJournal as jest.Mock).mock.calls[0][2];
+      expect(typeof postOptions?.extraOps).toBe('function');
+      const extraOpsResult =
+        typeof postOptions?.extraOps === 'function' ? postOptions.extraOps() : [];
       expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
+      expect(extraOpsResult).toEqual([expect.objectContaining({ updates: expect.any(Object) })]);
       expect(updatePpSpy).not.toHaveBeenCalled();
     });
 
@@ -372,6 +379,11 @@ describe('planned payment modules', () => {
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
       expect(createJournalSpy).toHaveBeenCalled();
+      const createOptions = createJournalSpy.mock.calls[0][2];
+      expect(typeof createOptions?.extraOps).toBe('function');
+      if (typeof createOptions?.extraOps === 'function') {
+        createOptions.extraOps({} as any);
+      }
       expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
       expect(updatePpSpy).not.toHaveBeenCalled();
     });
