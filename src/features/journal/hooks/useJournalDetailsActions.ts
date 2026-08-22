@@ -55,13 +55,17 @@ export function useJournalDetailsActions({
     try {
       const newJournal = await duplicateJournal(journalId);
       toast.success('New transaction created from copy.');
-      AppNavigation.toJournalEntry({ journalId: newJournal.id });
+      AppNavigation.toJournalEntry({
+        journalId: newJournal.id,
+        initialDate: journalDate ? new Date(journalDate).toISOString() : undefined,
+        amount: amount ? String(amount) : undefined,
+      });
     } catch (error) {
       logger.error('Failed to copy transaction:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showErrorAlert(`Could not copy transaction: ${errorMessage}`);
     }
-  }, [duplicateJournal, journalId]);
+  }, [duplicateJournal, journalId, journalDate, amount]);
 
   const handlePost = useCallback(async () => {
     if (status !== 'PLANNED') return;

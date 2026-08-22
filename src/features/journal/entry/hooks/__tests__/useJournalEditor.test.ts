@@ -1,7 +1,6 @@
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { transactionService } from '@/src/services/transaction-ingestion';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
@@ -10,7 +9,7 @@ import { JournalId, WorkplaceId } from '@/src/types/domain';
 jest.mock('@/src/services/journal/journalDomainService');
 jest.mock('@/src/services/transaction-ingestion');
 jest.mock('@/src/services/journal/journalReadService', () => ({
-  journalReadService: { find: jest.fn() },
+  journalReadService: { find: jest.fn(), getJournalForEditor: jest.fn() },
 }));
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('expo-router', () => ({
@@ -140,18 +139,21 @@ describe('useJournalEditor', () => {
   });
 
   it('should load journal data on edit', async () => {
-    const mockJournal = {
-      journalDate: '2024-01-01T12:00:00.000Z',
-      description: 'Test Load',
-      notes: 'Test Notes Loaded',
+    const mockEditorData = {
+      journal: {
+        journalDate: '2024-01-01T12:00:00.000Z',
+        description: 'Test Load',
+        notes: 'Test Notes Loaded',
+      },
+      lines: [
+        { id: '1', accountId: 'a1', amount: '10', currencyCode: 'USD', transactionType: 'DEBIT' },
+        { id: '2', accountId: 'a2', amount: '10', currencyCode: 'USD', transactionType: 'CREDIT' },
+      ],
+      transactionType: 'expense',
+      forceAdvancedMode: false,
     };
-    const mockTxs = [
-      { id: '1', accountId: 'a1', amount: 10, currencyCode: 'USD', transactionType: 'DEBIT' },
-      { id: '2', accountId: 'a2', amount: 10, currencyCode: 'USD', transactionType: 'CREDIT' },
-    ];
 
-    (journalReadService.find as jest.Mock).mockResolvedValue(mockJournal);
-    (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
+    (journalReadService.getJournalForEditor as jest.Mock).mockResolvedValue(mockEditorData);
 
     const { result } = renderHook(() =>
       useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'j1' as JournalId }),
@@ -167,47 +169,39 @@ describe('useJournalEditor', () => {
   });
 
   it('ignores stale edit loads when journalId changes before fetch completes', async () => {
-    const mockJournalJ1 = {
-      journalDate: '2024-01-01T12:00:00.000Z',
-      description: 'Journal One',
-      notes: '',
+    const mockDataJ1 = {
+      journal: {
+        journalDate: '2024-01-01T12:00:00.000Z',
+        description: 'Journal One',
+        notes: '',
+      },
+      lines: [],
+      transactionType: 'expense',
+      forceAdvancedMode: false,
     };
-    const mockJournalJ2 = {
-      journalDate: '2024-01-02T12:00:00.000Z',
-      description: 'Journal Two',
-      notes: '',
+    const mockDataJ2 = {
+      journal: {
+        journalDate: '2024-01-02T12:00:00.000Z',
+        description: 'Journal Two',
+        notes: '',
+      },
+      lines: [
+        { id: '1', accountId: 'a1', amount: '20', currencyCode: 'USD', transactionType: 'DEBIT' },
+        { id: '2', accountId: 'a2', amount: '20', currencyCode: 'USD', transactionType: 'CREDIT' },
+      ],
+      transactionType: 'expense',
+      forceAdvancedMode: false,
     };
 
-    let resolveJ1Find: (value: typeof mockJournalJ1) => void;
-    const j1FindPromise = new Promise<typeof mockJournalJ1>(resolve => {
-      resolveJ1Find = resolve;
+    let resolveJ1: (value: typeof mockDataJ1) => void;
+    const j1Promise = new Promise<typeof mockDataJ1>(resolve => {
+      resolveJ1 = resolve;
     });
 
-    (journalReadService.find as jest.Mock).mockImplementation((_wp: string, id: string) => {
-      if (id === 'j1') return j1FindPromise;
-      return Promise.resolve(mockJournalJ2);
-    });
-    (transactionService.getEnrichedByJournal as jest.Mock).mockImplementation(
+    (journalReadService.getJournalForEditor as jest.Mock).mockImplementation(
       (_wp: string, id: string) => {
-        if (id === 'j2') {
-          return Promise.resolve([
-            {
-              id: '1',
-              accountId: 'a1',
-              amount: 20,
-              currencyCode: 'USD',
-              transactionType: 'DEBIT',
-            },
-            {
-              id: '2',
-              accountId: 'a2',
-              amount: 20,
-              currencyCode: 'USD',
-              transactionType: 'CREDIT',
-            },
-          ]);
-        }
-        return Promise.resolve([]);
+        if (id === 'j1') return j1Promise;
+        return Promise.resolve(mockDataJ2);
       },
     );
 
@@ -222,7 +216,7 @@ describe('useJournalEditor', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.description).toBe('Journal Two');
 
-    resolveJ1Find!(mockJournalJ1);
+    resolveJ1!(mockDataJ1);
     await act(async () => {
       await Promise.resolve();
     });

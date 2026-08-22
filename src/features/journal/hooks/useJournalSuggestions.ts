@@ -1,5 +1,6 @@
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { WorkplaceId } from '@/src/types/domain';
+import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';
 
@@ -46,10 +47,13 @@ export function useJournalSuggestions(workplaceId: WorkplaceId, searchQuery: str
       }
     };
 
-    void loadData();
+    const cancel = runAfterInteractions(() => {
+      void loadData();
+    });
 
     return () => {
       isActive = false;
+      cancel();
     };
   }, [workplaceId, searchQuery]);
 

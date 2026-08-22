@@ -1,6 +1,4 @@
-import { mapEnrichedLinesToEditorState } from '@/src/services/journal/journalEditorHelpers';
 import { journalReadService } from '@/src/services/journal/journalReadService';
-import { transactionService } from '@/src/services/transaction-ingestion';
 import { JournalEntryLine, JournalId, TabType, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
@@ -41,36 +39,21 @@ export function useJournalEditorLoader({
 
     const loadData = async () => {
       try {
-        const journal = await journalReadService.find(workplaceId, journalId);
+        const result = await journalReadService.getJournalForEditor(workplaceId, journalId);
         if (!isActive) return;
 
-        if (journal) {
+        if (result) {
+          const { journal, lines, transactionType, forceAdvancedMode } = result;
           const dateObj = new Date(journal.journalDate);
-          const snapshot: JournalEditorHydration = {
+          hydrateEditor({
             description: journal.description || '',
             notes: journal.notes || '',
             journalDate: dayjs(dateObj).format('YYYY-MM-DD'),
             journalTime: dayjs(dateObj).format('HH:mm'),
-          };
-
-          const transactions = await transactionService.getEnrichedByJournal(
-            workplaceId,
-            journalId,
-          );
-          if (!isActive) return;
-
-          if (transactions.length > 0) {
-            const { lines, forceAdvancedMode, simpleTabType } =
-              mapEnrichedLinesToEditorState(transactions);
-            hydrateEditor({
-              ...snapshot,
-              lines,
-              transactionType: simpleTabType,
-              isGuidedMode: forceAdvancedMode ? false : undefined,
-            });
-          } else {
-            hydrateEditor(snapshot);
-          }
+            lines: lines.length > 0 ? lines : undefined,
+            transactionType,
+            isGuidedMode: forceAdvancedMode ? false : undefined,
+          });
         }
       } catch {
         if (isActive) showErrorAlert('Failed to load transaction');

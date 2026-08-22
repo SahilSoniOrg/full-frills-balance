@@ -20,7 +20,8 @@ import {
   resolveRevertPlannedActionLabels,
   resolveJournalAmountPresentation,
 } from '@/src/services/journal/journalDetailsHelpers';
-import { JournalId } from '@/src/types/domain';
+import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
+import { JournalId, TransactionType } from '@/src/types/domain';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -152,8 +153,44 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   const statusVariant = useMemo(() => resolveJournalStatusChipVariant(journalInfo), [journalInfo]);
 
   const handleEdit = useCallback(() => {
-    AppNavigation.toJournalEntry({ journalId });
-  }, [journalId]);
+    if (!journalId) return;
+
+    let sourceAccountId: string | undefined;
+    let destinationAccountId: string | undefined;
+    let type: 'expense' | 'income' | 'transfer' | undefined;
+    let mode: 'simple' | 'advanced' | undefined;
+
+    if (transactions.length === 2) {
+      const credit = transactions.find(t => t.transactionType === TransactionType.CREDIT);
+      const debit = transactions.find(t => t.transactionType === TransactionType.DEBIT);
+      if (credit && debit) {
+        sourceAccountId = credit.accountId;
+        destinationAccountId = debit.accountId;
+        mode = 'simple';
+        if (credit.accountType && debit.accountType) {
+          type = inferSimpleTabTypeFromTwoLegs(credit.accountType, debit.accountType);
+        }
+      }
+    } else if (transactions.length > 2) {
+      mode = 'advanced';
+    }
+
+    AppNavigation.toJournalEntry({
+      journalId,
+      initialDate: journalInfo
+        ? new Date(journalInfo.journalDate || journalInfo.date).toISOString()
+        : undefined,
+      sourceAccountId,
+      destinationAccountId,
+      amount: amount != null ? String(amount) : undefined,
+      notes: journalInfo?.notes || undefined,
+      params: {
+        ...(mode ? { mode } : {}),
+        ...(type ? { type } : {}),
+        ...(journalInfo?.description ? { description: journalInfo.description } : {}),
+      },
+    });
+  }, [journalId, transactions, journalInfo, amount]);
 
   const onHistoryPress = useCallback(() => {
     AppNavigation.toAuditLog({ entityType: 'journal', entityId: journalId });

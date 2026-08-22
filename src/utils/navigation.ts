@@ -81,6 +81,9 @@ export const AppNavigation = {
     rawSmsBody?: string;
     initialDate?: string;
     sourceAccountId?: string;
+    destinationAccountId?: string;
+    amount?: string;
+    notes?: string;
     params?: Record<string, string>;
   }) => {
     const { params, ...direct } = options ?? {};
