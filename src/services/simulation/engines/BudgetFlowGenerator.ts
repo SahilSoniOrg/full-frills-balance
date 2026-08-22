@@ -1,77 +1,78 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Budget from '@/src/data/models/Budget';
-import { BudgetUsage } from '@/src/services/budget/types';
-import { AccountId } from '@/src/types/domain';
-import dayjs from 'dayjs';
-import { BudgetPeriodUtils } from '../../budget/BudgetPeriodUtils';
-import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
+import {
+  BudgetCapacityProjection,
+  Flow,
+  FlowCategory,
+  FlowSource,
+  SimulationContext,
+} from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class BudgetFlowGenerator {
   /**
-   * Generates budget-related OUTFLOWs from liquid asset accounts.
+   * Materializes residual budget capacity into daily estimated burn flows,
+   * taking into account matched planned obligations within cycle periods.
    */
-  static generate(
+  static materializeFlows(
     context: SimulationContext,
-    budgets: Budget[],
-    usages: BudgetUsage[],
-    budgetCategoryMap: Map<string, Set<string>>,
-  ): Flow[] {
-    const flows: Flow[] = [];
+    capacities: BudgetCapacityProjection[],
+    plannedFlows: Flow[] = [],
+  ): { budgetFlows: Flow[] } {
+    const budgetFlows: Flow[] = [];
 
-    const getTargetAssetAccountIds = (budget: Budget): AccountId[] => {
-      if (budget.assetAccountIds) {
-        const ids = budget.assetAccountIds
-          .split(',')
-          .map((id: string) => id.trim())
-          .filter(Boolean) as AccountId[];
-        if (ids.length > 0) return ids;
+    // Pre-group relevant planned flows by category for faster lookup
+    const plannedByCategoryId = new Map<string, Flow[]>();
+    plannedFlows.forEach(f => {
+      if (f.categoryId) {
+        const list = plannedByCategoryId.get(f.categoryId) || [];
+        list.push(f);
+        plannedByCategoryId.set(f.categoryId, list);
       }
-      return context.orderedLiquidAccountIds.length > 0 ? [context.orderedLiquidAccountIds[0]] : [];
-    };
+    });
 
-    for (let i = 0; i < budgets.length; i++) {
-      const budget = budgets[i];
-      const usage = usages[i];
+    for (const proj of capacities) {
+      const {
+        budgetId,
+        name,
+        cycleAmount,
+        usageRemaining,
+        intervalType,
+        accountScope,
+        targetAssetAccountIds,
+        daysLeftInCycle,
+        nextCycleDays,
+        windowSpansExtraCycles,
+        futureCycles,
+      } = proj;
 
-      const remaining = Math.max(0, usage.remaining);
-      if (remaining === 0 && budget.amount === 0) continue;
+      // Subtract planned flows that match this budget's categories
+      let currentCyclePlannedTotal = 0;
+      let nextCyclePlannedTotal = 0;
 
-      const targetAssetIds = getTargetAssetAccountIds(budget);
-      if (targetAssetIds.length === 0) continue;
+      accountScope.forEach(catId => {
+        const matching = plannedByCategoryId.get(catId) || [];
+        matching.forEach(f => {
+          if (f.dayOffset < daysLeftInCycle) {
+            currentCyclePlannedTotal += f.amount;
+          } else {
+            nextCyclePlannedTotal += f.amount;
+          }
+        });
+      });
 
-      const budgetCategories = budgetCategoryMap.get(budget.id) || new Set<string>();
-
-      const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, context.simulationStartMs);
-      const daysLeftInCycle = Math.max(
-        1,
-        dayjs(endDate).diff(dayjs(context.simulationStartMs), 'day') + 1,
+      const effectiveRemaining = Math.max(0, usageRemaining - currentCyclePlannedTotal);
+      const effectiveNextCycleTotal = Math.max(
+        0,
+        cycleAmount - nextCyclePlannedTotal / futureCycles,
       );
 
-      const nextCycleStart = dayjs(endDate).add(1, 'ms').valueOf();
-      const nextCycleRange = BudgetPeriodUtils.getCurrentPeriod(budget, nextCycleStart);
-      const nextCycleDays = Math.max(
-        1,
-        dayjs(nextCycleRange.endDate).diff(dayjs(nextCycleRange.startDate), 'day') + 1,
-      );
-
-      const windowSpansExtraCycles = daysLeftInCycle + nextCycleDays < context.simulationDays;
-
-      const effectiveRemaining = Math.max(0, usage.remaining);
-      const effectiveNextCycleTotal = Math.max(0, budget.amount);
-
-      if (effectiveRemaining === 0 && effectiveNextCycleTotal === 0 && budget.amount === 0)
-        continue;
+      if (effectiveRemaining === 0 && effectiveNextCycleTotal === 0 && cycleAmount === 0) continue;
 
       const burns = new Array(context.simulationDays).fill(0);
       const isSmoothed = AppConfig.defaults.budgetMode === 'SMOOTHED';
-      const intervalType = budget.intervalType || 'MONTHLY';
-      // Constant-30 smoothing is a monthly heuristic; other cadences must use real cycle length.
       const useConstant30 =
         (AppConfig.insights.useConstant30DayBurn ?? true) && intervalType === 'MONTHLY';
 
-      // Averaging across the window would smear an already-spent cycle over later ones,
-      // so it only applies when the window holds no cycles beyond the next.
       if (isSmoothed && !windowSpansExtraCycles) {
         const totalInWindow =
           effectiveRemaining +
@@ -93,30 +94,25 @@ export class BudgetFlowGenerator {
         }
       }
 
-      // Support for RESERVE mode (hypothetical future-proofing or per-budget flag)
-      // If we want to support "keeping a balance", we can subtract the reserve from the available liquid balance in the simulator,
-      // or emit a "RESERVE" flow that doesn't actually spend but reduces safe-to-spend.
-      // For now, these are all OUTFLOWs.
-
-      const shareOfBurn = 1 / targetAssetIds.length;
-      const budgetCategoryIds = Array.from(budgetCategories);
+      const shareOfBurn = 1 / targetAssetAccountIds.length;
+      const budgetCategoryIds = Array.from(accountScope);
       const representativeCategoryId = budgetCategoryIds[0];
 
-      for (const assetId of targetAssetIds) {
+      for (const assetId of targetAssetAccountIds) {
         for (let d = 0; d < context.simulationDays; d++) {
           const dailyAmt = burns[d] * shareOfBurn;
           if (dailyAmt > AppConfig.defaults.simulation.financialEpsilon) {
-            flows.push({
+            budgetFlows.push({
               kind: 'OUTFLOW',
               accountId: assetId,
               amount: dailyAmt,
               dayOffset: d,
               category: FlowCategory.BUDGET,
               timeframe: 'FUTURE',
-              label: budget.name,
+              label: name,
               origin: FlowSource.BUDGET,
               categoryId: representativeCategoryId,
-              referenceId: budget.id,
+              referenceId: budgetId,
               meta: {
                 tags: d < daysLeftInCycle ? ['CURRENT_CYCLE'] : [],
               },
@@ -126,7 +122,7 @@ export class BudgetFlowGenerator {
       }
     }
 
-    flows.forEach(assertValidFlow);
-    return flows;
+    budgetFlows.forEach(assertValidFlow);
+    return { budgetFlows };
   }
 }

@@ -1,18 +1,31 @@
+import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { FlowResolver } from './FlowResolver';
-import { Flow } from './types';
+import { BudgetCapacityProjection, Flow, SimulationContext } from './types';
 
 export class ProjectionComposer {
   /**
-   * Reconciles Budget Intent vs Planned Expense Obligations.
-   * A budget flow reconciles against planned flows in any category covered
-   * by that budget on the same day, emitting merged/deduplicated flows.
+   * Reconciles Budget Intent vs Planned Expense Obligations via Delayed Discretization.
+   * Consumes semantic budget capacity projections and scheduled planned flows,
+   * resolves cycle-level capacities against matching planned outflows, materializes
+   * residual daily budget burn flows, and reconciles day-level tags.
    */
   static composeSpending(
-    budgetFlows: Flow[],
+    budgetCapacities: BudgetCapacityProjection[],
     plannedFlows: Flow[],
+    context: SimulationContext,
     budgetCategoryMap?: Map<string, Set<string>>,
   ): Flow[] {
-    return FlowResolver.resolveConflicts([...budgetFlows, ...plannedFlows], budgetCategoryMap);
+    const { budgetFlows } = BudgetFlowGenerator.materializeFlows(
+      context,
+      budgetCapacities,
+      plannedFlows,
+    );
+
+    const effectiveCategoryMap =
+      budgetCategoryMap ||
+      new Map<string, Set<string>>(budgetCapacities.map(b => [b.budgetId, b.accountScope]));
+
+    return FlowResolver.resolveConflicts([...budgetFlows, ...plannedFlows], effectiveCategoryMap);
   }
 
   /**

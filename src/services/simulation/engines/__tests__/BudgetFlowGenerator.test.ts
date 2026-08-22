@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
+import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/domain';
 import { SimulationContext } from '../../types';
@@ -35,7 +36,13 @@ describe('BudgetFlowGenerator', () => {
 
   it('generates daily burn flows in default mode', () => {
     // 300 remaining over 30 days = 10 per day
-    const flows = BudgetFlowGenerator.generate(mockContext, budgets, usages, budgetCategoryMap);
+    const capacities = budgetProjectionProvider.projectCapacities(
+      mockContext,
+      budgets,
+      usages,
+      budgetCategoryMap,
+    );
+    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows).toHaveLength(30);
     expect(flows[0]).toMatchObject({
@@ -58,20 +65,20 @@ describe('BudgetFlowGenerator', () => {
       orderedLiquidAccountIds: ['acc-1' as AccountId, 'acc-2' as AccountId],
     };
 
-    const flows = BudgetFlowGenerator.generate(
+    const capacities = budgetProjectionProvider.projectCapacities(
       contextWithTwoAccounts,
       multiAccountBudget as unknown as Budget[],
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }] as BudgetUsage[],
       new Map([['b2', new Set()]]),
     );
+    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(
+      contextWithTwoAccounts,
+      capacities,
+    );
 
-    // 100 / 10 days = 10 per day. Split between 2 accounts = 5 each.
-    // Total flows = 10 days * 2 accounts = 20 flows.
     expect(
       flows.filter(f => 'accountId' in f && f.accountId === ('acc-1' as AccountId)),
-    ).toHaveLength(30); // because simulationDays = 30
-    // Wait, simulationDays is 30, but daysLeftInMonth is 10.
-    // So days 0-9 use currentMonthDailyRate (100/10 = 10), days 10-29 use nextMonthDailyRate (100/30 = 3.33).
+    ).toHaveLength(30);
     const day0Acc1 = flows.find(
       f => f.dayOffset === 0 && 'accountId' in f && f.accountId === ('acc-1' as AccountId),
     );
@@ -79,8 +86,6 @@ describe('BudgetFlowGenerator', () => {
   });
 
   it('keeps future days at the full daily amount after today is fully spent', () => {
-    // Daily budget of 4000 with today's 4000 already spent: today burns nothing and
-    // each later day gets a fresh cycle, rather than averaging 3866.67 across the window.
     const dailyBudgets = [
       {
         id: 'b-daily-spent',
@@ -93,12 +98,13 @@ describe('BudgetFlowGenerator', () => {
       },
     ] as unknown as Budget[];
 
-    const flows = BudgetFlowGenerator.generate(
+    const capacities = budgetProjectionProvider.projectCapacities(
       mockContext,
       dailyBudgets,
       [{ spent: 4000, remaining: 0, budgetAmount: 4000, usagePercent: 1 }],
       new Map([['b-daily-spent', new Set(['cat-1'])]]),
     );
+    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows.find(f => f.dayOffset === 0)).toBeUndefined();
     expect(flows).toHaveLength(29);
@@ -122,12 +128,13 @@ describe('BudgetFlowGenerator', () => {
         },
       ] as unknown as Budget[];
 
-      const flows = BudgetFlowGenerator.generate(
+      const capacities = budgetProjectionProvider.projectCapacities(
         mockContext,
         dailyBudgets,
         [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],
         new Map([['b-daily', new Set(['cat-1'])]]),
       );
+      const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
       expect(flows).toHaveLength(30);
       expect(flows[0].amount).toBeCloseTo(100, 5);

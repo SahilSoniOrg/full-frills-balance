@@ -1,4 +1,4 @@
-import { AccountFields, AccountId, AccountSubtype } from '@/src/types/domain';
+import { AccountFields, AccountId, AccountSubtype, BudgetId } from '@/src/types/domain';
 
 export enum FlowCategory {
   INCOME = 'INCOME',
@@ -104,6 +104,20 @@ export interface SimulationContext {
   convert: (amount: number, from: string) => number;
 }
 
+export interface SimulationBudget {
+  id: BudgetId | string;
+  name: string;
+  amount: number;
+  currencyCode: string;
+  assetAccountIds?: string;
+  intervalType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
+  createdAt?: Date | number;
+}
+
 export interface SimulationPlannedPayment {
   id: string;
   name: string;
@@ -118,11 +132,25 @@ export interface SimulationPlannedPayment {
   endDate?: number;
 }
 
+export interface BudgetCapacityProjection {
+  budgetId: BudgetId | string;
+  name: string;
+  cycleAmount: number;
+  usageRemaining: number;
+  intervalType: string;
+  accountScope: Set<string>;
+  targetAssetAccountIds: AccountId[];
+  daysLeftInCycle: number;
+  nextCycleDays: number;
+  windowSpansExtraCycles: boolean;
+  futureCycles: number;
+}
+
 export type ProjectionSourceType = 'budget' | 'planned_payment' | 'liability' | 'goal' | 'custom';
 
-export interface ProjectionProvider<TInput = void> {
+export interface ProjectionProvider<TInput = void, TOutput = Flow[]> {
   readonly sourceType: ProjectionSourceType;
-  generate(context: SimulationContext, input: TInput): Promise<Flow[]> | Flow[];
+  generate(context: SimulationContext, input: TInput): Promise<TOutput> | TOutput;
 }
 
 export interface ISimulationEngine {

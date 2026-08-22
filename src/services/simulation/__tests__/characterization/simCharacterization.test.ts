@@ -291,10 +291,10 @@ describe('Forward-Finance Characterization Baseline (Behavior Locks)', () => {
       simulationDays: 30,
     });
 
-    // Total effective food spend should compose to 600 (not 600 + 150 = 750)
-    // 2000 starting - 600 total projected food = 1400 SafeToSpend
-    expect(result.simulationResult.summary.safeToSpend).toBe(1400);
-    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1400);
+    // Total effective food spend composes to $150 planned + 29 * $15 residual burn = $585 (not 600 + 150 = 750)
+    // 2000 starting - 585 total projected food = 1415 SafeToSpend
+    expect(result.simulationResult.summary.safeToSpend).toBe(1415);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1415);
   });
 
   it('LOCK 4: credit card statement obligation and settlement matching', async () => {

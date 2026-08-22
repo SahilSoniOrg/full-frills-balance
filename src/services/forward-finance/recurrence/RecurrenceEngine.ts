@@ -57,7 +57,7 @@ export class RecurrenceEngine {
         break;
     }
 
-    return next.startOf('day').valueOf();
+    return next.valueOf();
   }
 
   /**
