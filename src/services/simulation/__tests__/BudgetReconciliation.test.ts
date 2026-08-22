@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
+import { ProjectionComposer } from '../ProjectionComposer';
 import { FlowCategory, SimulationContext } from '../types';
 import { AccountId } from '@/src/types/domain';
 
@@ -56,17 +57,22 @@ describe('BudgetReconciliation', () => {
       [budget],
       [usage as any],
       budgetCategoryMap,
-      plannedFlows,
     );
 
-    // Total budget was $1000. Planned was $800.
-    // Remaining for burn should be $200.
-    // Daily burn over window = $200 / safeToSpendDays
-    const day0Burn = budgetFlows.find(f => f.dayOffset === 0);
-    expect(day0Burn?.amount).toBeCloseTo(200 / safeToSpendDays, 2);
+    // Pure budget intent emits $1000 / safeToSpendDays daily
+    const totalRawBurn = budgetFlows.reduce((sum, f) => sum + f.amount, 0);
+    expect(totalRawBurn).toBeCloseTo(1000, 2);
 
-    const totalBurn = budgetFlows.reduce((sum, f) => sum + f.amount, 0);
-    expect(totalBurn).toBeCloseTo(200, 2);
+    // When composed with planned flows, ProjectionComposer reconciles $800 planned + $200 residual
+    const composed = ProjectionComposer.compose({
+      plannedFlows,
+      budgetFlows,
+      budgetCategoryMap,
+      context,
+    });
+
+    const totalComposed = composed.reduce((sum, f) => sum + f.amount, 0);
+    expect(totalComposed).toBeCloseTo(1000, 2);
   });
 
   it('handles smoothing correctly with planned payments', () => {

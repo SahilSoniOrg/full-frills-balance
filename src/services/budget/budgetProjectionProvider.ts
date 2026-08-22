@@ -7,7 +7,6 @@ export interface BudgetProjectionInput {
   budgets: Budget[];
   usages: BudgetUsage[];
   budgetCategoryMap: Map<string, Set<string>>;
-  plannedFlows?: Flow[];
 }
 
 export class BudgetProjectionProvider implements ProjectionProvider<BudgetProjectionInput> {
@@ -20,7 +19,6 @@ export class BudgetProjectionProvider implements ProjectionProvider<BudgetProjec
       input.budgets,
       input.usages,
       input.budgetCategoryMap,
-      input.plannedFlows || [],
     );
   }
 }

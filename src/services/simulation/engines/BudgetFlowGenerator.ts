@@ -16,19 +16,8 @@ export class BudgetFlowGenerator {
     budgets: Budget[],
     usages: BudgetUsage[],
     budgetCategoryMap: Map<string, Set<string>>,
-    plannedFlows: Flow[] = [],
   ): Flow[] {
     const flows: Flow[] = [];
-
-    // Pre-group relevant planned flows by category for faster lookup
-    const plannedByCategoryId = new Map<string, Flow[]>();
-    plannedFlows.forEach(f => {
-      if (f.categoryId) {
-        const list = plannedByCategoryId.get(f.categoryId) || [];
-        list.push(f);
-        plannedByCategoryId.set(f.categoryId, list);
-      }
-    });
 
     const getTargetAssetAccountIds = (budget: Budget): AccountId[] => {
       if (budget.assetAccountIds) {
@@ -66,35 +55,10 @@ export class BudgetFlowGenerator {
         dayjs(nextCycleRange.endDate).diff(dayjs(nextCycleRange.startDate), 'day') + 1,
       );
 
-      // Subtract planned flows that match this budget's categories
-      let currentCyclePlannedTotal = 0;
-      let nextCyclePlannedTotal = 0;
-
-      budgetCategories.forEach(catId => {
-        const matching = plannedByCategoryId.get(catId) || [];
-        matching.forEach(f => {
-          if (f.dayOffset < daysLeftInCycle) {
-            currentCyclePlannedTotal += f.amount;
-          } else {
-            nextCyclePlannedTotal += f.amount;
-          }
-        });
-      });
-
-      // Current + next cycle only describe the whole window for long cadences. Short
-      // ones (daily/weekly) recur many times inside it, so post-cycle planned spend
-      // belongs to several cycles rather than being charged against a single one.
-      const futureCycles = Math.max(
-        1,
-        Math.ceil((context.simulationDays - daysLeftInCycle) / nextCycleDays),
-      );
       const windowSpansExtraCycles = daysLeftInCycle + nextCycleDays < context.simulationDays;
 
-      const effectiveRemaining = Math.max(0, usage.remaining - currentCyclePlannedTotal);
-      const effectiveNextCycleTotal = Math.max(
-        0,
-        budget.amount - nextCyclePlannedTotal / futureCycles,
-      );
+      const effectiveRemaining = Math.max(0, usage.remaining);
+      const effectiveNextCycleTotal = Math.max(0, budget.amount);
 
       if (effectiveRemaining === 0 && effectiveNextCycleTotal === 0 && budget.amount === 0)
         continue;
