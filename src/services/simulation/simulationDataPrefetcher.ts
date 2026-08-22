@@ -159,8 +159,8 @@ export async function fetchBudgetCategoryMap(
   budgets.forEach(budget => {
     const scopes = scopesByBudget.get(budget.id) || [];
     const rootScopeIds = scopes.map(s => s.accountId);
-    const descendantIds = ScopeResolver.resolveDescendantAccountIds(rootScopeIds, expenses);
-    map.set(budget.id, descendantIds as Set<string>);
+    const leafIds = ScopeResolver.resolveLeafAccountIds(rootScopeIds, expenses);
+    map.set(budget.id, leafIds as Set<string>);
   });
 
   return map;

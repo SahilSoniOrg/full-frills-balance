@@ -18,8 +18,7 @@ export interface LiabilityProjectionInput {
 export class LiabilityProjectionProvider implements ProjectionProvider<LiabilityProjectionInput> {
   readonly sourceType = 'liability';
 
-  generate(context: SimulationContext, input?: LiabilityProjectionInput): Flow[] {
-    if (!input) return [];
+  generate(context: SimulationContext, input: LiabilityProjectionInput): Flow[] {
     return LiabilityFlowGenerator.generate(
       context,
       input.previousFlows || [],

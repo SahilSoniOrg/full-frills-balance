@@ -10,12 +10,12 @@ describe('ScopeResolver', () => {
     { id: 'utilities', parentAccountId: 'root-expenses' },
   ];
 
-  it('resolves all descendants including intermediate nodes', () => {
-    const descendants = ScopeResolver.resolveDescendantAccountIds(['food'], accounts);
-    expect(descendants.has('food' as any)).toBe(true);
-    expect(descendants.has('groceries' as any)).toBe(true);
-    expect(descendants.has('dining' as any)).toBe(true);
-    expect(descendants.has('rent' as any)).toBe(false);
+  it('resolves full subtree including roots and intermediate nodes', () => {
+    const subtree = ScopeResolver.resolveSubtreeAccountIds(['food'], accounts);
+    expect(subtree.has('food' as any)).toBe(true);
+    expect(subtree.has('groceries' as any)).toBe(true);
+    expect(subtree.has('dining' as any)).toBe(true);
+    expect(subtree.has('rent' as any)).toBe(false);
   });
 
   it('resolves strictly leaf nodes for budget spend posting', () => {
@@ -37,7 +37,7 @@ describe('ScopeResolver', () => {
       { id: 'c', parentAccountId: 'b' },
     ];
 
-    const descendants = ScopeResolver.resolveDescendantAccountIds(['a'], cyclicAccounts);
-    expect(descendants.size).toBe(3);
+    const subtree = ScopeResolver.resolveSubtreeAccountIds(['a'], cyclicAccounts);
+    expect(subtree.size).toBe(3);
   });
 });

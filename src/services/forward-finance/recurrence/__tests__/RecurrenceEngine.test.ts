@@ -79,6 +79,78 @@ describe('RecurrenceEngine', () => {
       expect(start).toBe('2026-04-15');
       expect(end).toBe('2026-05-14');
     });
+
+    it('correctly handles intervalN = 3 (quarterly budget)', () => {
+      const startAnchor = new Date('2026-01-01T00:00:00Z').getTime();
+      const ref = new Date('2026-02-15T12:00:00Z').getTime();
+      const period = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'MONTHLY', intervalN: 3, recurrenceDay: 1, startDate: startAnchor },
+        ref,
+      );
+
+      const start = new Date(period.startDate).toISOString().split('T')[0];
+      const end = new Date(period.endDate).toISOString().split('T')[0];
+      expect(start).toBe('2026-01-01');
+      expect(end).toBe('2026-03-31');
+    });
+
+    it('correctly clips 31st monthly anchor across Jan, Feb, Mar, Apr', () => {
+      // In January (31 days)
+      const janRef = new Date('2026-01-31T12:00:00Z').getTime();
+      const janPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'MONTHLY', intervalN: 1, recurrenceDay: 31 },
+        janRef,
+      );
+      expect(new Date(janPeriod.startDate).toISOString().split('T')[0]).toBe('2026-01-31');
+      expect(new Date(janPeriod.endDate).toISOString().split('T')[0]).toBe('2026-02-27');
+
+      // In February (28 days non-leap)
+      const febRef = new Date('2026-02-15T12:00:00Z').getTime();
+      const febPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'MONTHLY', intervalN: 1, recurrenceDay: 31 },
+        febRef,
+      );
+      expect(new Date(febPeriod.startDate).toISOString().split('T')[0]).toBe('2026-01-31');
+      expect(new Date(febPeriod.endDate).toISOString().split('T')[0]).toBe('2026-02-27');
+
+      // In March (31 days)
+      const marRef = new Date('2026-03-15T12:00:00Z').getTime();
+      const marPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'MONTHLY', intervalN: 1, recurrenceDay: 31 },
+        marRef,
+      );
+      expect(new Date(marPeriod.startDate).toISOString().split('T')[0]).toBe('2026-02-28');
+      expect(new Date(marPeriod.endDate).toISOString().split('T')[0]).toBe('2026-03-30');
+
+      // In April (30 days)
+      const aprRef = new Date('2026-04-15T12:00:00Z').getTime();
+      const aprPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'MONTHLY', intervalN: 1, recurrenceDay: 31 },
+        aprRef,
+      );
+      expect(new Date(aprPeriod.startDate).toISOString().split('T')[0]).toBe('2026-03-31');
+      expect(new Date(aprPeriod.endDate).toISOString().split('T')[0]).toBe('2026-04-29');
+    });
+
+    it('correctly handles yearly recurrence anchored on Feb 29 (leap vs non-leap)', () => {
+      // Leap year 2024
+      const leapRef = new Date('2024-06-15T12:00:00Z').getTime();
+      const leapPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'YEARLY', intervalN: 1, recurrenceMonth: 2, recurrenceDay: 29 },
+        leapRef,
+      );
+      expect(new Date(leapPeriod.startDate).toISOString().split('T')[0]).toBe('2024-02-29');
+      expect(new Date(leapPeriod.endDate).toISOString().split('T')[0]).toBe('2025-02-27');
+
+      // Non-leap year 2025
+      const nonLeapRef = new Date('2025-06-15T12:00:00Z').getTime();
+      const nonLeapPeriod = RecurrenceEngine.getCurrentPeriod(
+        { intervalType: 'YEARLY', intervalN: 1, recurrenceMonth: 2, recurrenceDay: 29 },
+        nonLeapRef,
+      );
+      expect(new Date(nonLeapPeriod.startDate).toISOString().split('T')[0]).toBe('2025-02-28');
+      expect(new Date(nonLeapPeriod.endDate).toISOString().split('T')[0]).toBe('2026-02-27');
+    });
   });
 
   describe('getOccurrences', () => {

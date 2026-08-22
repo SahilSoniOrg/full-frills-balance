@@ -13,8 +13,10 @@ import dayjs from 'dayjs';
 import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
 import { plannedPaymentProjectionProvider } from '@/src/services/planned-payment/plannedPaymentProjectionProvider';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
+import { liabilityProjectionProvider } from './liability/liabilityProjectionProvider';
 import { ProjectionComposer } from './ProjectionComposer';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
+
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
 import { SimulationContext, SimulationRunResult } from './types';
@@ -243,6 +245,7 @@ export class CashFlowSimulationService {
         expenseAccountIds,
         journalTransactionsMap: journalTxsMap,
       }),
+
       budgetProjectionProvider.generate(context, {
         budgets: filteredBudgets,
         usages: filteredUsages,
@@ -251,19 +254,25 @@ export class CashFlowSimulationService {
     ]);
     trace?.metric('flow_gen_domain');
 
-    // 4. PHASE: COMPOSE VIA PROJECTION COMPOSER
-    const allFlows = ProjectionComposer.compose({
-      plannedFlows,
+    // 4. PHASE: COMPOSE SPENDING CONFLICTS
+    const resolvedSpendingFlows = ProjectionComposer.composeSpending(
       budgetFlows,
+      plannedFlows,
       budgetCategoryMap,
-      liabilityInput: {
-        liabilityBalances: normalizedLiabilityBalances,
-        metadataMap,
-        statementBalances,
-        settledSinceStatement,
-      },
-      context,
+    );
+
+    // 5. PHASE: GENERATE DERIVED LIABILITY OBLIGATIONS
+    const liabilityFlows = await liabilityProjectionProvider.generate(context, {
+      liabilityBalances: normalizedLiabilityBalances,
+      metadataMap,
+      statementBalances,
+      settledSinceStatement,
+      previousFlows: resolvedSpendingFlows,
     });
+    trace?.metric('flow_gen_liability');
+
+    // 6. PHASE: DETERMINISTIC TIMELINE SORTING
+    const allFlows = ProjectionComposer.sortTimeline([...resolvedSpendingFlows, ...liabilityFlows]);
 
     trace?.metric('flow_generation');
     logger.info(

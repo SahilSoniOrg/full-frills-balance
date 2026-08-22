@@ -6,6 +6,12 @@ export function normalizeToStartOfDay(timestamp: number): number {
   return dayjs(timestamp).startOf('day').valueOf();
 }
 
+/** Clamps a date to the maximum valid day in its target month. */
+function setClampedDate(date: dayjs.Dayjs, targetDay: number): dayjs.Dayjs {
+  const maxDay = date.endOf('month').date();
+  return date.date(Math.min(targetDay, maxDay));
+}
+
 export class RecurrenceEngine {
   /**
    * Calculates the next discrete occurrence strictly after `current` based on rule.
@@ -31,9 +37,7 @@ export class RecurrenceEngine {
 
       case 'MONTHLY': {
         const targetDay = rule.recurrenceDay ?? next.date();
-        next = next.date(1).add(intervalN, 'month');
-        const lastDayOfMonth = next.endOf('month').date();
-        next = next.date(Math.min(targetDay, lastDayOfMonth));
+        next = setClampedDate(next.date(1).add(intervalN, 'month'), targetDay);
         break;
       }
 
@@ -44,9 +48,7 @@ export class RecurrenceEngine {
             : next.month();
         const targetDay = rule.recurrenceDay ?? next.date();
 
-        next = next.add(intervalN, 'year').month(targetMonth).date(1);
-        const lastDayOfMonth = next.endOf('month').date();
-        next = next.date(Math.min(targetDay, lastDayOfMonth));
+        next = setClampedDate(next.add(intervalN, 'year').month(targetMonth).date(1), targetDay);
         break;
       }
 
@@ -81,17 +83,14 @@ export class RecurrenceEngine {
 
       case 'MONTHLY': {
         const targetDay = recurrenceDay ?? start.date();
-        const lastDayThisMonth = start.endOf('month').date();
-        const candidateDay = Math.min(targetDay, lastDayThisMonth);
-        const candidate = start.date(candidateDay);
+        const candidate = setClampedDate(start, targetDay);
 
         if (candidate.valueOf() >= start.valueOf()) {
           return candidate.valueOf();
         }
 
         const nextMonth = start.date(1).add(1, 'month');
-        const lastDayNextMonth = nextMonth.endOf('month').date();
-        return nextMonth.date(Math.min(targetDay, lastDayNextMonth)).valueOf();
+        return setClampedDate(nextMonth, targetDay).valueOf();
       }
 
       case 'YEARLY': {
@@ -101,17 +100,14 @@ export class RecurrenceEngine {
             : start.month();
         const targetDay = recurrenceDay ?? start.date();
 
-        let candidate = start.month(targetMonth).date(1);
-        const lastDayThisYear = candidate.endOf('month').date();
-        candidate = candidate.date(Math.min(targetDay, lastDayThisYear));
+        let candidate = setClampedDate(start.month(targetMonth).date(1), targetDay);
 
         if (candidate.valueOf() >= start.valueOf()) {
           return candidate.valueOf();
         }
 
-        let nextYear = start.add(1, 'year').month(targetMonth).date(1);
-        const lastDayNextYear = nextYear.endOf('month').date();
-        return nextYear.date(Math.min(targetDay, lastDayNextYear)).valueOf();
+        const nextYear = start.add(1, 'year').month(targetMonth).date(1);
+        return setClampedDate(nextYear, targetDay).valueOf();
       }
 
       default:
@@ -154,7 +150,7 @@ export class RecurrenceEngine {
    * Calculates the active cycle start and end dates containing referenceDate.
    */
   static getCurrentPeriod(rule: RecurrenceRule, referenceDate: number = Date.now()): DateRange {
-    const ref = dayjs(referenceDate);
+    const ref = dayjs(referenceDate).startOf('day');
     const intervalType = (rule.intervalType || 'MONTHLY') as RecurrenceInterval;
     const intervalN = Math.max(1, rule.intervalN || 1);
 
@@ -163,7 +159,7 @@ export class RecurrenceEngine {
         const startAnchor = rule.startDate
           ? dayjs(rule.startDate)
           : dayjs(rule.createdAt || referenceDate).startOf('day');
-        const diffDays = ref.startOf('day').diff(startAnchor.startOf('day'), 'day');
+        const diffDays = ref.diff(startAnchor.startOf('day'), 'day');
         const cyclesPassed = Math.floor(diffDays / intervalN);
         const cycleStart = startAnchor.add(cyclesPassed * intervalN, 'day').startOf('day');
         const cycleEnd = cycleStart.add(intervalN - 1, 'day').endOf('day');
@@ -180,7 +176,7 @@ export class RecurrenceEngine {
         const startAnchor = baseAnchor.day(rule.recurrenceDay || 0);
         const daysInCycle = 7 * intervalN;
 
-        const diffDays = ref.startOf('day').diff(startAnchor.startOf('day'), 'day');
+        const diffDays = ref.diff(startAnchor.startOf('day'), 'day');
         const cyclesPassed = Math.floor(diffDays / daysInCycle);
         const cycleStart = startAnchor.add(cyclesPassed * daysInCycle, 'day').startOf('day');
         const cycleEnd = cycleStart.add(daysInCycle - 1, 'day').endOf('day');
@@ -192,36 +188,75 @@ export class RecurrenceEngine {
       }
 
       case 'MONTHLY': {
-        const day = rule.recurrenceDay || 1;
-        let cycleStart = ref.date(day).startOf('day');
+        const targetDay = rule.recurrenceDay ?? (rule.startDate ? dayjs(rule.startDate).date() : 1);
+        const anchor = dayjs(rule.startDate || rule.createdAt || referenceDate).startOf('day');
+        const monthsDiff = (ref.year() - anchor.year()) * 12 + (ref.month() - anchor.month());
+        const cyclesPassed = Math.floor(monthsDiff / intervalN);
 
-        if (ref.date() < day) {
-          cycleStart = cycleStart.subtract(1, 'month');
+        let candidateMonth = anchor.date(1).add(cyclesPassed * intervalN, 'month');
+        let startCandidate = setClampedDate(candidateMonth, targetDay).startOf('day');
+        let nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+        let endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
+
+        if (ref.isBefore(startCandidate)) {
+          candidateMonth = candidateMonth.subtract(intervalN, 'month');
+          startCandidate = setClampedDate(candidateMonth, targetDay).startOf('day');
+          nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+          endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
+        } else if (ref.isAfter(endCandidate)) {
+          candidateMonth = candidateMonth.add(intervalN, 'month');
+          startCandidate = setClampedDate(candidateMonth, targetDay).startOf('day');
+          nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+          endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
         }
 
-        const cycleEnd = cycleStart.add(1, 'month').subtract(1, 'day').endOf('day');
-
         return {
-          startDate: cycleStart.valueOf(),
-          endDate: cycleEnd.valueOf(),
+          startDate: startCandidate.valueOf(),
+          endDate: endCandidate.valueOf(),
         };
       }
 
       case 'YEARLY': {
-        const month = (rule.recurrenceMonth || 1) - 1;
-        const day = rule.recurrenceDay || 1;
+        const targetMonth =
+          rule.recurrenceMonth !== undefined && rule.recurrenceMonth !== null
+            ? rule.recurrenceMonth - 1
+            : rule.startDate
+              ? dayjs(rule.startDate).month()
+              : 0;
+        const targetDay = rule.recurrenceDay ?? (rule.startDate ? dayjs(rule.startDate).date() : 1);
+        const anchor = dayjs(rule.startDate || rule.createdAt || referenceDate).startOf('day');
+        const yearsDiff = ref.year() - anchor.year();
+        const cyclesPassed = Math.floor(yearsDiff / intervalN);
 
-        let cycleStart = ref.month(month).date(day).startOf('day');
+        let candidateYear = anchor.year() + cyclesPassed * intervalN;
+        let startCandidate = setClampedDate(
+          dayjs().year(candidateYear).month(targetMonth).date(1),
+          targetDay,
+        ).startOf('day');
+        let nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+        let endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
 
-        if (ref.isBefore(cycleStart)) {
-          cycleStart = cycleStart.subtract(1, 'year');
+        if (ref.isBefore(startCandidate)) {
+          candidateYear -= intervalN;
+          startCandidate = setClampedDate(
+            dayjs().year(candidateYear).month(targetMonth).date(1),
+            targetDay,
+          ).startOf('day');
+          nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+          endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
+        } else if (ref.isAfter(endCandidate)) {
+          candidateYear += intervalN;
+          startCandidate = setClampedDate(
+            dayjs().year(candidateYear).month(targetMonth).date(1),
+            targetDay,
+          ).startOf('day');
+          nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
+          endCandidate = dayjs(nextStart).subtract(1, 'day').endOf('day');
         }
 
-        const cycleEnd = cycleStart.add(1, 'year').subtract(1, 'day').endOf('day');
-
         return {
-          startDate: cycleStart.valueOf(),
-          endDate: cycleEnd.valueOf(),
+          startDate: startCandidate.valueOf(),
+          endDate: endCandidate.valueOf(),
         };
       }
 

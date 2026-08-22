@@ -64,12 +64,11 @@ describe('BudgetReconciliation', () => {
     expect(totalRawBurn).toBeCloseTo(1000, 2);
 
     // When composed with planned flows, ProjectionComposer reconciles $800 planned + $200 residual
-    const composed = ProjectionComposer.compose({
-      plannedFlows,
+    const composed = ProjectionComposer.composeSpending(
       budgetFlows,
+      plannedFlows,
       budgetCategoryMap,
-      context,
-    });
+    );
 
     const totalComposed = composed.reduce((sum, f) => sum + f.amount, 0);
     expect(totalComposed).toBeCloseTo(1000, 2);

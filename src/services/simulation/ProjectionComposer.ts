@@ -1,51 +1,24 @@
-import Account from '@/src/data/models/Account';
-import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { FlowResolver } from './FlowResolver';
-import { Flow, LiabilityMetadata, SimulationContext } from './types';
-
-export interface ComposeInput {
-  plannedFlows: Flow[];
-  budgetFlows: Flow[];
-  budgetCategoryMap?: Map<string, Set<string>>;
-  liabilityInput?: {
-    liabilityBalances: { account: Account; balance: number }[];
-    metadataMap: Map<string, LiabilityMetadata>;
-    statementBalances: Map<string, number>;
-    settledSinceStatement: Map<string, number>;
-  };
-  context: SimulationContext;
-}
+import { Flow } from './types';
 
 export class ProjectionComposer {
   /**
-   * Central orchestrator for all cross-domain financial interactions:
-   * 1. Reconciles Budget Intent vs Planned Expense Obligations.
-   * 2. Routes CC spending charges into statement obligations & offsets by payment transfers.
-   * 3. Ensures deterministic global timeline ordering by dayOffset.
+   * Reconciles Budget Intent vs Planned Expense Obligations.
+   * A budget flow reconciles against planned flows in any category covered
+   * by that budget on the same day, emitting merged/deduplicated flows.
    */
-  static compose(input: ComposeInput): Flow[] {
-    const { plannedFlows, budgetFlows, budgetCategoryMap, liabilityInput, context } = input;
+  static composeSpending(
+    budgetFlows: Flow[],
+    plannedFlows: Flow[],
+    budgetCategoryMap?: Map<string, Set<string>>,
+  ): Flow[] {
+    return FlowResolver.resolveConflicts([...budgetFlows, ...plannedFlows], budgetCategoryMap);
+  }
 
-    // 1. Cross-Domain Composition: Budget vs Planned Spend
-    const resolvedSpendingFlows = FlowResolver.resolveConflicts(
-      [...budgetFlows, ...plannedFlows],
-      budgetCategoryMap,
-    );
-
-    // 2. Cross-Domain Composition: Liability Statement Accumulation & Transfer Offsets
-    let liabilityFlows: Flow[] = [];
-    if (liabilityInput) {
-      liabilityFlows = LiabilityFlowGenerator.generate(
-        context,
-        resolvedSpendingFlows,
-        liabilityInput.liabilityBalances,
-        liabilityInput.metadataMap,
-        liabilityInput.statementBalances,
-        liabilityInput.settledSinceStatement,
-      );
-    }
-
-    // 3. Global Timeline Sorting
-    return [...resolvedSpendingFlows, ...liabilityFlows].sort((a, b) => a.dayOffset - b.dayOffset);
+  /**
+   * Enforces global, deterministic timeline ordering by dayOffset across all domains.
+   */
+  static sortTimeline(flows: Flow[]): Flow[] {
+    return [...flows].sort((a, b) => a.dayOffset - b.dayOffset);
   }
 }

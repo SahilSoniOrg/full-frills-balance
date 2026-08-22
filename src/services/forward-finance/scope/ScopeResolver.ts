@@ -2,10 +2,10 @@ import { AccountFields, AccountId } from '@/src/types/domain';
 
 export class ScopeResolver {
   /**
-   * Resolves root account IDs to all descendant account IDs (full subtree including descendants).
+   * Resolves root account IDs to all subtree account IDs (roots + all descendants).
    * Safe against cycles in parent-child references.
    */
-  static resolveDescendantAccountIds(
+  static resolveSubtreeAccountIds(
     rootAccountIds: (AccountId | string)[],
     allAccounts: (AccountFields | { id: string; parentAccountId?: string | null })[],
   ): Set<AccountId> {

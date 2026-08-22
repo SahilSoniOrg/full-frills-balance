@@ -18,8 +18,7 @@ export interface PlannedPaymentProjectionInput {
 export class PlannedPaymentProjectionProvider implements ProjectionProvider<PlannedPaymentProjectionInput> {
   readonly sourceType = 'planned_payment';
 
-  generate(context: SimulationContext, input?: PlannedPaymentProjectionInput): Flow[] {
-    if (!input) return [];
+  generate(context: SimulationContext, input: PlannedPaymentProjectionInput): Flow[] {
     const { flows } = PlannedFlowGenerator.generate(
       context,
       input.plannedPayments,

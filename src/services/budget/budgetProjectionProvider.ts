@@ -12,8 +12,7 @@ export interface BudgetProjectionInput {
 export class BudgetProjectionProvider implements ProjectionProvider<BudgetProjectionInput> {
   readonly sourceType = 'budget';
 
-  generate(context: SimulationContext, input?: BudgetProjectionInput): Flow[] {
-    if (!input) return [];
+  generate(context: SimulationContext, input: BudgetProjectionInput): Flow[] {
     return BudgetFlowGenerator.generate(
       context,
       input.budgets,
