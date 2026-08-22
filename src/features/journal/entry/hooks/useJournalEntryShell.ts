@@ -62,6 +62,7 @@ export interface JournalEntryShell {
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   suggestions: JournalAutofillSuggestion[];
   onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
+  loadSuggestions: () => void;
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
 }
@@ -75,7 +76,7 @@ export function useJournalEntryShell(): JournalEntryShell {
   const route = parseJournalEntryRouteParams(params);
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
+  const { accounts } = useAccounts(workplaceId);
 
   const onAfterSave = useMemo(
     () =>
@@ -106,7 +107,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onSuccess,
   });
 
-  const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
+  const { suggestions, loadSuggestions } = useJournalSuggestions(workplaceId, editor.description);
 
   const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
     editor,
@@ -245,7 +246,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     guidedFooterAmount,
     onGuidedFooterAmountChange,
     guidedVoiceActionsRef,
-    isLoading: isLoadingAccounts || editor.isLoading,
+    isLoading: editor.isLoading,
     headerTitle,
     showEditBanner: editor.isEdit,
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,
@@ -260,6 +261,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onCreateAccountRequest,
     suggestions,
     onSelectSuggestion,
+    loadSuggestions,
     workplaceCurrency,
     workplaceId,
   };

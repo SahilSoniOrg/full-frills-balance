@@ -66,14 +66,14 @@ export class JournalEnrichmentQueries {
 
   async getRecentUniqueDescriptions(
     workplaceId: WorkplaceId,
-    limit: number = 500,
+    limit: number = 100,
   ): Promise<JournalAutofillSuggestion[]> {
     return this.getRecentSuggestionsWithTargetAccounts(workplaceId, limit);
   }
 
   async getRecentSuggestionsWithTargetAccounts(
     workplaceId: WorkplaceId,
-    limit: number = 500,
+    limit: number = 100,
   ): Promise<JournalAutofillSuggestion[]> {
     const sql = `
       WITH recent_descriptions AS (

@@ -5,13 +5,23 @@ import { InteractionManager } from 'react-native';
  * Uses requestIdleCallback where available (modern React Native / Web),
  * falling back to InteractionManager.runAfterInteractions.
  */
-export function runAfterInteractions(task: () => void | Promise<void>, timeout: number = 2500) {
+export function runAfterInteractions(
+  task: () => void | Promise<void>,
+  timeout: number = 2500,
+): () => void {
   if (typeof requestIdleCallback !== 'undefined') {
-    requestIdleCallback(() => task(), { timeout });
-    return;
+    const handle = requestIdleCallback(() => task(), { timeout });
+    return () => {
+      if (typeof cancelIdleCallback !== 'undefined') {
+        cancelIdleCallback(handle);
+      }
+    };
   }
 
-  InteractionManager.runAfterInteractions(task);
+  const handle = InteractionManager.runAfterInteractions(task);
+  return () => {
+    handle.cancel();
+  };
 }
 
 /**

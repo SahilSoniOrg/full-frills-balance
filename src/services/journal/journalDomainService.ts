@@ -36,6 +36,7 @@ export class JournalService {
     workplaceId: WorkplaceId,
     smsRecord?: TransactionInboxRecord | null,
   ): Promise<Journal> {
+    this.clearSuggestionsCache(workplaceId);
     if (!smsRecord) {
       return ledgerWriteService.createJournal(data, workplaceId);
     }
@@ -55,10 +56,12 @@ export class JournalService {
     data: CreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
+    this.clearSuggestionsCache(workplaceId);
     return ledgerWriteService.updateJournal(journalId, data, workplaceId);
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
+    this.clearSuggestionsCache(workplaceId);
     await ledgerWriteService.deleteJournal(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'delete', {
       journal_id: journalId,
@@ -66,6 +69,7 @@ export class JournalService {
   }
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+    this.clearSuggestionsCache(workplaceId);
     const journal = await ledgerWriteService.recoverJournal(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'recover', {
       journal_id: journalId,
@@ -281,6 +285,7 @@ export class JournalService {
         currency: currencyCode,
       });
 
+      this.clearSuggestionsCache(workplaceId);
       return {
         success: true,
         summaries: preparedItems.map(p => ({
@@ -295,8 +300,42 @@ export class JournalService {
     }
   }
 
+  private suggestionsCache = new Map<WorkplaceId, JournalAutofillSuggestion[]>();
+  private inFlightSuggestions = new Map<WorkplaceId, Promise<JournalAutofillSuggestion[]>>();
+
+  clearSuggestionsCache(workplaceId?: WorkplaceId): void {
+    if (workplaceId) {
+      this.suggestionsCache.delete(workplaceId);
+      this.inFlightSuggestions.delete(workplaceId);
+    } else {
+      this.suggestionsCache.clear();
+      this.inFlightSuggestions.clear();
+    }
+  }
+
   async getJournalSuggestions(workplaceId: WorkplaceId): Promise<JournalAutofillSuggestion[]> {
-    return journalEnrichmentQueries.getRecentUniqueDescriptions(workplaceId);
+    if (!workplaceId) return [];
+    if (this.suggestionsCache.has(workplaceId)) {
+      return this.suggestionsCache.get(workplaceId)!;
+    }
+    if (this.inFlightSuggestions.has(workplaceId)) {
+      return this.inFlightSuggestions.get(workplaceId)!;
+    }
+
+    const fetchPromise = journalEnrichmentQueries
+      .getRecentUniqueDescriptions(workplaceId)
+      .then(suggestions => {
+        this.suggestionsCache.set(workplaceId, suggestions);
+        this.inFlightSuggestions.delete(workplaceId);
+        return suggestions;
+      })
+      .catch(err => {
+        this.inFlightSuggestions.delete(workplaceId);
+        throw err;
+      });
+
+    this.inFlightSuggestions.set(workplaceId, fetchPromise);
+    return fetchPromise;
   }
 }
 

@@ -2,18 +2,15 @@ import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/domain';
-import {
-  getAccountIcon,
-  getArchivedAccountTilePresentation,
-  useAccounts,
-} from '@/src/features/accounts';
+import { getAccountIcon, getArchivedAccountTilePresentation } from '@/src/features/accounts';
+import { limitQuickTileAccounts } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import React, { useCallback, useMemo } from 'react';
+import { runAfterInteractions } from '@/src/utils/scheduler';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 export interface AccountTileListProps {
@@ -26,6 +23,8 @@ export interface AccountTileListProps {
   emptyPrompt?: string;
 }
 
+const INITIAL_ACCOUNT_TILE_BATCH = 15;
+
 export const AccountTileList = React.memo(function AccountTileList({
   title,
   accounts,
@@ -36,12 +35,30 @@ export const AccountTileList = React.memo(function AccountTileList({
   emptyPrompt,
 }: AccountTileListProps) {
   const { theme } = useTheme();
-  const { workplaceId } = useWorkplace();
-  const { version: accountsVersion } = useAccounts(workplaceId);
+  const [isFullyLoaded, setIsFullyLoaded] = useState(
+    () => accounts.length <= INITIAL_ACCOUNT_TILE_BATCH,
+  );
+
+  useEffect(() => {
+    if (accounts.length <= INITIAL_ACCOUNT_TILE_BATCH) {
+      setIsFullyLoaded(true);
+      return;
+    }
+    setIsFullyLoaded(false);
+    return runAfterInteractions(() => {
+      setIsFullyLoaded(true);
+    });
+  }, [accounts]);
+
+  const visibleAccounts = useMemo(() => {
+    if (isFullyLoaded || accounts.length <= INITIAL_ACCOUNT_TILE_BATCH) {
+      return accounts;
+    }
+    return limitQuickTileAccounts(accounts, selectedId, INITIAL_ACCOUNT_TILE_BATCH);
+  }, [accounts, isFullyLoaded, selectedId]);
 
   const items = useMemo(() => {
-    void accountsVersion;
-    return accounts.map(account => {
+    return visibleAccounts.map(account => {
       const { accentColor, categoryColor } = resolveAccountAppearance(account, theme);
       return {
         id: account.id,
@@ -51,14 +68,13 @@ export const AccountTileList = React.memo(function AccountTileList({
         categoryColor,
       };
     });
-  }, [accounts, theme, accountsVersion]);
+  }, [visibleAccounts, theme]);
 
   const archivedById = useMemo(() => {
-    void accountsVersion;
     return new Map<string, boolean>(
-      accounts.map(account => [account.id, isAccountArchived(account)]),
+      visibleAccounts.map(account => [account.id, isAccountArchived(account)]),
     );
-  }, [accounts, accountsVersion]);
+  }, [visibleAccounts]);
 
   const getTilePresentation = useCallback(
     (item: { id: string; color: string }, isSelected: boolean) =>

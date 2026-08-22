@@ -32,23 +32,29 @@ export function JournalEntryView(vm: JournalEntryShell) {
     savedSummary,
     setSavedSummary,
     guidedFooterAmount,
+    loadSuggestions,
+    editor,
+    onSelectSuggestion: handleSelectSuggestion,
   } = vm;
 
   const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
-  const onDescriptionFocus = useCallback(() => setHideSuggestions(false), []);
+  const onDescriptionFocus = useCallback(() => {
+    setHideSuggestions(false);
+    loadSuggestions();
+  }, [loadSuggestions]);
   const setDescription = useCallback(
     (desc: string) => {
       setHideSuggestions(false);
-      vm.editor.setDescription(desc);
+      editor.setDescription(desc);
     },
-    [vm.editor],
+    [editor],
   );
   const onSelectSuggestion = useCallback(
     (suggestion: JournalAutofillSuggestion) => {
       setHideSuggestions(false);
-      vm.onSelectSuggestion(suggestion);
+      handleSelectSuggestion(suggestion);
     },
-    [vm],
+    [handleSelectSuggestion],
   );
 
   const modeBodyProps: JournalEntryModeBodyProps = {

@@ -1,6 +1,7 @@
 import {
   isAdvancedJournalFormValid,
   isJournalEntrySubmitDisabled,
+  limitQuickTileAccounts,
   parseJournalEntryRouteParams,
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
@@ -77,5 +78,28 @@ describe('journalEntryPresentation', () => {
         isAdvancedValid: false,
       }),
     ).toBe(false);
+  });
+
+  describe('limitQuickTileAccounts', () => {
+    const accounts = Array.from({ length: 30 }, (_, i) => ({
+      id: `acc-${i}`,
+      name: `Account ${i}`,
+    }));
+
+    it('returns all accounts when length is within limit', () => {
+      expect(limitQuickTileAccounts(accounts.slice(0, 10), '', 15)).toHaveLength(10);
+    });
+
+    it('limits to top N accounts', () => {
+      const limited = limitQuickTileAccounts(accounts, '', 15);
+      expect(limited).toHaveLength(15);
+      expect(limited[0].id).toBe('acc-0');
+    });
+
+    it('ensures selected account outside top N is included', () => {
+      const limited = limitQuickTileAccounts(accounts, 'acc-25', 15);
+      expect(limited).toHaveLength(15);
+      expect(limited.some(a => a.id === 'acc-25')).toBe(true);
+    });
   });
 });
