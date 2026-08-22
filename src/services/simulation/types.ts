@@ -118,6 +118,13 @@ export interface SimulationPlannedPayment {
   endDate?: number;
 }
 
+export type ProjectionSourceType = 'budget' | 'planned_payment' | 'liability' | 'goal' | 'custom';
+
+export interface ProjectionProvider<TInput = any> {
+  readonly sourceType: ProjectionSourceType;
+  generate(context: SimulationContext, input?: TInput): Promise<Flow[]> | Flow[];
+}
+
 export interface ISimulationEngine {
   generate(context: SimulationContext, previousFlows: Flow[]): Flow[];
 }

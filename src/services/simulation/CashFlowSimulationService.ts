@@ -10,11 +10,11 @@ import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
-import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
-import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
-import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
+import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
+import { plannedPaymentProjectionProvider } from '@/src/services/planned-payment/plannedPaymentProjectionProvider';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { FlowResolver } from './FlowResolver';
+import { liabilityProjectionProvider } from './liability/liabilityProjectionProvider';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
@@ -223,14 +223,13 @@ export class CashFlowSimulationService {
       convert,
     };
 
-    // 3. PHASE: GENERATE FLOWS
-    const { flows: plannedFlows } = PlannedFlowGenerator.generate(
-      context,
-      normalizedPlannedPayments,
+    // 3. PHASE: GENERATE FLOWS VIA PROVIDERS (Sequential in PR 2)
+    const plannedFlows = await plannedPaymentProjectionProvider.generate(context, {
+      plannedPayments: normalizedPlannedPayments,
       projectablePlannedJournals,
       expenseAccountIds,
-      journalTxsMap,
-    );
+      journalTransactionsMap: journalTxsMap,
+    });
     trace?.metric('flow_gen_planned');
 
     const budgetEntries = normalizedBudgets.map((budget, index) => ({
@@ -246,13 +245,12 @@ export class CashFlowSimulationService {
     const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
     const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
 
-    const budgetFlows = BudgetFlowGenerator.generate(
-      context,
-      filteredBudgets,
-      filteredUsages,
+    const budgetFlows = await budgetProjectionProvider.generate(context, {
+      budgets: filteredBudgets,
+      usages: filteredUsages,
       budgetCategoryMap,
       plannedFlows,
-    );
+    });
     trace?.metric('flow_gen_budget');
 
     const resolvedSpendingFlows = FlowResolver.resolveConflicts(
@@ -260,14 +258,13 @@ export class CashFlowSimulationService {
       budgetCategoryMap,
     );
 
-    const liabilityFlows = LiabilityFlowGenerator.generate(
-      context,
-      resolvedSpendingFlows,
-      normalizedLiabilityBalances,
+    const liabilityFlows = await liabilityProjectionProvider.generate(context, {
+      liabilityBalances: normalizedLiabilityBalances,
       metadataMap,
       statementBalances,
       settledSinceStatement,
-    );
+      previousFlows: resolvedSpendingFlows,
+    });
     trace?.metric('flow_gen_liability');
 
     // SORTING SAFETY: Ensure all flows are globally sorted by dayOffset
