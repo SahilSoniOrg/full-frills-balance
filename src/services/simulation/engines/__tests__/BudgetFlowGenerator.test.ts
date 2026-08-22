@@ -41,7 +41,7 @@ describe('BudgetFlowGenerator', () => {
       usages,
       budgetCategoryMap,
     );
-    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
+    const flows = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows).toHaveLength(30);
     expect(flows[0]).toMatchObject({
@@ -70,10 +70,7 @@ describe('BudgetFlowGenerator', () => {
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }] as BudgetUsage[],
       new Map([['b2', new Set()]]),
     );
-    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(
-      contextWithTwoAccounts,
-      capacities,
-    );
+    const flows = BudgetFlowGenerator.materializeFlows(contextWithTwoAccounts, capacities);
 
     expect(
       flows.filter(f => 'accountId' in f && f.accountId === ('acc-1' as AccountId)),
@@ -103,7 +100,7 @@ describe('BudgetFlowGenerator', () => {
       [{ spent: 4000, remaining: 0, budgetAmount: 4000, usagePercent: 1 }],
       new Map([['b-daily-spent', new Set(['cat-1'])]]),
     );
-    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
+    const flows = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows.find(f => f.dayOffset === 0)).toBeUndefined();
     expect(flows).toHaveLength(29);
@@ -129,7 +126,7 @@ describe('BudgetFlowGenerator', () => {
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],
       new Map([['b-daily', new Set(['cat-1'])]]),
     );
-    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
+    const flows = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows).toHaveLength(30);
     expect(flows[0].amount).toBeCloseTo(100, 5);

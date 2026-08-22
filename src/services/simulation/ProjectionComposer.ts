@@ -22,7 +22,7 @@ export class ProjectionComposer {
     scheduledProjections: ScheduledProjection[],
     context: SimulationContext,
   ): Flow[] {
-    const { budgetFlows } = BudgetFlowGenerator.materializeFlows(
+    const budgetFlows = BudgetFlowGenerator.materializeFlows(
       context,
       budgetCapacities,
       scheduledProjections,

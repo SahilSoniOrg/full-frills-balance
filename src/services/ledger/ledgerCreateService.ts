@@ -84,21 +84,37 @@ export class LedgerCreateService {
     workplaceId: WorkplaceId,
     options?: BatchWriteOptions<Journal>,
   ): Promise<Journal> {
-    const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data, workplaceId);
-    const extras =
-      typeof options?.extraOps === 'function'
-        ? options.extraOps(journal)
-        : (options?.extraOps ?? []);
+    const prepared = await prepareJournalData(data, workplaceId);
+    let createdJournal: Journal | undefined;
+    let accountsToRebuildSet = new Set<AccountId>();
 
-    await persistBatch([...ops, ...extras], () => {
-      const activeStatus = isRebuildEligibleJournalStatus(data.status);
-      if (activeStatus && accountsToRebuild.size > 0) {
-        rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate, workplaceId);
-      }
-      options?.afterBatch?.();
-    });
+    await persistBatch(
+      () => {
+        const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
+          data,
+          prepared,
+          workplaceId,
+        );
+        createdJournal = journal;
+        accountsToRebuildSet = accountsToRebuild;
 
-    return journal;
+        const extras =
+          typeof options?.extraOps === 'function'
+            ? options.extraOps(journal)
+            : (options?.extraOps ?? []);
+
+        return [...ops, ...extras];
+      },
+      () => {
+        const activeStatus = isRebuildEligibleJournalStatus(data.status);
+        if (activeStatus && accountsToRebuildSet.size > 0) {
+          rebuildQueueService.enqueueMany(accountsToRebuildSet, data.journalDate, workplaceId);
+        }
+        options?.afterBatch?.();
+      },
+    );
+
+    return createdJournal!;
   }
 
   /**
@@ -115,26 +131,30 @@ export class LedgerCreateService {
     const allAccountsToRebuild = new Set<AccountId>();
     let minDate = Infinity;
 
-    const allOps: Model[] = [];
-    for (const item of items) {
-      const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
-        item.data,
-        item.prepared,
-        workplaceId,
-      );
-      journals.push(journal);
-      allOps.push(...ops);
-      for (const accountId of accountsToRebuild) {
-        allAccountsToRebuild.add(accountId);
-      }
-      minDate = Math.min(minDate, item.data.journalDate);
-    }
-
-    await persistBatch(allOps, () => {
-      if (allAccountsToRebuild.size > 0) {
-        rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
-      }
-    });
+    await persistBatch(
+      () => {
+        const allOps: Model[] = [];
+        for (const item of items) {
+          const { journal, ops, accountsToRebuild } = this.prepareCreateJournalFromPreparedData(
+            item.data,
+            item.prepared,
+            workplaceId,
+          );
+          journals.push(journal);
+          allOps.push(...ops);
+          for (const accountId of accountsToRebuild) {
+            allAccountsToRebuild.add(accountId);
+          }
+          minDate = Math.min(minDate, item.data.journalDate);
+        }
+        return allOps;
+      },
+      () => {
+        if (allAccountsToRebuild.size > 0) {
+          rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
+        }
+      },
+    );
 
     return journals;
   }

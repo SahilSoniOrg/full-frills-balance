@@ -22,7 +22,7 @@ export class PlannedFlowGenerator {
     plannedJournals: Journal[],
     expenseAccountIds: Set<string>,
     journalTransactionsMap: Map<string, Transaction[]>,
-  ): { projections: ScheduledProjection[] } {
+  ): ScheduledProjection[] {
     const projections: ScheduledProjection[] = [];
 
     // Day offset helper for efficient date-key matching without dayjs formatting
@@ -217,7 +217,7 @@ export class PlannedFlowGenerator {
       }
     }
 
-    return { projections };
+    return projections;
   }
 
   private static getNextOccurrence(curr: number, pp: SimulationPlannedPayment): number {

@@ -65,7 +65,7 @@ describe('BudgetReconciliation', () => {
     );
 
     // When materialized with scheduled projections, remaining $200 is burned over the 29 non-planned days
-    const { budgetFlows } = BudgetFlowGenerator.materializeFlows(
+    const budgetFlows = BudgetFlowGenerator.materializeFlows(
       context,
       capacities,
       scheduledProjections,

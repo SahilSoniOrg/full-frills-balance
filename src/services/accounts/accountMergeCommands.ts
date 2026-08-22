@@ -194,9 +194,12 @@ export async function mergeAccounts(
     workplaceId,
   );
 
-  await persistBatch([...opGroups.flat(), auditOp], () => {
-    rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
-  });
+  await persistBatch(
+    () => [...opGroups.flat(), auditOp],
+    () => {
+      rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
+    },
+  );
 
   analytics.trackFeatureUsage('account', 'merge', {
     source_count: filteredSourceIds.length,

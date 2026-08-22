@@ -275,7 +275,7 @@ export async function updateAccounts(
     })),
   );
 
-  await persistBatch([
+  await persistBatch(() => [
     ...planned.flatMap(({ context, update }) =>
       accountWriteRepository.prepareUpdateBatchOps(
         context.account,

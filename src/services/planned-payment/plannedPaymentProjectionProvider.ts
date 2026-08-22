@@ -23,14 +23,13 @@ export class PlannedPaymentProjectionProvider {
     context: SimulationContext,
     input: PlannedPaymentProjectionInput,
   ): ScheduledProjection[] {
-    const { projections } = PlannedFlowGenerator.generate(
+    return PlannedFlowGenerator.generate(
       context,
       input.plannedPayments,
       input.projectablePlannedJournals,
       input.expenseAccountIds,
       input.journalTransactionsMap,
     );
-    return projections;
   }
 }
 

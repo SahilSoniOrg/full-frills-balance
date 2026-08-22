@@ -140,21 +140,25 @@ export async function skipPlannedPaymentOccurrence(
     );
 
     if (existingPlanned.length > 0) {
-      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-      await persistBatch([
-        ...journalPlannedQueries.prepareStatusUpdates(
-          workplaceId,
-          existingPlanned,
-          JournalStatus.SKIPPED,
-        ),
-        ...(scheduleOp ? [scheduleOp] : []),
-      ]);
+      await persistBatch(() => {
+        const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
+        return [
+          ...journalPlannedQueries.prepareStatusUpdates(
+            workplaceId,
+            existingPlanned,
+            JournalStatus.SKIPPED,
+          ),
+          ...(scheduleOp ? [scheduleOp] : []),
+        ];
+      });
     } else if (!pp.toAccountId) {
       logger.warn(
         `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
       );
-      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-      if (scheduleOp) await persistBatch([scheduleOp]);
+      await persistBatch(() => {
+        const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
+        return scheduleOp ? [scheduleOp] : [];
+      });
     } else {
       await ledgerWriteService.createJournal(
         {

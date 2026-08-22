@@ -47,29 +47,31 @@ export async function togglePlannedPaymentStatus(
     }
   }
 
-  const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
-    record.status = newStatus;
-    if (!isPausing) {
-      record.nextOccurrence = updatedNextOccurrence;
-    }
-    record.updatedAt = new Date();
-  });
-
-  const journalUpdates = targetJournals.map(j =>
-    j.prepareUpdate(record => {
-      if (isPausing) {
-        record.status = JournalStatus.PAUSED;
-      } else {
-        record.status =
-          normalizeToStartOfDay(j.journalDate) >= nowMidnight
-            ? JournalStatus.PLANNED
-            : JournalStatus.SKIPPED;
+  await persistBatch(() => {
+    const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
+      record.status = newStatus;
+      if (!isPausing) {
+        record.nextOccurrence = updatedNextOccurrence;
       }
       record.updatedAt = new Date();
-    }),
-  );
+    });
 
-  await persistBatch([ppUpdate, ...journalUpdates]);
+    const journalUpdates = targetJournals.map(j =>
+      j.prepareUpdate(record => {
+        if (isPausing) {
+          record.status = JournalStatus.PAUSED;
+        } else {
+          record.status =
+            normalizeToStartOfDay(j.journalDate) >= nowMidnight
+              ? JournalStatus.PLANNED
+              : JournalStatus.SKIPPED;
+        }
+        record.updatedAt = new Date();
+      }),
+    );
+
+    return [ppUpdate, ...journalUpdates];
+  });
 
   if (!isPausing) {
     await processDuePlannedPayments(workplaceId);

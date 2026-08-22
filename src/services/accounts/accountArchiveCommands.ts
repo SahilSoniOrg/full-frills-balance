@@ -87,7 +87,7 @@ export async function applyAccountArchiveChanges(
   if (!prepared) return false;
 
   const { archiveTargets, unarchiveTargets, now } = prepared.plan;
-  await persistBatch([
+  await persistBatch(() => [
     ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
     ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
   ]);

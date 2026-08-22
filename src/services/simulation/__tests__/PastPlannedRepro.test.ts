@@ -33,7 +33,7 @@ describe('PlannedFlowGenerator Past Handling', () => {
       intervalN: 1,
     };
 
-    const { projections } = PlannedFlowGenerator.generate(
+    const projections = PlannedFlowGenerator.generate(
       context,
       [pp],
       [],
@@ -68,7 +68,7 @@ describe('PlannedFlowGenerator Past Handling', () => {
       ],
     ]);
 
-    const { projections } = PlannedFlowGenerator.generate(
+    const projections = PlannedFlowGenerator.generate(
       context,
       [],
       [journal as any],

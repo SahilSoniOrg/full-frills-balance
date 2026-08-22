@@ -136,7 +136,7 @@ export async function forceRunCheck(
         .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(repairedAccountIds)))
         .fetch();
 
-      await persistBatch(
+      await persistBatch(() =>
         accountsToNotify.map(a =>
           a.prepareUpdate((record: Account) => {
             record.updatedAt = new Date();

@@ -40,7 +40,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       recurrenceDay: 5,
     };
 
-    const { projections } = PlannedFlowGenerator.generate(
+    const projections = PlannedFlowGenerator.generate(
       mockContext,
       [overduePP],
       [], // No journals
@@ -77,7 +77,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       toAccountId: 'cc' as AccountId,
     };
 
-    const { projections } = PlannedFlowGenerator.generate(
+    const projections = PlannedFlowGenerator.generate(
       mockContext,
       [futurePP],
       [],

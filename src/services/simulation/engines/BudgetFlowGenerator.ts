@@ -20,7 +20,7 @@ export class BudgetFlowGenerator {
     context: SimulationContext,
     capacities: BudgetCapacityProjection[],
     scheduledProjections: ScheduledProjection[] = [],
-  ): { budgetFlows: Flow[] } {
+  ): Flow[] {
     const budgetFlows: Flow[] = [];
 
     // Pre-group relevant planned projections by category for faster lookup
@@ -155,6 +155,6 @@ export class BudgetFlowGenerator {
     }
 
     budgetFlows.forEach(assertValidFlow);
-    return { budgetFlows };
+    return budgetFlows;
   }
 }

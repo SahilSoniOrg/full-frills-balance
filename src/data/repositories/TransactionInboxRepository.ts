@@ -53,7 +53,7 @@ export class TransactionInboxRepository {
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) return;
-    await persistBatch([this.prepareLink(record, journalId, disposition)]);
+    await persistBatch(() => [this.prepareLink(record, journalId, disposition)]);
   }
 
   async persistStatus(
@@ -63,7 +63,7 @@ export class TransactionInboxRepository {
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) return;
-    await persistBatch([this.prepareStatus(record, status)]);
+    await persistBatch(() => [this.prepareStatus(record, status)]);
   }
 
   async persistScanBatch(buildOps: () => Promise<Model[]>, afterBatch?: () => void): Promise<void> {

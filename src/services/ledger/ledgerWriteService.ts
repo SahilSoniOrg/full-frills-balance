@@ -77,7 +77,7 @@ export class LedgerWriteService {
   postJournal(
     journalId: JournalId,
     workplaceId: WorkplaceId,
-    options?: BatchWriteOptions<Journal> | Model[],
+    options?: BatchWriteOptions<Journal>,
   ): Promise<Journal> {
     return ledgerLifecycleService.postJournal(journalId, workplaceId, options);
   }

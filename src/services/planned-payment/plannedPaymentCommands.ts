@@ -44,21 +44,11 @@ export async function updatePlannedPayment(
   return plannedPaymentRepository.update(workplaceId, existing, updates);
 }
 
-async function prepareSoftDeleteJournalsAndTransactions(
-  workplaceId: WorkplaceId,
+function prepareSoftDeleteJournalsAndTransactionsSync(
   journals: Journal[],
-): Promise<Model[]> {
-  if (journals.length === 0) return [];
-  const journalIds = journals.map(j => j.id);
-  const transactions = await database.collections
-    .get<Transaction>('transactions')
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('journal_id', Q.oneOf(journalIds)),
-      Q.where('deleted_at', Q.eq(null)),
-    )
-    .fetch();
-
+  transactions: Transaction[],
+): Model[] {
+  if (journals.length === 0 && transactions.length === 0) return [];
   const now = new Date();
   const journalOps = journals.map(j =>
     j.prepareUpdate(record => {
@@ -85,8 +75,22 @@ export async function deletePlannedPayment(
     workplaceId,
     plannedPaymentId,
   );
-  const journalOps = await prepareSoftDeleteJournalsAndTransactions(workplaceId, unpostedJournals);
-  const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
 
-  await persistBatch([ppOp, ...journalOps]);
+  const transactions =
+    unpostedJournals.length > 0
+      ? await database.collections
+          .get<Transaction>('transactions')
+          .query(
+            Q.where('workplace_id', workplaceId),
+            Q.where('journal_id', Q.oneOf(unpostedJournals.map(j => j.id))),
+            Q.where('deleted_at', Q.eq(null)),
+          )
+          .fetch()
+      : [];
+
+  await persistBatch(() => {
+    const journalOps = prepareSoftDeleteJournalsAndTransactionsSync(unpostedJournals, transactions);
+    const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
+    return [ppOp, ...journalOps];
+  });
 }

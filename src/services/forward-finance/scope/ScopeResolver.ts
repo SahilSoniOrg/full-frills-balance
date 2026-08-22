@@ -31,19 +31,7 @@ export class ScopeResolver {
     allAccounts: (AccountFields | { id: string; parentAccountId?: string | null })[],
   ): Set<AccountId> {
     const childrenMap = this.buildChildrenMap(allAccounts);
-    const allDescendants = new Set<AccountId>();
-
-    for (const rootId of rootAccountIds) {
-      if (!rootId) continue;
-      const typedRootId = rootId as AccountId;
-      allDescendants.add(typedRootId);
-      this.traverseSubtree(
-        typedRootId,
-        childrenMap,
-        allDescendants,
-        new Set<string>([typedRootId]),
-      );
-    }
+    const allDescendants = this.resolveSubtreeAccountIds(rootAccountIds, allAccounts);
 
     const leafAccountIds = new Set<AccountId>();
     for (const accountId of allDescendants) {

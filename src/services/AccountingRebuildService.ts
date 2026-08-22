@@ -68,8 +68,13 @@ export class AccountingRebuildService {
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
-    const account = await accountQueryRepository.find(workplaceId, accountId);
-    if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
+    const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
+    if (!account) {
+      logger.warn(
+        `[AccountingRebuildService] Account ${accountId} not found during running balance rebuild, skipping.`,
+      );
+      return;
+    }
 
     const precision = await currencyReadService.getPrecision(account.currencyCode);
 
@@ -145,9 +150,7 @@ export class AccountingRebuildService {
     }
 
     // 4. Fetch all data needed for rebuilding asynchronously first
-    const finalBatch: Model[] = [...extraOps];
-
-    if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0) {
+    if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0 || extraOps.length > 0) {
       const idsArray = Array.from(idsNeedingUpdate.keys());
       const BATCH_SIZE = AppConfig.performance.rebuild.batchSize;
       const allModelsToUpdate: Transaction[] = [];
@@ -159,57 +162,57 @@ export class AccountingRebuildService {
       }
 
       // Fetch invalidated snapshots after the starting point
-      const invalidatedSnapshots = await balanceSnapshotRepository.findAfterDate(
-        workplaceId,
-        accountId,
-        startDate,
-      );
+      const invalidatedSnapshots =
+        idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0
+          ? await balanceSnapshotRepository.findAfterDate(workplaceId, accountId, startDate)
+          : [];
 
-      // 5. Finalize inside the existing parent write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
+      // 5. Finalize inside database.write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
+      await persistBatch(() => {
+        const finalBatch: Model[] = [...extraOps];
 
-      // Prepare updates for transaction running balances
-      for (const m of allModelsToUpdate) {
-        finalBatch.push(
-          m.prepareUpdate((record: Transaction) => {
-            record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
-          }),
-        );
-      }
-
-      // Delete invalidated snapshots after the starting point
-      if (invalidatedSnapshots.length > 0) {
-        finalBatch.push(
-          ...invalidatedSnapshots.map((s: BalanceSnapshot) => s.prepareDestroyPermanently()),
-        );
-      }
-
-      // Create new snapshots
-      if (snapshotsToCreate.length > 0) {
-        finalBatch.push(
-          ...snapshotsToCreate.map(data =>
-            balanceSnapshotRepository.prepareCreate(workplaceId, {
-              accountId,
-              transactionId: data.transactionId,
-              transactionDate: data.transactionDate,
-              absoluteBalance: data.absoluteBalance,
-              transactionCount: data.transactionCount,
+        // Prepare updates for transaction running balances
+        for (const m of allModelsToUpdate) {
+          finalBatch.push(
+            m.prepareUpdate((record: Transaction) => {
+              record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
             }),
-          ),
-        );
-      }
+          );
+        }
 
-      // Trigger lightweight reactive refreshes
-      if (idsNeedingUpdate.size > 0 && !silent) {
-        finalBatch.push(
-          account.prepareUpdate(a => {
-            a.updatedAt = new Date();
-          }),
-        );
-      }
-    }
+        // Delete invalidated snapshots after the starting point
+        if (invalidatedSnapshots.length > 0) {
+          finalBatch.push(
+            ...invalidatedSnapshots.map((s: BalanceSnapshot) => s.prepareDestroyPermanently()),
+          );
+        }
 
-    if (finalBatch.length > 0) {
-      await persistBatch(finalBatch);
+        // Create new snapshots
+        if (snapshotsToCreate.length > 0) {
+          finalBatch.push(
+            ...snapshotsToCreate.map(data =>
+              balanceSnapshotRepository.prepareCreate(workplaceId, {
+                accountId,
+                transactionId: data.transactionId,
+                transactionDate: data.transactionDate,
+                absoluteBalance: data.absoluteBalance,
+                transactionCount: data.transactionCount,
+              }),
+            ),
+          );
+        }
+
+        // Trigger lightweight reactive refreshes
+        if (idsNeedingUpdate.size > 0 && !silent) {
+          finalBatch.push(
+            account.prepareUpdate(a => {
+              a.updatedAt = new Date();
+            }),
+          );
+        }
+
+        return finalBatch;
+      });
     }
   }
 }
