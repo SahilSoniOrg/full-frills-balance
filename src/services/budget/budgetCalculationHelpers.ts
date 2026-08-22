@@ -2,45 +2,30 @@ import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { ScopeResolver } from '@/src/services/forward-finance/scope/ScopeResolver';
 import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { BudgetUsage } from './types';
 
 /**
- * Resolve all leaf and descendant expense account IDs from the given scope accounts.
+ * Resolve all leaf expense account IDs from the given scope accounts.
  */
 export function resolveLeafExpenseAccountIds(
   scopeAccounts: (Account | null | undefined)[],
   allExpenses: Account[],
   workplaceId: WorkplaceId,
 ): Set<AccountId> {
-  const childrenMap = new Map<AccountId, AccountId[]>();
-  for (const acc of allExpenses) {
-    if (acc.parentAccountId) {
-      const siblings = childrenMap.get(acc.parentAccountId) || [];
-      siblings.push(acc.id);
-      childrenMap.set(acc.parentAccountId, siblings);
-    }
-  }
+  const rootExpenseIds = scopeAccounts
+    .filter(
+      (acc): acc is Account =>
+        acc != null && acc.workplaceId === workplaceId && acc.accountType === AccountType.EXPENSE,
+    )
+    .map(acc => acc.id);
 
-  const getDescendants = (id: AccountId, result: Set<AccountId>) => {
-    const children = childrenMap.get(id) || [];
-    for (const childId of children) {
-      result.add(childId);
-      getDescendants(childId, result);
-    }
-  };
+  const workplaceExpenses = allExpenses.filter(acc => acc.workplaceId === workplaceId);
 
-  const leafExpenseIds = new Set<AccountId>();
-  for (const acc of scopeAccounts) {
-    if (acc && acc.workplaceId === workplaceId && acc.accountType === AccountType.EXPENSE) {
-      leafExpenseIds.add(acc.id);
-      getDescendants(acc.id, leafExpenseIds);
-    }
-  }
-
-  return leafExpenseIds;
+  return ScopeResolver.resolveLeafAccountIds(rootExpenseIds, workplaceExpenses);
 }
 
 /**

@@ -1,7 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import dayjs from 'dayjs';
 import { TransactionType } from '@/src/types/domain';
 import {
   Flow,
@@ -10,6 +9,7 @@ import {
   SimulationContext,
   SimulationPlannedPayment,
 } from '../types';
+import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class PlannedFlowGenerator {
@@ -220,33 +220,10 @@ export class PlannedFlowGenerator {
   }
 
   private static getNextOccurrence(curr: number, pp: SimulationPlannedPayment): number {
-    const intervalN = pp.intervalN || 1;
-    let next = dayjs(curr);
-
-    switch (pp.intervalType) {
-      case 'DAILY':
-        next = next.add(intervalN, 'day');
-        break;
-      case 'WEEKLY':
-        next = next.add(intervalN, 'week');
-        break;
-      case 'MONTHLY':
-        next = next.add(intervalN, 'month');
-        break;
-      case 'YEARLY':
-        next = next.add(intervalN, 'year');
-        break;
-      default:
-        next = next.add(intervalN, 'day');
-        break;
-    }
-
-    if (pp.recurrenceDay && (pp.intervalType === 'MONTHLY' || pp.intervalType === 'YEARLY')) {
-      const targetDay = pp.recurrenceDay;
-      const lastDayOfMonth = next.endOf('month').date();
-      next = next.date(Math.min(targetDay, lastDayOfMonth));
-    }
-
-    return next.valueOf();
+    return RecurrenceEngine.getNextOccurrence(curr, {
+      intervalType: pp.intervalType,
+      intervalN: pp.intervalN,
+      recurrenceDay: pp.recurrenceDay,
+    });
   }
 }

@@ -13,6 +13,7 @@ import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { toLiabilityMetadata } from './liabilityMetadata';
 import { TimeContext } from './TimeContext';
+import { ScopeResolver } from '@/src/services/forward-finance/scope/ScopeResolver';
 import { LiabilityMetadata } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
@@ -143,34 +144,6 @@ export async function fetchBudgetCategoryMap(
 
   const expenses = allAccounts.filter(a => a.accountType === AccountType.EXPENSE);
 
-  // Build child map once for ALL accounts
-  const childrenMap = new Map<string, string[]>();
-  expenses.forEach(acc => {
-    if (acc.parentAccountId) {
-      const siblings = childrenMap.get(acc.parentAccountId) || [];
-      siblings.push(acc.id);
-      childrenMap.set(acc.parentAccountId, siblings);
-    }
-  });
-
-  // Cache to avoid re-traversing subtrees
-  const descendantCache = new Map<string, Set<string>>();
-
-  const getDescendants = (id: string): Set<string> => {
-    if (descendantCache.has(id)) return descendantCache.get(id)!;
-
-    const result = new Set<string>();
-    const children = childrenMap.get(id) || [];
-    for (const childId of children) {
-      result.add(childId);
-      const childDescendants = getDescendants(childId);
-      childDescendants.forEach(d => result.add(d));
-    }
-
-    descendantCache.set(id, result);
-    return result;
-  };
-
   // Batch fetch all scopes
   const allScopes = await budgetRepository.getScopesByBudgetIds(
     workplaceId,
@@ -185,12 +158,9 @@ export async function fetchBudgetCategoryMap(
 
   budgets.forEach(budget => {
     const scopes = scopesByBudget.get(budget.id) || [];
-    const leafIds = new Set<string>();
-    for (const scope of scopes) {
-      leafIds.add(scope.accountId);
-      getDescendants(scope.accountId).forEach(id => leafIds.add(id));
-    }
-    map.set(budget.id, leafIds);
+    const rootScopeIds = scopes.map(s => s.accountId);
+    const descendantIds = ScopeResolver.resolveDescendantAccountIds(rootScopeIds, expenses);
+    map.set(budget.id, descendantIds as Set<string>);
   });
 
   return map;
