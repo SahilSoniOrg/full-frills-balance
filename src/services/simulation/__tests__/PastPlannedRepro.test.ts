@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
+import { ProjectionComposer } from '../ProjectionComposer';
 import { SimulationContext } from '../types';
 import { AccountId } from '@/src/types/domain';
 
@@ -32,13 +33,15 @@ describe('PlannedFlowGenerator Past Handling', () => {
       intervalN: 1,
     };
 
-    const { flows } = PlannedFlowGenerator.generate(
+    const { projections } = PlannedFlowGenerator.generate(
       context,
       [pp],
       [],
       new Set(['rent-category']),
       new Map(),
     );
+
+    const flows = ProjectionComposer.materializeScheduledProjections(projections, context);
 
     // Should have one flow for the past payment (now today) and potentially nothing else if next is 1 month away
     expect(flows.some(f => f.referenceId === 'pp-1' && f.dayOffset === 0)).toBe(true);
@@ -65,13 +68,15 @@ describe('PlannedFlowGenerator Past Handling', () => {
       ],
     ]);
 
-    const { flows } = PlannedFlowGenerator.generate(
+    const { projections } = PlannedFlowGenerator.generate(
       context,
       [],
       [journal as any],
       new Set(),
       journalTxsMap as any,
     );
+
+    const flows = ProjectionComposer.materializeScheduledProjections(projections, context);
 
     // NEW BEHAVIOR: Returns 1 flow at Day 0
     expect(flows.length).toBe(1);

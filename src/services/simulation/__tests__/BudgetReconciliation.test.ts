@@ -3,7 +3,7 @@ import Budget from '@/src/data/models/Budget';
 import dayjs from 'dayjs';
 import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
-import { FlowCategory, SimulationContext } from '../types';
+import { FlowCategory, FlowSource, ScheduledProjection, SimulationContext } from '../types';
 import { AccountId } from '@/src/types/domain';
 
 describe('BudgetReconciliation', () => {
@@ -38,15 +38,20 @@ describe('BudgetReconciliation', () => {
       total: 1000,
     };
 
-    // Case 1: Overdue payment ($800) from 2 days ago, projected for today
-    const plannedFlows: any[] = [
+    // Case 1: Overdue payment ($800) projected for today (dayOffset 0)
+    const scheduledProjections: ScheduledProjection[] = [
       {
-        kind: 'OUTFLOW',
+        sourceId: 'pp1',
+        occurrenceDate: simulationStartMs,
         amount: 800,
-        dayOffset: 0,
+        fromAccountId: 'acc1' as AccountId,
+        toAccountId: 'cat1' as AccountId,
         category: FlowCategory.PLANNED_EXPENSE,
+        timeframe: 'FUTURE',
+        label: 'Overdue Bill',
+        origin: FlowSource.PLANNED_PAYMENT,
         categoryId: 'cat1',
-        referenceId: 'pp1',
+        isTransfer: false,
       },
     ];
 
@@ -59,17 +64,18 @@ describe('BudgetReconciliation', () => {
       budgetCategoryMap,
     );
 
-    // When materialized with planned flows, remaining $200 is burned over the window
-    const { budgetFlows } = BudgetFlowGenerator.materializeFlows(context, capacities, plannedFlows);
+    // When materialized with scheduled projections, remaining $200 is burned over the 29 non-planned days
+    const { budgetFlows } = BudgetFlowGenerator.materializeFlows(
+      context,
+      capacities,
+      scheduledProjections,
+    );
 
-    const day0Burn = budgetFlows.find(f => f.dayOffset === 0);
-    expect(day0Burn?.amount).toBeCloseTo(200 / safeToSpendDays, 2);
+    // Non-planned days burn $200 / 29 = $6.90/day, Day 0 has no duplicate budget burn
+    expect(budgetFlows.find(f => f.dayOffset === 0)).toBeUndefined();
+    expect(budgetFlows.length).toBe(safeToSpendDays - 1);
 
     const totalBurn = budgetFlows.reduce((sum, f) => sum + f.amount, 0);
     expect(totalBurn).toBeCloseTo(200, 2);
-  });
-
-  it('handles smoothing correctly with planned payments', () => {
-    // Logic check for future months
   });
 });

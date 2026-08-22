@@ -230,7 +230,7 @@ export class RecurrenceEngine {
 
         let candidateYear = anchor.year() + cyclesPassed * intervalN;
         let startCandidate = setClampedDate(
-          dayjs().year(candidateYear).month(targetMonth).date(1),
+          anchor.year(candidateYear).month(targetMonth).date(1),
           targetDay,
         ).startOf('day');
         let nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
@@ -239,7 +239,7 @@ export class RecurrenceEngine {
         if (ref.isBefore(startCandidate)) {
           candidateYear -= intervalN;
           startCandidate = setClampedDate(
-            dayjs().year(candidateYear).month(targetMonth).date(1),
+            anchor.year(candidateYear).month(targetMonth).date(1),
             targetDay,
           ).startOf('day');
           nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);
@@ -247,7 +247,7 @@ export class RecurrenceEngine {
         } else if (ref.isAfter(endCandidate)) {
           candidateYear += intervalN;
           startCandidate = setClampedDate(
-            dayjs().year(candidateYear).month(targetMonth).date(1),
+            anchor.year(candidateYear).month(targetMonth).date(1),
             targetDay,
           ).startOf('day');
           nextStart = this.getNextOccurrence(startCandidate.valueOf(), rule);

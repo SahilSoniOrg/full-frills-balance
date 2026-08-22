@@ -132,25 +132,35 @@ export interface SimulationPlannedPayment {
   endDate?: number;
 }
 
+export interface BudgetCycleCapacity {
+  startDate: number;
+  endDate: number;
+  capacity: number;
+  remainingCapacity: number;
+}
+
 export interface BudgetCapacityProjection {
   budgetId: BudgetId | string;
   name: string;
-  cycleAmount: number;
-  usageRemaining: number;
-  intervalType: string;
   accountScope: Set<string>;
   targetAssetAccountIds: AccountId[];
-  daysLeftInCycle: number;
-  nextCycleDays: number;
-  windowSpansExtraCycles: boolean;
-  futureCycles: number;
+  intervalType: string;
+  cycles: BudgetCycleCapacity[];
 }
 
-export type ProjectionSourceType = 'budget' | 'planned_payment' | 'liability' | 'goal' | 'custom';
-
-export interface ProjectionProvider<TInput = void, TOutput = Flow[]> {
-  readonly sourceType: ProjectionSourceType;
-  generate(context: SimulationContext, input: TInput): Promise<TOutput> | TOutput;
+export interface ScheduledProjection {
+  sourceId: string;
+  occurrenceDate: number;
+  amount: number;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
+  category: FlowCategory;
+  timeframe: FlowTimeframe;
+  label: string;
+  origin: FlowSource;
+  categoryId?: string;
+  tags?: string[];
+  isTransfer?: boolean;
 }
 
 export interface ISimulationEngine {

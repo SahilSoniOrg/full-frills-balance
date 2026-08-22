@@ -3,19 +3,18 @@ import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { TransactionType } from '@/src/types/domain';
 import {
-  Flow,
   FlowCategory,
   FlowSource,
+  ScheduledProjection,
   SimulationContext,
   SimulationPlannedPayment,
 } from '../types';
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
-import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class PlannedFlowGenerator {
   /**
-   * Generates PLANNED flows from payments and journals.
-   * Internal transfers are now explicitly emitted as TRANSFER.
+   * Generates high-level semantic scheduled projections from planned payments and journals.
+   * Delayed discretization: Emits ScheduledProjection[] without premature Flow[] conversion.
    */
   static generate(
     context: SimulationContext,
@@ -23,22 +22,21 @@ export class PlannedFlowGenerator {
     plannedJournals: Journal[],
     expenseAccountIds: Set<string>,
     journalTransactionsMap: Map<string, Transaction[]>,
-  ): { flows: Flow[] } {
-    const flows: Flow[] = [];
+  ): { projections: ScheduledProjection[] } {
+    const projections: ScheduledProjection[] = [];
 
     // Day offset helper for efficient date-key matching without dayjs formatting
     const getDayKey = (ms: number) => Math.floor(ms / (24 * 60 * 60 * 1000));
 
-    // Track journals by date to fill gaps correctly
+    // Fast-path set of journal occurrences mapped to their parent planned payments
     const journalDatesByPP = new Set<string>();
     for (const journal of plannedJournals) {
-      if (journal.plannedPaymentId) {
-        const dayKey = getDayKey(journal.journalDate);
-        journalDatesByPP.add(`${journal.plannedPaymentId}:${dayKey}`);
+      if (journal.plannedPaymentId && journal.status !== 'SKIPPED') {
+        journalDatesByPP.add(`${journal.plannedPaymentId}:${getDayKey(journal.journalDate)}`);
       }
     }
 
-    // Process Planned Payments
+    // Process Planned Payments (Rules/Templates)
     for (const pp of plannedPayments) {
       const isLiquidFrom =
         context.liquidAccountIds.has(pp.fromAccountId) ||
@@ -46,6 +44,10 @@ export class PlannedFlowGenerator {
       const isLiquidTo =
         context.liquidAccountIds.has(pp.toAccountId) ||
         context.liabilityAccountIds.has(pp.toAccountId);
+
+      if (!isLiquidFrom && !isLiquidTo) {
+        continue;
+      }
 
       let curr = pp.nextOccurrence;
       const endDate = pp.endDate || Infinity;
@@ -73,56 +75,54 @@ export class PlannedFlowGenerator {
           if (dayOffset >= context.simulationDays) break;
 
           const normalizedAmount = context.convert(pp.amount, pp.currencyCode);
-          const meta = {
-            label: pp.name || 'Planned Payment',
-            referenceId: pp.id,
-            tags: isLiquidTo && isLiquidFrom ? ['LIABILITY_PAYMENT'] : [],
-          };
+          const tags = isLiquidTo && isLiquidFrom ? ['LIABILITY_PAYMENT'] : [];
 
           if (isLiquidFrom && isLiquidTo) {
-            flows.push({
-              kind: 'TRANSFER',
+            projections.push({
+              sourceId: pp.id,
+              occurrenceDate: curr,
+              amount: normalizedAmount,
               fromAccountId: pp.fromAccountId,
               toAccountId: pp.toAccountId,
-              amount: normalizedAmount,
-              dayOffset,
               category: FlowCategory.TRANSFER,
               timeframe: 'FUTURE',
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
-              referenceId: pp.id,
               categoryId: pp.toAccountId,
-              meta: { tags: meta.tags },
+              tags,
+              isTransfer: true,
             });
           } else if (isLiquidFrom) {
-            flows.push({
-              kind: 'OUTFLOW',
-              accountId: pp.fromAccountId,
+            projections.push({
+              sourceId: pp.id,
+              occurrenceDate: curr,
               amount: normalizedAmount,
-              dayOffset,
-              category: meta.tags?.includes('LIABILITY_PAYMENT')
+              fromAccountId: pp.fromAccountId,
+              toAccountId: pp.toAccountId,
+              category: tags.includes('LIABILITY_PAYMENT')
                 ? FlowCategory.DEBT
                 : FlowCategory.PLANNED_EXPENSE,
               timeframe: 'FUTURE',
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
-              referenceId: pp.id,
               categoryId: pp.toAccountId,
-              meta: { tags: meta.tags },
+              tags,
+              isTransfer: false,
             });
           } else if (isLiquidTo) {
-            flows.push({
-              kind: 'INFLOW',
-              accountId: pp.toAccountId,
+            projections.push({
+              sourceId: pp.id,
+              occurrenceDate: curr,
               amount: normalizedAmount,
-              dayOffset,
+              fromAccountId: pp.fromAccountId,
+              toAccountId: pp.toAccountId,
               category: FlowCategory.INCOME,
               timeframe: 'FUTURE',
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
-              referenceId: pp.id,
               categoryId: pp.fromAccountId,
-              meta: { tags: meta.tags },
+              tags,
+              isTransfer: false,
             });
           }
         }
@@ -162,19 +162,19 @@ export class PlannedFlowGenerator {
             context.liabilityAccountIds.has(debitTx.accountId) &&
             !context.liabilityAccountIds.has(creditTx.accountId);
 
-          flows.push({
-            kind: 'TRANSFER',
+          projections.push({
+            sourceId: journal.id,
+            occurrenceDate: occurrenceMs,
+            amount: context.convert(debitTx.amount, debitTx.currencyCode),
             fromAccountId: creditTx.accountId,
             toAccountId: debitTx.accountId,
-            amount: context.convert(debitTx.amount, debitTx.currencyCode),
-            dayOffset,
             category: FlowCategory.TRANSFER,
             timeframe: 'FUTURE',
             label: journal.description || 'Planned Journal',
             origin: FlowSource.PLANNED_JOURNAL,
-            referenceId: journal.id,
             categoryId: categoryId || debitTx.accountId,
-            meta: { tags: isLiabilityPayment ? ['LIABILITY_PAYMENT'] : [] },
+            tags: isLiabilityPayment ? ['LIABILITY_PAYMENT'] : [],
+            isTransfer: true,
           });
           continue;
         }
@@ -186,37 +186,38 @@ export class PlannedFlowGenerator {
           tx.transactionType === TransactionType.DEBIT ? normalizedAmount : -normalizedAmount;
 
         if (impact > 0) {
-          flows.push({
-            kind: 'INFLOW',
-            accountId: tx.accountId,
+          projections.push({
+            sourceId: journal.id,
+            occurrenceDate: occurrenceMs,
             amount: normalizedAmount,
-            dayOffset,
+            fromAccountId: (categoryId || tx.accountId) as any,
+            toAccountId: tx.accountId,
             category: FlowCategory.INCOME,
             timeframe: 'FUTURE',
             label: journal.description || 'Planned Journal',
             origin: FlowSource.PLANNED_JOURNAL,
-            referenceId: journal.id,
             categoryId: categoryId || undefined,
+            isTransfer: false,
           });
         } else if (impact < 0) {
-          flows.push({
-            kind: 'OUTFLOW',
-            accountId: tx.accountId,
+          projections.push({
+            sourceId: journal.id,
+            occurrenceDate: occurrenceMs,
             amount: normalizedAmount,
-            dayOffset,
-            category: FlowCategory.EXPENSE, // Generic journal outflows
+            fromAccountId: tx.accountId,
+            toAccountId: (categoryId || tx.accountId) as any,
+            category: FlowCategory.EXPENSE,
             timeframe: 'FUTURE',
             label: journal.description || 'Planned Journal',
             origin: FlowSource.PLANNED_JOURNAL,
-            referenceId: journal.id,
             categoryId: categoryId || undefined,
+            isTransfer: false,
           });
         }
       }
     }
 
-    flows.forEach(assertValidFlow);
-    return { flows };
+    return { projections };
   }
 
   private static getNextOccurrence(curr: number, pp: SimulationPlannedPayment): number {

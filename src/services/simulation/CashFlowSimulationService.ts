@@ -235,32 +235,30 @@ export class CashFlowSimulationService {
     const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
     const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
 
-    const [plannedFlows, budgetCapacities] = await Promise.all([
-      plannedPaymentProjectionProvider.generate(context, {
-        plannedPayments: normalizedPlannedPayments,
-        projectablePlannedJournals,
-        expenseAccountIds,
-        journalTransactionsMap: journalTxsMap,
-      }),
+    const scheduledProjections = plannedPaymentProjectionProvider.projectScheduled(context, {
+      plannedPayments: normalizedPlannedPayments,
+      projectablePlannedJournals,
+      expenseAccountIds,
+      journalTransactionsMap: journalTxsMap,
+    });
 
-      budgetProjectionProvider.generate(context, {
-        budgets: filteredBudgets,
-        usages: filteredUsages,
-        budgetCategoryMap,
-      }),
-    ]);
+    const budgetCapacities = budgetProjectionProvider.projectCapacities(
+      context,
+      filteredBudgets,
+      filteredUsages,
+      budgetCategoryMap,
+    );
     trace?.metric('flow_gen_domain');
 
     // 4. PHASE: COMPOSE SPENDING CONFLICTS (DELAYED DISCRETIZATION)
     const resolvedSpendingFlows = ProjectionComposer.composeSpending(
       budgetCapacities,
-      plannedFlows,
+      scheduledProjections,
       context,
-      budgetCategoryMap,
     );
 
     // 5. PHASE: GENERATE DERIVED LIABILITY OBLIGATIONS
-    const liabilityFlows = await liabilityProjectionProvider.generate(context, {
+    const liabilityFlows = liabilityProjectionProvider.projectLiabilityFlows(context, {
       liabilityBalances: normalizedLiabilityBalances,
       metadataMap,
       statementBalances,

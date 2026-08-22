@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
+import { ProjectionComposer } from '../ProjectionComposer';
 import { AccountId } from '@/src/types/domain';
 
 describe('PlannedFlowGenerator May 5th Regression', () => {
@@ -11,6 +12,18 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
   const liquidAccountIds = new Set(['bank' as AccountId]);
   const liabilityAccountIds = new Set(['cc' as AccountId]);
   const expenseAccountIds = new Set(['rent_cat' as AccountId]);
+
+  const mockContext = {
+    simulationStartMs,
+    simulationDays: safeToSpendDays,
+    simulationEndMs,
+    resultCurrency: 'USD',
+    liquidAccountIds,
+    orderedLiquidAccountIds: Array.from(liquidAccountIds),
+    liabilityAccountIds,
+    accountMap: new Map(),
+    convert: (amount: number) => amount,
+  } as any;
 
   it('generates the May 5th occurrence if nextOccurrence is in the past (overdue gap filling)', () => {
     // Scenario: Payment was on April 5 (overdue). Next should be May 5.
@@ -27,32 +40,23 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       recurrenceDay: 5,
     };
 
-    const result = PlannedFlowGenerator.generate(
-      {
-        simulationStartMs,
-        simulationDays: safeToSpendDays,
-        simulationEndMs,
-        resultCurrency: 'USD',
-        liquidAccountIds,
-        orderedLiquidAccountIds: Array.from(liquidAccountIds),
-        liabilityAccountIds,
-        accountMap: new Map(),
-        convert: (amount: number) => amount,
-      } as any,
+    const { projections } = PlannedFlowGenerator.generate(
+      mockContext,
       [overduePP],
       [], // No journals
       expenseAccountIds,
       new Map(),
     );
 
-    // We expect THREE flows in 60-day window:
+    const flows = ProjectionComposer.materializeScheduledProjections(projections, mockContext);
+
+    // We expect TWO flows in 30-day window:
     // 1. One for the overdue April 5th payment (pulled to Day 0)
     // 2. One for the May 5th payment
-    // 3. One for the June 5th payment
-    const day0Flow = result.flows.find(f => f.dayOffset === 0);
-    const may5Flow = result.flows.find(f => f.dayOffset === 27); // (May 5 - April 8) = 27 days
+    const day0Flow = flows.find(f => f.dayOffset === 0);
+    const may5Flow = flows.find(f => f.dayOffset === 27); // (May 5 - April 8) = 27 days
 
-    expect(result.flows.length).toBe(2);
+    expect(flows.length).toBe(2);
     expect(day0Flow).toBeDefined();
     expect(may5Flow).toBeDefined();
     expect(may5Flow?.amount).toBe(1000);
@@ -73,25 +77,17 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       toAccountId: 'cc' as AccountId,
     };
 
-    const result = PlannedFlowGenerator.generate(
-      {
-        simulationStartMs,
-        simulationDays: safeToSpendDays,
-        simulationEndMs,
-        resultCurrency: 'USD',
-        liquidAccountIds,
-        orderedLiquidAccountIds: Array.from(liquidAccountIds),
-        liabilityAccountIds,
-        accountMap: new Map(),
-        convert: (amount: number) => amount,
-      } as any,
+    const { projections } = PlannedFlowGenerator.generate(
+      mockContext,
       [futurePP],
       [],
       expenseAccountIds,
       new Map(),
     );
 
-    const may5Flow = result.flows.find(f => f.dayOffset === 27);
+    const flows = ProjectionComposer.materializeScheduledProjections(projections, mockContext);
+
+    const may5Flow = flows.find(f => f.dayOffset === 27);
     expect(may5Flow).toBeDefined();
     expect(may5Flow?.amount).toBe(1000);
   });

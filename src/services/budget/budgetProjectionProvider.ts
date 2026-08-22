@@ -4,30 +4,15 @@ import dayjs from 'dayjs';
 import { BudgetPeriodUtils } from './BudgetPeriodUtils';
 import {
   BudgetCapacityProjection,
-  ProjectionProvider,
+  BudgetCycleCapacity,
   SimulationBudget,
   SimulationContext,
 } from '@/src/services/simulation/types';
 
-export interface BudgetProjectionInput {
-  budgets: SimulationBudget[];
-  usages: BudgetUsage[];
-  budgetCategoryMap: Map<string, Set<string>>;
-}
-
-export class BudgetProjectionProvider implements ProjectionProvider<
-  BudgetProjectionInput,
-  BudgetCapacityProjection[]
-> {
-  readonly sourceType = 'budget';
-
-  generate(context: SimulationContext, input: BudgetProjectionInput): BudgetCapacityProjection[] {
-    return this.projectCapacities(context, input.budgets, input.usages, input.budgetCategoryMap);
-  }
-
+export class BudgetProjectionProvider {
   /**
    * Projects high-level semantic budget capacity across cycle periods.
-   * Delayed discretization: Does NOT flatten budget into daily flows yet.
+   * Delayed discretization: Emits explicit cycles without premature discretization into daily flows.
    */
   projectCapacities(
     context: SimulationContext,
@@ -36,6 +21,7 @@ export class BudgetProjectionProvider implements ProjectionProvider<
     budgetCategoryMap: Map<string, Set<string>>,
   ): BudgetCapacityProjection[] {
     const projections: BudgetCapacityProjection[] = [];
+    const startOfSim = dayjs(context.simulationStartMs).startOf('day');
 
     const getTargetAssetAccountIds = (budget: SimulationBudget): AccountId[] => {
       if (budget.assetAccountIds) {
@@ -60,37 +46,45 @@ export class BudgetProjectionProvider implements ProjectionProvider<
 
       const budgetCategories = budgetCategoryMap.get(budget.id) || new Set<string>();
 
-      const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, context.simulationStartMs);
-      const daysLeftInCycle = Math.max(
-        1,
-        dayjs(endDate).diff(dayjs(context.simulationStartMs), 'day') + 1,
-      );
+      // Generate all cycles that overlap the simulation window [simulationStartMs, simulationEndMs]
+      const cycles: BudgetCycleCapacity[] = [];
 
-      const nextCycleStart = dayjs(endDate).add(1, 'ms').valueOf();
-      const nextCycleRange = BudgetPeriodUtils.getCurrentPeriod(budget, nextCycleStart);
-      const nextCycleDays = Math.max(
-        1,
-        dayjs(nextCycleRange.endDate).diff(dayjs(nextCycleRange.startDate), 'day') + 1,
-      );
+      let currentPeriod = BudgetPeriodUtils.getCurrentPeriod(budget, context.simulationStartMs);
+      cycles.push({
+        startDate: currentPeriod.startDate,
+        endDate: currentPeriod.endDate,
+        capacity: budget.amount,
+        remainingCapacity: remaining,
+      });
 
-      const windowSpansExtraCycles = daysLeftInCycle + nextCycleDays < context.simulationDays;
-      const futureCycles = Math.max(
-        1,
-        Math.ceil((context.simulationDays - daysLeftInCycle) / nextCycleDays),
-      );
+      // Walk forward to collect future cycles within the simulation window
+      while (currentPeriod.endDate < context.simulationEndMs) {
+        const nextCycleRef = dayjs(currentPeriod.endDate).add(1, 'second').valueOf();
+        const nextPeriod = BudgetPeriodUtils.getCurrentPeriod(budget, nextCycleRef);
+
+        // Guard against infinite loop if period doesn't advance
+        if (nextPeriod.startDate <= currentPeriod.startDate) break;
+
+        const nextStartOffset = dayjs(nextPeriod.startDate).startOf('day').diff(startOfSim, 'day');
+        if (nextStartOffset >= context.simulationDays) break;
+
+        cycles.push({
+          startDate: nextPeriod.startDate,
+          endDate: nextPeriod.endDate,
+          capacity: budget.amount,
+          remainingCapacity: budget.amount,
+        });
+
+        currentPeriod = nextPeriod;
+      }
 
       projections.push({
         budgetId: budget.id,
         name: budget.name,
-        cycleAmount: budget.amount,
-        usageRemaining: remaining,
-        intervalType: budget.intervalType || 'MONTHLY',
         accountScope: budgetCategories,
         targetAssetAccountIds: targetAssetIds,
-        daysLeftInCycle,
-        nextCycleDays,
-        windowSpansExtraCycles,
-        futureCycles,
+        intervalType: budget.intervalType || 'MONTHLY',
+        cycles,
       });
     }
 

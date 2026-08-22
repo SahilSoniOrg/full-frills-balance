@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
@@ -112,36 +111,29 @@ describe('BudgetFlowGenerator', () => {
   });
 
   it('burns a daily budget at the full daily amount, not a monthly 30-day rate', () => {
-    const originalMode = AppConfig.defaults.budgetMode;
-    (AppConfig.defaults as { budgetMode: 'SMOOTHED' | 'ACTUAL' }).budgetMode = 'ACTUAL';
+    const dailyBudgets = [
+      {
+        id: 'b-daily',
+        name: 'Daily Coffee',
+        amount: 100,
+        assetAccountIds: 'acc-1',
+        intervalType: 'DAILY',
+        intervalN: 1,
+        startDate: mockContext.simulationStartMs,
+      },
+    ] as unknown as Budget[];
 
-    try {
-      const dailyBudgets = [
-        {
-          id: 'b-daily',
-          name: 'Daily Coffee',
-          amount: 100,
-          assetAccountIds: 'acc-1',
-          intervalType: 'DAILY',
-          intervalN: 1,
-          startDate: mockContext.simulationStartMs,
-        },
-      ] as unknown as Budget[];
+    const capacities = budgetProjectionProvider.projectCapacities(
+      mockContext,
+      dailyBudgets,
+      [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],
+      new Map([['b-daily', new Set(['cat-1'])]]),
+    );
+    const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
-      const capacities = budgetProjectionProvider.projectCapacities(
-        mockContext,
-        dailyBudgets,
-        [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],
-        new Map([['b-daily', new Set(['cat-1'])]]),
-      );
-      const { budgetFlows: flows } = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
-
-      expect(flows).toHaveLength(30);
-      expect(flows[0].amount).toBeCloseTo(100, 5);
-      expect(flows[1].amount).toBeCloseTo(100, 5);
-      expect(flows.every(f => Math.abs(f.amount - 100) < 1e-9)).toBe(true);
-    } finally {
-      (AppConfig.defaults as { budgetMode: 'SMOOTHED' | 'ACTUAL' }).budgetMode = originalMode;
-    }
+    expect(flows).toHaveLength(30);
+    expect(flows[0].amount).toBeCloseTo(100, 5);
+    expect(flows[1].amount).toBeCloseTo(100, 5);
+    expect(flows.every(f => Math.abs(f.amount - 100) < 1e-9)).toBe(true);
   });
 });

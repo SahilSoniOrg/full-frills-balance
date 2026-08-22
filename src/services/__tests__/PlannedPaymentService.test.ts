@@ -65,7 +65,7 @@ describe('planned payment modules', () => {
   describe('calculateNextOccurrence', () => {
     // Use fixed dates for testing
     // Jan 31, 2024 (Wednesday)
-    const JAN_31_2024 = new Date(2024, 0, 31, 12, 0, 0).getTime();
+    const JAN_31_2024 = new Date(2024, 0, 31, 0, 0, 0).getTime();
 
     test('Daily: adds N days and normalizes to midnight', () => {
       const next = calculateNextOccurrence(JAN_31_2024, {

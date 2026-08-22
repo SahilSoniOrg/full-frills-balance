@@ -291,10 +291,10 @@ describe('Forward-Finance Characterization Baseline (Behavior Locks)', () => {
       simulationDays: 30,
     });
 
-    // Total effective food spend composes to $150 planned + 29 * $15 residual burn = $585 (not 600 + 150 = 750)
-    // 2000 starting - 585 total projected food = 1415 SafeToSpend
-    expect(result.simulationResult.summary.safeToSpend).toBe(1415);
-    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1415);
+    // Total effective food spend composes to $150 planned + $450 residual burn = $600 (not 600 + 150 = 750)
+    // 2000 starting - 600 total projected food = 1400 SafeToSpend
+    expect(result.simulationResult.summary.safeToSpend).toBe(1400);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1400);
   });
 
   it('LOCK 4: credit card statement obligation and settlement matching', async () => {
@@ -346,5 +346,62 @@ describe('Forward-Finance Characterization Baseline (Behavior Locks)', () => {
 
     // 3000 starting - 800 payment = 2200
     expect(result.simulationResult.summary.safeToSpend).toBe(2200);
+  });
+
+  it('LOCK 5: mid-cycle simulation burns full remaining budget capacity before cycle end', async () => {
+    // Simulation begins on Aug 22 (10 days remaining in Aug 1-31 cycle: Aug 22 to Aug 31)
+    jest.setSystemTime(new Date('2026-08-22T00:00:00Z'));
+
+    const midCycleBudget = {
+      id: 'b-mid-cycle',
+      name: 'Mid Cycle Food',
+      amount: 10000,
+      currencyCode: 'USD',
+      assetAccountIds: liquidAccountId,
+      intervalType: 'MONTHLY',
+      intervalN: 1,
+      recurrenceDay: 1,
+    } as unknown as Budget;
+
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
+      { budgetId: 'b-mid-cycle', accountId: foodExpenseAccountId, workplaceId },
+    ]);
+
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map([[liquidAccountId, 50000]]),
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [],
+      allAccounts: baseAccounts,
+      budgets: [midCycleBudget],
+      usages: [{ spent: 0, remaining: 10000, budgetAmount: 10000, usagePercent: 0 }],
+      plannedPayments: [],
+      plannedJournals: [],
+      resultCurrency: 'USD',
+      workplaceId,
+      simulationDays: 30, // 10 days in Aug + 20 days in Sept
+    });
+
+    const flows = result.allFlows;
+    const augFlows = flows.filter(f => f.dayOffset < 10);
+    const septFlows = flows.filter(f => f.dayOffset >= 10);
+
+    expect(augFlows).toHaveLength(10);
+    expect(septFlows).toHaveLength(20);
+
+    // Entire ₹10,000 remaining capacity is burned over the 10 remaining days of August (₹1,000/day)
+    const augTotalBurn = augFlows.reduce((sum, f) => sum + f.amount, 0);
+    expect(augTotalBurn).toBeCloseTo(10000, 2);
+    expect(augFlows[0].amount).toBeCloseTo(1000, 2);
+
+    // September burns at the full 30-day rate: 10000 / 30 = 333.33/day
+    expect(septFlows[0].amount).toBeCloseTo(10000 / 30, 2);
+    const septTotalBurn = septFlows.reduce((sum, f) => sum + f.amount, 0);
+    expect(septTotalBurn).toBeCloseTo((10000 / 30) * 20, 2);
+
+    // Safe to spend: 50,000 - (10,000 + 6,666.67) = 33,333.33
+    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(
+      50000 - (augTotalBurn + septTotalBurn),
+      2,
+    );
   });
 });

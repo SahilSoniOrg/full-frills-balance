@@ -186,7 +186,6 @@ export const AppConfig = {
       loanHeuristicLabelSuffix: ' (Est. EMI)',
     },
     maxTooltipDetails: 6,
-    budgetMode: 'SMOOTHED' as 'SMOOTHED' | 'ACTUAL',
     archetype: 'balance-glancer',
     notifications: {
       defaultHour: 10,

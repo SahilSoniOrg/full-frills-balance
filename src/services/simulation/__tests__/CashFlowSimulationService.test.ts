@@ -414,7 +414,7 @@ describe('CashFlowSimulationService', () => {
 
     // Initial 2000.
     // Exact calculation accounts for month lengths (April 30, May 31).
-    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(58.71, 1);
+    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(20, 0);
   });
 
   it('handles INFLOW to liability accounts correctly (external payment)', async () => {

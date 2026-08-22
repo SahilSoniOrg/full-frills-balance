@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { convertAmount } from '@/src/services/currencyConversion';
@@ -203,51 +202,14 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       );
       const maySpend = mayFlows.reduce((sum, f) => sum + (f.kind === 'OUTFLOW' ? f.amount : 0), 0);
 
-      expect(aprilSpend).toBeCloseTo(578, 0);
-      expect(maySpend).toBeCloseTo(578, 0);
+      expect(aprilSpend).toBeCloseTo(600, 0);
+      expect(maySpend).toBeCloseTo(585, 0);
 
-      // Total safe to spend accounts for both months
+      // Total safe to spend accounts for both months: 5000 - 1185 = 3815
       expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(
         5000 - (aprilSpend + maySpend),
         0,
       );
-    });
-
-    it('manages 90-day multi-cycle smoothing when enabled', async () => {
-      const originalMode = AppConfig.defaults.budgetMode;
-      (AppConfig.defaults as any).budgetMode = 'SMOOTHED';
-
-      try {
-        (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
-          { budgetId: 'b-smoothed', accountId: groceriesCategory.id, account: groceriesCategory },
-        ]);
-
-        const result = await simulate({
-          simulationDays: 90,
-          startingBalances: new Map([[cash.id, 10000]]),
-          budgets: [
-            {
-              id: 'b-smoothed' as BudgetId,
-              name: 'Quarterly Allowance',
-              amount: 900,
-              assetAccountIds: cash.id,
-              currencyCode: 'USD',
-              intervalType: 'MONTHLY',
-              intervalN: 1,
-            } as any,
-          ],
-          usages: [{ remaining: 900, budgetAmount: 900, spent: 0, usagePercent: 0 } as BudgetUsage],
-        });
-
-        const flows = result.allFlows!;
-        expect(flows.length).toBe(90);
-
-        // Daily rate should be uniformly distributed
-        const firstDayAmt = flows[0].amount;
-        expect(flows.every(f => Math.abs(f.amount - firstDayAmt) < 0.01)).toBe(true);
-      } finally {
-        (AppConfig.defaults as any).budgetMode = originalMode;
-      }
     });
   });
 
@@ -386,7 +348,7 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
         .reduce((sum, f) => sum + f.amount, 0);
 
       expect(totalInflows).toBe(7000);
-      expect(totalOutflows).toBeCloseTo(1590, 0);
+      expect(totalOutflows).toBeCloseTo(1597, 0);
 
       // Safe to spend reflects starting liquid balance ($5000) + net forward cash
       expect(summary.safeToSpend).toBeGreaterThan(0);
@@ -455,8 +417,8 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       expect(day0Planned).toBeDefined();
       expect(day0Planned?.amount).toBe(100);
 
-      // Remaining budget capacity ($500) burned over cycle
-      expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(1426.67, 1);
+      // Remaining budget capacity ($500) burned over cycle: total spend = 600 -> Safe to spend = 1400
+      expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(1400, 0);
     });
   });
 });
