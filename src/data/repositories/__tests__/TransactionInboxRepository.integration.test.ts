@@ -98,4 +98,36 @@ describe('TransactionInboxRepository integration', () => {
       ),
     ).toThrow('Inbox record does not belong to the specified workplace');
   });
+
+  it('does not persist prepared inbox rows when cancellation arrives before the real batch', async () => {
+    const controller = new AbortController();
+    const afterBatch = jest.fn();
+    const payload = {
+      workplaceId,
+      channel: 'sms' as const,
+      deviceSourceId: 'sms-repository-cancelled',
+      inputDate: 1_700_000_000_000,
+      inputFingerprint: 'fingerprint-cancelled',
+      parseStatus: InboxParseStatus.PARSED,
+      direction: TransactionDirection.DEBIT,
+      processingStatus: InboxProcessingStatus.PENDING,
+      firstSeenAt: 1_700_000_000_000,
+      lastScannedAt: 1_700_000_000_000,
+    };
+
+    await expect(
+      repository.persistScanBatch(
+        async () => {
+          const prepared = repository.prepareUpsert(payload, null);
+          controller.abort();
+          return prepared.ops;
+        },
+        afterBatch,
+        controller.signal,
+      ),
+    ).resolves.toBe(false);
+
+    expect(await repository.find(workplaceId, 'sms-repository-cancelled')).toBeNull();
+    expect(afterBatch).not.toHaveBeenCalled();
+  });
 });

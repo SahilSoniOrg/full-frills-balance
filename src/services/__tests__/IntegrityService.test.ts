@@ -239,6 +239,75 @@ describe('IntegrityService', () => {
       );
       rebuildSpy.mockRestore();
     });
+
+    it('does not commit a repair when cancellation arrives at the real writer boundary', async () => {
+      await journalWriteRepository.createJournalWithTransactions(
+        {
+          description: 'Corrupted balance source',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const cashTransactions = await database.collections
+        .get<Transaction>('transactions')
+        .query(Q.where('account_id', cashAccountId))
+        .fetch();
+      await database.write(async () => {
+        await cashTransactions[0]!.update(transaction => {
+          transaction.runningBalance = 9999;
+        });
+      });
+
+      const controller = new AbortController();
+      const originalWrite = database.write.bind(database);
+      const writeSpy = jest.spyOn(database, 'write').mockImplementation(async work => {
+        controller.abort();
+        return originalWrite(work);
+      });
+
+      try {
+        await expect(
+          repairAccountBalance(
+            'wp-1' as WorkplaceId,
+            cashAccountId as AccountId,
+            {
+              accountId: cashAccountId as AccountId,
+              accountName: 'Cash',
+              cachedBalance: 9999,
+              computedBalance: 500,
+              matches: false,
+              discrepancy: 9499,
+            },
+            'repair',
+            controller.signal,
+          ),
+        ).resolves.toBe(false);
+      } finally {
+        writeSpy.mockRestore();
+      }
+
+      const unchanged = await database.collections
+        .get<Transaction>('transactions')
+        .find(cashTransactions[0]!.id);
+      expect(unchanged.runningBalance).toBe(9999);
+      expect(await database.collections.get<AuditLog>('audit_logs').query().fetch()).toHaveLength(
+        0,
+      );
+    });
   });
 
   describe('computeBalanceFromTransactions with snapshot boundaries', () => {

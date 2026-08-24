@@ -154,7 +154,7 @@ describe('DatabaseRepository', () => {
     expect(cacheMap.get('old-acc')).toBe(targetCached);
   });
 
-  it('restores native-adapter rows when a later table fails during the swap', async () => {
+  it('restores simulated rows when a later table fails during the swap', async () => {
     const rows = new Map([
       ['accounts:target', 1],
       ['accounts:staging', 2],

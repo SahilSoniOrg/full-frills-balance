@@ -1,7 +1,7 @@
 # Architecture Refactor Remediation Plan
 
-Status: **ACTIVE — durable rebuild delivery verified; native and transaction-owner integration debt remains**
-Baseline: `b1ee4d45` on `main`; verified local head before this documentation refresh: `222679b6`
+Status: **ACTIVE — disposable rebuild delivery restored; native device proof remains open**
+Baseline: `b1ee4d45` on `main`; verified local head before this documentation refresh: `0ff90512`
 Owner: orchestration thread; implementation work is delegated to isolated Luna worktrees.
 Push policy: **never push**. Local commits are expected; completed work is squash-merged into `main`.
 
@@ -18,34 +18,17 @@ Close the remaining lifecycle, workplace-isolation, financial-integrity, persist
 
 ## Local merge ledger
 
-All changes below were implemented in isolated `gpt-5.6-luna` worktrees, reviewed by the orchestrator, squash-merged into `main`, and not pushed:
+The unpushed remediation work was implemented in isolated `gpt-5.6-luna` worktrees, reviewed by the orchestrator, and is now consolidated into seven local logical commits immediately after `origin/main`. The pre-consolidation chain remains recoverable under `codex/pre-history-cleanup`; nothing was pushed.
 
-- `73ad745` — isolate SMS scans and honor cancellation.
-- `ce7a1ffa` — cancel stale workplace reactive work.
-- `c7b33970` — guard financial rebuilds against cancellation.
-- `c6a05c0d` — make staged import cleanup retryable and cover savepoint rollback.
-- `6d73615` — reject deleted account-tree parents.
-- `7117459` — ratchet service/command model persistence access.
-- `b13e9e6` — refresh persistence enforcement inventory and E2E policy documentation.
-- `d7ce7c6d` — prevent cancelled rebuild resurrection after restart.
-- `793f26a3` — atomically advance planned-payment schedule with journal creation.
-- `25a5b50b` — move SMS inbox model preparation into the repository.
-- `6da8cb1b` — move rebuild preparation into repositories.
-- `2db1d13e` — move journal lifecycle preparation into the repository.
-- `7c266523` — move budget and planned-payment merge preparation into repositories.
-- `35d0abc1` — move integrity refresh preparation into the account repository.
-- `1aac5930` — delegate account-merge transaction preparation.
-- `4d70f8ed` — run `persistBatch` callbacks after the writer resolves.
-- `136b2777` — move export ORM projection into the data layer.
-- `b6c2e7c0`, `9c5b19a7` — ratchet completed rebuild/lifecycle/integrity ownership migrations.
-- `df396a2b` — revert an incomplete rebuild slice after focused tests caught missing repository helpers; no incomplete implementation was retained.
-- `0cb78220` — record the durable rebuild outbox audit and ownership closure.
-- `d8221fd3`, `d8f700fc`, `32eb4f4b`, `d881875d` — add schema, model, repository, and atomic batch support for durable rebuild intents.
-- `6de63e2d` — include rebuild intents in workplace purge/export/staged-import table ownership.
-- `728ab437`, `36c8c13b`, `708dfdb0`, `4ecdc306`, `a92959a9`, `793bc337`, `f4b01072`, `491c0947`, `beb0bf3e` — migrate account, ledger, journal, bulk, merge, and SMS producers to same-writer durable intent insertion.
-- `e4e0ed06`, `74617530`, `f1f541b9` — remove the obsolete enqueue helper, type intent status, and refresh producer expectations.
-- `3c574056`, `e468d4a8`, `50fd3d1d`, `bee3040d` — implement and harden the durable dispatcher, lease recovery, retry retention, and repository-owned dispatcher writes.
-- `222679b6` — complete rebuild-intent export/summary coverage and update SMS batch fixtures for the durable seam.
+The consolidated tree contains these logical waves:
+
+- journal/import workflow refactors;
+- account-management, selection, and hierarchy work;
+- architecture and domain-boundary cleanup;
+- lifecycle cancellation and workplace-isolation hardening;
+- repository ownership migration and persistence ratchets;
+- rebuild-delivery evaluation, durable-outbox removal, and disposable MMKV restoration;
+- real-writer tests, adapter-contract fault injection, architecture reports, and final verification records.
 
 Slice-level verification passed in the worktrees: SMS 42 tests; lifecycle/reactive 21 tests; financial cancellation 39 tests; import/account 65 tests; ratchet and formatting checks passed.
 
@@ -53,9 +36,9 @@ Second-wave slice verification passed in the worktrees: rebuild recovery 10 test
 
 Third-wave slice verification passed in isolated Luna worktrees: rebuild ownership 13 tests; journal lifecycle ownership 17 tests; account-merge ownership 37 tests; integrity refresh 9 tests; planned-payment ownership 46 tests; export ownership 9 tests; post-commit callback semantics 3 tests. All accepted slices were reviewed and squash-merged locally.
 
-## Post-merge verification
+## Prior durable-outbox verification (historical)
 
-The final merged-tree `bun run verify` completed successfully after all accepted remediation waves:
+The following verification covered the durable-outbox experiment before it was intentionally removed:
 
 - Architecture checks and all ratchets passed: `direct_database_write=3`, `service_model_persistence_access=0`.
 - E2E TypeScript check passed.
@@ -63,14 +46,26 @@ The final merged-tree `bun run verify` completed successfully after all accepted
 - Lint completed without errors.
 - `git diff --check` passed; no commits were pushed.
 
+## Current verification
+
+Verified on the merged tree at `4548d974` (code changes through `0ff90512`):
+
+- Targeted adapter/transaction-owner coverage: 5 suites, 21 tests passed.
+- Architecture checks and all ratchets passed: `direct_database_write=3`, `service_model_persistence_access=0`.
+- E2E TypeScript check and application TypeScript check passed.
+- Jest: 274 suites passed; 1,643 tests passed; 1 skipped.
+- Lint and `git diff --check` passed; no commits were pushed.
+
+The native SQLite/JSI claim remains explicitly narrowed because this environment cannot provide device-level execution.
+
 ## Deferred work that remains explicit
 
-- Durable rebuild intents are now inserted in the same Watermelon batch as migrated business mutations. The compatibility `RebuildQueueService.enqueue*` API remains for legacy callers and persists through the repository; no production producer should use it.
-- Savepoint rollback coverage simulates native-adapter behavior; device-level iOS/Android JSI execution remains unproven.
+- A queued rebuild can be lost on process death by design. The source journal/transaction data remains authoritative; startup integrity, manual force-rebuild, and later mutations are the recovery paths for stale projections.
+- The adapter contract now has fault injection after every staged-import DELETE/UPDATE boundary, with row restoration and cache-notification assertions. Device-level iOS/Android SQLite/JSI execution and native cache-coherence proof remain unproven.
 - Playwright remains scheduled/manual by policy, not a pull-request gate.
-- Integrity cancellation and several rollback tests still mock the rebuild boundary; add real-writer/fault-injection integration cases before claiming full transaction-owner coverage.
+- Some higher-level integrity/import tests still mock boundaries, but real-writer coverage now exists for the critical cancellation and rollback paths. Native device fault injection remains the final evidence gap.
 - Planned-payment due-horizon generation still has a read-before-write concurrency window for duplicate occurrence days.
-- Named cross-domain coordinators remain deferred; repository writers currently own the durable batches and the ratchet prevents service leakage.
+- Named cross-domain coordinators remain deferred; repository writers currently own the business batches and the ratchet prevents service leakage.
 
 ## Adversarial follow-up slices
 
@@ -104,11 +99,11 @@ Required outcome: move model preparation into the inbox repository/coordinator w
 
 Landed in `25a5b50b`; the service-model ratchet entries are gone.
 
-### Slice 11 — Real transaction-owner integration coverage (P2)
+### Slice 11 — Real transaction-owner integration coverage (P2) — COMPLETE
 
 Add integration coverage that exercises actual database writers for cancellation and rollback. Current tests mock `rebuildAccountBalances` and `createJournal`, and the inbox repository test uses a fake writer; these prove orchestration but not durable commit behavior.
 
-Still pending; this is the next verification tranche.
+Landed in `0ff90512`. Real writers are exercised for integrity repair cancellation, planned-payment cancellation, SMS inbox cancellation, and failed import staging. The tests assert persisted rows and after-commit effects, not merely mocked orchestration.
 
 ### Slice 12 — Repository ownership ratchet closure (P1/P2) — COMPLETE
 
@@ -116,24 +111,19 @@ All service/command `prepare*`, model update, and private `_raw` occurrences are
 
 ### Slice 13 — After-commit callback boundary (P1) — COMPLETE
 
-`persistBatch` now invokes callbacks only after `database.write` resolves successfully and never for empty or failed batches. Mandatory rebuild delivery has since moved into same-writer `rebuild_intents` operations; callbacks remain appropriate for analytics and cache effects.
+`persistBatch` now invokes callbacks only after `database.write` resolves successfully and never for empty or failed batches. Rebuild enqueue is an after-commit trigger for disposable projection work; callbacks remain appropriate for analytics and cache effects.
 
-### Slice 14 — Durable rebuild intent outbox (P0/P1) — COMPLETE
+### Slice 14 — Durable rebuild intent outbox — REMOVED BY REQUIREMENT CLARIFICATION
 
-The Luna durability sweep traced 13 production enqueue paths across ledger create/reversal/update/lifecycle, journal bulk operations, account hierarchy/create/merge, and SMS scan. All migrated paths now pass typed `rebuildIntentRequests` into repository-owned writers; no production producer remains on the volatile enqueue path.
+The original roadmap defines rebuilds as recoverable projection work: the queue retries transient failures, `flush()` awaits scheduled retries, and startup integrity can trigger a larger repair. The clarified product requirement is stronger: journals and transactions are authoritative, while balances and snapshots may be rebuilt again at account or workplace scale. A lost pending rebuild request therefore creates stale derived data until the next trigger; it does not lose financial truth.
 
-Landed bounded slices:
+The durable outbox was implemented experimentally across 13 producer paths, then removed in `3c993643`. It added schema, model, repository, export, purge, lease, retry, and migration machinery for a guarantee the product does not require. MMKV remains the correct scheduler for disposable rebuild work: enqueue after the business commit, coalesce by workplace/account and earliest boundary, retry in-process, and recover with startup integrity/manual force-rebuild paths.
 
-1. `d8221fd3`–`d8f700fc`: schema v32, model, status typing, and repository operations for append-only intent rows.
-2. `32eb4f4b`–`beb0bf3e`: same-writer intent preparation across all producer slices, including custom writers and SMS batch persistence.
-3. `3c574056`–`50fd3d1d`: dispatcher lease recovery, retry retention, legacy MMKV migration, and repository-owned state transitions.
-4. `222679b6`: export and summary coverage for the workplace-owned intent table.
+The durable series (`d8221fd3` through `222679b6`) remains in history as an explicitly superseded experiment. Its lease/CAS, process-death, and export concerns are no longer acceptance criteria.
 
-Proof currently present: business-write failure rolls back intent insertion; rebuild failure retains intent for retry; legacy queue migration is loss-aware; replay acknowledgement is durable; deliberate stop leaves durable rows intact. Native SQLite/JSI crash/restart proof remains deferred.
+### Slice 15 — Native staged-import rollback proof (P1) — CLAIM NARROWED; ADAPTER CONTRACT COMPLETE
 
-### Slice 15 — Native staged-import rollback proof (P1) — PENDING
-
-The Luna rollback sweep found no safe commit. Existing tests use a mocked raw adapter and in-memory savepoint behavior; they do not prove device SQLite/JSI rollback. Strengthen the adapter contract test only when it can be rerun and verified, and keep the atomicity claim explicitly narrowed until then.
+Landed in `6bc8a124`. `DatabaseRepository.adapter-contract.test.ts` exercises the real raw-adapter extraction path and injects failures after each DELETE/UPDATE boundary, asserting savepoint rollback/release, row restoration, and no cache notifications. This proves the application adapter contract and keeps the atomicity claim explicitly narrowed. It does not prove native SQLite/JSI behavior on iOS or Android; that requires a device-capable test environment.
 
 ## Risk-ordered workstreams
 
@@ -222,7 +212,7 @@ Tests required:
 
 - Fail staging cleanup after a successful swap; assert the import result is successful and cleanup is retryable.
 - Inject a failure during table reassignment; assert target rows are restored and staging rows remain available.
-- Run the swap against the native adapter, not only mocks.
+- Run the swap through the real raw-adapter extraction path with fault injection. Device-native SQLite/JSI execution remains outside this environment and is explicitly unproven.
 
 ### Slice 5 — Account-tree invariant hardening (P1)
 
@@ -274,7 +264,7 @@ Evidence:
 Required outcome:
 
 - Decide and document whether web E2E is a PR gate or a scheduled confidence suite.
-- Add at least one import persistence integration contract that exercises staging, swap, cleanup, and rollback semantics.
+- [x] Add an import persistence integration contract that exercises staging, failed materialization, cleanup, and target preservation (`src/services/import/__tests__/ImportService.workflow.integration.test.ts`).
 
 ## Merge protocol
 
@@ -289,7 +279,7 @@ Required outcome:
 
 - Slices 1–5 have implementation and regression tests.
 - Slice 6 closes the ownership gap for service/command persistence mechanics; remaining exceptions are explicit test/infrastructure seams.
-- Import native rollback behavior is proven or the atomicity claim is narrowed.
+- Import rollback is covered at the adapter contract and real workflow levels; the native SQLite/JSI claim is explicitly narrowed and remains a device-level follow-up.
 - Current docs match the actual ratchet and remaining risks.
 - Full verification passes on `main`.
 - This document records merged commits, verification results, and any consciously deferred work.

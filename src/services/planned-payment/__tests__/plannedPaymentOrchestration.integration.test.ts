@@ -17,6 +17,7 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { Q } from '@nozbe/watermelondb';
 
 const WORKPLACE_ID = 'wp-planned-atomic' as WorkplaceId;
 
@@ -122,6 +123,35 @@ describe('planned payment orchestration persistence', () => {
 
     expect(generated).toBe(false);
     expect(journals).toHaveLength(0);
+    expect(reloaded?.nextOccurrence).toBe(payment.nextOccurrence);
+  }, 30000);
+
+  it('does not commit when cancellation arrives at the real database writer', async () => {
+    const payment = await createDuePayment();
+    const controller = new AbortController();
+    const originalWrite = database.write.bind(database);
+    const writeSpy = jest.spyOn(database, 'write').mockImplementation(async work => {
+      controller.abort();
+      return originalWrite(work);
+    });
+
+    let generated = false;
+    try {
+      generated = await generatePlannedJournalForPayment(payment, payment.nextOccurrence, {
+        signal: controller.signal,
+      });
+    } finally {
+      writeSpy.mockRestore();
+    }
+
+    const journalCount = await database.collections
+      .get('journals')
+      .query(Q.where('planned_payment_id', payment.id))
+      .fetchCount();
+    const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
+
+    expect(generated).toBe(false);
+    expect(journalCount).toBe(0);
     expect(reloaded?.nextOccurrence).toBe(payment.nextOccurrence);
   }, 30000);
 });
