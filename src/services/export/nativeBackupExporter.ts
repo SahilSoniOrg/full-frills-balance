@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import Workplace from '@/src/data/models/Workplace';
 import { analytics } from '@/src/services/analytics';
-import { serializeExportPayload } from '@/src/services/export/exportSerialization';
+import { serializeExportPayloadFromSources } from '@/src/services/export/exportSerialization';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/ids';
 import { compression } from '@/src/utils/compression';
@@ -21,6 +21,21 @@ function getCollection(tableName: string): Collection<Model> | undefined {
   }
 }
 
+const EXPORT_KEY_BY_TABLE: Record<string, string> = {
+  accounts: 'accounts',
+  journals: 'journals',
+  transactions: 'transactions',
+  audit_logs: 'auditLogs',
+  budgets: 'budgets',
+  budget_scopes: 'budgetScopes',
+  account_metadata: 'accountMetadata',
+  planned_payments: 'plannedPayments',
+  journal_metadata: 'journalMetadata',
+  transaction_auto_post_rules: 'transactionAutoPostRules',
+  transaction_inbox_records: 'transactionInboxRecords',
+  balance_snapshots: 'balance_snapshots',
+};
+
 /**
  * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
  * Returns a Base64 encoded ZIP string.
@@ -35,71 +50,49 @@ export async function exportToJSON(
   try {
     const tableTasks = [...WORKPLACE_DATA_TABLES];
 
-    // Track sub-progress of each parallel task
-    const tableProgress = new Map<string, number>();
-    const updateGlobalProgress = (message: string) => {
-      const totalProgress =
-        Array.from(tableProgress.values()).reduce((a, b) => a + b, 0) / tableTasks.length;
-      onProgress?.(message, 0.05 + totalProgress * 0.45); // 5% to 50%
-    };
-
-    const fetchResults = await Promise.all(
-      tableTasks.map(async task => {
-        const startTime = Date.now();
-        const result = await fetchAndTransformTable<Record<string, unknown>>(
-          workplaceId,
-          task.table,
-          (p, t) => {
-            tableProgress.set(task.table, p / t);
-            updateGlobalProgress(`Gathering ${task.name}...`);
+    const tableCounts = new Map<string, number>();
+    const exportedTransactionIds = new Set<string>();
+    const exportedJournalIds = new Set<string>();
+    const sources = tableTasks.map(
+      (task, taskIndex) =>
+        [
+          EXPORT_KEY_BY_TABLE[task.table] ?? task.table,
+          async () => {
+            const startTime = Date.now();
+            onProgress?.(`Gathering ${task.name}...`, 0.05);
+            let result = await fetchAndTransformTable<Record<string, unknown>>(
+              workplaceId,
+              task.table,
+              (processed, total) =>
+                onProgress?.(
+                  `Gathering ${task.name}...`,
+                  0.05 + ((taskIndex + processed / total) / tableTasks.length) * 0.45,
+                ),
+            );
+            if (task.table === 'journals') {
+              result.forEach(row => exportedJournalIds.add(String(row.id ?? '')));
+            } else if (task.table === 'transactions') {
+              result.forEach(row => exportedTransactionIds.add(String(row.id ?? '')));
+            } else if (task.table === 'journal_metadata') {
+              result = result.filter(
+                row => typeof row.journalId === 'string' && exportedJournalIds.has(row.journalId),
+              );
+            } else if (task.table === 'balance_snapshots') {
+              result = result.filter(
+                row =>
+                  typeof row.transactionId === 'string' &&
+                  exportedTransactionIds.has(row.transactionId),
+              );
+            }
+            tableCounts.set(task.table, result.length);
+            logger.info(`[ExportService] Fetched ${task.name}...`, {
+              count: result.length,
+              timeTakenMs: Date.now() - startTime,
+            });
+            return result;
           },
-        );
-        const endTime = Date.now();
-        tableProgress.set(task.table, 1.0);
-        updateGlobalProgress(`Gathering ${task.name}...`);
-
-        logger.info(`[ExportService] Fetched ${task.name}...`, {
-          count: result.length,
-          timeTakenMs: endTime - startTime,
-        });
-
-        // Yield to event loop to allow UI to render
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        return result;
-      }),
+        ] as const,
     );
-    onProgress?.('Gathering workplaces...', 0.52);
-
-    const [
-      accounts,
-      journals,
-      transactions,
-      auditLogs,
-      budgets,
-      budgetScopes,
-      accountMetadata,
-      plannedPayments,
-      journalMetadata,
-      transactionAutoPostRules,
-      transactionInboxRecords,
-      balanceSnapshotsRaw,
-    ] = fetchResults;
-
-    const exportedTransactionIds = new Set(
-      transactions.map(row => String((row as { id?: unknown }).id ?? '')),
-    );
-    const exportedJournalIds = new Set(
-      journals.map(row => String((row as { id?: unknown }).id ?? '')),
-    );
-    const balanceSnapshots = balanceSnapshotsRaw.filter(row => {
-      const transactionId = (row as { transactionId?: unknown }).transactionId;
-      return typeof transactionId === 'string' && exportedTransactionIds.has(transactionId);
-    });
-    const journalMetadataActive = journalMetadata.filter(row => {
-      const journalId = (row as { journalId?: unknown }).journalId;
-      return typeof journalId === 'string' && exportedJournalIds.has(journalId);
-    });
 
     onProgress?.('Processing preferences...', 0.53);
     const [userPreferences, workplace] = await Promise.all([
@@ -107,7 +100,7 @@ export async function exportToJSON(
       database.collections.get<Workplace>('workplaces').find(workplaceId),
     ]);
 
-    const finalJson = await serializeExportPayload(
+    const finalJson = await serializeExportPayloadFromSources(
       {
         exportDate: new Date().toISOString(),
         version: '1.4.0',
@@ -124,20 +117,7 @@ export async function exportToJSON(
             }
           : undefined,
       },
-      [
-        ['accounts', accounts],
-        ['journals', journals],
-        ['transactions', transactions],
-        ['auditLogs', auditLogs],
-        ['budgets', budgets],
-        ['budgetScopes', budgetScopes],
-        ['accountMetadata', accountMetadata],
-        ['plannedPayments', plannedPayments],
-        ['journalMetadata', journalMetadataActive],
-        ['transactionAutoPostRules', transactionAutoPostRules],
-        ['transactionInboxRecords', transactionInboxRecords],
-        ['balance_snapshots', balanceSnapshots],
-      ],
+      sources,
       (message, serializationProgress) =>
         onProgress?.(message, 0.54 + serializationProgress * 0.21),
     );
@@ -145,17 +125,7 @@ export async function exportToJSON(
     analytics.logExportCompleted('ZIP');
 
     logger.info('[ExportService] Export complete', {
-      accounts: accounts.length,
-      journals: journals.length,
-      transactions: transactions.length,
-      auditLogs: auditLogs.length,
-      budgets: budgets.length,
-      budgetScopes: budgetScopes.length,
-      accountMetadata: accountMetadata.length,
-      plannedPayments: plannedPayments.length,
-      journalMetadata: journalMetadataActive.length,
-      transactionAutoPostRules: transactionAutoPostRules.length,
-      balanceSnapshots: balanceSnapshots.length,
+      ...Object.fromEntries(tableTasks.map(task => [task.table, tableCounts.get(task.table) ?? 0])),
     });
 
     onProgress?.('Compressing ZIP archive...', 0.75);
