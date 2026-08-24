@@ -31,6 +31,130 @@ interface BarChartProps {
   tooltipHeight?: number;
 }
 
+interface BarChartSvgProps {
+  data: BarChartDataPoint[];
+  height: number;
+  svgWidth: number;
+  theme: ReturnType<typeof useTheme>['theme'];
+  yForValue: (value: number) => number;
+  domainMin: number;
+  domainMax: number;
+  groupWidth: number;
+  centerOffset: number;
+  paddingLeft: number;
+  paddingRight: number;
+  labelStartY: number;
+  barWidth: number;
+  barSpacing: number;
+  startXOffset: number;
+  selectedIndex?: number;
+  onPress?: (index: number) => void;
+}
+
+// Scroll position only affects the overlay tooltip. Keeping the SVG subtree
+// isolated prevents a scroll-only state update from remapping every bar.
+const BarChartSvg = React.memo(function BarChartSvg({
+  data,
+  height,
+  svgWidth,
+  theme,
+  yForValue,
+  domainMin,
+  domainMax,
+  groupWidth,
+  centerOffset,
+  paddingLeft,
+  paddingRight,
+  labelStartY,
+  barWidth,
+  barSpacing,
+  startXOffset,
+  selectedIndex,
+  onPress,
+}: BarChartSvgProps) {
+  return (
+    <Svg height={height} width={svgWidth}>
+      <Rect
+        x={0}
+        y={0}
+        width={svgWidth}
+        height={height}
+        fill="transparent"
+        onPress={() => onPress?.(-1)}
+      />
+      {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
+        const y = yForValue(domainMin + t * (domainMax - domainMin));
+        return (
+          <Line
+            key={t}
+            x1={paddingLeft}
+            y1={y}
+            x2={svgWidth - paddingRight}
+            y2={y}
+            stroke={theme.border}
+            strokeWidth={1}
+            strokeDasharray="4,4"
+          />
+        );
+      })}
+      {data.map((point, index) => {
+        const xGroupCenter = paddingLeft + index * groupWidth + centerOffset;
+
+        return (
+          <React.Fragment key={index}>
+            {point.values.map((val, vIndex) => {
+              const x = xGroupCenter + startXOffset + vIndex * (barWidth + barSpacing);
+              const zeroY = yForValue(0);
+              const valueY = yForValue(val);
+              const y = Math.min(valueY, zeroY);
+              const barHeight = Math.max(Math.abs(zeroY - valueY), 1);
+              const isSelected = selectedIndex === index;
+              const opacity =
+                selectedIndex !== undefined && selectedIndex !== -1 && !isSelected
+                  ? REPORT_CHART_LAYOUT.barChartUnselectedOpacity
+                  : 1;
+
+              return (
+                <React.Fragment key={vIndex}>
+                  <Rect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={barHeight}
+                    fill={point.colors[vIndex]}
+                    rx={REPORT_CHART_LAYOUT.barChartBarCornerRadius}
+                    opacity={opacity}
+                    onPress={() => onPress?.(index)}
+                  />
+                  <Rect
+                    x={x - barSpacing}
+                    y={0}
+                    width={barWidth + barSpacing * 2}
+                    height={height}
+                    fill="transparent"
+                    onPress={() => onPress?.(index)}
+                  />
+                </React.Fragment>
+              );
+            })}
+            <SvgText
+              x={xGroupCenter}
+              y={labelStartY}
+              fontSize={REPORT_CHART_LAYOUT.barChartXAxisLabelFontSize}
+              fill={theme.textSecondary}
+              textAnchor="start"
+              alignmentBaseline="hanging"
+              transform={`rotate(90, ${xGroupCenter}, ${labelStartY})`}
+            >
+              {point.label}
+            </SvgText>
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
+});
+
 export const BarChart = ({
   data,
   height = REPORT_CHART_LAYOUT.barChartHeight,
@@ -197,86 +321,25 @@ export const BarChart = ({
             scrollEventThrottle={16}
           >
             <View>
-              <Svg height={height} width={svgWidth}>
-                <Rect
-                  x={0}
-                  y={0}
-                  width={svgWidth}
-                  height={height}
-                  fill="transparent"
-                  onPress={() => onPress?.(-1)}
-                />
-                {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
-                  const y = yForValue(domainMin + t * (domainMax - domainMin));
-                  return (
-                    <Line
-                      key={t}
-                      x1={PADDING_LEFT}
-                      y1={y}
-                      x2={svgWidth - PADDING_RIGHT}
-                      y2={y}
-                      stroke={theme.border}
-                      strokeWidth={1}
-                      strokeDasharray="4,4"
-                    />
-                  );
-                })}
-                {processedData.map((point, index) => {
-                  const xGroupCenter = PADDING_LEFT + index * groupWidth + centerOffset;
-
-                  return (
-                    <React.Fragment key={index}>
-                      {point.values.map((val, vIndex) => {
-                        const x = xGroupCenter + startXOffset + vIndex * (barWidth + BAR_SPACING);
-                        const zeroY = yForValue(0);
-                        const valueY = yForValue(val);
-                        const y = Math.min(valueY, zeroY);
-                        const barHeight = Math.max(Math.abs(zeroY - valueY), 1);
-                        const isSelected = selectedIndex === index;
-                        const opacity =
-                          selectedIndex !== undefined && selectedIndex !== -1 && !isSelected
-                            ? REPORT_CHART_LAYOUT.barChartUnselectedOpacity
-                            : 1;
-
-                        return (
-                          <React.Fragment key={vIndex}>
-                            <Rect
-                              x={x}
-                              y={y}
-                              width={barWidth}
-                              height={barHeight}
-                              fill={point.colors[vIndex]}
-                              rx={REPORT_CHART_LAYOUT.barChartBarCornerRadius}
-                              opacity={opacity}
-                              onPress={() => onPress?.(index)}
-                            />
-                            <Rect
-                              x={x - BAR_SPACING}
-                              y={0}
-                              width={barWidth + BAR_SPACING * 2}
-                              height={height}
-                              fill="transparent"
-                              onPress={() => onPress?.(index)}
-                            />
-                          </React.Fragment>
-                        );
-                      })}
-
-                      <SvgText
-                        x={xGroupCenter}
-                        y={labelStartY}
-                        fontSize={REPORT_CHART_LAYOUT.barChartXAxisLabelFontSize}
-                        fill={theme.textSecondary}
-                        textAnchor="start"
-                        alignmentBaseline="hanging"
-                        transform={`rotate(90, ${xGroupCenter}, ${labelStartY})`}
-                      >
-                        {point.label}
-                      </SvgText>
-                    </React.Fragment>
-                  );
-                })}
-              </Svg>
+              <BarChartSvg
+                data={processedData}
+                height={height}
+                svgWidth={svgWidth}
+                theme={theme}
+                yForValue={yForValue}
+                domainMin={domainMin}
+                domainMax={domainMax}
+                groupWidth={groupWidth}
+                centerOffset={centerOffset}
+                paddingLeft={PADDING_LEFT}
+                paddingRight={PADDING_RIGHT}
+                labelStartY={labelStartY}
+                barWidth={barWidth}
+                barSpacing={BAR_SPACING}
+                startXOffset={startXOffset}
+                selectedIndex={selectedIndex}
+                onPress={onPress}
+              />
             </View>
           </ScrollView>
         </GestureDetector>

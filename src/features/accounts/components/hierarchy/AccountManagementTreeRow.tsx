@@ -10,12 +10,27 @@ import { isAccountArchived } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export const ACCOUNT_TREE_ROW_MIN_HEIGHT = 56;
 export const ACCOUNT_TREE_SECTION_HEADER_HEIGHT =
   Spacing.lg + Math.round(Typography.sizes.xs * Typography.lineHeights.tight) + Spacing.sm;
+export const ACCOUNT_TREE_DRAG_UPDATE_MIN_DELTA = 4;
+
+export function shouldDispatchAccountTreeDragUpdate(
+  previous: { translationY: number; absoluteY: number } | null,
+  next: { translationY: number; absoluteY: number },
+): boolean {
+  'worklet';
+  return (
+    previous == null ||
+    Math.max(
+      Math.abs(next.translationY - previous.translationY),
+      Math.abs(next.absoluteY - previous.absoluteY),
+    ) >= ACCOUNT_TREE_DRAG_UPDATE_MIN_DELTA
+  );
+}
 
 interface AccountManagementTreeRowProps {
   row: FlattenedAccountTreeRow;
@@ -60,10 +75,22 @@ export function AccountManagementTreeRow({
     () => ({ transform: [{ translateY: isActiveSubtree ? dragTranslation : 0 }] }),
     [dragTranslation, isActiveSubtree],
   );
+  const lastDispatchedDragUpdate = useSharedValue<{
+    translationY: number;
+    absoluteY: number;
+  } | null>(null);
   const gesture = Gesture.Pan()
     .activateAfterLongPress(180)
-    .onStart(() => runOnJS(onBegin)(account.id))
-    .onUpdate(event => runOnJS(onUpdate)(account.id, event.translationY, event.absoluteY))
+    .onStart(() => {
+      lastDispatchedDragUpdate.value = null;
+      runOnJS(onBegin)(account.id);
+    })
+    .onUpdate(event => {
+      const next = { translationY: event.translationY, absoluteY: event.absoluteY };
+      if (!shouldDispatchAccountTreeDragUpdate(lastDispatchedDragUpdate.value, next)) return;
+      lastDispatchedDragUpdate.value = next;
+      runOnJS(onUpdate)(account.id, event.translationY, event.absoluteY);
+    })
     .onEnd(() => runOnJS(onFinish)())
     .onFinalize((_event, success) => {
       if (!success) runOnJS(onCancel)();

@@ -7,6 +7,7 @@ import {
   projectAccountTreeDragLayout,
   resolveAccountTreeVisualHover,
 } from '../accountTreeDragLayout';
+import { shouldDispatchAccountTreeDragUpdate } from '../AccountManagementTreeRow';
 
 const id = (value: string) => value as AccountId;
 
@@ -169,5 +170,28 @@ describe('getAccountTreeAutoScrollVelocity', () => {
     expect(getAccountTreeAutoScrollVelocity(568, 100, 500, 64, 600)).toBe(300);
     expect(getAccountTreeAutoScrollVelocity(20, 100, 500, 64, 600)).toBe(-600);
     expect(getAccountTreeAutoScrollVelocity(680, 100, 500, 64, 600)).toBe(600);
+  });
+});
+
+describe('shouldDispatchAccountTreeDragUpdate', () => {
+  it('dispatches the first update and meaningful movement', () => {
+    expect(shouldDispatchAccountTreeDragUpdate(null, { translationY: 0, absoluteY: 100 })).toBe(
+      true,
+    );
+    expect(
+      shouldDispatchAccountTreeDragUpdate(
+        { translationY: 0, absoluteY: 100 },
+        { translationY: 4, absoluteY: 104 },
+      ),
+    ).toBe(true);
+  });
+
+  it('coalesces sub-threshold movement without changing drop geometry', () => {
+    expect(
+      shouldDispatchAccountTreeDragUpdate(
+        { translationY: 20, absoluteY: 120 },
+        { translationY: 23, absoluteY: 123 },
+      ),
+    ).toBe(false);
   });
 });
