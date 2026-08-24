@@ -185,6 +185,13 @@ describe('validateAccountTreeStructure', () => {
       [{ id: 'child' as never, parentAccountId: 'missing' as never, accountType: 'ASSET' }],
     ],
     [
+      'deleted parent',
+      [
+        { id: 'parent' as never, accountType: 'ASSET', deletedAt: new Date() },
+        { id: 'child' as never, parentAccountId: 'parent' as never, accountType: 'ASSET' },
+      ],
+    ],
+    [
       'cross-type parent',
       [
         { id: 'parent' as never, accountType: 'ASSET' },

@@ -268,6 +268,7 @@ export async function runStartupCheck(
       discrepancy.accountId,
       discrepancy,
       'startup',
+      signal,
     );
     if (success) {
       repairsSuccessful++;

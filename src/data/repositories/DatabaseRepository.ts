@@ -219,13 +219,25 @@ export class DatabaseRepository {
           savepointOpen = false;
         } catch (err) {
           if (savepointOpen) {
+            let rolledBack = false;
             try {
               await adapter.queryRaw(`ROLLBACK TO SAVEPOINT ${savepoint}`, []);
+              rolledBack = true;
             } catch (rollbackErr) {
               logger.error(
                 '[DatabaseRepository] Failed to roll back staged import swap savepoint',
                 rollbackErr,
               );
+            }
+            if (rolledBack) {
+              try {
+                await adapter.queryRaw(`RELEASE SAVEPOINT ${savepoint}`, []);
+              } catch (releaseErr) {
+                logger.error(
+                  '[DatabaseRepository] Failed to release rolled-back staged import savepoint',
+                  releaseErr,
+                );
+              }
             }
           }
           throw err;

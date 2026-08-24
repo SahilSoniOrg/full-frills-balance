@@ -351,17 +351,18 @@ describe('SmsSyncPipeline integration', () => {
       expect(inbox?.linkedJournalId).toBe(journal.id);
     });
 
-    it('marks SMS as imported when device id is in processed MMKV set', async () => {
+    it('does not use legacy processed IDs as a cross-workplace source of truth', async () => {
+      await seedSmsTestAccounts(SMS_TEST_WORKPLACE_B);
       const message = smsMessageFromFixture('swiggyNoRef', {
         id: 'sms-exact-c3',
         date: baseDate,
       });
       smsSyncPipeline.markSmsAsProcessed(message.id);
 
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+      await scanSmsInbox(SMS_TEST_WORKPLACE_B, [message]);
 
-      const inbox = await fetchInboxByDeviceId('sms-exact-c3');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+      const inbox = await fetchInboxByDeviceId('sms-exact-c3', SMS_TEST_WORKPLACE_B);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
     });
   });
 

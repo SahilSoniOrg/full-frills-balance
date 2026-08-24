@@ -20,6 +20,12 @@ import { storage } from '@/src/utils/storage';
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
 
+export type RebuildCurrentCheck = () => boolean;
+
+function isRebuildCancelled(signal?: AbortSignal, isCurrent?: RebuildCurrentCheck): boolean {
+  return signal?.aborted === true || isCurrent?.() === false;
+}
+
 export class AccountingRebuildService {
   /**
    * Rebuilds running balances for an account using a segmented snapshot strategy.
@@ -31,7 +37,11 @@ export class AccountingRebuildService {
     accountId: AccountId,
     fromDate?: number,
     extraOps: Model[] = [],
+    signal?: AbortSignal,
+    isCurrent?: RebuildCurrentCheck,
   ): Promise<void> {
+    if (isRebuildCancelled(signal, isCurrent)) return;
+
     const lockKey = REBUILD_LOCK_PREFIX + accountId;
 
     // Atomic-ish check and set for RN/single-threaded JS
@@ -48,7 +58,15 @@ export class AccountingRebuildService {
 
     storage.set(lockKey, String(Date.now()));
     try {
-      await this.rebuildAccountBalancesInternal(workplaceId, accountId, fromDate, false, extraOps);
+      await this.rebuildAccountBalancesInternal(
+        workplaceId,
+        accountId,
+        fromDate,
+        false,
+        extraOps,
+        signal,
+        isCurrent,
+      );
     } finally {
       storage.remove(lockKey);
     }
@@ -64,12 +82,17 @@ export class AccountingRebuildService {
     fromDate?: number,
     silent: boolean = false,
     extraOps: Model[] = [],
+    signal?: AbortSignal,
+    isCurrent?: RebuildCurrentCheck,
   ): Promise<void> {
+    if (isRebuildCancelled(signal, isCurrent)) return;
+
     logger.debug(
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
     const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
+    if (isRebuildCancelled(signal, isCurrent)) return;
     if (!account) {
       logger.warn(
         `[AccountingRebuildService] Account ${accountId} not found during running balance rebuild, skipping.`,
@@ -78,11 +101,14 @@ export class AccountingRebuildService {
     }
 
     const precision = await currencyReadService.getPrecision(account.currencyCode);
+    if (isRebuildCancelled(signal, isCurrent)) return;
 
     // 1. Find the latest checkpoint strictly before the change
     const snapshot = fromDate
       ? await balanceSnapshotRepository.findLatestForAccount(workplaceId, accountId, fromDate - 1)
       : null;
+
+    if (isRebuildCancelled(signal, isCurrent)) return;
 
     let runningBalance = snapshot?.absoluteBalance || 0;
     let runningCount = snapshot?.transactionCount || 0;
@@ -95,6 +121,7 @@ export class AccountingRebuildService {
       accountId,
       startDate,
     );
+    if (isRebuildCancelled(signal, isCurrent)) return;
 
     // Precise Anchor: If we have a snapshot, find its transaction and skip everything up to it.
     if (snapshot) {
@@ -157,10 +184,13 @@ export class AccountingRebuildService {
       const allModelsToUpdate: Transaction[] = [];
 
       for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
+        if (isRebuildCancelled(signal, isCurrent)) return;
         const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
         const models = await transactionQueryRepository.findByIds(workplaceId, chunkIds);
         allModelsToUpdate.push(...models);
       }
+
+      if (isRebuildCancelled(signal, isCurrent)) return;
 
       // Fetch invalidated snapshots after the starting point
       const invalidatedSnapshots =
@@ -168,8 +198,14 @@ export class AccountingRebuildService {
           ? await balanceSnapshotRepository.findAfterDate(workplaceId, accountId, startDate)
           : [];
 
+      if (isRebuildCancelled(signal, isCurrent)) return;
+
       // 5. Finalize inside database.write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
       await persistBatch(() => {
+        // The write may have waited behind another database transaction. Re-check inside the
+        // write owner immediately before preparing any durable operations.
+        if (isRebuildCancelled(signal, isCurrent)) return [];
+
         const finalBatch: Model[] = [...extraOps];
 
         // Prepare updates for transaction running balances

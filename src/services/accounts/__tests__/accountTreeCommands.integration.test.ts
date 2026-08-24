@@ -77,6 +77,29 @@ describe('moveAccount', () => {
     expect((await accountQueryRepository.find(workplaceId, child.id))?.parentAccountId).toBeNull();
   });
 
+  it('rejects deleted destinations before writing', async () => {
+    const child = await accountWriteRepository.create({
+      name: 'Child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      orderNum: 0,
+      workplaceId,
+    });
+    const deletedParent = await accountWriteRepository.create({
+      name: 'Deleted parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      orderNum: 1,
+      deletedAt: new Date(),
+      workplaceId,
+    });
+
+    await expect(
+      moveAccount(workplaceId, child.id, { parentId: deletedParent.id, siblingIndex: 0 }),
+    ).rejects.toThrow();
+    expect((await accountQueryRepository.find(workplaceId, child.id))?.parentAccountId).toBeNull();
+  });
+
   it('reorders the same sibling list repeatedly without losing the parent', async () => {
     const first = await accountWriteRepository.create({
       name: 'First',
@@ -505,6 +528,36 @@ describe('saveAccount', () => {
     ).rejects.toThrow('Parent account must be of the same type');
 
     expect((await accountQueryRepository.find(workplaceId, account.id))?.name).toBe('Original');
+  });
+
+  it('rejects a deleted parent without persisting details or placement', async () => {
+    const account = await accountWriteRepository.create({
+      name: 'Original',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      orderNum: 0,
+      workplaceId,
+    });
+    const deletedParent = await accountWriteRepository.create({
+      name: 'Deleted parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      orderNum: 1,
+      deletedAt: new Date(),
+      workplaceId,
+    });
+
+    await expect(
+      saveAccount(workplaceId, account.id, {
+        name: 'Must not persist',
+        parentAccountId: deletedParent.id,
+      }),
+    ).rejects.toThrow();
+
+    expect(await accountQueryRepository.find(workplaceId, account.id)).toMatchObject({
+      name: 'Original',
+      parentAccountId: null,
+    });
   });
 
   it('moves a leaf between type-scoped root lists in the same save', async () => {

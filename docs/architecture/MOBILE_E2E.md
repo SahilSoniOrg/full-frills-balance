@@ -9,6 +9,8 @@ CI and local commands:
 
 Typecheck that tree with `bun run typecheck:e2e` (`tsconfig.e2e.json`). App `tsc` excludes these specs so a Detox import cannot fail product typecheck.
 
+Playwright runs in scheduled or manually dispatched CI, not as a pull-request gate. The web export is useful coverage, but its 60-minute browser job would duplicate the faster Detox PR gate and add unrelated web-runner flake to mobile changes. Run it locally when changing web behavior.
+
 Not the mobile contract:
 
 - Playwright `e2e/*.test.ts` — web export only (`bun run test:e2e`)

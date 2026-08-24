@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
@@ -16,9 +15,7 @@ import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
-import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { storage } from '@/src/utils/storage';
 import { Model, Q } from '@nozbe/watermelondb';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
@@ -27,37 +24,15 @@ import { processScanBatchItem } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult } from './types';
 
 export class SmsSyncPipeline {
-  private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
   private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
 
   private get inbox() {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
   }
 
-  getProcessedSmsIds(): string[] {
-    try {
-      const data = storage.getString(this.PROCESSED_SMS_KEY);
-      return data ? safeParseJSON(data, []) : [];
-    } catch (error) {
-      logger.error('Failed to get processed SMS IDs from MMKV', error);
-      return [];
-    }
-  }
-
-  markSmsAsProcessed(smsId: string): void {
-    try {
-      const processedIds = this.getProcessedSmsIds();
-      if (!processedIds.includes(smsId)) {
-        processedIds.push(smsId);
-        const maxStored = AppConfig.input.sms.maxStoredProcessedIds;
-        if (processedIds.length > maxStored) {
-          processedIds.splice(0, processedIds.length - maxStored);
-        }
-        storage.set(this.PROCESSED_SMS_KEY, JSON.stringify(processedIds));
-      }
-    } catch (error) {
-      logger.error('Failed to mark SMS as processed in MMKV', error);
-    }
+  markSmsAsProcessed(_smsId: string): void {
+    // Inbox status and linked journals are the durable, workplace-scoped source of truth.
+    // Keep this legacy API as a no-op so callers cannot reintroduce global SMS state.
   }
 
   async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
@@ -101,7 +76,7 @@ export class SmsSyncPipeline {
       await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
     ).sort((a, b) => smsRuleEngine.getRulePriority(b) - smsRuleEngine.getRulePriority(a));
 
-    const processedIds = new Set(this.getProcessedSmsIds());
+    const processedIds = new Set<string>();
     const existing = await this.inbox
       .query(
         Q.where('workplace_id', workplaceId),
@@ -217,7 +192,7 @@ export class SmsSyncPipeline {
     if (analysisResults.length > 0 && !signal?.aborted) {
       // Re-fetch records and journals inside the write transaction to guard
       // against concurrent mutations that may have occurred since Phase 1.
-      await transactionInboxRepository.persistScanBatch(
+      const committed = await transactionInboxRepository.persistScanBatch(
         async () => {
           if (signal?.aborted) return [];
           const messageIds = analysisResults.map(result => result.message.id);
@@ -237,7 +212,7 @@ export class SmsSyncPipeline {
           const latestRecordsByMessageId = new Map(
             latestRecords.map(record => [record.deviceSourceId, record]),
           );
-          const latestProcessedIds = new Set(this.getProcessedSmsIds());
+          const latestProcessedIds = new Set<string>();
           const allOps: Model[] = [];
 
           for (const result of analysisResults) {
@@ -272,10 +247,13 @@ export class SmsSyncPipeline {
             rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
           }
         },
+        signal,
       );
 
-      processedMessageIds.forEach(messageId => this.markSmsAsProcessed(messageId));
-      triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
+      if (committed) {
+        processedMessageIds.forEach(messageId => this.markSmsAsProcessed(messageId));
+        triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
+      }
     }
 
     logger.info(`[Trace] SmsSyncPipeline.scanInbox: ${Date.now() - start}ms`, {

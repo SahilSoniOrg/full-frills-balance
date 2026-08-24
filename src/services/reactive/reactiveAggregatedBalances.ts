@@ -21,7 +21,7 @@ import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
-import { combineLatest, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, finalize, map, Observable, switchMap } from 'rxjs';
 
 type RawSQLRow = Record<string, unknown>;
 
@@ -67,8 +67,10 @@ export function observeAggregatedAccountBalances(
     namespace: REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
     key: `${targetCurrency}_${workplaceId}`,
     workplaceId,
-    createSource: () =>
-      combineLatest([
+    createSource: () => {
+      let disposed = false;
+
+      return combineLatest([
         // WatermelonDB reuses mutable model instances between emissions. Snapshot
         // the fields used by distinctUntilChanged before comparing, otherwise the
         // previous emission observes the mutation too and archive changes vanish.
@@ -147,7 +149,9 @@ export function observeAggregatedAccountBalances(
               targetCurrency,
             );
 
-            snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
+            if (!disposed) {
+              snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
+            }
 
             return { accounts, balancesMap, wealthSummary };
           } catch (error) {
@@ -161,6 +165,10 @@ export function observeAggregatedAccountBalances(
             trace.end();
           }
         }),
-      ),
+        finalize(() => {
+          disposed = true;
+        }),
+      );
+    },
   });
 }

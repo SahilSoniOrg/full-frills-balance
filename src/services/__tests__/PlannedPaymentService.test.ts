@@ -9,9 +9,11 @@ import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plann
 import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
+  processDuePlannedPayments,
   postPlannedPaymentOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import {
   calculateNextOccurrence,
   computeFirstOccurrence,
@@ -431,6 +433,52 @@ describe('planned payment modules', () => {
       const nextOcc = (plannedPaymentRepository.prepareUpdate as jest.Mock).mock.calls[0][2]
         .nextOccurrence as number;
       expect(new Date(nextOcc).getMonth()).toBe(1); // Feb
+    });
+  });
+
+  describe('cancellation at journal commit boundary', () => {
+    const mockPP = {
+      id: 'pp-cancellable' as PlannedPaymentId,
+      workplaceId: 'wp-1' as WorkplaceId,
+      name: 'Cancellable rent',
+      amount: 1000,
+      currencyCode: 'USD',
+      fromAccountId: 'acc-1',
+      toAccountId: 'acc-2',
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.MONTHLY,
+      nextOccurrence: new Date(2024, 0, 1).getTime(),
+    };
+
+    it('does not create a journal when cancellation arrives after the existence check', async () => {
+      const controller = new AbortController();
+      (plannedPaymentRepository.findAllActive as jest.Mock).mockResolvedValue([mockPP]);
+      (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
+      (journalPlannedQueries.countOnDay as jest.Mock).mockImplementation(async () => {
+        controller.abort();
+        return 0;
+      });
+
+      await processDuePlannedPayments('wp-1' as WorkplaceId, controller.signal);
+
+      expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('does not return journal operations after cancellation during preparation', async () => {
+      const controller = new AbortController();
+      (ledgerWriteService.createJournal as jest.Mock).mockImplementation(
+        async (_data, _workplaceId, options) => {
+          controller.abort();
+          options.extraOps({} as any);
+        },
+      );
+
+      await expect(
+        generatePlannedJournalForPayment(mockPP as any, mockPP.nextOccurrence, {
+          signal: controller.signal,
+        }),
+      ).resolves.toBe(false);
     });
   });
 

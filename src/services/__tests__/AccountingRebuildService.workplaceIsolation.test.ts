@@ -4,9 +4,10 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { storage } from '@/src/utils/storage';
 import { Q, Model } from '@nozbe/watermelondb';
@@ -86,6 +87,42 @@ describe('AccountingRebuildService workplace isolation', () => {
     expect(unchangedForeignTransaction.runningBalance).toBe(777);
     expect(unchangedForeignSnapshot.absoluteBalance).toBe(777);
     expect(unchangedForeignSnapshot.workplaceId).toBe(WORKPLACE_TWO);
+  });
+
+  it('does not commit when cancellation arrives during model preparation', async () => {
+    const targetAccount = await accountWriteRepository.create({
+      name: 'Cancellable cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WORKPLACE_ONE,
+    });
+    const controller = new AbortController();
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    jest.spyOn(transactionRawRepository, 'getRebuildDataRaw').mockResolvedValue([
+      {
+        id: 'tx-during-cancel' as TransactionId,
+        amount: 25,
+        transactionType: TransactionType.DEBIT,
+        transactionDate: 1_000,
+        runningBalance: 0,
+        createdAt: 1_000,
+      },
+    ]);
+    jest.spyOn(transactionQueryRepository, 'findByIds').mockImplementation(async () => {
+      controller.abort();
+      return [];
+    });
+
+    await accountingRebuildService.rebuildAccountBalances(
+      WORKPLACE_ONE,
+      targetAccount.id,
+      undefined,
+      [],
+      controller.signal,
+    );
+
+    expect(batchSpy).not.toHaveBeenCalled();
   });
 });
 

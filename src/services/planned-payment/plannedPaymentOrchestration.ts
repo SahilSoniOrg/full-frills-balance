@@ -194,10 +194,13 @@ export async function skipPlannedPaymentOccurrence(
 export async function processDuePlannedPayments(
   workplaceId: WorkplaceId,
   signal?: AbortSignal,
+  isCurrent?: () => boolean,
 ): Promise<void> {
-  if (signal?.aborted) return;
+  const isCancelled = () => signal?.aborted === true || isCurrent?.() === false;
+
+  if (isCancelled()) return;
   const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
-  if (signal?.aborted) return;
+  if (isCancelled()) return;
 
   const nowTime = normalizeToStartOfDay(Date.now());
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
@@ -207,7 +210,7 @@ export async function processDuePlannedPayments(
     workplaceId,
     allPlannedIds,
   );
-  if (signal?.aborted) return;
+  if (isCancelled()) return;
 
   const journalledDays = new Map<string, Set<number>>();
   for (const j of existingJournals) {
@@ -219,7 +222,7 @@ export async function processDuePlannedPayments(
   }
 
   for (const pp of activePayments) {
-    if (signal?.aborted) {
+    if (isCancelled()) {
       logger.info('[PlannedPaymentOrchestration] Processing aborted due to signal.');
       break;
     }
@@ -244,9 +247,15 @@ export async function processDuePlannedPayments(
           dayEnd,
         );
 
+        if (isCancelled()) break;
+
         if (dbExists === 0) {
-          const created = await generatePlannedJournalForPayment(pp, nextOcc);
+          const created = await generatePlannedJournalForPayment(pp, nextOcc, {
+            signal,
+            isCurrent,
+          });
           if (!created) break;
+          if (isCancelled()) break;
           if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
           journalledDays.get(pp.id)!.add(nextOcc);
         } else {
@@ -259,6 +268,7 @@ export async function processDuePlannedPayments(
       nextOcc = calculateNextOccurrence(nextOcc, pp);
 
       if (pp.endDate && nextOcc > pp.endDate) {
+        if (isCancelled()) break;
         await plannedPaymentRepository.update(workplaceId, pp, {
           status: PlannedPaymentStatus.COMPLETED,
         });
@@ -273,6 +283,7 @@ export async function processDuePlannedPayments(
     }
 
     if (nextOcc !== pp.nextOccurrence) {
+      if (isCancelled()) break;
       await plannedPaymentRepository.update(workplaceId, pp, { nextOccurrence: nextOcc });
     }
   }

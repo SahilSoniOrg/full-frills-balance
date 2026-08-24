@@ -1,8 +1,8 @@
 # Architecture Refactor Remediation Plan
 
-Status: **ACTIVE**  
-Baseline: `b1ee4d45` on `main`  
-Owner: orchestration thread; implementation work is delegated to isolated Luna worktrees.  
+Status: **ACTIVE — first remediation pass complete; deferred architecture debt remains**
+Baseline: `b1ee4d45` on `main`; current local head will be recorded after verification
+Owner: orchestration thread; implementation work is delegated to isolated Luna worktrees.
 Push policy: **never push**. Local commits are expected; completed work is squash-merged into `main`.
 
 ## Objective
@@ -15,6 +15,68 @@ Close the remaining lifecycle, workplace-isolation, financial-integrity, persist
 - The working tree is clean.
 - The architecture ratchet currently reports three approved direct database-write occurrences in testing helpers.
 - No implementation agent may edit files owned by another workstream.
+
+## Local merge ledger
+
+All changes below were implemented in isolated `gpt-5.6-luna` worktrees, reviewed by the orchestrator, squash-merged into `main`, and not pushed:
+
+- `73ad745` — isolate SMS scans and honor cancellation.
+- `ce7a1ffa` — cancel stale workplace reactive work.
+- `c7b33970` — guard financial rebuilds against cancellation.
+- `c6a05c0d` — make staged import cleanup retryable and cover savepoint rollback.
+- `6d73615` — reject deleted account-tree parents.
+- `7117459` — ratchet service/command model persistence access.
+- `b13e9e6` — refresh persistence enforcement inventory and E2E policy documentation.
+
+Slice-level verification passed in the worktrees: SMS 42 tests; lifecycle/reactive 21 tests; financial cancellation 39 tests; import/account 65 tests; ratchet and formatting checks passed. Full post-merge verification remains required.
+
+## Post-merge verification
+
+The post-merge `bun run verify` completed successfully on local `main` after the two new cancellation-test fixtures were branded correctly:
+
+- Architecture checks and all ratchets passed: `direct_database_write=3`, `service_model_persistence_access=26`.
+- E2E TypeScript check passed.
+- Jest: 262 suites passed; 1,597 tests passed; 1 skipped.
+- Lint completed without errors.
+- The working tree is clean after the final documentation update; no commits were pushed.
+
+## Deferred work that remains explicit
+
+- The 26 service/command model-access baseline entries are guarded against growth but still need migration into repositories/coordinators.
+- Rebuild intent remains MMKV-backed rather than a transactional outbox; a crash between the business commit and enqueue can defer derived repair.
+- Savepoint rollback coverage simulates native-adapter behavior; device-level iOS/Android JSI execution remains unproven.
+- Playwright remains scheduled/manual by policy, not a pull-request gate.
+- `persistBatch` callbacks such as rebuild enqueue still execute inside the Watermelon writer callback; their after-commit semantics need a dedicated coordinator decision.
+
+## Adversarial follow-up slices
+
+The post-merge Luna review confirmed these additional gaps; they are now part of the active goal:
+
+### Slice 8 — Cancelled rebuild marker recovery (P1)
+
+- `src/services/RebuildQueueService.ts:204-210` clears in-memory work but leaves `PROCESSING_KEY` behind.
+- An in-flight marker is written at `:338-352`, cleanup is skipped after generation changes at `:401-404`, and startup re-enqueues it at `:85-99`.
+
+Required outcome: stopping a workplace cannot resurrect its cancelled in-flight batch after restart, while genuine crash recovery remains intact. Add restart/recovery coverage.
+
+### Slice 9 — Planned-payment journal and schedule atomicity (P1)
+
+- `src/services/planned-payment/plannedPaymentOrchestration.ts:252-260` creates the journal.
+- `src/services/planned-payment/plannedPaymentOrchestration.ts:285-287` advances `nextOccurrence` in a later write.
+- The persistence inventory must not claim this path is atomic until a coordinator owns both mutations.
+
+Required outcome: journal creation and schedule advancement commit or roll back together, with failure-between-writes coverage.
+
+### Slice 10 — SMS preparation ownership (P2)
+
+- `src/services/sms/pipeline/smsInboxRecordPreparer.ts:64-77` still calls model `prepareUpdate`/`prepareCreate` directly.
+- These two occurrences are explicitly baselined in `scripts/architecture-ratchet-baseline.json:21`.
+
+Required outcome: move model preparation into the inbox repository/coordinator while keeping analysis pure and preserving workplace-scoped idempotency.
+
+### Slice 11 — Real transaction-owner integration coverage (P2)
+
+Add integration coverage that exercises actual database writers for cancellation and rollback. Current tests mock `rebuildAccountBalances` and `createJournal`, and the inbox repository test uses a fake writer; these prove orchestration but not durable commit behavior.
 
 ## Risk-ordered workstreams
 

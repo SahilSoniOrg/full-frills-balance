@@ -137,6 +137,27 @@ describe('RebuildQueueService lifecycle', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
+  it('stop prevents later items in an in-flight batch from starting', async () => {
+    let resolveFirst: (() => void) | undefined;
+    rebuildAccountBalances.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          resolveFirst = resolve;
+        }),
+    );
+    queue.enqueueMany([accountId, 'account-2' as AccountId], 654, workplaceId);
+
+    await jest.advanceTimersByTimeAsync(100);
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+
+    queue.stop();
+    resolveFirst?.();
+    await Promise.resolve();
+
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+    expect(queue.hasPending).toBe(false);
+  });
+
   it('coalesces a fresh enqueue with an existing delayed retry', async () => {
     rebuildAccountBalances.mockRejectedValueOnce(new Error('transient')).mockResolvedValue(null);
     queue.enqueue(accountId, 500, workplaceId);

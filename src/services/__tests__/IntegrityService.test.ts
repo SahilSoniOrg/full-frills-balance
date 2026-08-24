@@ -9,6 +9,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { IntegrityService } from '@/src/services/integrity';
+import { repairAccountBalance } from '@/src/services/integrity/integrityRepair';
 import { Q } from '@nozbe/watermelondb';
 
 describe('IntegrityService', () => {
@@ -196,6 +197,46 @@ describe('IntegrityService', () => {
           }),
         }),
       );
+    });
+
+    it('reports cancellation and forwards it before the rebuild can commit', async () => {
+      const controller = new AbortController();
+      const verification = {
+        accountId: cashAccountId as AccountId,
+        accountName: 'Cash',
+        cachedBalance: 999,
+        computedBalance: 500,
+        matches: false,
+        discrepancy: 499,
+      };
+      const rebuildSpy = jest
+        .spyOn(accountingRebuildService, 'rebuildAccountBalances')
+        .mockImplementation(async () => {
+          controller.abort();
+        });
+
+      await expect(
+        repairAccountBalance(
+          'wp-1' as WorkplaceId,
+          cashAccountId as AccountId,
+          verification,
+          'repair',
+          controller.signal,
+        ),
+      ).resolves.toBe(false);
+
+      expect(rebuildSpy).toHaveBeenCalledWith(
+        'wp-1',
+        cashAccountId,
+        undefined,
+        expect.any(Array),
+        controller.signal,
+        undefined,
+      );
+      expect(await database.collections.get<AuditLog>('audit_logs').query().fetch()).toHaveLength(
+        0,
+      );
+      rebuildSpy.mockRestore();
     });
   });
 

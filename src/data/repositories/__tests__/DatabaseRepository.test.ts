@@ -150,8 +150,58 @@ describe('DatabaseRepository', () => {
 
     expect(queryRaw).toHaveBeenCalledWith('SAVEPOINT import_swap', []);
     expect(queryRaw).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT import_swap', []);
-    expect(queryRaw).not.toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
+    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
     expect(cacheMap.get('old-acc')).toBe(targetCached);
+  });
+
+  it('restores native-adapter rows when a later table fails during the swap', async () => {
+    const rows = new Map([
+      ['accounts:target', 1],
+      ['accounts:staging', 2],
+      ['journals:target', 3],
+      ['journals:staging', 4],
+    ]);
+    let savepointRows: Map<string, number> | undefined;
+    const queryRaw = jest.fn().mockImplementation(async (sql: string, args: string[]) => {
+      if (sql === 'SAVEPOINT import_swap') {
+        savepointRows = new Map(rows);
+        return;
+      }
+      if (sql.startsWith('DELETE FROM')) {
+        const table = sql.split(' ')[2];
+        rows.delete(`${table}:${args[0]}`);
+        return;
+      }
+      if (sql.startsWith('UPDATE journals')) {
+        throw new Error('native update failed');
+      }
+      if (sql.startsWith('UPDATE accounts')) {
+        rows.delete('accounts:staging');
+        rows.set('accounts:target', 2);
+        return;
+      }
+      if (sql === 'ROLLBACK TO SAVEPOINT import_swap') {
+        rows.clear();
+        for (const [key, value] of savepointRows ?? []) rows.set(key, value);
+      }
+    });
+    mockGetRawAdapter.mockReturnValue({ queryRaw });
+
+    await expect(
+      repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
+        'accounts',
+        'journals',
+      ]),
+    ).rejects.toThrow('native update failed');
+
+    expect([...rows.entries()]).toEqual([
+      ['accounts:target', 1],
+      ['accounts:staging', 2],
+      ['journals:target', 3],
+      ['journals:staging', 4],
+    ]);
+    expect(queryRaw).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT import_swap', []);
+    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
   });
 
   it('drops purged workplace rows from RecordCache after raw SQL purge', async () => {

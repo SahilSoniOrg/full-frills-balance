@@ -1,33 +1,33 @@
 # Persistence Ownership Inventory
 
-Status: WP-4 design inventory complete
-Snapshot: `6d282b63`
+Status: WP-4 design inventory complete; enforcement coverage refreshed
+Snapshot: `3f967ba18`
 Scope: production persistence primitives, privileged adapter access, cross-domain mutation workflows, and the tests that define their contracts
 
 ## Audit coverage
 
-- Repository source files mechanically scanned: 1,052.
+- Tracked TypeScript/TSX source files mechanically scanned: 1,281; current production `app/` + `src/` ratchet scope: 940 files.
 - Production files containing candidate persistence primitives: 50; analyzed: 50; blocked: 0.
-- Production files containing privileged/raw access candidates: 11; analyzed: 11; blocked: 0.
-- Direct service-owned `database.write`/`database.batch` violations already ratcheted: 38 across 15 service/testing files.
+- Production files containing privileged/raw access candidates: 16; analyzed: 16; blocked: 0.
+- Direct database write occurrences ratcheted: 3 across 2 approved test-harness files; no service-owned occurrences remain in the current baseline.
+- Service/command model preparation, update, and private raw-access occurrences ratcheted: 26 across 12 files.
 - Relevant persistence-contract test files inspected: 30.
 - Schema migrations inspected: versions 2 through 31, including 71 `unsafeExecuteSql` calls.
 - Search families: `database.(write|batch|action)`, model `create`/`update`/`prepare*`/delete calls, `getRawAdapter`, `queryRaw`, `unsafeQueryRaw`, `_raw`, `_setRaw`, `_cache`, `_notify`, and all production callers of the resulting mutation APIs.
 
 False positives were classified and excluded: React state setters, chart/animation `.update` calls, and the non-Watermelon preferences store. Tests, fixtures, and `src/testing` helpers are evidence or approved test infrastructure, not application transaction owners.
 
-Inventory status: **COMPLETE**. No mutation path found by the scoped primitive and caller sweeps remains unclassified. One implementation gate remains: the repository does not prove that sequential private-adapter `queryRaw` calls inside a Watermelon writer share a SQL rollback boundary. The migration plan treats that guarantee as absent until a native-adapter integration test proves otherwise.
+Inventory status: **COMPLETE**. No mutation path found by the scoped primitive and caller sweeps remains unclassified. The architecture gate now covers the previously unratcheted service/command model-access family; the 26 existing occurrences remain explicit debt until migrated. One implementation gate remains: the repository does not prove that sequential private-adapter `queryRaw` calls inside a Watermelon writer share a SQL rollback boundary. The migration plan treats that guarantee as absent until a native-adapter integration test proves otherwise.
 
 ## Verdict
 
 **Fixable.** The codebase has real repositories and several good atomic batches. The failure is competing ownership: services, repositories, and command modules can each open transactions, while audit, rebuild, cache, preferences, and external SMS acknowledgement are inconsistently inside or outside the durable commit.
 
-The highest-risk remaining failures are:
+The highest-risk remaining gaps are:
 
-1. The staged-import raw swap is called atomic, but executes sequential private-adapter deletes and updates without a proved rollback contract.
-2. Rebuild follow-up model queries omit workplace predicates even though the raw source query is scoped.
-3. Integrity force-repair still audits and refreshes in later writes.
-4. Rebuild enqueue is still an in-memory queue, not a durable outbox.
+1. The staged-import raw swap now uses a SQL savepoint, but native-adapter failure injection and cache-coherence behavior are not proved; current rollback coverage is mocked.
+2. Rebuild intent is persisted in MMKV (`rebuild_queue_v1`), not transactionally with the business write; a crash between commit and enqueue can still defer derived repair to startup integrity.
+3. The service/command model-access baseline is 26 occurrences across 12 files, including direct preparation and private `_raw` access; the ratchet prevents growth but does not remove the debt.
 
 ## Target ownership model
 
@@ -117,7 +117,7 @@ The initial pipeline lookup at `SmsSyncPipeline.ts:143` and rebuild follow-up qu
 | Path                    | Initiator                        | Tables                                                                     | Current transaction owner                                                                                                                                      | Audit/rebuild behavior                                                                               | Rollback gap                                                                                                                                                                    | Recommended owner                                                                                                            |
 | ----------------------- | -------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Running-balance rebuild | Rebuild queue, integrity, import | `transactions.running_balance`, `balance_snapshots`, `accounts.updated_at` | `AccountingRebuildService` opens writer at `src/services/AccountingRebuildService.ts` and owns prepared ops in `rebuildAccountBalancesInternal`                | Derived repair normally has no audit; integrity repair can pass audit `extraOps` into the same batch | Follow-up transaction/snapshot fetches already include `workplace_id`. Rebuild enqueue remains MMKV (`rebuild_queue_v1`); crash recovery is startup integrity, not a SQL outbox | Keep `AccountingRebuildService` as owner; do not add a `rebuild_intents` table unless integrity recovery proves insufficient |
-| Integrity force repair  | Settings/bootstrap/import        | same derived tables plus `audit_logs`                                      | Per-account writer at `src/services/integrity-service.ts` calls `rebuildAccountBalancesInternal` with a prepared audit op; account refresh uses `persistBatch` | Repair audit is in the same batch as the rebuild                                                     | Repair and audit roll back together; rebuild-queue delivery is still MMKV                                                                                                       | Keep integrity + rebuild extra ops; no named coordinator                                                                     |
+| Integrity force repair  | Settings/bootstrap/import        | same derived tables plus `audit_logs`                                      | Per-account writer at `src/services/integrity/integrityRepair.ts` calls `AccountingRebuildService` with a prepared audit op; final account refresh uses `persistBatch` | Repair audit is in the same batch as the rebuild                                                     | Repair and audit roll back together; rebuild-queue delivery is still MMKV                                                                                                       | Keep integrity + rebuild extra ops; no named coordinator                                                                     |
 
 | Audit legacy cleanup | Bootstrap/maintenance | `audit_logs` | `AuditService` at `src/services/audit-service.ts:95-124` | No audit-of-audit expected | Legitimate maintenance operation, but physical mechanics belong in repository | `AuditMaintenanceRepository` |
 
@@ -134,7 +134,7 @@ Existing evidence: `src/data/repositories/__tests__/TransactionRepository.test.t
 | Create/delete workplace  | Onboarding/settings/import staging | `workplaces`, system accounts, optional initial ledger; all workplace tables on delete                                                                           | `WorkplaceRepository`, `WorkplaceService`, and integrity maintenance split ownership at `src/services/WorkplaceService.ts:13-78` and `:156-173` | Analytics/preferences follow persistence                                             | Creation can leave an empty/partially bootstrapped workplace. Deletion purges data then destroys workplace in a second write                                                                                                        | `WorkplaceLifecycleCoordinator`                                                                                      |
 | Purge/reset/cleanup      | Settings/dev maintenance           | all database/workplace tables                                                                                                                                    | `DatabaseRepository` at `DatabaseRepository.ts:70-166`; service wrapper at `src/services/integrity/integrityMaintenance.ts:15-64`               | Factory reset separately clears SMS MMKV and preferences                             | Irreversible DB reset may succeed, then cache/preferences cleanup fails and reports overall failure. Workplace purge and shell deletion are separate                                                                                | `DatabaseMaintenanceRepository` plus `FactoryResetCoordinator` with explicit irreversible completion semantics       |
 
-The staging architecture is sound in intent: parse, backup, stage, verify, swap (`ImportService.ts:73-126`). The target ledger is not exposed to chunk failures. The unproved raw swap—not chunking itself—is the target-integrity risk.
+The staging architecture is sound in intent: parse, backup, stage, verify, swap (`ImportService.ts:73-126`). The target ledger is protected from chunk failures because the swap operates on a staging workplace. The remaining target-integrity risk is native-adapter savepoint behavior and cache coherence under a mid-swap failure, not chunking itself.
 
 Existing evidence: `src/services/import/__tests__/ImportService.workflow.test.ts:127-326`, `src/data/repositories/__tests__/ImportRepository.test.ts:15-121`, and `src/data/repositories/__tests__/DatabaseRepository.test.ts:31-158`. Mocked SAVEPOINT rollback is covered. Native-adapter fault injection (every DELETE/UPDATE step, cache coherence, second-chunk failure) is deferred.
 
@@ -250,7 +250,7 @@ Tests: interrupted repair/retry; audit failure; reset post-cleanup failure; raw 
 - Move budget and planned-payment account-merge preparers into repositories.
 - Delete unused journal and import mutation APIs.
 - Replace `_setRaw` and consolidate `_raw` writes in the import adapter.
-- Update the direct-write ratchet after each migration; never raise the baseline.
+- Update the direct-write and service-model ratchets after each migration; never raise either baseline.
 
 ## Definition of done for WP-4 implementation
 

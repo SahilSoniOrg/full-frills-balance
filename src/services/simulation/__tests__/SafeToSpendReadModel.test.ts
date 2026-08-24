@@ -204,6 +204,36 @@ describe('SafeToSpendReadModel', () => {
       expect(firstAgain).not.toBe(second);
     });
 
+    it('does not persist a pre-warm result after its workplace cache is disposed', async () => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 5000 },
+      ]);
+
+      let resolveSimulation: ((result: typeof emptySimResult) => void) | undefined;
+      const simulationPromise = new Promise<typeof emptySimResult>(resolve => {
+        resolveSimulation = resolve;
+      });
+      (cashFlowSimulationService.simulate as jest.Mock).mockReturnValue(simulationPromise);
+      const simulate = cashFlowSimulationService.simulate as jest.Mock;
+
+      const preWarmPromise = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId).preWarm();
+      for (let i = 0; i < 20 && !simulate.mock.calls.length; i += 1) {
+        await Promise.resolve();
+      }
+
+      expect(cashFlowSimulationService.simulate).toHaveBeenCalled();
+      safeToSpendReadModel.clearCache();
+      resolveSimulation?.(emptySimResult);
+      await preWarmPromise;
+      await Promise.resolve();
+
+      expect(snapshotService.saveCustomSnapshot).not.toHaveBeenCalled();
+    });
+
     it('switchMaps currency on the same workplace stream', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },

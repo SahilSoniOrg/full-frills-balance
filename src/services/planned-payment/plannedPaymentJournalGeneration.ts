@@ -23,9 +23,14 @@ export async function generatePlannedJournalForPayment(
     status?: JournalStatus;
     journalDate?: number;
     extraOps?: (data: CreateJournalData) => Model[];
+    signal?: AbortSignal;
+    isCurrent?: () => boolean;
   },
 ): Promise<boolean> {
   try {
+    const isCancelled = () => options?.signal?.aborted === true || options?.isCurrent?.() === false;
+    if (isCancelled()) return false;
+
     if (!pp.toAccountId) {
       logger.warn(`Planned payment ${pp.id} is missing toAccountId — skipping journal generation.`);
       return true;
@@ -45,10 +50,19 @@ export async function generatePlannedJournalForPayment(
     };
 
     await ledgerWriteService.createJournal(data, pp.workplaceId, {
-      extraOps: options?.extraOps ? () => options.extraOps!(data) : undefined,
+      // LedgerCreateService evaluates extraOps inside its persistBatch factory. Throwing here
+      // prevents the journal ops themselves from being returned after preparation completed.
+      extraOps: () => {
+        if (isCancelled()) {
+          throw new Error('Planned journal generation cancelled before commit.');
+        }
+        return options?.extraOps ? options.extraOps(data) : [];
+      },
     });
     return true;
   } catch (error) {
+    if (options?.signal?.aborted || options?.isCurrent?.() === false) return false;
+
     const message =
       error instanceof Error
         ? error.message

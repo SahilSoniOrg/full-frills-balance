@@ -3,7 +3,8 @@
  * Ratchets three architecture debts without pretending they are already zero:
  *   - raw repository APIs / static raw SQL that omit workplace scope;
  *   - presentation and feature imports of WatermelonDB models;
- *   - direct database write/batch/action calls outside persistence seams.
+ *   - direct database write/batch/action calls outside persistence seams;
+ *   - service/command model preparation, update, and private raw access.
  *
  * The baseline is per rule and file. A new occurrence fails with file:line;
  * removing an occurrence makes the baseline stale and also fails until the
@@ -28,6 +29,13 @@ const PRESENTATION_ROOTS = [
   'src/hooks/',
 ];
 const PERSISTENCE_SEAMS = ['src/data/database/', 'src/data/models/', 'src/data/repositories/'];
+const MODEL_ACCESS_SEAMS = [
+  'src/data/database/',
+  'src/data/models/',
+  'src/data/repositories/',
+  'src/services/import/',
+  'src/testing/',
+];
 const WORKPLACE_TABLES = new Set([
   'account_metadata',
   'accounts',
@@ -44,7 +52,20 @@ const WORKPLACE_TABLES = new Set([
 ]);
 const RAW_CALL_NAMES = new Set(['queryRaw', 'unsafeQueryRaw', 'unsafeSqlQuery']);
 const DATABASE_WRITE_NAMES = new Set(['action', 'batch', 'write']);
-const RULES = ['unscoped_raw_query', 'presentation_model_import', 'direct_database_write'];
+const MODEL_PREPARATION_NAMES = new Set([
+  'prepareCreate',
+  'prepareUpdate',
+  'prepareDestroy',
+  'prepareDestroyPermanently',
+  'prepareMarkAsDeleted',
+]);
+const PRIVATE_MODEL_ACCESS_NAMES = new Set(['_raw', '_setRaw']);
+const RULES = [
+  'unscoped_raw_query',
+  'presentation_model_import',
+  'direct_database_write',
+  'service_model_persistence_access',
+];
 
 function parseArgs(argv) {
   const args = { root: DEFAULT_ROOT, baseline: DEFAULT_BASELINE, writeBaseline: false };
@@ -67,6 +88,18 @@ function isProductionSource(relativePath) {
   return !(
     relativePath.includes('/__tests__/') || /\.(?:test|spec)\.(?:ts|tsx)$/.test(relativePath)
   );
+}
+
+function isServiceOrCommandSource(relativePath) {
+  return (
+    relativePath.startsWith('src/services/') ||
+    relativePath.startsWith('src/commands/') ||
+    /(?:^|\/)[^/]*commands?[^/]*\.(?:ts|tsx)$/.test(relativePath)
+  );
+}
+
+function isModelAccessSeam(relativePath) {
+  return MODEL_ACCESS_SEAMS.some(prefix => relativePath.startsWith(prefix));
 }
 
 function collectFiles(root) {
@@ -112,6 +145,45 @@ function receiverOf(expression) {
     return expression.expression;
   }
   return null;
+}
+
+function rootIdentifier(node) {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+    return rootIdentifier(node.expression);
+  }
+  return null;
+}
+
+function isRepositoryReceiver(node) {
+  const root = rootIdentifier(node);
+  return Boolean(root && /repo(?:sitory)?$/i.test(root));
+}
+
+function isLikelyModelValue(node, modelValueIdentifiers) {
+  const root = rootIdentifier(node);
+  if (!root || isRepositoryReceiver(node)) return false;
+  if (modelValueIdentifiers.has(root)) return true;
+
+  return [
+    'account',
+    'budget',
+    'scope',
+    'journal',
+    'transaction',
+    'payment',
+    'workplace',
+    'currency',
+    'snapshot',
+    'metadata',
+    'record',
+    'model',
+    'rule',
+    'inbox',
+    'auditlog',
+    'tx',
+    'pp',
+  ].some(term => root.toLowerCase() === term || root.toLowerCase().endsWith(term));
 }
 
 function staticText(node, declarations) {
@@ -166,8 +238,12 @@ function scanFile(root, file) {
   const findings = [];
   const declarations = new Map();
   const databaseIdentifiers = new Set();
+  const modelTypeNames = new Set();
+  const modelValueIdentifiers = new Set();
   const inPresentation = PRESENTATION_ROOTS.some(prefix => file.relativePath.startsWith(prefix));
   const inPersistenceSeam = PERSISTENCE_SEAMS.some(prefix => file.relativePath.startsWith(prefix));
+  const inServiceOrCommand =
+    isServiceOrCommandSource(file.relativePath) && !isModelAccessSeam(file.relativePath);
 
   const firstPass = node => {
     if (
@@ -192,6 +268,27 @@ function scanFile(root, file) {
       }
     }
     if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      /(?:^|\/)data\/models(?:\/|$)/.test(node.moduleSpecifier.text)
+    ) {
+      const importClause = node.importClause;
+      if (importClause?.name) modelTypeNames.add(importClause.name.text);
+      for (const element of importClause?.namedBindings?.elements ?? []) {
+        modelTypeNames.add(element.name.text);
+      }
+    }
+    if (
+      (ts.isParameter(node) || ts.isVariableDeclaration(node)) &&
+      ts.isIdentifier(node.name) &&
+      node.type &&
+      ts.isTypeReferenceNode(node.type) &&
+      ts.isIdentifier(node.type.typeName) &&
+      modelTypeNames.has(node.type.typeName.text)
+    ) {
+      modelValueIdentifiers.add(node.name.text);
+    }
+    if (
       ts.isVariableDeclaration(node) &&
       ts.isObjectBindingPattern(node.name) &&
       node.initializer
@@ -210,6 +307,56 @@ function scanFile(root, file) {
   firstPass(sourceFile);
 
   const visit = node => {
+    if (inServiceOrCommand && ts.isCallExpression(node)) {
+      const name = propertyName(node.expression);
+      const receiver = receiverOf(node.expression);
+      if (
+        name &&
+        MODEL_PREPARATION_NAMES.has(name) &&
+        receiver &&
+        !isRepositoryReceiver(receiver)
+      ) {
+        addFinding(
+          findings,
+          sourceFile,
+          file,
+          node,
+          'service_model_persistence_access',
+          `model.${name}() is outside an approved persistence seam`,
+        );
+      } else if (
+        name === 'update' &&
+        receiver &&
+        isLikelyModelValue(receiver, modelValueIdentifiers)
+      ) {
+        addFinding(
+          findings,
+          sourceFile,
+          file,
+          node,
+          'service_model_persistence_access',
+          'model.update() is outside an approved persistence seam',
+        );
+      }
+    }
+
+    if (
+      inServiceOrCommand &&
+      (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))
+    ) {
+      const name = propertyName(node);
+      if (name && PRIVATE_MODEL_ACCESS_NAMES.has(name)) {
+        addFinding(
+          findings,
+          sourceFile,
+          file,
+          node,
+          'service_model_persistence_access',
+          `model.${name} private access is outside an approved persistence seam`,
+        );
+      }
+    }
+
     if (
       inPresentation &&
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&

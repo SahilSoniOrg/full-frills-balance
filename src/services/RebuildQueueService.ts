@@ -357,6 +357,10 @@ class RebuildQueueService {
         // This avoids DB lock contention and long-held write locks, especially for large accounts.
         const results: { status: 'fulfilled' | 'rejected'; reason?: unknown }[] = [];
         for (const item of batch) {
+          if (generation !== this.lifecycleGeneration) {
+            break;
+          }
+
           try {
             const [workplaceId, accountId] = parseQueueKey(item.id);
             await accountingRebuildService.rebuildAccountBalances(

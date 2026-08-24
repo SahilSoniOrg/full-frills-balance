@@ -6,6 +6,20 @@
     "direct_database_write": {
       "src/testing/e2eSeed.ts": 1,
       "src/testing/smsTestHarness.ts": 2
+    },
+    "service_model_persistence_access": {
+      "src/services/AccountingRebuildService.ts": 3,
+      "src/services/accounts/accountArchiveMutations.ts": 2,
+      "src/services/accounts/accountMergeCommands.ts": 1,
+      "src/services/budget/budgetWriteService.ts": 2,
+      "src/services/export/exportTableTransformer.ts": 1,
+      "src/services/integrity/integrityOrchestrator.ts": 1,
+      "src/services/ledger/ledgerLifecycleService.ts": 8,
+      "src/services/planned-payment/plannedPaymentCommands.ts": 2,
+      "src/services/planned-payment/plannedPaymentLifecycle.ts": 2,
+      "src/services/planned-payment/plannedPaymentMergeOperations.ts": 1,
+      "src/services/sms/pipeline/smsInboxRecordPreparer.ts": 2,
+      "src/services/transaction-ingestion/TransactionService.ts": 1
     }
   }
 }

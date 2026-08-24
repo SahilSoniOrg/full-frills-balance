@@ -55,5 +55,15 @@ export async function commitStagedImport(
     stagingWorkplaceId,
     WORKPLACE_SCOPED_TABLE_NAMES,
   );
-  await discardImportStagingWorkplace(stagingWorkplaceId);
+
+  // The target replacement is complete once the swap returns. Cleanup is
+  // deliberately retryable and must not make a successful import look failed.
+  try {
+    await discardImportStagingWorkplace(stagingWorkplaceId);
+  } catch (error) {
+    logger.warn(
+      `[ImportStaging] Target replacement succeeded; staging cleanup is pending for ${stagingWorkplaceId}:`,
+      { error },
+    );
+  }
 }

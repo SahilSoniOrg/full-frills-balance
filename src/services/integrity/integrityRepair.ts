@@ -47,17 +47,27 @@ export async function repairAccountBalance(
   accountId: AccountId,
   verification?: BalanceVerificationResult,
   auditTrigger: IntegrityRepairTrigger = 'repair',
+  signal?: AbortSignal,
+  isCurrent?: () => boolean,
 ): Promise<boolean> {
+  if (signal?.aborted || isCurrent?.() === false) return false;
+
   const discrepancy = verification ?? (await verifyAccountBalance(accountId, workplaceId));
+  if (signal?.aborted || isCurrent?.() === false) return false;
   const hadIssue = !discrepancy.matches || discrepancy.snapshotCorrupted;
 
   try {
+    if (signal?.aborted || isCurrent?.() === false) return false;
+
     await accountingRebuildService.rebuildAccountBalances(
       workplaceId,
       accountId,
       undefined,
       hadIssue ? [prepareRunningBalanceRepair(workplaceId, discrepancy, auditTrigger)] : [],
+      signal,
+      isCurrent,
     );
+    if (signal?.aborted || isCurrent?.() === false) return false;
     logger.info(`[IntegrityRepair] Repaired running balances for account ${accountId}`);
     return true;
   } catch (error) {

@@ -67,14 +67,25 @@ export class TransactionInboxRepository {
     await persistBatch(() => [this.prepareStatus(record, status)]);
   }
 
-  async persistScanBatch(buildOps: () => Promise<Model[]>, afterBatch?: () => void): Promise<void> {
+  async persistScanBatch(
+    buildOps: () => Promise<Model[]>,
+    afterBatch?: () => void,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    let committed = false;
+
     await database.write(async () => {
       const ops = await buildOps();
-      if (ops.length > 0) {
-        await database.batch(ops);
-      }
+      // The builder yields while analysis/rechecks run. Re-check cancellation at the last
+      // possible point so an aborted scan cannot enter the write batch or its bookkeeping.
+      if (ops.length === 0 || signal?.aborted) return;
+
+      await database.batch(ops);
+      committed = true;
       afterBatch?.();
     });
+
+    return committed;
   }
 }
 

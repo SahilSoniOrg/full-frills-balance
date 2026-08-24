@@ -389,6 +389,9 @@ export async function saveAccount(
       assertNotSelfParent(accountId, nextParentId);
       const parent = snapshot.accountsById.get(nextParentId);
       if (!parent) throw new Error('Parent account references missing or deleted account(s)');
+      if (parent.deletedAt) {
+        throw new Error('Parent account references missing or deleted account(s)');
+      }
       if (parent.archivedAt) throw new Error('Archived accounts cannot have new children');
       if (snapshot.getDescendants(accountId).has(nextParentId)) {
         throw new Error('Circular parent relationship detected');
@@ -687,6 +690,9 @@ export async function saveAccountTreeDraft(
       if (!parentId) continue;
       const parent = accountsById.get(parentId);
       if (!parent) throw new Error('Parent account references missing or deleted account(s)');
+      if (parent.deletedAt) {
+        throw new Error('Parent account references missing or deleted account(s)');
+      }
       if (parent.archivedAt) throw new Error('Archived accounts cannot have new children');
       if ((account.parentAccountId || undefined) === parentId) continue;
       const hasTransactions = await transactionQueryRepository.hasTransactions(

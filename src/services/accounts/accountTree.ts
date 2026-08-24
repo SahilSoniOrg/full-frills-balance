@@ -358,6 +358,9 @@ export function validateAccountTreeStructure<T extends OrderedAccount>(
     if (!parentId) continue;
     const parent = accountsById.get(parentId);
     if (!parent) throw new Error('Parent account references missing or deleted account(s)');
+    if (isPresent(parent.deletedAt)) {
+      throw new Error('Parent account references missing or deleted account(s)');
+    }
     if (parent.accountType !== account.accountType) {
       throw new Error('Parent and child accounts must have the same account type');
     }

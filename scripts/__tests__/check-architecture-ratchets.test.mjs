@@ -24,6 +24,7 @@ function emptyBaseline() {
       unscoped_raw_query: {},
       presentation_model_import: {},
       direct_database_write: {},
+      service_model_persistence_access: {},
     },
   };
 }
@@ -77,6 +78,84 @@ test('ignores tests and approved persistence seams', t => {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   assert.deepEqual(collectArchitectureFindings(root), []);
+});
+
+test('ratchets service model preparation, update, and private raw access', t => {
+  const root = fixture({
+    'src/services/unsafeMutations.ts': `
+      import Account from '@/src/data/models/Account';
+      export function unsafe(account: Account) {
+        account.prepareUpdate(() => {});
+        account.update(() => {});
+        return account['_raw'];
+      }
+    `,
+    'src/services/allowedRepositoryCall.ts': `
+      import Account from '@/src/data/models/Account';
+      import { accountRepository } from '@/src/data/repositories/account';
+      export function allowed(account: Account) {
+        return accountRepository.update(account);
+      }
+    `,
+    'src/commands/unsafe.ts': `
+      export function unsafe(record: any) {
+        return record.prepareCreate(() => {});
+      }
+    `,
+  });
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const findings = collectArchitectureFindings(root).filter(
+    finding => finding.rule === 'service_model_persistence_access',
+  );
+
+  assert.equal(findings.length, 4);
+  assert.deepEqual(
+    findings.map(finding => finding.message),
+    [
+      'model.prepareCreate() is outside an approved persistence seam',
+      'model.prepareUpdate() is outside an approved persistence seam',
+      'model.update() is outside an approved persistence seam',
+      'model._raw private access is outside an approved persistence seam',
+    ],
+  );
+});
+
+test('preserves import, migration, testing, and repository model seams', t => {
+  const root = fixture({
+    'src/services/import/importWriter.ts': `
+      export function write(record: any) {
+        record.prepareCreate(() => {});
+        record._setRaw('id', 'imported');
+      }
+    `,
+    'src/data/database/migrations.ts': `
+      export function migrate(record: any) {
+        record.prepareUpdate(() => {});
+        return record._raw;
+      }
+    `,
+    'src/testing/modelHarness.ts': `
+      export function seed(record: any) {
+        record.prepareDestroyPermanently();
+        return record._raw;
+      }
+    `,
+    'src/data/repositories/ModelRepository.ts': `
+      export function persist(record: any) {
+        record.prepareUpdate(() => {});
+        return record._raw;
+      }
+    `,
+  });
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  assert.deepEqual(
+    collectArchitectureFindings(root).filter(
+      finding => finding.rule === 'service_model_persistence_access',
+    ),
+    [],
+  );
 });
 
 test('fails when a baseline entry becomes stale', () => {
