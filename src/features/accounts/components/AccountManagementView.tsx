@@ -28,6 +28,7 @@ export function AccountManagementView({
         onDiscardDraft={vm.onDiscardDraft}
         onSelectAccount={vm.onSelectAccount}
         onToggleExpand={vm.onToggleExpand}
+        onToggleTypeSection={vm.onToggleTypeSection}
         onCreateParent={vm.onCreateParent}
         onToggleOrganize={vm.onToggleOrganize}
       />

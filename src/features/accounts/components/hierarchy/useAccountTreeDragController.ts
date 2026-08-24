@@ -23,7 +23,10 @@ import {
   projectAccountTreeDragLayout,
   resolveAccountTreeVisualHover,
 } from './accountTreeDragLayout';
-import { ACCOUNT_TREE_ROW_MIN_HEIGHT } from './AccountManagementTreeRow';
+import {
+  ACCOUNT_TREE_ROW_MIN_HEIGHT,
+  ACCOUNT_TREE_SECTION_HEADER_HEIGHT,
+} from './AccountManagementTreeRow';
 
 const AUTO_SCROLL_EDGE_SIZE = 72;
 const AUTO_SCROLL_MAX_SPEED = 640;
@@ -131,9 +134,15 @@ export function useAccountTreeDragController({
     (accountId: AccountId, translationY: number) => {
       const sourceGeometry = getAccountTreeRowGeometry(rows, accountId, rowHeights);
       if (!sourceGeometry) return;
+      const sourceRow = rows.find(row => row.accountId === accountId);
+      const sourceHeaderHeight = sourceRow?.sectionLabel ? ACCOUNT_TREE_SECTION_HEADER_HEIGHT : 0;
+      const sourceAccountHeight = Math.max(
+        ACCOUNT_TREE_ROW_MIN_HEIGHT,
+        sourceGeometry.height - sourceHeaderHeight,
+      );
       const contentY = getAccountTreeDragContentYFromGeometry(
-        sourceGeometry.top,
-        sourceGeometry.height,
+        sourceGeometry.top + sourceHeaderHeight,
+        sourceAccountHeight,
         translationY,
         scrollOffsetRef.current - initialScrollOffsetRef.current,
       );
@@ -148,6 +157,19 @@ export function useAccountTreeDragController({
       );
       if (!visualHover || dragLayout.activeSubtreeAccountIds.has(visualHover.hoveredAccountId))
         return;
+      const draggedAccount = accountsById.get(accountId);
+      const hoveredAccount = accountsById.get(visualHover.hoveredAccountId);
+      if (
+        draggedAccount &&
+        hoveredAccount &&
+        draggedAccount.accountType !== hoveredAccount.accountType
+      ) {
+        // Type sections are hard drag boundaries. Clear the projected hover so
+        // the active subtree returns to its original slot while crossing one.
+        hoverRef.current = null;
+        setHover(null);
+        return;
+      }
       const resolution = resolveAccountTreeDropTarget(
         accounts,
         accountId,

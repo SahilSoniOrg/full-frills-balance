@@ -22,6 +22,7 @@ describe('AccountManagementTreeList', () => {
         onDiscardDraft={jest.fn()}
         onSelectAccount={jest.fn()}
         onToggleExpand={jest.fn()}
+        onToggleTypeSection={jest.fn()}
         onCreateParent={jest.fn()}
         onToggleOrganize={jest.fn()}
       />,

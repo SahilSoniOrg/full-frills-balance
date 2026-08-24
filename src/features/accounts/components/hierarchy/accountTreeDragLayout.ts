@@ -17,6 +17,27 @@ export type AccountTreeRowHeightSource = number | ReadonlyMap<AccountId, number>
 
 const DEFAULT_ROW_HEIGHT = 56;
 
+/**
+ * Headers are rendered inside the first root row of each type. During a drag,
+ * that first row can change, so rebuild the labels from the projected order.
+ */
+function normalizeSectionLabels(
+  rows: readonly FlattenedAccountTreeRow[],
+): FlattenedAccountTreeRow[] {
+  const labelsByType = new Map<string, string>();
+  for (const row of rows) {
+    if (row.accountType && row.sectionLabel) labelsByType.set(row.accountType, row.sectionLabel);
+  }
+
+  const seenTypes = new Set<string>();
+  return rows.map(row => {
+    if (row.depth !== 0 || !row.accountType) return { ...row, sectionLabel: undefined };
+    if (seenTypes.has(row.accountType)) return { ...row, sectionLabel: undefined };
+    seenTypes.add(row.accountType);
+    return { ...row, sectionLabel: labelsByType.get(row.accountType) };
+  });
+}
+
 function resolveRowHeight(
   row: FlattenedAccountTreeRow,
   source: AccountTreeRowHeightSource,
@@ -200,10 +221,13 @@ export function projectAccountTreeDragLayout(
     ...activeRows,
     ...rowsWithoutActiveSubtree.slice(insertionIndex),
   ];
+  const normalizedProjectedRows = normalizeSectionLabels(projectedRows);
 
-  const projectedActiveIndex = projectedRows.findIndex(row => row.accountId === activeAccountId);
+  const projectedActiveIndex = normalizedProjectedRows.findIndex(
+    row => row.accountId === activeAccountId,
+  );
   return {
-    rows: projectedRows,
+    rows: normalizedProjectedRows,
     activeSubtreeAccountIds,
     activeTranslationAdjustment:
       getRowTop(projectedRows, projectedActiveIndex, rowHeights) -

@@ -46,6 +46,7 @@ export function useAccountManagementViewModel() {
   const [selectedAccountId, setSelectedAccountId] = useState<AccountId | null>(null);
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<AccountId>>(new Set());
+  const [collapsedAccountTypes, setCollapsedAccountTypes] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<AccountTreeDraft<AccountFields>>(() =>
     createAccountTreeDraft([]),
   );
@@ -81,8 +82,8 @@ export function useAccountManagementViewModel() {
   const allModeAccounts = draft.accounts;
   const treeSnapshot = useMemo(() => createAccountTreeSnapshot(allModeAccounts), [allModeAccounts]);
   const treeRows = useMemo(
-    () => flattenAccountTree(treeSnapshot, { expandedAccountIds }),
-    [expandedAccountIds, treeSnapshot],
+    () => flattenAccountTree(treeSnapshot, { expandedAccountIds, collapsedAccountTypes }),
+    [collapsedAccountTypes, expandedAccountIds, treeSnapshot],
   );
   const selectedAccount = selectedAccountId
     ? treeSnapshot.accountsById.get(selectedAccountId)
@@ -292,6 +293,15 @@ export function useAccountManagementViewModel() {
         const next = new Set(previous);
         if (next.has(id)) next.delete(id);
         else next.add(id);
+        return next;
+      });
+    },
+    collapsedAccountTypes,
+    onToggleTypeSection: (accountType: string) => {
+      setCollapsedAccountTypes(previous => {
+        const next = new Set(previous);
+        if (next.has(accountType)) next.delete(accountType);
+        else next.add(accountType);
         return next;
       });
     },

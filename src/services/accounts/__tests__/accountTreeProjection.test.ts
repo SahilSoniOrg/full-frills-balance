@@ -66,4 +66,30 @@ describe('flattenAccountTree', () => {
       isExpanded: false,
     });
   });
+
+  it('marks the first visible root of each account type as a section', () => {
+    const rows = flattenAccountTree(
+      createAccountTreeSnapshot([
+        { id: id('asset-1'), accountType: 'ASSET', orderNum: 0 },
+        { id: id('asset-2'), accountType: 'ASSET', orderNum: 1 },
+        { id: id('equity-1'), accountType: 'EQUITY', orderNum: 0 },
+      ]),
+    );
+
+    expect(rows.map(row => row.sectionLabel)).toEqual(['Assets', undefined, 'Equity']);
+  });
+
+  it('keeps a collapsed type section visible while hiding its accounts', () => {
+    const rows = flattenAccountTree(
+      createAccountTreeSnapshot([
+        { id: id('asset'), accountType: 'ASSET', orderNum: 0 },
+        { id: id('asset-child'), accountType: 'ASSET', parentAccountId: id('asset'), orderNum: 0 },
+        { id: id('equity'), accountType: 'EQUITY', orderNum: 0 },
+      ]),
+      { collapsedAccountTypes: new Set(['ASSET']) },
+    );
+
+    expect(rows.map(row => row.accountId)).toEqual(['asset', 'equity']);
+    expect(rows[0]).toMatchObject({ sectionLabel: 'Assets', isSectionCollapsed: true });
+  });
 });

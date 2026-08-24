@@ -66,6 +66,27 @@ describe('projectAccountTreeDragLayout', () => {
     expect(layout.activeTranslationAdjustment).toBe(128);
   });
 
+  it('keeps the type header before the first account after reordering it', () => {
+    const rows: FlattenedAccountTreeRow[] = [
+      { ...row('cash'), accountType: 'ASSET', sectionLabel: 'Assets' },
+      { ...row('bank'), accountType: 'ASSET' },
+      { ...row('opening'), accountType: 'EQUITY', sectionLabel: 'Equity' },
+    ];
+
+    const layout = projectAccountTreeDragLayout(
+      rows,
+      id('cash'),
+      { hoveredAccountId: id('bank'), kind: 'sibling-after' },
+      76,
+    );
+
+    expect(layout.rows.map(item => [item.accountId, item.sectionLabel])).toEqual([
+      [id('bank'), 'Assets'],
+      [id('cash'), undefined],
+      [id('opening'), 'Equity'],
+    ]);
+  });
+
   it('exposes before, child, and outside targets around an expanded parent', () => {
     const rows = [
       row('before'),

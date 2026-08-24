@@ -30,6 +30,7 @@ interface AccountManagementTreeListProps {
   onDiscardDraft: () => void;
   onSelectAccount: (accountId: AccountId | null) => void;
   onToggleExpand: (accountId: AccountId) => void;
+  onToggleTypeSection: (accountType: string) => void;
   onCreateParent: () => void;
   onToggleOrganize: () => void;
 }
@@ -49,6 +50,7 @@ export function AccountManagementTreeList({
   onDiscardDraft,
   onSelectAccount,
   onToggleExpand,
+  onToggleTypeSection,
   onCreateParent,
   onToggleOrganize,
 }: AccountManagementTreeListProps) {
@@ -132,6 +134,7 @@ export function AccountManagementTreeList({
                 onPress={() =>
                   item.childCount > 0 ? onToggleExpand(account.id) : onSelectAccount(account.id)
                 }
+                onToggleTypeSection={onToggleTypeSection}
               />
             );
           }}
