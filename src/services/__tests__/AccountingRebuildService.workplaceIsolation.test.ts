@@ -4,7 +4,10 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import {
+  transactionQueryRepository,
+  transactionWriteRepository,
+} from '@/src/data/repositories/transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
@@ -123,6 +126,65 @@ describe('AccountingRebuildService workplace isolation', () => {
     );
 
     expect(batchSpy).not.toHaveBeenCalled();
+  });
+
+  it('delegates rebuild model preparation to the scoped repositories', async () => {
+    const account = await accountWriteRepository.create({
+      name: 'Repository-owned cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WORKPLACE_ONE,
+    });
+    const journal = await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Rebuild preparation',
+        journalDate: 1_000,
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: account.id,
+            amount: 25,
+            transactionType: TransactionType.DEBIT,
+          },
+        ],
+      },
+      WORKPLACE_ONE,
+    );
+    const [transaction] = await transactionQueryRepository.findByJournal(WORKPLACE_ONE, journal.id);
+    await balanceSnapshotRepository.create(WORKPLACE_ONE, {
+      accountId: account.id,
+      transactionId: transaction.id,
+      transactionDate: 2_000,
+      absoluteBalance: 777,
+      transactionCount: 1,
+    });
+
+    jest.spyOn(transactionRawRepository, 'getRebuildDataRaw').mockResolvedValue([
+      {
+        id: transaction.id,
+        amount: 25,
+        transactionType: TransactionType.DEBIT,
+        transactionDate: 1_000,
+        runningBalance: 0,
+        createdAt: transaction.createdAt.getTime(),
+      },
+    ]);
+    const runningBalanceUpdateSpy = jest.spyOn(
+      transactionWriteRepository,
+      'prepareRunningBalanceUpdate',
+    );
+    const snapshotDeleteSpy = jest.spyOn(balanceSnapshotRepository, 'prepareDeleteForAccount');
+    const accountRefreshSpy = jest.spyOn(accountWriteRepository, 'prepareRefresh');
+
+    await accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, account.id, 0);
+
+    expect(runningBalanceUpdateSpy).toHaveBeenCalledWith(WORKPLACE_ONE, transaction, 25);
+    expect(snapshotDeleteSpy).toHaveBeenCalledWith(
+      WORKPLACE_ONE,
+      account.id,
+      expect.objectContaining({ accountId: account.id }),
+    );
+    expect(accountRefreshSpy).toHaveBeenCalledWith(WORKPLACE_ONE, account);
   });
 });
 

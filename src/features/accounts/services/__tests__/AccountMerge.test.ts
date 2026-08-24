@@ -3,17 +3,15 @@ import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { transactionWriteRepository } from '@/src/data/repositories/transaction';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/services/planned-payment/plannedPaymentMergeOperations');
 jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository');
-jest.mock('@/src/services/budget/budgetWriteService');
 jest.mock('@/src/data/repositories/BalanceSnapshotRepository');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/analytics');
@@ -25,14 +23,14 @@ describe('mergeAccounts command', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Default mock implementations to return empty arrays
-    (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
-    (preparePlannedPaymentMergeOperations as jest.Mock).mockResolvedValue([]);
+    (transactionWriteRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
+    jest.spyOn(plannedPaymentRepository, 'prepareMergeOperations').mockResolvedValue([]);
     (transactionAutoPostRuleRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
-    (budgetWriteService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
+    jest.spyOn(budgetRepository, 'prepareMergeOperations').mockResolvedValue([]);
     (balanceSnapshotRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
   });
 
-  test('calls transactionQueryRepository.findAllByAccountIds with deduplicated sources (excluding target)', async () => {
+  test('calls transactionWriteRepository.prepareMergeOperations with deduplicated sources (excluding target)', async () => {
     const targetId = 'target' as AccountId;
     const sourceIds = ['source1', 'source2', 'source1', 'target'] as AccountId[];
 
@@ -43,7 +41,7 @@ describe('mergeAccounts command', () => {
       currencyCode: 'USD',
     });
 
-    // Mock repository
+    // Mock repositories
     jest
       .spyOn(accountQueryRepository, 'find')
       .mockImplementation(
@@ -63,18 +61,11 @@ describe('mergeAccounts command', () => {
 
     await mergeAccounts(workplaceId, targetId, sourceIds);
 
-    // Verify transactionQueryRepository.findAllByAccountIds was called with deduplicated source1 and source2, but not target
-    const expectedSources = ['source1', 'source2'];
-
-    expect(transactionQueryRepository.findAllByAccountIds).toHaveBeenCalledWith(
+    expect(transactionWriteRepository.prepareMergeOperations).toHaveBeenCalledWith(
       workplaceId,
-      expect.arrayContaining(expectedSources),
+      ['source1', 'source2'],
+      targetId,
     );
-    const callArgs = (transactionQueryRepository.findAllByAccountIds as jest.Mock).mock.calls[0][1];
-    expect(callArgs.length).toBe(2);
-    expect(callArgs).toContain('source1');
-    expect(callArgs).toContain('source2');
-    expect(callArgs).not.toContain('target');
   });
 
   test('invokes rewrite preparers for every retarget/destroy referenceSites entry', async () => {
@@ -105,10 +96,10 @@ describe('mergeAccounts command', () => {
 
     await mergeAccounts(workplaceId, targetId, sourceIds);
 
-    expect(transactionQueryRepository.findAllByAccountIds).toHaveBeenCalled();
-    expect(preparePlannedPaymentMergeOperations).toHaveBeenCalled();
+    expect(transactionWriteRepository.prepareMergeOperations).toHaveBeenCalled();
+    expect(plannedPaymentRepository.prepareMergeOperations).toHaveBeenCalled();
     expect(transactionAutoPostRuleRepository.prepareMergeOperations).toHaveBeenCalled();
-    expect(budgetWriteService.prepareMergeOperations).toHaveBeenCalled();
+    expect(budgetRepository.prepareMergeOperations).toHaveBeenCalled();
     expect(accountWriteRepository.prepareMergeOperations).toHaveBeenCalled();
     expect(balanceSnapshotRepository.prepareMergeOperations).toHaveBeenCalledWith(
       workplaceId,

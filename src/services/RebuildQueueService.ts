@@ -198,6 +198,12 @@ class RebuildQueueService {
   /**
    * Stop the service, clear any pending timeouts, and empty the queue.
    *
+   * The processing marker is a crash-recovery record, not a durable claim on
+   * work. A deliberate stop cancels the current lifecycle, so its in-flight
+   * batch must not be replayed by the next service instance. A process that
+   * dies without calling stop leaves the marker intact and is therefore still
+   * recoverable on the next startup.
+   *
    * IMPORTANT: If this service ever holds observable subscriptions,
    * they MUST be unsubscribed here to prevent memory leaks.
    */
@@ -207,6 +213,7 @@ class RebuildQueueService {
     this.clearRetryTimers();
     this.queue.clear();
     this.retryCounts.clear();
+    storage.remove(RebuildQueueService.PROCESSING_KEY);
     this.syncQueueToDisk();
   }
 

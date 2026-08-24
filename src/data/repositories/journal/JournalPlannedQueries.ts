@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
+import type Transaction from '@/src/data/models/Transaction';
 import { JournalStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -108,15 +109,39 @@ export class JournalPlannedQueries {
   prepareStatusUpdates(
     workplaceId: WorkplaceId,
     journals: Journal[],
-    status: JournalStatus,
+    status: JournalStatus | ((journal: Journal) => JournalStatus),
   ): Model[] {
     this.assertJournalOwnership(workplaceId, journals);
     return journals.map(journal =>
       journal.prepareUpdate((record: Journal) => {
-        record.status = status;
+        record.status = typeof status === 'function' ? status(journal) : status;
         record.updatedAt = new Date();
       }),
     );
+  }
+
+  prepareSoftDeleteUpdates(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    transactions: Transaction[],
+    deletedAt = new Date(),
+  ): Model[] {
+    this.assertModelOwnership(workplaceId, journals, transactions);
+
+    const journalUpdates = journals.map(journal =>
+      journal.prepareUpdate(record => {
+        record.deletedAt = deletedAt;
+        record.updatedAt = deletedAt;
+      }),
+    );
+    const transactionUpdates = transactions.map(transaction =>
+      transaction.prepareUpdate(record => {
+        record.deletedAt = deletedAt;
+        record.updatedAt = deletedAt;
+      }),
+    );
+
+    return [...journalUpdates, ...transactionUpdates];
   }
 
   async batchUpdateStatus(
@@ -132,9 +157,26 @@ export class JournalPlannedQueries {
   }
 
   private assertJournalOwnership(workplaceId: WorkplaceId, journals: Journal[]): void {
+    this.assertModelOwnership(workplaceId, journals);
+  }
+
+  private assertModelOwnership(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    transactions: Transaction[] = [],
+  ): void {
     const foreignJournal = journals.find(journal => journal.workplaceId !== workplaceId);
     if (foreignJournal) {
       throw new Error(`Journal ${foreignJournal.id} does not belong to workplace ${workplaceId}`);
+    }
+
+    const foreignTransaction = transactions.find(
+      transaction => transaction.workplaceId !== workplaceId,
+    );
+    if (foreignTransaction) {
+      throw new Error(
+        `Transaction ${foreignTransaction.id} does not belong to workplace ${workplaceId}`,
+      );
     }
   }
 }

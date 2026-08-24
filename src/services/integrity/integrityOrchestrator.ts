@@ -1,13 +1,10 @@
-import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
-import Account from '@/src/data/models/Account';
-import { accountQueryRepository } from '@/src/data/repositories/account';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { analytics } from '@/src/services/analytics';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
-import { Q } from '@nozbe/watermelondb';
 import { repairAccountBalance } from './integrityRepair';
 import {
   scanForNullAccountTransactions,
@@ -92,7 +89,7 @@ export async function forceRunCheck(
   let repairsSuccessful = 0;
 
   if (discrepancies.length > 0) {
-    const repairedAccountIds: string[] = [];
+    const repairedAccountIds: AccountId[] = [];
 
     for (let i = 0; i < discrepancies.length; i++) {
       const discrepancy = discrepancies[i];
@@ -131,17 +128,8 @@ export async function forceRunCheck(
     // Perform ONE single unified refresh for all repaired accounts at the very end
     if (repairedAccountIds.length > 0) {
       onProgress?.('Updating database snapshots...', 0.96);
-      const accountsToNotify = await database.collections
-        .get<Account>('accounts')
-        .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(repairedAccountIds)))
-        .fetch();
-
       await persistBatch(() =>
-        accountsToNotify.map(a =>
-          a.prepareUpdate((record: Account) => {
-            record.updatedAt = new Date();
-          }),
-        ),
+        accountWriteRepository.prepareRefreshOps(workplaceId, repairedAccountIds),
       );
     }
   } else {

@@ -21,18 +21,6 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
   },
 }));
 
-const mockPrepareCreate = jest.fn();
-
-jest.mock('@/src/data/database/Database', () => ({
-  database: {
-    collections: {
-      get: jest.fn(() => ({
-        prepareCreate: mockPrepareCreate,
-      })),
-    },
-  },
-}));
-
 const makeParsedTx = (overrides: Partial<ParsedTransaction>): ParsedTransaction => ({
   id: 'sms-1',
   date: Date.now(),
@@ -321,13 +309,7 @@ describe('SmsSyncPipeline', () => {
     };
 
     it('persists duplicate metadata on the inbox model fields', () => {
-      let createdRecord: Record<string, unknown> = {};
-      mockPrepareCreate.mockImplementation((fn: (record: Record<string, unknown>) => void) => {
-        fn(createdRecord);
-        return createdRecord;
-      });
-
-      const { record } = prepareUpsertInboxRecord(
+      const record = prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500, merchant: 'SWIGGY' }),
         'fingerprint-abc',
@@ -342,25 +324,18 @@ describe('SmsSyncPipeline', () => {
         },
       );
 
-      expect(record).toBe(createdRecord);
-      expect(createdRecord.inputFingerprint).toBe('fingerprint-abc');
-      expect(createdRecord.duplicateJournalId).toBe('journal-dup');
-      expect(createdRecord.duplicateConfidence).toBe(0.72);
-      expect(createdRecord.firstSeenAt).toEqual(expect.any(Number));
-      expect(createdRecord.lastScannedAt).toEqual(expect.any(Number));
+      expect(record.inputFingerprint).toBe('fingerprint-abc');
+      expect(record.duplicateJournalId).toBe('journal-dup');
+      expect(record.duplicateConfidence).toBe(0.72);
+      expect(record.firstSeenAt).toEqual(expect.any(Number));
+      expect(record.lastScannedAt).toEqual(expect.any(Number));
 
-      const metadata = JSON.parse(createdRecord.metadataJson as string);
+      const metadata = JSON.parse(record.metadataJson as string);
       expect(metadata.duplicateReasons).toEqual(['Same amount', 'Matching description/merchant']);
     });
 
     it('persists referenceNumber from parsed SMS', () => {
-      let createdRecord: Record<string, unknown> = {};
-      mockPrepareCreate.mockImplementation((fn: (record: Record<string, unknown>) => void) => {
-        fn(createdRecord);
-        return createdRecord;
-      });
-
-      prepareUpsertInboxRecord(
+      const record = prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500, referenceNumber: 'UTR123456' }),
         'fingerprint-abc',
@@ -369,25 +344,16 @@ describe('SmsSyncPipeline', () => {
         'wp-1' as any,
       );
 
-      expect(createdRecord.referenceNumber).toBe('UTR123456');
+      expect(record.referenceNumber).toBe('UTR123456');
     });
 
     it('preserves firstSeenAt and merges metadata when updating an existing record', () => {
-      let updatedRecord: Record<string, unknown> = {};
       const existingRecord = {
         firstSeenAt: 1699000000000,
         metadataJson: JSON.stringify({ keepMe: true }),
-        prepareUpdate: jest.fn((fn: (record: Record<string, unknown>) => void) => {
-          updatedRecord = {
-            firstSeenAt: 1699000000000,
-            metadataJson: JSON.stringify({ keepMe: true }),
-          };
-          fn(updatedRecord);
-          return updatedRecord;
-        }),
       };
 
-      prepareUpsertInboxRecord(
+      const record = prepareUpsertInboxRecord(
         sms,
         makeParsedTx({ amount: 500 }),
         'fingerprint-abc',
@@ -396,9 +362,9 @@ describe('SmsSyncPipeline', () => {
         'wp-1' as any,
       );
 
-      expect(updatedRecord.firstSeenAt).toBe(1699000000000);
-      expect(updatedRecord.lastScannedAt).toEqual(expect.any(Number));
-      const metadata = JSON.parse(updatedRecord.metadataJson as string);
+      expect(record.firstSeenAt).toBe(1699000000000);
+      expect(record.lastScannedAt).toEqual(expect.any(Number));
+      const metadata = JSON.parse(record.metadataJson as string);
       expect(metadata.keepMe).toBe(true);
     });
   });

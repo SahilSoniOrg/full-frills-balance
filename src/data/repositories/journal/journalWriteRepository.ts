@@ -366,6 +366,108 @@ export class JournalWriteRepository {
     return { journal, transactions: associatedTransactions };
   }
 
+  prepareDeleteJournalUpdates(
+    journal: Journal,
+    transactions: Transaction[],
+    workplaceId: WorkplaceId,
+    deletedAt: Date,
+  ): Model[] {
+    return this.prepareLifecycleUpdates(
+      workplaceId,
+      journal,
+      transactions,
+      record => {
+        record.deletedAt = deletedAt;
+        record.updatedAt = deletedAt;
+      },
+      record => {
+        record.deletedAt = deletedAt;
+        record.updatedAt = deletedAt;
+      },
+    );
+  }
+
+  prepareRecoverJournalUpdates(
+    journal: Journal,
+    transactions: Transaction[],
+    workplaceId: WorkplaceId,
+    recoveredAt: Date,
+  ): Model[] {
+    return this.prepareLifecycleUpdates(
+      workplaceId,
+      journal,
+      transactions,
+      record => {
+        record.deletedAt = undefined;
+        record.updatedAt = recoveredAt;
+      },
+      record => {
+        record.deletedAt = undefined;
+        record.updatedAt = recoveredAt;
+      },
+    );
+  }
+
+  preparePostJournalUpdates(
+    journal: Journal,
+    transactions: Transaction[],
+    workplaceId: WorkplaceId,
+    postTime: number,
+  ): Model[] {
+    const updatedAt = new Date();
+    return this.prepareLifecycleUpdates(
+      workplaceId,
+      journal,
+      transactions,
+      record => {
+        record.status = JournalStatus.POSTED;
+        record.journalDate = postTime;
+        record.updatedAt = updatedAt;
+      },
+      record => {
+        record.transactionDate = postTime;
+        record.updatedAt = updatedAt;
+      },
+    );
+  }
+
+  prepareRevertJournalUpdates(
+    journal: Journal,
+    transactions: Transaction[],
+    workplaceId: WorkplaceId,
+    revertTime: number,
+  ): Model[] {
+    const updatedAt = new Date();
+    return this.prepareLifecycleUpdates(
+      workplaceId,
+      journal,
+      transactions,
+      record => {
+        record.status = JournalStatus.PLANNED;
+        record.journalDate = revertTime;
+        record.updatedAt = updatedAt;
+      },
+      record => {
+        record.transactionDate = revertTime;
+        record.updatedAt = updatedAt;
+      },
+    );
+  }
+
+  private prepareLifecycleUpdates(
+    workplaceId: WorkplaceId,
+    journal: Journal,
+    transactions: Transaction[],
+    updateJournal: (record: Journal) => void,
+    updateTransaction: (record: Transaction) => void,
+  ): Model[] {
+    this.assertModelOwnership(workplaceId, [journal], transactions);
+    return [
+      journal.prepareUpdate(updateJournal),
+      ...transactions.map(transaction => transaction.prepareUpdate(updateTransaction)),
+    ];
+  }
+
   prepareMarkReversed(
     journal: Journal,
     reversingJournalId: JournalId,

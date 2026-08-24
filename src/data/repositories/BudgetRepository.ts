@@ -217,6 +217,56 @@ export class BudgetRepository {
       )
       .fetch();
   }
+
+  /**
+   * Prepares WatermelonDB operations to merge budget references from source accounts
+   * into a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<(Budget | BudgetScope)[]> {
+    const scopes = await this.findAllScopesByAccountIds(workplaceId, sourceAccountIds);
+    const budgets = await this.findAllWithAssetAccountIds(workplaceId);
+
+    const scopeOps = scopes.map(scope =>
+      scope.prepareUpdate(record => {
+        record.accountId = targetAccountId;
+        record.updatedAt = new Date();
+      }),
+    );
+
+    const sourceIds = new Set(sourceAccountIds);
+    const budgetOps: Budget[] = [];
+    for (const budget of budgets) {
+      if (!budget.assetAccountIds) continue;
+
+      let changed = false;
+      const accountIds = budget.assetAccountIds
+        .split(',')
+        .map(id => id.trim())
+        .filter(id => id.length > 0)
+        .map(id => {
+          if (sourceIds.has(id as AccountId)) {
+            changed = true;
+            return targetAccountId;
+          }
+          return id as AccountId;
+        });
+
+      if (changed) {
+        budgetOps.push(
+          budget.prepareUpdate(record => {
+            record.assetAccountIds = [...new Set(accountIds)].join(',');
+            record.updatedAt = new Date();
+          }),
+        );
+      }
+    }
+
+    return [...scopeOps, ...budgetOps];
+  }
 }
 
 export const budgetRepository = new BudgetRepository();

@@ -56,7 +56,11 @@ export async function generatePlannedJournalForPayment(
         if (isCancelled()) {
           throw new Error('Planned journal generation cancelled before commit.');
         }
-        return options?.extraOps ? options.extraOps(data) : [];
+        const extraOps = options?.extraOps ? options.extraOps(data) : [];
+        if (isCancelled()) {
+          throw new Error('Planned journal generation cancelled before commit.');
+        }
+        return extraOps;
       },
     });
     return true;

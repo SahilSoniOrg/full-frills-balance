@@ -31,6 +31,8 @@ const accountId = 'account-1' as AccountId;
 const workplaceId = 'workplace-1' as WorkplaceId;
 const rebuildAccountBalances = accountingRebuildService.rebuildAccountBalances as jest.Mock;
 const storageSet = storage.set as jest.Mock;
+const storageGetString = storage.getString as jest.Mock;
+const storageRemove = storage.remove as jest.Mock;
 
 function createQueue(config: { retryLimit?: number } = {}): RebuildQueueService {
   return new RebuildQueueService({
@@ -156,6 +158,57 @@ describe('RebuildQueueService lifecycle', () => {
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
     expect(queue.hasPending).toBe(false);
+  });
+
+  it('does not replay a deliberately stopped batch, but recovers a crashed batch on restart', async () => {
+    let processingMarker: string | undefined;
+    storageSet.mockImplementation((key: string, value: string) => {
+      if (key === 'rebuild_processing_batch_v1') {
+        processingMarker = value;
+      }
+    });
+    storageGetString.mockImplementation((key: string) => {
+      if (key === 'rebuild_processing_batch_v1') {
+        return processingMarker;
+      }
+      return undefined;
+    });
+    storageRemove.mockImplementation((key: string) => {
+      if (key === 'rebuild_processing_batch_v1') {
+        processingMarker = undefined;
+      }
+    });
+
+    let resolveInFlight: (() => void) | undefined;
+    rebuildAccountBalances.mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveInFlight = resolve;
+        }),
+    );
+    queue.enqueue(accountId, 111, workplaceId);
+    await jest.advanceTimersByTimeAsync(100);
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+    expect(processingMarker).toBe(JSON.stringify([['workplace-1__account-1', 111]]));
+
+    queue.stop();
+    expect(storageRemove).toHaveBeenCalledWith('rebuild_processing_batch_v1');
+    resolveInFlight?.();
+    await queue.flush();
+
+    const restartedAfterStop = createQueue();
+    await restartedAfterStop.flush();
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+
+    rebuildAccountBalances.mockResolvedValue(null);
+    processingMarker = JSON.stringify([['workplace-1__account-1', 222]]);
+    const restartedAfterCrash = createQueue();
+    await restartedAfterCrash.flush();
+
+    expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
+    expect(rebuildAccountBalances).toHaveBeenLastCalledWith(workplaceId, accountId, 222);
+    restartedAfterStop.stop();
+    restartedAfterCrash.stop();
   });
 
   it('coalesces a fresh enqueue with an existing delayed retry', async () => {

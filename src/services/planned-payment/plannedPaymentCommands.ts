@@ -1,7 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import Journal from '@/src/data/models/Journal';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import Transaction from '@/src/data/models/Transaction';
+import type PlannedPayment from '@/src/data/models/PlannedPayment';
+import type Transaction from '@/src/data/models/Transaction';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -15,7 +14,7 @@ import {
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { Model, Q } from '@nozbe/watermelondb';
+import { Q } from '@nozbe/watermelondb';
 
 export async function createPlannedPayment(
   workplaceId: WorkplaceId,
@@ -44,27 +43,6 @@ export async function updatePlannedPayment(
   return plannedPaymentRepository.update(workplaceId, existing, updates);
 }
 
-function prepareSoftDeleteJournalsAndTransactionsSync(
-  journals: Journal[],
-  transactions: Transaction[],
-): Model[] {
-  if (journals.length === 0 && transactions.length === 0) return [];
-  const now = new Date();
-  const journalOps = journals.map(j =>
-    j.prepareUpdate(record => {
-      record.deletedAt = now;
-      record.updatedAt = now;
-    }),
-  );
-  const txOps = transactions.map(t =>
-    t.prepareUpdate(record => {
-      record.deletedAt = now;
-      record.updatedAt = now;
-    }),
-  );
-  return [...journalOps, ...txOps];
-}
-
 export async function deletePlannedPayment(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
@@ -89,8 +67,12 @@ export async function deletePlannedPayment(
       : [];
 
   await persistBatch(() => {
-    const journalOps = prepareSoftDeleteJournalsAndTransactionsSync(unpostedJournals, transactions);
     const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
+    const journalOps = journalPlannedQueries.prepareSoftDeleteUpdates(
+      workplaceId,
+      unpostedJournals,
+      transactions,
+    );
     return [ppOp, ...journalOps];
   });
 }

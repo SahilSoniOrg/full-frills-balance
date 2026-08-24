@@ -84,6 +84,22 @@ export class BalanceSnapshotRepository {
   }
 
   /**
+   * Prepares deletion of an invalidated snapshot for an account owned by the workplace.
+   * The caller owns the write and is responsible for batching the prepared operation.
+   */
+  prepareDeleteForAccount(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    snapshot: BalanceSnapshot,
+  ): BalanceSnapshot {
+    if (snapshot.workplaceId !== workplaceId || snapshot.accountId !== accountId) {
+      throw new Error('Balance snapshot does not belong to the specified account and workplace');
+    }
+
+    return snapshot.prepareDestroyPermanently();
+  }
+
+  /**
    * Finds all snapshots after a given date for invalidation.
    */
   async findAfterDate(

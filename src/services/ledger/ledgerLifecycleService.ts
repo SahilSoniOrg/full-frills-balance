@@ -1,6 +1,6 @@
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
-import Journal from '@/src/data/models/Journal';
-import Transaction from '@/src/data/models/Transaction';
+import type Journal from '@/src/data/models/Journal';
+import type Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
@@ -15,7 +15,7 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { BatchWriteOptions } from './ledgerCreateService';
+import type { BatchWriteOptions } from './ledgerCreateService';
 
 export class LedgerLifecycleService {
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
@@ -27,17 +27,12 @@ export class LedgerLifecycleService {
 
     await persistBatch(
       () => {
-        const journalOp = journal.prepareUpdate(j => {
-          j.deletedAt = now;
-          j.updatedAt = now;
-        });
-        const txOps = transactions.map(tx =>
-          tx.prepareUpdate(t => {
-            t.deletedAt = now;
-            t.updatedAt = now;
-          }),
+        const lifecycleOps = journalWriteRepository.prepareDeleteJournalUpdates(
+          journal,
+          transactions,
+          workplaceId,
+          now,
         );
-
         const auditOp = auditRepository.prepareLog(
           {
             entityType: 'journal',
@@ -56,7 +51,7 @@ export class LedgerLifecycleService {
           workplaceId,
         );
 
-        return [journalOp, ...txOps, auditOp];
+        return [...lifecycleOps, auditOp];
       },
       () => {
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -76,17 +71,12 @@ export class LedgerLifecycleService {
 
     await persistBatch(
       () => {
-        const journalOp = journal.prepareUpdate(j => {
-          j.deletedAt = undefined;
-          j.updatedAt = now;
-        });
-        const txOps = transactions.map(tx =>
-          tx.prepareUpdate(t => {
-            t.deletedAt = undefined;
-            t.updatedAt = now;
-          }),
+        const lifecycleOps = journalWriteRepository.prepareRecoverJournalUpdates(
+          journal,
+          transactions,
+          workplaceId,
+          now,
         );
-
         const auditOp = auditRepository.prepareLog(
           {
             entityType: 'journal',
@@ -100,7 +90,7 @@ export class LedgerLifecycleService {
           workplaceId,
         );
 
-        return [journalOp, ...txOps, auditOp];
+        return [...lifecycleOps, auditOp];
       },
       () => {
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -141,19 +131,12 @@ export class LedgerLifecycleService {
             ? options.extraOps(journal)
             : (options?.extraOps ?? []);
 
-        const journalOp = journal.prepareUpdate((record: Journal) => {
-          record.status = JournalStatus.POSTED;
-          record.journalDate = postTime;
-          record.updatedAt = new Date();
-        });
-
-        const txOps = transactions.map(tx =>
-          tx.prepareUpdate((record: Transaction) => {
-            record.transactionDate = postTime;
-            record.updatedAt = new Date();
-          }),
+        const lifecycleOps = journalWriteRepository.preparePostJournalUpdates(
+          journal,
+          transactions,
+          workplaceId,
+          postTime,
         );
-
         const auditOp = auditRepository.prepareLog(
           {
             entityType: 'journal',
@@ -167,7 +150,7 @@ export class LedgerLifecycleService {
           workplaceId,
         );
 
-        return [metadataOp, journalOp, ...txOps, auditOp, ...extras];
+        return [metadataOp, ...lifecycleOps, auditOp, ...extras];
       },
       () => {
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -213,19 +196,12 @@ export class LedgerLifecycleService {
 
     await persistBatch(
       () => {
-        const journalOp = journal.prepareUpdate((record: Journal) => {
-          record.status = JournalStatus.PLANNED;
-          record.journalDate = revertTime;
-          record.updatedAt = new Date();
-        });
-
-        const txOps = transactions.map(tx =>
-          tx.prepareUpdate((record: Transaction) => {
-            record.transactionDate = revertTime;
-            record.updatedAt = new Date();
-          }),
+        const lifecycleOps = journalWriteRepository.prepareRevertJournalUpdates(
+          journal,
+          transactions,
+          workplaceId,
+          revertTime,
         );
-
         const auditOp = auditRepository.prepareLog(
           {
             entityType: 'journal',
@@ -239,7 +215,7 @@ export class LedgerLifecycleService {
           workplaceId,
         );
 
-        return [journalOp, ...txOps, auditOp];
+        return [...lifecycleOps, auditOp];
       },
       () => {
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));

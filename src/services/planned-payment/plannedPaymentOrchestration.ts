@@ -253,6 +253,10 @@ export async function processDuePlannedPayments(
           const created = await generatePlannedJournalForPayment(pp, nextOcc, {
             signal,
             isCurrent,
+            extraOps: () => {
+              const scheduleOp = prepareScheduleAdvance(workplaceId, pp, nextOcc);
+              return scheduleOp ? [scheduleOp] : [];
+            },
           });
           if (!created) break;
           if (isCancelled()) break;
@@ -269,9 +273,11 @@ export async function processDuePlannedPayments(
 
       if (pp.endDate && nextOcc > pp.endDate) {
         if (isCancelled()) break;
-        await plannedPaymentRepository.update(workplaceId, pp, {
-          status: PlannedPaymentStatus.COMPLETED,
-        });
+        if (pp.status !== PlannedPaymentStatus.COMPLETED) {
+          await plannedPaymentRepository.update(workplaceId, pp, {
+            status: PlannedPaymentStatus.COMPLETED,
+          });
+        }
         break;
       }
     }

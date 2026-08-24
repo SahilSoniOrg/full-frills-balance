@@ -1,6 +1,6 @@
-import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
   calculateNextOccurrence,
@@ -44,26 +44,21 @@ export async function togglePlannedPaymentStatus(
   }
 
   await persistBatch(() => {
-    const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
-      record.status = newStatus;
-      if (!isPausing) {
-        record.nextOccurrence = updatedNextOccurrence;
-      }
-      record.updatedAt = new Date();
-    });
-
-    const journalUpdates = targetJournals.map(j =>
-      j.prepareUpdate(record => {
-        if (isPausing) {
-          record.status = JournalStatus.PAUSED;
-        } else {
-          record.status =
-            normalizeToStartOfDay(j.journalDate) >= nowMidnight
+    const ppUpdate = plannedPaymentRepository.prepareStatusUpdate(
+      workplaceId,
+      pp,
+      newStatus,
+      isPausing ? undefined : updatedNextOccurrence,
+    );
+    const journalUpdates = journalPlannedQueries.prepareStatusUpdates(
+      workplaceId,
+      targetJournals,
+      isPausing
+        ? JournalStatus.PAUSED
+        : journal =>
+            normalizeToStartOfDay(journal.journalDate) >= nowMidnight
               ? JournalStatus.PLANNED
-              : JournalStatus.SKIPPED;
-        }
-        record.updatedAt = new Date();
-      }),
+              : JournalStatus.SKIPPED,
     );
 
     return [ppUpdate, ...journalUpdates];

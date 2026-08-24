@@ -210,6 +210,60 @@ export class AccountWriteRepository {
     return batchOps;
   }
 
+  /**
+   * Prepare the final reactive refresh for the requested live accounts.
+   *
+   * Resolve the accounts and prepare their updates inside the caller's write
+   * batch factory so model preparation stays synchronous with the eventual
+   * batch commit. Account lookup is workplace-scoped and ignores deleted rows.
+   */
+  async prepareRefreshOps(workplaceId: WorkplaceId, accountIds: AccountId[]): Promise<Model[]> {
+    const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
+    return accounts.map(account =>
+      account.prepareUpdate(record => {
+        record.updatedAt = new Date();
+      }),
+    );
+  }
+
+  /**
+   * Prepares WatermelonDB operations to archive or unarchive accounts.
+   */
+  prepareArchiveTargetOps(
+    archiveTargets: Account[],
+    unarchiveTargets: Account[],
+    now: Date,
+  ): Model[] {
+    return [
+      ...archiveTargets.map(account =>
+        account.prepareUpdate(record => {
+          record.archivedAt = now;
+          record.updatedAt = now;
+        }),
+      ),
+      ...unarchiveTargets.map(account =>
+        account.prepareUpdate(record => {
+          record.archivedAt = undefined;
+          record.updatedAt = now;
+        }),
+      ),
+    ];
+  }
+
+  /**
+   * Prepares a reactive refresh for an account owned by the workplace.
+   * The caller owns the write and is responsible for batching the prepared operation.
+   */
+  prepareRefresh(workplaceId: WorkplaceId, account: Account): Account {
+    if (account.workplaceId !== workplaceId) {
+      throw new Error('Account does not belong to the specified workplace');
+    }
+
+    return account.prepareUpdate(record => {
+      record.updatedAt = new Date();
+    });
+  }
+
   async update(
     account: Account,
     updates: Partial<AccountPersistenceInput>,

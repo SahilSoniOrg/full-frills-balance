@@ -1,6 +1,6 @@
 # Architecture Refactor Remediation Plan
 
-Status: **ACTIVE — first remediation pass complete; deferred architecture debt remains**
+Status: **ACTIVE — third remediation pass verified; durability and integration debt remains**
 Baseline: `b1ee4d45` on `main`; current local head will be recorded after verification
 Owner: orchestration thread; implementation work is delegated to isolated Luna worktrees.
 Push policy: **never push**. Local commits are expected; completed work is squash-merged into `main`.
@@ -11,7 +11,7 @@ Close the remaining lifecycle, workplace-isolation, financial-integrity, persist
 
 ## Current verification baseline
 
-- `bun run verify` passes locally: architecture checks, typecheck, E2E typecheck, 260 Jest suites, 1,582 passing tests, 1 skipped, and lint.
+- `bun run verify` passes locally: architecture checks, typecheck, E2E typecheck, Jest, and lint. The latest merged-tree run is recorded below.
 - The working tree is clean.
 - The architecture ratchet currently reports three approved direct database-write occurrences in testing helpers.
 - No implementation agent may edit files owned by another workstream.
@@ -27,39 +27,58 @@ All changes below were implemented in isolated `gpt-5.6-luna` worktrees, reviewe
 - `6d73615` — reject deleted account-tree parents.
 - `7117459` — ratchet service/command model persistence access.
 - `b13e9e6` — refresh persistence enforcement inventory and E2E policy documentation.
+- `d7ce7c6d` — prevent cancelled rebuild resurrection after restart.
+- `793f26a3` — atomically advance planned-payment schedule with journal creation.
+- `25a5b50b` — move SMS inbox model preparation into the repository.
+- `6da8cb1b` — move rebuild preparation into repositories.
+- `2db1d13e` — move journal lifecycle preparation into the repository.
+- `7c266523` — move budget and planned-payment merge preparation into repositories.
+- `35d0abc1` — move integrity refresh preparation into the account repository.
+- `1aac5930` — delegate account-merge transaction preparation.
+- `4d70f8ed` — run `persistBatch` callbacks after the writer resolves.
+- `136b2777` — move export ORM projection into the data layer.
+- `b6c2e7c0`, `9c5b19a7` — ratchet completed rebuild/lifecycle/integrity ownership migrations.
+- `df396a2b` — revert an incomplete rebuild slice after focused tests caught missing repository helpers; no incomplete implementation was retained.
 
-Slice-level verification passed in the worktrees: SMS 42 tests; lifecycle/reactive 21 tests; financial cancellation 39 tests; import/account 65 tests; ratchet and formatting checks passed. Full post-merge verification remains required.
+Slice-level verification passed in the worktrees: SMS 42 tests; lifecycle/reactive 21 tests; financial cancellation 39 tests; import/account 65 tests; ratchet and formatting checks passed.
+
+Second-wave slice verification passed in the worktrees: rebuild recovery 10 tests; planned-payment atomicity 38 tests; SMS repository ownership 44 tests. The SMS targeted command exited nonzero only because its isolated coverage threshold was not met; all 44 targeted tests passed.
+
+Third-wave slice verification passed in isolated Luna worktrees: rebuild ownership 13 tests; journal lifecycle ownership 17 tests; account-merge ownership 37 tests; integrity refresh 9 tests; planned-payment ownership 46 tests; export ownership 9 tests; post-commit callback semantics 3 tests. All accepted slices were reviewed and squash-merged locally.
 
 ## Post-merge verification
 
-The post-merge `bun run verify` completed successfully on local `main` after the two new cancellation-test fixtures were branded correctly:
+The final merged-tree `bun run verify` completed successfully after all accepted remediation waves:
 
-- Architecture checks and all ratchets passed: `direct_database_write=3`, `service_model_persistence_access=26`.
+- Architecture checks and all ratchets passed: `direct_database_write=3`, `service_model_persistence_access=0`.
 - E2E TypeScript check passed.
-- Jest: 262 suites passed; 1,597 tests passed; 1 skipped.
+- Jest: 272 suites passed; 1,634 tests passed; 1 skipped.
 - Lint completed without errors.
-- The working tree is clean after the final documentation update; no commits were pushed.
+- `git diff --check` passed; no commits were pushed. The documentation commit that records this verification follows this run.
 
 ## Deferred work that remains explicit
 
-- The 26 service/command model-access baseline entries are guarded against growth but still need migration into repositories/coordinators.
 - Rebuild intent remains MMKV-backed rather than a transactional outbox; a crash between the business commit and enqueue can defer derived repair.
 - Savepoint rollback coverage simulates native-adapter behavior; device-level iOS/Android JSI execution remains unproven.
 - Playwright remains scheduled/manual by policy, not a pull-request gate.
-- `persistBatch` callbacks such as rebuild enqueue still execute inside the Watermelon writer callback; their after-commit semantics need a dedicated coordinator decision.
+- Integrity cancellation tests still mock the rebuild boundary; add a real writer/fault-injection integration case before claiming full transaction-owner coverage.
+- Planned-payment due-horizon generation still has a read-before-write concurrency window for duplicate occurrence days.
+- Named cross-domain coordinators and durable outbox ownership remain a design tranche; current repository writers are mechanically enforced and tested.
 
 ## Adversarial follow-up slices
 
 The post-merge Luna review confirmed these additional gaps; they are now part of the active goal:
 
-### Slice 8 — Cancelled rebuild marker recovery (P1)
+### Slice 8 — Cancelled rebuild marker recovery (P1) — COMPLETE
 
 - `src/services/RebuildQueueService.ts:204-210` clears in-memory work but leaves `PROCESSING_KEY` behind.
 - An in-flight marker is written at `:338-352`, cleanup is skipped after generation changes at `:401-404`, and startup re-enqueues it at `:85-99`.
 
 Required outcome: stopping a workplace cannot resurrect its cancelled in-flight batch after restart, while genuine crash recovery remains intact. Add restart/recovery coverage.
 
-### Slice 9 — Planned-payment journal and schedule atomicity (P1)
+Landed in `d7ce7c6d`; restart and genuine-crash recovery coverage passed.
+
+### Slice 9 — Planned-payment journal and schedule atomicity (P1) — COMPLETE
 
 - `src/services/planned-payment/plannedPaymentOrchestration.ts:252-260` creates the journal.
 - `src/services/planned-payment/plannedPaymentOrchestration.ts:285-287` advances `nextOccurrence` in a later write.
@@ -67,16 +86,30 @@ Required outcome: stopping a workplace cannot resurrect its cancelled in-flight 
 
 Required outcome: journal creation and schedule advancement commit or roll back together, with failure-between-writes coverage.
 
-### Slice 10 — SMS preparation ownership (P2)
+Landed in `793f26a3`; merged-tree integration coverage passed.
+
+### Slice 10 — SMS preparation ownership (P2) — COMPLETE
 
 - `src/services/sms/pipeline/smsInboxRecordPreparer.ts:64-77` still calls model `prepareUpdate`/`prepareCreate` directly.
-- These two occurrences are explicitly baselined in `scripts/architecture-ratchet-baseline.json:21`.
+- These two occurrences were explicitly baselined during the first pass and are now removed from the baseline.
 
 Required outcome: move model preparation into the inbox repository/coordinator while keeping analysis pure and preserving workplace-scoped idempotency.
+
+Landed in `25a5b50b`; the service-model ratchet entries are gone.
 
 ### Slice 11 — Real transaction-owner integration coverage (P2)
 
 Add integration coverage that exercises actual database writers for cancellation and rollback. Current tests mock `rebuildAccountBalances` and `createJournal`, and the inbox repository test uses a fake writer; these prove orchestration but not durable commit behavior.
+
+Still pending; this is the next verification tranche.
+
+### Slice 12 — Repository ownership ratchet closure (P1/P2) — COMPLETE
+
+All service/command `prepare*`, model update, and private `_raw` occurrences are now repository-owned. The ratchet reports `service_model_persistence_access=0`; direct database writes remain limited to the three approved test harness entries.
+
+### Slice 13 — After-commit callback boundary (P1) — COMPLETE
+
+`persistBatch` now invokes callbacks only after `database.write` resolves successfully and never for empty or failed batches. This removes the previous rebuild-enqueue ambiguity, while durable delivery remains deferred.
 
 ## Risk-ordered workstreams
 
@@ -188,14 +221,14 @@ Owner: repository/coordinator layer plus architecture ratchet.
 
 Evidence:
 
-- `scripts/check-architecture-ratchets.mjs:45-47,265-277` detects direct database writes but not service-owned `prepare*` or model mutation preparation.
-- Remaining service-owned preparation exists in `src/services/ledger/ledgerLifecycleService.ts:30-38`, `src/services/planned-payment/plannedPaymentCommands.ts:53-65`, `src/services/AccountingRebuildService.ts:175-212`, and related command modules.
+- `scripts/check-architecture-ratchets.mjs:45-47,265-277` now detects direct database writes and service-owned `prepare*`, model updates, and private raw access.
+- The formerly service-owned preparation paths have migrated to repositories; the ratchet now mechanically rejects regressions.
 - `docs/architecture/PERSISTENCE_OWNERSHIP_INVENTORY.md:12` still reports the old count of 38 direct-write violations while the current ratchet has three approved test-only occurrences.
 
 Required outcome:
 
 - Either move remaining cross-domain preparation into named repositories/coordinators or explicitly codify the allowed preparer seam.
-- Add a ratchet for forbidden service/command model preparation and update the inventory to the current baseline.
+- The service/command persistence ratchet is active at a zero baseline; new bypasses fail architecture verification.
 - Preserve legitimate migration/import/test seams with explicit allowlists and rationale.
 
 Tests and verification required:
@@ -231,7 +264,7 @@ Required outcome:
 ## Definition of done
 
 - Slices 1–5 have implementation and regression tests.
-- Slice 6 either closes the ownership gap or records an explicit, mechanically enforced exception model.
+- Slice 6 closes the ownership gap for service/command persistence mechanics; remaining exceptions are explicit test/infrastructure seams.
 - Import native rollback behavior is proven or the atomicity claim is narrowed.
 - Current docs match the actual ratchet and remaining risks.
 - Full verification passes on `main`.

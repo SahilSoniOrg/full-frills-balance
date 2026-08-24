@@ -1,10 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
+import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { Model, Q } from '@nozbe/watermelondb';
-import Collection from '@nozbe/watermelondb/Collection';
 import {
   DATE_COLUMN_NAMES,
   EXPORT_OMIT_SOFT_DELETED_TABLES,
@@ -13,14 +12,6 @@ import {
   toIsoDate,
   typeSafeColumns,
 } from './exportSchemaUtils';
-
-function getCollection(tableName: string): Collection<Model> | undefined {
-  try {
-    return database.collections.get<Model>(tableName);
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * Universal fetch and transform helper derived from database schema.
@@ -84,21 +75,7 @@ export async function fetchAndTransformTable<T extends object>(
     logger.warn(
       `[ExportService] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
     );
-    const collection = getCollection(tableName);
-    if (!collection?.query) return [];
-    const clauses = columnNames.includes('workplace_id')
-      ? [Q.where('workplace_id', workplaceId)]
-      : [];
-    const rows = await collection.query(...clauses).fetch();
-    raws = rows.map((row: Model) => {
-      const source = (row._raw as unknown as Record<string, unknown>) ?? row;
-      const mapped: Record<string, unknown> = {};
-      for (const snake of columnNames) {
-        const camel = snakeToCamel(snake);
-        mapped[camel] = source?.[snake] !== undefined ? source[snake] : source?.[camel];
-      }
-      return mapped;
-    });
+    raws = await exportRepository.fetchOrmTable(tableName, columnNames, workplaceId);
   }
 
   if (omitSoftDeleted) {

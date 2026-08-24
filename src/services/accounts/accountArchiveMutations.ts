@@ -1,4 +1,5 @@
 import Account from '@/src/data/models/Account';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { analytics } from '@/src/services/analytics';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 
@@ -38,20 +39,7 @@ export function prepareArchiveTargetOps(
   unarchiveTargets: Account[],
   now: Date,
 ) {
-  return [
-    ...archiveTargets.map(account =>
-      account.prepareUpdate(record => {
-        record.archivedAt = now;
-        record.updatedAt = now;
-      }),
-    ),
-    ...unarchiveTargets.map(account =>
-      account.prepareUpdate(record => {
-        record.archivedAt = undefined;
-        record.updatedAt = now;
-      }),
-    ),
-  ];
+  return accountWriteRepository.prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now);
 }
 
 export function collectArchiveAuditEntries(

@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { roundToPrecision } from '@/src/utils/money';
 import { transactionQueryRepository } from './TransactionQueryRepository';
 
@@ -97,6 +97,46 @@ export class TransactionWriteRepository {
         t.deletedAt = new Date();
       });
     });
+  }
+
+  /**
+   * Prepares a running-balance cache update for a transaction owned by the workplace.
+   * The caller owns the write and is responsible for batching the prepared operation.
+   */
+  prepareRunningBalanceUpdate(
+    workplaceId: WorkplaceId,
+    transaction: Transaction,
+    runningBalance: number,
+  ): Transaction {
+    if (transaction.workplaceId !== workplaceId) {
+      throw new Error('Transaction does not belong to the specified workplace');
+    }
+
+    return transaction.prepareUpdate(record => {
+      record.runningBalance = runningBalance;
+    });
+  }
+
+  /**
+   * Prepares WatermelonDB operations to merge transactions from multiple accounts into a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<Transaction[]> {
+    const transactions = await transactionQueryRepository.findAllByAccountIds(
+      workplaceId,
+      sourceAccountIds,
+    );
+
+    return transactions.map(transaction =>
+      transaction.prepareUpdate(record => {
+        record.accountId = targetAccountId;
+        record.runningBalance = null; // Invalidate cache
+        record.updatedAt = new Date();
+      }),
+    );
   }
 }
 

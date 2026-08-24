@@ -12,6 +12,7 @@ import {
 import {
   transactionObserveQueries,
   transactionQueryRepository,
+  transactionWriteRepository,
 } from '@/src/data/repositories/transaction';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
@@ -231,16 +232,10 @@ export class TransactionService {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<Transaction[]> {
-    const transactions = await transactionQueryRepository.findAllByAccountIds(
+    return transactionWriteRepository.prepareMergeOperations(
       workplaceId,
       sourceAccountIds,
-    );
-    return transactions.map((tx: Transaction) =>
-      tx.prepareUpdate((r: Transaction) => {
-        r.accountId = targetAccountId;
-        r.runningBalance = null; // Invalidate cache
-        r.updatedAt = new Date();
-      }),
+      targetAccountId,
     );
   }
 }

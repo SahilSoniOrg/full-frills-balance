@@ -5,6 +5,30 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { Model } from '@nozbe/watermelondb';
 
+export interface TransactionInboxRecordWriteData {
+  workplaceId: WorkplaceId;
+  channel: 'sms';
+  deviceSourceId: string;
+  senderAddress?: string;
+  rawBody?: string;
+  inputDate: number;
+  inputFingerprint: string;
+  parseStatus: TransactionInboxRecord['parseStatus'];
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  parsedMerchant?: string;
+  parsedAccountSource?: string;
+  referenceNumber?: string;
+  direction: TransactionInboxRecord['direction'];
+  processingStatus: InboxProcessingStatus;
+  linkedJournalId?: JournalId;
+  duplicateJournalId?: JournalId;
+  duplicateConfidence?: number;
+  metadataJson?: string;
+  firstSeenAt: number;
+  lastScannedAt: number;
+}
+
 function isProcessedStatus(status: InboxProcessingStatus): boolean {
   return (
     status === InboxProcessingStatus.IMPORTED ||
@@ -44,6 +68,31 @@ export class TransactionInboxRepository {
       entry.processingStatus = status;
       entry.processedAt = isProcessedStatus(status) ? Date.now() : undefined;
     });
+  }
+
+  prepareUpsert(
+    data: TransactionInboxRecordWriteData,
+    existingRecord: TransactionInboxRecord | null,
+  ): { ops: Model[]; record: TransactionInboxRecord } {
+    if (existingRecord && existingRecord.workplaceId !== data.workplaceId) {
+      throw new Error('Inbox record does not belong to the specified workplace');
+    }
+
+    if (existingRecord) {
+      return {
+        ops: [
+          existingRecord.prepareUpdate(record => {
+            Object.assign(record, data);
+          }),
+        ],
+        record: existingRecord,
+      };
+    }
+
+    const record = this.inbox.prepareCreate((entry: TransactionInboxRecord) => {
+      Object.assign(entry, data);
+    });
+    return { ops: [record], record };
   }
 
   async persistLink(

@@ -3,10 +3,12 @@ import { AuditAction, AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { transactionWriteRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
 import {
   AccountReferenceSiteKey,
@@ -16,8 +18,6 @@ import {
   assertMergeAccountsCompatible,
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
-import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
@@ -82,8 +82,8 @@ async function validateMergeEligibility(
  * Merge command: moves transactions, planned payments, rules, budgets, and
  * snapshots from source accounts into a target account atomically, then queues
  * a rebuild. Owns merge eligibility and dependent-record migration policy.
- * Sites to retarget/destroy come from `referenceSites`; Watermelon prepareUpdate
- * ops stay in this command / existing preparers.
+ * Sites to retarget/destroy come from `referenceSites`; preparation is delegated
+ * to the owning repositories.
  */
 export async function mergeAccounts(
   workplaceId: WorkplaceId,
@@ -121,24 +121,16 @@ export async function mergeAccounts(
 
   if (prepareKinds.has('transactions')) {
     prepareTasks.push(
-      (async () => {
-        const transactions = await transactionQueryRepository.findAllByAccountIds(
-          workplaceId,
-          filteredSourceIds,
-        );
-        return transactions.map(tx =>
-          tx.prepareUpdate(r => {
-            r.accountId = targetAccountId;
-            r.runningBalance = null;
-            r.updatedAt = new Date();
-          }),
-        );
-      })(),
+      transactionWriteRepository.prepareMergeOperations(
+        workplaceId,
+        filteredSourceIds,
+        targetAccountId,
+      ) as Promise<Model[]>,
     );
   }
   if (prepareKinds.has('plannedPayments')) {
     prepareTasks.push(
-      preparePlannedPaymentMergeOperations(
+      plannedPaymentRepository.prepareMergeOperations(
         workplaceId,
         filteredSourceIds,
         targetAccountId,
@@ -156,7 +148,7 @@ export async function mergeAccounts(
   }
   if (prepareKinds.has('budgets')) {
     prepareTasks.push(
-      budgetWriteService.prepareMergeOperations(
+      budgetRepository.prepareMergeOperations(
         workplaceId,
         filteredSourceIds,
         targetAccountId,

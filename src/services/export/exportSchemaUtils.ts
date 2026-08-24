@@ -2,7 +2,7 @@ import { schema } from '@/src/data/database/schema';
 import { TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
 
-export const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
+export { snakeToCamel } from '@/src/utils/stringUtils';
 
 export const DATE_COLUMN_NAMES = [
   'created_at',

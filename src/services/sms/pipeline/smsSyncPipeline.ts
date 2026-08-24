@@ -222,7 +222,7 @@ export class SmsSyncPipeline {
               latestJournalsByFingerprint.get(result.fingerprint) ??
               null;
 
-            const { ops, record, autoPosted } = processScanBatchItem({
+            const { journalOps, inboxRecord, autoPosted } = processScanBatchItem({
               result,
               latestRecord,
               latestJournal,
@@ -233,7 +233,12 @@ export class SmsSyncPipeline {
               triggeredRuleIds,
             });
 
-            allOps.push(...ops);
+            const { ops: inboxOps, record } = transactionInboxRepository.prepareUpsert(
+              inboxRecord,
+              latestRecord,
+            );
+
+            allOps.push(...journalOps, ...inboxOps);
             if (autoPosted) importedCount += 1;
             latestRecordsByMessageId.set(result.message.id, record);
           }

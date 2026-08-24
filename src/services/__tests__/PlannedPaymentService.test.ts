@@ -1,12 +1,11 @@
 import { database } from '@/src/data/database/Database';
 import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
-import { preparePlannedPaymentMergeOperations } from '@/src/services/planned-payment/plannedPaymentMergeOperations';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {
   processDuePlannedPayments,
@@ -50,11 +49,26 @@ describe('planned payment modules', () => {
     (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockResolvedValue(undefined);
     (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
+    (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.countOnDay as jest.Mock).mockResolvedValue(0);
-    (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockReturnValue([]);
+    (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockImplementation(
+      (_workplaceId, journals, status) =>
+        journals.map((journal: any) => {
+          journal.status = typeof status === 'function' ? status(journal) : status;
+          return { journalId: journal.id, status: journal.status };
+        }),
+    );
+    (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockReturnValue([]);
     (plannedPaymentRepository.prepareUpdate as jest.Mock).mockImplementation(
       (_workplaceId, _pp, updates) => ({ updates }),
+    );
+    (plannedPaymentRepository.prepareStatusUpdate as jest.Mock).mockImplementation(
+      (_workplaceId, pp, status, nextOccurrence) => {
+        pp.status = status;
+        if (nextOccurrence !== undefined) pp.nextOccurrence = nextOccurrence;
+        return { status, nextOccurrence };
+      },
     );
   });
 
@@ -482,38 +496,82 @@ describe('planned payment modules', () => {
     });
   });
 
-  describe('prepareMergeOperations', () => {
-    test('handles dual-reference case (both from and to accounts are source accounts)', async () => {
-      const sourceAccountIds = ['acc-1', 'acc-2'] as AccountId[];
-      const targetAccountId = 'target-acc' as AccountId;
-      const workplaceId = 'wp-1' as WorkplaceId;
+  describe('delete preparation', () => {
+    it('keeps planned payment, journal, and transaction operations in one ordered batch', async () => {
+      const plannedPayment = {
+        id: 'pp-delete' as PlannedPaymentId,
+        workplaceId: 'wp-1' as WorkplaceId,
+        prepareUpdate: jest.fn(),
+      };
+      const journal = {
+        id: 'journal-delete',
+        workplaceId: 'wp-1' as WorkplaceId,
+        prepareUpdate: jest.fn(),
+      };
+      const transaction = {
+        id: 'transaction-delete',
+        workplaceId: 'wp-1' as WorkplaceId,
+        prepareUpdate: jest.fn(),
+      };
+      const plannedPaymentOp = { id: 'planned-payment-op' };
+      const journalOp = { id: 'journal-op' };
+      const transactionOp = { id: 'transaction-op' };
 
-      const mockPP = {
-        id: 'pp-dual',
-        fromAccountId: 'acc-1',
-        toAccountId: 'acc-2',
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          const record = { id: 'pp-dual', fromAccountId: 'acc-1', toAccountId: 'acc-2' };
-          fn(record);
-          return record;
-        }),
+      (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(plannedPayment);
+      (plannedPaymentRepository.prepareDelete as jest.Mock).mockReturnValue(plannedPaymentOp);
+      (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([
+        journal,
+      ]);
+      (database.collections.get as jest.Mock).mockReturnValue({
+        query: jest.fn().mockReturnThis(),
+        fetch: jest.fn().mockResolvedValue([transaction]),
+      });
+      (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockReturnValue([
+        journalOp,
+        transactionOp,
+      ]);
+
+      await deletePlannedPayment('wp-1' as WorkplaceId, plannedPayment.id);
+
+      expect(database.batch).toHaveBeenCalledWith([plannedPaymentOp, journalOp, transactionOp]);
+      expect(journalPlannedQueries.prepareSoftDeleteUpdates).toHaveBeenCalledWith(
+        'wp-1',
+        [journal],
+        [transaction],
+      );
+      expect(plannedPayment.prepareUpdate).not.toHaveBeenCalled();
+      expect(journal.prepareUpdate).not.toHaveBeenCalled();
+      expect(transaction.prepareUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does not submit a batch when repository preparation fails', async () => {
+      const plannedPayment = {
+        id: 'pp-delete' as PlannedPaymentId,
+        workplaceId: 'wp-1' as WorkplaceId,
+        prepareUpdate: jest.fn(),
+      };
+      const journal = {
+        id: 'journal-delete',
+        workplaceId: 'wp-1' as WorkplaceId,
+        prepareUpdate: jest.fn(),
       };
 
-      // Mock repository to return the same PP for both queries
-      (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([mockPP]);
-      (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([mockPP]);
+      (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(plannedPayment);
+      (plannedPaymentRepository.prepareDelete as jest.Mock).mockReturnValue({ id: 'pp-op' });
+      (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([
+        journal,
+      ]);
+      (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockImplementation(() => {
+        throw new Error('foreign planned-payment journal');
+      });
 
-      const ops = await preparePlannedPaymentMergeOperations(
-        workplaceId,
-        sourceAccountIds,
-        targetAccountId,
+      await expect(deletePlannedPayment('wp-1' as WorkplaceId, plannedPayment.id)).rejects.toThrow(
+        'foreign planned-payment journal',
       );
 
-      // Verify exactly one prepareUpdate was called
-      expect(mockPP.prepareUpdate).toHaveBeenCalledTimes(1);
-      expect(ops.length).toBe(1);
-      expect(ops[0].fromAccountId).toBe(targetAccountId);
-      expect(ops[0].toAccountId).toBe(targetAccountId);
+      expect(database.batch).not.toHaveBeenCalled();
+      expect(plannedPayment.prepareUpdate).not.toHaveBeenCalled();
+      expect(journal.prepareUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -523,20 +581,13 @@ describe('planned payment modules', () => {
         id: 'pp-1' as PlannedPaymentId,
         workplaceId: 'wp-1' as WorkplaceId,
         status: PlannedPaymentStatus.ACTIVE,
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          const record = { id: 'pp-1', status: PlannedPaymentStatus.ACTIVE };
-          fn(record);
-          return record;
-        }),
+        prepareUpdate: jest.fn(),
       };
 
       const mockJournal = {
         id: 'j-planned',
         status: 'PLANNED',
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          fn(mockJournal);
-          return mockJournal;
-        }),
+        prepareUpdate: jest.fn(),
       };
 
       (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(mockPP);
@@ -552,8 +603,19 @@ describe('planned payment modules', () => {
         JournalStatus.PLANNED,
       );
       expect(newStatus).toBe(PlannedPaymentStatus.PAUSED);
-      expect(mockPP.prepareUpdate).toHaveBeenCalled();
-      expect(mockJournal.prepareUpdate).toHaveBeenCalled();
+      expect(plannedPaymentRepository.prepareStatusUpdate).toHaveBeenCalledWith(
+        'wp-1',
+        mockPP,
+        PlannedPaymentStatus.PAUSED,
+        undefined,
+      );
+      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
+        'wp-1',
+        [mockJournal],
+        JournalStatus.PAUSED,
+      );
+      expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
+      expect(mockJournal.prepareUpdate).not.toHaveBeenCalled();
       expect(mockJournal.status).toBe('PAUSED');
       expect(database.batch).toHaveBeenCalled();
     });
@@ -566,10 +628,7 @@ describe('planned payment modules', () => {
         nextOccurrence: Date.now() - 100000000, // in the past
         intervalN: 1,
         intervalType: PlannedPaymentInterval.DAILY,
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          fn(mockPP);
-          return mockPP;
-        }),
+        prepareUpdate: jest.fn(),
       };
 
       const futureDate = Date.now() + 100000;
@@ -579,20 +638,14 @@ describe('planned payment modules', () => {
         id: 'j-future',
         journalDate: futureDate,
         status: 'PAUSED',
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          fn(mockFutureJournal);
-          return mockFutureJournal;
-        }),
+        prepareUpdate: jest.fn(),
       };
 
       const mockPastJournal = {
         id: 'j-past',
         journalDate: pastDate,
         status: 'PAUSED',
-        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-          fn(mockPastJournal);
-          return mockPastJournal;
-        }),
+        prepareUpdate: jest.fn(),
       };
 
       (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(mockPP);
@@ -615,11 +668,22 @@ describe('planned payment modules', () => {
         JournalStatus.PAUSED,
       );
       expect(newStatus).toBe(PlannedPaymentStatus.ACTIVE);
-      expect(mockPP.prepareUpdate).toHaveBeenCalled();
+      expect(plannedPaymentRepository.prepareStatusUpdate).toHaveBeenCalledWith(
+        'wp-1',
+        mockPP,
+        PlannedPaymentStatus.ACTIVE,
+        expect.any(Number),
+      );
       expect(mockPP.nextOccurrence).toBeGreaterThan(oldNextOccurrence);
       expect(mockPP.nextOccurrence).toBeGreaterThanOrEqual(Date.now() - 86400000); // normalized to today midnight
-      expect(mockFutureJournal.prepareUpdate).toHaveBeenCalled();
-      expect(mockPastJournal.prepareUpdate).toHaveBeenCalled();
+      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
+        'wp-1',
+        [mockFutureJournal, mockPastJournal],
+        expect.any(Function),
+      );
+      expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
+      expect(mockFutureJournal.prepareUpdate).not.toHaveBeenCalled();
+      expect(mockPastJournal.prepareUpdate).not.toHaveBeenCalled();
       expect(mockFutureJournal.status).toBe('PLANNED');
       expect(mockPastJournal.status).toBe('SKIPPED');
       // Lifecycle calls processDuePlannedPayments directly (not the façade method).

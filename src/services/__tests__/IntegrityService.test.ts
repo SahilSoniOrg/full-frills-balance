@@ -10,6 +10,7 @@ import { journalWriteRepository } from '@/src/data/repositories/journal/journalW
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { IntegrityService } from '@/src/services/integrity';
 import { repairAccountBalance } from '@/src/services/integrity/integrityRepair';
+import * as integrityVerification from '@/src/services/integrity/integrityVerification';
 import { Q } from '@nozbe/watermelondb';
 
 describe('IntegrityService', () => {
@@ -324,6 +325,53 @@ describe('IntegrityService', () => {
   });
 
   describe('forceRunCheck workplace isolation', () => {
+    it('batches the final refresh for all repaired accounts once', async () => {
+      const secondAccount = await accountWriteRepository.create({
+        name: 'Second cash account',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+      await database.write(async () => {
+        await secondAccount.update(account => {
+          account.updatedAt = new Date(300);
+        });
+      });
+      const scanSpy = jest
+        .spyOn(integrityVerification, 'scanForNullAccountTransactions')
+        .mockResolvedValue();
+      const verifySpy = jest
+        .spyOn(integrityVerification, 'verifyAccountBalance')
+        .mockImplementation(async accountId => ({
+          accountId,
+          accountName: 'Needs repair',
+          cachedBalance: 999,
+          computedBalance: 100,
+          matches: false,
+          discrepancy: 899,
+        }));
+      const rebuildSpy = jest
+        .spyOn(accountingRebuildService, 'rebuildAccountBalances')
+        .mockResolvedValue();
+      const batchSpy = jest.spyOn(database, 'batch');
+
+      try {
+        await service.forceRunCheck('wp-1' as WorkplaceId);
+
+        expect(scanSpy).toHaveBeenCalledWith('wp-1');
+        expect(verifySpy).toHaveBeenCalledTimes(3);
+        expect(rebuildSpy).toHaveBeenCalledTimes(3);
+        expect(batchSpy).toHaveBeenCalledTimes(1);
+        expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
+        expect(secondAccount.updatedAt.getTime()).toBeGreaterThan(300);
+      } finally {
+        batchSpy.mockRestore();
+        rebuildSpy.mockRestore();
+        verifySpy.mockRestore();
+        scanSpy.mockRestore();
+      }
+    });
+
     it('does not notify a foreign account when repair output contains its ID', async () => {
       jest.spyOn(service, 'scanForNullAccountTransactions').mockResolvedValue();
 

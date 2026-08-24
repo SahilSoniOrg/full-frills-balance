@@ -1,7 +1,7 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -12,10 +12,6 @@ import { Model } from '@nozbe/watermelondb';
 import { resolveProcessingStatus, toDirection } from './smsFingerprint';
 import { SmsAnalysisResult } from './types';
 
-function getInboxCollection() {
-  return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-}
-
 export function prepareUpsertInboxRecord(
   sms: SmsMessage,
   parsed: ParsedTransaction,
@@ -25,8 +21,7 @@ export function prepareUpsertInboxRecord(
   workplaceId: WorkplaceId,
   linkedJournalId?: JournalId,
   duplicate?: { journalId: JournalId; score: number; reasons: string[] },
-): { ops: Model[]; record: TransactionInboxRecord } {
-  const ops: Model[] = [];
+): TransactionInboxRecordWriteData {
   const now = Date.now();
   const existingMetadata = existingRecord?.metadataJson
     ? safeParseJSON<Record<string, unknown>>(existingRecord.metadataJson, {})
@@ -35,7 +30,7 @@ export function prepareUpsertInboxRecord(
     ...existingMetadata,
     ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
   });
-  const payload = {
+  return {
     workplaceId,
     channel: 'sms' as const,
     deviceSourceId: sms.id,
@@ -60,24 +55,6 @@ export function prepareUpsertInboxRecord(
     firstSeenAt: existingRecord?.firstSeenAt ?? now,
     lastScannedAt: now,
   };
-
-  let targetRecord: TransactionInboxRecord;
-  if (existingRecord) {
-    targetRecord = existingRecord;
-    ops.push(
-      existingRecord.prepareUpdate(record => {
-        Object.assign(record, payload);
-      }),
-    );
-  } else {
-    const col = getInboxCollection();
-    targetRecord = col.prepareCreate((record: TransactionInboxRecord) => {
-      Object.assign(record, payload);
-    });
-    ops.push(targetRecord);
-  }
-
-  return { ops, record: targetRecord };
 }
 
 export function processScanBatchItem(params: {
@@ -89,7 +66,11 @@ export function processScanBatchItem(params: {
   allAccountsToRebuild: Set<AccountId>;
   processedMessageIds: string[];
   triggeredRuleIds: string[];
-}): { ops: Model[]; record: TransactionInboxRecord; autoPosted: boolean } {
+}): {
+  journalOps: Model[];
+  inboxRecord: TransactionInboxRecordWriteData;
+  autoPosted: boolean;
+} {
   const {
     result,
     latestRecord,
@@ -137,7 +118,7 @@ export function processScanBatchItem(params: {
     triggeredRuleIds.push(result.autoPost.ruleId);
   }
 
-  const { ops: upsertOps, record } = prepareUpsertInboxRecord(
+  const inboxRecord = prepareUpsertInboxRecord(
     result.message,
     result.parsed,
     result.fingerprint,
@@ -147,7 +128,5 @@ export function processScanBatchItem(params: {
     linkedJournalId,
     result.duplicate || undefined,
   );
-  allOps.push(...upsertOps);
-
-  return { ops: allOps, record, autoPosted };
+  return { journalOps: allOps, inboxRecord, autoPosted };
 }

@@ -1,10 +1,11 @@
 import { AppConfig } from '@/src/constants';
-import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
-import Transaction from '@/src/data/models/Transaction';
-import { accountQueryRepository } from '@/src/data/repositories/account';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import {
+  transactionQueryRepository,
+  transactionWriteRepository,
+} from '@/src/data/repositories/transaction';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
@@ -12,6 +13,7 @@ import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model } from '@nozbe/watermelondb';
+import type Transaction from '@/src/data/models/Transaction';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 
@@ -209,18 +211,22 @@ export class AccountingRebuildService {
         const finalBatch: Model[] = [...extraOps];
 
         // Prepare updates for transaction running balances
-        for (const m of allModelsToUpdate) {
-          finalBatch.push(
-            m.prepareUpdate((record: Transaction) => {
-              record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
-            }),
-          );
-        }
+        finalBatch.push(
+          ...allModelsToUpdate.map(m =>
+            transactionWriteRepository.prepareRunningBalanceUpdate(
+              workplaceId,
+              m,
+              idsNeedingUpdate.get(m.id) ?? 0,
+            ),
+          ),
+        );
 
         // Delete invalidated snapshots after the starting point
         if (invalidatedSnapshots.length > 0) {
           finalBatch.push(
-            ...invalidatedSnapshots.map((s: BalanceSnapshot) => s.prepareDestroyPermanently()),
+            ...invalidatedSnapshots.map(s =>
+              balanceSnapshotRepository.prepareDeleteForAccount(workplaceId, accountId, s),
+            ),
           );
         }
 
@@ -241,11 +247,7 @@ export class AccountingRebuildService {
 
         // Trigger lightweight reactive refreshes
         if (idsNeedingUpdate.size > 0 && !silent) {
-          finalBatch.push(
-            account.prepareUpdate(a => {
-              a.updatedAt = new Date();
-            }),
-          );
+          finalBatch.push(accountWriteRepository.prepareRefresh(workplaceId, account));
         }
 
         return finalBatch;

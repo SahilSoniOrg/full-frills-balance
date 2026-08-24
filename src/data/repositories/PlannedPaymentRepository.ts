@@ -129,6 +129,18 @@ export class PlannedPaymentRepository {
     });
   }
 
+  prepareStatusUpdate(
+    workplaceId: WorkplaceId,
+    pp: PlannedPayment,
+    status: PlannedPaymentStatus,
+    nextOccurrence?: number,
+  ): Model {
+    return this.prepareUpdate(workplaceId, pp, {
+      status,
+      ...(nextOccurrence === undefined ? {} : { nextOccurrence }),
+    });
+  }
+
   prepareDelete(workplaceId: WorkplaceId, pp: PlannedPayment): Model {
     if (pp.workplaceId !== workplaceId) {
       throw new Error('Planned payment not found or does not belong to the workplace');
@@ -166,6 +178,46 @@ export class PlannedPaymentRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
+  }
+
+  /**
+   * Prepares WatermelonDB operations to merge planned-payment references from source
+   * accounts into a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<PlannedPayment[]> {
+    const plannedFrom = await this.findAllByFromAccountIds(workplaceId, sourceAccountIds);
+    const plannedTo = await this.findAllByToAccountIds(workplaceId, sourceAccountIds);
+
+    const mutations = new Map<
+      string,
+      { from?: AccountId; to?: AccountId; record: PlannedPayment }
+    >();
+
+    plannedFrom.forEach(record => {
+      if (!mutations.has(record.id)) {
+        mutations.set(record.id, { record });
+      }
+      mutations.get(record.id)!.from = targetAccountId;
+    });
+
+    plannedTo.forEach(record => {
+      if (!mutations.has(record.id)) {
+        mutations.set(record.id, { record });
+      }
+      mutations.get(record.id)!.to = targetAccountId;
+    });
+
+    return Array.from(mutations.values()).map(({ record, from, to }) =>
+      record.prepareUpdate(updated => {
+        if (from) updated.fromAccountId = from;
+        if (to) updated.toAccountId = to;
+        updated.updatedAt = new Date();
+      }),
+    );
   }
 }
 
