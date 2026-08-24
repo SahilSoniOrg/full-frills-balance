@@ -7,7 +7,7 @@ import {
   SerializedAccountMetadataPayload,
   WorkplaceId,
 } from '@/src/types/domain';
-import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import { accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -42,6 +42,7 @@ export interface CreateAccountCommandInput {
   /** Custom accent color (hex). Empty/omitted = derive from account type. */
   color?: string;
   initialBalance?: number;
+  /** @deprecated Ordinary creation always appends within its sibling list. */
   orderNum?: number;
   parentAccountId?: AccountId | null;
   workplaceId: WorkplaceId;
@@ -55,8 +56,6 @@ export async function createAccount(
   workplaceId: WorkplaceId,
   input: CreateAccountCommandInput,
 ): Promise<Account> {
-  const orderNum = input.orderNum ?? (await accountQueryRepository.countNonDeleted(workplaceId));
-
   let currencyCode = input.currencyCode;
   if (!currencyCode) {
     currencyCode = await workplaceService.getCurrency(workplaceId);
@@ -92,7 +91,7 @@ export async function createAccount(
     description: input.description,
     icon: input.icon,
     color: input.color && isValidHexColor(input.color) ? input.color : undefined,
-    orderNum,
+    orderNum: 0,
     parentAccountId: input.parentAccountId || undefined,
     workplaceId: input.workplaceId,
     metadata: input.metadata,
@@ -115,6 +114,14 @@ export async function createAccount(
 
   const account = await accountWriteRepository.persistCreatedAccount({
     payload,
+    resolvePayload: accounts => ({
+      ...payload,
+      orderNum: accounts.filter(
+        candidate =>
+          (candidate.parentAccountId || undefined) === (input.parentAccountId || undefined) &&
+          candidate.accountType === input.accountType,
+      ).length,
+    }),
     companionPayloads,
     extraOps: ({ account: created }) => [
       auditRepository.prepareLog(

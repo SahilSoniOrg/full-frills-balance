@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test';
+
 module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['./jest.setup.js'],

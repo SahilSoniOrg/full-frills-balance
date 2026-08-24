@@ -47,7 +47,6 @@ export interface AccountsListViewModel {
   modals: AccountsListModalsProps;
   onCollapseAccount: (accountId: AccountId) => void;
   onCreateAccount: () => void;
-  onReorderPress: () => void;
   onManageHierarchy: () => void;
   isLoading: boolean;
   version: number;

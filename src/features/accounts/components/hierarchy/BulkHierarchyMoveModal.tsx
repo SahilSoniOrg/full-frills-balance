@@ -1,5 +1,5 @@
-import { ModalSurface } from '@/src/components/common/ModalSurface';
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -40,18 +40,14 @@ export function BulkHierarchyMoveModal({
   };
 
   return (
-    <ModalSurface
+    <BulkActionModalSurface
       visible={visible}
       onClose={onClose}
       title="Move Accounts"
-      fixedHeight={false}
-      scrollable={true}
-      accessibilityCloseLabel="Close move modal"
-      footer={
-        <AppButton variant="ghost" onPress={onClose} style={styles.cancelButton}>
-          Cancel
-        </AppButton>
-      }
+      itemCount={selectedCount}
+      itemCountLabel={`${selectedCount} selected account${selectedCount === 1 ? '' : 's'}`}
+      cancelLabel="Cancel"
+      testID="bulk-hierarchy-move"
     >
       <AppText variant="caption" color="secondary" style={styles.subtitle}>
         {`Select a new parent account for ${selectedCount} selected account${
@@ -100,7 +96,7 @@ export function BulkHierarchyMoveModal({
           </AppText>
         </TouchableOpacity>
       ))}
-    </ModalSurface>
+    </BulkActionModalSurface>
   );
 }
 
@@ -127,8 +123,5 @@ const styles = StyleSheet.create({
   },
   itemText: {
     flex: 1,
-  },
-  cancelButton: {
-    marginTop: Spacing.xs,
   },
 });

@@ -32,7 +32,7 @@ export function useAccountPersistence(
   currentAccountId: AccountId | undefined,
   hasExistingAccounts: boolean,
 ): PersistenceResult {
-  const { createAccount, updateAccount, adjustBalance } = useAccountActions(workplaceId);
+  const { createAccount, saveAccount, adjustBalance } = useAccountActions(workplaceId);
   const [isCreating, setIsCreating] = useState(false);
   const isSubmitting = useRef(false);
 
@@ -63,7 +63,7 @@ export function useAccountPersistence(
           });
         }
 
-        const updatedAccount = await updateAccount(existingAccount, {
+        const updatedAccount = await saveAccount(existingAccount, {
           name: sanitizedName,
           accountType: payload.accountType,
           accountSubtype: payload.accountSubtype,

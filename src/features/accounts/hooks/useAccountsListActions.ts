@@ -82,12 +82,8 @@ export function useAccountsListActions({
     }
   }, [activeTab]);
 
-  const onReorderPress = useCallback(() => {
-    AppNavigation.toAccountReorder(activeTab);
-  }, [activeTab]);
-
   const onManageHierarchy = useCallback(() => {
-    AppNavigation.toManageHierarchy({ filterMode: activeTab });
+    AppNavigation.toAccountManagement({ filterMode: activeTab });
   }, [activeTab]);
 
   const onNavigateToAccountDetails = useCallback(
@@ -174,7 +170,6 @@ export function useAccountsListActions({
   return {
     onAccountPress,
     onCreateAccount,
-    onReorderPress,
     onManageHierarchy,
     onViewDetails,
     onEditAccount,

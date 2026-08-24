@@ -37,6 +37,32 @@ export interface ListSelectionChrome {
   actions?: SelectionAction[];
 }
 
+export interface SelectionActionPartition {
+  barActions: SelectionAction[];
+  overflowActions: SelectionAction[];
+}
+
+export function partitionSelectionActions(actions: SelectionAction[]): SelectionActionPartition {
+  const applicableActions = actions.filter(action => !action.disabled);
+  if (applicableActions.length <= 3) {
+    return { barActions: applicableActions, overflowActions: [] };
+  }
+
+  const primaries = applicableActions.filter(action => action.isPrimary);
+  const secondaries = applicableActions.filter(action => !action.isPrimary);
+  if (primaries.length > 0) {
+    return {
+      barActions: primaries.slice(0, 3),
+      overflowActions: [...secondaries, ...primaries.slice(3)],
+    };
+  }
+
+  return {
+    barActions: applicableActions.slice(0, 3),
+    overflowActions: applicableActions.slice(3),
+  };
+}
+
 export interface SelectionActionBarProps {
   selectedCount: number;
   totalCount: number;
@@ -89,28 +115,10 @@ export const SelectionActionBar = ({
   }, [actions, onShare, selectedCount]);
 
   // Split actions between direct bar buttons and overflow bottom sheet
-  const { barActions, overflowActions } = useMemo(() => {
-    if (finalActions.length <= 2) {
-      return { barActions: finalActions, overflowActions: [] };
-    }
-
-    const primaries = finalActions.filter(a => a.isPrimary);
-    const secondaries = finalActions.filter(a => !a.isPrimary);
-
-    let visible: SelectionAction[];
-    let overflow: SelectionAction[];
-
-    if (primaries.length > 0) {
-      visible = primaries.slice(0, 2);
-      const remainingPrimaries = primaries.slice(2);
-      overflow = [...secondaries, ...remainingPrimaries];
-    } else {
-      visible = finalActions.slice(0, 2);
-      overflow = finalActions.slice(2);
-    }
-
-    return { barActions: visible, overflowActions: overflow };
-  }, [finalActions]);
+  const { barActions, overflowActions } = useMemo(
+    () => partitionSelectionActions(finalActions),
+    [finalActions],
+  );
 
   // --- Selection State Logic
   const selectionState = useMemo(() => {

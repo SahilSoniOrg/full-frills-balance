@@ -8,6 +8,5 @@ export { getAccountIcon } from '@/src/utils/accountIcon';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as CategoryCreationScreen } from './screens/CategoryCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
-export { default as AccountReorderScreen } from './screens/AccountReorderScreen';
+export { default as AccountManagementScreen } from './screens/AccountManagementScreen';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';
-export { default as ManageHierarchyScreen } from './screens/ManageHierarchyScreen';

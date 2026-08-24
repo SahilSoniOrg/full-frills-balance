@@ -5,7 +5,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { balanceService } from '@/src/services/balance';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { createAccount } from '@/src/services/accounts/accountCommands';
-import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
+import { saveAccount, updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 
 describe('Account Hierarchy Integration', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;
@@ -20,6 +20,19 @@ describe('Account Hierarchy Integration', () => {
       icon: 'briefcase',
       defaultCurrencyCode: 'USD',
     });
+  });
+
+  it('rejects hierarchy fields sent through the detail-only update command', async () => {
+    const account = await createAccount(workplaceId, {
+      name: 'Detail only',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    await expect(
+      updateAccount(workplaceId, account.id, { parentAccountId: null } as never),
+    ).rejects.toThrow('Hierarchy fields must be changed with saveAccount or moveAccounts');
   });
 
   it('should create a parent and child account correctly', async () => {
@@ -176,7 +189,7 @@ describe('Account Hierarchy Integration', () => {
     });
 
     // Attempting to set A's parent to B should fail
-    await expect(updateAccount(workplaceId, a.id, { parentAccountId: b.id })).rejects.toThrow(
+    await expect(saveAccount(workplaceId, a.id, { parentAccountId: b.id })).rejects.toThrow(
       'Circular parent relationship detected',
     );
   });
@@ -224,7 +237,7 @@ describe('Account Hierarchy Integration', () => {
 
     // Attempting to set 'parent' as child's parent should fail because it has an initial balance transaction
     await expect(
-      updateAccount(workplaceId, child.id, { parentAccountId: parent.id }),
+      saveAccount(workplaceId, child.id, { parentAccountId: parent.id }),
     ).rejects.toThrow(/has transactions and cannot be used as a parent/);
   });
 
@@ -288,7 +301,7 @@ describe('Account Hierarchy Integration', () => {
     });
 
     // Update ONLY parentAccountId
-    const updated = await updateAccount(workplaceId, child.id, { parentAccountId: parent.id });
+    const updated = await saveAccount(workplaceId, child.id, { parentAccountId: parent.id });
 
     // Verify name and description are preserved
     expect(updated.name).toBe('Original Child Name');
@@ -296,7 +309,7 @@ describe('Account Hierarchy Integration', () => {
     expect(updated.parentAccountId).toBe(parent.id);
 
     // Move back to top level (clear parent)
-    const cleared = await updateAccount(workplaceId, child.id, { parentAccountId: null });
+    const cleared = await saveAccount(workplaceId, child.id, { parentAccountId: null });
     expect(cleared.name).toBe('Original Child Name');
     expect(cleared.parentAccountId).toBeFalsy();
   });

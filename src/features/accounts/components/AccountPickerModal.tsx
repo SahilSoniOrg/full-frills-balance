@@ -3,6 +3,10 @@ import { AccountId, PlainAccount } from '@/src/types/domain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
+import { AppIcon, AppText } from '@/src/components/core';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { useTheme } from '@/src/hooks/use-theme';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 export type { CreateAccountIntent };
 
@@ -13,6 +17,9 @@ type AccountPickerModalBaseProps = {
   onClose: () => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
+  allowNone?: boolean;
+  noneLabel?: string;
+  onClear?: () => void;
 };
 
 export type AccountPickerModalProps = AccountPickerModalBaseProps & {
@@ -35,11 +42,38 @@ export function AccountPickerModal({
   onSelect,
   onCreateRequest,
   excludeParentAccounts = false,
+  allowNone = false,
+  noneLabel = 'None',
+  onClear,
 }: AccountPickerModalProps) {
   const selectedIds = useMemo(() => new Set(selectedId ? [selectedId] : []), [selectedId]);
+  const { theme } = useTheme();
 
   return (
     <BaseAccountPickerModal visible={visible} onClose={onClose} title={title}>
+      {allowNone && onClear ? (
+        <TouchableOpacity
+          style={[
+            styles.noneOption,
+            {
+              backgroundColor: withOpacity(theme.primary, Opacity.hover),
+              borderColor: theme.primary,
+            },
+          ]}
+          onPress={() => {
+            onClear();
+            onClose();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={noneLabel}
+        >
+          <AppIcon name="eject" size={Size.iconMd} color={theme.primary} />
+          <AppText variant="body" color="primary" weight="bold" style={styles.noneLabel}>
+            {noneLabel}
+          </AppText>
+          {!selectedId && <AppIcon name="check" size={Size.iconMd} color={theme.primary} />}
+        </TouchableOpacity>
+      ) : null}
       <AccountPickerList
         accounts={accounts}
         selectedIds={selectedIds}
@@ -52,6 +86,22 @@ export function AccountPickerModal({
     </BaseAccountPickerModal>
   );
 }
+
+const styles = StyleSheet.create({
+  noneOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    minHeight: Size.touchTarget,
+    borderWidth: 1,
+    borderRadius: Shape.radius.md,
+  },
+  noneLabel: { flex: 1 },
+});
 
 export function MultiAccountPickerModal({
   visible,

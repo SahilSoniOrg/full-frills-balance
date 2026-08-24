@@ -20,16 +20,20 @@ interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
   selectedAccount: AccountFields | undefined;
   parentCandidates: AccountFields[];
+  isSaving: boolean;
   onSelectAccount: (accountId: AccountId | null) => void;
   onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
+  onDismiss: () => void;
 }
 
 export function HierarchyMoveModal({
   selectedAccountId,
   selectedAccount,
   parentCandidates,
+  isSaving,
   onSelectAccount,
   onAssignParent,
+  onDismiss,
 }: HierarchyMoveModalProps) {
   const { theme } = useTheme();
   const close = () => onSelectAccount(null);
@@ -40,6 +44,7 @@ export function HierarchyMoveModal({
       transparent
       animationType="slide"
       onRequestClose={close}
+      onDismiss={onDismiss}
       statusBarTranslucent
     >
       <TouchableWithoutFeedback onPress={close}>
@@ -62,8 +67,27 @@ export function HierarchyMoveModal({
                   <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
                     {AppConfig.strings.accounts.hierarchy.moveParentLabel}
                   </AppText>
+                  <TouchableOpacity
+                    disabled={isSaving}
+                    style={[
+                      styles.destinationItem,
+                      { borderBottomColor: theme.divider } as ViewStyle,
+                    ]}
+                    onPress={() =>
+                      selectedAccountId && void onAssignParent(selectedAccountId, null)
+                    }
+                  >
+                    <AppIcon name="eject" size={Size.iconSm} color={theme.textSecondary} />
+                    <AppText variant="body" style={{ flex: 1 }}>
+                      No parent
+                    </AppText>
+                    {!selectedAccount?.parentAccountId && (
+                      <AppIcon name="check" size={Size.iconSm} color={theme.success} />
+                    )}
+                  </TouchableOpacity>
                   {parentCandidates.map(candidate => (
                     <TouchableOpacity
+                      disabled={isSaving}
                       key={candidate.id}
                       style={[
                         styles.destinationItem,

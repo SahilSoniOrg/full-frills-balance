@@ -35,7 +35,6 @@ function AccountsScreen() {
           searchQuery={vm.searchQuery}
           onSearchChange={vm.onSearchChange}
           setIsSearching={vm.setIsSearching}
-          onReorderPress={vm.onReorderPress}
           onManageHierarchy={vm.onManageHierarchy}
           accountsForArchiveToggle={vm.accountsForArchiveToggle}
         />
@@ -54,7 +53,6 @@ function AccountsScreen() {
     vm.isSelectionModeActive,
     vm.selectionChrome.exitSelectionMode,
     vm.onManageHierarchy,
-    vm.onReorderPress,
     vm.onSearchChange,
     vm.searchQuery,
     vm.setIsSearching,

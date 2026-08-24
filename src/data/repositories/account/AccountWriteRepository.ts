@@ -67,6 +67,8 @@ export class AccountWriteRepository {
    */
   async persistCreatedAccount(params: {
     payload: AccountPersistenceInput;
+    /** Resolve lock-sensitive fields from the writer's current account set. */
+    resolvePayload?: (accounts: readonly Account[]) => AccountPersistenceInput;
     companionPayloads?: AccountPersistenceInput[];
     extraOps?: (created: { account: Account; companions: Account[] }) => Model[];
     followUpBatch?: (created: { account: Account; companions: Account[] }) => Promise<Model[]>;
@@ -84,7 +86,10 @@ export class AccountWriteRepository {
     }
 
     return this.db.write(async () => {
-      const { account, ops } = this.prepareCreateOps(params.payload);
+      const payload = params.resolvePayload
+        ? params.resolvePayload(await accountQueryRepository.findAll(params.payload.workplaceId))
+        : params.payload;
+      const { account, ops } = this.prepareCreateOps(payload);
       const companions: Account[] = [];
       for (const companion of params.companionPayloads ?? []) {
         const prepared = this.prepareCreateOps(companion);

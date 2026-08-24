@@ -6,8 +6,7 @@ import type {
   JournalActiveModal,
   JournalListModalsProps,
 } from '@/src/features/journal/types/modals';
-import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
-import { useUndoableAction } from '@/src/hooks/useUndoableAction';
+import { useListSelection } from '@/src/hooks/useListSelection';
 import type { UseSelectionResult } from '@/src/hooks/useSelection';
 import {
   bulkChangeJournalAccount as bulkChangeJournalAccountCommand,
@@ -20,7 +19,7 @@ import {
 } from '@/src/services/journal/bulk';
 import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
@@ -35,19 +34,17 @@ export function useJournalsBulkOperations({
   selection,
   onShareSelected,
 }: UseJournalsBulkOperationsInput) {
-  const [activeModal, setActiveModal] = useState<JournalActiveModal>(null);
-  const openModal = useCallback((modal: JournalActiveModal) => {
-    setActiveModal(modal);
-  }, []);
-  const closeModal = useCallback(() => {
-    setActiveModal(null);
-  }, []);
-
-  const { selectedItems: selectedJournals } = useSelectedItemMap<EnrichedJournal, JournalId>(
-    journals,
+  const {
+    activeModal,
+    openModal,
+    closeModal,
+    selectedItems: selectedJournals,
+    runUndoableAction,
+    buildActions,
+  } = useListSelection<EnrichedJournal, JournalId, JournalActiveModal>({
+    items: journals,
     selection,
-  );
-  const runUndoableAction = useUndoableAction(selection.exitSelectionMode, closeModal);
+  });
 
   // 1. Bulk Rename
   const handleOpenBulkRename = useCallback(() => {
@@ -188,71 +185,82 @@ export function useJournalsBulkOperations({
   }, [workplaceId, selection, runUndoableAction]);
 
   // Bulk Selection Actions for SelectionActionBar
-  const actions: SelectionAction[] = useMemo(() => {
-    const count = selection.selectedIds.size;
-    const disabled = count === 0;
-
-    return [
-      {
-        name: 'edit' as const,
-        label: 'Rename',
-        onPress: handleOpenBulkRename,
-        variant: 'surface',
-        disabled,
-        accessibilityLabel: 'Edit names of selected transactions',
-      },
-      {
-        name: 'copy' as const,
-        label: 'Duplicate',
-        onPress: handleBulkDuplicate,
-        variant: 'surface',
-        disabled,
-        accessibilityLabel: 'Duplicate selected transactions',
-      },
-      {
-        name: 'merge' as const,
-        label: 'Merge',
-        onPress: handleOpenMerge,
-        variant: 'surface',
-        disabled: count < 2,
-        accessibilityLabel: 'Merge selected transactions',
-      },
-      {
-        name: 'swapHorizontal' as const,
-        label: 'Change Account',
-        onPress: handleOpenChangeAccount,
-        variant: 'surface',
-        disabled,
-        accessibilityLabel: 'Change accounts for selected transactions',
-      },
-      {
-        name: 'share' as const,
-        label: 'Share',
-        onPress: onShareSelected,
-        variant: 'primary',
-        isPrimary: true,
-        disabled,
-        accessibilityLabel: 'Share selected transactions',
-      },
-      {
-        name: 'delete' as const,
-        label: 'Delete',
-        onPress: handleBulkDelete,
-        variant: 'error',
-        isPrimary: true,
-        disabled,
-        accessibilityLabel: 'Delete selected transactions',
-      },
-    ];
-  }, [
-    selection.selectedIds.size,
-    handleOpenBulkRename,
-    handleBulkDuplicate,
-    handleOpenMerge,
-    handleOpenChangeAccount,
-    onShareSelected,
-    handleBulkDelete,
-  ]);
+  const actions: SelectionAction[] = useMemo(
+    () =>
+      buildActions([
+        {
+          action: {
+            name: 'edit' as const,
+            label: 'Rename',
+            onPress: handleOpenBulkRename,
+            variant: 'surface',
+            accessibilityLabel: 'Edit names of selected transactions',
+          },
+          isEnabled: count => count > 0,
+        },
+        {
+          action: {
+            name: 'copy' as const,
+            label: 'Duplicate',
+            onPress: handleBulkDuplicate,
+            variant: 'surface',
+            accessibilityLabel: 'Duplicate selected transactions',
+          },
+          isEnabled: count => count > 0,
+        },
+        {
+          action: {
+            name: 'merge' as const,
+            label: 'Merge',
+            onPress: handleOpenMerge,
+            variant: 'surface',
+            accessibilityLabel: 'Merge selected transactions',
+          },
+          isVisible: count => count >= 2,
+        },
+        {
+          action: {
+            name: 'swapHorizontal' as const,
+            label: 'Change Account',
+            onPress: handleOpenChangeAccount,
+            variant: 'surface',
+            accessibilityLabel: 'Change accounts for selected transactions',
+          },
+          isEnabled: count => count > 0,
+        },
+        {
+          action: {
+            name: 'share' as const,
+            label: 'Share',
+            onPress: onShareSelected,
+            variant: 'primary',
+            isPrimary: true,
+            accessibilityLabel: 'Share selected transactions',
+          },
+          isEnabled: count => count > 0,
+        },
+        {
+          action: {
+            name: 'delete' as const,
+            label: 'Delete',
+            onPress: handleBulkDelete,
+            variant: 'error',
+            isPrimary: true,
+            accessibilityLabel: 'Delete selected transactions',
+          },
+          isEnabled: count => count > 0,
+        },
+      ]),
+    [
+      buildActions,
+      handleOpenBulkRename,
+      handleBulkDuplicate,
+      handleOpenMerge,
+      handleOpenChangeAccount,
+      onShareSelected,
+      handleBulkDelete,
+    ],
+  );
 
   const modals = useMemo(
     (): JournalListModalsProps => ({

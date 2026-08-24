@@ -70,3 +70,15 @@ _Avoid_: Include inactive; show hidden
 **Archive cascade**:
 When archiving or unarchiving an account that has descendants, a confirmation dialog listing the account tree (parents and leaves, hierarchy indented). The user selects which nodes to include; nothing cascades without explicit selection.
 _Avoid_: Archive all; cascade archive (as automatic behavior)
+
+**Account tree**:
+The complete hierarchy of accounts in one account type, including archived accounts, where each account belongs to exactly one ordered sibling list under a parent or at the root.
+_Avoid_: flat account order; global account order
+
+**Sibling list**:
+The ordered children of one parent account, or the ordered root accounts when there is no parent. Positions are scoped to that list and do not compare across parents.
+_Avoid_: global position; category position
+
+**Subtree move**:
+A tree operation that changes an account’s parent while preserving that account’s descendants, their parent links, and their relative sibling order.
+_Avoid_: move-and-flatten; reattach children

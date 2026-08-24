@@ -82,6 +82,46 @@ describe('account commands (integration)', () => {
     expect(meta?.statementDay).toBe(15);
   });
 
+  it('assigns omitted sibling positions inside the write owner', async () => {
+    const parent = await createAccount(WP, {
+      name: 'Concurrent parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const created = await Promise.all(
+      ['Concurrent A', 'Concurrent B'].map(name =>
+        createAccount(WP, {
+          name,
+          accountType: AccountType.ASSET,
+          currencyCode: 'USD',
+          parentAccountId: parent.id,
+          workplaceId: WP,
+        }),
+      ),
+    );
+    expect(created.map(account => account.orderNum).sort()).toEqual([0, 1]);
+  });
+
+  it('does not allow ordinary creation to inject an explicit sibling position', async () => {
+    await createAccount(WP, {
+      name: 'First',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+
+    const second = await createAccount(WP, {
+      name: 'Second',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      orderNum: 0,
+      workplaceId: WP,
+    });
+
+    expect(second.orderNum).toBe(1);
+  });
+
   it('create rejects parent with mismatched type', async () => {
     const expenseParent = await createAccount(WP, {
       name: 'Food',

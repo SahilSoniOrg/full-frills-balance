@@ -1,0 +1,15 @@
+appId: in.sahilsoni.fullfrillsbalance
+env:
+  SEED_PROFILE: journal-ready
+---
+- runFlow: account-management-smoke.yml
+- swipe:
+    start: 9%, 47%
+    end: 9%, 57%
+    duration: 2000
+- extendedWaitUntil:
+    visible: Save 1 change
+    timeout: 10000
+- assertVisible: Changes are staged until saved.
+- tapOn: Save
+- assertNotVisible: Save 1 change

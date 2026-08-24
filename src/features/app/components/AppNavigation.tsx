@@ -53,12 +53,12 @@ export function NavigationStack() {
       <Stack.Screen name="account-details" options={{ headerShown: false }} />
       <Stack.Screen name="journal-details" options={{ headerShown: false }} />
       <Stack.Screen
-        name="account-reorder"
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="manage-hierarchy"
-        options={{ headerShown: false, presentation: 'modal' }}
+        name="account-management"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          headerBackButtonMenuEnabled: false,
+        }}
       />
       <Stack.Screen name="import-selection" options={{ headerShown: false }} />
       <Stack.Screen name="audit-log" options={{ headerShown: false }} />

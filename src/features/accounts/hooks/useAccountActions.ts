@@ -19,8 +19,11 @@ import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChange
 import { createAccount as createAccountCommand } from '@/src/services/accounts/accountCommands';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import {
+  type AccountDetailsUpdate,
+  type AccountSaveUpdate,
+  saveAccount as saveAccountCommand,
   updateAccount as updateAccountCommand,
-  updateAccountOrder as updateAccountOrderCommand,
+  moveAccount as moveAccountCommand,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
@@ -46,22 +49,15 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   );
 
   const updateAccount = useCallback(
-    async (
-      account: { id: AccountId },
-      data: {
-        name?: string;
-        accountType?: AccountType;
-        accountSubtype?: AccountSubtype;
-        currencyCode?: string;
-        description?: string;
-        icon?: IconName;
-        color?: string;
-        parentAccountId?: AccountId | null;
-        metadata?: Partial<SerializedAccountMetadataPayload>;
-      },
-    ) => {
+    async (account: { id: AccountId }, data: AccountDetailsUpdate) => {
       return updateAccountCommand(workplaceId, account.id, data);
     },
+    [workplaceId],
+  );
+
+  const saveAccount = useCallback(
+    async (account: { id: AccountId }, data: AccountSaveUpdate) =>
+      saveAccountCommand(workplaceId, account.id, data),
     [workplaceId],
   );
 
@@ -86,9 +82,12 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
-  const updateAccountOrder = useCallback(
-    async (account: { id: AccountId }, newOrder: number) => {
-      return updateAccountOrderCommand(workplaceId, account.id, newOrder);
+  const moveAccount = useCallback(
+    async (
+      accountId: AccountId,
+      destination: { parentId: AccountId | null; siblingIndex: number },
+    ) => {
+      return moveAccountCommand(workplaceId, accountId, destination);
     },
     [workplaceId],
   );
@@ -121,10 +120,11 @@ export function useAccountActions(workplaceId: WorkplaceId) {
   return {
     createAccount,
     updateAccount,
+    saveAccount,
     applyArchiveChanges,
     deleteAccount,
     recoverAccount,
-    updateAccountOrder,
+    moveAccount,
     adjustBalance,
     reconcileAccount,
     mergeAccounts,

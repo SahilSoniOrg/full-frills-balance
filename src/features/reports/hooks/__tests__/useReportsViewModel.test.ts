@@ -6,6 +6,10 @@ import { AccountId } from '@/src/types/domain';
 
 jest.mock('../useReports');
 
+jest.mock('@/src/services/analytics', () => ({
+  analytics: { trackFeatureUsage: jest.fn(), logChartInteracted: jest.fn() },
+}));
+
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({
     workplaceId: 'wp-1',

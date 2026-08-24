@@ -9,8 +9,7 @@ jest.mock('@/src/utils/navigation', () => ({
     toAccountDetails: jest.fn(),
     toAccountCreation: jest.fn(),
     toCategoryCreation: jest.fn(),
-    toAccountReorder: jest.fn(),
-    toManageHierarchy: jest.fn(),
+    toAccountManagement: jest.fn(),
   },
 }));
 
@@ -95,12 +94,11 @@ describe('useAccountsListActions', () => {
 
     act(() => {
       result.current.onCreateAccount();
-      result.current.onReorderPress();
       result.current.onManageHierarchy();
     });
 
     expect(AppNavigation.toCategoryCreation).toHaveBeenCalled();
-    expect(AppNavigation.toAccountReorder).toHaveBeenCalledWith('categories');
-    expect(AppNavigation.toManageHierarchy).toHaveBeenCalledWith({ filterMode: 'categories' });
+    expect(AppNavigation.toAccountManagement).toHaveBeenCalledWith({ filterMode: 'categories' });
+    expect(AppNavigation.toAccountManagement).toHaveBeenCalledTimes(1);
   });
 });

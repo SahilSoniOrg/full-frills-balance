@@ -11,7 +11,6 @@ export type AccountsListHeaderActionsProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   setIsSearching: (searching: boolean) => void;
-  onReorderPress: () => void;
   onManageHierarchy: () => void;
   accountsForArchiveToggle: readonly ArchiveAccountRef[];
 };
@@ -21,7 +20,6 @@ export function AccountsListHeaderActions({
   searchQuery,
   onSearchChange,
   setIsSearching,
-  onReorderPress,
   onManageHierarchy,
   accountsForArchiveToggle,
 }: AccountsListHeaderActionsProps) {
@@ -29,13 +27,6 @@ export function AccountsListHeaderActions({
     <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
       {!isSearching ? (
         <>
-          <IconButton
-            name="reorder"
-            size={Size.iconSm}
-            variant="surface"
-            onPress={onReorderPress}
-            accessibilityLabel="Reorder accounts"
-          />
           <IconButton
             name="hierarchy"
             size={Size.iconSm}

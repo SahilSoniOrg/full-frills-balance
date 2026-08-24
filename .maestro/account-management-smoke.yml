@@ -1,0 +1,21 @@
+appId: in.sahilsoni.fullfrillsbalance
+env:
+  SEED_PROFILE: journal-ready
+---
+- runFlow: subflows/launch-seeded.yml
+- extendedWaitUntil:
+    visible:
+      id: tab-accounts
+    timeout: 120000
+- tapOn:
+    id: tab-accounts
+- extendedWaitUntil:
+    visible: Manage hierarchy
+    timeout: 30000
+- tapOn: Manage hierarchy
+- extendedWaitUntil:
+    visible: Drag accounts to reorder them or place them under a parent account.
+    timeout: 30000
+- assertVisible: .*Cash.*
+- assertVisible: .*Bank.*
+- assertVisible: New Parent

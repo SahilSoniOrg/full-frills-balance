@@ -2,6 +2,7 @@ import {
   MoneyDetailHeaderActions,
   moneyDetailEditDeleteActions,
 } from '@/src/components/common/MoneyDetailHeaderActions';
+import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -20,7 +21,7 @@ function PlannedPaymentDetailsScreen() {
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready';
 
-    return buildDetailNavChrome({
+    const detailChrome = buildDetailNavChrome({
       phase,
       readyTitle: vm.title ?? AppConfig.strings.plannedPayments.details.screenTitle,
       onBack: vm.onBack,
@@ -34,7 +35,21 @@ function PlannedPaymentDetailsScreen() {
         />
       ) : undefined,
     });
-  }, [theme, vm.headerActions, vm.isLoading, vm.isMissing, vm.onBack, vm.title]);
+
+    return applySelectionChrome(detailChrome, {
+      active: vm.isSelectionModeActive,
+      onExit: vm.exitSelectionMode,
+    });
+  }, [
+    theme,
+    vm.exitSelectionMode,
+    vm.headerActions,
+    vm.isLoading,
+    vm.isMissing,
+    vm.isSelectionModeActive,
+    vm.onBack,
+    vm.title,
+  ]);
 
   return <PlannedPaymentDetailsView {...vm} chrome={chrome} />;
 }

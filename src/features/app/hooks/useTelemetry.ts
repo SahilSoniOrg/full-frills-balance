@@ -35,7 +35,10 @@ export type AppScreenRoute = NormalizeRouteSegment<RawAppRoutePath> | '(tabs)/in
  * Exhaustive Route Metadata Dictionary.
  * Every screen in app/ MUST be declared here or TypeScript compilation will fail.
  */
-const ROUTE_METADATA_MAP: Record<AppScreenRoute, RouteMetadata> = {
+const ROUTE_METADATA_MAP: Record<
+  Exclude<AppScreenRoute, 'account-reorder' | 'manage-hierarchy'> | 'account-management',
+  RouteMetadata
+> = {
   // Tabs & Roots
   index: { screenType: 'dashboard', flowContext: 'dashboard_overview', isModal: false },
   '(tabs)': { screenType: 'dashboard', flowContext: 'dashboard_overview', isModal: false },
@@ -57,12 +60,11 @@ const ROUTE_METADATA_MAP: Record<AppScreenRoute, RouteMetadata> = {
   'account-creation': { screenType: 'account', flowContext: 'account_setup', isModal: true },
   'category-creation': { screenType: 'account', flowContext: 'category_setup', isModal: true },
   'account-details': { screenType: 'account', flowContext: 'account_drilldown', isModal: false },
-  'account-reorder': {
+  'account-management': {
     screenType: 'account',
     flowContext: 'account_reorganization',
     isModal: true,
   },
-  'manage-hierarchy': { screenType: 'account', flowContext: 'account_hierarchy', isModal: true },
 
   // Journal & Transactions
   'journal-entry': { screenType: 'journal', flowContext: 'transaction_creation', isModal: true },
@@ -133,22 +135,24 @@ const ROUTE_METADATA_MAP: Record<AppScreenRoute, RouteMetadata> = {
   '_design-preview': { screenType: 'developer', flowContext: 'design_preview', isModal: false },
 };
 
+type RouteMetadataKey = keyof typeof ROUTE_METADATA_MAP;
+
 function resolveRouteMetadata(screenName: string): RouteMetadata {
-  const direct = ROUTE_METADATA_MAP[screenName as AppScreenRoute];
+  const direct = ROUTE_METADATA_MAP[screenName as RouteMetadataKey];
   if (direct) return direct;
 
   const baseSegment = screenName.split('/').pop() || screenName;
   if (baseSegment in ROUTE_METADATA_MAP) {
-    return ROUTE_METADATA_MAP[baseSegment as AppScreenRoute];
+    return ROUTE_METADATA_MAP[baseSegment as RouteMetadataKey];
   }
 
   const matchedKey = Object.keys(ROUTE_METADATA_MAP).find(k => screenName.includes(k));
-  if (matchedKey) return ROUTE_METADATA_MAP[matchedKey as AppScreenRoute];
+  if (matchedKey) return ROUTE_METADATA_MAP[matchedKey as RouteMetadataKey];
 
   return {
     screenType: 'other',
     flowContext: null,
-    isModal: /entry|creation|edit|form|reorder|hierarchy|modal/.test(screenName),
+    isModal: /entry|creation|edit|form|modal/.test(screenName),
   };
 }
 

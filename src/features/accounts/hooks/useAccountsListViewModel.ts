@@ -304,7 +304,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     modals,
     onCollapseAccount,
     onCreateAccount: actions.onCreateAccount,
-    onReorderPress: actions.onReorderPress,
     onManageHierarchy: actions.onManageHierarchy,
     isLoading,
     version,

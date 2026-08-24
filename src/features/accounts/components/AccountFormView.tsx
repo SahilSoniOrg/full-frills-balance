@@ -21,6 +21,7 @@ import { CurrencySelector } from '@/src/features/accounts/components/CurrencySel
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
@@ -270,6 +271,9 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         visible={isParentPickerVisible}
         accounts={potentialParents}
         selectedId={parentAccountId}
+        allowNone
+        noneLabel="No parent"
+        onClear={() => setParentAccountId(EMPTY_ACCOUNT_ID)}
         onClose={() => setIsParentPickerVisible(false)}
         onSelect={id => {
           setParentAccountId(id);

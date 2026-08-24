@@ -377,18 +377,14 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the Account Reorder screen.
+   * Navigate to the merged account management screen.
    */
-  toAccountReorder: (filterMode?: 'accounts' | 'categories') => {
-    router.push(buildRoute('/account-reorder', { filterMode }));
-  },
-
-  /**
-   * Navigate to the Manage Hierarchy screen.
-   */
-  toManageHierarchy: (options?: { accountId?: string; filterMode?: 'accounts' | 'categories' }) => {
+  toAccountManagement: (options?: {
+    accountId?: string;
+    filterMode?: 'accounts' | 'categories';
+  }) => {
     router.push(
-      buildRoute('/manage-hierarchy', {
+      buildRoute('/account-management', {
         accountId: options?.accountId,
         filterMode: options?.filterMode,
       }),

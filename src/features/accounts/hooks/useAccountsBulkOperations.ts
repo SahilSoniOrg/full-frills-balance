@@ -7,12 +7,13 @@ import {
 } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
 import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
-import { useUndoableAction } from '@/src/hooks/useUndoableAction';
+import { useListSelection } from '@/src/hooks/useListSelection';
 import type { UseSelectionResult } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
 import {
+  moveAccounts,
+  restoreAccountTreeMove,
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,
 } from '@/src/services/accounts/accountHierarchyCommands';
@@ -41,16 +42,11 @@ function buildInverseBulkUpdates(
 ): AccountBulkUpdate[] {
   return requests.map(req => {
     const original = accountsById.get(req.accountId);
-    const undoUpdates: AccountBulkUpdate['updates'] = {};
+    const undoUpdates: Pick<AccountBulkUpdate['updates'], 'name' | 'icon' | 'color'> = {};
     if (original) {
-      for (const key of Object.keys(req.updates) as (keyof AccountBulkUpdate['updates'])[]) {
-        if (key === 'name') undoUpdates.name = original.name;
-        if (key === 'color') undoUpdates.color = original.color ?? '';
-        if (key === 'icon') undoUpdates.icon = original.icon as IconName;
-        if (key === 'parentAccountId') {
-          undoUpdates.parentAccountId = original.parentAccountId ?? null;
-        }
-      }
+      if (req.updates.name !== undefined) undoUpdates.name = original.name;
+      if (req.updates.color !== undefined) undoUpdates.color = original.color ?? '';
+      if (req.updates.icon !== undefined) undoUpdates.icon = original.icon as IconName;
     }
     return { accountId: req.accountId, updates: undoUpdates };
   });
@@ -67,11 +63,14 @@ export function useAccountsBulkOperations({
 }: UseAccountsBulkOperationsInput) {
   const { theme, onContrast } = useTheme();
 
-  const { itemsById: accountsById } = useSelectedItemMap<AccountListItem, AccountId>(
-    accounts,
+  const { itemsById: accountsById, runUndoableAction } = useListSelection<
+    AccountListItem,
+    AccountId
+  >({
+    items: accounts,
     selection,
-  );
-  const runUndoableAction = useUndoableAction(selection.exitSelectionMode, closeModal);
+    onCloseModal: closeModal,
+  });
 
   const handleBulkArchive = useCallback(async () => {
     if (!workplaceId || selection.selectedIds.size === 0) return;
@@ -209,12 +208,19 @@ export function useAccountsBulkOperations({
         count: selection.selectedIds.size,
         has_parent: parentId !== null,
       });
-      await applyBulkUpdate(() => ({ parentAccountId: parentId }), {
-        successMessage: count => `Moved ${count} account${count === 1 ? '' : 's'} in hierarchy`,
-        undoMessage: 'Hierarchy move undone',
-      });
+      const selectedIds = Array.from(selection.selectedIds);
+      await runUndoableAction(
+        () => moveAccounts(workplaceId, selectedIds, { parentId, siblingIndex: 0 }),
+        receipt => restoreAccountTreeMove(workplaceId, receipt),
+        `Moved ${selectedIds.length} account${selectedIds.length === 1 ? '' : 's'} in hierarchy`,
+        {
+          errorMessage: 'Failed to move accounts in hierarchy',
+          undoSuccessMessage: 'Hierarchy move undone',
+          onUndoError: error => showErrorAlert(error, 'Failed to undo hierarchy move'),
+        },
+      );
     },
-    [applyBulkUpdate, selection.selectedIds.size, workplaceId],
+    [runUndoableAction, selection.selectedIds, workplaceId],
   );
 
   // Lazy computation: only calculate hierarchy candidates when modal is open
@@ -268,44 +274,64 @@ export function useAccountsBulkOperations({
   }, [selection.selectedIds, accountsById]);
 
   const selectionActions = useMemo<SelectionAction[]>(() => {
-    return [
+    const count = selection.selectedIds.size;
+    const definitions = [
       {
-        name: 'edit' as const,
-        label: 'Rename',
-        onPress: () => openModal({ type: 'bulkRename' }),
-        accessibilityLabel: 'Edit account names',
+        action: {
+          name: 'edit' as const,
+          label: 'Rename',
+          onPress: () => openModal({ type: 'bulkRename' }),
+          accessibilityLabel: 'Edit account names',
+        },
+        isEnabled: (selectedCount: number) => selectedCount > 0,
       },
       {
-        name: 'palette' as const,
-        label: 'Change Color',
-        onPress: () => openModal({ type: 'bulkAppearance', mode: 'color' }),
-        accessibilityLabel: 'Change account color',
+        action: {
+          name: 'palette' as const,
+          label: 'Change Color',
+          onPress: () => openModal({ type: 'bulkAppearance', mode: 'color' }),
+          accessibilityLabel: 'Change account color',
+        },
+        isEnabled: (selectedCount: number) => selectedCount > 0,
       },
       {
-        name: 'tag' as const,
-        label: 'Change Icon',
-        onPress: () => openModal({ type: 'bulkAppearance', mode: 'icon' }),
-        accessibilityLabel: 'Change account icon',
+        action: {
+          name: 'tag' as const,
+          label: 'Change Icon',
+          onPress: () => openModal({ type: 'bulkAppearance', mode: 'icon' }),
+          accessibilityLabel: 'Change account icon',
+        },
+        isEnabled: (selectedCount: number) => selectedCount > 0,
       },
       {
-        name: 'hierarchy' as const,
-        label: 'Move Hierarchy',
-        onPress: () => openModal({ type: 'bulkHierarchy' }),
-        disabled: isMixedAccountTypes,
-        accessibilityLabel: isMixedAccountTypes
-          ? 'Cannot move accounts of mixed types in hierarchy'
-          : 'Move accounts hierarchy',
+        action: {
+          name: 'hierarchy' as const,
+          label: 'Move Hierarchy',
+          onPress: () => openModal({ type: 'bulkHierarchy' }),
+          accessibilityLabel: 'Move accounts hierarchy',
+        },
+        isVisible: (selectedCount: number) => selectedCount > 0 && !isMixedAccountTypes,
       },
       {
-        name: 'archive' as const,
-        label: 'Archive / Unarchive',
-        onPress: handleBulkArchive,
-        variant: 'surface',
-        isPrimary: true,
-        accessibilityLabel: 'Archive or unarchive selected accounts',
+        action: {
+          name: 'archive' as const,
+          label: 'Archive / Unarchive',
+          onPress: handleBulkArchive,
+          variant: 'surface' as const,
+          isPrimary: true,
+          accessibilityLabel: 'Archive or unarchive selected accounts',
+        },
+        isEnabled: (selectedCount: number) => selectedCount > 0,
       },
     ];
-  }, [handleBulkArchive, isMixedAccountTypes, openModal]);
+
+    return definitions
+      .filter(({ isVisible }) => isVisible?.(count) ?? true)
+      .map(({ action, isEnabled }) => ({
+        ...action,
+        disabled: !(isEnabled?.(count) ?? true),
+      }));
+  }, [handleBulkArchive, isMixedAccountTypes, openModal, selection.selectedIds.size]);
 
   return {
     selectedAccountsList,

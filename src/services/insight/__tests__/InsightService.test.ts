@@ -37,6 +37,10 @@ jest.mock('@/src/utils/preferences', () => ({
 }));
 
 describe('PatternService', () => {
+  afterEach(() => {
+    patternService.clearCache();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     clearReactiveWorkplaceObservesCache();
