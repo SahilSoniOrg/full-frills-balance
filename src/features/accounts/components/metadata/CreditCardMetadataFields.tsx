@@ -1,4 +1,5 @@
 import { FormSelectorField } from '@/src/components/common/FormSelectorField';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppInput, AppText } from '@/src/components/core';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
@@ -60,12 +61,11 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
       </View>
       <View style={styles.row}>
         <View style={{ flex: 2 }}>
-          <AppInput
+          <CalculatorAmountInput
             label="Credit Limit"
             value={creditLimitAmount}
             onChangeText={setCreditLimitAmount}
             placeholder="Enter credit limit"
-            keyboardType="decimal-pad"
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -102,12 +102,11 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
       {isMinPaymentOnly && (
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <AppInput
+            <CalculatorAmountInput
               label="Min Amount"
               value={minimumPaymentAmount}
               onChangeText={setMinimumPaymentAmount}
               placeholder="e.g. 500"
-              keyboardType="decimal-pad"
             />
           </View>
           <View style={{ flex: 1 }}>

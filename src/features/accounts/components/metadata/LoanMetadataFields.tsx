@@ -1,4 +1,5 @@
 import { AppInput } from '@/src/components/core';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
@@ -45,12 +46,11 @@ export const LoanMetadataFields: React.FC<LoanMetadataFieldsProps> = ({ metadata
       </View>
       <View style={styles.row}>
         <View style={{ flex: 2 }}>
-          <AppInput
+          <CalculatorAmountInput
             label="Monthly EMI"
             value={minimumPaymentAmount}
             onChangeText={setMinimumPaymentAmount}
             placeholder="Enter EMI amount"
-            keyboardType="decimal-pad"
           />
         </View>
         <View style={{ flex: 1 }}>

@@ -1,5 +1,6 @@
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
+import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
@@ -29,7 +30,6 @@ function accountChipStyles(account: AccountFields | undefined, theme: Theme) {
 
 interface SplitRowItemProps {
   row: SplitJournalController['splits'][number];
-  index: number;
   isLast: boolean;
   canRemove: boolean;
   categoryAccount?: AccountFields;
@@ -39,11 +39,11 @@ interface SplitRowItemProps {
   onOpenPicker: (id: string) => void;
   onUpdateAmount: (id: string, amount: string) => void;
   onRemoveRow: (id: string) => void;
+  currencySymbol: string;
 }
 
 const SplitRowItem = React.memo(function SplitRowItem({
   row,
-  index,
   isLast,
   canRemove,
   categoryAccount,
@@ -53,6 +53,7 @@ const SplitRowItem = React.memo(function SplitRowItem({
   onOpenPicker,
   onUpdateAmount,
   onRemoveRow,
+  currencySymbol,
 }: SplitRowItemProps) {
   const categoryStyles = accountChipStyles(categoryAccount, theme);
 
@@ -89,15 +90,12 @@ const SplitRowItem = React.memo(function SplitRowItem({
 
       <View style={styles.amountCell}>
         <View style={[styles.amountInputWrap, hairlineStyle]}>
-          <AppInput
+          <CalculatorAmountInput
             value={row.amount}
             onChangeText={amount => onUpdateAmount(row.id, amount)}
-            keyboardType="decimal-pad"
             placeholder={str.amountPlaceholder}
-            accessibilityLabel={`${str.category} ${index + 1} ${str.amount}`}
-            variant="minimal"
-            inputStyle={[styles.splitAmountInput, { color: theme.text }]}
-            containerStyle={styles.splitAmountContainer}
+            currencySymbol={currencySymbol}
+            testID={`split-amount-input-${row.id}`}
           />
         </View>
       </View>
@@ -225,15 +223,12 @@ export function SplitForm({
                 >
                   {currencySymbol}
                 </AppText>
-                <AppInput
+                <CalculatorAmountInput
                   value={totalAmount}
                   onChangeText={setTotalAmount}
-                  keyboardType="decimal-pad"
                   placeholder={str.amountPlaceholder}
-                  accessibilityLabel={str.totalAmount}
-                  variant="minimal"
-                  inputStyle={[styles.totalAmountInput, { color: theme.text }]}
-                  containerStyle={styles.totalAmountContainer}
+                  currencySymbol={currencySymbol}
+                  testID="split-total-amount-input"
                 />
               </View>
             </View>
@@ -279,7 +274,6 @@ export function SplitForm({
             <SplitRowItem
               key={row.id}
               row={row}
-              index={index}
               isLast={isLast}
               canRemove={canRemove}
               categoryAccount={category}
@@ -289,6 +283,7 @@ export function SplitForm({
               onOpenPicker={openSplitAccountPicker}
               onUpdateAmount={handleUpdateAmount}
               onRemoveRow={removeSplitRow}
+              currencySymbol={currencySymbol}
             />
           );
         })}

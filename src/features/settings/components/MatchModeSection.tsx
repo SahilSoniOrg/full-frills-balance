@@ -1,4 +1,5 @@
 import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { FilterChipRow } from '@/src/components/common/FilterChipRow';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
@@ -154,33 +155,27 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               amountOperator === 'between' ? (
                 <View style={styles.inputRow}>
                   <View style={styles.inputCol}>
-                    <AppInput
+                    <CalculatorAmountInput
                       label="Minimum Amount"
-                      leftIcon="calculator"
                       value={amountValue}
                       onChangeText={setAmountValue}
-                      keyboardType="decimal-pad"
                       placeholder="0.00"
                     />
                   </View>
                   <View style={styles.inputCol}>
-                    <AppInput
+                    <CalculatorAmountInput
                       label="Maximum Amount"
-                      leftIcon="calculator"
                       value={amountSecondaryValue}
                       onChangeText={setAmountSecondaryValue}
-                      keyboardType="decimal-pad"
                       placeholder="0.00"
                     />
                   </View>
                 </View>
               ) : (
-                <AppInput
+                <CalculatorAmountInput
                   label="Amount"
-                  leftIcon="calculator"
                   value={amountValue}
                   onChangeText={setAmountValue}
-                  keyboardType="decimal-pad"
                   placeholder="0.00"
                 />
               )

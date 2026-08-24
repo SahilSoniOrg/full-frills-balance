@@ -1,4 +1,5 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { TransactionType } from '@/src/types/enums';
@@ -81,14 +82,11 @@ export const JournalLineItem = React.memo(
                   line.accountCurrency ||
                   workplaceCurrency}
               </AppText>
-              <AppInput
+              <CalculatorAmountInput
                 value={line.amount}
                 onChangeText={(value: string) => onUpdate('amount', value)}
                 placeholder="0.00"
-                keyboardType="numeric"
-                style={styles.amountInput}
-                variant="minimal"
-                containerStyle={{ minHeight: 0, marginTop: -4 }}
+                currencySymbol={CURRENCY_SYMBOLS[line.accountCurrency || workplaceCurrency] || ''}
                 testID={`amount-input-${line.id}`}
               />
             </View>

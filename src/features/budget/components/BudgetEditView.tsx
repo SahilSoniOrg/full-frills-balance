@@ -121,6 +121,9 @@ export function BudgetEditView({
           }
           amountValue={amount}
           onAmountChange={setAmount}
+          currencySymbol={
+            currencies.find(currency => currency.code === currencyCode)?.symbol || currencyCode
+          }
           footer={
             <CurrencySelector
               variant="pill"

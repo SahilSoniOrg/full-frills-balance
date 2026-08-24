@@ -1,6 +1,6 @@
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
-import { AmountCalculatorSheet } from '@/src/features/journal/entry/components/AmountCalculatorSheet';
+import { AmountCalculatorSheet } from '@/src/components/common/AmountCalculatorSheet';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';

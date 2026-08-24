@@ -1,9 +1,9 @@
 import { AppInput } from '@/src/components/core/AppInput';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { Spacing, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ReactNode } from 'react';
-import { HeroNumberInput } from './HeroNumberInput';
 import { SectionLabel } from './SectionLabel';
 
 interface FormHeroSectionProps {
@@ -19,6 +19,8 @@ interface FormHeroSectionProps {
   prefix?: ReactNode;
   nameAlign?: 'left' | 'center';
   showAmount?: boolean;
+  currencySymbol?: string;
+  precision?: number;
 }
 
 /**
@@ -38,6 +40,8 @@ export const FormHeroSection = ({
   prefix,
   nameAlign = 'center',
   showAmount = true,
+  currencySymbol = '$',
+  precision = 2,
 }: FormHeroSectionProps) => {
   const { theme, fonts } = useTheme();
 
@@ -76,10 +80,13 @@ export const FormHeroSection = ({
             marginTop="none"
             style={{ marginBottom: Spacing.xs, letterSpacing: 1 }}
           />
-          <HeroNumberInput
+          <CalculatorAmountInput
             value={amountValue}
             onChangeText={onAmountChange}
             placeholder={amountPlaceholder}
+            currencySymbol={currencySymbol}
+            precision={precision}
+            variant="hero"
             testID="hero-amount-input"
           />
         </>

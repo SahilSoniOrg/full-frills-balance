@@ -6,6 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
 import dayjs from 'dayjs';
 
@@ -137,15 +138,11 @@ export const BulkEntryRow = React.memo(
             >
               {sourceCurrency || ''}
             </AppText>
-            <AppInput
+            <CalculatorAmountInput
               value={row.amount}
               onChangeText={val => onUpdateField(row.id, 'amount', val)}
               placeholder="0.00"
-              keyboardType="numeric"
-              variant="minimal"
-              flex={1}
-              style={styles.amountInput}
-              containerStyle={styles.inputContainer}
+              currencySymbol={sourceCurrency || ''}
               testID={`bulk-amount-${row.id}`}
             />
           </View>

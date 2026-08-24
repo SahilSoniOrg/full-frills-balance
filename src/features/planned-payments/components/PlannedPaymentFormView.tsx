@@ -7,6 +7,7 @@ import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { FadeIn, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -61,6 +62,7 @@ export function PlannedPaymentFormView({
           amountLabel="Amount"
           amountValue={form.amount}
           onAmountChange={(val: string) => setField('amount', val)}
+          currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
         />
 
         <Stack space="xl" style={styles.formSection}>

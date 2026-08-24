@@ -11,6 +11,7 @@ import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppIcon, AppText, IconName, isValidIconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 
@@ -133,6 +134,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         }
         amountValue={initialBalance}
         onAmountChange={onInitialBalanceChange}
+        currencySymbol={CURRENCY_SYMBOLS[selectedCurrency] || selectedCurrency}
         showAmount={vm.showInitialBalance}
         footer={
           !isCategory ? (

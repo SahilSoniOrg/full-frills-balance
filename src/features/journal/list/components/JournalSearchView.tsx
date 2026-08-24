@@ -1,4 +1,5 @@
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
+import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import {
@@ -83,22 +84,20 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
         </ScrollView>
 
         <View style={styles.amountRangeRow}>
-          <AppInput
+          <CalculatorAmountInput
             placeholder="Min Amount"
             value={vm.minAmount}
             onChangeText={vm.setMinAmount}
-            keyboardType="numeric"
-            containerStyle={styles.amountInput}
+            testID="journal-search-min-amount"
           />
           <AppText variant="caption" style={{ color: theme.textSecondary }}>
             to
           </AppText>
-          <AppInput
+          <CalculatorAmountInput
             placeholder="Max Amount"
             value={vm.maxAmount}
             onChangeText={vm.setMaxAmount}
-            keyboardType="numeric"
-            containerStyle={styles.amountInput}
+            testID="journal-search-max-amount"
           />
           {(vm.searchQuery ||
             vm.accountIds.length > 0 ||
