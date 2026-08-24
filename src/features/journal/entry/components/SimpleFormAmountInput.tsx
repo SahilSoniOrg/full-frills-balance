@@ -1,9 +1,10 @@
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface SimpleFormAmountInputProps {
   amount: string;
@@ -14,6 +15,7 @@ interface SimpleFormAmountInputProps {
   readOnly?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  onOpenCalculator?: () => void;
   variant?: 'default' | 'hero';
 }
 
@@ -25,6 +27,7 @@ export function SimpleFormAmountInput({
   readOnly,
   onFocus,
   onBlur,
+  onOpenCalculator,
   variant = 'default',
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
@@ -53,12 +56,30 @@ export function SimpleFormAmountInput({
           <AppText
             variant={isHero ? 'hero' : 'title'}
             weight="bold"
-            style={{ color: resolvedActiveColor, textAlign: 'right' }}
+            style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
             numberOfLines={1}
           >
             {amount || '0'}
           </AppText>
         </View>
+      ) : onOpenCalculator ? (
+        <TouchableOpacity
+          style={[styles.amountDisplay, styles.calculatorDisplay]}
+          onPress={onOpenCalculator}
+          accessibilityRole="button"
+          accessibilityLabel="Open amount calculator"
+          testID="amount-input"
+        >
+          <AppText
+            variant={isHero ? 'hero' : 'title'}
+            weight="bold"
+            style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
+            numberOfLines={1}
+          >
+            {amount || '0'}
+          </AppText>
+          <AppIcon name="calculator" size={Size.iconSm} color={resolvedActiveColor} />
+        </TouchableOpacity>
       ) : (
         <TextInput
           style={[
@@ -124,5 +145,13 @@ const styles = StyleSheet.create({
   amountDisplay: {
     flex: 1,
     justifyContent: 'center',
+  },
+  calculatorDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  calculatorValue: {
+    flex: 1,
   },
 });
