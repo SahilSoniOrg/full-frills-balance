@@ -1,6 +1,5 @@
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
-import { AmountCalculatorSheet } from '@/src/components/common/AmountCalculatorSheet';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
@@ -16,7 +15,6 @@ import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHa
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,7 +27,7 @@ export type GuidedFooterAmount = {
   displayCurrency: string;
   onFocus: () => void;
   onBlur: () => void;
-  onOpenCalculator: () => void;
+  precision: number;
 };
 
 export type GuidedVoiceActions = {
@@ -58,7 +56,6 @@ export function GuidedModePanel({
   voiceActionsRef,
 }: GuidedModePanelProps) {
   const [isAmountFocused, setIsAmountFocused] = useState(false);
-  const [isCalculatorVisible, setIsCalculatorVisible] = useState(false);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
   const { getLineIdByRole } = editor;
@@ -118,21 +115,15 @@ export function GuidedModePanel({
 
   const onFocusAmount = useCallback(() => setIsAmountFocused(true), []);
   const onBlurAmount = useCallback(() => setIsAmountFocused(false), []);
-  const openCalculator = useCallback(() => {
-    Keyboard.dismiss();
-    setIsAmountFocused(false);
-    setIsCalculatorVisible(true);
-  }, []);
-
   const footerAmount = useMemo<GuidedFooterAmount>(
     () => ({
       amount: simpleEditor.amount,
       setAmount: simpleEditor.setAmount,
       accentType: simpleEditor.type,
       displayCurrency: simpleEditor.displayCurrency,
+      precision,
       onFocus: onFocusAmount,
       onBlur: onBlurAmount,
-      onOpenCalculator: openCalculator,
     }),
     [
       simpleEditor.amount,
@@ -141,7 +132,7 @@ export function GuidedModePanel({
       simpleEditor.displayCurrency,
       onFocusAmount,
       onBlurAmount,
-      openCalculator,
+      precision,
     ],
   );
 
@@ -250,21 +241,6 @@ export function GuidedModePanel({
         onApply={handleApplyVoiceInput}
         workplaceId={workplaceId}
       />
-      {isCalculatorVisible && (
-        <AmountCalculatorSheet
-          visible
-          initialAmount={simpleEditor.amount}
-          currencySymbol={
-            CURRENCY_SYMBOLS[simpleEditor.displayCurrency] || simpleEditor.displayCurrency
-          }
-          precision={precision}
-          onClose={() => setIsCalculatorVisible(false)}
-          onDone={amount => {
-            simpleEditor.setAmount(amount);
-            setIsCalculatorVisible(false);
-          }}
-        />
-      )}
     </>
   );
 }
@@ -285,7 +261,7 @@ export function GuidedFooterAmountSlot({
       displayCurrency={footerAmount.displayCurrency}
       onFocus={footerAmount.onFocus}
       onBlur={footerAmount.onBlur}
-      onOpenCalculator={footerAmount.onOpenCalculator}
+      precision={footerAmount.precision}
       variant="default"
     />
   );

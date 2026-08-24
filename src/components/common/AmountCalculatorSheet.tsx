@@ -1,11 +1,11 @@
-import { AppButton, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/common/ModalSurface';
+import { AppButton, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
-import { useTheme } from '@/src/hooks/use-theme';
 import {
   evaluateAmountExpression,
   formatAmountExpressionValue,
 } from '@/src/features/journal/entry/utils/amountExpression';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   NativeSyntheticEvent,
@@ -411,6 +411,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginTop: Spacing.lg,
+    paddingBottom: Spacing.xxxxl,
   },
   actionButton: {
     flex: 1,

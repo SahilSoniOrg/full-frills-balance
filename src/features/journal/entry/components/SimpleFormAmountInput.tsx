@@ -1,9 +1,11 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
+import { AmountCalculatorSheet } from '@/src/components/common/AmountCalculatorSheet';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface SimpleFormAmountInputProps {
@@ -15,7 +17,7 @@ interface SimpleFormAmountInputProps {
   readOnly?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
-  onOpenCalculator?: () => void;
+  precision?: number;
   variant?: 'default' | 'hero';
 }
 
@@ -27,84 +29,100 @@ export function SimpleFormAmountInput({
   readOnly,
   onFocus,
   onBlur,
-  onOpenCalculator,
+  precision = 2,
   variant = 'default',
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
   const resolvedActiveColor = resolveThemeColor(theme, activeColor);
+  const [calculatorVisible, setCalculatorVisible] = useState(false);
 
   const isHero = variant === 'hero';
 
   return (
-    <View
-      style={[
-        styles.amountRow,
-        isHero ? styles.heroRow : { backgroundColor: theme.surfaceSecondary },
-      ]}
-    >
-      <View style={styles.currencyWrap}>
-        <AppText
-          variant={isHero ? 'heading' : 'xl'}
-          weight="bold"
-          style={{ color: theme.textSecondary, opacity: Opacity.heavy }}
-        >
-          {CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
-        </AppText>
-      </View>
-      {readOnly ? (
-        <View style={styles.amountDisplay}>
+    <>
+      <View
+        style={[
+          styles.amountRow,
+          isHero ? styles.heroRow : { backgroundColor: theme.surfaceSecondary },
+        ]}
+      >
+        <View style={styles.currencyWrap}>
           <AppText
-            variant={isHero ? 'hero' : 'title'}
+            variant={isHero ? 'heading' : 'xl'}
             weight="bold"
-            style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
-            numberOfLines={1}
+            style={{ color: theme.textSecondary, opacity: Opacity.heavy }}
           >
-            {amount || '0'}
+            {CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
           </AppText>
         </View>
-      ) : onOpenCalculator ? (
-        <TouchableOpacity
-          style={[styles.amountDisplay, styles.calculatorDisplay]}
-          onPress={onOpenCalculator}
-          accessibilityRole="button"
-          accessibilityLabel="Open amount calculator"
-          testID="amount-input"
-        >
-          <AppText
-            variant={isHero ? 'hero' : 'title'}
-            weight="bold"
-            style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
-            numberOfLines={1}
+        {readOnly ? (
+          <View style={styles.amountDisplay}>
+            <AppText
+              variant={isHero ? 'hero' : 'title'}
+              weight="bold"
+              style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
+              numberOfLines={1}
+            >
+              {amount || '0'}
+            </AppText>
+          </View>
+        ) : setAmount ? (
+          <TouchableOpacity
+            style={[styles.amountDisplay, styles.calculatorDisplay]}
+            onPress={() => setCalculatorVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open amount calculator"
+            testID="amount-input"
           >
-            {amount || '0'}
-          </AppText>
-          <AppIcon name="calculator" size={Size.iconSm} color={resolvedActiveColor} />
-        </TouchableOpacity>
-      ) : (
-        <TextInput
-          style={[
-            styles.amountInput,
-            {
-              color: resolvedActiveColor,
-              fontFamily: fonts.heading,
-              fontSize: isHero ? Typography.sizes.jumbo : Typography.sizes.xxxl,
-            },
-          ]}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          autoFocus={isHero}
-          numberOfLines={1}
-          placeholder="0"
-          placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
-          cursorColor={resolvedActiveColor}
-          selectionColor={withOpacity(resolvedActiveColor || activeColor, Opacity.muted)}
-          testID="amount-input"
-          onFocus={onFocus}
-          onBlur={onBlur}
+            <AppText
+              variant={isHero ? 'hero' : 'title'}
+              weight="bold"
+              style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
+              numberOfLines={1}
+            >
+              {amount || '0'}
+            </AppText>
+            <AppIcon name="calculator" size={Size.iconSm} color={resolvedActiveColor} />
+          </TouchableOpacity>
+        ) : (
+          <TextInput
+            style={[
+              styles.amountInput,
+              {
+                color: resolvedActiveColor,
+                fontFamily: fonts.heading,
+                fontSize: isHero ? Typography.sizes.jumbo : Typography.sizes.xxxl,
+              },
+            ]}
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+            autoFocus={isHero}
+            numberOfLines={1}
+            placeholder="0"
+            placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
+            cursorColor={resolvedActiveColor}
+            selectionColor={withOpacity(resolvedActiveColor || activeColor, Opacity.muted)}
+            testID="amount-input"
+            onFocus={onFocus}
+            onBlur={onBlur}
+          />
+        )}
+      </View>
+      {!readOnly && setAmount && (
+        <AmountCalculatorSheet
+          visible={calculatorVisible}
+          initialAmount={amount}
+          currencySymbol={CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
+          precision={precision}
+          onClose={() => setCalculatorVisible(false)}
+          onDone={value => {
+            setAmount(value);
+            setCalculatorVisible(false);
+          }}
         />
       )}
-    </View>
+    </>
   );
 }
 
