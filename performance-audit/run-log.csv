@@ -1,0 +1,6 @@
+run-id,date,commit,platform/device,RAM/Hz/power,build/dev state,engine/architecture/compiler,dataset/cache/network/lifecycle,workload/script,markers/instrumentation,raw artifact,metric/result,anomaly/exclusion
+R-000,2026-08-25,6fb79796782c473f664a2a90ac0ca827c79a9908,macOS host; no app runtime device recorded,N/A,N/A,N/A,N/A,static inventory and repository inspection,N/A,none,static baseline only,No runtime magnitude claim
+R-001,2026-08-25,6fb79796782c473f664a2a90ac0ca827c79a9908,macOS host,N/A,TypeScript check,N/A,N/A,bun run typecheck,N/A,none,passed,Correctness/tooling only
+R-002,2026-08-25,6fb79796782c473f664a2a90ac0ca827c79a9908,macOS host,N/A,Jest CI; LokiJS/web test adapter,N/A,N/A,bun run test:ci,N/A,none,275 suites passed; 1653 tests passed; 1 skipped; 25.305 s,Correctness/tooling only; console output noisy
+R-003,2026-08-25,6fb79796782c473f664a2a90ac0ca827c79a9908,macOS host,N/A,Expo lint,N/A,N/A,bun run lint,N/A,none,passed,Correctness/tooling only
+R-004,2026-08-25,6fb79796782c473f664a2a90ac0ca827c79a9908,iPhone 17 simulator available; build incomplete during audit,N/A,Detox iOS release build attempted; Release; EXPO_PUBLIC_E2E=1,Hermes/New Architecture expected,synthetic E2E seed path not executed,bun run e2e:build:ios,N/A,ios/build/Build,started but no completed artifact/workload trace recorded,Does not advance validation beyond L0
