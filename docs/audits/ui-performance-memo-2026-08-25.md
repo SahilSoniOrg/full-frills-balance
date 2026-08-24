@@ -1,7 +1,7 @@
 # Full Frills Balance — React/UI performance audit
 
-Date: 2026-08-25  
-Scope: React/rendering, navigation, lists, scrolling, animation/chart, images/assets/fonts, startup/module evaluation, and UI lifecycle.  
+Date: 2026-08-25
+Scope: React/rendering, navigation, lists, scrolling, animation/chart, images/assets/fonts, startup/module evaluation, and UI lifecycle.
 Validation level: `L0 STATIC COMPLETE`. No device trace, profiler capture, frame-time run, memory sample, or production telemetry was available in the workspace. `E1` means static signal; `E2` means the execution path and scaling behavior are established from source/config. No E3–E5 claims are made.
 
 ## Verdict

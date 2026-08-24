@@ -46,11 +46,11 @@ These are not measured performance findings. They are structurally established m
 
 ### P-001 — Full export/import representations multiply peak memory
 
-Priority: P1 (static risk)  
-Evidence: E2  
-Finding type: STATIC RISK  
-Affected workloads: W-009  
-Platforms/builds: Android/iOS/web source paths; runtime device/build unknown.  
+Priority: P1 (static risk)
+Evidence: E2
+Finding type: STATIC RISK
+Affected workloads: W-009
+Platforms/builds: Android/iOS/web source paths; runtime device/build unknown.
 Dataset/cache/lifecycle conditions: total rows and serialized bytes across all workplace tables; export fetches all tables concurrently; import reads full file/buffers.
 
 User consequence: not established. The deterministic risk is peak memory growing with the full dataset and multiple simultaneous representations; no OOM, freeze, or duration claim is made.
@@ -75,11 +75,11 @@ Confidence limits: no calibrated dataset, memory trace, device evidence, or user
 
 ### P-002 — Shared aggregate emissions fan out full-workplace work and synchronous snapshots
 
-Priority: P1 (static risk)  
-Evidence: E2  
-Finding type: STATIC RISK  
-Affected workloads: W-001 W-003 W-004 W-005 W-006 W-012  
-Platforms/builds: all source platforms; runtime magnitude unknown.  
+Priority: P1 (static risk)
+Evidence: E2
+Finding type: STATIC RISK
+Affected workloads: W-001 W-003 W-004 W-005 W-006 W-012
+Platforms/builds: all source platforms; runtime magnitude unknown.
 Dataset/cache/lifecycle conditions: account count `A`, journal metadata count `J`, active transaction count, exchange-rate changes, accepted emission frequency after debounce, subscriber count `D`.
 
 User consequence: not established. An accepted emission deterministically triggers raw balance metrics, mapping, precision lookup, hierarchy aggregation, wealth conversion, and synchronous snapshot persistence before downstream consumers receive data.
@@ -104,11 +104,11 @@ Confidence limits: no emission count, subscriber count, duration, React profile,
 
 ### P-003 — Safe-to-Spend simulation retains horizon-sized account maps and multiplies projection work
 
-Priority: P1 (static risk)  
-Evidence: E2  
-Finding type: STATIC RISK  
-Affected workloads: W-003 W-008  
-Platforms/builds: Android/iOS source paths; runtime/device unknown.  
+Priority: P1 (static risk)
+Evidence: E2
+Finding type: STATIC RISK
+Affected workloads: W-003 W-008
+Platforms/builds: Android/iOS source paths; runtime/device unknown.
 Dataset/cache/lifecycle conditions: simulation days `D`, accounts `A`, budgets `B`, scopes `S`, cycles `C`, planned recurrence density, liabilities, and reactive emissions.
 
 User consequence: not established. The path retains one cloned account-balance map per simulation day and regenerates the pipeline when inputs emit.
@@ -133,11 +133,11 @@ Confidence limits: simulation shapes and runtime memory/duration are unmeasured.
 
 ### P-004 — Uncapped bulk-entry rows and continuous UI-to-JS update paths are boundedness risks
 
-Priority: P2 (static risk)  
-Evidence: E2  
-Finding type: STATIC RISK  
-Affected workloads: W-004 W-006 W-007  
-Platforms/builds: all source platforms; release/device behavior unknown.  
+Priority: P2 (static risk)
+Evidence: E2
+Finding type: STATIC RISK
+Affected workloads: W-004 W-006 W-007
+Platforms/builds: all source platforms; release/device behavior unknown.
 Dataset/cache/lifecycle conditions: bulk rows `N`, chart points `P`, series `S`, account-tree rows, gesture update rate, and edge auto-scroll duration.
 
 User consequence: not established. Bulk entry maps all rows in a normal `ScrollView` with no visible cap; bar-chart scrolling sets React state every 16 ms and maps all SVG points/series; account-tree drag calls JS on every gesture update.
