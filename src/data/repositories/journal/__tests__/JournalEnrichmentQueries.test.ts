@@ -289,4 +289,69 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       },
     ]);
   });
+
+  it('returns every target category used with the same description', async () => {
+    const food = await accountWriteRepository.create({
+      name: 'Food',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      workplaceId: workplaceOne,
+    });
+    const groceries = await accountWriteRepository.create({
+      name: 'Groceries',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      workplaceId: workplaceOne,
+    });
+
+    await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Milk',
+        journalDate: 4_000,
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: food.id,
+            amount: 10,
+            transactionType: TransactionType.DEBIT,
+          },
+        ],
+      },
+      workplaceOne,
+    );
+    await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Milk',
+        journalDate: 3_000,
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: groceries.id,
+            amount: 12,
+            transactionType: TransactionType.DEBIT,
+          },
+        ],
+      },
+      workplaceOne,
+    );
+
+    const milkSuggestions = (
+      await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(workplaceOne, 10)
+    ).filter(suggestion => suggestion.description === 'Milk');
+
+    expect(milkSuggestions).toEqual([
+      expect.objectContaining({
+        description: 'Milk',
+        targetAccountId: food.id,
+        targetAccountName: 'Food',
+        targetAccountType: AccountType.EXPENSE,
+      }),
+      expect.objectContaining({
+        description: 'Milk',
+        targetAccountId: groceries.id,
+        targetAccountName: 'Groceries',
+        targetAccountType: AccountType.EXPENSE,
+      }),
+    ]);
+  });
 });

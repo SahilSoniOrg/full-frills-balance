@@ -1,5 +1,6 @@
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 
@@ -46,5 +47,38 @@ describe('useJournalSuggestions', () => {
     });
 
     expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+  });
+
+  it('keeps only target categories compatible with the active tab', async () => {
+    (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue([
+      {
+        description: 'Milk',
+        count: 5,
+        targetAccountId: 'food',
+        targetAccountName: 'Food',
+        targetAccountType: AccountType.EXPENSE,
+      },
+      {
+        description: 'Milk',
+        count: 2,
+        targetAccountId: 'salary',
+        targetAccountName: 'Salary',
+        targetAccountType: AccountType.INCOME,
+      },
+    ]);
+
+    const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'mil', 'income'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.suggestions).toEqual([
+      expect.objectContaining({
+        description: 'Milk',
+        targetAccountName: 'Salary',
+        targetAccountType: AccountType.INCOME,
+      }),
+    ]);
   });
 });

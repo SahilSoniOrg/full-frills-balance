@@ -109,11 +109,16 @@ export function useJournalEntryShell(): JournalEntryShell {
     onSuccess,
   });
 
-  const { suggestions, loadSuggestions } = useJournalSuggestions(workplaceId, editor.description);
-
   const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
     editor,
     route.mode,
+  );
+
+  const suggestionTabType = activeMode === 'guided' ? editor.transactionType : undefined;
+  const { suggestions, loadSuggestions } = useJournalSuggestions(
+    workplaceId,
+    editor.description,
+    suggestionTabType,
   );
 
   const { applyAccountToLine, resolveSelectedAccountId } = useModeAccountActions();

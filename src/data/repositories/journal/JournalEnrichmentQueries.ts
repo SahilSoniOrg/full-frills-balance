@@ -67,14 +67,14 @@ export class JournalEnrichmentQueries {
 
   async getRecentUniqueDescriptions(
     workplaceId: WorkplaceId,
-    limit: number = 100,
+    limit: number = 500,
   ): Promise<JournalAutofillSuggestion[]> {
     return this.getRecentSuggestionsWithTargetAccounts(workplaceId, limit);
   }
 
   async getRecentSuggestionsWithTargetAccounts(
     workplaceId: WorkplaceId,
-    limit: number = 100,
+    limit: number = 500,
   ): Promise<JournalAutofillSuggestion[]> {
     const sql = `
       WITH recent_descriptions AS (
@@ -98,7 +98,8 @@ export class JournalEnrichmentQueries {
         t.account_id as account_id,
         a.name as account_name,
         a.account_type as account_type,
-        COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN j.id END) as account_usage_count
+        COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN j.id END) as account_usage_count,
+        MAX(j.journal_date) as account_latest_date
       FROM recent_descriptions d
       JOIN journals j ON j.description = d.description
         AND j.workplace_id = ?
@@ -122,6 +123,7 @@ export class JournalEnrichmentQueries {
         account_name: string | null;
         account_type: AccountType | null;
         account_usage_count: number;
+        account_latest_date: number | null;
         latest_date: number;
       }>(sql, [workplaceId, limit, workplaceId, workplaceId, workplaceId]);
 
@@ -140,6 +142,7 @@ export class JournalEnrichmentQueries {
             accountName: string;
             accountType: AccountType;
             count: number;
+            latestDate: number;
           }[];
         }
       >();
@@ -161,20 +164,34 @@ export class JournalEnrichmentQueries {
             accountName: row.account_name,
             accountType: row.account_type,
             count: Number(row.account_usage_count) || 0,
+            latestDate: Number(row.account_latest_date) || 0,
           });
         }
       }
 
       const suggestions: JournalAutofillSuggestion[] = [];
       for (const group of groups.values()) {
-        const dominant = computeDominantTargetAccount(group.accounts);
-        suggestions.push({
-          description: group.description,
-          count: group.journalCount,
-          targetAccountId: dominant.targetAccountId,
-          targetAccountName: dominant.targetAccountName,
-          targetAccountType: dominant.targetAccountType,
-        });
+        const accounts = [...group.accounts].sort(
+          (a, b) => b.latestDate - a.latestDate || b.count - a.count,
+        );
+
+        if (accounts.length === 0) {
+          suggestions.push({
+            description: group.description,
+            count: group.journalCount,
+          });
+        } else {
+          for (const account of accounts) {
+            suggestions.push({
+              description: group.description,
+              count: group.journalCount,
+              targetAccountId: account.accountId,
+              targetAccountName: account.accountName,
+              targetAccountType: account.accountType,
+            });
+            if (suggestions.length >= limit) break;
+          }
+        }
         if (suggestions.length >= limit) break;
       }
 
@@ -270,14 +287,21 @@ export class JournalEnrichmentQueries {
           count: journalIds.size,
         };
       });
-      const dominant = computeDominantTargetAccount(accountEntries);
-      suggestions.push({
-        description,
-        count: jList.length,
-        targetAccountId: dominant.targetAccountId,
-        targetAccountName: dominant.targetAccountName,
-        targetAccountType: dominant.targetAccountType,
-      });
+      if (accountEntries.length === 0) {
+        suggestions.push({ description, count: jList.length });
+      } else {
+        const accounts = [...accountEntries].sort((a, b) => b.count - a.count);
+        for (const account of accounts) {
+          suggestions.push({
+            description,
+            count: jList.length,
+            targetAccountId: account.accountId,
+            targetAccountName: account.accountName,
+            targetAccountType: account.accountType,
+          });
+          if (suggestions.length >= limit) break;
+        }
+      }
       if (suggestions.length >= limit) break;
     }
 
