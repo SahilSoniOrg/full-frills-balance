@@ -1,0 +1,15 @@
+surface,status,evidence/owner,workloads,measurement/disposition
+startup and readiness,APPLICABLE,RootLayout; index.js; app bootstrap,W-001 W-002,Static trace first; release-like boot marks required
+JS/module evaluation,APPLICABLE,index.js; Metro/Babel; startup imports,W-001,Bundle/module graph and runtime timing required
+React rendering/invalidation,APPLICABLE,Root providers/features/reactive hooks,W-001-W-008 W-012,Profiler/commit and emission alignment required
+lists and scrolling,APPLICABLE,47 list/scroll source files,W-004 W-005 W-007,Frame/mount/memory measurements required
+reactive state/subscriptions/caches,APPLICABLE,82 observer/subscription files; ReactiveDataService,W-001-W-008 W-012,Subscription graph and mutation emission measurements required
+database/persistence,APPLICABLE,Watermelon repositories/models/raw SQL,W-003-W-010 W-012,query plan/rows/materialization/write lock evidence required
+computation/reporting/simulation,APPLICABLE,reports/projections/recurrence/Safe-to-Spend,W-003 W-007 W-008,realistic synthetic scaling measurements required
+animation/gesture/layout/charts,APPLICABLE,Reanimated/Gesture/SVG/chart components,W-004 W-007,frame/hitch and JS/UI split required
+images/assets/fonts,APPLICABLE,useFonts; Expo image/assets,W-001 W-004 W-005,load/decode/layout evidence required
+native modules and JS/native interfaces,APPLICABLE,SMS/LiteRT/crypto/filesystem/widgets,W-009-W-011,physical/device native traces required
+network and caching,APPLICABLE,analytics/exchange-rate/update paths,W-002 W-003 W-009,disposition request paths and cache state
+memory and lifecycle,APPLICABLE,cache/queues/providers/model/storage,W-001 W-002 W-009-W-012,repeat-cycle plateau and retained-owner evidence required
+background/battery/contention,APPLICABLE,foreground maintenance/widgets/SMS/queue/analytics,W-001 W-002 W-006 W-010 W-012,overlap scenarios and native CPU/wakeup evidence required
+size and update cost,APPLICABLE,Metro/EAS/assets/models/native ABIs,W-001 W-011,production artifact attribution required
