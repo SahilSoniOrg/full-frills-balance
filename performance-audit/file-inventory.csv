@@ -1,35 +1,35 @@
 path,package/source-root,platform,runtime role,entry/workload membership,imports/exports,fan-in/fan-out,performance surfaces,status,notes/evidence links
-index.js,root,all,JS entry/bootstrap,startup,"expo-router; splash; Sentry; crypto; fonts",high,startup/module evaluation,MAPPED,"Early side effects and boot anchor"
-app/_layout.tsx,app,all,router layout,startup/navigation,"RootLayout",high,startup/react/render,MAPPED,"Thin export"
-app/(tabs)/*.tsx,app,all,route entry,navigation,"feature screens",medium,navigation/lists,MAPPED,"Route inventory"
-src/features/app/RootLayout.tsx,src/features/app,all,provider/runtime root,startup/lifecycle,"providers; bootstrap; navigation",high,startup/react/lifecycle,MAPPED,"Provider order and splash orchestration inspected"
-src/features/app/hooks/useAppBootstrap.ts,src/features/app,all,bootstrap orchestration,startup/dashboard,"reactive prewarm; database; snapshots",high,startup/database/cache,MAPPED,"Requires deep pass"
-src/features/app/hooks/useAppForegroundMaintenance.ts,src/features/app,all,foreground maintenance,resume/lifecycle,"integrity; rebuild; observers",medium,background/lifecycle,MAPPED,"Requires deep pass"
-src/services/ReactiveDataService.ts,src/services,all,shared reactive read model,dashboard/accounts,"RxJS; replay caches; snapshots",high,reactivity/database/serialization,MAPPED,"Shared fan-out hub"
-src/services/reactive/**,src/services,all,cache/observer layer,dashboard/accounts/workplace,"Watermelon observers; RxJS",high,reactivity/database/lifecycle,MAPPED,"Inventory complete; deep analysis delegated"
-src/data/repositories/**,src/data,android/ios/web,test,query/write repositories,read/write/import/export,"Watermelon; raw SQL",high,database/native-to-JS/persistence,MAPPED,"Inventory complete; deep analysis delegated"
-src/data/models/**,src/data,all,Watermelon models,all database workloads,"model decorators",high,database/materialization,MAPPED,"Relevant model set mapped"
-src/features/dashboard/**,src/features/dashboard,all,dashboard UI/read model,startup/dashboard/Safe-to-Spend,"observables; charts; projections",high,react/render/chart/computation,MAPPED,"Deep analysis delegated"
-src/features/accounts/**,src/features/accounts,all,account list/detail/hierarchy,accounts/mutations,"SectionList; observers; aggregation",high,lists/react/database,MAPPED,"Deep analysis delegated"
-src/features/journal/**,src/features/journal,all,journal list/detail/entry,activity/search/write/import,"FlashList; enrichment; editor",high,lists/react/database/native,MAPPED,"Deep analysis delegated"
-src/features/reports/**,src/features/reports,all,report UI/read models,reports,"SVG; calculators; SQL",high,computation/charts/database,MAPPED,"Deep analysis delegated"
-src/services/import/**,src/services,all,import pipeline,import/export/restore,"filesystem; parsing; DB batches",high,serialization/database/memory,MAPPED,"Deep analysis delegated"
-src/services/export/**,src/services,all,export/backup pipeline,export/backup,"filesystem; zip; JSON",medium,serialization/filesystem/memory,MAPPED,"Deep analysis delegated"
-src/services/ai/**,src/services,ios/android,native model service,AI/voice,"LiteRT/native module",high,native/memory/thermal,MAPPED,"Physical-device evidence required"
-src/services/transaction-ingestion/**,src/services,all,transaction parsing,AI/SMS/import,"native AI; fallback; transforms",high,native/computation,MAPPED,"Deep analysis delegated"
-src/services/ledger/**,src/services,all,ledger write/parse,write/voice/SMS,"DB writes; parsing",high,database/computation,MAPPED,"Deep analysis delegated"
-src/services/sms-service.ts,src/services,android,Android SMS integration,SMS/background,"custom Expo SMS module",medium,native/background/network,MAPPED,"Android-specific"
-modules/expo-sms-inbox/**,modules,android,native SMS module,SMS,"Expo module",medium,native/thread/lifecycle,MAPPED,"Native source present"
-src/services/RebuildQueueService.ts,src/services,all,rebuild queue,write/import/resume,"queue; DB; observers",high,background/database/lifecycle,MAPPED,"Deep analysis delegated"
-src/services/WorkplaceService.ts,src/services,all,workplace lifecycle,workplace switching,"storage; DB",high,lifecycle/cache,MAPPED,"Deep analysis delegated"
-src/utils/SnapshotService.ts,src/utils,all,persistent snapshots,startup/dashboard/accounts,"MMKV; JSON",high,startup/storage/serialization,MAPPED,"Synchronous serialization path"
-src/utils/TraceService.ts,src/utils,all,performance telemetry,all measured paths,"Date.now; logger",medium,instrumentation,MAPPED,"Clock/overhead review required"
-src/utils/logger.ts,src/utils,all,logging/metrics,all paths,"console; Sentry; JSON",high,instrumentation/serialization,MAPPED,"Instrumentation can perturb discovery lane"
-app.config.ts,root,all,Expo/build config,startup/build,"plugins; minification; shrink",high,build/bundle/native,MAPPED,"Release configuration inspected"
-babel.config.js,root,all,transform config,module evaluation/render,"compiler; import; reanimated",high,build/module evaluation/react,MAPPED,"Plugin ordering inspected"
-metro.config.js,root,all,bundler/resolver config,bundle/platform,"Sentry Metro; polyfills",high,bundle/module evaluation,MAPPED,"Platform-specific resolver"
-eas.json,root,all,build profiles,release-like outcome,"preview/production",medium,build/artifact,MAPPED,"Profiles inspected"
-android/**,android,android,native app/build,Android workloads,"Gradle; C++/Java/Kotlin",high,native/build/memory,MAPPED,"Generated/build outputs excluded"
-ios/**,ios,ios,native app/build,iOS workloads,"Xcode/Pods",high,native/build/memory,MAPPED,"Generated/build outputs excluded"
-e2e/**,.maestro/**,tests,all,workload drivers,major navigation/read/write,"Detox; Playwright; Maestro",high,workload/reproducibility,MAPPED,"Functional fixtures; not performance datasets"
-scripts/**,scripts,all,tooling/build,verification/bundle,"architecture; assets",medium,tooling/bundle,MAPPED,"No dedicated perf harness found yet"
+index.js,root,all,JS entry/bootstrap,startup,expo-router; splash; Sentry; crypto; fonts,high,startup/module evaluation,MAPPED,Early side effects and boot anchor
+app/_layout.tsx,app,all,router layout,startup/navigation,RootLayout,high,startup/react/render,MAPPED,Thin export
+app/(tabs)/*.tsx,app,all,route entry,navigation,feature screens,medium,navigation/lists,MAPPED,Route inventory
+src/features/app/RootLayout.tsx,src/features/app,all,provider/runtime root,startup/lifecycle,providers; bootstrap; navigation,high,startup/react/lifecycle,MAPPED,Provider order and splash orchestration inspected
+src/features/app/hooks/useAppBootstrap.ts,src/features/app,all,bootstrap orchestration,startup/dashboard,reactive prewarm; database; snapshots,high,startup/database/cache,MAPPED,Requires deep pass
+src/features/app/hooks/useAppForegroundMaintenance.ts,src/features/app,all,foreground maintenance,resume/lifecycle,integrity; rebuild; observers,medium,background/lifecycle,MAPPED,Requires deep pass
+src/services/ReactiveDataService.ts,src/services,all,shared reactive read model,dashboard/accounts,RxJS; replay caches; snapshots,high,reactivity/database/serialization,MAPPED,Shared fan-out hub
+src/services/reactive/**,src/services,all,cache/observer layer,dashboard/accounts/workplace,Watermelon observers; RxJS,high,reactivity/database/lifecycle,MAPPED,Inventory complete; deep analysis delegated
+"src/data/repositories/**",src/data,"android/ios/web,test","query/write repositories","read/write/import/export","Watermelon; raw SQL",high,"database/native-to-JS/persistence",MAPPED,"Inventory complete; deep analysis delegated"
+src/data/models/**,src/data,all,Watermelon models,all database workloads,model decorators,high,database/materialization,MAPPED,Relevant model set mapped
+src/features/dashboard/**,src/features/dashboard,all,dashboard UI/read model,startup/dashboard/Safe-to-Spend,observables; charts; projections,high,react/render/chart/computation,MAPPED,Deep analysis delegated
+src/features/accounts/**,src/features/accounts,all,account list/detail/hierarchy,accounts/mutations,SectionList; observers; aggregation,high,lists/react/database,MAPPED,Deep analysis delegated
+src/features/journal/**,src/features/journal,all,journal list/detail/entry,activity/search/write/import,FlashList; enrichment; editor,high,lists/react/database/native,MAPPED,Deep analysis delegated
+src/features/reports/**,src/features/reports,all,report UI/read models,reports,SVG; calculators; SQL,high,computation/charts/database,MAPPED,Deep analysis delegated
+src/services/import/**,src/services,all,import pipeline,import/export/restore,filesystem; parsing; DB batches,high,serialization/database/memory,MAPPED,Deep analysis delegated
+src/services/export/**,src/services,all,export/backup pipeline,export/backup,filesystem; zip; JSON,medium,serialization/filesystem/memory,MAPPED,Deep analysis delegated
+src/services/ai/**,src/services,ios/android,native model service,AI/voice,LiteRT/native module,high,native/memory/thermal,MAPPED,Physical-device evidence required
+src/services/transaction-ingestion/**,src/services,all,transaction parsing,AI/SMS/import,native AI; fallback; transforms,high,native/computation,MAPPED,Deep analysis delegated
+src/services/ledger/**,src/services,all,ledger write/parse,write/voice/SMS,DB writes; parsing,high,database/computation,MAPPED,Deep analysis delegated
+src/services/sms-service.ts,src/services,android,Android SMS integration,SMS/background,custom Expo SMS module,medium,native/background/network,MAPPED,Android-specific
+modules/expo-sms-inbox/**,modules,android,native SMS module,SMS,Expo module,medium,native/thread/lifecycle,MAPPED,Native source present
+src/services/RebuildQueueService.ts,src/services,all,rebuild queue,write/import/resume,queue; DB; observers,high,background/database/lifecycle,MAPPED,Deep analysis delegated
+src/services/WorkplaceService.ts,src/services,all,workplace lifecycle,workplace switching,storage; DB,high,lifecycle/cache,MAPPED,Deep analysis delegated
+src/utils/SnapshotService.ts,src/utils,all,persistent snapshots,startup/dashboard/accounts,MMKV; JSON,high,startup/storage/serialization,MAPPED,Synchronous serialization path
+src/utils/TraceService.ts,src/utils,all,performance telemetry,all measured paths,Date.now; logger,medium,instrumentation,MAPPED,Clock/overhead review required
+src/utils/logger.ts,src/utils,all,logging/metrics,all paths,console; Sentry; JSON,high,instrumentation/serialization,MAPPED,Instrumentation can perturb discovery lane
+app.config.ts,root,all,Expo/build config,startup/build,plugins; minification; shrink,high,build/bundle/native,MAPPED,Release configuration inspected
+babel.config.js,root,all,transform config,module evaluation/render,compiler; import; reanimated,high,build/module evaluation/react,MAPPED,Plugin ordering inspected
+metro.config.js,root,all,bundler/resolver config,bundle/platform,Sentry Metro; polyfills,high,bundle/module evaluation,MAPPED,Platform-specific resolver
+eas.json,root,all,build profiles,release-like outcome,preview/production,medium,build/artifact,MAPPED,Profiles inspected
+android/**,android,android,native app/build,Android workloads,Gradle; C++/Java/Kotlin,high,native/build/memory,MAPPED,Generated/build outputs excluded
+ios/**,ios,ios,native app/build,iOS workloads,Xcode/Pods,high,native/build/memory,MAPPED,Generated/build outputs excluded
+"e2e/**,.maestro/**",tests,all,"workload drivers","major navigation/read/write","Detox; Playwright; Maestro",high,"workload/reproducibility",MAPPED,"Functional fixtures; not performance datasets"
+scripts/**,scripts,all,tooling/build,verification/bundle,architecture; assets,medium,tooling/bundle,MAPPED,No dedicated perf harness found yet

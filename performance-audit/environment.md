@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | Repository | `/Users/sahilsoni/me/projects/full-frills-balance` |
-| Commit | `6fb79796782c473f664a2a90ac0ca827c79a9908` |
+| Source baseline commit | `6fb79796782c473f664a2a90ac0ca827c79a9908` |
+| Audit artifact base | `2cb7fcd4` before this remediation-plan review |
 | Branch | `main` |
 | Working tree at audit start | clean; branch was 2 commits ahead of `origin/main` |
 | Audit date | 2026-08-25 |
@@ -31,4 +32,3 @@ Commands are recorded in `run-log.csv`. Passing tests/type checks are correctnes
 - Physical-device Android/iOS evidence is not yet available.
 - Release-like runtime measurement and native profiler traces require an available simulator/device/build path; until run, runtime impact claims are prohibited.
 - Dataset calibration must be grounded in repository fixtures/schema, not round-number assumptions.
-

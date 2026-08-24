@@ -1,6 +1,6 @@
 # Full Frills Balance performance audit
 
-This directory is the durable audit state for the repository at commit `6fb79796782c473f664a2a90ac0ca827c79a9908` (2026-08-25). It records static coverage, workloads, hypotheses, evidence limits, rejected investigations, and final findings. It must not contain private financial, SMS, account, or model-prompt data.
+This directory is the durable audit state for source baseline commit `6fb79796782c473f664a2a90ac0ca827c79a9908` (2026-08-25). The audit artifacts are committed separately on top of that baseline. It records static coverage, workloads, hypotheses, evidence limits, rejected investigations, and final findings. It must not contain private financial, SMS, account, or model-prompt data.
 
 Status is maintained in `coverage.md`; the report is `report.md`. The audit is evidence-first: static signals remain hypotheses until the acceptance gate in the React Native performance-audit methodology is met.
 
@@ -18,4 +18,3 @@ Files:
 - `coverage.md` — coverage/depth/validation status.
 - `decision-log.md` — profile drift and audit decisions.
 - `report.md` — durable handoff report.
-

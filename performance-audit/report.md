@@ -2,7 +2,7 @@
 
 ## Performance audit status
 
-Repository / commit: `6fb79796782c473f664a2a90ac0ca827c79a9908` / `main`
+Source baseline commit: `6fb79796782c473f664a2a90ac0ca827c79a9908`. Audit artifacts are committed separately on top of that source baseline; see git history for the artifact commits.
 
 Coverage: COMPLETE for static source, runtime-map, workload, surface, lifecycle, and hypothesis accounting.
 
@@ -55,7 +55,7 @@ Dataset/cache/lifecycle conditions: total rows and serialized bytes across all w
 
 User consequence: not established. The deterministic risk is peak memory growing with the full dataset and multiple simultaneous representations; no OOM, freeze, or duration claim is made.
 
-Evidence: `nativeBackupExporter.ts:46-184` fetches all tables, transforms them, creates complete JSON, compresses it, and converts ZIP data to Base64 before cleanup. `exportSerialization.ts:34-47` builds the complete JSON string. Import orchestration reads the complete archive/buffer and may create extracted buffers/strings. Import chunking occurs after preparation and bounds DB batch size, not all preparation memory.
+Evidence: `nativeBackupExporter.ts:46-184` fetches all tables, transforms them, creates complete JSON, compresses it, and converts ZIP data to Base64 before cleanup. `exportSerialization.ts:34-47` builds the complete JSON string. Import reads raw bytes, extracted bytes, decoded text, and parsed JSON in sequence before persistence (`src/hooks/use-import.ts:49-67`); `ImportRepository.ts:41-53` chunks DB writes only after preparation. The chunking therefore bounds DB batch size, not all preparation memory.
 
 Runtime mechanism: file/export trigger → parallel table fetch → arrays/transformed arrays → JSON string → ZIP → Base64 → filesystem/share; import is the inverse with full representations → JS/native memory pressure.
 
@@ -84,7 +84,7 @@ Dataset/cache/lifecycle conditions: account count `A`, journal metadata count `J
 
 User consequence: not established. An accepted emission deterministically triggers raw balance metrics, mapping, precision lookup, hierarchy aggregation, wealth conversion, and synchronous snapshot persistence before downstream consumers receive data.
 
-Evidence: `reactiveAggregatedBalances.ts:73-156` combines four sources, debounces/distincts, runs raw SQL, maps balances, builds precision maps, aggregates hierarchy, calculates wealth, and calls `saveWealthSnapshot`. `ReactiveDataService.ts:126-213` derives dashboard/account-list payloads and saves snapshots. `ReactiveDataService.ts:230-277` exposes account-detail consumers. `JournalObserveQueries.ts:107-111` observes all non-deleted workplace journal metadata.
+Evidence: `reactiveAggregatedBalances.ts:73-156` combines four sources, debounces/distincts, runs raw SQL, maps balances, builds precision maps, aggregates hierarchy, calculates wealth, and calls `saveWealthSnapshot`. `ReactiveDataService.ts:126-213` derives dashboard/account-list payloads and saves snapshots. `ReactiveDataService.ts:230-277` exposes account-detail consumers. `src/data/repositories/journal/JournalObserveQueries.ts:107-111` observes non-deleted workplace `journals` rows with selected status/date/amount columns.
 
 Runtime mechanism: mutation/source emission → aggregate SQL/materialization → JS transforms → synchronous MMKV JSON → replay stream → dashboard/accounts/details consumers → render/commit.
 
@@ -104,7 +104,7 @@ Confidence limits: no emission count, subscriber count, duration, React profile,
 
 ### P-003 — Safe-to-Spend simulation retains horizon-sized account maps and multiplies projection work
 
-Priority: P1 (static risk)
+Priority: P2 (static risk; revisit after calibrated dataset/runtime evidence)
 Evidence: E2
 Finding type: STATIC RISK
 Affected workloads: W-003 W-008
@@ -113,7 +113,7 @@ Dataset/cache/lifecycle conditions: simulation days `D`, accounts `A`, budgets `
 
 User consequence: not established. The path retains one cloned account-balance map per simulation day and regenerates the pipeline when inputs emit.
 
-Evidence: `Simulator.ts:66-115` emits daily projections and clones `roundedAccountBalances` into each result. `BudgetFlowGenerator.ts:38-153` allocates day-sized burns and loops budget cycles, eligible days, and target accounts. Safe-to-Spend input acquisition creates per-budget usage observers in `safeToSpendInputAcquisition.ts:161-167`; the read model can be prewarmed and consumed by widgets.
+Evidence: `Simulator.ts:66-115` emits daily projections and clones `roundedAccountBalances` into each result. `BudgetFlowGenerator.ts:38-153` allocates day-sized burns and loops budget cycles, eligible days, and target accounts. Safe-to-Spend input acquisition creates per-budget usage observers in `safeToSpendInputAcquisition.ts:161-169`; the read model can be prewarmed and consumed by widgets.
 
 Runtime mechanism: source/budget/planned/account emission → input acquisition → flow generators → daily simulator → projections/maps → dashboard/widget/read-model consumers.
 
@@ -163,7 +163,7 @@ Confidence limits: no frame/input/commit/memory measurements.
 ## Additional open hypotheses
 
 - Startup stabilization concurrently launches integrity, insight, planned-payment, sharing, exchange-rate, notification, and optional SMS work after delay; overlap with resume/first interaction is unknown (`H-008`, `H-014`).
-- Cold-start module/font evaluation is broad; module evaluation and selected-font load are unmeasured (`H-004` and the UI memo UI-04).
+- Cold-start module/font evaluation is broad; module evaluation and selected-font load are unmeasured (`H-019` and the UI memo UI-04).
 - Reporting can load aggregate queries plus a full transaction range and convert rows (`H-017`); SMS can return full bodies, parse concurrently, and issue duplicate/rule work (`H-018`).
 - LiteRT models range from hundreds of MB to multiple GB and can run up to three passes (`H-016`); model memory/thermal lifecycle is device-blocked.
 - Rebuild queue, widget sync, model switching, network timeout/cancellation, and lifecycle retention remain open questions, not findings.
