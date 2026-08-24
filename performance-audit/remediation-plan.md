@@ -1,8 +1,16 @@
 # Performance remediation plan
 
-Status: plan only. No production code changes are authorized by this plan.
+Status: execution in progress. P-001, P-002, and the safe subset of P-004 are implemented on `main`; P-003 and bulk-entry virtualization remain unimplemented pending discriminating runtime evidence.
 
 Scope: P-001 through P-004 in [`report.md`](./report.md). The audit is L0 static; every implementation step is gated by a reproducible baseline. Do not optimize from source shape alone. P-003 is currently P2, not P1, until realistic horizons/cardinalities or runtime evidence justify escalation.
+
+## Execution record — 2026-08-25
+
+- `fcf4531a perf: bound export table retention` — P-001 export tables now load and serialize sequentially, preserving the public export keys and ZIP/Base64 contract. Import was not changed because existing repository writes are already chunked and no bounded parser baseline exists.
+- `1c76f40c perf: defer reactive snapshot persistence` — P-002 dashboard, account-list, and wealth snapshot writes are coalesced per workplace/key and deferred one event-loop turn; direct reads and synchronous save APIs remain intact; clear cancels pending writes.
+- `45a852d5 perf: reduce chart and drag rerender pressure` — P-004 chart SVG is isolated from scroll-only tooltip state; account-tree gesture updates are coalesced below a 4px movement threshold. Bulk entry was intentionally left unchanged.
+- Verification: focused functional tests passed (32 tests), `bun run typecheck` passed, `bun run lint` passed, and `bun run test:ci` passed (275 suites, 1659 passed, 1 skipped). Narrow coverage runs can fail repository per-file thresholds even when all selected tests pass; the full CI coverage gate passed.
+- iOS validation ceiling: no completed physical-device trace. The iPhone 17 simulator build was attempted but no release workload trace was completed, so runtime magnitude and frame/memory claims remain unverified.
 
 ## Operating rules
 
