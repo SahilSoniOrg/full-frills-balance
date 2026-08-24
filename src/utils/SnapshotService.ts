@@ -18,6 +18,16 @@ export interface Snapshot<T = unknown> {
  * Uses MMKV for synchronous, high-performance disk access.
  */
 class SnapshotService {
+  private readonly pendingWrites = new Map<string, () => void>();
+  private pendingWriteTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Reactive consumers can observe the same logical value through more than
+   * one replay path. Keep the last serialized payload so those emissions do
+   * not rewrite MMKV synchronously without changing snapshot freshness or
+   * cold-boot behavior.
+   */
+  private readonly lastPersistedPayloads = new Map<string, string>();
+
   private static isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
   }
@@ -74,21 +84,7 @@ class SnapshotService {
    * Persists a dashboard snapshot to disk.
    */
   saveDashboardSnapshot<T>(workplaceId: string, data: T): void {
-    try {
-      const snapshot: Snapshot<T> = {
-        data,
-        timestamp: Date.now(),
-        workplaceId,
-      };
-      storage.set(
-        `${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`,
-        JSON.stringify(snapshot, this.replacer),
-      );
-    } catch (error) {
-      logger.error('[SnapshotService] Failed to save dashboard snapshot', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    this.saveSnapshot(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, workplaceId, data, 'dashboard');
   }
 
   /**
@@ -103,18 +99,7 @@ class SnapshotService {
    * Persists a wealth summary snapshot.
    */
   saveWealthSnapshot<T>(workplaceId: string, data: T): void {
-    try {
-      const snapshot: Snapshot<T> = {
-        data,
-        timestamp: Date.now(),
-        workplaceId,
-      };
-      storage.set(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, JSON.stringify(snapshot, this.replacer));
-    } catch (error) {
-      logger.error('[SnapshotService] Failed to save wealth snapshot', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    this.saveSnapshot(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId, data, 'wealth');
   }
 
   /**
@@ -128,18 +113,58 @@ class SnapshotService {
    * Persists a custom snapshot by key.
    */
   saveCustomSnapshot<T>(workplaceId: string, key: string, data: T): void {
+    this.saveSnapshot(`${key}_${workplaceId}`, workplaceId, data, key);
+  }
+
+  private saveSnapshot<T>(storageKey: string, workplaceId: string, data: T, label: string): void {
     try {
+      const payload = JSON.stringify(data, this.replacer) ?? 'undefined';
+
+      // A storage read protects correctness if snapshots were cleared outside
+      // this instance (for example during logout or a test reset).
+      if (this.lastPersistedPayloads.get(storageKey) === payload && storage.getString(storageKey)) {
+        return;
+      }
+
       const snapshot: Snapshot<T> = {
         data,
         timestamp: Date.now(),
         workplaceId,
       };
-      storage.set(`${key}_${workplaceId}`, JSON.stringify(snapshot, this.replacer));
+      storage.set(storageKey, JSON.stringify(snapshot, this.replacer));
+      this.lastPersistedPayloads.set(storageKey, payload);
     } catch (error) {
-      logger.error(`[SnapshotService] Failed to save snapshot: ${key}`, {
+      logger.error(`[SnapshotService] Failed to save snapshot: ${label}`, {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  private deferWrite(key: string, write: () => void): void {
+    this.pendingWrites.set(key, write);
+    if (this.pendingWriteTimer !== null) return;
+    this.pendingWriteTimer = setTimeout(() => {
+      this.pendingWriteTimer = null;
+      const writes = Array.from(this.pendingWrites.values());
+      this.pendingWrites.clear();
+      for (const pendingWrite of writes) pendingWrite();
+    }, 0);
+  }
+
+  deferDashboardSnapshot<T>(workplaceId: string, data: T): void {
+    this.deferWrite(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, () =>
+      this.saveDashboardSnapshot(workplaceId, data),
+    );
+  }
+
+  deferWealthSnapshot<T>(workplaceId: string, data: T): void {
+    this.deferWrite(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, () =>
+      this.saveWealthSnapshot(workplaceId, data),
+    );
+  }
+
+  deferCustomSnapshot<T>(workplaceId: string, key: string, data: T): void {
+    this.deferWrite(`${key}_${workplaceId}`, () => this.saveCustomSnapshot(workplaceId, key, data));
   }
 
   /**
@@ -189,6 +214,11 @@ class SnapshotService {
    * Clears all snapshot records selectively without wiping non-snapshot storage keys.
    */
   clearSnapshots(): void {
+    if (this.pendingWriteTimer !== null) {
+      clearTimeout(this.pendingWriteTimer);
+      this.pendingWriteTimer = null;
+    }
+    this.pendingWrites.clear();
     try {
       const keys = storage.getAllKeys();
       for (const key of keys) {
@@ -200,6 +230,7 @@ class SnapshotService {
           storage.remove(key);
         }
       }
+      this.lastPersistedPayloads.clear();
     } catch (error) {
       logger.warn('[SnapshotService] Failed to clear snapshots', { error });
     }

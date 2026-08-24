@@ -150,7 +150,7 @@ export function observeAggregatedAccountBalances(
             );
 
             if (!disposed) {
-              snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
+              snapshotService.deferWealthSnapshot(workplaceId, wealthSummary);
             }
 
             return { accounts, balancesMap, wealthSummary };

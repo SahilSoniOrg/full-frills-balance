@@ -1,4 +1,5 @@
 import { snapshotService } from '../SnapshotService';
+import { storage } from '@/src/utils/storage';
 
 const mockSnapshotStore = new Map<string, unknown>();
 
@@ -12,7 +13,25 @@ jest.mock('@/src/utils/storage', () => ({
 }));
 
 describe('SnapshotService', () => {
-  beforeEach(() => mockSnapshotStore.clear());
+  beforeEach(() => {
+    mockSnapshotStore.clear();
+    jest.clearAllMocks();
+    snapshotService.clearSnapshots();
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('skips redundant writes while persisting changed data immediately', () => {
+    snapshotService.saveCustomSnapshot('workplace-1', 'accounts', { value: 1 });
+    snapshotService.saveCustomSnapshot('workplace-1', 'accounts', { value: 1 });
+    snapshotService.saveCustomSnapshot('workplace-1', 'accounts', { value: 2 });
+
+    expect(storage.set).toHaveBeenCalledTimes(2);
+    expect(snapshotService.getCustomSnapshot('workplace-1', 'accounts')).toEqual({ value: 2 });
+  });
 
   it('round-trips typed payloads containing maps and sets', () => {
     snapshotService.saveCustomSnapshot('workplace-1', 'typed', {
@@ -48,5 +67,30 @@ describe('SnapshotService', () => {
 
     expect(snapshotService.getCustomSnapshot('workplace-1', 'expired')).toBeNull();
     expect(mockSnapshotStore.has('expired_workplace-1')).toBe(false);
+  });
+
+  it('coalesces deferred writes per workplace and snapshot key', () => {
+    jest.useFakeTimers();
+    snapshotService.deferCustomSnapshot('workplace-1', 'accounts', { value: 1 });
+    snapshotService.deferCustomSnapshot('workplace-1', 'accounts', { value: 2 });
+    snapshotService.deferCustomSnapshot('workplace-2', 'accounts', { value: 3 });
+
+    expect(mockSnapshotStore.size).toBe(0);
+    jest.runAllTimers();
+
+    expect(JSON.parse(mockSnapshotStore.get('accounts_workplace-1') as string).data).toEqual({
+      value: 2,
+    });
+    expect(JSON.parse(mockSnapshotStore.get('accounts_workplace-2') as string).data).toEqual({
+      value: 3,
+    });
+  });
+
+  it('cancels pending writes when snapshots are cleared', () => {
+    jest.useFakeTimers();
+    snapshotService.deferDashboardSnapshot('workplace-1', { value: 1 });
+    snapshotService.clearSnapshots();
+    jest.runAllTimers();
+    expect(mockSnapshotStore.has('dashboard_data_snapshot_workplace-1')).toBe(false);
   });
 });

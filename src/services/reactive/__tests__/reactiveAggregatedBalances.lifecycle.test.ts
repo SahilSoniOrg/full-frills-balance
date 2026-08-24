@@ -38,7 +38,7 @@ jest.mock('@/src/services/wealth-service', () => ({
   wealthService: { calculateSummary: jest.fn() },
 }));
 jest.mock('@/src/utils/SnapshotService', () => ({
-  snapshotService: { saveWealthSnapshot: jest.fn() },
+  snapshotService: { deferWealthSnapshot: jest.fn() },
 }));
 
 describe('reactiveAggregatedBalances lifecycle', () => {
@@ -107,6 +107,6 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     await wealthPromise;
     await Promise.resolve();
 
-    expect(snapshotService.saveWealthSnapshot).not.toHaveBeenCalled();
+    expect(snapshotService.deferWealthSnapshot).not.toHaveBeenCalled();
   });
 });

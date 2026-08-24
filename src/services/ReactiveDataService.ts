@@ -169,7 +169,7 @@ class ReactiveDataService {
           }),
           tap(data => {
             // Persist for Instant Boot on next launch
-            snapshotService.saveDashboardSnapshot(workplaceId, data);
+            snapshotService.deferDashboardSnapshot(workplaceId, data);
           }),
         ),
       decorate: observable =>
@@ -206,7 +206,7 @@ class ReactiveDataService {
           }),
           tap(data => {
             // Persist for Instant Boot / Remount on Accounts Screen
-            snapshotService.saveCustomSnapshot(workplaceId, 'accounts_list_data', data);
+            snapshotService.deferCustomSnapshot(workplaceId, 'accounts_list_data', data);
           }),
         ),
       decorate: observable => withFirstEmissionMetric(observable, 'Hydration.Hit.AccountList'),
