@@ -1,4 +1,4 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import type { IconName } from '@/src/components/core';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type {
@@ -42,10 +42,7 @@ export interface AccountsListViewModel {
   onAccountActionPress: (account: AccountCardViewModel) => void;
   selectedAccountIds: Set<AccountId>;
   isSelectionModeActive: boolean;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
-  onClearSelection: () => void;
-  selectionActions: SelectionAction[];
+  selectionChrome: ListSelectionChrome;
   totalSelectableAccounts: number;
   modals: AccountsListModalsProps;
   onCollapseAccount: (accountId: AccountId) => void;

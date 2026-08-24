@@ -1,5 +1,5 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import type { JournalListModalsProps } from '@/src/features/journal';
+import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import { IconName } from '@/src/components/core';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
@@ -89,10 +89,6 @@ export interface AccountDetailsViewModel {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  actions?: SelectionAction[];
+  selectionChrome: ListSelectionChrome;
   modals?: JournalListModalsProps;
 }

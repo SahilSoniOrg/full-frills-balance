@@ -27,6 +27,30 @@ import { createDisposableReplay, DisposableReplay } from '@/src/services/reactiv
 
 type ReactiveCacheEntry<T> = DisposableReplay<T> & { workplaceId: WorkplaceId };
 
+function withFirstEmissionMetric<T>(
+  source$: Observable<T>,
+  metricName: string,
+  context?: Record<string, unknown>,
+): Observable<T> {
+  return new Observable<T>(subscriber => {
+    const subStart = performance.now();
+    let firstEmission = true;
+    const sub = source$.subscribe({
+      next: value => {
+        if (firstEmission) {
+          const duration = performance.now() - subStart;
+          logger.metric(metricName, duration, { ...context, hit: duration < 50 });
+          firstEmission = false;
+        }
+        subscriber.next(value);
+      },
+      error: err => subscriber.error(err),
+      complete: () => subscriber.complete(),
+    });
+    return () => sub.unsubscribe();
+  });
+}
+
 /**
  * Consolidated reactive data for dashboard widgets.
  * Eliminates duplicate subscriptions by providing a single source of truth.
@@ -175,25 +199,8 @@ class ReactiveDataService {
 
     const replay = createDisposableReplay(obs$);
 
-    const loggedObs$ = new Observable<DashboardData>(subscriber => {
-      const subStart = performance.now();
-      let firstEmission = true;
-      const sub = replay.observable.subscribe({
-        next: value => {
-          if (firstEmission) {
-            const duration = performance.now() - subStart;
-            logger.metric('Hydration.Hit.Dashboard', duration, {
-              hit: duration < 50,
-              currency: targetCurrency,
-            });
-            firstEmission = false;
-          }
-          subscriber.next(value);
-        },
-        error: err => subscriber.error(err),
-        complete: () => subscriber.complete(),
-      });
-      return () => sub.unsubscribe();
+    const loggedObs$ = withFirstEmissionMetric(replay.observable, 'Hydration.Hit.Dashboard', {
+      currency: targetCurrency,
     });
 
     this._dashboardCache.set(cacheKey, { ...replay, observable: loggedObs$, workplaceId });
@@ -232,25 +239,7 @@ class ReactiveDataService {
 
     const replay = createDisposableReplay(obs$);
 
-    const loggedObs$ = new Observable<LiveAccountsSummaryData>(subscriber => {
-      const subStart = performance.now();
-      let firstEmission = true;
-      const sub = replay.observable.subscribe({
-        next: value => {
-          if (firstEmission) {
-            const duration = performance.now() - subStart;
-            logger.metric('Hydration.Hit.AccountList', duration, {
-              hit: duration < 50,
-            });
-            firstEmission = false;
-          }
-          subscriber.next(value);
-        },
-        error: err => subscriber.error(err),
-        complete: () => subscriber.complete(),
-      });
-      return () => sub.unsubscribe();
-    });
+    const loggedObs$ = withFirstEmissionMetric(replay.observable, 'Hydration.Hit.AccountList');
 
     this._optimizedAccountListCache.set(cacheKey, {
       ...replay,
@@ -319,25 +308,8 @@ class ReactiveDataService {
 
     const replay = createDisposableReplay(obs$);
 
-    const loggedObs$ = new Observable<AccountDashboardData>(subscriber => {
-      const subStart = performance.now();
-      let firstEmission = true;
-      const sub = replay.observable.subscribe({
-        next: value => {
-          if (firstEmission) {
-            const duration = performance.now() - subStart;
-            logger.metric('Hydration.Hit.AccountDetails', duration, {
-              hit: duration < 50,
-              accountId,
-            });
-            firstEmission = false;
-          }
-          subscriber.next(value);
-        },
-        error: err => subscriber.error(err),
-        complete: () => subscriber.complete(),
-      });
-      return () => sub.unsubscribe();
+    const loggedObs$ = withFirstEmissionMetric(replay.observable, 'Hydration.Hit.AccountDetails', {
+      accountId,
     });
 
     this._accountDashboardCache.set(cacheKey, {

@@ -12,6 +12,7 @@ import {
 } from '@/src/services/simulation/SafeToSpendReadModel';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
+import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
@@ -171,7 +172,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     const timeoutId = setTimeout(() => {
       void bootstrapWidgets().catch((err: Error | unknown) => {
         if (lease.isCurrent()) {
-          console.warn('[useWidgetSync] Failed to sync widget data:', err);
+          logger.warn('[useWidgetSync] Failed to sync widget data:', { error: err });
         }
       });
     }, 500);

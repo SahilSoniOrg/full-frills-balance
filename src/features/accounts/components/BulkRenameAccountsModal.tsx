@@ -1,11 +1,10 @@
-import { ModalSurface } from '@/src/components/common/ModalSurface';
-import { AppInput, AppText, IvyIcon } from '@/src/components/core';
+import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { AppInput, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface BulkRenameAccountsModalProps {
   visible: boolean;
@@ -19,8 +18,8 @@ function BulkRenameAccountsModalContent({
   onClose,
   onSave,
 }: Omit<BulkRenameAccountsModalProps, 'visible'>) {
-  const { theme } = useTheme();
   const [namesOverride, setNamesOverride] = useState<Record<AccountId, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleTextChange = (accountId: AccountId, text: string) => {
     setNamesOverride(prev => ({
@@ -35,46 +34,29 @@ function BulkRenameAccountsModalContent({
       const accountId = account.id;
       finalNames[accountId] = namesOverride[accountId] ?? account.name;
     });
+    setIsSaving(true);
     try {
       await onSave(finalNames);
       onClose();
     } catch {
       // The caller owns error presentation. Keep the draft open for retry.
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <ModalSurface
+    <BulkActionModalSurface
       visible={true}
       onClose={onClose}
       title="Edit Account Names"
-      fixedHeight={false}
-      scrollable={true}
-      accessibilityCloseLabel="Close rename modal"
-      footer={
-        <View style={styles.footerRow}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={[styles.footerButton, styles.cancelButton, { borderColor: theme.border }]}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel rename"
-          >
-            <AppText variant="body" weight="medium" color="secondary">
-              Cancel
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.footerButton, styles.saveButton, { backgroundColor: theme.primary }]}
-            accessibilityRole="button"
-            accessibilityLabel="Save Changes"
-          >
-            <AppText variant="body" weight="bold" style={{ color: theme.background }}>
-              Save Changes
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      }
+      itemCount={accounts.length}
+      confirmLabel="Save Changes"
+      confirmAccessibilityLabel="Save Changes"
+      cancelAccessibilityLabel="Cancel rename"
+      onConfirm={handleSave}
+      isSubmitting={isSaving}
+      testID="bulk-rename-accounts-modal"
     >
       {accounts.map(account => {
         const accountId = account.id;
@@ -110,7 +92,7 @@ function BulkRenameAccountsModalContent({
           </View>
         );
       })}
-    </ModalSurface>
+    </BulkActionModalSurface>
   );
 }
 
@@ -129,6 +111,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    marginBottom: Spacing.md,
   },
   categoryIconFrame: {
     padding: Spacing.xs / 2,
@@ -140,19 +123,4 @@ const styles = StyleSheet.create({
   inputContainer: {
     flex: 1,
   },
-  footerRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    borderRadius: Shape.radius.r3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  saveButton: {},
 });

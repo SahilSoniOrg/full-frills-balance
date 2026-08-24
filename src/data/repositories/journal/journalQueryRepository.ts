@@ -40,6 +40,13 @@ export class JournalQueryRepository {
       )
       .fetch();
   }
+
+  async findWithDeletedByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
+    if (ids.length === 0) return [];
+    return this.journals
+      .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+      .fetch();
+  }
 }
 
 export const journalQueryRepository = new JournalQueryRepository();

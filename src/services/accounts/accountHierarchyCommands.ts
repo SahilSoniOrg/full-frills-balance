@@ -42,7 +42,7 @@ async function isDescendant(
 async function getPlainMetadata(
   accountId: AccountId,
   workplaceId: WorkplaceId,
-): Promise<Record<string, any> | undefined> {
+): Promise<Record<string, unknown> | undefined> {
   const meta = await accountQueryRepository.findMetadata(workplaceId, accountId);
   if (!meta) return undefined;
 
@@ -74,7 +74,7 @@ export type AccountFieldUpdateContext = {
     currencyCode: string;
     description?: string;
   };
-  beforeMetadata: Record<string, any> | undefined;
+  beforeMetadata: Record<string, unknown> | undefined;
 };
 
 function buildAccountUpdateAuditChanges(

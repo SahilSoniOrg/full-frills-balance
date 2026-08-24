@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import {
   useJournalEntryList,
   useJournalsBulkOperations,
@@ -30,12 +30,7 @@ export interface RecentJournalEntries {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  toggleSelection: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  actions?: SelectionAction[];
+  selectionChrome: ListSelectionChrome;
   modals?: JournalListModalsProps;
 }
 
@@ -80,12 +75,7 @@ export function useRecentJournalEntries({
     selectedIds: core.selectedIds,
     isSelectionModeActive: core.isSelectionModeActive,
     onLongPressItem: core.onLongPressItem,
-    toggleSelection: core.toggleSelection,
-    selectAll: core.selectAll,
-    clearItems: core.clearItems,
-    exitSelectionMode: core.exitSelectionMode,
-    onShareSelected: core.onShareSelected,
-    actions: bulkOperations.actions,
+    selectionChrome: bulkOperations.selectionChrome,
     modals: bulkOperations.modals,
   };
 }

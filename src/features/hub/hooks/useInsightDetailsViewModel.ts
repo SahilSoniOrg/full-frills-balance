@@ -1,4 +1,4 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -26,11 +26,7 @@ export interface InsightDetailsViewModel {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  actions?: SelectionAction[];
+  selectionChrome: ListSelectionChrome;
   modals?: JournalListModalsProps;
 }
 
@@ -76,11 +72,7 @@ export function useInsightDetailsViewModel(
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectAll: journalList.selectAll,
-    clearItems: journalList.clearItems,
-    exitSelectionMode: journalList.exitSelectionMode,
-    onShareSelected: journalList.onShareSelected,
-    actions: bulkOperations.actions,
+    selectionChrome: bulkOperations.selectionChrome,
     modals: bulkOperations.modals,
   };
 }

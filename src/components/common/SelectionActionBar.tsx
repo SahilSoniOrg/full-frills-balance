@@ -20,6 +20,23 @@ export interface SelectionAction {
   isPrimary?: boolean;
 }
 
+/**
+ * Secondary chrome shown while a list is in selection mode — select-all,
+ * clear, share, the overflow action bar, and dismiss. Bundled as a single
+ * object so view-models hand the common list a single prop instead of five
+ * and so feature hooks can assemble it once instead of re-deriving it per
+ * consumer. Lived in `JournalEntryListView` previously; moved here because
+ * it is imported across accounts/budget/dashboard/hub/journal feature hooks
+ * and belongs next to `SelectionAction`, which it references.
+ */
+export interface ListSelectionChrome {
+  exitSelectionMode: () => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  onShareSelected?: () => void;
+  actions?: SelectionAction[];
+}
+
 export interface SelectionActionBarProps {
   selectedCount: number;
   totalCount: number;

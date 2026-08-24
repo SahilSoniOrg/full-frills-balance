@@ -6,6 +6,7 @@ import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAppLockEngine } from '@/src/features/app/hooks/useAppLockEngine';
+import { logger } from '@/src/utils/logger';
 import { MotiView } from 'moti';
 import { allowScreenCaptureAsync, preventScreenCaptureAsync } from 'expo-screen-capture';
 import React, { useEffect } from 'react';
@@ -32,7 +33,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
           await allowScreenCaptureAsync();
         }
       } catch (err) {
-        console.warn('[AppLockInterceptor] Screen capture toggle failed:', err);
+        logger.warn('[AppLockInterceptor] Screen capture toggle failed:', { error: err });
       }
     };
     applyPrivacy();

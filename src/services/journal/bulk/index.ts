@@ -3,4 +3,5 @@ export * from './bulkDuplicate';
 export * from './bulkMerge';
 export * from './bulkChangeAccount';
 export * from './bulkDelete';
+export * from './bulkRestore';
 export * from './bulkHelpers';

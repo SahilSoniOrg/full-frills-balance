@@ -4,13 +4,13 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
-import { JournalListModals } from '@/src/features/journal';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
+import { JournalListModals } from '@/src/features/journal';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
@@ -95,23 +95,6 @@ export function DashboardScreenView({
     isLoading: !safeToSpendData,
   });
 
-  const selectionChrome = useMemo(
-    () => ({
-      exitSelectionMode: recentJournalEntries.exitSelectionMode,
-      selectAll: recentJournalEntries.selectAll,
-      clearItems: recentJournalEntries.clearItems,
-      onShareSelected: recentJournalEntries.onShareSelected,
-      actions: recentJournalEntries.actions,
-    }),
-    [
-      recentJournalEntries.exitSelectionMode,
-      recentJournalEntries.selectAll,
-      recentJournalEntries.clearItems,
-      recentJournalEntries.onShareSelected,
-      recentJournalEntries.actions,
-    ],
-  );
-
   if (!hasCompletedOnboarding) {
     return null;
   }
@@ -128,6 +111,7 @@ export function DashboardScreenView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
+    selectionChrome,
   } = recentJournalEntries;
 
   return (

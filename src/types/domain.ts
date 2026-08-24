@@ -171,6 +171,11 @@ export interface TransactionDuplicateCandidate {
   reasons: string[];
 }
 
+export interface BulkDeleteUndoToken {
+  journals: { id: JournalId; deletedAt: number }[];
+  transactions: { id: TransactionId; journalId: JournalId; deletedAt: number }[];
+}
+
 export interface TransactionLinkedJournalInfo {
   journalId: JournalId;
   description?: string;

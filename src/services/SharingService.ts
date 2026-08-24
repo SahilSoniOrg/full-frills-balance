@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 import { analytics } from './analytics';
 
 import { ShareFormat } from '@/src/types/sharing';
+import type { AnalyticsProperties } from './analytics/analyticsConfig';
 
 export { ShareFormat };
 
@@ -242,7 +243,7 @@ class SharingService {
     }
   }
 
-  private track(event: string, provider: ShareProvider, extra: Record<string, any> = {}) {
+  private track(event: string, provider: ShareProvider, extra: AnalyticsProperties = {}) {
     analytics.track(event, {
       provider: provider.id,
       ...extra,

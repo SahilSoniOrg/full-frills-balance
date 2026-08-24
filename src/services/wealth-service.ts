@@ -30,6 +30,20 @@ export interface DailyNetWorth {
   totalLiabilities: number;
 }
 
+type DailyTotals = { assets: number; liabilities: number };
+
+function addDailyDelta(
+  dailyDeltas: Map<string, DailyTotals>,
+  dayKey: string,
+  accountType: AccountType,
+  delta: number,
+): void {
+  const current = dailyDeltas.get(dayKey) ?? { assets: 0, liabilities: 0 };
+  if (accountType === AccountType.ASSET) current.assets += delta;
+  else current.liabilities += delta;
+  dailyDeltas.set(dayKey, current);
+}
+
 /**
  * WealthService - Pure logic for calculating wealth metrics.
  * Follows Rule 1.3: Data-Driven UI (Database is source of truth, service interprets it).
@@ -211,14 +225,8 @@ export const wealthService = {
 
       for (const tx of convertedTxs) {
         if (!tx) continue;
-        const current = dailyDeltas.get(tx.dayKey) || { assets: 0, liabilities: 0 };
         const impact = effect(tx.accountType, tx.transactionType).delta(tx.convertedAmount);
-        if (tx.accountType === AccountType.ASSET) {
-          current.assets += impact;
-        } else {
-          current.liabilities += impact;
-        }
-        dailyDeltas.set(tx.dayKey, current);
+        addDailyDelta(dailyDeltas, tx.dayKey, tx.accountType, impact);
       }
     } else {
       for (const d of deltas) {
@@ -226,13 +234,7 @@ export const wealthService = {
         const rate = rates.get(d.currencyCode) || 1;
         const convertedDelta = d.delta * rate;
 
-        const current = dailyDeltas.get(dayKey) || { assets: 0, liabilities: 0 };
-        if (d.accountType === AccountType.ASSET) {
-          current.assets += convertedDelta;
-        } else {
-          current.liabilities += convertedDelta;
-        }
-        dailyDeltas.set(dayKey, current);
+        addDailyDelta(dailyDeltas, dayKey, d.accountType, convertedDelta);
       }
     }
 

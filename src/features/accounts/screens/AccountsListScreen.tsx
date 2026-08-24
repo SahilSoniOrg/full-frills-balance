@@ -44,7 +44,7 @@ function AccountsScreen() {
 
     return applySelectionChrome(baseChrome, {
       active: vm.isSelectionModeActive,
-      onExit: vm.onClearSelection,
+      onExit: vm.selectionChrome.exitSelectionMode,
       fab,
     });
   }, [
@@ -52,7 +52,7 @@ function AccountsScreen() {
     vm.accountsForArchiveToggle,
     vm.isSearching,
     vm.isSelectionModeActive,
-    vm.onClearSelection,
+    vm.selectionChrome.exitSelectionMode,
     vm.onManageHierarchy,
     vm.onReorderPress,
     vm.onSearchChange,

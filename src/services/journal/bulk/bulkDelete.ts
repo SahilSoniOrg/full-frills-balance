@@ -1,5 +1,5 @@
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { BulkDeleteUndoToken, JournalId, WorkplaceId } from '@/src/types/domain';
 import { enqueueRebuildIfNeeded } from './bulkHelpers';
 
 /**
@@ -8,13 +8,14 @@ import { enqueueRebuildIfNeeded } from './bulkHelpers';
 export async function bulkDeleteJournals(
   workplaceId: WorkplaceId,
   journalIds: JournalId[],
-): Promise<void> {
-  if (journalIds.length === 0) return;
+): Promise<BulkDeleteUndoToken> {
+  if (journalIds.length === 0) {
+    return { journals: [], transactions: [] };
+  }
 
-  const { affectedAccountIds, minDate } = await journalWriteRepository.bulkSoftDeleteJournals(
-    workplaceId,
-    journalIds,
-  );
+  const { affectedAccountIds, minDate, undoToken } =
+    await journalWriteRepository.bulkSoftDeleteJournals(workplaceId, journalIds);
 
   enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
+  return undoToken;
 }

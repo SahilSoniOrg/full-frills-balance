@@ -48,10 +48,12 @@ const requiredViewProps = {
   onAccountActionPress: jest.fn(),
   selectedAccountIds: new Set<AccountId>(),
   isSelectionModeActive: false,
-  onSelectAll: jest.fn(),
-  onDeselectAll: jest.fn(),
-  onClearSelection: jest.fn(),
-  selectionActions: [],
+  selectionChrome: {
+    exitSelectionMode: jest.fn(),
+    selectAll: jest.fn(),
+    clearItems: jest.fn(),
+    actions: [],
+  },
   totalSelectableAccounts: 0,
   modals: {
     activeModal: null,
@@ -243,16 +245,19 @@ describe('AccountsListView', () => {
         {...requiredViewProps}
         isSelectionModeActive={true}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
-        onSelectAll={onSelectAll}
-        onClearSelection={onClearSelection}
+        selectionChrome={{
+          ...requiredViewProps.selectionChrome,
+          selectAll: onSelectAll,
+          exitSelectionMode: onClearSelection,
+          actions: [
+            {
+              name: 'archive',
+              onPress: jest.fn(),
+              accessibilityLabel: 'Archive selected',
+            },
+          ],
+        }}
         totalSelectableAccounts={1}
-        selectionActions={[
-          {
-            name: 'archive',
-            onPress: jest.fn(),
-            accessibilityLabel: 'Archive selected',
-          },
-        ]}
         chrome={mockChrome as any}
       />,
     );

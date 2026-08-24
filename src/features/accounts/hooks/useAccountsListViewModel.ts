@@ -2,9 +2,14 @@ import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope'
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   filterAccountsBySearch,
-  filterAccountsForListTab,
   filterAccountSectionsForTab,
+  filterAccountsForListTab,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
+import type {
+  AccountsListActiveModal,
+  AccountsListModalsProps,
+  AccountsListViewModel,
+} from '@/src/features/accounts/hooks/accountsListTypes';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountsBulkOperations } from '@/src/features/accounts/hooks/useAccountsBulkOperations';
 import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
@@ -15,22 +20,16 @@ import {
   AccountSectionViewModel,
   transformAccountsToSections,
 } from '@/src/features/accounts/utils/transformAccounts';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
-import { useTheme } from '@/src/hooks/use-theme';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
-
-import type {
-  AccountsListActiveModal,
-  AccountsListModalsProps,
-  AccountsListViewModel,
-} from '@/src/features/accounts/hooks/accountsListTypes';
 
 export type {
   AccountSectionViewModel,
@@ -281,6 +280,16 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     selection.selectAll(allSelectableAccountIds);
   }, [selection, allSelectableAccountIds]);
 
+  const selectionChrome = useMemo(
+    () => ({
+      exitSelectionMode: selection.exitSelectionMode,
+      selectAll: handleSelectAll,
+      clearItems: selection.clearItems,
+      actions: bulk.selectionActions,
+    }),
+    [selection.exitSelectionMode, handleSelectAll, selection.clearItems, bulk.selectionActions],
+  );
+
   return {
     sections,
     onToggleSection,
@@ -290,10 +299,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onAccountActionPress,
     selectedAccountIds: selection.selectedIds,
     isSelectionModeActive: selection.isSelectionModeActive,
-    onSelectAll: handleSelectAll,
-    onDeselectAll: selection.clearItems,
-    onClearSelection: selection.exitSelectionMode,
-    selectionActions: bulk.selectionActions,
+    selectionChrome,
     totalSelectableAccounts: allSelectableAccountIds.length,
     modals,
     onCollapseAccount,

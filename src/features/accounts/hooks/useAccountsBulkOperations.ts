@@ -7,7 +7,9 @@ import {
 } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
 import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { useSelection } from '@/src/hooks/useSelection';
+import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
+import { useUndoableAction } from '@/src/hooks/useUndoableAction';
+import type { UseSelectionResult } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
 import {
@@ -15,10 +17,10 @@ import {
   type AccountBulkUpdate,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { AccountId, AccountType, PlainAccount, WorkplaceId } from '@/src/types/domain';
-import { isAccountArchived } from '@/src/utils/accountArchive';
+import { isAccountArchived, type AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 
 type AccountListItem = AccountFields | PlainAccount;
@@ -26,14 +28,11 @@ type AccountListItem = AccountFields | PlainAccount;
 interface UseAccountsBulkOperationsInput {
   workplaceId?: WorkplaceId;
   accounts: AccountListItem[];
-  selection: ReturnType<typeof useSelection<AccountId>>;
+  selection: UseSelectionResult<AccountId>;
   isBulkHierarchyOpen: boolean;
   openModal: (modal: AccountsListActiveModal) => void;
   closeModal: () => void;
-  applyArchiveChanges: (changes: {
-    toArchive: AccountId[];
-    toUnarchive: AccountId[];
-  }) => Promise<any>;
+  applyArchiveChanges: (changes: AccountArchiveChanges) => Promise<boolean>;
 }
 
 function buildInverseBulkUpdates(
@@ -67,10 +66,12 @@ export function useAccountsBulkOperations({
   applyArchiveChanges,
 }: UseAccountsBulkOperationsInput) {
   const { theme, onContrast } = useTheme();
-  const accountsById = useMemo(
-    () => new Map<AccountId, AccountListItem>(accounts.map(a => [a.id, a])),
-    [accounts],
+
+  const { itemsById: accountsById } = useSelectedItemMap<AccountListItem, AccountId>(
+    accounts,
+    selection,
   );
+  const runUndoableAction = useUndoableAction(selection.exitSelectionMode, closeModal);
 
   const handleBulkArchive = useCallback(async () => {
     if (!workplaceId || selection.selectedIds.size === 0) return;
@@ -80,39 +81,24 @@ export function useAccountsBulkOperations({
     const toArchive = anyUnarchived ? selectedArray : [];
     const toUnarchive = anyUnarchived ? [] : selectedArray;
 
-    try {
-      await applyArchiveChanges({ toArchive, toUnarchive });
-      selection.exitSelectionMode();
+    analytics.trackFeatureUsage('account', 'bulk_archive', {
+      count: selectedArray.length,
+      is_archive: anyUnarchived,
+    });
 
-      analytics.trackFeatureUsage('account', 'bulk_archive', {
-        count: selectedArray.length,
-        is_archive: anyUnarchived,
-      });
+    const actionText = anyUnarchived ? 'Archived' : 'Unarchived';
 
-      const actionText = anyUnarchived ? 'Archived' : 'Unarchived';
-      toast.success(
-        `${actionText} ${selectedArray.length} account${selectedArray.length === 1 ? '' : 's'}`,
-        {
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try {
-                await applyArchiveChanges({
-                  toArchive: toUnarchive,
-                  toUnarchive: toArchive,
-                });
-                toast.success('Archive status reverted');
-              } catch (error) {
-                showErrorAlert(error, 'Failed to undo archive changes');
-              }
-            },
-          },
-        },
-      );
-    } catch (error) {
-      showErrorAlert(error, 'Failed to update account archive status');
-    }
-  }, [workplaceId, selection, accounts, applyArchiveChanges]);
+    await runUndoableAction(
+      () => applyArchiveChanges({ toArchive, toUnarchive }),
+      () => applyArchiveChanges({ toArchive: toUnarchive, toUnarchive: toArchive }),
+      `${actionText} ${selectedArray.length} account${selectedArray.length === 1 ? '' : 's'}`,
+      {
+        errorMessage: 'Failed to update account archive status',
+        undoSuccessMessage: 'Archive status reverted',
+        onUndoError: error => showErrorAlert(error, 'Failed to undo archive changes'),
+      },
+    );
+  }, [workplaceId, selection.selectedIds, accounts, applyArchiveChanges, runUndoableAction]);
 
   const applyBulkUpdate = useCallback(
     async (
@@ -131,30 +117,18 @@ export function useAccountsBulkOperations({
 
       const undoRequests = buildInverseBulkUpdates(requests, accountsById);
 
-      try {
-        await updateAccountsCommand(workplaceId, requests);
-        selection.exitSelectionMode();
-        closeModal();
-
-        toast.success(options.successMessage(requests.length), {
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try {
-                await updateAccountsCommand(workplaceId, undoRequests);
-                toast.success(options.undoMessage);
-              } catch (error) {
-                showErrorAlert(error, `Failed to undo: ${options.undoMessage}`);
-              }
-            },
-          },
-        });
-      } catch (error) {
-        showErrorAlert(error, 'Failed to update selected accounts');
-        throw error;
-      }
+      await runUndoableAction(
+        () => updateAccountsCommand(workplaceId, requests),
+        () => updateAccountsCommand(workplaceId, undoRequests),
+        () => options.successMessage(requests.length),
+        {
+          errorMessage: 'Failed to update selected accounts',
+          undoSuccessMessage: options.undoMessage,
+          onUndoError: error => showErrorAlert(error, `Failed to undo: ${options.undoMessage}`),
+        },
+      );
     },
-    [selection, workplaceId, closeModal, accountsById],
+    [selection.selectedIds, workplaceId, accountsById, runUndoableAction],
   );
 
   const handleBulkAppearanceSelect = useCallback(
@@ -210,34 +184,22 @@ export function useAccountsBulkOperations({
 
       const undoRequests = buildInverseBulkUpdates(requests, accountsById);
 
-      try {
-        await updateAccountsCommand(workplaceId, requests);
-        selection.exitSelectionMode();
-        closeModal();
+      analytics.trackFeatureUsage('account', 'bulk_rename', {
+        count: requests.length,
+      });
 
-        analytics.trackFeatureUsage('account', 'bulk_rename', {
-          count: requests.length,
-        });
-
-        toast.success(`Renamed ${requests.length} account${requests.length === 1 ? '' : 's'}`, {
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try {
-                await updateAccountsCommand(workplaceId, undoRequests);
-                toast.success('Rename undone');
-              } catch (error) {
-                showErrorAlert(error, 'Failed to undo rename');
-              }
-            },
-          },
-        });
-      } catch (error) {
-        showErrorAlert(error, 'Failed to rename selected accounts');
-        throw error;
-      }
+      await runUndoableAction(
+        () => updateAccountsCommand(workplaceId, requests),
+        () => updateAccountsCommand(workplaceId, undoRequests),
+        `Renamed ${requests.length} account${requests.length === 1 ? '' : 's'}`,
+        {
+          errorMessage: 'Failed to rename selected accounts',
+          undoSuccessMessage: 'Rename undone',
+          onUndoError: error => showErrorAlert(error, 'Failed to undo rename'),
+        },
+      );
     },
-    [workplaceId, accountsById, selection, closeModal],
+    [workplaceId, accountsById, selection, closeModal, runUndoableAction],
   );
 
   const handleBulkHierarchyMoveAssign = useCallback(

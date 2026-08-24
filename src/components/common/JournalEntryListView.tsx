@@ -10,15 +10,7 @@ import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
 import { SelectableJournalEntryCard } from './SelectableJournalEntryCard';
-import { SelectionActionBar, type SelectionAction } from './SelectionActionBar';
-
-export type JournalEntryListSelectionChrome = {
-  exitSelectionMode: () => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  onShareSelected?: () => void;
-  actions?: SelectionAction[];
-};
+import { SelectionActionBar, type ListSelectionChrome } from './SelectionActionBar';
 
 interface JournalEntryListViewProps {
   items: JournalListItem[];
@@ -36,7 +28,7 @@ interface JournalEntryListViewProps {
   onLongPressItem?: (id: JournalId) => void;
   isSelectionModeActive?: boolean;
   /** Selection-mode secondary chrome (action bar + dismiss). Owned by this list. */
-  selectionChrome?: JournalEntryListSelectionChrome;
+  selectionChrome?: ListSelectionChrome;
   style?: StyleProp<ViewStyle>;
 }
 

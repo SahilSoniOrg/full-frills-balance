@@ -8,7 +8,6 @@ import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import type { InsightDetailsViewModel } from '@/src/features/hub/hooks/useInsightDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function InsightDetailsView({
@@ -21,25 +20,10 @@ export function InsightDetailsView({
   selectedIds,
   isSelectionModeActive,
   onLongPressItem,
-  selectAll,
-  clearItems,
-  exitSelectionMode,
-  onShareSelected,
-  actions,
+  selectionChrome,
   modals,
 }: InsightDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { theme, fonts } = useTheme();
-
-  const selectionChrome = useMemo(
-    () => ({
-      exitSelectionMode,
-      selectAll,
-      clearItems,
-      onShareSelected,
-      actions,
-    }),
-    [exitSelectionMode, selectAll, clearItems, onShareSelected, actions],
-  );
 
   const listHeader = (
     <View style={styles.headerContainer}>

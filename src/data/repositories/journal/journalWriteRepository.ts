@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import {
+  BulkDeleteUndoToken,
   JournalStatus,
   AccountId,
   JournalDisplayType,
@@ -62,6 +63,52 @@ export class JournalWriteRepository {
     return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
+  private prepareTransaction(
+    journalId: JournalId,
+    txData: CreateJournalData['transactions'][number],
+    journalDate: number,
+    journalCurrency: string,
+    workplaceId: WorkplaceId,
+    calculatedBalances?: Map<string, number | null>,
+    now = new Date(),
+    overrides?: Pick<CreateJournalData['transactions'][number], 'notes' | 'transactionType'>,
+  ): Transaction {
+    return this.transactions.prepareCreate(tx => {
+      tx.journalId = journalId;
+      tx.accountId = txData.accountId;
+      tx.amount = txData.amount;
+      tx.currencyCode = txData.currencyCode || journalCurrency;
+      tx.transactionType = overrides?.transactionType ?? txData.transactionType;
+      tx.transactionDate = journalDate;
+      tx.notes = overrides?.notes ?? txData.notes;
+      tx.exchangeRate = txData.exchangeRate;
+      tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
+      tx.workplaceId = workplaceId;
+      tx.createdAt = now;
+      tx.updatedAt = now;
+    });
+  }
+
+  private prepareMetadata(
+    journalId: JournalId,
+    metadata: NonNullable<CreateJournalData['metadata']>,
+    workplaceId: WorkplaceId,
+    now = new Date(),
+  ): JournalMetadata {
+    return this.journalMetadata.prepareCreate(m => {
+      m.journalId = journalId;
+      m.workplaceId = workplaceId;
+      m.importSource = metadata.importSource;
+      m.originalSmsId = metadata.originalSmsId;
+      m.originalSmsSender = metadata.originalSmsSender;
+      m.originalSmsBody = metadata.originalSmsBody;
+      m.metadataJson = metadata.metadataJson;
+      m.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
+      m.createdAt = now;
+      m.updatedAt = now;
+    });
+  }
+
   private assertModelOwnership(
     workplaceId: WorkplaceId,
     journals: Journal[],
@@ -111,35 +158,20 @@ export class JournalWriteRepository {
       j.updatedAt = new Date();
     });
 
-    const transactions = transactionData.map(txData => {
-      return this.transactions.prepareCreate(tx => {
-        tx.journalId = journal.id;
-        tx.accountId = txData.accountId;
-        tx.amount = txData.amount;
-        tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-        tx.transactionType = txData.transactionType;
-        tx.transactionDate = journalFields.journalDate;
-        tx.notes = txData.notes;
-        tx.exchangeRate = txData.exchangeRate;
-        tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-        tx.workplaceId = workplaceId;
-        tx.createdAt = new Date();
-        tx.updatedAt = new Date();
-      });
-    });
+    const transactions = transactionData.map(txData =>
+      this.prepareTransaction(
+        journal.id,
+        txData,
+        journalFields.journalDate,
+        journalFields.currencyCode,
+        workplaceId,
+        calculatedBalances,
+      ),
+    );
 
     let metadataRecord: JournalMetadata | undefined;
     if (metadata) {
-      metadataRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
-        m.journalId = journal.id;
-        m.workplaceId = workplaceId;
-        m.importSource = metadata.importSource;
-        m.originalSmsId = metadata.originalSmsId;
-        m.originalSmsSender = metadata.originalSmsSender;
-        m.originalSmsBody = metadata.originalSmsBody;
-        m.metadataJson = metadata.metadataJson;
-        m.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
-      });
+      metadataRecord = this.prepareMetadata(journal.id, metadata, workplaceId);
     }
 
     return { journal, transactions, metadataRecord };
@@ -209,22 +241,16 @@ export class JournalWriteRepository {
         }),
       );
 
-      const createUpdates = transactionData.map(txData => {
-        return this.transactions.prepareCreate(tx => {
-          tx.accountId = txData.accountId;
-          tx.amount = txData.amount;
-          tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-          tx.transactionType = txData.transactionType;
-          tx.journalId = journalId;
-          tx.workplaceId = workplaceId;
-          tx.transactionDate = journalFields.journalDate;
-          tx.notes = txData.notes;
-          tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-          tx.createdAt = new Date();
-          tx.updatedAt = new Date();
-        });
-      });
+      const createUpdates = transactionData.map(txData =>
+        this.prepareTransaction(
+          journalId,
+          txData,
+          journalFields.journalDate,
+          journalFields.currencyCode,
+          workplaceId,
+          calculatedBalances,
+        ),
+      );
 
       const journalUpdate = existingJournal.prepareUpdate((j: Journal) => {
         j.journalDate = journalFields.journalDate;
@@ -414,25 +440,31 @@ export class JournalWriteRepository {
         j.updatedAt = now;
       });
 
-      const reversalTransactions = originalTransactions.map(tx => {
-        return this.transactions.prepareCreate(t => {
-          t.journalId = reversalJournal.id;
-          t.accountId = tx.accountId;
-          t.amount = tx.amount;
-          t.currencyCode = tx.currencyCode;
-          t.transactionType =
-            tx.transactionType === TransactionType.DEBIT
-              ? TransactionType.CREDIT
-              : TransactionType.DEBIT;
-          t.transactionDate = reversalDate;
-          t.notes = `Reversal: ${tx.notes || ''}`;
-          t.exchangeRate = tx.exchangeRate || 1;
-          t.runningBalance = null;
-          t.workplaceId = workplaceId;
-          t.createdAt = now;
-          t.updatedAt = now;
-        });
-      });
+      const reversalTransactions = originalTransactions.map(tx =>
+        this.prepareTransaction(
+          reversalJournal.id,
+          {
+            accountId: tx.accountId,
+            amount: tx.amount,
+            currencyCode: tx.currencyCode,
+            transactionType: tx.transactionType,
+            notes: tx.notes,
+            exchangeRate: tx.exchangeRate || 1,
+          },
+          reversalDate,
+          originalJournal.currencyCode,
+          workplaceId,
+          undefined,
+          now,
+          {
+            transactionType:
+              tx.transactionType === TransactionType.DEBIT
+                ? TransactionType.CREDIT
+                : TransactionType.DEBIT,
+            notes: `Reversal: ${tx.notes || ''}`,
+          },
+        ),
+      );
 
       const originalJournalUpdate = originalJournal.prepareUpdate(record => {
         record.reversingJournalId = reversalJournal.id;
@@ -451,22 +483,17 @@ export class JournalWriteRepository {
         j.updatedAt = now;
       });
 
-      const newTransactions = replacementTransactions.map(txData => {
-        return this.transactions.prepareCreate(tx => {
-          tx.journalId = replacementJournal.id;
-          tx.accountId = txData.accountId;
-          tx.amount = txData.amount;
-          tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-          tx.transactionType = txData.transactionType;
-          tx.transactionDate = journalFields.journalDate;
-          tx.notes = txData.notes;
-          tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-          tx.workplaceId = workplaceId;
-          tx.createdAt = now;
-          tx.updatedAt = new Date();
-        });
-      });
+      const newTransactions = replacementTransactions.map(txData =>
+        this.prepareTransaction(
+          replacementJournal.id,
+          txData,
+          journalFields.journalDate,
+          journalFields.currencyCode,
+          workplaceId,
+          calculatedBalances,
+          now,
+        ),
+      );
 
       await database.batch([
         reversalJournal,
@@ -521,15 +548,74 @@ export class JournalWriteRepository {
     });
   }
 
-  /**
-   * Atomically soft deletes multiple journals and their child transactions in a single database batch.
-   */
+  private calculateBulkImpact(
+    journals: Journal[],
+    transactions: Transaction[],
+  ): {
+    affectedAccountIds: Set<AccountId>;
+    minDate: number;
+  } {
+    const affectedAccountIds = new Set<AccountId>();
+    let minDate = Infinity;
+
+    for (const transaction of transactions) {
+      affectedAccountIds.add(transaction.accountId);
+      minDate = Math.min(minDate, transaction.transactionDate);
+    }
+    for (const journal of journals) {
+      minDate = Math.min(minDate, journal.journalDate);
+    }
+
+    return { affectedAccountIds, minDate };
+  }
+
+  private prepareBulkDeletedStateUpdates(
+    journals: Journal[],
+    transactions: Transaction[],
+    deletedAt: Date | undefined,
+  ): Model[] {
+    const now = new Date();
+    return [
+      ...journals.map(journal =>
+        journal.prepareUpdate(record => {
+          record.deletedAt = deletedAt;
+          record.updatedAt = now;
+        }),
+      ),
+      ...transactions.map(transaction =>
+        transaction.prepareUpdate(record => {
+          record.deletedAt = deletedAt;
+          record.updatedAt = now;
+        }),
+      ),
+    ];
+  }
+
+  private async updateBulkDeletedState(
+    journals: Journal[],
+    transactions: Transaction[],
+    deletedAt: Date | undefined,
+  ): Promise<void> {
+    await database.write(async () => {
+      await database.batch(this.prepareBulkDeletedStateUpdates(journals, transactions, deletedAt));
+    });
+  }
+
+  /** Atomically soft deletes multiple journals and their child transactions. */
   async bulkSoftDeleteJournals(
     workplaceId: WorkplaceId,
     journalIds: JournalId[],
-  ): Promise<{ affectedAccountIds: Set<AccountId>; minDate: number }> {
+  ): Promise<{
+    affectedAccountIds: Set<AccountId>;
+    minDate: number;
+    undoToken: BulkDeleteUndoToken;
+  }> {
     if (journalIds.length === 0) {
-      return { affectedAccountIds: new Set(), minDate: Infinity };
+      return {
+        affectedAccountIds: new Set(),
+        minDate: Infinity,
+        undoToken: { journals: [], transactions: [] },
+      };
     }
 
     const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
@@ -540,34 +626,99 @@ export class JournalWriteRepository {
         Q.where('workplace_id', workplaceId),
       )
       .fetch();
+    const deletedAt = new Date();
+    await this.updateBulkDeletedState(journals, transactions, deletedAt);
 
-    const affectedAccountIds = new Set<AccountId>();
-    let minDate = Infinity;
+    const impact = this.calculateBulkImpact(journals, transactions);
+    return {
+      ...impact,
+      undoToken: {
+        journals: journals.map(journal => ({ id: journal.id, deletedAt: deletedAt.getTime() })),
+        transactions: transactions.map(transaction => ({
+          id: transaction.id,
+          journalId: transaction.journalId,
+          deletedAt: deletedAt.getTime(),
+        })),
+      },
+    };
+  }
 
-    for (const tx of transactions) {
-      affectedAccountIds.add(tx.accountId);
-      minDate = Math.min(minDate, tx.transactionDate);
+  /** Atomically restores exactly the rows recorded by a bulk-delete undo token. */
+  async bulkRestoreJournals(
+    workplaceId: WorkplaceId,
+    token: BulkDeleteUndoToken,
+  ): Promise<{ affectedAccountIds: Set<AccountId>; minDate: number }> {
+    if (token.journals.length === 0 && token.transactions.length === 0) {
+      return { affectedAccountIds: new Set(), minDate: Infinity };
     }
 
-    await database.write(async () => {
-      const now = new Date();
-      const journalUpdates = journals.map(j =>
-        j.prepareUpdate(record => {
-          record.deletedAt = now;
-          record.updatedAt = now;
-        }),
+    return database.write(async () => {
+      const journals = await journalQueryRepository.findWithDeletedByIds(
+        workplaceId,
+        token.journals.map(journal => journal.id),
       );
-      const txUpdates = transactions.map(t =>
-        t.prepareUpdate(record => {
-          record.deletedAt = now;
-          record.updatedAt = now;
-        }),
+      const transactions = await this.transactions
+        .query(
+          Q.where('id', Q.oneOf(token.transactions.map(transaction => transaction.id))),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+      const journalIds = token.journals.map(journal => journal.id);
+      const journalIdSet = new Set(journalIds);
+      const deletedAt = token.journals[0]?.deletedAt ?? token.transactions[0]?.deletedAt;
+      if (
+        token.journals.length === 0 ||
+        token.journals.some(journal => journal.deletedAt !== deletedAt) ||
+        token.transactions.some(
+          transaction =>
+            transaction.deletedAt !== deletedAt || !journalIdSet.has(transaction.journalId),
+        )
+      ) {
+        throw new Error('Undo token does not match the journal delete operation');
+      }
+      const allDeletedTransactions = await this.transactions
+        .query(
+          Q.where('journal_id', Q.oneOf(journalIds)),
+          Q.where('deleted_at', Q.eq(deletedAt)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+      const journalById = new Map(journals.map(journal => [journal.id, journal]));
+      const transactionById = new Map(
+        transactions.map(transaction => [transaction.id, transaction]),
       );
+      const tokenTransactionIds = new Set(token.transactions.map(transaction => transaction.id));
+      if (
+        allDeletedTransactions.length !== token.transactions.length ||
+        allDeletedTransactions.some(transaction => !tokenTransactionIds.has(transaction.id))
+      ) {
+        throw new Error('Undo token does not match the journal delete operation');
+      }
 
-      await database.batch([...journalUpdates, ...txUpdates]);
+      for (const expected of token.journals) {
+        const journal = journalById.get(expected.id);
+        if (!journal || journal.deletedAt?.getTime() !== expected.deletedAt) {
+          throw new Error(`Journal ${expected.id} no longer matches the delete operation`);
+        }
+      }
+      for (const expected of token.transactions) {
+        const transaction = transactionById.get(expected.id);
+        if (
+          !transaction ||
+          transaction.deletedAt?.getTime() !== expected.deletedAt ||
+          transaction.journalId !== expected.journalId
+        ) {
+          throw new Error(`Transaction ${expected.id} no longer matches the delete operation`);
+        }
+      }
+      if (journals.some(journal => !token.journals.some(expected => expected.id === journal.id))) {
+        throw new Error('Undo token does not match the journal delete operation');
+      }
+
+      const impact = this.calculateBulkImpact(journals, transactions);
+      await database.batch(this.prepareBulkDeletedStateUpdates(journals, transactions, undefined));
+      return impact;
     });
-
-    return { affectedAccountIds, minDate };
   }
 
   /**

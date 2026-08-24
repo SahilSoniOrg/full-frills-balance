@@ -1,6 +1,6 @@
-import { ModalSurface } from '@/src/components/common/ModalSurface';
+import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { AppButton, AppInput, AppText, Badge } from '@/src/components/core';
+import { AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { EnrichedJournal, JournalDisplayType, JournalId } from '@/src/types/domain';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -48,27 +48,15 @@ function BulkRenameJournalsModalContent({
   }, [names, onSave, onClose]);
 
   return (
-    <ModalSurface
+    <BulkActionModalSurface
       visible={true}
       onClose={onClose}
       title="Edit Names"
-      fixedHeight={false}
-      scrollable={true}
-      footer={
-        <View style={styles.footerRow}>
-          <AppButton variant="outline" onPress={onClose} style={styles.button} disabled={isSaving}>
-            Cancel
-          </AppButton>
-          <AppButton
-            variant="primary"
-            onPress={handleSave}
-            style={styles.button}
-            loading={isSaving}
-          >
-            Save Changes
-          </AppButton>
-        </View>
-      }
+      itemCount={journals.length}
+      confirmLabel="Save Changes"
+      onConfirm={handleSave}
+      isSubmitting={isSaving}
+      testID="bulk-rename-journals-modal"
     >
       {journals.map(journal => {
         const id = journal.id;
@@ -108,7 +96,7 @@ function BulkRenameJournalsModalContent({
           </View>
         );
       })}
-    </ModalSurface>
+    </BulkActionModalSurface>
   );
 }
 
@@ -141,14 +129,5 @@ const styles = StyleSheet.create({
   },
   amountText: {
     fontSize: Typography.sizes.sm,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-  },
-  button: {
-    flex: 1,
   },
 });

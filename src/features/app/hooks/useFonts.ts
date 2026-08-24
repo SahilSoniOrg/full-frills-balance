@@ -21,7 +21,9 @@ import * as Font from 'expo-font';
 import { useEffect, useRef } from 'react';
 
 // Define the fonts needed for each ID
-const FONT_MAP: Record<string, Record<string, any>> = {
+type FontMap = Parameters<typeof Font.loadAsync>[0];
+
+const FONT_MAP: Record<string, FontMap> = {
   [FontIds.DEEP_SPACE]: {
     'DMSerifDisplay-Regular': DMSerifDisplay_400Regular,
     'InstrumentSans-Regular': InstrumentSans_400Regular,

@@ -6,13 +6,13 @@ import {
   useVoiceJournalParse,
   type VoiceJournalApplyParams,
 } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
+import { useVoiceVisualizer } from '@/src/features/journal/entry/hooks/useVoiceVisualizer';
 import { useTheme } from '@/src/hooks/use-theme';
 import { WorkplaceId } from '@/src/types/domain';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Easing,
   Modal,
   Pressable,
   ScrollView,
@@ -42,28 +42,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   const { isNativeAiEnabled } = useAiPrefs();
   const insets = useSafeAreaInsets();
 
-  const [animValues] = useState(() => [
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]);
-
-  const onVolumeChange = useCallback(
-    (volume: number) => {
-      const scale = Math.max(1, (volume + 2) / 3);
-      animValues.forEach(anim => {
-        Animated.spring(anim, {
-          toValue: scale * (0.8 + Math.random() * 0.4),
-          useNativeDriver: true,
-          friction: 7,
-          tension: 40,
-        }).start();
-      });
-    },
-    [animValues],
-  );
+  const { animValues, onVolumeChange, setRecording } = useVoiceVisualizer();
 
   const {
     transcription,
@@ -84,49 +63,9 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     onVolumeChange,
   });
 
-  const animLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-
   useEffect(() => {
-    if (isRecording) {
-      const animations = animValues.map((anim, index) => {
-        return Animated.loop(
-          Animated.sequence([
-            Animated.timing(anim, {
-              toValue: 2.5 + Math.sin(index) * 0.8,
-              duration: 350 + index * 80,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(anim, {
-              toValue: 0.6,
-              duration: 350 + index * 80,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-        );
-      });
-
-      animLoopRef.current = Animated.parallel(animations);
-      animLoopRef.current.start();
-    } else {
-      if (animLoopRef.current) {
-        animLoopRef.current.stop();
-      }
-      animValues.forEach(anim => {
-        Animated.spring(anim, {
-          toValue: 1.0,
-          useNativeDriver: true,
-        }).start();
-      });
-    }
-
-    return () => {
-      if (animLoopRef.current) {
-        animLoopRef.current.stop();
-      }
-    };
-  }, [isRecording, animValues]);
+    setRecording(isRecording);
+  }, [isRecording, setRecording]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

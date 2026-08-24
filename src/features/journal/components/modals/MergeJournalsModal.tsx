@@ -1,6 +1,6 @@
-import { ModalSurface } from '@/src/components/common/ModalSurface';
+import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { AppButton, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
+import { AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -66,28 +66,16 @@ function MergeJournalsModalContent({
   }, [preview, description, onConfirmMerge]);
 
   return (
-    <ModalSurface
+    <BulkActionModalSurface
       visible={true}
       onClose={onClose}
-      title="Merge Transactions"
-      fixedHeight={false}
-      scrollable={true}
-      footer={
-        <View style={styles.footerRow}>
-          <AppButton variant="outline" onPress={onClose} style={styles.button} disabled={isMerging}>
-            Cancel
-          </AppButton>
-          <AppButton
-            variant="primary"
-            onPress={handleConfirm}
-            style={styles.button}
-            disabled={!preview?.canMerge || isMerging}
-            loading={isMerging}
-          >
-            Merge Transactions
-          </AppButton>
-        </View>
-      }
+      title="Merge Journal Entries"
+      itemCount={journalIds.length}
+      confirmLabel="Merge Journal Entries"
+      onConfirm={handleConfirm}
+      isSubmitting={isMerging}
+      isConfirmDisabled={!preview?.canMerge}
+      testID="merge-journals-modal"
     >
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -110,7 +98,7 @@ function MergeJournalsModalContent({
           >
             <AppIcon name="alert" size={20} color={theme.error} />
             <AppText style={[styles.errorText, { color: theme.error }]}>
-              {preview.reason || 'These transactions cannot be merged.'}
+              {preview.reason || 'These journal entries cannot be merged.'}
             </AppText>
           </View>
         </View>
@@ -161,45 +149,43 @@ function MergeJournalsModalContent({
             <AppText
               style={[styles.sectionHeading, { fontFamily: fonts.semibold, color: theme.text }]}
             >
-              Consolidated Transaction Legs
+              Consolidated Legs ({preview.combinedLines.length})
             </AppText>
           </View>
 
-          {preview.combinedLines.map(line => {
-            const isDebit = line.transactionType === 'DEBIT';
-            const accountName = accountsById.get(line.accountId) || 'Account';
-
-            return (
-              <View
-                key={`${line.accountId}_${line.transactionType}`}
-                style={[
-                  styles.legRow,
-                  { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-                ]}
-              >
-                <View style={styles.legMeta}>
-                  <Badge size="sm" variant={isDebit ? 'error' : 'success'}>
-                    {isDebit ? 'DEBIT' : 'CREDIT'}
-                  </Badge>
-                  <AppText style={[styles.accountName, { color: theme.text }]}>
-                    {accountName}
-                  </AppText>
-                </View>
-                <MoneyText
-                  amount={line.amount}
-                  currencyCode={preview.currencyCode}
-                  style={[styles.legAmount, { fontFamily: fonts.semibold, color: theme.text }]}
-                />
+          {preview.combinedLines.map(line => (
+            <View
+              key={`${line.accountId}_${line.transactionType}`}
+              style={[
+                styles.legRow,
+                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+              ]}
+            >
+              <View style={styles.legMeta}>
+                <Badge
+                  size="sm"
+                  variant={line.transactionType === 'DEBIT' ? 'default' : 'secondary'}
+                >
+                  {line.transactionType === 'DEBIT' ? 'DEST' : 'SRC'}
+                </Badge>
+                <AppText style={[styles.accountName, { color: theme.text }]}>
+                  {accountsById.get(line.accountId) || 'Account'}
+                </AppText>
               </View>
-            );
-          })}
+              <MoneyText
+                amount={line.amount}
+                currencyCode={preview.currencyCode}
+                style={[styles.legAmount, { fontFamily: fonts.semibold, color: theme.text }]}
+              />
+            </View>
+          ))}
 
-          {/* Original Journals to be Replaced */}
-          <View style={styles.breakdownHeader}>
+          {/* Original Journal Entries Reference */}
+          <View style={[styles.breakdownHeader, { marginTop: Spacing.md }]}>
             <AppText
               style={[styles.sectionHeading, { fontFamily: fonts.semibold, color: theme.text }]}
             >
-              Original Entries Replaced ({preview.sourceJournals.length})
+              Journal Entries to Merge ({preview.sourceJournals.length})
             </AppText>
           </View>
 
@@ -215,20 +201,20 @@ function MergeJournalsModalContent({
                 <AppText style={[styles.sourceDesc, { color: theme.text }]} numberOfLines={1}>
                   {j.description || 'Transaction'}
                 </AppText>
-                <AppText style={[styles.sourceDate, { color: theme.textSecondary }]}>
+                <AppText style={[styles.sourceDate, { color: theme.textTertiary }]}>
                   {formatDate(j.journalDate, { includeTime: false })}
                 </AppText>
               </View>
               <MoneyText
                 amount={j.totalAmount}
                 currencyCode={j.currencyCode}
-                style={[styles.sourceAmount, { color: theme.textSecondary }]}
+                style={[styles.sourceAmount, { fontFamily: fonts.semibold, color: theme.text }]}
               />
             </View>
           ))}
         </View>
       )}
-    </ModalSurface>
+    </BulkActionModalSurface>
   );
 }
 
@@ -252,7 +238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorContainer: {
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -267,22 +253,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   previewSection: {
+    padding: Spacing.md,
     borderRadius: Shape.radius.md,
     borderWidth: 1,
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   previewDate: {
     fontSize: Typography.sizes.xs,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   inputLabel: {
     fontSize: Typography.sizes.xs,
@@ -292,9 +278,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
   },
   totalLabel: {
     fontSize: Typography.sizes.sm,
@@ -351,14 +335,5 @@ const styles = StyleSheet.create({
   },
   sourceAmount: {
     fontSize: Typography.sizes.xs,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-  },
-  button: {
-    flex: 1,
   },
 });

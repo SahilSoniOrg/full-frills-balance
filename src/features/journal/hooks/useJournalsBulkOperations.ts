@@ -1,13 +1,19 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type {
+  ListSelectionChrome,
+  SelectionAction,
+} from '@/src/components/common/SelectionActionBar';
 import type {
   JournalActiveModal,
   JournalListModalsProps,
 } from '@/src/features/journal/types/modals';
-import { useSelection } from '@/src/hooks/useSelection';
+import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
+import { useUndoableAction } from '@/src/hooks/useUndoableAction';
+import type { UseSelectionResult } from '@/src/hooks/useSelection';
 import {
   bulkChangeJournalAccount as bulkChangeJournalAccountCommand,
   bulkDeleteJournals as bulkDeleteJournalsCommand,
   bulkDuplicateJournals as bulkDuplicateJournalsCommand,
+  bulkRestoreJournals as bulkRestoreJournalsCommand,
   bulkRenameJournals as bulkRenameJournalsCommand,
   mergeJournals as mergeJournalsCommand,
   undoBulkChangeJournalAccount as undoBulkChangeJournalAccountCommand,
@@ -19,7 +25,7 @@ import { useCallback, useMemo, useState } from 'react';
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
   journals: EnrichedJournal[];
-  selection: ReturnType<typeof useSelection<JournalId>>;
+  selection: UseSelectionResult<JournalId>;
   onShareSelected: () => void;
 }
 
@@ -30,29 +36,24 @@ export function useJournalsBulkOperations({
   onShareSelected,
 }: UseJournalsBulkOperationsInput) {
   const [activeModal, setActiveModal] = useState<JournalActiveModal>(null);
-
-  const journalsById = useMemo(
-    () => new Map<JournalId, EnrichedJournal>(journals.map(j => [j.id, j])),
-    [journals],
-  );
-
-  const selectedJournals = useMemo(
-    () =>
-      Array.from(selection.selectedIds)
-        .map(id => journalsById.get(id))
-        .filter((j): j is EnrichedJournal => Boolean(j)),
-    [selection.selectedIds, journalsById],
-  );
-
+  const openModal = useCallback((modal: JournalActiveModal) => {
+    setActiveModal(modal);
+  }, []);
   const closeModal = useCallback(() => {
     setActiveModal(null);
   }, []);
 
+  const { selectedItems: selectedJournals } = useSelectedItemMap<EnrichedJournal, JournalId>(
+    journals,
+    selection,
+  );
+  const runUndoableAction = useUndoableAction(selection.exitSelectionMode, closeModal);
+
   // 1. Bulk Rename
   const handleOpenBulkRename = useCallback(() => {
     if (selectedJournals.length === 0) return;
-    setActiveModal({ type: 'bulkRename', journals: selectedJournals });
-  }, [selectedJournals]);
+    openModal({ type: 'bulkRename', journals: selectedJournals });
+  }, [selectedJournals, openModal]);
 
   const handleBulkRenameSave = useCallback(
     async (namesByJournalId: Record<JournalId, string>) => {
@@ -66,57 +67,53 @@ export function useJournalsBulkOperations({
         renames[id] = name;
       }
 
-      try {
-        const { renamedCount, inverseRenames } = await bulkRenameJournalsCommand(
-          workplaceId,
-          renames,
-        );
-        selection.exitSelectionMode();
-        closeModal();
-
-        if (renamedCount === 0) return;
-
-        toast.success(`Updated names for ${renamedCount} transaction(s)`, {
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try {
-                await bulkRenameJournalsCommand(workplaceId, inverseRenames);
-                toast.success('Rename undone');
-              } catch (error) {
-                showErrorAlert(error, 'Failed to undo rename');
-              }
-            },
-          },
-        });
-      } catch (error) {
-        showErrorAlert(error, 'Failed to update transaction names');
-      }
+      await runUndoableAction(
+        () => bulkRenameJournalsCommand(workplaceId, renames),
+        res => bulkRenameJournalsCommand(workplaceId, res.inverseRenames),
+        res =>
+          res.renamedCount > 0
+            ? `Updated names for ${res.renamedCount} journal entr${res.renamedCount === 1 ? 'y' : 'ies'}`
+            : '',
+        {
+          errorMessage: 'Failed to update journal entry names',
+          undoSuccessMessage: 'Rename undone',
+          onUndoError: error => showErrorAlert(error, 'Failed to undo rename'),
+        },
+      );
     },
-    [workplaceId, selection, closeModal],
+    [workplaceId, runUndoableAction],
   );
 
   // 2. Bulk Duplicate
   const handleBulkDuplicate = useCallback(async () => {
     if (!workplaceId || selection.selectedIds.size === 0) return;
     const ids = Array.from(selection.selectedIds);
-    try {
-      const duplicated = await bulkDuplicateJournalsCommand(workplaceId, ids);
-      selection.exitSelectionMode();
-      toast.success(`Duplicated ${duplicated.length} transaction(s)`);
-    } catch (error) {
-      showErrorAlert(error, 'Failed to duplicate transactions');
-    }
-  }, [workplaceId, selection]);
+
+    await runUndoableAction(
+      () => bulkDuplicateJournalsCommand(workplaceId, ids),
+      duplicated =>
+        bulkDeleteJournalsCommand(
+          workplaceId,
+          duplicated.map(journal => journal.id),
+        ),
+      duplicated =>
+        `Duplicated ${duplicated.length} journal entr${duplicated.length === 1 ? 'y' : 'ies'}`,
+      {
+        errorMessage: 'Failed to duplicate journal entries',
+        undoSuccessMessage: 'Duplicated journal entries removed',
+        onUndoError: error => showErrorAlert(error, 'Failed to undo duplication'),
+      },
+    );
+  }, [workplaceId, selection.selectedIds, runUndoableAction]);
 
   // 3. Merge
   const handleOpenMerge = useCallback(() => {
     if (selection.selectedIds.size < 2) {
-      toast.info('Select at least 2 transactions to merge.');
+      toast.info('Select at least 2 journal entries to merge.');
       return;
     }
-    setActiveModal({ type: 'merge', journalIds: Array.from(selection.selectedIds) });
-  }, [selection.selectedIds]);
+    openModal({ type: 'merge', journalIds: Array.from(selection.selectedIds) });
+  }, [selection.selectedIds, openModal]);
 
   const handleMergeConfirm = useCallback(
     async (params: { description: string; journalDate: number }) => {
@@ -126,9 +123,9 @@ export function useJournalsBulkOperations({
         await mergeJournalsCommand(workplaceId, ids, params);
         selection.exitSelectionMode();
         closeModal();
-        toast.success(`Successfully merged ${ids.length} transactions into 1`);
+        toast.success(`Successfully merged ${ids.length} journal entries into 1`);
       } catch (error) {
-        showErrorAlert(error, 'Failed to merge transactions');
+        showErrorAlert(error, 'Failed to merge journal entries');
       }
     },
     [workplaceId, selection, closeModal],
@@ -137,41 +134,29 @@ export function useJournalsBulkOperations({
   // 4. Change Account (Destination / Source)
   const handleOpenChangeAccount = useCallback(() => {
     if (selection.selectedIds.size === 0) return;
-    setActiveModal({ type: 'bulkChangeAccount', journalIds: Array.from(selection.selectedIds) });
-  }, [selection.selectedIds]);
+    openModal({ type: 'bulkChangeAccount', journalIds: Array.from(selection.selectedIds) });
+  }, [selection.selectedIds, openModal]);
 
   const handleBulkChangeAccountSelect = useCallback(
     async (targetLeg: 'debit' | 'credit', newAccountId: AccountId) => {
       if (!workplaceId || selection.selectedIds.size === 0) return;
       const ids = Array.from(selection.selectedIds);
-      try {
-        const { updatedCount, originalAccountIdByTransactionId } =
-          await bulkChangeJournalAccountCommand(workplaceId, ids, targetLeg, newAccountId);
-        selection.exitSelectionMode();
-        closeModal();
-        const legName = targetLeg === 'debit' ? 'Destination' : 'Source';
-        toast.success(`Updated ${legName} account for ${updatedCount} transaction(s)`, {
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try {
-                await undoBulkChangeJournalAccountCommand(
-                  workplaceId,
-                  originalAccountIdByTransactionId,
-                );
-                toast.success('Account change undone');
-              } catch (error) {
-                showErrorAlert(error, 'Failed to undo account change');
-              }
-            },
-          },
-        });
-      } catch (error) {
-        showErrorAlert(error, 'Failed to update transaction account');
-        throw error;
-      }
+      const legName = targetLeg === 'debit' ? 'Destination' : 'Source';
+
+      await runUndoableAction(
+        () => bulkChangeJournalAccountCommand(workplaceId, ids, targetLeg, newAccountId),
+        res =>
+          undoBulkChangeJournalAccountCommand(workplaceId, res.originalAccountIdByTransactionId),
+        res =>
+          `Updated ${legName} account for ${res.updatedCount} journal entr${res.updatedCount === 1 ? 'y' : 'ies'}`,
+        {
+          errorMessage: 'Failed to update journal entry account',
+          undoSuccessMessage: 'Account change undone',
+          onUndoError: error => showErrorAlert(error, 'Failed to undo account change'),
+        },
+      );
     },
-    [workplaceId, selection, closeModal],
+    [workplaceId, selection.selectedIds, runUndoableAction],
   );
 
   // 5. Bulk Delete
@@ -180,24 +165,27 @@ export function useJournalsBulkOperations({
     const ids = Array.from(selection.selectedIds);
 
     confirm.show({
-      title: 'Delete Transactions',
-      message: `Are you sure you want to delete ${ids.length} selected transaction${ids.length === 1 ? '' : 's'}? This action cannot be undone.`,
+      title: 'Delete Journal Entries',
+      message: `Are you sure you want to delete ${ids.length} selected journal entr${ids.length === 1 ? 'y' : 'ies'}?`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       destructive: true,
       onConfirm: async () => {
-        try {
-          await bulkDeleteJournalsCommand(workplaceId, ids);
-          selection.exitSelectionMode();
-          toast.success(`Deleted ${ids.length} transaction(s)`);
-        } catch (error) {
-          showErrorAlert(error, 'Failed to delete transactions');
-        }
+        await runUndoableAction(
+          () => bulkDeleteJournalsCommand(workplaceId, ids),
+          token => bulkRestoreJournalsCommand(workplaceId, token),
+          `Deleted ${ids.length} journal entr${ids.length === 1 ? 'y' : 'ies'}`,
+          {
+            errorMessage: 'Failed to delete journal entries',
+            undoSuccessMessage: 'Deleted journal entries restored',
+            onUndoError: error => showErrorAlert(error, 'Failed to undo deletion'),
+          },
+        );
       },
       onCancel: () => {},
       onClose: () => {},
     });
-  }, [workplaceId, selection]);
+  }, [workplaceId, selection, runUndoableAction]);
 
   // Bulk Selection Actions for SelectionActionBar
   const actions: SelectionAction[] = useMemo(() => {
@@ -285,7 +273,23 @@ export function useJournalsBulkOperations({
     ],
   );
 
+  const handleSelectAll = useCallback(() => {
+    selection.selectAll(journals.map(j => j.id));
+  }, [selection, journals]);
+
+  const selectionChrome: ListSelectionChrome = useMemo(
+    () => ({
+      exitSelectionMode: selection.exitSelectionMode,
+      selectAll: handleSelectAll,
+      clearItems: selection.clearItems,
+      onShareSelected,
+      actions,
+    }),
+    [selection.exitSelectionMode, handleSelectAll, selection.clearItems, onShareSelected, actions],
+  );
+
   return {
+    selectionChrome,
     activeModal,
     selectedJournals,
     closeModal,

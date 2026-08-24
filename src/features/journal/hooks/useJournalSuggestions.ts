@@ -3,6 +3,7 @@ import { WorkplaceId } from '@/src/types/domain';
 import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { logger } from '@/src/utils/logger';
 
 /**
  * Hook to provide journal description suggestions based on past entries.
@@ -20,7 +21,7 @@ export function useJournalSuggestions(workplaceId: WorkplaceId, searchQuery: str
       const suggestions = await journalService.getJournalSuggestions(workplaceId);
       setAllSuggestions(suggestions);
     } catch (error) {
-      console.error('Failed to fetch journal suggestions:', error);
+      logger.error('Failed to fetch journal suggestions:', error);
     } finally {
       setIsLoading(false);
     }
@@ -38,7 +39,7 @@ export function useJournalSuggestions(workplaceId: WorkplaceId, searchQuery: str
         setAllSuggestions(suggestions);
       } catch (error) {
         if (isActive) {
-          console.error('Failed to fetch journal suggestions:', error);
+          logger.error('Failed to fetch journal suggestions:', error);
         }
       } finally {
         if (isActive) {

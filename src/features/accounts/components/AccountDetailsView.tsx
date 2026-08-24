@@ -10,7 +10,6 @@ import { SubAccountListModal } from '@/src/features/accounts/components/SubAccou
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView({
@@ -38,24 +37,8 @@ export function AccountDetailsView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
-    selectAll,
-    clearItems,
-    onShareSelected,
-    exitSelectionMode,
-    actions,
-    modals,
+    selectionChrome,
   } = vm;
-
-  const selectionChrome = useMemo(
-    () => ({
-      exitSelectionMode,
-      selectAll,
-      clearItems,
-      onShareSelected,
-      actions,
-    }),
-    [exitSelectionMode, selectAll, clearItems, onShareSelected, actions],
-  );
 
   return (
     <ScreenWithChrome chrome={chrome}>
@@ -114,7 +97,7 @@ export function AccountDetailsView({
             unreconciledCount={vm.unreconciledCount}
           />
 
-          {modals ? <JournalListModals {...modals} /> : null}
+          {vm.modals ? <JournalListModals {...vm.modals} /> : null}
         </>
       )}
     </ScreenWithChrome>

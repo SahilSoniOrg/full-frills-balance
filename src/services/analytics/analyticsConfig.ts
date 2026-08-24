@@ -11,12 +11,22 @@ export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 export const BUILD_TYPE = process.env.APP_VARIANT || 'development';
 
+export type AnalyticsProperty =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | AnalyticsProperty[]
+  | { [key: string]: AnalyticsProperty };
+export type AnalyticsProperties = Record<string, AnalyticsProperty>;
+
 export const navigationIntegration = Sentry.reactNavigationIntegration();
 
 /**
  * Get global properties for event enrichment
  */
-export function getGlobalProperties(): Record<string, any> {
+export function getGlobalProperties(): AnalyticsProperties {
   try {
     return {
       $app_id: Application.applicationId || 'unknown',

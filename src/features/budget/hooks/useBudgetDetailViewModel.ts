@@ -10,7 +10,7 @@ import {
   useJournalsBulkOperations,
   type JournalListModalsProps,
 } from '@/src/features/journal';
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -47,11 +47,7 @@ export interface BudgetDetailViewModel {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  actions?: SelectionAction[];
+  selectionChrome: ListSelectionChrome;
   modals?: JournalListModalsProps;
 }
 
@@ -251,11 +247,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectAll: journalList.selectAll,
-    clearItems: journalList.clearItems,
-    exitSelectionMode: journalList.exitSelectionMode,
-    onShareSelected: journalList.onShareSelected,
-    actions: bulkOperations.actions,
+    selectionChrome: bulkOperations.selectionChrome,
     modals: bulkOperations.modals,
   };
 }

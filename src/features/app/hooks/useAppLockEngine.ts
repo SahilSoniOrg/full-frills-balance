@@ -4,6 +4,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import { logger } from '@/src/utils/logger';
 
 const AUTH_COOLDOWN_MS = 2000;
 
@@ -84,7 +85,7 @@ export function useAppLockEngine() {
           }
         }
       } catch (err) {
-        console.error('[AppLockEngine] Auth error:', err);
+        logger.error('[AppLockEngine] Auth error:', err);
         setError('An unexpected error occurred.');
       } finally {
         setIsAuthenticating(false);

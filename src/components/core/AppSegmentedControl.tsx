@@ -16,6 +16,7 @@ import {
   ViewStyle,
   Keyboard,
 } from 'react-native';
+import { logger } from '@/src/utils/logger';
 import { AppIcon, type IconName } from './AppIcon';
 import { AppText } from './AppText';
 
@@ -227,7 +228,7 @@ export const AppSegmentedControl = <T extends string | number>({
   const selectedIndex = useMemo(() => {
     const idx = options.findIndex(opt => opt.id === value);
     if (__DEV__ && idx === -1 && options.length > 0) {
-      console.warn(
+      logger.warn(
         `[AppSegmentedControl] Invalid value "${value}" provided. Falling back to index 0.`,
       );
     }

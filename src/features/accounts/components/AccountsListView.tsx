@@ -31,10 +31,7 @@ export function AccountsListView({
   onAccountActionPress,
   selectedAccountIds,
   isSelectionModeActive,
-  onSelectAll,
-  onDeselectAll,
-  onClearSelection,
-  selectionActions,
+  selectionChrome,
   totalSelectableAccounts,
   modals,
   onCollapseAccount,
@@ -268,10 +265,10 @@ export function AccountsListView({
           isVisible={isSelectionModeActive}
           selectedCount={selectedAccountIds.size}
           totalCount={totalSelectableAccounts}
-          onClear={onClearSelection}
-          onSelectAll={onSelectAll}
-          onDeselectAll={onDeselectAll}
-          actions={selectionActions}
+          onClear={selectionChrome.exitSelectionMode}
+          onSelectAll={selectionChrome.selectAll}
+          onDeselectAll={selectionChrome.clearItems}
+          actions={selectionChrome.actions}
         />
 
         <AccountsListModals {...modals} />

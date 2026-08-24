@@ -19,12 +19,12 @@ function AccountDetailsScreen() {
     accountLoading,
     accountMissing,
     accountType,
-    exitSelectionMode,
     headerActions,
     isDeleted,
     isParent,
     isSelectionModeActive,
     onAddPress,
+    selectionChrome,
   } = vm;
 
   const chrome = useMemo<ScreenNavChrome>(() => {
@@ -55,7 +55,7 @@ function AccountDetailsScreen() {
       }),
       {
         active: isSelectionModeActive,
-        onExit: exitSelectionMode,
+        onExit: selectionChrome.exitSelectionMode,
       },
     );
   }, [
@@ -63,12 +63,12 @@ function AccountDetailsScreen() {
     accountLoading,
     accountMissing,
     accountType,
-    exitSelectionMode,
     headerActions,
     isDeleted,
     isParent,
     isSelectionModeActive,
     onAddPress,
+    selectionChrome.exitSelectionMode,
     vm.onBack,
   ]);
 

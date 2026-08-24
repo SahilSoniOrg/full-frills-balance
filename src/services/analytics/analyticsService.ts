@@ -9,6 +9,7 @@ import {
   navigationIntegration,
   POSTHOG_API_KEY,
   POSTHOG_HOST,
+  type AnalyticsProperties,
 } from './analyticsConfig';
 import { FeatureEventMap, KnownFeature } from './types';
 
@@ -39,7 +40,7 @@ export class AnalyticsService {
 
     // Register as the performance reporter early so we don't miss early traces
     logger.setPerformanceReporter((metric, value, context) => {
-      this.trackPerformance(metric, value, context);
+      this.trackPerformance(metric, value, context as AnalyticsProperties | undefined);
     });
   }
 
@@ -119,11 +120,16 @@ export class AnalyticsService {
   /**
    * Track a custom event
    */
-  track(eventName: string, props?: Record<string, string | number | boolean | null>) {
+  track(eventName: string, props?: AnalyticsProperties) {
     if (!this.posthog) return;
 
     try {
-      this.posthog.capture(eventName, props);
+      this.posthog.capture(
+        eventName,
+        Object.fromEntries(
+          Object.entries(props ?? {}).filter(([, value]) => value !== undefined),
+        ) as Record<string, string | number | boolean | null>,
+      );
       if (__DEV__) {
         logger.debug(`[Analytics] Tracked: ${eventName}`, props);
       }
@@ -270,7 +276,7 @@ export class AnalyticsService {
       | 'ai_success'
       | 'reversal_detected'
       | 'amount_missing',
-    properties?: Record<string, any>,
+    properties?: AnalyticsProperties,
   ) {
     this.track(`parse_${event}`, properties);
   }
@@ -281,7 +287,7 @@ export class AnalyticsService {
     this.track(`user_correction_${type}`);
   }
 
-  logAiModelLoad(success: boolean, properties?: Record<string, any>) {
+  logAiModelLoad(success: boolean, properties?: AnalyticsProperties) {
     this.trackFeatureUsage('ai', success ? 'model_load_success' : 'model_load_failure', properties);
   }
 
@@ -352,7 +358,7 @@ export class AnalyticsService {
   /**
    * Enhanced user behavior tracking
    */
-  trackUserInteraction(action: string, context?: Record<string, any>) {
+  trackUserInteraction(action: string, context?: AnalyticsProperties) {
     this.updateActivity();
     this.track(`user_${action}`, context);
   }
@@ -360,7 +366,7 @@ export class AnalyticsService {
   trackFeatureUsage<F extends KnownFeature | (string & {})>(
     feature: F,
     action: F extends KnownFeature ? FeatureEventMap[F] : string,
-    properties?: Record<string, any>,
+    properties?: AnalyticsProperties,
   ) {
     this.updateActivity();
     this.track(`feature_${feature}_${action}`, {
@@ -410,11 +416,15 @@ export class AnalyticsService {
   /**
    * Update user properties for better segmentation
    */
-  updateUserProperties(properties: Record<string, any>) {
+  updateUserProperties(properties: AnalyticsProperties) {
     if (!this.posthog) return;
 
     try {
-      this.posthog.setPersonProperties(properties);
+      this.posthog.setPersonProperties(
+        Object.fromEntries(
+          Object.entries(properties).filter(([, value]) => value !== undefined),
+        ) as Record<string, string | number | boolean | null>,
+      );
       if (__DEV__) {
         logger.debug('[Analytics] Updated user properties', properties);
       }
@@ -429,7 +439,7 @@ export class AnalyticsService {
   trackPerformance(
     metric: string,
     value: number,
-    context?: Record<string, any>,
+    context?: AnalyticsProperties,
     unit: string = 'ms',
   ) {
     this.track('performance', {
@@ -445,7 +455,7 @@ export class AnalyticsService {
   /**
    * Track user engagement and retention
    */
-  trackEngagement(type: string, properties?: Record<string, any>) {
+  trackEngagement(type: string, properties?: AnalyticsProperties) {
     const sessionDuration = Date.now() - this.sessionStartTime;
     this.track('engagement', {
       engagement_type: type,

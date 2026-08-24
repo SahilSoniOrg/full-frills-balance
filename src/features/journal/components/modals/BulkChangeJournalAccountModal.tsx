@@ -1,5 +1,5 @@
-import { ModalSurface } from '@/src/components/common/ModalSurface';
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -70,19 +70,12 @@ function BulkChangeJournalAccountModalContent({
 
   return (
     <>
-      <ModalSurface
+      <BulkActionModalSurface
         visible={!activeLegForPicker && !isSubmitting}
         onClose={onClose}
         title="Change Account"
-        fixedHeight={false}
-        scrollable={true}
-        footer={
-          <View style={styles.footerRow}>
-            <AppButton variant="outline" onPress={onClose} style={styles.button}>
-              Cancel
-            </AppButton>
-          </View>
-        }
+        itemCount={journalIds.length}
+        testID="bulk-change-journal-account-modal"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -182,7 +175,7 @@ function BulkChangeJournalAccountModalContent({
             </TouchableOpacity>
           </View>
         )}
-      </ModalSurface>
+      </BulkActionModalSurface>
 
       {activeLegForPicker ? (
         <AccountPickerModal
@@ -240,12 +233,5 @@ const styles = StyleSheet.create({
   },
   optionDesc: {
     fontSize: Typography.sizes.xs,
-  },
-  footerRow: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-  },
-  button: {
-    width: '100%',
   },
 });

@@ -7,6 +7,7 @@ import {
   bulkChangeJournalAccount,
   bulkDeleteJournals,
   bulkDuplicateJournals,
+  bulkRestoreJournals,
   bulkRenameJournals,
   checkJournalAccountEditEligibility,
   mergeJournals,
@@ -127,6 +128,21 @@ describe('journalBulkCommands', () => {
     expect(duplicates[0].id).not.toBe(j1.id);
     expect(duplicates[0].description).toBe('To Clone');
     expect(duplicates[0].totalAmount).toBe(50);
+
+    const duplicateIds = duplicates.map(journal => journal.id as JournalId);
+    const duplicateTxsBeforeUndo = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', Q.oneOf(duplicateIds)))
+      .fetch();
+    expect(duplicateTxsBeforeUndo).toHaveLength(2);
+
+    const duplicateDeleteToken = await bulkDeleteJournals(WP, duplicateIds);
+    await bulkRestoreJournals(WP, duplicateDeleteToken);
+
+    const duplicateAfterUndo = await database.collections
+      .get<Journal>('journals')
+      .find(duplicates[0].id);
+    expect(duplicateAfterUndo.deletedAt).toBeFalsy();
   });
 
   it('analyzeJournalsForMerge computes preview correctly and enforces balance invariants', async () => {
@@ -272,6 +288,33 @@ describe('journalBulkCommands', () => {
     expect(txs[0].accountId).toBe(expenseAccId);
   });
 
+  it('bulkDeleteJournals rejects restore after the journal changes', async () => {
+    const journal = await ledgerWriteService.createJournal(
+      {
+        journalDate: Date.now(),
+        description: 'Changed after delete',
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: expenseAccId, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: assetAccId, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      WP,
+    );
+
+    const deleteToken = await bulkDeleteJournals(WP, [journal.id as JournalId]);
+    await database.write(async () => {
+      const record = await database.collections.get<Journal>('journals').find(journal.id);
+      await record.update(current => {
+        current.deletedAt = undefined;
+      });
+    });
+
+    await expect(bulkRestoreJournals(WP, deleteToken)).rejects.toThrow(
+      'no longer matches the delete operation',
+    );
+  });
+
   it('bulkDeleteJournals soft deletes journals and transactions in an atomic batch', async () => {
     const j1 = await ledgerWriteService.createJournal(
       {
@@ -286,15 +329,26 @@ describe('journalBulkCommands', () => {
       WP,
     );
 
-    await bulkDeleteJournals(WP, [j1.id as JournalId]);
+    const deleteToken = await bulkDeleteJournals(WP, [j1.id as JournalId]);
 
     const reloaded = await database.collections.get<Journal>('journals').find(j1.id);
     expect(reloaded.deletedAt).toBeTruthy();
 
-    const txs = await database.collections
+    const deletedTxs = await database.collections
       .get<Transaction>('transactions')
       .query(Q.where('journal_id', j1.id), Q.where('deleted_at', Q.eq(null)))
       .fetch();
-    expect(txs.length).toBe(0);
+    expect(deletedTxs.length).toBe(0);
+
+    await bulkRestoreJournals(WP, deleteToken);
+
+    const restored = await database.collections.get<Journal>('journals').find(j1.id);
+    expect(restored.deletedAt).toBeFalsy();
+
+    const restoredTxs = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', j1.id), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    expect(restoredTxs.length).toBe(2);
   });
 });

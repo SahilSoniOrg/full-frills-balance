@@ -6,6 +6,7 @@ import {
   tryParseJSON,
 } from '@/src/features/journal/components/aiExampleShared';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { logger } from '@/src/utils/logger';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { GenerationStats, MultimodalPart } from 'react-native-litert-lm';
 
@@ -59,7 +60,9 @@ export function AiExampleBenchmarkPanel({
       model.resetConversation();
       await new Promise(r => setTimeout(r, 200));
     } catch (e: unknown) {
-      console.warn('Initial resetConversation failed:', e instanceof Error ? e.message : String(e));
+      logger.warn('Initial resetConversation failed:', {
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
 
     for (const transcript of TEST_TRANSCRIPTS) {

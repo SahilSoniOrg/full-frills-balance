@@ -1,9 +1,9 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import { type ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
-import { Size, Spacing } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import {
   JournalListModals,
   type JournalListModalsProps,
@@ -11,7 +11,7 @@ import {
 import { JournalId } from '@/src/types/domain';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type JournalListBundle = {
@@ -42,16 +42,11 @@ export type JournalPeriodBarBundle = {
   onNext?: () => void;
 };
 
-export type JournalSelectionBundle = {
+export type JournalSelectionBundle = ListSelectionChrome & {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
   toggleSelection: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected?: () => void;
-  actions?: SelectionAction[];
 };
 
 export interface JournalListViewProps {
@@ -66,20 +61,6 @@ export interface JournalListViewProps {
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
   const { list, chrome, datePicker, periodBar, selection, modals } = props;
-
-  const selectionChrome = useMemo(
-    () =>
-      selection
-        ? {
-            exitSelectionMode: selection.exitSelectionMode,
-            selectAll: selection.selectAll,
-            clearItems: selection.clearItems,
-            onShareSelected: selection.onShareSelected,
-            actions: selection.actions,
-          }
-        : undefined,
-    [selection],
-  );
 
   return (
     <ScreenWithChrome chrome={chrome}>
@@ -112,7 +93,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           selectedIds={selection?.selectedIds}
           onLongPressItem={selection?.onLongPressItem}
           isSelectionModeActive={selection?.isSelectionModeActive}
-          selectionChrome={selectionChrome}
+          selectionChrome={selection}
         />
 
         {datePicker ? (
@@ -138,10 +119,12 @@ const styles = StyleSheet.create({
   },
   periodBar: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.sm,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.xs,
   },
   listContent: {
-    padding: Spacing.lg,
-    paddingBottom: Size.buttonLg + Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xxl,
   },
 });

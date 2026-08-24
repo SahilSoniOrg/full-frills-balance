@@ -201,11 +201,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectAll: journalList.selectAll,
-    clearItems: journalList.clearItems,
-    exitSelectionMode: journalList.exitSelectionMode,
-    onShareSelected: journalList.onShareSelected,
-    actions: bulkOperations.actions,
+    selectionChrome: bulkOperations.selectionChrome,
     modals: bulkOperations.modals,
   };
 }
