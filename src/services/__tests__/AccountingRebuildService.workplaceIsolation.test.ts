@@ -214,4 +214,18 @@ describe('AccountingRebuildService lock vs extraOps', () => {
       ),
     ).resolves.toBeUndefined();
   });
+
+  it('scopes concurrent rebuild locks by workplace as well as account', async () => {
+    const getString = jest.spyOn(storage, 'getString').mockReturnValue(undefined);
+    jest.spyOn(storage, 'set').mockImplementation(() => undefined);
+    jest.spyOn(storage, 'remove').mockImplementation(() => true);
+
+    await Promise.all([
+      accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, 'same-account' as AccountId),
+      accountingRebuildService.rebuildAccountBalances(WORKPLACE_TWO, 'same-account' as AccountId),
+    ]);
+
+    expect(getString).toHaveBeenCalledWith(`rebuild_lock_${WORKPLACE_ONE}__same-account`);
+    expect(getString).toHaveBeenCalledWith(`rebuild_lock_${WORKPLACE_TWO}__same-account`);
+  });
 });

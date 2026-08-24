@@ -44,7 +44,7 @@ export class AccountingRebuildService {
   ): Promise<void> {
     if (isRebuildCancelled(signal, isCurrent)) return;
 
-    const lockKey = REBUILD_LOCK_PREFIX + accountId;
+    const lockKey = `${REBUILD_LOCK_PREFIX}${workplaceId}__${accountId}`;
 
     // Atomic-ish check and set for RN/single-threaded JS
     // Since storage calls are synchronous, this prevents race conditions in the same event loop.

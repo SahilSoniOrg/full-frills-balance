@@ -131,8 +131,9 @@ export class TransactionInboxRepository {
 
       await database.batch(ops);
       committed = true;
-      afterBatch?.();
     });
+
+    if (committed) afterBatch?.();
 
     return committed;
   }
