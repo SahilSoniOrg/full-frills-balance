@@ -11,6 +11,7 @@ Scope: P-001 through P-004 in [`report.md`](./report.md). The audit is L0 static
 - `45a852d5 perf: reduce chart and drag rerender pressure` — P-004 chart SVG is isolated from scroll-only tooltip state; account-tree gesture updates are coalesced below a 4px movement threshold. Bulk entry was intentionally left unchanged.
 - Verification: focused functional tests passed (32 tests), `bun run typecheck` passed, `bun run lint` passed, and `bun run test:ci` passed (275 suites, 1659 passed, 1 skipped). Narrow coverage runs can fail repository per-file thresholds even when all selected tests pass; the full CI coverage gate passed.
 - iOS validation ceiling: no completed physical-device trace. The iPhone 17 simulator build was attempted but no release workload trace was completed, so runtime magnitude and frame/memory claims remain unverified.
+- iOS smoke validation: the Release iPhone 17 simulator build completed successfully and the seeded dashboard launch smoke test passed (1 suite, 1 test). This validates native integration and launch correctness only; it is not a performance profile.
 
 ## Operating rules
 
