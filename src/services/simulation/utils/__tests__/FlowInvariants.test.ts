@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { Flow, FlowCategory, FlowSource } from '../../types';
 import { assertValidFlow } from '../FlowInvariants';
 

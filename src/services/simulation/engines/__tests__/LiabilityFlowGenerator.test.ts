@@ -1,5 +1,5 @@
 import { LiabilityFlowGenerator } from '../LiabilityFlowGenerator';
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 
 import dayjs from 'dayjs';
 

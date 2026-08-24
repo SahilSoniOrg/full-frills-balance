@@ -69,7 +69,7 @@ import { canonicalImportFromBatchImportData } from '@/src/services/import/canoni
 import { importService } from '@/src/services/import/ImportService';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 const mockPlugin: ImportPlugin = {
   id: 'test',

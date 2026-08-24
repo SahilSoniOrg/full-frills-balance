@@ -1,5 +1,5 @@
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
 import { useReportDateFilter } from './useReportDateFilter';

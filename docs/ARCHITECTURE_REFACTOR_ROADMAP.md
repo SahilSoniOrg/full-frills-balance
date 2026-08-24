@@ -1,8 +1,9 @@
 # Architecture Refactor Roadmap
 
-Status: Active
-Owner: Codex orchestration task
+Status: complete
+Owner: repository maintainers
 Started: 2026-08-16
+Completed: 2026-08-24
 Branch policy: small local commits on `main`; subagents use isolated worktrees; completed work is reviewed and squash-merged; never push.
 
 ## Objective
@@ -198,19 +199,6 @@ Goal: remove residue and prove the architecture holds.
 
 Exit: documentation, CI, dependency rules, and implementation describe the same architecture.
 
-## Initial Delivery Sequence
-
-1. Roadmap and orchestration foundation.
-2. Architecture checks in the canonical CI path.
-3. Raw transaction and rebuild workplace scoping.
-4. Insight, SMS, and budget workplace scoping.
-5. Rebuild queue correctness.
-6. Workplace lifecycle and reactive cache disposal.
-7. SMS/notification/widget concurrency.
-8. Persistence boundary migrations.
-9. Feature-by-feature DTO migration.
-10. Context and view-model decomposition.
-
 ## Progress Ledger
 
 | Date       | Work package | Result                                                                         | Commit                                         |
@@ -247,6 +235,7 @@ Exit: documentation, CI, dependency rules, and implementation describe the same 
 | 2026-08-18 | WP-5         | Journal, planned-payment, budget, settings, audit, workplace presentation DTOs | `74f8bf46`                                     |
 | 2026-08-19 | WP-4/6       | Named `RawSqlAdapter`; split app-shell ready/lock/restart/onboarding contexts  | `3cae2814`                                     |
 | 2026-08-19 | WP-6/7       | Form views, feature nav/telemetry owners, delete PlannedPaymentService façade  | `1684df24`                                     |
+| 2026-08-24 | Architecture audit | Closed Journal/Accounts cycle, UI/constants coupling, reactive ownership, domain type hub, and import repository findings | `01b7a135` |
 
 ## Audit Evidence Index
 
@@ -262,6 +251,6 @@ Original confirmed risks (closed or ratcheted unless noted):
 - docs vs CI — `check:architecture` is on the CI path;
 - mixed app-shell state machines — WP-6 split; views receive nav callbacks from screens/view models.
 
-Stale “Open” rows in `docs/architecture/WP1_EXIT_AUDIT.md` described `adf1378f`; they were closed in later WP-1L–WP-1R work.
+`WP1_EXIT_AUDIT.md` is a historical snapshot. Its failure narrative describes the code at its audit target, not the current implementation. Use the checked items above and `ARCHITECTURE_AUDIT.md` for current status.
 
-The detailed evidence remains in the originating Codex architecture-audit task. This roadmap is the durable execution source of truth.
+The detailed evidence remains in the originating work-package audits. `docs/architecture/ARCHITECTURE_AUDIT.md` is the durable refactor ledger; this file is the closed execution record.

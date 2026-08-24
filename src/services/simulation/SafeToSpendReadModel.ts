@@ -3,7 +3,7 @@ import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeT
 import { projectSafeToSpendDashboardFromSnapshot } from '@/src/services/simulation/safeToSpendProjection';
 import { persistSafeToSpendSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
 import { firstValueFrom, from, Observable, of } from 'rxjs';

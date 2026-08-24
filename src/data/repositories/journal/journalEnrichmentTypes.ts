@@ -1,4 +1,5 @@
-import { AccountId, AccountType, JournalId, TransactionType } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 /** Row shape returned by `journalEnrichmentQueries.getEnrichmentDataRaw`. */
 export type JournalEnrichmentRow = {

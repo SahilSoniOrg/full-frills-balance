@@ -11,7 +11,7 @@ import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
 import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
 import { wealthService } from '@/src/services/wealth-service';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';

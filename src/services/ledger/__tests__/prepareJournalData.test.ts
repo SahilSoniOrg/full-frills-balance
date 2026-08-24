@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  WorkplaceId,
-  JournalStatus,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';

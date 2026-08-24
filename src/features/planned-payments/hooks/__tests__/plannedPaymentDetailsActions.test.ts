@@ -1,8 +1,5 @@
-import {
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-  type PlainPlannedPayment,
-} from '@/src/types/domain';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { type PlainPlannedPayment } from '@/src/types/plainDtos';
 import { confirm } from '@/src/utils/alerts';
 import { buildPlannedPaymentDetailsActions } from '../plannedPaymentDetailsActions';
 

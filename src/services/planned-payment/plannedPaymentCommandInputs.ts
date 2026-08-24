@@ -1,4 +1,5 @@
-import { AccountId, PlannedPaymentInterval } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 
 /** Caller-owned fields for creating or updating a planned payment (form data only). */
 export interface PlannedPaymentCommandInput {

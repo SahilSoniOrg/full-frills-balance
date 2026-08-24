@@ -1,6 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { PlannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 describe('PlannedPaymentRepository', () => {
   describe('prepareDelete', () => {

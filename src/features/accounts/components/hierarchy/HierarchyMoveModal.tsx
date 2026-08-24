@@ -1,10 +1,10 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import {
   DimensionValue,
   Modal,

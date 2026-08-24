@@ -1,6 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { Flow, FlowSource, Outflow } from '@/src/services/simulation/types';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalDisplayType } from '@/src/types/enums';
 import {
   PlannedJournalOccurrence,
   PlannedOccurrenceViewModel,

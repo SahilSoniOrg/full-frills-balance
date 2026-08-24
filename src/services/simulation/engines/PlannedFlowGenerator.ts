@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { TransactionType } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
 import {
   FlowCategory,
   FlowSource,

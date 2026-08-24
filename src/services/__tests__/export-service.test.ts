@@ -4,7 +4,7 @@ import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { exportService } from '@/src/services/export';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { compression } from '@/src/utils/compression';

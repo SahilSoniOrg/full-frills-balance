@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 
 /** Account merge read + prepareUpdate batching (metadata, sub-accounts, soft-delete sources). */

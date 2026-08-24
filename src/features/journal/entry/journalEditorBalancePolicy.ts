@@ -3,7 +3,7 @@ import {
   isJournalEditorEntryReady,
   mapEditorLinesForBalanceCheck,
 } from '@/src/services/journal/journalEditorHelpers';
-import { JournalEntryLine } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 
 export interface JournalEditorBalanceState {
   imbalance: ReturnType<typeof JournalCalculator.calculateImbalance>;

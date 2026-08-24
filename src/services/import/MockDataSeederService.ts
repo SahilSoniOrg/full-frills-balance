@@ -2,16 +2,18 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import {
   AccountType,
   TransactionType,
+  JournalDisplayType,
+  JournalStatus,
+  PlannedPaymentStatus,
+} from '@/src/types/enums';
+import {
   WorkplaceId,
   AccountId,
   JournalId,
   PlannedPaymentId,
   TransactionId,
   BudgetId,
-  JournalDisplayType,
-  JournalStatus,
-  PlannedPaymentStatus,
-} from '@/src/types/domain';
+} from '@/src/types/ids';
 
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import type {

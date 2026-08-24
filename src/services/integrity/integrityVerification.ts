@@ -5,7 +5,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { analytics } from '@/src/services/analytics';
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';

@@ -3,8 +3,8 @@ import {
   AccountType,
   TransactionType,
   JournalDisplayType,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 /**
  * Integration tests for AccountRepository
  * Tests account creation, balance calculations, and precision handling

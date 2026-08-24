@@ -1,6 +1,7 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlainPlannedPayment, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { of } from 'rxjs';
 
 /** Shared observeById subscription for planned payment form + details. */

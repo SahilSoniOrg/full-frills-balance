@@ -4,7 +4,7 @@ import {
   isSimpleModeDisabledByLines,
   normalizeJournalLinesForGuidedMode,
 } from '@/src/services/journal/journalEditorHelpers';
-import { JournalEntryLine } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 
 /** The modes whose edits live in `editor.lines`. */
 export type JournalLinesOwningMode = Extract<JournalEntryScreenMode, 'guided' | 'advanced'>;

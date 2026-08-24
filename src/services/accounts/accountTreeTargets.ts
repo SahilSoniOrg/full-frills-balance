@@ -1,4 +1,4 @@
-import type { AccountId } from '@/src/types/domain';
+import type { AccountId } from '@/src/types/ids';
 import { createAccountTreeSnapshot, type OrderedAccount } from './accountTree';
 
 export type AccountTreeDropKind = 'sibling-before' | 'sibling-after' | 'outside' | 'child';

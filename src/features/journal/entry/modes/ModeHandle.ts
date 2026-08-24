@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 /** Submit chrome the shell footer renders for the active mode. */
 export type ModeSubmitState = {

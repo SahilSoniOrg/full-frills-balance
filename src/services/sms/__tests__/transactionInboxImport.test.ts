@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import { TransactionInboxItem } from '@/src/types/domain';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { buildTransactionInboxImportNavigation } from '@/src/services/sms/transactionInboxImport';
 
 const item: TransactionInboxItem = {

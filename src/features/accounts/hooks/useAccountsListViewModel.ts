@@ -25,7 +25,7 @@ import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

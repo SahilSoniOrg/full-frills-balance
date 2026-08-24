@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';

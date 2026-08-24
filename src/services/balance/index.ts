@@ -1,5 +1,6 @@
 import Account from '@/src/data/models/Account';
-import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { Trace } from '@/src/utils/TraceService';
 import { balanceHierarchyAggregator } from './balanceHierarchyAggregator';
 import { balanceReadService } from './balanceReadService';

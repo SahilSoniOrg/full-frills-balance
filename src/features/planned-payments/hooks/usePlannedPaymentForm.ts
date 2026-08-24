@@ -11,7 +11,7 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { analytics } from '@/src/services/analytics';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';

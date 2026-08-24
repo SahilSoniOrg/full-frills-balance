@@ -7,7 +7,8 @@ import type {
   JournalAutofillSuggestion,
   JournalEnrichmentRow,
 } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 

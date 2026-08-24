@@ -1,6 +1,7 @@
 import { mapLiabilityFlowsToPlannedOccurrences } from '@/src/features/planned-payments/mappers/plannedOccurrenceMapper';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
-import { AccountId, JournalDisplayType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { JournalDisplayType } from '@/src/types/enums';
 
 describe('plannedOccurrenceMapper', () => {
   const todayStartMs = Date.UTC(2026, 6, 31); // 2026-07-31

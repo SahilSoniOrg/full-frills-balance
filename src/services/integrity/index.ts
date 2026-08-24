@@ -13,7 +13,7 @@ import {
   IntegrityProgressCallback,
   IntegrityRepairTrigger,
 } from './types';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export * from './types';
 export * from './integrityVerification';

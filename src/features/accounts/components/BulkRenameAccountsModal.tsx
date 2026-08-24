@@ -2,7 +2,7 @@ import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalS
 import { AppInput, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

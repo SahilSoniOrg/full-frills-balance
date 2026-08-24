@@ -2,7 +2,8 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { EntityStatus } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { AccountFields, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import React, { useMemo } from 'react';
 export function useAuditAccounts(wokrplaceId: string) {
   const { data: accounts = [], isLoading } = useObservable<AccountFields[]>(

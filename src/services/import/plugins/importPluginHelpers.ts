@@ -1,7 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import { generator } from '@/src/data/database/idGenerator';
 import { ImportedAccount } from '@/src/data/repositories/importTypes';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 /**
  * Resolves or dynamically registers a system Equity account for Opening Balances or Balance Corrections.

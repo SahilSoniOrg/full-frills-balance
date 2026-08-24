@@ -9,7 +9,7 @@ import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import { useState } from 'react';
 import { Modal } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

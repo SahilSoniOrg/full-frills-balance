@@ -9,7 +9,7 @@ import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPres
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { PlainBudget } from '@/src/types/domain';
+import { PlainBudget } from '@/src/types/plainDtos';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 

@@ -1,7 +1,9 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { Theme } from '@/src/constants/design-tokens';
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { PlainAccount } from '@/src/types/plainDtos';
 import {
   getAccountSections,
   getSectionColor,

@@ -1,4 +1,4 @@
-import { AccountType, TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 

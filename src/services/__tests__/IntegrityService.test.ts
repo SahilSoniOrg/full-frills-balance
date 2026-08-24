@@ -1,11 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  WorkplaceId,
-  AuditAction,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, AuditAction } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';

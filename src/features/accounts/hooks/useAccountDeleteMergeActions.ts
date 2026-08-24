@@ -1,7 +1,8 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';

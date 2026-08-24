@@ -9,8 +9,8 @@ import {
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import type { AccountFields } from '@/src/types/domain';
-import { WorkplaceId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { MutableRefObject } from 'react';
 
 export type JournalEntryModeBodyProps = {

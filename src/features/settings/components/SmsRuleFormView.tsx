@@ -3,7 +3,7 @@ import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionSettingsSection } from './ActionSettingsSection';

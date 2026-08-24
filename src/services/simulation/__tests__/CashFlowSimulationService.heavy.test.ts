@@ -1,12 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import {
-  AccountSubtype,
-  AccountType,
-  AccountId,
-  BudgetId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';

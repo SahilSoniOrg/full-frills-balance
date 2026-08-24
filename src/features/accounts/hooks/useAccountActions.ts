@@ -1,10 +1,6 @@
-import {
-  AccountSubtype,
-  AccountType,
-  AccountId,
-  SerializedAccountMetadataPayload,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 /**
  * Account mutation hooks — thin wrappers over named command modules (ADR-0008).
  */

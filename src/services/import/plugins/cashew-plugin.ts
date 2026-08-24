@@ -7,7 +7,7 @@ import {
   AccountType,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';

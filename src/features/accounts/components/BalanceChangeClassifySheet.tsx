@@ -3,10 +3,12 @@ import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { PlainAccount } from '@/src/types/plainDtos';
 import {
   BalanceChangeCounterparty,
   filterEligibleCounterparties,

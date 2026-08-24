@@ -1,7 +1,7 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import { AppIcon } from '@/src/components/core';
-import { isValidIconName } from '@/src/components/core/AppIcon';
-import { PlainWorkplace } from '@/src/types/domain';
+import { isValidIconName } from '@/src/types/domainIcons';
+import { PlainWorkplace } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';

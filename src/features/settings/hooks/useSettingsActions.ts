@@ -4,7 +4,7 @@ import { exportService } from '@/src/services/export';
 import { integrityService } from '@/src/services/integrity';
 
 import { useCallback } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 export function useSettingsActions(workplaceId: WorkplaceId) {
   const { requireRestart } = useAppRestart();

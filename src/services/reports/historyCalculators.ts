@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { IncomeVsExpense } from '@/src/services/reports/reportSnapshot';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';

@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { combineLatest, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 

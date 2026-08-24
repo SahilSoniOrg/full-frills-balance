@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics';
-import { AccountId, PlannedPaymentId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';

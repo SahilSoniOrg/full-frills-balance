@@ -1,10 +1,6 @@
-import {
-  AccountType,
-  TransactionType,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 
 import {
   inferSimpleTabTypeFromTwoLegs,

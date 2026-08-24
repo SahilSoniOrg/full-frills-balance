@@ -1,4 +1,4 @@
-import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/domain';
+import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { IconName } from '@/src/types/domainIcons';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import {

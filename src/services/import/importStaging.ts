@@ -3,7 +3,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { integrityService } from '@/src/services/integrity';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 
 export async function createImportStagingWorkplace(

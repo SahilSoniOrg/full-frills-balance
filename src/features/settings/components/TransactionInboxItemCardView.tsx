@@ -1,7 +1,8 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
-import { InboxProcessingStatus, TransactionInboxItem } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { alert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
 import { useTheme } from '@/src/hooks/use-theme';

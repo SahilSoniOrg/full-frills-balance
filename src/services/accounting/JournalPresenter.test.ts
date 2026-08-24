@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalDisplayType,
-  SemanticType,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalDisplayType, SemanticType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 

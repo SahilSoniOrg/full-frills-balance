@@ -7,7 +7,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { smsService } from '@/src/services/sms-service';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { preferences } from '@/src/utils/preferences';

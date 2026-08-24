@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';

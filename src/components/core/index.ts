@@ -35,8 +35,9 @@ export type { ListRowProps } from './ListRow';
 export { Badge } from './Badge';
 export type { BadgeProps } from './Badge';
 
-export { AppIcon, isValidIconName } from './AppIcon';
-export type { IconName } from './AppIcon';
+export { AppIcon } from './AppIcon';
+export { isValidIconName } from '@/src/types/domainIcons';
+export type { IconName } from '@/src/types/domainIcons';
 export { ColoredDot } from './ColoredDot';
 export type { ColoredDotProps } from './ColoredDot';
 export { ErrorBoundary } from './ErrorBoundary';

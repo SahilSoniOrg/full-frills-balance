@@ -7,7 +7,7 @@ import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { ReportLegendRow } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface BreakdownDonutCardProps {

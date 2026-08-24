@@ -1,5 +1,5 @@
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
 import { AppConfig } from '@/src/constants/app-config';
 

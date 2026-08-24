@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType, WorkplaceId, AccountId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId, AccountId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { observeWorkplaceJournalMeta } from '@/src/services/reactive/reactiveWorkplaceObserves';

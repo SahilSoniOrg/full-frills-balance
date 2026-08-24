@@ -5,7 +5,7 @@ import {
   parseFlexibleDate,
 } from '@/src/services/import/plugins/csv-plugin';
 import { ImportFileContext } from '@/src/services/import/types';
-import { AccountType, TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 jest.mock('@/src/data/database/idGenerator', () => {
   let counter = 0;

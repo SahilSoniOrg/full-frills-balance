@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalDisplayType,
-  SemanticType,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalDisplayType, SemanticType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 const SEMANTIC_MATRIX: Record<AccountType, Record<AccountType, SemanticType>> = {
   [AccountType.ASSET]: {

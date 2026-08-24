@@ -1,13 +1,9 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import {
-  InboxParseStatus,
-  InboxProcessingStatus,
-  JournalId,
-  PlainInboxRecord,
-  TransactionChannel,
-  TransactionDirection,
-} from '@/src/types/domain';
+import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
+import { PlainInboxRecord } from '@/src/types/plainDtos';
+import { TransactionChannel } from '@/src/types/domainJournal';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 

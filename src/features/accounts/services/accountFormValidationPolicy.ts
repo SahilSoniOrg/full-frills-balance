@@ -1,4 +1,4 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { sanitizeInput } from '@/src/utils/validation';
 
 /**

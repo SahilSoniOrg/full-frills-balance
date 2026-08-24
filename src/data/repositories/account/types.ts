@@ -1,10 +1,6 @@
-import {
-  AccountId,
-  AccountSubtype,
-  AccountType,
-  SerializedAccountMetadataPayload,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 
 export interface AccountPersistenceInput {
   name: string;

@@ -1,4 +1,5 @@
-import { AccountId, BudgetId, PlainBudget, PlainBudgetScope } from '@/src/types/domain';
+import { AccountId, BudgetId } from '@/src/types/ids';
+import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 
 export interface BudgetEditDraft {
   name: string;

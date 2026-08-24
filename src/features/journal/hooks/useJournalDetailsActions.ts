@@ -2,7 +2,7 @@ import { formatMoneyAmount } from '@/src/utils/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';

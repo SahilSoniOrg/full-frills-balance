@@ -1,4 +1,4 @@
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { analytics } from '@/src/services/analytics';
 import { accountResolutionService } from '@/src/services/ledger/resolution';

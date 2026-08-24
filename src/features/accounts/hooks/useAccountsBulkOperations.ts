@@ -1,6 +1,6 @@
 import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
 import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import {
   getBulkHierarchyCandidates,
   type HierarchyCandidateAccount,
@@ -17,7 +17,9 @@ import {
   updateAccounts as updateAccountsCommand,
   type AccountBulkUpdate,
 } from '@/src/services/accounts/accountHierarchyCommands';
-import { AccountId, AccountType, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { isAccountArchived, type AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';

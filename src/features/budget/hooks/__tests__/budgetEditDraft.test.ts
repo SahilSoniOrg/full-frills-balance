@@ -3,7 +3,7 @@ import {
   mapBudgetToEditDraft,
   shouldSeedBudgetDraft,
 } from '../budgetEditDraft';
-import { AccountId, BudgetId } from '@/src/types/domain';
+import { AccountId, BudgetId } from '@/src/types/ids';
 
 describe('budgetEditDraft', () => {
   describe('shouldSeedBudgetDraft', () => {

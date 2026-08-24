@@ -1,4 +1,5 @@
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';

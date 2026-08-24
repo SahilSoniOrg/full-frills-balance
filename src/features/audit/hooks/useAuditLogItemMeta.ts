@@ -1,6 +1,6 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig, ColorKey } from '@/src/constants';
-import { AuditAction } from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
 import {
   AuditLogEntry,
   EntityStatus,

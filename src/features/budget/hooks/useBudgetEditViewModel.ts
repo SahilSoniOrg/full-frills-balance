@@ -1,11 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import {
-  AccountType,
-  AccountId,
-  BudgetId,
-  PlainBudget,
-  PlainBudgetScope,
-} from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId, BudgetId } from '@/src/types/ids';
+import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 
 import {
   BudgetEditDraft,

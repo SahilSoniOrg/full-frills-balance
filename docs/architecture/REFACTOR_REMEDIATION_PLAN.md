@@ -1,0 +1,176 @@
+# Architecture Refactor Remediation Plan
+
+Status: **ACTIVE**  
+Baseline: `b1ee4d45` on `main`  
+Owner: orchestration thread; implementation work is delegated to isolated Luna worktrees.  
+Push policy: **never push**. Local commits are expected; completed work is squash-merged into `main`.
+
+## Objective
+
+Close the remaining lifecycle, workplace-isolation, financial-integrity, persistence-ownership, and verification gaps found after the architecture refactor. Keep the application behavior stable while making cancellation and transaction ownership truthful and testable.
+
+## Current verification baseline
+
+- `bun run verify` passes locally: architecture checks, typecheck, E2E typecheck, 260 Jest suites, 1,582 passing tests, 1 skipped, and lint.
+- The working tree is clean.
+- The architecture ratchet currently reports three approved direct database-write occurrences in testing helpers.
+- No implementation agent may edit files owned by another workstream.
+
+## Risk-ordered workstreams
+
+### Slice 1 — Lifecycle cancellation and stale derived writes (P0/P1)
+
+Owner: lifecycle coordinator / reactive services.
+
+Evidence:
+
+- `src/services/RebuildQueueService.ts:204-211,356-366` increments the lifecycle generation and clears queued work, but an in-flight batch does not check generation between items and receives no abort signal.
+- `src/services/reactive/reactiveAggregatedBalances.ts:89-150` performs asynchronous work in `switchMap` and saves a wealth snapshot after eviction can unsubscribe the stream.
+- `src/features/app/hooks/useAppBootstrap.ts:80-85` starts Safe-to-Spend prewarming without cancellation.
+- `src/services/simulation/SafeToSpendReadModel.ts:43-47,77-97` clears only the cache map; it does not dispose an active prewarm subscription.
+
+Required outcome:
+
+- Old workplace work cannot publish snapshots or process later queue items after a switch.
+- Cancellation reaches the final derived-write/commit boundary.
+- Queue `stop()` remains truthful about pending work.
+
+Tests required:
+
+- Stop a two-item rebuild batch while the first item is blocked; assert the second item is not processed.
+- Evict a reactive workplace while calculation is awaiting; assert no snapshot write occurs afterward.
+- Dispose Safe-to-Spend prewarm during projection; assert no stale snapshot write.
+
+### Slice 2 — Cross-domain cancellation at commit boundaries (P1)
+
+Owner: integrity and planned-payment coordinators.
+
+Evidence:
+
+- `src/services/integrity/integrityOrchestrator.ts:250-275` checks cancellation only between repairs.
+- `src/services/integrity/integrityRepair.ts:45-60` does not accept or forward a signal to rebuild.
+- `src/services/planned-payment/plannedPaymentOrchestration.ts:221-249` checks cancellation only between occurrences.
+- `src/services/planned-payment/plannedPaymentJournalGeneration.ts:19-50` creates the journal without cancellation support.
+
+Required outcome:
+
+- A workplace switch cannot commit an integrity repair or planned journal after cancellation.
+- Signals are checked immediately before transaction preparation and inside the coordinator that owns the write.
+
+Tests required:
+
+- Abort during integrity rebuild preparation; assert no repair batch commits.
+- Abort between planned-payment existence check and journal creation; assert no journal commits.
+
+### Slice 3 — SMS workplace isolation and transactional cancellation (P1)
+
+Owner: SMS pipeline/repository boundary.
+
+Evidence:
+
+- `src/services/sms/pipeline/smsSyncPipeline.ts:29-60` stores processed SMS IDs under one global key.
+- `src/services/sms/pipeline/smsSyncPipeline.ts:217-236` performs asynchronous rereads after the last cancellation guard.
+- `src/data/repositories/TransactionInboxRepository.ts:70-77` batches the callback result without a signal or final guard.
+
+Required outcome:
+
+- Processed-ID state is workplace-scoped or removed as an independent source of truth.
+- The transaction coordinator rejects stale work before batching.
+- Existing per-workplace single-flight and post-commit processed-ID behavior remain intact.
+
+Tests required:
+
+- Same device SMS ID in two workplaces must not cross-suppress processing.
+- Abort during transaction rereads must produce zero database operations.
+- Concurrent scans for one workplace remain serialized; different workplaces remain independent.
+
+### Slice 4 — Import outcome semantics and native rollback proof (P1)
+
+Owner: import transaction coordinator / database repository.
+
+Evidence:
+
+- `src/services/import/importStaging.ts:49-58` swaps the target and then separately deletes staging data.
+- `src/services/import/ImportService.ts:111-132` reports a failed import if cleanup fails after a successful swap.
+- `src/data/repositories/DatabaseRepository.ts:177-237` uses a private-adapter savepoint, but native rollback behavior is not integration-tested.
+
+Required outcome:
+
+- Import state is explicit and resumable, or post-swap cleanup is idempotent and cannot turn a successful replacement into a reported failure.
+- Native adapter fault injection proves rollback of partial swap and cache synchronization behavior.
+
+Tests required:
+
+- Fail staging cleanup after a successful swap; assert the import result is successful and cleanup is retryable.
+- Inject a failure during table reassignment; assert target rows are restored and staging rows remain available.
+- Run the swap against the native adapter, not only mocks.
+
+### Slice 5 — Account-tree invariant hardening (P1)
+
+Owner: account-tree domain validator.
+
+Evidence:
+
+- `src/services/accounts/accountTree.ts:351-363` validates parent existence and type but not `parent.deletedAt`.
+- `src/services/accounts/accountHierarchyCommands.ts:677-690` rejects archived parents but not deleted parents.
+- `src/services/accounts/__tests__/accountTree.test.ts:182-203` lacks a deleted-parent case.
+
+Required outcome:
+
+- Deleted accounts cannot become parents.
+- The invariant is enforced in the shared validator and covered by domain and command-level tests.
+
+### Slice 6 — Persistence ownership and enforcement (P1/P2)
+
+Owner: repository/coordinator layer plus architecture ratchet.
+
+Evidence:
+
+- `scripts/check-architecture-ratchets.mjs:45-47,265-277` detects direct database writes but not service-owned `prepare*` or model mutation preparation.
+- Remaining service-owned preparation exists in `src/services/ledger/ledgerLifecycleService.ts:30-38`, `src/services/planned-payment/plannedPaymentCommands.ts:53-65`, `src/services/AccountingRebuildService.ts:175-212`, and related command modules.
+- `docs/architecture/PERSISTENCE_OWNERSHIP_INVENTORY.md:12` still reports the old count of 38 direct-write violations while the current ratchet has three approved test-only occurrences.
+
+Required outcome:
+
+- Either move remaining cross-domain preparation into named repositories/coordinators or explicitly codify the allowed preparer seam.
+- Add a ratchet for forbidden service/command model preparation and update the inventory to the current baseline.
+- Preserve legitimate migration/import/test seams with explicit allowlists and rationale.
+
+Tests and verification required:
+
+- Ratchet self-tests for service-owned `prepare*`, model `.update`, raw/private adapter access, and approved seams.
+- Focused tests for each migrated coordinator.
+- Full architecture check after every ownership slice.
+
+### Slice 7 — CI and contract coverage (P2)
+
+Owner: verification/docs.
+
+Evidence:
+
+- `.github/workflows/playwright.yml:3-7` runs only on schedule or manual dispatch.
+- `.github/workflows/ci.yml:3-46` does not run Playwright on pull requests.
+- `src/services/import/__tests__/ImportService.workflow.test.ts:8-62` mocks repository, database, staging, and integrity behavior, so it does not exercise import persistence.
+
+Required outcome:
+
+- Decide and document whether web E2E is a PR gate or a scheduled confidence suite.
+- Add at least one import persistence integration contract that exercises staging, swap, cleanup, and rollback semantics.
+
+## Merge protocol
+
+1. Each workstream uses a separate worktree and a `codex/` branch.
+2. Agents commit only their owned files and report commit SHA, tests, and unresolved risks.
+3. Orchestrator reviews the diff and tests before merging.
+4. Completed work is squash-merged into `main` as one focused commit per slice.
+5. No pushes, force operations, or destructive cleanup.
+6. After each merge, run the slice tests plus architecture checks; after the final merge, run `bun run verify`.
+
+## Definition of done
+
+- Slices 1–5 have implementation and regression tests.
+- Slice 6 either closes the ownership gap or records an explicit, mechanically enforced exception model.
+- Import native rollback behavior is proven or the atomicity claim is narrowed.
+- Current docs match the actual ratchet and remaining risks.
+- Full verification passes on `main`.
+- This document records merged commits, verification results, and any consciously deferred work.

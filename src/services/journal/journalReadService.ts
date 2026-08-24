@@ -9,13 +9,9 @@ import {
   JournalEditorEnrichedLine,
   mapEnrichedLinesToEditorState,
 } from '@/src/services/journal/journalEditorHelpers';
-import {
-  JournalEntryLine,
-  JournalId,
-  PlainJournal,
-  TabType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { PlainJournal } from '@/src/types/plainDtos';
 import { map, Observable } from 'rxjs';
 
 export interface JournalEditorLoadData {

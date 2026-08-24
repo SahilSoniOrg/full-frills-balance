@@ -5,7 +5,7 @@ import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 

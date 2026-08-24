@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {
@@ -9,7 +9,7 @@ import {
   validateSplitState,
 } from '@/src/services/journal/splitJournalHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef } from 'react';

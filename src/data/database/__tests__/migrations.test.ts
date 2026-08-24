@@ -1,4 +1,5 @@
-import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 /**
  * Migration regression harness (Phase 3.3).
  *

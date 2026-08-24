@@ -9,7 +9,7 @@ import {
   parseFlexibleDate,
 } from '@/src/services/import/plugins/csv/csvParser';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 
 // Re-export parser utilities for backwards compatibility & tests

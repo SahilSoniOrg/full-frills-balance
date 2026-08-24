@@ -1,11 +1,5 @@
-import {
-  AccountId,
-  JournalDisplayType,
-  JournalId,
-  JournalStatus,
-  TransactionId,
-  TransactionType,
-} from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
+import { JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { generator } from '@/src/data/database/idGenerator';
 import type { CanonicalAccount, CanonicalJournal, CanonicalTransaction } from '../canonicalImport';
 import type { ImportIssue, ImportTransactionInput } from '../canonicalImportBuilder';

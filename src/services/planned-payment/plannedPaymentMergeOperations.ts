@@ -1,6 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 /**
  * Prepares WatermelonDB operations to merge planned payments from source accounts to a target account.
@@ -19,10 +19,7 @@ export async function preparePlannedPaymentMergeOperations(
     sourceAccountIds,
   );
 
-  const mutations = new Map<
-    string,
-    { from?: AccountId; to?: AccountId; record: PlannedPayment }
-  >();
+  const mutations = new Map<string, { from?: AccountId; to?: AccountId; record: PlannedPayment }>();
 
   plannedFrom.forEach(p => {
     if (!mutations.has(p.id)) {

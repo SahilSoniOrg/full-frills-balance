@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
-import { JournalStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';

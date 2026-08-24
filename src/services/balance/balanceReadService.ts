@@ -5,7 +5,9 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountBalance, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
 import { balanceHierarchyAggregator } from './balanceHierarchyAggregator';

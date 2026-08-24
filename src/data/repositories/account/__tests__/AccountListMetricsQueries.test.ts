@@ -5,7 +5,8 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { AccountId, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 

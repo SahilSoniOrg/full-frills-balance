@@ -1,6 +1,6 @@
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { database } from '@/src/data/database/Database';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {

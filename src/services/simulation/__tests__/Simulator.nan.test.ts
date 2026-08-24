@@ -1,6 +1,6 @@
 import { Simulator } from '@/src/services/simulation/Simulator';
 import { Flow, FlowCategory, FlowSource } from '@/src/services/simulation/types';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 function nanOutflow(accountId: string): Flow {
   return {

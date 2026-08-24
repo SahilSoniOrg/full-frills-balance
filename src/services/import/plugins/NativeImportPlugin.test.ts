@@ -5,7 +5,7 @@ import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity';
 import { preferences } from '@/src/utils/preferences';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 // Mock dependencies
 jest.mock('@/src/services/import/preImportBackupService', () => ({

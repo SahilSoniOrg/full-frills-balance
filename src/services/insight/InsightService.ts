@@ -7,7 +7,8 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
 import { switchMap, take } from 'rxjs/operators';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceJournalMeta,

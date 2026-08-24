@@ -1,7 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { Q, Query } from '@nozbe/watermelondb';
 
 export class AccountQueryRepository {

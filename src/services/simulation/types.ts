@@ -1,4 +1,6 @@
-import { AccountFields, AccountId, AccountSubtype, BudgetId } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountId, BudgetId } from '@/src/types/ids';
+import { AccountSubtype } from '@/src/types/enums';
 
 export enum FlowCategory {
   INCOME = 'INCOME',

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
-import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/domain';
+import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;

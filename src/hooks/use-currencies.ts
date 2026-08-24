@@ -1,7 +1,7 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { PlainCurrency } from '@/src/types/domain';
+import { PlainCurrency } from '@/src/types/plainDtos';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo } from 'react';

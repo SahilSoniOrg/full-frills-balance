@@ -1,5 +1,6 @@
 import Account from '@/src/data/models/Account';
-import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import {
   accountQueryRepository,

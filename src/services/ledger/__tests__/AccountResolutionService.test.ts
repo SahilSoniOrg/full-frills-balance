@@ -1,7 +1,8 @@
 import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { database } from '@/src/data/database/Database';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 describe('AccountResolutionService', () => {
   const workplaceId = 'test-workplace-id' as WorkplaceId;

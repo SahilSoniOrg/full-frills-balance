@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { InboxParseStatus, InboxProcessingStatus, JournalId } from '@/src/types/domain';
+import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import {

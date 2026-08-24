@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 

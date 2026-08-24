@@ -5,7 +5,7 @@ import type {
   AccountCardViewModel,
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 export type AccountsListActiveModal =
   | { type: 'actionSheet'; account: AccountCardViewModel }

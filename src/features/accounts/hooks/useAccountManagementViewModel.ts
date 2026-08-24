@@ -1,6 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
-import type { AccountFields, AccountId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountId } from '@/src/types/ids';
 import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';

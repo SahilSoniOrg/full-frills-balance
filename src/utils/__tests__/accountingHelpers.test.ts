@@ -1,4 +1,5 @@
-import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 import {
   calculateAccountPeriodFlows,

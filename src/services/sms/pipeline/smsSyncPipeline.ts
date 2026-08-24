@@ -13,12 +13,8 @@ import {
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import {
-  AccountId,
-  InboxParseStatus,
-  InboxProcessingStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';

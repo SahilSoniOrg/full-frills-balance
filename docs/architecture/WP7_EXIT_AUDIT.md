@@ -1,5 +1,7 @@
 # WP-7 exit audit
 
+Status: complete
+
 Compared to the originating architecture-audit risks (roadmap evidence index) against enforced ratchets on 2026-08-19.
 
 ## Metrics

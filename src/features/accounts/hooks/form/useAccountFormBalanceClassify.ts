@@ -1,11 +1,12 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountFormBalanceClassifyDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormCoreApi } from '@/src/features/accounts/hooks/form/useAccountFormCore';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { AccountPersistenceSaveInput } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { buildAccountSavePayload } from '@/src/features/accounts/services/accountFormService';
 import { AccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import {
   BalanceChangeCounterparty,
   isBalanceChangedBeyondEpsilon,

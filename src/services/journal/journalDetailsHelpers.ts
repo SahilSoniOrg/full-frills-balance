@@ -1,5 +1,6 @@
 import { ColorKey } from '@/src/constants';
-import { JournalDisplayType, PlannedPaymentId } from '@/src/types/domain';
+import { JournalDisplayType } from '@/src/types/enums';
+import { PlannedPaymentId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateUtils';
 import { safeParseJSON } from '@/src/utils/serialization';
 

@@ -1,6 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
-import { AccountId, AccountSubtype } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype } from '@/src/types/enums';
 import {
   FlowSource,
   FlowType,

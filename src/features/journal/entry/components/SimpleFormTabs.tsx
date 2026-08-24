@@ -1,7 +1,7 @@
 import { AppConfig, Spacing } from '@/src/constants';
 import { AppSegmentedControl } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TabType } from '@/src/types/domain';
+import { TabType } from '@/src/types/domainJournal';
 import { StyleSheet, View } from 'react-native';
 
 interface SimpleFormTabsProps {

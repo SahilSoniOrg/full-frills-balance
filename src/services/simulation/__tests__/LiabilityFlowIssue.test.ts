@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountQueryRepository } from '@/src/data/repositories/account';

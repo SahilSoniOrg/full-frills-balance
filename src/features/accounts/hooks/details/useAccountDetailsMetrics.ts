@@ -1,4 +1,6 @@
-import { AccountType, AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { AppConfig } from '@/src/constants';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';

@@ -6,11 +6,9 @@ import {
   InboxProcessingStatus,
   TransactionDirection,
   AccountType,
-  AccountId,
-  JournalId,
   TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { ledgerWriteService } from '@/src/services/ledger';

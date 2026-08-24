@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 const WORKPLACE_A = 'wp-account-merge-a' as WorkplaceId;
 const WORKPLACE_B = 'wp-account-merge-b' as WorkplaceId;

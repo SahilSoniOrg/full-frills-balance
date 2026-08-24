@@ -12,7 +12,8 @@ import { balanceService } from '@/src/services/balance';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceActiveTransactionCount,

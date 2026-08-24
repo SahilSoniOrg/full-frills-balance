@@ -1,11 +1,6 @@
-import {
-  AccountId,
-  AccountType,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TransactionId,
-  TransactionType,
-} from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 import {
   isGuidedDisabledForMode,
   JournalModeTransitionInput,

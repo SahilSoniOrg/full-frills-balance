@@ -1,5 +1,5 @@
 import { AccountsListTab } from '@/src/features/accounts/helpers/accountsListHelpers';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { useCallback, useState } from 'react';
 
 export function useAccountsListUiState() {

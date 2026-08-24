@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/balance';

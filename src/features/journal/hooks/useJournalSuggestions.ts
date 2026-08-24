@@ -1,5 +1,5 @@
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';

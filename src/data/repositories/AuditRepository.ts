@@ -1,7 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import AuditLog from '@/src/data/models/AuditLog';
-import { AuditAction, AuditEntityType, WorkplaceId } from '@/src/types/domain';
+import { AuditAction, AuditEntityType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 

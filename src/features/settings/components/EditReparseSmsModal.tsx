@@ -7,7 +7,8 @@ import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { smsService } from '@/src/services/sms-service';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { InboxParseStatus, TransactionInboxItem } from '@/src/types/domain';
+import { InboxParseStatus } from '@/src/types/enums';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { showErrorAlert } from '@/src/utils/alerts';
 
 interface EditReparseSmsModalProps {

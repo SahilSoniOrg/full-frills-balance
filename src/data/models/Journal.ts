@@ -1,12 +1,8 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
-import {
-  JournalDisplayType,
-  JournalId,
-  JournalStatus,
-  PlainJournal,
-  PlannedPaymentId,
-} from '@/src/types/domain';
+import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
+import { JournalId, PlannedPaymentId } from '@/src/types/ids';
+import { PlainJournal } from '@/src/types/plainDtos';
 import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 

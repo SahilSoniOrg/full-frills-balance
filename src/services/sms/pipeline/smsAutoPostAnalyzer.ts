@@ -5,7 +5,8 @@ import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteM
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import { JournalStatus, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { JournalStatus, TransactionType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
 import { computeSmsFingerprint, toDirection } from './smsFingerprint';

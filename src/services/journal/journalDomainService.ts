@@ -1,12 +1,8 @@
 import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import {
-  InboxProcessingStatus,
-  JournalEntryLine,
-  JournalId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { InboxProcessingStatus, TransactionType } from '@/src/types/enums';
+import { JournalEntryLine } from '@/src/types/domainJournal';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {

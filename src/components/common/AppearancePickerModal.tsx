@@ -10,7 +10,7 @@ import {
   Size,
   Spacing,
 } from '@/src/constants';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { withOpacity } from '@/src/utils/color-math';

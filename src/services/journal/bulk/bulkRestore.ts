@@ -1,8 +1,9 @@
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { BulkDeleteUndoToken, WorkplaceId } from '@/src/types/domain';
+import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
+import { WorkplaceId } from '@/src/types/ids';
 import { enqueueRebuildIfNeeded } from './bulkHelpers';
 
-export type { BulkDeleteUndoToken } from '@/src/types/domain';
+export type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 
 /** Atomically restores the journals and child transactions from a bulk delete. */
 export async function bulkRestoreJournals(

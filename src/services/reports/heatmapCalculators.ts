@@ -1,4 +1,4 @@
-import { TransactionType } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
 
 import dayjs from 'dayjs';
 import { ConvertedReportTransaction } from './reportTypes';

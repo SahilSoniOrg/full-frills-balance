@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { CalculationInput, Insight } from './insightTypes';
 

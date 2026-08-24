@@ -1,7 +1,8 @@
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
-import { JournalDisplayType, WorkplaceId, AccountId, JournalId } from '@/src/types/domain';
+import { JournalDisplayType } from '@/src/types/enums';
+import { WorkplaceId, AccountId, JournalId } from '@/src/types/ids';
 import { useJournalEntryList } from '../useJournalEntryList';
 
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
@@ -84,7 +85,7 @@ jest.mock('@/src/utils/money', () => ({
   safeSubtract: (a: number, b: number) => a - b,
 }));
 
-const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
+const mockEnrichedJournals: import('@/src/types/domainReadModels').EnrichedJournal[] = [
   {
     id: 'j1' as JournalId,
     journalDate: new Date(2024, 2, 20, 15).getTime(),

@@ -1,4 +1,4 @@
-import { MultiAccountPickerModal } from '@/src/features/accounts';
+import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import {

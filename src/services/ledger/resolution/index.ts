@@ -1,6 +1,7 @@
 import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { AccountId, AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { LocalTransactionClassifier } from '@/src/utils/nlp/BayesClassifier';
 import { fuzzyMatch } from './fuzzyMatcher';
 import { getBayesTrainingData, resolveFromHistory } from './historyResolver';

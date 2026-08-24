@@ -1,6 +1,7 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { AccountFields, AccountType } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountType } from '@/src/types/enums';
 import { toAccountType } from '@/src/utils/accountCategory';
 
 /**

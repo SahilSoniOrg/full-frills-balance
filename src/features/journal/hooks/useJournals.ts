@@ -12,13 +12,9 @@ import {
   JournalTimelineRowsOptions,
 } from '@/src/services/journal/journalTimelineRows';
 import { transactionService } from '@/src/services/transaction-ingestion';
-import {
-  DisplayTransaction,
-  EnrichedJournal,
-  JournalId,
-  JournalStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { DisplayTransaction, EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalStatus } from '@/src/types/enums';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
 

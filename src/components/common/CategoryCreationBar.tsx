@@ -1,6 +1,6 @@
 import { IconPickerModal } from '@/src/components/common/IconPickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';

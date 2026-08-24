@@ -3,7 +3,8 @@ import type { ListSelectionChrome } from '@/src/components/common/SelectionActio
 import { IconName } from '@/src/components/core';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { AccountType, JournalId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';

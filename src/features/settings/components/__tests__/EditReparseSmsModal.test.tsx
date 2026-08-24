@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@/src/utils/test-utils';
 import { EditReparseSmsModal } from '../EditReparseSmsModal';
-import { TransactionInboxItem } from '@/src/types/domain';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';
 
 jest.mock('@/src/services/sms-service', () => ({

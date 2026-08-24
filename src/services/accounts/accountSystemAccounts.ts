@@ -2,7 +2,8 @@ import { AppConfig } from '@/src/constants';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, WorkplaceId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 
 export function isSystemAccount(account: { name: string }): boolean {

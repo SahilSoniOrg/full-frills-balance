@@ -1,5 +1,5 @@
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { useMemo } from 'react';
 

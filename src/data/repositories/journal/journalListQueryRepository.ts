@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
-import { JournalStatus, WorkplaceId } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';

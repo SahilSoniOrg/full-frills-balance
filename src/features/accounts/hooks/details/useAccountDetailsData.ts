@@ -6,13 +6,10 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { formatAccountSubtypeLabel, isAccountType } from '@/src/types/accountSubtype';
-import {
-  AccountBalance,
-  AccountId,
-  AccountType,
-  type AccountFields,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { type AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';

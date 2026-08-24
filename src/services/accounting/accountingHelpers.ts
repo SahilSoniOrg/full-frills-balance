@@ -1,4 +1,5 @@
-import { AccountType, TransactionType, AccountId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 /**
  * Accounting aggregates that are not mere BalanceEffects wrappers.
  * Prefer `effect` / `checkJournal` / `foldBalances` / `periodFlowSQL` from BalanceEffects for signs.

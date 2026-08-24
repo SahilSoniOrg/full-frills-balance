@@ -1,12 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
-import {
-  TransactionType,
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TransactionId,
-  AccountType,
-} from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { TransactionType, AccountType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 

@@ -1,4 +1,5 @@
-import { PlainWorkplace, WorkplaceId } from '@/src/types/domain';
+import { PlainWorkplace } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 import { date, field } from '@nozbe/watermelondb/decorators';
 

@@ -1,4 +1,5 @@
-import { AuditAction, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';

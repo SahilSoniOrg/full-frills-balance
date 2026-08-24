@@ -1,6 +1,6 @@
 import { Model } from '@nozbe/watermelondb';
 import { field } from '@nozbe/watermelondb/decorators';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 export default class BaseScopedModel<ID extends string = string> extends Model {
   @field('workplace_id') workplaceId!: WorkplaceId;

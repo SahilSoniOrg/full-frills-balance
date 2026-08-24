@@ -4,7 +4,7 @@ import {
   partitionArchiveTargets,
   prepareArchiveTargetOps,
 } from '@/src/services/accounts/accountArchiveMutations';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 function mockAccount(id: string, archivedAt?: Date) {
   const state: { archivedAt?: Date; updatedAt?: Date } = { archivedAt };

@@ -2,7 +2,8 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalReadService } from '@/src/services/journal/journalReadService';
-import { AccountType, JournalId, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/data/repositories/journal/journalTimelineModule', () => ({
   journalObserveQueries: {

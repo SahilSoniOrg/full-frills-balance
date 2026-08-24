@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 export interface BalanceVerificationResult {
   accountId: AccountId;

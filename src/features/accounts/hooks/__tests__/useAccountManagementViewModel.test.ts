@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { AccountType, type AccountFields, type AccountId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { type AccountFields } from '@/src/types/plainDtos';
+import { type AccountId } from '@/src/types/ids';
 import { useAccountManagementViewModel } from '../useAccountManagementViewModel';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';

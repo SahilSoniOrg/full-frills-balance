@@ -1,9 +1,6 @@
-import {
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  PlainPlannedPayment,
-  PlannedPaymentInterval,
-} from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export interface PlannedPaymentFormState {
   name: string;

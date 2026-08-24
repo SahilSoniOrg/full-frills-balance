@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { buildActiveClauses, deterministicSort } from './transactionActiveClauses';

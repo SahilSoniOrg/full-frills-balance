@@ -1,4 +1,6 @@
-import { AccountType, AccountId, DisplayTransaction } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import { DisplayTransaction } from '@/src/types/domainReadModels';
 
 import { buildJournalSplitItems } from '../journalDetailsSplitItems';
 

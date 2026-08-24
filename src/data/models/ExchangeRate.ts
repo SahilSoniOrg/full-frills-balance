@@ -1,4 +1,4 @@
-import { PlainExchangeRate } from '@/src/types/domain';
+import { PlainExchangeRate } from '@/src/types/plainDtos';
 import { Model } from '@nozbe/watermelondb';
 import { date, field } from '@nozbe/watermelondb/decorators';
 

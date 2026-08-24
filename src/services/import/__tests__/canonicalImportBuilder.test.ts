@@ -7,7 +7,7 @@ import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
   TransactionType,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
 
 jest.mock('@/src/data/database/idGenerator', () => {
   let counter = 0;

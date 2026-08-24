@@ -1,5 +1,6 @@
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, AccountType, EMPTY_ACCOUNT_ID, TransactionType } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import {
   filterGuidedLegAccounts,
   filterToLeafAccounts,

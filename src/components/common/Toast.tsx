@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { AppIcon, IconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig } from '@/src/constants';
 import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
+import type { IconName } from '@/src/types/domainIcons';
 import { Animated, StyleSheet, View, TouchableOpacity } from 'react-native';
 
 export function ToastContainer() {

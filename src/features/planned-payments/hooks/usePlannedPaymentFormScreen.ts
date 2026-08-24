@@ -1,5 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { PlannedPaymentInterval, AccountId } from '@/src/types/domain';
+import { PlannedPaymentInterval } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import { useAccounts } from '@/src/features/accounts';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { AppNavigation } from '@/src/utils/navigation';

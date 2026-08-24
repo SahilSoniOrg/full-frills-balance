@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Box, BoxBaseProps } from '@/src/design-system/Box';

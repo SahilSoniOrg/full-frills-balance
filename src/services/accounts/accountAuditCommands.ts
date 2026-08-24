@@ -1,7 +1,8 @@
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
-import { AccountAuditState, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountAuditState } from '@/src/types/audit';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 /**
  * Restores account fields from an audit `before` snapshot during revert.

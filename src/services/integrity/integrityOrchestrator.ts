@@ -4,7 +4,7 @@ import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { analytics } from '@/src/services/analytics';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';

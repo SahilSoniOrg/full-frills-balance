@@ -1,5 +1,6 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import { AccountId, PlainSmsRule } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { PlainSmsRule } from '@/src/types/plainDtos';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 import { Relation } from '@nozbe/watermelondb';
 import Account from './Account';

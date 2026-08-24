@@ -1,6 +1,6 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { smsService } from '@/src/services/sms-service';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { Platform } from 'react-native';
 import { of } from 'rxjs';
 

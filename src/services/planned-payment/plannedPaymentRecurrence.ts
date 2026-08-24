@@ -2,7 +2,7 @@ import {
   RecurrenceEngine,
   normalizeToStartOfDay,
 } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
-import { PlannedPaymentInterval } from '@/src/types/domain';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export { normalizeToStartOfDay };
 

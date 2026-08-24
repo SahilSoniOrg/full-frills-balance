@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/utils/preferences';
 import { ParserOutput, TransactionFallbackAIProvider } from './types/ai-parsing';
 import { nativeAIProvider } from './NativeAIProvider';

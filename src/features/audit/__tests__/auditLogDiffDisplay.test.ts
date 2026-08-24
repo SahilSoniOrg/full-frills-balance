@@ -4,7 +4,7 @@ import {
   formatAuditAccountLabel,
   shouldHideUnchangedTransactionLeg,
 } from '@/src/features/audit/auditLogDiffDisplay';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 describe('auditLogDiffDisplay', () => {
   const accountMap = {

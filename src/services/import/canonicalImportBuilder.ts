@@ -6,15 +6,13 @@ import {
   isAccountType,
   isSubtypeAllowedForType,
 } from '@/src/types/accountSubtype';
+import { AccountId, BudgetId, PlannedPaymentId } from '@/src/types/ids';
 import {
-  AccountId,
   AccountSubtype,
   AccountType,
-  BudgetId,
-  PlannedPaymentId,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 import {
   CANONICAL_IMPORT_VERSION_V1,

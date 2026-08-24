@@ -2,13 +2,9 @@ import { IconName } from '@/src/types/domainIcons';
 import type AccountMetadata from '@/src/data/models/AccountMetadata';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
-import {
-  AccountId,
-  AccountSubtype,
-  AccountType,
-  PlainAccount,
-  PlainAccountMetadata,
-} from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { PlainAccount, PlainAccountMetadata } from '@/src/types/plainDtos';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 

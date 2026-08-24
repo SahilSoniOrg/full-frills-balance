@@ -1,5 +1,5 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';

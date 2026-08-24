@@ -1,4 +1,5 @@
-import { AppIcon, IconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { resolveStyleColors, resolveThemeColor } from '@/src/design-system/utils';

@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { filterAccountsForDisplay, hasArchivedAccountsInList } from '@/src/utils/accountArchive';
 import React, { createContext, useContext, useMemo, useState, type ComponentType } from 'react';
 

@@ -1,13 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalId,
-  PlannedPaymentId,
-  WorkplaceId,
-  JournalStatus,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Journal from '@/src/data/models/Journal';

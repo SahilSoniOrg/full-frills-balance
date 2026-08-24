@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { InboxProcessingStatus } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
 import {
   fetchInboxByDeviceId,

@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { AccountId, JournalId, TabType } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/ids';
+import { TabType } from '@/src/types/domainJournal';
 
 export type JournalEntryScreenMode = 'guided' | 'advanced' | 'bulk' | 'split';
 export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';

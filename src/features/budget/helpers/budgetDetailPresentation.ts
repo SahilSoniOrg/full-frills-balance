@@ -1,4 +1,5 @@
-import { BudgetId, PlainBudget } from '@/src/types/domain';
+import { BudgetId } from '@/src/types/ids';
+import { PlainBudget } from '@/src/types/plainDtos';
 
 export interface BudgetUsagePreview {
   spent: number;

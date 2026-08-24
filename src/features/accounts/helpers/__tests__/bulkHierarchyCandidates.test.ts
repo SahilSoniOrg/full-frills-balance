@@ -1,5 +1,6 @@
 import { getBulkHierarchyCandidates } from '../bulkHierarchyCandidates';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 const account = (id: string, accountType: AccountType, parentAccountId: string | null = null) => ({
   id: id as AccountId,

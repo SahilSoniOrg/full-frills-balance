@@ -4,7 +4,8 @@ import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteM
 import { PreparedJournalData } from '@/src/services/ledger/prepareJournalData';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
-import { InboxProcessingStatus, JournalId } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 
 export interface SmsAnalysisResult {
   message: SmsMessage;

@@ -1,7 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import {
   moveAccount,
   moveAccounts,

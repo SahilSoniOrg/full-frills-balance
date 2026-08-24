@@ -1,12 +1,7 @@
 import Account from '@/src/data/models/Account';
-import {
-  AuditAction,
-  AccountId,
-  AccountSubtype,
-  AccountType,
-  SerializedAccountMetadataPayload,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AuditAction, AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';

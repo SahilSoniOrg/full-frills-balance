@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import BudgetScope from '@/src/data/models/BudgetScope';
-import { AccountType, AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';

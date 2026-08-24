@@ -1,7 +1,7 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { of } from 'rxjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 export function useJournal(
   workplaceId: WorkplaceId,

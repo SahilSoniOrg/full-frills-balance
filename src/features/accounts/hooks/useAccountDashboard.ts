@@ -4,7 +4,7 @@
  */
 import { useObservable } from '@/src/hooks/useObservable';
 import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { of } from 'rxjs';
 
 export function useAccountDashboard(

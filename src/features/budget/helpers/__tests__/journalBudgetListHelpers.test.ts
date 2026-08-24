@@ -1,11 +1,6 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  EnrichedJournal,
-  JournalDisplayType,
-  JournalId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalDisplayType } from '@/src/types/enums';
+import { AccountId, JournalId } from '@/src/types/ids';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 
 import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
 import { journalsToTimelineRows } from '@/src/services/journal/journalTimelineRows';

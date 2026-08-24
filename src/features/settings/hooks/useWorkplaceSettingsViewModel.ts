@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { AccountType, PlainWorkplace } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { PlainWorkplace } from '@/src/types/plainDtos';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { analytics } from '@/src/services/analytics';

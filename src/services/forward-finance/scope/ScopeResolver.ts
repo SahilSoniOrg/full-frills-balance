@@ -1,4 +1,5 @@
-import { AccountFields, AccountId } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
 
 export class ScopeResolver {
   /**

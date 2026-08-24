@@ -3,7 +3,8 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
 import { smsService } from '@/src/services/sms-service';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
-import { PlainSmsRule, WorkplaceId } from '@/src/types/domain';
+import { PlainSmsRule } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { useMemo } from 'react';
 import { from } from 'rxjs';
 

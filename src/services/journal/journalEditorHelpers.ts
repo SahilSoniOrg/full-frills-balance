@@ -1,12 +1,6 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TabType,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
+import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 

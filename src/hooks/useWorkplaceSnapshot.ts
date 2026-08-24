@@ -1,6 +1,7 @@
 import { useObservable, UseObservableResult } from '@/src/hooks/useObservable';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { PlainWorkplace, WorkplaceId } from '@/src/types/domain';
+import { PlainWorkplace } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { of } from 'rxjs';
 
 /**

@@ -1,4 +1,5 @@
-import { AccountFields, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export interface BulkJournalRow {
   id: string;

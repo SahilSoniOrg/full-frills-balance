@@ -1,13 +1,10 @@
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import {
-  AccountId,
   AccountSubtype,
   AccountType,
-  BudgetId,
-  PlannedPaymentId,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
 
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';

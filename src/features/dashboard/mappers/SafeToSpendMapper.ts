@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';

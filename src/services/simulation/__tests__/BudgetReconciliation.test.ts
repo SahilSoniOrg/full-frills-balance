@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
 import { FlowCategory, FlowSource, ScheduledProjection, SimulationContext } from '../types';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 describe('BudgetReconciliation', () => {
   const simulationStartMs = dayjs('2026-04-01T00:00:00Z').valueOf();

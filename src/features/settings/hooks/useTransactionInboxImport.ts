@@ -1,10 +1,12 @@
-import { TransactionInboxItem, WorkplaceId, InboxParseStatus } from '@/src/types/domain';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { WorkplaceId } from '@/src/types/ids';
+import { InboxParseStatus } from '@/src/types/enums';
 import { smsService } from '@/src/services/sms-service';
 import {
   buildTransactionInboxImportNavigation,
   TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';

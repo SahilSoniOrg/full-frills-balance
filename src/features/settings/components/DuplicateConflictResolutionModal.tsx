@@ -5,7 +5,7 @@ import { MoneyText } from '@/src/components/common/MoneyText';
 import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TransactionInboxItem } from '@/src/types/domain';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 
 interface DuplicateConflictResolutionModalProps {
   visible: boolean;

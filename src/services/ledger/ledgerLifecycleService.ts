@@ -10,13 +10,9 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import {
-  AuditAction,
-  JournalId,
-  JournalStatus,
-  WorkplaceId,
-  mapTransactionToAudit,
-} from '@/src/types/domain';
+import { AuditAction, JournalStatus } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { mapTransactionToAudit } from '@/src/types/audit';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { BatchWriteOptions } from './ledgerCreateService';

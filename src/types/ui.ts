@@ -1,5 +1,5 @@
 import { JournalEntryCardProps } from '@/src/components/common/JournalEntryCard';
-import { JournalId } from './domain';
+import { JournalId } from './ids';
 
 export type JournalListItemType = 'journal' | 'separator' | 'reconciledMarker';
 

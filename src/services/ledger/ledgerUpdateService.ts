@@ -7,13 +7,9 @@ import {
 } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import {
-  AccountId,
-  AuditAction,
-  JournalId,
-  WorkplaceId,
-  mapTransactionToAudit,
-} from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { mapTransactionToAudit } from '@/src/types/audit';
 import { prepareJournalData } from './prepareJournalData';
 
 export class LedgerUpdateService {

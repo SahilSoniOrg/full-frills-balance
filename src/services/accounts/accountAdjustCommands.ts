@@ -8,7 +8,8 @@ import {
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { findOrCreateBalanceCorrectionAccount } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 

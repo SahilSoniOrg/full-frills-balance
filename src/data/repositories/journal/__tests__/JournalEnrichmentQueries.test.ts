@@ -8,13 +8,8 @@ import {
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import {
-  AccountId,
-  AccountType,
-  JournalId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 describe('computeDominantTargetAccount', () => {
   it('returns target account when there is a single category account (100% consensus)', () => {

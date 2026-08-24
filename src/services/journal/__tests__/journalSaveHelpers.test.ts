@@ -4,10 +4,9 @@ import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-  AccountId,
   TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { assembleCreateJournalData } from '@/src/services/journal/journalSaveHelpers';
 
 jest.mock('@/src/services/WorkplaceService', () => ({

@@ -1,14 +1,13 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 import {
-  AccountId,
-  AccountSubtype,
-  AccountType,
   type AccountFields,
   type PlainAccountMetadata,
   type PlainCurrency,
-} from '@/src/types/domain';
+} from '@/src/types/plainDtos';
 import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,

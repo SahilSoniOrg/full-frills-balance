@@ -2,10 +2,10 @@ import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalS
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analyzeJournalsForMerge, MergeJournalsAnalysis } from '@/src/services/journal/bulk';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';

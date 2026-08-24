@@ -1,4 +1,4 @@
-import type { TransactionChannel } from '@/src/types/domain';
+import type { TransactionChannel } from '@/src/types/domainJournal';
 
 export type { TransactionChannel };
 

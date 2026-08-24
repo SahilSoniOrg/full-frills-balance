@@ -1,5 +1,5 @@
 import { Theme } from '@/src/constants/design-tokens';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 

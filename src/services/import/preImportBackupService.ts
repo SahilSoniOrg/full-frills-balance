@@ -2,7 +2,7 @@ import { Q } from '@nozbe/watermelondb';
 
 import { database } from '@/src/data/database/Database';
 import { exportService } from '@/src/services/export';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
 

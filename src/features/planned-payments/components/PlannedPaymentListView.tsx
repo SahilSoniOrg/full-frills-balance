@@ -1,7 +1,7 @@
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
-import { PlainPlannedPayment } from '@/src/types/domain';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 

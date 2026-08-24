@@ -6,7 +6,7 @@ import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 import expoWidgetsModule from '@/modules/expo-widgets';
 

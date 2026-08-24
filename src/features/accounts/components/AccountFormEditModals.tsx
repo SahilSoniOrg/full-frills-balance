@@ -3,8 +3,9 @@ import {
   AccountArchiveCascadeModal,
   type AccountArchiveCascadeModalProps,
 } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 
 export type AccountMergePickerModalProps = {
   visible: boolean;

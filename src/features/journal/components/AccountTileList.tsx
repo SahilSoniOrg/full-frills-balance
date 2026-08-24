@@ -2,11 +2,14 @@ import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
-import { getAccountIcon, getArchivedAccountTilePresentation } from '@/src/features/accounts';
+import type { AccountFields } from '@/src/types/plainDtos';
+import {
+  getArchivedAccountTilePresentation,
+  getAccountIcon,
+} from '@/src/components/account-selection';
 import { limitQuickTileAccounts } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { runAfterInteractions } from '@/src/utils/scheduler';

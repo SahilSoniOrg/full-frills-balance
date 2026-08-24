@@ -57,13 +57,10 @@ describe('accountArchiveCommands', () => {
 
 describe('prepareArchiveMutation', () => {
   it('returns null when both change lists are empty', async () => {
-    const result = await prepareArchiveMutation(
-      'wp-1' as import('@/src/types/domain').WorkplaceId,
-      {
-        toArchive: [],
-        toUnarchive: [],
-      },
-    );
+    const result = await prepareArchiveMutation('wp-1' as import('@/src/types/ids').WorkplaceId, {
+      toArchive: [],
+      toUnarchive: [],
+    });
     expect(result).toBeNull();
   });
 });

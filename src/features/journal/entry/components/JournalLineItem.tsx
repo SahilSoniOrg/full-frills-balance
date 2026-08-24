@@ -1,7 +1,8 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { TransactionType, JournalEntryLine } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

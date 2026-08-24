@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Model, Q } from '@nozbe/watermelondb';
 import Collection from '@nozbe/watermelondb/Collection';

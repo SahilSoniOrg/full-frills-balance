@@ -1,11 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { ledgerWriteService } from '@/src/services/ledger';

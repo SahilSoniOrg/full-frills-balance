@@ -1,5 +1,5 @@
 import { AppearancePickerModal } from '@/src/components/common/AppearancePickerModal';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import React from 'react';
 
 export interface IconPickerModalProps {

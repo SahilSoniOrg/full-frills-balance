@@ -1,6 +1,6 @@
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/services/journal/journalDomainService');

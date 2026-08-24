@@ -6,7 +6,8 @@ import {
   resolveSimpleCrossCurrencyRates,
   resolveTargetAccountIdForSimpleTab,
 } from '@/src/services/journal/simpleJournalHelpers';
-import { AccountType, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 describe('simpleJournalHelpers cross-currency', () => {
   describe('deriveCrossCurrencyDisplayRate', () => {

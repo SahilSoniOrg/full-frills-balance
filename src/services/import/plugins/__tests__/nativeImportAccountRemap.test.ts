@@ -1,12 +1,5 @@
-import {
-  AccountSubtype,
-  AccountType,
-  AccountId,
-  BudgetId,
-  EMPTY_ACCOUNT_ID,
-  JournalId,
-  TransactionId,
-} from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, BudgetId, EMPTY_ACCOUNT_ID, JournalId, TransactionId } from '@/src/types/ids';
 
 import { importPlan, referenceSites } from '@/src/services/accounts/accountReferenceGraph';
 import {

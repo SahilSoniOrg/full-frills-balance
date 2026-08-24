@@ -3,7 +3,7 @@ import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics';
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';

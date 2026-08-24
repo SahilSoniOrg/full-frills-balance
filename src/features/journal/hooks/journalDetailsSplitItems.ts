@@ -1,8 +1,9 @@
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { mapJournalLegSplitPresentation } from '@/src/services/journal/journalDetailsHelpers';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
-import { AccountId, DisplayTransaction } from '@/src/types/domain';
+import { getAccountFallbackIcon } from '@/src/components/account-selection';
+import { AccountId } from '@/src/types/ids';
+import { DisplayTransaction } from '@/src/types/domainReadModels';
 
 export interface JournalSplitItemViewModel {
   id: string;

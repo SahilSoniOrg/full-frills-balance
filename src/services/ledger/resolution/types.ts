@@ -1,4 +1,4 @@
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export interface ResolutionResult {
   sourceAccountId: AccountId; // Mapped Asset / Liability account

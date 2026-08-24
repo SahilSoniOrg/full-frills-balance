@@ -1,6 +1,6 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
-import { JournalId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 

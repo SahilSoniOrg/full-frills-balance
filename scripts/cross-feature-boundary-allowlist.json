@@ -20,9 +20,7 @@
   "hub": [
     "journal"
   ],
-  "journal": [
-    "accounts"
-  ],
+  "journal": [],
   "planned-payments": [
     "accounts",
     "journal"

@@ -1,5 +1,7 @@
 import type { AccountListItemRaw } from './types';
-import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 type RawListRow = AccountListItemRaw | Record<string, unknown>;
 

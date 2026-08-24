@@ -5,14 +5,8 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalT
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalPresenter, type TransactionLike } from '@/src/services/accounting/journalPresenter';
-import {
-  AccountId,
-  AccountType,
-  JournalDisplayType,
-  JournalId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { enqueueRebuildIfNeeded, groupTransactionsByJournal } from './bulkHelpers';
 
 export interface JournalAccountEditEligibility {

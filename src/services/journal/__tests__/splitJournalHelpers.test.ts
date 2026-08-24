@@ -1,5 +1,6 @@
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, AccountType, TransactionType } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 import {
   buildJournalLinesFromSplitState,

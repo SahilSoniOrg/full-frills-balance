@@ -17,7 +17,7 @@ import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
 import { LatestGenerationCoordinator } from './latestGeneration';
 

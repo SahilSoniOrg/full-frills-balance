@@ -3,7 +3,7 @@ import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalE
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 // Mock dependencies
 jest.mock('@/src/services/journal/journalDomainService');

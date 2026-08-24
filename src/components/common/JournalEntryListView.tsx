@@ -2,7 +2,7 @@ import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
-import { JournalId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';

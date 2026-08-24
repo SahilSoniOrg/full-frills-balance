@@ -1,4 +1,4 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { findDuplicateAccountNameError } from '@/src/features/accounts/services/accountFormValidationPolicy';
 import { validateAccountName } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';

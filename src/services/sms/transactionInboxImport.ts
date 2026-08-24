@@ -1,12 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
-import {
-  AccountFields,
-  AccountId,
-  AccountType,
-  EMPTY_ACCOUNT_ID,
-  PlainSmsRule,
-  TransactionInboxItem,
-} from '@/src/types/domain';
+import { AccountFields, PlainSmsRule } from '@/src/types/plainDtos';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 
 export interface TransactionInboxImportOptions {
   mode?: 'simple' | 'split' | 'advanced';

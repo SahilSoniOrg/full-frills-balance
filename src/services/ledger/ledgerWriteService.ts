@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 import { BatchWriteOptions, ledgerCreateService } from './ledgerCreateService';
 import { ledgerLifecycleService } from './ledgerLifecycleService';

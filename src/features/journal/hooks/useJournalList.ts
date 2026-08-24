@@ -7,7 +7,8 @@ import {
 import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
 import { AppConfig } from '@/src/constants';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
-import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { WorkplaceId } from '@/src/types/ids';
 import { getPerfNow } from '@/src/utils/dateHelpers';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';

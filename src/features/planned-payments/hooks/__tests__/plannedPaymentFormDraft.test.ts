@@ -3,7 +3,8 @@ import {
   mapPlannedPaymentToForm,
   shouldSeedPlannedPaymentDraft,
 } from '../plannedPaymentFormDraft';
-import { PlannedPaymentInterval, AccountId } from '@/src/types/domain';
+import { PlannedPaymentInterval } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 describe('plannedPaymentFormDraft', () => {
   describe('shouldSeedPlannedPaymentDraft', () => {

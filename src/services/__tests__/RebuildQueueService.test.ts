@@ -1,6 +1,6 @@
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { RebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 

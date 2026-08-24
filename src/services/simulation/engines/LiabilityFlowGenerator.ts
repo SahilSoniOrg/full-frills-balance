@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import dayjs from 'dayjs';
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 import {
   Flow,
   FlowCategory,

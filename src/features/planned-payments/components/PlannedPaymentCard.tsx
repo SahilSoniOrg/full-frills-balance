@@ -4,11 +4,8 @@ import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import {
-  PlainPlannedPayment,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/types/domain';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
 import { TouchableOpacity } from 'react-native';
 

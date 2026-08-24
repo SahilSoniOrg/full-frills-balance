@@ -3,7 +3,8 @@ import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardA
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import type { GroupingOptions } from '@/src/hooks/useJournalListGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger/buildDayNetStats';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalDisplayType } from '@/src/types/enums';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { logger } from '@/src/utils/logger';
 

@@ -1,12 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TabType,
-} from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import {
   filterGuidedLegAccounts,

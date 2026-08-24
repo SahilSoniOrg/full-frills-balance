@@ -7,7 +7,7 @@ import {
   ReportAccount,
   ReportingDeltaInput,
 } from '@/src/services/reports/reportTypes';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';

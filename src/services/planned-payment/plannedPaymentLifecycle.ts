@@ -7,12 +7,8 @@ import {
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
-import {
-  JournalStatus,
-  PlannedPaymentId,
-  PlannedPaymentStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 /**
  * Toggles planned-payment ACTIVE ↔ PAUSED.

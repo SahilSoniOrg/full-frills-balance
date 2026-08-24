@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/features/accounts';
+import { AccountPickerModal } from '@/src/components/account-selection';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { Page } from '@/src/design-system';

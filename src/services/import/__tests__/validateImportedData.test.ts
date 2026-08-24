@@ -1,4 +1,5 @@
-import { AccountId, JournalDisplayType, JournalId, TransactionId } from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
+import { JournalDisplayType } from '@/src/types/enums';
 import {
   BatchImportData,
   ImportedAccount,

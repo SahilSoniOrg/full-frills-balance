@@ -1,4 +1,5 @@
-import { TransactionDirection, AccountId } from '@/src/types/domain';
+import { TransactionDirection } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants/app-config';
 
 export interface SmsMatchData {

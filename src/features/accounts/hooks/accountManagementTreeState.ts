@@ -1,4 +1,5 @@
-import type { AccountFields, AccountId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountId } from '@/src/types/ids';
 import type { AccountTreeMove } from '@/src/services/accounts/accountTree';
 import { planAccountTreeMove } from '@/src/services/accounts/accountTree';
 

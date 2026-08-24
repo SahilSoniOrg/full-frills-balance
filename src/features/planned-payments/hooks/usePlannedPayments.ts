@@ -1,6 +1,7 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlainPlannedPayment, WorkplaceId } from '@/src/types/domain';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
 

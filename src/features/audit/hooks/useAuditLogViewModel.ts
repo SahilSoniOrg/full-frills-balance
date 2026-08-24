@@ -5,7 +5,8 @@ import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hoo
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
 import { analytics } from '@/src/services/analytics';
 import { auditService } from '@/src/services/audit-service';
-import { AccountId, AuditEntityType, JournalId } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/ids';
+import { AuditEntityType } from '@/src/types/enums';
 import * as Alerts from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';

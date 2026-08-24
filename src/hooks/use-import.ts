@@ -10,7 +10,7 @@ import {
 import { importService } from '@/src/services/import/ImportService';
 import { ImportFileContext } from '@/src/services/import/types';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import * as DocumentPicker from 'expo-document-picker';

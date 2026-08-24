@@ -1,6 +1,8 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { AccountType, PlainWorkplace, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { PlainWorkplace } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 
 import Workplace, { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';

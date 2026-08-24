@@ -12,7 +12,7 @@ import {
   SankeyData,
 } from '@/src/services/reports/reportSnapshot';
 import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
 import { map } from 'rxjs/operators';

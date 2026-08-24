@@ -1,4 +1,4 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';
@@ -7,7 +7,7 @@ import {
   BalanceChangeCounterparty,
   resolveBalanceChangeRequirement,
 } from '@/src/services/accounts/balanceChangeClassification';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';

@@ -1,5 +1,5 @@
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
 

@@ -1,7 +1,8 @@
 import type Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Budget from '@/src/data/models/Budget';
-import { AccountId, BudgetId, PlainBudgetScope } from '@/src/types/domain';
+import { AccountId, BudgetId } from '@/src/types/ids';
+import { PlainBudgetScope } from '@/src/types/plainDtos';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 

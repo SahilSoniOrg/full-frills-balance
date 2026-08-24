@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 
 export type ImportAccountBalanceRebuildProgress = (

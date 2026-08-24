@@ -2,15 +2,9 @@ import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDe
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { revertRegistry } from '@/src/services/revert-registry';
-import {
-  AccountAuditState,
-  AccountId,
-  AuditAction,
-  JournalAuditState,
-  JournalId,
-  JournalStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountAuditState, JournalAuditState } from '@/src/types/audit';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AuditAction, JournalStatus } from '@/src/types/enums';
 
 /**
  * Register all audit revert handlers.

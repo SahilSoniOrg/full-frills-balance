@@ -4,7 +4,7 @@ import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useStsPreferences } from '@/src/hooks/useStsPreferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
-import type { PlainCurrency } from '@/src/types/domain';
+import type { PlainCurrency } from '@/src/types/plainDtos';
 import { analytics } from '@/src/services/analytics';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { useCallback } from 'react';

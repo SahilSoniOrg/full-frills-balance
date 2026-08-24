@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType, TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 import { roundToPrecision } from '@/src/utils/money';
 

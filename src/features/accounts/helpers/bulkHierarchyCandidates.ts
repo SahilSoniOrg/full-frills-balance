@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 export interface HierarchyCandidateAccount {
   id: AccountId;

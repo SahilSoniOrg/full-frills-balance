@@ -1,5 +1,5 @@
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 

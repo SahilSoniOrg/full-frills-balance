@@ -10,7 +10,7 @@ import {
   observeWorkplaceActiveTransactionCount,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/services/reactive/reactiveWorkplaceObserves', () => ({
   observeWorkplaceAccounts: jest.fn(),

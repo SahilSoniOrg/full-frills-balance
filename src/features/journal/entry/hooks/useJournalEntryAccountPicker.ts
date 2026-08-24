@@ -1,7 +1,8 @@
-import { CreateAccountIntent } from '@/src/features/accounts';
-import type { AccountFields } from '@/src/types/domain';
+import type { CreateAccountIntent } from '@/src/components/account-selection';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import {
   resolveJournalEntrySelectableAccounts,
   resolveJournalEntrySelectedAccountId,

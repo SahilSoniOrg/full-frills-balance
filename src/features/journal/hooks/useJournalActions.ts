@@ -1,5 +1,6 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { JournalEntryLine, JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback } from 'react';
 
 type SaveJournalEntryParams = Omit<

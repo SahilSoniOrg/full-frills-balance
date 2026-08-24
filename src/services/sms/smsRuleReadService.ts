@@ -1,6 +1,7 @@
 import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { PlainSmsRule, WorkplaceId } from '@/src/types/domain';
+import { PlainSmsRule } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { map, Observable } from 'rxjs';
 
 export class SmsRuleReadService {

@@ -1,12 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import {
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-  AccountId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 

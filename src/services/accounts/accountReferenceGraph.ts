@@ -12,7 +12,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 
 export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
 

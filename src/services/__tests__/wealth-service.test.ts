@@ -1,4 +1,5 @@
-import { AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';

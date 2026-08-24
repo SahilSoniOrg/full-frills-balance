@@ -17,7 +17,7 @@ import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
 // Use the types from the module
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import type {
   WidgetDataSnapshot,
   WidgetThemeSnapshot,

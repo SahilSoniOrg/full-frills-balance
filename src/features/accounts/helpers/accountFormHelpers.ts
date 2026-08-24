@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, AccountType } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 
 export { isCategoryAccountType };

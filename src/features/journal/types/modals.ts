@@ -1,4 +1,5 @@
-import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 
 export type JournalActiveModal =
   | { type: 'bulkRename'; journals: EnrichedJournal[] }

@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { analytics } from '@/src/services/analytics';

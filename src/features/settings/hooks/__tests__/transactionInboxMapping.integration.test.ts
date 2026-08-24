@@ -1,5 +1,6 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { InboxProcessingStatus, JournalId } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { AppConfig } from '@/src/constants';
 import { smsService } from '@/src/services/sms-service';

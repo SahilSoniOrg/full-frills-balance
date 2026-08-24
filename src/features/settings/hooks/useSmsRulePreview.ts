@@ -1,4 +1,5 @@
-import { PlainInboxRecord, WorkplaceId } from '@/src/types/domain';
+import { PlainInboxRecord } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
   buildSmsRulePreviewInput,

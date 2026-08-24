@@ -5,7 +5,7 @@ import {
   SmsJournalInfoDisplay,
 } from '@/src/services/journal/journalDetailsHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { from, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 

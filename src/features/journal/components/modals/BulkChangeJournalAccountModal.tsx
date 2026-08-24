@@ -1,13 +1,13 @@
 import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import { AccountPickerModal, useAccounts } from '@/src/features/accounts';
+import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   checkJournalAccountEditEligibility,
   JournalAccountEditEligibility,
 } from '@/src/services/journal/bulk';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 

@@ -1,4 +1,4 @@
-import type { AccountFields, PlainAccountMetadata } from '@/src/types/domain';
+import type { AccountFields, PlainAccountMetadata } from '@/src/types/plainDtos';
 import {
   AccountFormDraftAction,
   AccountFormDraftState,
@@ -16,7 +16,7 @@ import {
   AccountFormDefaults,
   AccountFormRouteContext,
 } from '@/src/features/accounts/services/accountFormService';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { Dispatch, useReducer } from 'react';
 
 export type AccountFormDraftDispatch = Dispatch<AccountFormDraftAction>;

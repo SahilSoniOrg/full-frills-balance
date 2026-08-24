@@ -5,7 +5,7 @@ import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { journalDisplayTypeChrome } from '@/src/services/journal/journalTimelinePresentation';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType } from '@/src/types/enums';
 import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';

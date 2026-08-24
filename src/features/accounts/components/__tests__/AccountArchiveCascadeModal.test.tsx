@@ -1,6 +1,7 @@
 import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import { AppConfig } from '@/src/constants';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { defaultCascadeSelection, buildArchiveCascadeNodes } from '@/src/utils/accountArchive';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 

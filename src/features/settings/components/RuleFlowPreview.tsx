@@ -4,8 +4,8 @@ import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
-import { IconName } from '@/src/components/core/AppIcon';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import type { IconName } from '@/src/types/domainIcons';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { Shape, Spacing } from '@/src/constants';
 
 export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {

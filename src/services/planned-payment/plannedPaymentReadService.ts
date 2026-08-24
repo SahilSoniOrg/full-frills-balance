@@ -1,6 +1,6 @@
 import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs';
 
 /** Read boundary for planned-payment feature consumers. */

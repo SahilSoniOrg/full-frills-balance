@@ -1,5 +1,5 @@
 import Transaction from '@/src/data/models/Transaction';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q, Query } from '@nozbe/watermelondb';
 

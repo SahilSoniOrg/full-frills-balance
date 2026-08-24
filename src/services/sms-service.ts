@@ -5,7 +5,8 @@ import TransactionAutoPostRule, { toPlainSmsRule } from '@/src/data/models/Trans
 import TransactionInboxRecord, {
   toPlainInboxRecord,
 } from '@/src/data/models/TransactionInboxRecord';
-import { InboxProcessingStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';

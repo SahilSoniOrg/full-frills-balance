@@ -1,5 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType, AccountBalance, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';

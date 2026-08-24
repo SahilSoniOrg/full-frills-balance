@@ -1,6 +1,8 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { roundToPrecision } from '@/src/utils/money';
 import { AppConfig } from '@/src/constants/app-config';

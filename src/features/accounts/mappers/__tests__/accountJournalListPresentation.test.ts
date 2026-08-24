@@ -1,4 +1,4 @@
-import { JournalId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { injectReconciledMarkersIntoJournalList } from '../accountJournalListPresentation';
 

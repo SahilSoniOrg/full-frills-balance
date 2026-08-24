@@ -1,7 +1,7 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';

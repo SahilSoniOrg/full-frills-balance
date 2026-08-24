@@ -14,7 +14,7 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
 
 export async function createPlannedPayment(

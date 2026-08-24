@@ -7,7 +7,7 @@ import {
   isDuplicateAboveThreshold,
   scoreFuzzyDuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;

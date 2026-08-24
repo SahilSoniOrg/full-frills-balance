@@ -1,4 +1,4 @@
-import { AccountType, TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 /**
  * Non-sign journal scaffolding helpers (distinct accounts, simple 2-line construction).

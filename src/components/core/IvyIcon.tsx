@@ -1,4 +1,6 @@
-import { AppIcon, IconName, isValidIconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
+import { isValidIconName } from '@/src/types/domainIcons';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';

@@ -7,7 +7,7 @@ import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
-import { PlannedPaymentInterval } from '@/src/types/domain';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 import { FadeIn, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';

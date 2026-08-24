@@ -1,4 +1,5 @@
-import { AccountType, AccountId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
 export type JournalTimelineViewer = { accountId: AccountId };

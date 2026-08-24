@@ -6,7 +6,7 @@ import {
   ScheduledProjection,
   SimulationContext,
 } from '@/src/services/simulation/types';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 
 describe('ProjectionComposer', () => {

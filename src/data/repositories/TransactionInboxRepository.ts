@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { InboxProcessingStatus, JournalId, WorkplaceId } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { Model } from '@nozbe/watermelondb';
 

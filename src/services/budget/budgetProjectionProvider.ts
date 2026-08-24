@@ -1,5 +1,5 @@
 import { BudgetUsage } from '@/src/services/budget/types';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 import { BudgetPeriodUtils } from './BudgetPeriodUtils';
 import {

@@ -3,7 +3,8 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { AccountId, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 const WORKPLACE_ONE = 'wp-metrics-isolation-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-metrics-isolation-2' as WorkplaceId;

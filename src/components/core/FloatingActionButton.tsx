@@ -1,4 +1,5 @@
-import { AppIcon, type IconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

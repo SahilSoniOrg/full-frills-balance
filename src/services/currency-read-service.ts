@@ -2,7 +2,7 @@ import Currency from '@/src/data/models/Currency';
 import { toPlainExchangeRate } from '@/src/data/models/ExchangeRate';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
-import { PlainCurrency } from '@/src/types/domain';
+import { PlainCurrency } from '@/src/types/plainDtos';
 import { map } from 'rxjs';
 
 export function toPlainCurrency(currency: Currency): PlainCurrency {

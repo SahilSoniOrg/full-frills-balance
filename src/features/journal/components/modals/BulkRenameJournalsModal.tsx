@@ -2,7 +2,9 @@ import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalS
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import { EnrichedJournal, JournalDisplayType, JournalId } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalDisplayType } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';

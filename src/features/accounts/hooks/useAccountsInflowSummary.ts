@@ -5,8 +5,10 @@ import {
   resolveInflowTotals,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import { reportService } from '@/src/services/report-service';
-import { AccountBalance, PlainAccount, WorkplaceId } from '@/src/types/domain';
-import type { AccountFields } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { PlainAccount } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

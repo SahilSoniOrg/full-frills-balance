@@ -2,7 +2,7 @@ import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkp
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { insightService } from '@/src/services/insight/InsightService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/services/ReactiveDataService', () => ({
   reactiveDataService: { clearCache: jest.fn() },

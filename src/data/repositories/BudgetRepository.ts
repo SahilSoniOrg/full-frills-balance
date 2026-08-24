@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
-import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 

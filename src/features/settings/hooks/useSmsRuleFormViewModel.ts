@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccounts } from '@/src/features/accounts';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics';
@@ -13,7 +13,8 @@ import {
 } from '@/src/services/sms/smsRuleFormPolicy';
 import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, EMPTY_ACCOUNT_ID, PlainInboxRecord } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';

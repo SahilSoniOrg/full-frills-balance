@@ -1,5 +1,5 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import { InboxParseStatus, TransactionDirection } from '@/src/types/domain';
+import { InboxParseStatus, TransactionDirection } from '@/src/types/enums';
 import { SmsExtractor } from '@/src/services/ledger/SmsExtractor';
 
 export function toTransactionDirection(type: 'debit' | 'credit' | 'unknown'): TransactionDirection {

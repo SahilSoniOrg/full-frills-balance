@@ -1,10 +1,5 @@
-import {
-  AccountId,
-  AccountType,
-  JournalId,
-  TransactionId,
-  TransactionType,
-} from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 
 /**
  * Valid primitive types for raw SQL query arguments.

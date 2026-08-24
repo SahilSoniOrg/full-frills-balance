@@ -1,5 +1,5 @@
 import { ModeHandle, ModeSubmitState } from '@/src/features/journal/entry/modes/ModeHandle';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import {
   createContext,
   Dispatch,

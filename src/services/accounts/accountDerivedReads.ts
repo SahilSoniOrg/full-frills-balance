@@ -1,4 +1,6 @@
-import { AccountType, AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 /**
  * Account derived reads — balance, unreconciled, period metrics, chart feeds.
  * Not a pass-through of `accountQueries` (entity observe/find). See docs/ACCOUNTS.md.

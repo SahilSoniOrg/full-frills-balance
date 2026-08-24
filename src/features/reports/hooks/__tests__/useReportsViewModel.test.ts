@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 jest.mock('../useReports');
 

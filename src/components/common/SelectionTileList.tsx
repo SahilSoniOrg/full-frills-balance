@@ -1,6 +1,6 @@
 import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill';
 import { AppIcon, AppText } from '@/src/components/core';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { useRevealHorizontalItem } from '@/src/components/common/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Bleed, Inline } from '@/src/design-system';

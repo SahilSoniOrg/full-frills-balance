@@ -7,14 +7,8 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import {
-  AccountId,
-  AccountType,
-  JournalId,
-  TransactionId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { firstValueFrom, of, take } from 'rxjs';
 
 const WORKPLACE_ONE = 'wp-raw-isolation-1' as WorkplaceId;

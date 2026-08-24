@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { AuditAction, AccountSubtype, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AuditAction, AccountSubtype, AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';

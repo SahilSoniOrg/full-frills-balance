@@ -1,16 +1,14 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { Flow } from '@/src/services/simulation/types';
-import {
-  EnrichedJournal,
-  JournalStatus,
-  PlainPlannedPayment,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalStatus } from '@/src/types/enums';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 import { useMemo } from 'react';
 import {
   mapLiabilityFlowsToPlannedOccurrences,

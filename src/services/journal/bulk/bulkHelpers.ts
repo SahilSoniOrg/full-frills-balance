@@ -1,6 +1,6 @@
 import Transaction from '@/src/data/models/Transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 /** Groups a flat transaction list into a map keyed by journalId. */
 export function groupTransactionsByJournal(

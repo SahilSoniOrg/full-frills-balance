@@ -12,8 +12,8 @@ import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHa
 import { Spacing } from '@/src/constants';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
 
 export type AdvancedModePanelProps = {
   accounts: AccountFields[];

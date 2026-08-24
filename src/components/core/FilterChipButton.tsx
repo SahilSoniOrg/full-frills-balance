@@ -3,7 +3,8 @@ import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo } from 'react';
 import { Keyboard, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import { AppIcon, IconName } from './AppIcon';
+import { AppIcon } from './AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';
 
 interface FilterChipButtonProps {

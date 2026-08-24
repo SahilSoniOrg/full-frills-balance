@@ -1,5 +1,6 @@
 import { journalReadService } from '@/src/services/journal/journalReadService';
-import { JournalEntryLine, JournalId, TabType, WorkplaceId } from '@/src/types/domain';
+import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { showErrorAlert } from '@/src/utils/alerts';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';

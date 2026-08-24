@@ -1,11 +1,5 @@
-import {
-  AccountId,
-  AccountType,
-  JournalId,
-  TransactionId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';

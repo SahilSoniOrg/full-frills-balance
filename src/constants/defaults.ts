@@ -1,5 +1,5 @@
-import { IconMap, IconName } from '@/src/components/core/AppIcon';
-import { AccountType } from '@/src/types/domain';
+import { isValidIconName, type IconName } from '@/src/types/domainIcons';
+import { AccountType } from '@/src/types/enums';
 
 export interface AccountSuggestion {
   id: string;
@@ -26,7 +26,7 @@ export const DEFAULT_ACCOUNTS: AccountSuggestion[] = (
   ] as const
 ).map(acc => ({
   ...acc,
-  icon: (IconMap[acc.icon] ? acc.icon : 'wallet') as IconName,
+  icon: (isValidIconName(acc.icon) ? acc.icon : 'wallet') as IconName,
 }));
 
 export const DEFAULT_CATEGORIES: CategorySuggestion[] = (
@@ -42,5 +42,5 @@ export const DEFAULT_CATEGORIES: CategorySuggestion[] = (
   ] as const
 ).map(cat => ({
   ...cat,
-  icon: (IconMap[cat.icon] ? cat.icon : 'tag') as IconName,
+  icon: (isValidIconName(cat.icon) ? cat.icon : 'tag') as IconName,
 }));

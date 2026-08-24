@@ -21,7 +21,8 @@ import {
   resolveJournalAmountPresentation,
 } from '@/src/services/journal/journalDetailsHelpers';
 import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
-import { JournalId, TransactionType } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
+import { TransactionType } from '@/src/types/enums';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';

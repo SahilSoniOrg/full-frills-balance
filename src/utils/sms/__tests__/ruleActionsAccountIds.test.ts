@@ -1,4 +1,4 @@
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import {
   dispositionForRuleAccounts,
   mapOptionalRuleAccountId,

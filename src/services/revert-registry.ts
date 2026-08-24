@@ -1,4 +1,4 @@
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 export type RevertHandler<T = any> = (
   entityId: string,
   changes: { before?: Partial<T>; after?: Partial<T> },

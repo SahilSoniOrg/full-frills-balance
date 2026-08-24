@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 /**
  * Integration tests for journal write/read modules (ledger + journal query repositories).
  * Tests double-entry accounting, precision handling, and balance integrity.

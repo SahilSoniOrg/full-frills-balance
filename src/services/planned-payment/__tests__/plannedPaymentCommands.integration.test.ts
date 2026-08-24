@@ -5,10 +5,8 @@ import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
   AccountType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';

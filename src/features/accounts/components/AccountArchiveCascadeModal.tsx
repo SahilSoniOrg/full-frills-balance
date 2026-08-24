@@ -1,8 +1,9 @@
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { InfoSheet } from '@/src/components/common/InfoSheet';
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import {
   ArchiveCascadeNode,
   buildArchiveCascadeNodes,

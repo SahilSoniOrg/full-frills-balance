@@ -1,4 +1,4 @@
-import { JournalStatus } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 
 const ACTIVE_SET = new Set<JournalStatus>(ACTIVE_JOURNAL_STATUSES);

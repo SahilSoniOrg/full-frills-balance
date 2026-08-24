@@ -1,12 +1,12 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TabType } from '@/src/types/domain';
+import { TabType } from '@/src/types/domainJournal';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';

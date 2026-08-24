@@ -2,7 +2,8 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
 
 export interface HistoryResolutionResult {

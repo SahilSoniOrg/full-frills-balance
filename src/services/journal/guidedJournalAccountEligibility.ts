@@ -1,5 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
-import { TransactionType, AccountId, EMPTY_ACCOUNT_ID, TabType } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { TabType } from '@/src/types/domainJournal';
 
 import {
   getAllowedAccountTypes,

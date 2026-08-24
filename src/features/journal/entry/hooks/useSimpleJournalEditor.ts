@@ -1,14 +1,8 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields } from '@/src/types/domain';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  AccountRole,
-  EMPTY_ACCOUNT_ID,
-  JournalEntryLine,
-  TabType,
-} from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';

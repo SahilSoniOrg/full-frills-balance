@@ -1,12 +1,5 @@
-import {
-  AccountSubtype,
-  AccountType,
-  TransactionType,
-  AccountId,
-  BudgetId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';

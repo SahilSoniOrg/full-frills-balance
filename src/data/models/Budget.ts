@@ -1,6 +1,7 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type BudgetScope from '@/src/data/models/BudgetScope';
-import { BudgetId, PlainBudget } from '@/src/types/domain';
+import { BudgetId } from '@/src/types/ids';
+import { PlainBudget } from '@/src/types/plainDtos';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 

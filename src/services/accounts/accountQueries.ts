@@ -1,4 +1,5 @@
-import { AccountType, AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { accountObserveQueries, accountQueryRepository } from '@/src/data/repositories/account';
 import { map } from 'rxjs';

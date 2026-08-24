@@ -4,7 +4,7 @@ import Model from '@nozbe/watermelondb/Model';
 import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
 import { logger } from '@/src/utils/logger';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 type WorkplaceScopedRaw = { workplace_id?: string };
 

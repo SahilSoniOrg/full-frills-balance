@@ -1,4 +1,5 @@
-import { JournalStatus, WorkplaceId } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { useJournals } from '@/src/features/journal';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';

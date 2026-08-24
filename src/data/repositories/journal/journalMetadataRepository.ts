@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
 

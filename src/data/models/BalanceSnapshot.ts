@@ -1,5 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import { AccountId, TransactionId } from '@/src/types/domain';
+import { AccountId, TransactionId } from '@/src/types/ids';
 import { date, field, readonly } from '@nozbe/watermelondb/decorators';
 
 export default class BalanceSnapshot extends BaseScopedModel {

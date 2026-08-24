@@ -1,4 +1,4 @@
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { getAccountFallbackIcon, getAccountIcon } from '../accountIcon';
 

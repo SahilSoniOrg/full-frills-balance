@@ -1,7 +1,7 @@
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 describe('useObservable', () => {
   it('should return initial value immediately', () => {

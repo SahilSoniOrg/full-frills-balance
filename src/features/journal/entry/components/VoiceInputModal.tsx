@@ -8,7 +8,7 @@ import {
 } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
 import { useVoiceVisualizer } from '@/src/features/journal/entry/hooks/useVoiceVisualizer';
 import { useTheme } from '@/src/hooks/use-theme';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { useEffect } from 'react';
 import {
   ActivityIndicator,

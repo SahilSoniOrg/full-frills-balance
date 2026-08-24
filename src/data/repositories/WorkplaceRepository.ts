@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 

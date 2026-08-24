@@ -6,7 +6,8 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import type { AccountListItemRaw } from './types';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
-import { WorkplaceId, AccountType } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';

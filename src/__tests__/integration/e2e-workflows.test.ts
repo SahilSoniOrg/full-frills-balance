@@ -1,4 +1,5 @@
-import { AccountType, TransactionType, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 /**
  * End-to-End Workflow Tests
  * Tests complete user workflows across multiple repositories

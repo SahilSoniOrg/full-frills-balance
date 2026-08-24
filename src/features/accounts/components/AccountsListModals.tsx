@@ -2,7 +2,7 @@ import { AppearancePickerModal } from '@/src/components/common/AppearancePickerM
 import { AccountActionSheet } from '@/src/features/accounts/components/AccountActionSheet';
 import { BulkRenameAccountsModal } from '@/src/features/accounts/components/BulkRenameAccountsModal';
 import { BulkHierarchyMoveModal } from '@/src/features/accounts/components/hierarchy/BulkHierarchyMoveModal';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 import type { AccountsListModalsProps } from '@/src/features/accounts/hooks/accountsListTypes';
 
 export type { AccountsListModalsProps };

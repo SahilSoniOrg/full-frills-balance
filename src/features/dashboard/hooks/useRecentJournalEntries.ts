@@ -5,7 +5,8 @@ import {
   useJournalsBulkOperations,
   type JournalListModalsProps,
 } from '@/src/features/journal';
-import { EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 
 export interface UseRecentJournalEntriesParams {

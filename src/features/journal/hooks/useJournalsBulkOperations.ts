@@ -17,7 +17,8 @@ import {
   mergeJournals as mergeJournalsCommand,
   undoBulkChangeJournalAccount as undoBulkChangeJournalAccountCommand,
 } from '@/src/services/journal/bulk';
-import { AccountId, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 

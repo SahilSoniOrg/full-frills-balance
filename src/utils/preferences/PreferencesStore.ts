@@ -1,5 +1,5 @@
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';

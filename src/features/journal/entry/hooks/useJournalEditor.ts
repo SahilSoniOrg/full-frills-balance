@@ -1,14 +1,8 @@
 import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import {
-  TransactionType,
-  AccountId,
-  AccountRole,
-  JournalEntryLine,
-  JournalId,
-  TabType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {

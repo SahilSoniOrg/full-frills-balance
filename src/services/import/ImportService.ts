@@ -22,7 +22,7 @@ import { validateImportedData } from '@/src/services/import/validateImportedData
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { integrityService } from '@/src/services/integrity';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';

@@ -1,7 +1,7 @@
 import { HeatmapPoint } from '@/src/services/reports/heatmapCalculators';
 import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/sankeyCalculator';
 import type { CategoryBreakdown } from '@/src/services/reports/reportTypes';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 /**
  * Chart-neutral report snapshot contract (plan commit 43).

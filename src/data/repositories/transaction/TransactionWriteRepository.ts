@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { roundToPrecision } from '@/src/utils/money';
 import { transactionQueryRepository } from './TransactionQueryRepository';
 

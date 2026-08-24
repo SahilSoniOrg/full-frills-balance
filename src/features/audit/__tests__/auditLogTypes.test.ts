@@ -1,4 +1,5 @@
-import { AuditAction, AccountId } from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import {
   AuditLogEntry,
   computeCanRevert,

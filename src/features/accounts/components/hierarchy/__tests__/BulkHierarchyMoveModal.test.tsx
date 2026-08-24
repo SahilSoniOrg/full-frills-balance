@@ -1,5 +1,6 @@
 import { BulkHierarchyMoveModal } from '../BulkHierarchyMoveModal';
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { act, fireEvent, render } from '@/src/utils/test-utils';
 
 const mockCandidates = [

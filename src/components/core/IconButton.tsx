@@ -3,7 +3,8 @@
  * Encodes visual identity for navigation and action buttons
  */
 
-import { AppIcon, IconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import {

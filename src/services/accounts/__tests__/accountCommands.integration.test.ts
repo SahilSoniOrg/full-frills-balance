@@ -3,9 +3,9 @@ import {
   AccountType,
   TransactionType,
   JournalDisplayType,
-  WorkplaceId,
   AuditAction,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 /**
  * Account command lifecycle (integration).
  */

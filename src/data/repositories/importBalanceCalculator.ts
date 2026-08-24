@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { isAccountType } from '@/src/types/accountSubtype';
 import Currency from '@/src/data/models/Currency';
-import { AccountType, TransactionType } from '@/src/types/domain';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import type { BatchImportData, ImportedTransaction } from '@/src/data/repositories/importTypes';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';

@@ -2,13 +2,14 @@ import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountType, TabType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { TabType } from '@/src/types/domainJournal';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountIcon } from '@/src/components/account-selection';
 import React, { useMemo } from 'react';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 

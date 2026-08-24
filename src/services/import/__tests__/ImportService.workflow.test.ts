@@ -77,7 +77,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { integrityService } from '@/src/services/integrity';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { preferences } from '@/src/utils/preferences';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 function createMockPlugin(overrides?: Partial<ImportPlugin>): ImportPlugin {
   return {

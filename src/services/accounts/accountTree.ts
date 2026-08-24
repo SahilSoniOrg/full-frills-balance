@@ -1,4 +1,4 @@
-import type { AccountId, WorkplaceId } from '@/src/types/domain';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 
 /**
  * Storage shape owned by the Account Tree module. Callers should consume the

@@ -1,4 +1,5 @@
-import { AccountId, EnrichedJournal, JournalId } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/ids';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListRowId } from '@/src/types/ui';
 

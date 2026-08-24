@@ -1,12 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  JournalStatus,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-  AccountId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { ledgerWriteService } from '@/src/services/ledger';

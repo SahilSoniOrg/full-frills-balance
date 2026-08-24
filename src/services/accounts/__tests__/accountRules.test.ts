@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType, TransactionType, AccountId } from '@/src/types/domain';
+import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 import {
   assertNotSelfParent,

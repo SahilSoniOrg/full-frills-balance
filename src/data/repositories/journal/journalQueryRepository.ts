@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
-import { JournalId, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 
 /** Read-only journal lookups by id (persistence intent). */

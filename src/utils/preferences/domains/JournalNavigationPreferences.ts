@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import type { PreferencesStore } from '../PreferencesStore';
 
 /** Last-used journal account ids for simple entry defaults. */

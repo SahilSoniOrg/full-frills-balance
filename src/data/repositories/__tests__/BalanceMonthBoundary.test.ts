@@ -1,5 +1,5 @@
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 describe('AccountListMetricsQueries Month Boundary', () => {
   it('fetches correct balance', async () => {

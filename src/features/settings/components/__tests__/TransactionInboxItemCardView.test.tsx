@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@/src/utils/test-utils';
 import { TransactionInboxItemCardView } from '../TransactionInboxItemCardView';
-import { JournalId, TransactionInboxItem } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 
 describe('TransactionInboxItemCardView', () => {
   const mockItem: TransactionInboxItem = {

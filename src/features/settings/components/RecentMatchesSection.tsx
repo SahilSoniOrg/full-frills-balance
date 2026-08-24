@@ -7,7 +7,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { Shape, Spacing, Typography, type Theme } from '@/src/constants';
 
 function highlightSmsBody(

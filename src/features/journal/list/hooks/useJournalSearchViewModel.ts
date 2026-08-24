@@ -3,10 +3,10 @@ import type { SelectionAction } from '@/src/components/common/SelectionActionBar
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields } from '@/src/types/domain';
-import { useAccounts } from '@/src/features/accounts';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { useAccounts } from '@/src/components/account-selection';
 import { analytics } from '@/src/services/analytics';
-import { AccountId, JournalId } from '@/src/types/domain';
+import { AccountId, JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useLocalSearchParams } from 'expo-router';

@@ -2,7 +2,7 @@ import {
   toLiabilityMetadata,
   type LiabilityMetadataSource,
 } from '@/src/services/simulation/liabilityMetadata';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 describe('toLiabilityMetadata', () => {
   it('maps persisted min payment mode from minPaymentOnly only', () => {

@@ -2,7 +2,8 @@ import { AppConfig } from '@/src/constants';
 import { counterAccountsFromJournalPeers } from '@/src/services/accounting/displayTransactionCounterAccounts';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildTimelineAccountBadges } from '@/src/services/accounting/timelineAccountBadges';
-import { EnrichedJournal, JournalDisplayType, SemanticType } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { JournalDisplayType, SemanticType } from '@/src/types/enums';
 import {
   JournalTimelineIconKey,
   JournalTimelineItem,

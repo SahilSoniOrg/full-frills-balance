@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository } from './AccountQueryRepository';
 import type Account from '@/src/data/models/Account';
-import type { WorkplaceId } from '@/src/types/domain';
+import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 
 export interface AccountTreeTransactionPlan<T> {

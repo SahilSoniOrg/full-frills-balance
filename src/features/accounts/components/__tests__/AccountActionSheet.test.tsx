@@ -1,6 +1,7 @@
 import { AccountActionSheet } from '../AccountActionSheet';
 import { AccountCardViewModel } from '../../utils/transformAccounts';
-import { AccountType, AccountId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import { fireEvent, render } from '@/src/utils/test-utils';
 
 const mockAccount: AccountCardViewModel = {

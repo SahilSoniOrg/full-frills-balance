@@ -1,4 +1,4 @@
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { transactionReadService } from '@/src/services/transactions/transactionReadService';
 import {
   DateRange,

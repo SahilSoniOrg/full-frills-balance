@@ -1,5 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountFields, AccountId, AccountSubtype } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay, getLiquidImpact, isCommitmentFlow } from './utils/FlowPolicy';

@@ -1,6 +1,6 @@
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { brandedKeys, JournalId, WorkplaceId } from '@/src/types/domain';
+import { brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
 
 export interface BulkRenameResult {
   renamedCount: number;

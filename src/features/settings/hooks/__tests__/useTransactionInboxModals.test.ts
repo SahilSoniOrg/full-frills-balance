@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useTransactionInboxModals } from '../useTransactionInboxModals';
-import { JournalId, TransactionInboxItem, WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
 

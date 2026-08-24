@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
-import { AccountId, AccountType, type AccountFields } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { type AccountFields } from '@/src/types/plainDtos';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 

@@ -1,6 +1,6 @@
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { useObservable } from '@/src/hooks/useObservable';
-import { PlainExchangeRate } from '@/src/types/domain';
+import { PlainExchangeRate } from '@/src/types/plainDtos';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
 

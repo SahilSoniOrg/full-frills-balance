@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { TransactionInboxItem, WorkplaceId } from '@/src/types/domain';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { WorkplaceId } from '@/src/types/ids';
 import { TransactionInboxImportOptions } from '@/src/services/sms/transactionInboxImport';
 import { smsService } from '@/src/services/sms-service';
 import { analytics } from '@/src/services/analytics';

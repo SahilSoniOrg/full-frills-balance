@@ -1,6 +1,6 @@
 import { exportService } from '@/src/services/export';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { files } from '@/src/utils/files';
 
 jest.mock('@/src/services/export', () => ({

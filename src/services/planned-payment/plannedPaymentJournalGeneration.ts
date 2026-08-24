@@ -3,7 +3,7 @@ import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteM
 import { ledgerWriteService } from '@/src/services/ledger';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { JournalStatus } from '@/src/types/domain';
+import { JournalStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
 

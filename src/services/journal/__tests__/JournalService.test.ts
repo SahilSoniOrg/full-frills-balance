@@ -1,4 +1,5 @@
-import { TransactionType, JournalId, WorkplaceId } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { JournalService } from '@/src/services/journal/journalDomainService';

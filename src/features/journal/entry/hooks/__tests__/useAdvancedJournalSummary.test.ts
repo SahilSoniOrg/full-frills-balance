@@ -1,4 +1,4 @@
-import { TransactionType } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
 
 import { act, renderHook } from '@testing-library/react-native';
 import { AdvancedJournalLineLike, useAdvancedJournalSummary } from '../useAdvancedJournalSummary';

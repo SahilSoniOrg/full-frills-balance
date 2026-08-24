@@ -1,10 +1,10 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import {
   SplitRowState,
   SplitTotals,
   SplitValidationError,
 } from '@/src/services/journal/splitJournalHelpers';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 /** Observable split-entry draft + derived display fields. */
 export interface SplitJournalState {

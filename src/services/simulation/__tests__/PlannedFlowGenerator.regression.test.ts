@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
 import { ProjectionComposer } from '../ProjectionComposer';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 describe('PlannedFlowGenerator May 5th Regression', () => {
   const simulationStartMs = dayjs('2026-04-08').startOf('day').valueOf();

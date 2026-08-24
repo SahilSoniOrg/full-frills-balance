@@ -2,7 +2,9 @@ import { AppConfig } from '@/src/constants';
 import { AuditLogEntry } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
-import { AuditEntityType, PlainAuditLog, WorkplaceId } from '@/src/types/domain';
+import { AuditEntityType } from '@/src/types/enums';
+import { PlainAuditLog } from '@/src/types/plainDtos';
+import { WorkplaceId } from '@/src/types/ids';
 
 export function useAuditLogs(params: {
   entityType?: AuditEntityType;

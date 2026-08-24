@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { BehaviorSubject, of as mockOf } from 'rxjs';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
 

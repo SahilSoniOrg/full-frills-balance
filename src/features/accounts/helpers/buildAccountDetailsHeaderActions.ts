@@ -2,7 +2,7 @@ import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeade
 import type { AccountDetailsViewModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import type { Theme } from '@/src/constants/design-tokens';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 type AccountDetailsHeaderActions = AccountDetailsViewModel['headerActions'];
 

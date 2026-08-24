@@ -1,4 +1,4 @@
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType } from '@/src/types/enums';
 import {
   mapJournalLegSplitPresentation,
   mapSmsJournalMetadataDisplay,

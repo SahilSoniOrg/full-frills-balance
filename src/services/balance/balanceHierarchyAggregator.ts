@@ -3,7 +3,7 @@ import Account from '@/src/data/models/Account';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountBalance } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { Trace, traceService } from '@/src/utils/TraceService';

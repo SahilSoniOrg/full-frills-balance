@@ -1,11 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
-import {
-  TransactionType,
-  AccountId,
-  JournalEntryLine,
-  TabType,
-  AccountType,
-} from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { TransactionType, AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
 import { preferences } from '@/src/utils/preferences';

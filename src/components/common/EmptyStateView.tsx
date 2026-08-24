@@ -1,8 +1,9 @@
 import { AppButton } from '@/src/components/core/AppButton';
-import { AppIcon, type IconName } from '@/src/components/core/AppIcon';
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Box, Stack } from '@/src/design-system';
 import { StyleProp, ViewStyle } from 'react-native';
+import type { IconName } from '@/src/types/domainIcons';
 
 export interface EmptyStateViewProps {
   title: string;

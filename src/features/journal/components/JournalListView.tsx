@@ -8,7 +8,7 @@ import {
   JournalListModals,
   type JournalListModalsProps,
 } from '@/src/features/journal/components/JournalListModals';
-import { JournalId } from '@/src/types/domain';
+import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';

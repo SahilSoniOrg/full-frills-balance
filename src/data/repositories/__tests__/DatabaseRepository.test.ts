@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { getRawAdapter } from '@/src/data/database/DatabaseUtils';
 import { DatabaseRepository } from '../DatabaseRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {

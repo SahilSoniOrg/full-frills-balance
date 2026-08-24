@@ -17,7 +17,8 @@ import {
   Keyboard,
 } from 'react-native';
 import { logger } from '@/src/utils/logger';
-import { AppIcon, type IconName } from './AppIcon';
+import { AppIcon } from './AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';
 
 export type SegmentedOption<T extends string | number = string> = {

@@ -1,11 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountId,
-  AccountType,
-  TransactionId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';

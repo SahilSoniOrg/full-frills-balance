@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { JournalEntryLine } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 import { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 

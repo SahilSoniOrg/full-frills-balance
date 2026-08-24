@@ -3,66 +3,56 @@ import Journal from '@/src/data/models/Journal';
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
-import { WorkplaceId } from '@/src/types/domain';
-import { Observable, shareReplay } from 'rxjs';
-
-const accountsObsCache = new Map<WorkplaceId, Observable<Account[]>>();
-const journalMetaObsCache = new Map<WorkplaceId, Observable<Journal[]>>();
-const activeCountObsCache = new Map<WorkplaceId, Observable<number>>();
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
+import { WorkplaceId } from '@/src/types/ids';
+import { Observable } from 'rxjs';
 
 export function clearReactiveWorkplaceObservesCache(workplaceId?: WorkplaceId): void {
-  if (workplaceId !== undefined) {
-    accountsObsCache.delete(workplaceId);
-    journalMetaObsCache.delete(workplaceId);
-    activeCountObsCache.delete(workplaceId);
-  } else {
-    accountsObsCache.clear();
-    journalMetaObsCache.clear();
-    activeCountObsCache.clear();
-  }
+  reactiveCacheCoordinator.clearNamespaces(
+    [
+      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
+      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
+      REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
+    ],
+    workplaceId,
+  );
 }
 
 export function clearReactiveWorkplaceAccountsAndJournalMetaCache(workplaceId?: WorkplaceId): void {
-  if (workplaceId !== undefined) {
-    accountsObsCache.delete(workplaceId);
-    journalMetaObsCache.delete(workplaceId);
-  } else {
-    accountsObsCache.clear();
-    journalMetaObsCache.clear();
-  }
+  reactiveCacheCoordinator.clearNamespaces(
+    [REACTIVE_CACHE_NAMESPACES.workplaceAccounts, REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta],
+    workplaceId,
+  );
 }
 
 export function observeWorkplaceAccounts(workplaceId: WorkplaceId): Observable<Account[]> {
-  if (accountsObsCache.has(workplaceId)) {
-    return accountsObsCache.get(workplaceId)!;
-  }
-  const obs$ = accountObserveQueries
-    .observeAll(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
-  accountsObsCache.set(workplaceId, obs$);
-  return obs$;
+  return reactiveCacheCoordinator.getOrCreate({
+    namespace: REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
+    key: workplaceId,
+    workplaceId,
+    createSource: () => accountObserveQueries.observeAll(workplaceId),
+  });
 }
 
 export function observeWorkplaceJournalMeta(workplaceId: WorkplaceId): Observable<Journal[]> {
-  if (journalMetaObsCache.has(workplaceId)) {
-    return journalMetaObsCache.get(workplaceId)!;
-  }
-  const obs$ = journalObserveQueries
-    .observeStatusMeta(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
-  journalMetaObsCache.set(workplaceId, obs$);
-  return obs$;
+  return reactiveCacheCoordinator.getOrCreate({
+    namespace: REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
+    key: workplaceId,
+    workplaceId,
+    createSource: () => journalObserveQueries.observeStatusMeta(workplaceId),
+  });
 }
 
 export function observeWorkplaceActiveTransactionCount(
   workplaceId: WorkplaceId,
 ): Observable<number> {
-  if (activeCountObsCache.has(workplaceId)) {
-    return activeCountObsCache.get(workplaceId)!;
-  }
-  const obs$ = transactionObserveQueries
-    .observeActiveCount(workplaceId)
-    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
-  activeCountObsCache.set(workplaceId, obs$);
-  return obs$;
+  return reactiveCacheCoordinator.getOrCreate({
+    namespace: REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
+    key: workplaceId,
+    workplaceId,
+    createSource: () => transactionObserveQueries.observeActiveCount(workplaceId),
+  });
 }

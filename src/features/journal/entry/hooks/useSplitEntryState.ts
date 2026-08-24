@@ -1,6 +1,6 @@
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { createEmptySplitRow, SplitRowState } from '@/src/services/journal/splitJournalHelpers';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useCallback, useState } from 'react';
 
 export function useSplitEntryState() {

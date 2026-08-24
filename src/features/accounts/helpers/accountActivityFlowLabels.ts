@@ -1,4 +1,4 @@
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 export function getAccountActivityFlowLabels(accountType: string): {
   increaseLabel: string;

@@ -1,5 +1,6 @@
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
-import { BulkDeleteUndoToken, JournalId, WorkplaceId } from '@/src/types/domain';
+import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { enqueueRebuildIfNeeded } from './bulkHelpers';
 
 /**

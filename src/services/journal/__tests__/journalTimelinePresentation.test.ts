@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  AccountId,
-  JournalDisplayType,
-  JournalId,
-  SemanticType,
-} from '@/src/types/domain';
+import { AccountType, JournalDisplayType, SemanticType } from '@/src/types/enums';
+import { AccountId, JournalId } from '@/src/types/ids';
 
 import {
   journalDisplayTypeChrome,

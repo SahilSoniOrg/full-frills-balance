@@ -1,5 +1,5 @@
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { JournalEntryLine } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
 import { logger } from '@/src/utils/logger';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useEffect, useRef } from 'react';

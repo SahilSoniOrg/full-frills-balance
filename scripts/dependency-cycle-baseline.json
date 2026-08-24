@@ -1,0 +1,24 @@
+{
+  "description": "Known production dependency cycles. New cycles and stale entries fail the architecture check.",
+  "cycles": [
+    [
+      "src/data/models/Account.ts",
+      "src/data/models/AccountMetadata.ts",
+      "src/data/models/Journal.ts",
+      "src/data/models/Transaction.ts"
+    ],
+    [
+      "src/data/models/Budget.ts",
+      "src/data/models/BudgetScope.ts"
+    ],
+    [
+      "src/services/WorkplaceService.ts",
+      "src/services/accounts/accountCommands.ts",
+      "src/services/accounts/accountSystemAccounts.ts"
+    ],
+    [
+      "src/services/import/canonicalImportBuilder.ts",
+      "src/services/import/phases/transactionSynthesizer.ts"
+    ]
+  ]
+}

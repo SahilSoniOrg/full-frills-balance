@@ -1,4 +1,4 @@
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 
 /**
  * Liquid assets are accounts that can be easily converted to cash

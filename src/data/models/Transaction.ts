@@ -1,7 +1,8 @@
 import type Account from '@/src/data/models/Account';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Journal from '@/src/data/models/Journal';
-import { AccountId, JournalId, TransactionId, TransactionType } from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
+import { TransactionType } from '@/src/types/enums';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 

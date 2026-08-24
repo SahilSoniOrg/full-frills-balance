@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType, BudgetId, WorkplaceId } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { BudgetId, WorkplaceId } from '@/src/types/ids';
 
 import { toPlainBudget } from '@/src/data/models/Budget';
 import { toPlainBudgetScope } from '@/src/data/models/BudgetScope';

@@ -1,11 +1,7 @@
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import {
-  JournalId,
-  PlainInboxRecord,
-  TransactionDuplicateCandidate,
-  TransactionInboxItem,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { PlainInboxRecord } from '@/src/types/plainDtos';
+import { TransactionDuplicateCandidate, TransactionInboxItem } from '@/src/types/domainJournal';
 
 /** Maps inbox DB records to list items, joining linked/duplicate journals. */
 export async function enrichTransactionInboxRecords(

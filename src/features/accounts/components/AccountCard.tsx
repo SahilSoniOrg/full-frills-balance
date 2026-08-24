@@ -4,7 +4,7 @@ import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccoun
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountCardStatsConfig';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';

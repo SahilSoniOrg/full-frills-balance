@@ -1,7 +1,8 @@
-import { CreateAccountIntent, useAccounts } from '@/src/features/accounts';
+import type { CreateAccountIntent } from '@/src/components/account-selection';
+import { useAccounts } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
@@ -26,7 +27,8 @@ import {
   resolveTargetAccountIdForSimpleTab,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, EMPTY_ACCOUNT_ID, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
+import { TransactionType } from '@/src/types/enums';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';

@@ -1,8 +1,10 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountBalance, AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 

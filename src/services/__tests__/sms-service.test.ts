@@ -4,10 +4,9 @@ import {
   InboxProcessingStatus,
   TransactionDirection,
   AccountType,
-  JournalId,
   TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';

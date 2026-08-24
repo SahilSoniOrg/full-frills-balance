@@ -1,6 +1,6 @@
 import { useObservable } from '@/src/hooks/useObservable';
 import { Insight, insightService } from '@/src/services/insight/InsightService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { EMPTY } from 'rxjs';
 
 /**

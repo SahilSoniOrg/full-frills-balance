@@ -1,5 +1,7 @@
 import { Theme } from '@/src/constants/design-tokens';
-import { AccountType, AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 
 import { transformAccountsToSections } from '../transformAccounts';
 

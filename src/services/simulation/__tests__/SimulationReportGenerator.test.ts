@@ -1,7 +1,8 @@
 import { SimulationReportGenerator } from '@/src/services/simulation/SimulationReportGenerator';
 import { Flow, FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import Account from '@/src/data/models/Account';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 
 describe('SimulationReportGenerator', () => {
   const resultCurrency = 'USD';

@@ -9,7 +9,9 @@ import {
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics';
 import { smsService } from '@/src/services/sms-service';
-import { InboxProcessingStatus, PlainInboxRecord, TransactionInboxItem } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import { PlainInboxRecord } from '@/src/types/plainDtos';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';

@@ -12,7 +12,9 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/balance';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { combineLatest, of, switchMap } from 'rxjs';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 /**

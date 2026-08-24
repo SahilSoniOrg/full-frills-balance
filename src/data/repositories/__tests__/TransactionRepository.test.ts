@@ -1,12 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountType,
-  TransactionType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-  JournalStatus,
-} from '@/src/types/domain';
+import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';

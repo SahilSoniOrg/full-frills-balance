@@ -1,5 +1,5 @@
 import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { AccountType, JournalDisplayType, SemanticType, TransactionType } from '@/src/types/domain';
+import { AccountType, JournalDisplayType, SemanticType, TransactionType } from '@/src/types/enums';
 import {
   enrichJournals,
   enrichedJournalsAreEqual,

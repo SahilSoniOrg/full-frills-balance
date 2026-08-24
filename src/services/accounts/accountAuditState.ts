@@ -1,4 +1,4 @@
-import { AccountAuditState } from '@/src/types/domain';
+import { AccountAuditState } from '@/src/types/audit';
 
 /** Persisted shape written to audit_logs.changes for archive mutations. */
 export type PersistedArchiveAuditChanges = {

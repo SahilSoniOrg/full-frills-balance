@@ -1,4 +1,6 @@
-import { TransactionType, AccountId, EnrichedJournal } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 
 import { BudgetCumulativeTx } from '@/src/services/projections/buildBudgetCumulativeSeries';
 

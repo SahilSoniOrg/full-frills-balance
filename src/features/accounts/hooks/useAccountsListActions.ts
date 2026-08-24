@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import {
   resolveAccountListPressAction,
   type AccountsListTab,
@@ -10,7 +10,9 @@ import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { deleteAccount as deleteAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
 import { updateAccounts as updateAccountsCommand } from '@/src/services/accounts/accountHierarchyCommands';
-import { AccountBalance, AccountId, PlainAccount, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { confirm, showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { Dispatch, SetStateAction, useCallback } from 'react';

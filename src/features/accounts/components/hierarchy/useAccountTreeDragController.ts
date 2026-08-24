@@ -12,7 +12,8 @@ import {
   type AccountTreeDropKind,
   type AccountTreeDropTarget,
 } from '@/src/services/accounts/accountTreeTargets';
-import type { AccountFields, AccountId } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { triggerHaptic } from '@/src/utils/haptics';
 import {

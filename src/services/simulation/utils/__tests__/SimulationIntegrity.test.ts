@@ -1,4 +1,4 @@
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { FlowCategory, FlowSource } from '../../types';
 import { assertGlobalIntegrity } from '../SimulationIntegrity';
 

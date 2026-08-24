@@ -5,7 +5,8 @@ import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { JournalEntryLine, WorkplaceId } from '@/src/types/domain';
+import { JournalEntryLine } from '@/src/types/domainJournal';
+import { WorkplaceId } from '@/src/types/ids';
 import { sanitizeAmount } from '@/src/utils/validation';
 
 export type JournalSaveLineInput = {

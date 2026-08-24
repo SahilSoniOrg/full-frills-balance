@@ -1,4 +1,4 @@
-import { BudgetId } from '@/src/types/domain';
+import { BudgetId } from '@/src/types/ids';
 import { buildBudgetDetailPreview, buildBudgetUsagePreview } from '../budgetDetailPresentation';
 
 describe('budgetDetailPresentation', () => {

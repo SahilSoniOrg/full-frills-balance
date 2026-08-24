@@ -2,14 +2,9 @@ import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountObserveQueries, accountQueryRepository } from '@/src/data/repositories/account';
-import {
-  AccountType,
-  AccountId,
-  DisplayCounterAccount,
-  DisplayTransaction,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { DisplayCounterAccount, DisplayTransaction } from '@/src/types/domainReadModels';
 import {
   journalObserveQueries,
   journalQueryRepository,

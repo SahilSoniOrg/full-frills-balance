@@ -6,7 +6,8 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { AccountId, AccountType, TransactionType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { storage } from '@/src/utils/storage';
 import { Q, Model } from '@nozbe/watermelondb';
 

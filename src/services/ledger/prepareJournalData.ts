@@ -1,10 +1,5 @@
-import {
-  AccountType,
-  AccountId,
-  JournalDisplayType,
-  JournalStatus,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountType, JournalDisplayType, JournalStatus } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';

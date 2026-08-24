@@ -1,15 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
-import {
-  BulkDeleteUndoToken,
-  JournalStatus,
-  AccountId,
-  JournalDisplayType,
-  JournalId,
-  PlannedPaymentId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
+import { JournalStatus, JournalDisplayType, TransactionType } from '@/src/types/enums';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';

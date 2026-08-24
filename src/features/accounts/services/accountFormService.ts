@@ -1,13 +1,9 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
-import {
-  AccountId,
-  AccountSubtype,
-  AccountType,
-  EMPTY_ACCOUNT_ID,
-  SerializedAccountMetadataPayload,
-} from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import {
   isCategoryAccountType,
   resolveInitialAccountType,

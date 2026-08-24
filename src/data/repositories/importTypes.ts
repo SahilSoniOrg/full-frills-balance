@@ -4,13 +4,9 @@ import {
   PlannedPaymentStatus,
   AccountSubtype,
   AccountType,
-  AccountId,
-  BudgetId,
   JournalDisplayType,
-  JournalId,
-  PlannedPaymentId,
-  TransactionId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import { IconName } from '@/src/types/domainIcons';
 
 export interface ImportedAccount {

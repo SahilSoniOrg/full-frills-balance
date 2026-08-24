@@ -1,5 +1,5 @@
 import { Model } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 /**
  * Watermelon `_raw` columns used during import batch insert / sync.

@@ -1,4 +1,5 @@
-import { PlannedPaymentInterval, PlannedPaymentStatus, AccountId } from '@/src/types/domain';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 import {
   buildCreatePersistenceInput,
   buildUpdatePersistenceInput,

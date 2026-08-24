@@ -1,5 +1,6 @@
-import { IconName } from '@/src/components/core/AppIcon';
-import { AccountType, WorkplaceId } from '@/src/types/domain';
+import type { IconName } from '@/src/types/domainIcons';
+import { AccountType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { createAccount } from '@/src/services/accounts/accountCommands';

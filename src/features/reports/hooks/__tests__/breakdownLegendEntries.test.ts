@@ -2,7 +2,7 @@ import {
   mapAccountBreakdownToLegendEntry,
   mapCategoryBreakdownToLegendEntries,
 } from '@/src/features/reports/hooks/breakdownLegendEntries';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 describe('breakdownLegendEntries', () => {
   it('maps account breakdowns to legend entries with a single account id', () => {

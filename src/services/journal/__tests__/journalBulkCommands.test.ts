@@ -14,14 +14,8 @@ import {
   undoBulkChangeJournalAccount,
 } from '@/src/services/journal/bulk';
 import { ledgerWriteService } from '@/src/services/ledger';
-import {
-  AccountId,
-  AccountType,
-  JournalDisplayType,
-  JournalId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-bulk-cmd' as WorkplaceId;

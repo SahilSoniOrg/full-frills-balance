@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '@/src/data/models/Transaction';

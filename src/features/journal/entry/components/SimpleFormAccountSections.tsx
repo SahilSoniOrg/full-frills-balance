@@ -1,7 +1,8 @@
 import { AppConfig, Spacing } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
-import { AccountId, AccountRole as DomainAccountRole } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountRole as DomainAccountRole } from '@/src/types/domainJournal';
 import { StyleSheet, View } from 'react-native';
 
 interface SimpleFormAccountSectionsProps {

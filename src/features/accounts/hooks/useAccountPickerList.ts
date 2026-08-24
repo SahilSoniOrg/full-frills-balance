@@ -1,7 +1,8 @@
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useDebounce } from '@/src/hooks/useDebounce';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountSections } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 

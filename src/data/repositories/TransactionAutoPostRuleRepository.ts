@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
 import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';

@@ -3,7 +3,7 @@ import { formatAccountSubtypeLabel, getAccountSubtypesForType } from '@/src/type
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
 import React, { useMemo } from 'react';
-import { AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 
 interface AccountSubtypeSelectorProps {
   accountType: AccountType;

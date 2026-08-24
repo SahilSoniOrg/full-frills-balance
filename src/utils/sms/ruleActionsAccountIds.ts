@@ -1,4 +1,4 @@
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
 
 type RuleActionsShape = {

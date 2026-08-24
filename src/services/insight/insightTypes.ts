@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { RecurringPattern, TransactionMetadata } from '@/src/data/repositories/TransactionTypes';
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 
 export interface Insight {
   id: string;

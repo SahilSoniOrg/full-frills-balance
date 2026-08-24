@@ -21,7 +21,7 @@ import { CurrencySelector } from '@/src/features/accounts/components/CurrencySel
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';

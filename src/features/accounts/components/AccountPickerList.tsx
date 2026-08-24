@@ -1,14 +1,16 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
-import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
 import React, { useCallback, useMemo } from 'react';

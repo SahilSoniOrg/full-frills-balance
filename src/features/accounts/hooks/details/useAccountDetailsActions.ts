@@ -1,7 +1,9 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountIcon } from '@/src/utils/accountIcon';
-import { AccountId, AccountType, PlainAccount } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { DateRange } from '@/src/utils/dateUtils';

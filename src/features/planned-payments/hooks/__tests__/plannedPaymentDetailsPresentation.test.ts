@@ -1,4 +1,4 @@
-import { PlannedPaymentInterval } from '@/src/types/domain';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 
 describe('formatPlannedPaymentInterval', () => {

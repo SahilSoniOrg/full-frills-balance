@@ -7,7 +7,7 @@
 
 import { AppConfig } from '@/src/constants';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';

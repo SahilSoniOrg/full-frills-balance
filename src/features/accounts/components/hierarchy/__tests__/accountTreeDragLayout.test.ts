@@ -1,4 +1,4 @@
-import type { AccountId } from '@/src/types/domain';
+import type { AccountId } from '@/src/types/ids';
 import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTreeProjection';
 import {
   getAccountTreeDragContentYFromGeometry,

@@ -11,7 +11,7 @@ import {
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/data/repositories/account', () => ({
   ...jest.requireActual('@/src/data/repositories/account'),

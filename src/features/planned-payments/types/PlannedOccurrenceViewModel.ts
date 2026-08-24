@@ -1,4 +1,5 @@
-import { AccountId, JournalDisplayType, JournalId, PlannedPaymentId } from '@/src/types/domain';
+import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
+import { JournalDisplayType } from '@/src/types/enums';
 
 /**
  * Presentation DTO for the dashboard "Upcoming" planned section.

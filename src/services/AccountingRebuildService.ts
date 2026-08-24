@@ -12,7 +12,8 @@ import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model } from '@nozbe/watermelondb';
-import { TransactionType, AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 
 import { storage } from '@/src/utils/storage';
 

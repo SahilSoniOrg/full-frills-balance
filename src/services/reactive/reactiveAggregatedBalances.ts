@@ -10,14 +10,18 @@ import {
   observeWorkplaceActiveTransactionCount,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
-import { AccountBalance, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { traceService } from '@/src/utils/TraceService';
 import { combineLatest, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
-import { createDisposableReplay, DisposableReplay } from '@/src/services/reactive/disposableReplay';
 
 type RawSQLRow = Record<string, unknown>;
 
@@ -26,12 +30,6 @@ export interface AggregatedAccountBalances {
   balancesMap: Map<string, AccountBalance>;
   wealthSummary: WealthSummary;
 }
-
-type AggregatedBalancesCacheEntry = DisposableReplay<AggregatedAccountBalances> & {
-  workplaceId: WorkplaceId;
-};
-
-const aggregatedBalancesCache = new Map<string, AggregatedBalancesCacheEntry>();
 
 export type AccountObservationSnapshot = {
   accounts: Account[];
@@ -51,11 +49,10 @@ export function snapshotAccountObservation(accounts: Account[]): AccountObservat
 }
 
 export function clearReactiveAggregatedBalancesCache(workplaceId?: WorkplaceId): void {
-  for (const [key, entry] of aggregatedBalancesCache) {
-    if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
-    entry.dispose();
-    aggregatedBalancesCache.delete(key);
-  }
+  reactiveCacheCoordinator.clearNamespace(
+    REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+    workplaceId,
+  );
 }
 
 /**
@@ -66,101 +63,104 @@ export function observeAggregatedAccountBalances(
   targetCurrency: string,
   workplaceId: WorkplaceId,
 ): Observable<AggregatedAccountBalances> {
-  const cacheKey = `${targetCurrency}_${workplaceId}`;
-  if (aggregatedBalancesCache.has(cacheKey)) {
-    return aggregatedBalancesCache.get(cacheKey)!.observable;
-  }
+  return reactiveCacheCoordinator.getOrCreate({
+    namespace: REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+    key: `${targetCurrency}_${workplaceId}`,
+    workplaceId,
+    createSource: () =>
+      combineLatest([
+        // WatermelonDB reuses mutable model instances between emissions. Snapshot
+        // the fields used by distinctUntilChanged before comparing, otherwise the
+        // previous emission observes the mutation too and archive changes vanish.
+        observeWorkplaceAccounts(workplaceId).pipe(map(snapshotAccountObservation)),
+        observeWorkplaceJournalMeta(workplaceId),
+        observeWorkplaceActiveTransactionCount(workplaceId),
+        exchangeRateRepository.observeAll(),
+      ]).pipe(
+        firstFastDebounce(Animation.dataRefreshDebounce),
+        distinctUntilChanged((prev, curr) => {
+          return (
+            prev[0].signature === curr[0].signature &&
+            prev[1] === curr[1] &&
+            prev[2] === curr[2] &&
+            prev[3] === curr[3]
+          );
+        }),
+        switchMap(async ([accountsSnapshot]) => {
+          const accounts = accountsSnapshot.accounts;
+          const trace = traceService.startTrace('AllBalances.Calculate');
+          try {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+            const endOfMonth = new Date(
+              now.getFullYear(),
+              now.getMonth() + 1,
+              0,
+              23,
+              59,
+              59,
+              999,
+            ).getTime();
 
-  const obs$ = combineLatest([
-    // WatermelonDB reuses mutable model instances between emissions. Snapshot
-    // the fields used by distinctUntilChanged before comparing, otherwise the
-    // previous emission observes the mutation too and archive changes vanish.
-    observeWorkplaceAccounts(workplaceId).pipe(map(snapshotAccountObservation)),
-    observeWorkplaceJournalMeta(workplaceId),
-    observeWorkplaceActiveTransactionCount(workplaceId),
-    exchangeRateRepository.observeAll(),
-  ]).pipe(
-    firstFastDebounce(Animation.dataRefreshDebounce),
-    distinctUntilChanged((prev, curr) => {
-      return (
-        prev[0].signature === curr[0].signature &&
-        prev[1] === curr[1] &&
-        prev[2] === curr[2] &&
-        prev[3] === curr[3]
-      );
-    }),
-    switchMap(async ([accountsSnapshot]) => {
-      const accounts = accountsSnapshot.accounts;
-      const trace = traceService.startTrace('AllBalances.Calculate');
-      try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-        const endOfMonth = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999,
-        ).getTime();
+            const rawItemsResponse = await accountListMetricsQueries.getAccountListItemsRaw(
+              startOfMonth,
+              endOfMonth,
+              workplaceId,
+              false,
+              false,
+            );
 
-        const rawItemsResponse = await accountListMetricsQueries.getAccountListItemsRaw(
-          startOfMonth,
-          endOfMonth,
-          workplaceId,
-          false,
-          false,
-        );
+            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
+              ? (rawItemsResponse as unknown as RawSQLRow[])
+              : (((rawItemsResponse as unknown as { rows?: RawSQLRow[] })?.rows ||
+                  []) as RawSQLRow[]);
 
-        const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
-          ? (rawItemsResponse as unknown as RawSQLRow[])
-          : (((rawItemsResponse as unknown as { rows?: RawSQLRow[] })?.rows || []) as RawSQLRow[]);
+            const balances: AccountBalance[] = rawItems.map(item =>
+              mapAccountListRowToBalance(item, now.getTime()),
+            );
 
-        const balances: AccountBalance[] = rawItems.map(item =>
-          mapAccountListRowToBalance(item, now.getTime()),
-        );
+            const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
+            const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
 
-        const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
-        const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
+            const currencyPrecisionMap = await currencyReadService.getAllPrecisions();
+            const precisionMap = new Map<string, number>();
+            for (const account of accounts) {
+              const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;
+              precisionMap.set(account.id, precision);
+            }
 
-        const currencyPrecisionMap = await currencyReadService.getAllPrecisions();
-        const precisionMap = new Map<string, number>();
-        for (const account of accounts) {
-          const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;
-          precisionMap.set(account.id, precision);
-        }
+            await balanceService.aggregateBalances(
+              accounts,
+              balancesMap,
+              precisionMap,
+              targetCurrency,
+              trace,
+            );
 
-        await balanceService.aggregateBalances(
-          accounts,
-          balancesMap,
-          precisionMap,
-          targetCurrency,
-          trace,
-        );
+            const finalBalances = Array.from(balancesMap.values());
+            const parentIds = new Set(
+              accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
+            );
+            const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
+            const wealthSummary = await wealthService.calculateSummary(
+              leafBalances,
+              targetCurrency,
+            );
 
-        const finalBalances = Array.from(balancesMap.values());
-        const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
-        const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
-        const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
+            snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
 
-        snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
-
-        return { accounts, balancesMap, wealthSummary };
-      } catch (error) {
-        logger.error('Failed to calculate shared balances:', error);
-        return {
-          accounts,
-          balancesMap: new Map(),
-          wealthSummary: await wealthService.calculateSummary([], targetCurrency),
-        };
-      } finally {
-        trace.end();
-      }
-    }),
-  );
-
-  const replay = createDisposableReplay(obs$);
-  aggregatedBalancesCache.set(cacheKey, { ...replay, workplaceId });
-  return replay.observable;
+            return { accounts, balancesMap, wealthSummary };
+          } catch (error) {
+            logger.error('Failed to calculate shared balances:', error);
+            return {
+              accounts,
+              balancesMap: new Map(),
+              wealthSummary: await wealthService.calculateSummary([], targetCurrency),
+            };
+          } finally {
+            trace.end();
+          }
+        }),
+      ),
+  });
 }

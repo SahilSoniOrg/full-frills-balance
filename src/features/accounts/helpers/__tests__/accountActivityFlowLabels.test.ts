@@ -1,4 +1,4 @@
-import { AccountType } from '@/src/types/domain';
+import { AccountType } from '@/src/types/enums';
 
 import { getAccountActivityFlowLabels } from '../accountActivityFlowLabels';
 

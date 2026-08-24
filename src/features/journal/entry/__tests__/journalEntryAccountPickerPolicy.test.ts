@@ -4,7 +4,8 @@ import {
   resolveJournalEntrySelectedAccountId,
 } from '../journalEntryAccountPickerPolicy';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
-import { AccountId, EMPTY_ACCOUNT_ID, type AccountFields } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { type AccountFields } from '@/src/types/plainDtos';
 
 describe('journalEntryAccountPickerPolicy', () => {
   const accounts = [

@@ -1,5 +1,6 @@
-import type { AccountFields } from '@/src/types/domain';
-import { AccountId, PlainAccount } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { AccountId } from '@/src/types/ids';
+import { PlainAccount } from '@/src/types/plainDtos';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';

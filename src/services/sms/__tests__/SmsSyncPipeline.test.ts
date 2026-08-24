@@ -1,11 +1,6 @@
 import { SmsSyncPipeline } from '../pipeline';
-import {
-  InboxParseStatus,
-  InboxProcessingStatus,
-  TransactionDirection,
-  JournalId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';

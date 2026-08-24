@@ -12,7 +12,7 @@ import {
   type JournalListModalsProps,
 } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { JournalId } from '@/src/types/domain';
+import type { JournalId } from '@/src/types/ids';
 import type { JournalListItem } from '@/src/types/ui';
 import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo } from 'react';

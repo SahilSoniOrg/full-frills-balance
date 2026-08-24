@@ -5,7 +5,7 @@ import {
   useRegisterModeHandle,
 } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { act, render, renderHook } from '@testing-library/react-native';
 import { ReactNode, useState } from 'react';
 import { Text } from 'react-native';

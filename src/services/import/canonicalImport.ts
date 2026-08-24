@@ -3,16 +3,12 @@ import {
   AccountType,
   AuditEntityType,
   TransactionType,
-  AccountId,
-  BudgetId,
   JournalDisplayType,
-  JournalId,
   JournalStatus,
-  PlannedPaymentId,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
-  TransactionId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 
 import { IconName } from '@/src/types/domainIcons';
 import { UIPreferences } from '@/src/utils/preferences';

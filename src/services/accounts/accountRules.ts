@@ -1,11 +1,6 @@
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
-import {
-  TransactionType,
-  AccountId,
-  WorkplaceId,
-  AccountSubtype,
-  AccountType,
-} from '@/src/types/domain';
+import { TransactionType, AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { getEpsilon } from '@/src/utils/money';

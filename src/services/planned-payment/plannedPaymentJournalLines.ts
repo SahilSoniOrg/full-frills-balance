@@ -1,5 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { TransactionType, AccountId } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
 
 import { Money } from '@/src/utils/money';
 

@@ -1,6 +1,8 @@
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountFields, TransactionType, TabType, AccountType } from '@/src/types/domain';
+import { AccountFields } from '@/src/types/plainDtos';
+import { TransactionType, AccountType } from '@/src/types/enums';
+import { TabType } from '@/src/types/domainJournal';
 
 import { ComponentVariant } from '@/src/utils/style-helpers';
 

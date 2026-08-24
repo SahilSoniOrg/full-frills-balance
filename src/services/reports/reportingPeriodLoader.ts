@@ -11,7 +11,7 @@ import {
   ReportAccount,
   ReportingDeltaInput,
 } from '@/src/services/reports/reportTypes';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export interface ReportingPeriodData {
   /** Per-account period totals — SQL aggregates when available, else transaction-mapped deltas. */

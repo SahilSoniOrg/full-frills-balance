@@ -6,14 +6,8 @@
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import {
-  AuditEntityType,
-  AccountId,
-  BudgetId,
-  JournalId,
-  PlannedPaymentId,
-  TransactionId,
-} from '@/src/types/domain';
+import { AuditEntityType } from '@/src/types/enums';
+import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {
   ImportedAccount,
   ImportedAccountMetadata,

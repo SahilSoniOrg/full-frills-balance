@@ -1,6 +1,6 @@
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants/app-config';
 
 jest.mock('@/src/services/AccountingRebuildService', () => ({

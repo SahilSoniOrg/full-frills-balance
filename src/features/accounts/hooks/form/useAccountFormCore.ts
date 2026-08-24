@@ -3,7 +3,8 @@ import { getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { AccountFormCoreDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
-import { AccountId, AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { useCallback, useMemo } from 'react';
 
 export interface AccountFormCoreApi {

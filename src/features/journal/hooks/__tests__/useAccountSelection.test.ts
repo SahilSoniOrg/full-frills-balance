@@ -1,4 +1,5 @@
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';

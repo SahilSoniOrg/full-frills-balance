@@ -71,7 +71,7 @@ import {
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 
 const mockPlugin: ImportPlugin = {
   id: 'test',

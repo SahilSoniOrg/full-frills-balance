@@ -4,14 +4,8 @@ import { convertAmount } from '@/src/services/currencyConversion';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import {
-  AccountId,
-  AccountSubtype,
-  AccountType,
-  BudgetId,
-  PlannedPaymentId,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import { cashFlowSimulationService, SimulationInput } from '../CashFlowSimulationService';
 import { FlowSource } from '../types';

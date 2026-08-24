@@ -1,4 +1,5 @@
-import { AccountSubtype, AccountType, AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 import {
   BatchImportData,

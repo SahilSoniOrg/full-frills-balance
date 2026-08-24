@@ -1,6 +1,6 @@
 import { CategoryBreakdown, ExpenseCategory } from '@/src/services/reports/reportSnapshot';
 import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 
 export type BreakdownLegendEntry = {
   id: string;

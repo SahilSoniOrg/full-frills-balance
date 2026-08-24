@@ -1,8 +1,8 @@
 import { JournalEntryCardProps } from '@/src/components/common/JournalEntryCard';
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
 import { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { EnrichedJournal } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalTimelineItem, JournalTimelineViewer } from '@/src/types/journalTimeline';
 
 export function mapTimelineItemToEntryCardProps(

@@ -3,7 +3,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { SmsRuleFormView } from '@/src/features/settings/components/SmsRuleFormView';
 import { useSmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';

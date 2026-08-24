@@ -1,4 +1,4 @@
-import { AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 
 export const ACCOUNT_SUBTYPES_BY_TYPE: Record<AccountType, readonly AccountSubtype[]> = {
   [AccountType.ASSET]: [

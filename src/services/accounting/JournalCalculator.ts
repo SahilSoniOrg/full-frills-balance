@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { TransactionType } from '@/src/types/domain';
+import { TransactionType } from '@/src/types/enums';
 
 import { checkJournal, JournalLineForCheck } from '@/src/utils/accounting/BalanceEffects';
 import { sanitizeAmount } from '@/src/utils/validation';

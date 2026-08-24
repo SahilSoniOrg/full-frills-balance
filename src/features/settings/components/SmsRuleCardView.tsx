@@ -1,6 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
-import { PlainSmsRule } from '@/src/types/domain';
+import { PlainSmsRule } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';

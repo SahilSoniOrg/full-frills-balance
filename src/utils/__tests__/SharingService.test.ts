@@ -3,7 +3,7 @@ import {
   JournalShareProvider,
   ShareableJournalEntry,
 } from '../../services/sharing/JournalShareProvider';
-import { JournalDisplayType } from '../../types/domain';
+import { JournalDisplayType } from '../../types/enums';
 
 // Mock native modules for Jest environment
 jest.mock('react-native-mmkv', () => ({

@@ -5,7 +5,7 @@ import { insightService } from '@/src/services/insight/InsightService';
 import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { WorkplaceId } from '@/src/types/domain';
+import { WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({ useAppReady: jest.fn() }));

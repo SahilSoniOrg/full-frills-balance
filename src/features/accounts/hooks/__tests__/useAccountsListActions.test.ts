@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react-native';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountsListActions } from '../useAccountsListActions';
-import { AccountBalance, AccountId, AccountType } from '@/src/types/domain';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { AppNavigation } from '@/src/utils/navigation';
 
 jest.mock('@/src/utils/navigation', () => ({

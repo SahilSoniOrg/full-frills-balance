@@ -6,7 +6,7 @@ import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
 

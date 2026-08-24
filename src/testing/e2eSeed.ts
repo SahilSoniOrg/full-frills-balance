@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -8,8 +8,8 @@ import {
   TransactionDirection,
   AccountType,
   TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+} from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';

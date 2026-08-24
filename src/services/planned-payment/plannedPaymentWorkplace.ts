@@ -1,6 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 export function assertPlannedPaymentWorkplace(
   workplaceId: WorkplaceId,

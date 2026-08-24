@@ -1,6 +1,6 @@
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { Spacing } from '@/src/constants';
-import { AccountSubtype, AccountType } from '@/src/types/domain';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
 
 import { Separator } from '@/src/design-system';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';

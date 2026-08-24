@@ -7,7 +7,7 @@ import {
   parseFundingAccountIds,
 } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
-import { BudgetId, AccountId, WorkplaceId } from '@/src/types/domain';
+import { BudgetId, AccountId, WorkplaceId } from '@/src/types/ids';
 
 export class BudgetWriteService {
   /**

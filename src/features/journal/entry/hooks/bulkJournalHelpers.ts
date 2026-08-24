@@ -1,12 +1,7 @@
-import type { AccountFields } from '@/src/types/domain';
-import {
-  TransactionType,
-  JournalEntryLine,
-  WorkplaceId,
-  EMPTY_ACCOUNT_ID,
-  TransactionId,
-  AccountType,
-} from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { TransactionType, AccountType } from '@/src/types/enums';
+import { JournalEntryLine } from '@/src/types/domainJournal';
+import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { sanitizeAmount } from '@/src/utils/validation';

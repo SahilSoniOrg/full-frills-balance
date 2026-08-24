@@ -1,4 +1,4 @@
-import { JournalDisplayType } from '../../types/domain';
+import { JournalDisplayType } from '../../types/enums';
 import { CurrencyFormatter } from '../../utils/currencyFormatter';
 import { formatDate } from '../../utils/dateUtils';
 import { ShareFormat, ShareProvider } from '../SharingService';

@@ -12,9 +12,10 @@ import {
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
-import type { AccountFields } from '@/src/types/domain';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId, AccountRole, TabType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard } from 'react-native';
 

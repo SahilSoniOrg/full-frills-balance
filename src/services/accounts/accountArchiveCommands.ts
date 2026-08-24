@@ -16,7 +16,8 @@ import {
 } from '@/src/services/accounts/accountAuditState';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { invalidateAccountArchiveCaches } from '@/src/services/reactive/invalidateAccountArchiveCaches';
-import { AuditAction, WorkplaceId } from '@/src/types/domain';
+import { AuditAction } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 export type PreparedArchiveMutation = {
   plan: ArchiveMutationPlan;

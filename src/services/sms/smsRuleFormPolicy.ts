@@ -5,7 +5,8 @@ import {
   SmsRuleMode,
 } from '@/src/utils/sms/RuleMatcher';
 import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
-import { AccountId, PlainSmsRule } from '@/src/types/domain';
+import { AccountId } from '@/src/types/ids';
+import { PlainSmsRule } from '@/src/types/plainDtos';
 
 export type SmsRuleAmountOperator = '' | 'eq' | 'gt' | 'lt' | 'between';
 export type SmsRuleDirection = '' | 'debit' | 'credit';

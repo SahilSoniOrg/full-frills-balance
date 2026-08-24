@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AccountSubtype } from '@/src/types/domain';
+import { AccountSubtype } from '@/src/types/enums';
 
 import {
   AccountCommitment,

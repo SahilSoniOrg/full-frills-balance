@@ -1,11 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import {
-  AccountType,
-  AccountId,
-  JournalId,
-  WorkplaceId,
-  InboxProcessingStatus,
-} from '@/src/types/domain';
+import { AccountType, InboxProcessingStatus } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';

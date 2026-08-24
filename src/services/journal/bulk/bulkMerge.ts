@@ -2,13 +2,8 @@ import Journal from '@/src/data/models/Journal';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import {
-  AccountId,
-  JournalDisplayType,
-  JournalId,
-  TransactionType,
-  WorkplaceId,
-} from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { safeAdd } from '@/src/utils/money';
 import { enqueueRebuildIfNeeded } from './bulkHelpers';
 

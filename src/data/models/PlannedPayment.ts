@@ -3,13 +3,9 @@ import Journal from '@/src/data/models/Journal';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
-import {
-  AccountId,
-  PlainPlannedPayment,
-  PlannedPaymentId,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/types/domain';
+import { AccountId, PlannedPaymentId } from '@/src/types/ids';
+import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 
 export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   static table = 'planned_payments';

@@ -1,4 +1,5 @@
-import { AuditAction, JournalStatus, AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AuditAction, JournalStatus } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
