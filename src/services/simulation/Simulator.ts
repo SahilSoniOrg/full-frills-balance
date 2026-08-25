@@ -57,11 +57,11 @@ export class Simulator {
         accountMinBalancesBeforeIncome.set(id, b);
       }
 
-      let lastAccountBalancesMap = new Map(currentBalances);
       const roundedAccountBalances = new Map<string, number>();
-      for (const [id, bal] of lastAccountBalancesMap.entries()) {
+      for (const [id, bal] of currentBalances.entries()) {
         roundedAccountBalances.set(id, Math.round(((bal ?? 0) + Number.EPSILON) * 100) / 100);
       }
+      let accountBalancesSnapshot = new Map(roundedAccountBalances);
 
       for (let d = 0; d < days; d++) {
         const todayOffset = startDayOffset + d;
@@ -96,8 +96,9 @@ export class Simulator {
             roundedAccountBalances.set(id, Math.round((bal + Number.EPSILON) * 100) / 100);
           }
 
-          // Only create a new Map if there were changes
-          lastAccountBalancesMap = new Map(currentBalances);
+          // Preserve independent snapshots only when balances changed. Quiet
+          // days can safely reuse the immutable snapshot reference.
+          accountBalancesSnapshot = new Map(roundedAccountBalances);
         }
 
         globalMinBalance = Math.min(globalMinBalance, globalBalance);
@@ -110,7 +111,7 @@ export class Simulator {
           dayOffset: todayOffset,
           timestamp,
           globalBalance: Math.round((globalBalance + Number.EPSILON) * 100) / 100,
-          accountBalances: new Map(roundedAccountBalances), // Snapshot for this day
+          accountBalances: accountBalancesSnapshot,
           flows: todayFlows,
         });
       }
