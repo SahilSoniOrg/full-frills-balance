@@ -332,7 +332,7 @@ export function AmountCalculatorSheet({
                   <AppText
                     variant="subheading"
                     weight="bold"
-                    style={{ color: isAction ? theme.pureInverse : theme.text }}
+                    style={[styles.keyLabel, { color: isAction ? theme.onPrimary : theme.text }]}
                   >
                     {key.label}
                   </AppText>
@@ -406,6 +406,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Shape.radius.r3,
+  },
+  keyLabel: {
+    fontSize: Typography.sizes.xxl,
+    lineHeight: Typography.sizes.xxl + Spacing.xs,
   },
   actions: {
     flexDirection: 'row',
