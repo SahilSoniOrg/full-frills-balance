@@ -17,7 +17,6 @@ import {
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -25,6 +24,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
   const isSubmitting = vm.editor.isSubmitting;
+  const isBatchMode = vm.activeMode === 'batch';
   const isPlanValid =
     vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
@@ -42,6 +42,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     isAdvancedValid: isPlanValid,
     isSplitValid: vm.splitValidation.valid,
   });
+  const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;
 
   const {
     isLoading,
@@ -87,6 +88,10 @@ export function JournalEntryView(vm: JournalEntryShell) {
     onSelectAccountRequest: vm.onSelectAccountRequest,
     onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
     guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
+    batchEditor: vm.batchEditor,
+    batchSummary: vm.batchSummary,
+    onContinueBatch: vm.onContinueBatch,
+    onDoneBatch: vm.onDoneBatch,
   };
 
   if (isLoading) {
@@ -133,18 +138,17 @@ export function JournalEntryView(vm: JournalEntryShell) {
             mode={activeMode}
             onToggleMode={onToggleMode}
             isSimpleDisabled={vm.isSimpleModeDisabled}
-            onOpenBatch={AppNavigation.toBulkJournalEntry}
           />
         </>
       }
       footer={
         <SubmitFooter
           onPress={vm.onSubmit}
-          disabled={isSubmitDisabled}
-          label={submitLabel}
-          loading={isSubmitting}
+          disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
+          label={isBatchMode ? `Post ${vm.batchEditor.rows.length} transactions` : submitLabel}
+          loading={isBatchMode ? vm.batchEditor.isSubmitting : isSubmitting}
           topSlot={
-            guidedFooterAmount ? (
+            !isBatchMode && guidedFooterAmount ? (
               <GuidedFooterAmountSlot footerAmount={guidedFooterAmount} />
             ) : undefined
           }
@@ -152,28 +156,30 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }
     >
       <View style={styles.content}>
-        <JournalMetaCard
-          date={vm.editor.journalDate}
-          setDate={vm.editor.setJournalDate}
-          time={vm.editor.journalTime}
-          setTime={vm.editor.setJournalTime}
-          description={vm.editor.description}
-          setDescription={setDescription}
-          onSelectSuggestion={onSelectSuggestion}
-          activeTabType={activeMode === 'basic' ? vm.editor.transactionType : undefined}
-          accounts={vm.accounts}
-          notes={vm.editor.notes}
-          setNotes={vm.editor.setNotes}
-          showBanner={showEditBanner}
-          bannerText={editBannerText}
-          suggestions={vm.suggestions}
-          suggestionState={vm.suggestionState}
-          hideSuggestions={hideSuggestions}
-          onDescriptionFocus={onDescriptionFocus}
-          onVoiceInputPress={
-            activeMode === 'basic' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
-          }
-        />
+        {!isBatchMode && (
+          <JournalMetaCard
+            date={vm.editor.journalDate}
+            setDate={vm.editor.setJournalDate}
+            time={vm.editor.journalTime}
+            setTime={vm.editor.setJournalTime}
+            description={vm.editor.description}
+            setDescription={setDescription}
+            onSelectSuggestion={onSelectSuggestion}
+            activeTabType={activeMode === 'basic' ? vm.editor.transactionType : undefined}
+            accounts={vm.accounts}
+            notes={vm.editor.notes}
+            setNotes={vm.editor.setNotes}
+            showBanner={showEditBanner}
+            bannerText={editBannerText}
+            suggestions={vm.suggestions}
+            suggestionState={vm.suggestionState}
+            hideSuggestions={hideSuggestions}
+            onDescriptionFocus={onDescriptionFocus}
+            onVoiceInputPress={
+              activeMode === 'basic' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
+            }
+          />
+        )}
 
         <JournalEntryModeBody {...modeBodyProps} />
       </View>

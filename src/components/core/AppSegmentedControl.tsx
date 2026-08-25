@@ -292,7 +292,6 @@ export const AppSegmentedControl = <T extends string | number>({
   const handlePress = useCallback(
     (id: T) => {
       if (disabled || disabledSet.has(id)) return;
-      Keyboard.dismiss();
       onChange(id);
     },
     [disabled, disabledSet, onChange],

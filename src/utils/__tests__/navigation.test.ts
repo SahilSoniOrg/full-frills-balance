@@ -68,10 +68,10 @@ describe('journal-entry navigation', () => {
     expect(router.push).toHaveBeenCalledWith('/journal-entry');
   });
 
-  it('opens the isolated batch workspace', () => {
+  it('opens Batch inside the shared journal composer', () => {
     AppNavigation.toBulkJournalEntry();
 
-    expect(router.push).toHaveBeenCalledWith('/journal-bulk');
+    expect(router.push).toHaveBeenCalledWith('/journal-entry?mode=bulk');
   });
 
   it('preserves prefilled, edit/copy, and planned-entry route data', () => {

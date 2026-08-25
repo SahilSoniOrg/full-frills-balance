@@ -57,6 +57,7 @@ describe('useJournalSuggestions', () => {
     await act(async () => loadPromise);
 
     expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 20);
+    expect(result.current.suggestions).toEqual(mockSuggestions);
   });
 
   it('fetches and filters suggestions when searchQuery is non-empty', async () => {

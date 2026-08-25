@@ -74,7 +74,7 @@ describe('journalEntryPresentation', () => {
     expect(resolveJournalEntryScreenMode('simple')).toBe('basic');
     expect(resolveJournalEntryScreenMode('advanced')).toBe('expert');
     expect(resolveJournalEntryScreenMode('split')).toBe('allocation');
-    expect(resolveJournalEntryScreenMode('bulk')).toBe('basic');
+    expect(resolveJournalEntryScreenMode('bulk')).toBe('batch');
     expect(resolveJournalEntryScreenMode(undefined)).toBe('basic');
   });
 

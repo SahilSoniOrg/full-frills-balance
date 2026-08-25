@@ -7,6 +7,7 @@ import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEdito
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LayoutAnimation } from 'react-native';
 
 type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
@@ -24,7 +25,7 @@ export function useJournalEntryModeState(
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'basic');
-    if (activeMode === 'allocation') setTransactionType('expense');
+    if (activeMode === 'allocation' || activeMode === 'batch') setTransactionType('expense');
   }, [activeMode, setIsGuidedMode, setTransactionType]);
 
   const wasEditorGuidedRef = useRef(editorIsGuidedMode);
@@ -47,6 +48,7 @@ export function useJournalEntryModeState(
         return;
       }
 
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setActiveMode(mode);
     },
     [lines],

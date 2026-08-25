@@ -9,6 +9,7 @@ const JOURNAL_MODE_OPTIONS: readonly JournalModeOption[] = [
   { id: 'basic', label: 'Basic' },
   { id: 'allocation', label: 'Allocate' },
   { id: 'expert', label: 'Expert' },
+  { id: 'batch', label: 'Batch' },
 ];
 
 /** User-facing detail levels for the transaction composer. */

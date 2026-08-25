@@ -19,6 +19,8 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
+import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import {
   JournalSuggestionState,
   useJournalSuggestions,
@@ -74,6 +76,10 @@ export interface JournalEntryShell {
   loadSuggestions: () => void;
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
+  batchEditor: ReturnType<typeof useBulkJournalEditor>;
+  batchSummary: { count: number; items: SavedJournalSummary[] } | null;
+  onContinueBatch: () => void;
+  onDoneBatch: () => void;
 }
 
 /**
@@ -126,6 +132,30 @@ export function useJournalEntryShell(): JournalEntryShell {
     seed.editorMode,
   );
 
+  const [batchSummary, setBatchSummary] = useState<{
+    count: number;
+    items: SavedJournalSummary[];
+  } | null>(null);
+  const onBatchSaveSuccess = useCallback(
+    (count: number, items: SavedJournalSummary[]) => setBatchSummary({ count, items }),
+    [],
+  );
+  const batchEditor = useBulkJournalEditor({
+    workplaceId,
+    workplaceCurrency,
+    accounts,
+    onSaveSuccess: onBatchSaveSuccess,
+  });
+  const onContinueBatch = useCallback(() => {
+    setBatchSummary(null);
+    batchEditor.clearRows();
+  }, [batchEditor.clearRows]);
+  const onDoneBatch = useCallback(() => {
+    setBatchSummary(null);
+    batchEditor.clearRows();
+    onToggleMode('basic');
+  }, [batchEditor.clearRows, onToggleMode]);
+
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
     workplaceId,
@@ -134,8 +164,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   );
 
   const onSubmit = useCallback(() => {
+    if (activeMode === 'batch') {
+      void batchEditor.saveAll();
+      return;
+    }
     void session.submit(activeMode === 'allocation' ? 'allocation' : 'editor');
-  }, [activeMode, session]);
+  }, [activeMode, batchEditor.saveAll, session]);
 
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {
@@ -274,5 +308,9 @@ export function useJournalEntryShell(): JournalEntryShell {
     loadSuggestions,
     workplaceCurrency,
     workplaceId,
+    batchEditor,
+    batchSummary,
+    onContinueBatch,
+    onDoneBatch,
   };
 }

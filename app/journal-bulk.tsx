@@ -1,3 +1,5 @@
-import { BulkJournalScreen } from '@/src/features/journal';
+import { Redirect } from 'expo-router';
 
-export default BulkJournalScreen;
+export default function LegacyBulkRoute() {
+  return <Redirect href="/journal-entry?mode=bulk" />;
+}

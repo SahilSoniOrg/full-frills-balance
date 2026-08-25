@@ -115,9 +115,9 @@ export const AppNavigation = {
     router.push(href);
   },
 
-  /** Navigate to the isolated batch transaction workspace. */
+  /** Open Batch inside the shared journal-entry composer. */
   toBulkJournalEntry: () => {
-    router.push('/journal-bulk');
+    router.push('/journal-entry?mode=bulk');
   },
 
   /**

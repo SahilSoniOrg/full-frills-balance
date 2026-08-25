@@ -3,7 +3,7 @@ import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 
 /** Internal composer views. Legacy route names are translated at the adapter boundary below. */
-export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert';
+export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch';
 export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
 export type JournalEntrySimpleType = 'expense' | 'income' | 'transfer';
 
@@ -75,7 +75,7 @@ export function resolveJournalEntryScreenMode(
   if (routeMode === 'simple') return 'basic';
   if (routeMode === 'advanced') return 'expert';
   if (routeMode === 'split') return 'allocation';
-  // Bulk is redirected before the single-transaction shell mounts.
+  if (routeMode === 'bulk') return 'batch';
   return 'basic';
 }
 
@@ -118,6 +118,7 @@ export function resolveJournalEntrySubmitLabel(input: {
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
+  if (input.activeMode === 'batch') return AppConfig.strings.transactionFlow.saving;
   if (input.activeMode === 'basic') {
     return input.simpleSubmitting
       ? AppConfig.strings.transactionFlow.saving
@@ -144,6 +145,7 @@ export function isJournalEntrySubmitDisabled(input: {
   if (input.activeMode === 'allocation') {
     return !input.isSplitValid;
   }
+  if (input.activeMode === 'batch') return false;
   if (input.activeMode === 'basic') {
     return !input.isSimpleValid;
   }

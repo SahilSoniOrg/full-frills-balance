@@ -177,13 +177,12 @@ export function useJournalSuggestions(
 
   const filteredSuggestions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return [];
-
     return allSuggestions
       .filter(
         item =>
-          item.description.toLowerCase().includes(query) &&
-          item.description.toLowerCase() !== query &&
+          (!query ||
+            (item.description.toLowerCase().includes(query) &&
+              item.description.toLowerCase() !== query)) &&
           isTargetAccountCompatible(item.targetAccountType, activeTabType),
       )
       .sort((a, b) => b.count - a.count)
