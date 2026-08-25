@@ -132,6 +132,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   let workplaceTwoAccountId: AccountId;
   let workplaceOneJournalId: JournalId;
   let workplaceTwoJournalId: JournalId;
+  const recentJournalDate = () => Date.now();
 
   beforeEach(async () => {
     jest.restoreAllMocks();
@@ -170,7 +171,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     const workplaceOneJournal = await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Coffee',
-        journalDate: 2_000,
+        journalDate: recentJournalDate(),
         currencyCode: 'USD',
         transactions: [
           {
@@ -185,7 +186,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     const workplaceTwoJournal = await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Coffee',
-        journalDate: 1_000,
+        journalDate: recentJournalDate() - 1_000,
         currencyCode: 'USD',
         transactions: [
           {
@@ -271,6 +272,18 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     expect(args.filter(arg => arg === workplaceOne)).toHaveLength(4);
   });
 
+  it('limits suggestions to the last three months', async () => {
+    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+
+    await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(workplaceOne, 10);
+
+    const [sql, args = []] = queryRaw.mock.calls[0];
+    expect(sql).toContain('journal_date >= ?');
+    expect(args).toHaveLength(7);
+    expect(typeof args[1]).toBe('number');
+    expect(args[1]).toBeLessThan(Date.now());
+  });
+
   it('isolates recent-suggestion fallback from malformed transaction and account links', async () => {
     jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
 
@@ -307,7 +320,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Milk',
-        journalDate: 4_000,
+        journalDate: recentJournalDate(),
         currencyCode: 'USD',
         transactions: [
           {
@@ -322,7 +335,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     await journalWriteRepository.createJournalWithTransactions(
       {
         description: 'Milk',
-        journalDate: 3_000,
+        journalDate: recentJournalDate() - 1_000,
         currencyCode: 'USD',
         transactions: [
           {

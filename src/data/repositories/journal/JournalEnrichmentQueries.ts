@@ -11,6 +11,9 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import dayjs from 'dayjs';
+
+const SUGGESTION_LOOKBACK_MONTHS = 3;
 
 export function computeDominantTargetAccount(
   accountEntries: {
@@ -76,6 +79,7 @@ export class JournalEnrichmentQueries {
     workplaceId: WorkplaceId,
     limit: number = 500,
   ): Promise<JournalAutofillSuggestion[]> {
+    const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
     const sql = `
       WITH recent_descriptions AS (
         SELECT
@@ -84,6 +88,7 @@ export class JournalEnrichmentQueries {
           MAX(journal_date) as latest_date
         FROM journals
         WHERE workplace_id = ?
+          AND journal_date >= ?
           AND deleted_at IS NULL
           AND description IS NOT NULL
           AND description != ''
@@ -103,6 +108,7 @@ export class JournalEnrichmentQueries {
       FROM recent_descriptions d
       JOIN journals j ON j.description = d.description
         AND j.workplace_id = ?
+        AND j.journal_date >= ?
         AND j.deleted_at IS NULL
       LEFT JOIN transactions t ON t.journal_id = j.id
         AND t.workplace_id = ?
@@ -125,7 +131,7 @@ export class JournalEnrichmentQueries {
         account_usage_count: number;
         account_latest_date: number | null;
         latest_date: number;
-      }>(sql, [workplaceId, limit, workplaceId, workplaceId, workplaceId]);
+      }>(sql, [workplaceId, cutoffDate, limit, workplaceId, cutoffDate, workplaceId, workplaceId]);
 
       if (!results) {
         return this.getRecentSuggestionsFallback(workplaceId, limit);
@@ -209,9 +215,11 @@ export class JournalEnrichmentQueries {
     workplaceId: WorkplaceId,
     limit: number,
   ): Promise<JournalAutofillSuggestion[]> {
+    const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
     const journals = await this.journals
       .query(
         Q.where('workplace_id', workplaceId),
+        Q.where('journal_date', Q.gte(cutoffDate)),
         Q.where('deleted_at', Q.eq(null)),
         Q.where('description', Q.notEq(null)),
         Q.where('description', Q.notEq('')),

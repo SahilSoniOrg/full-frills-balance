@@ -21,15 +21,24 @@ interface JournalEditorLoaderOptions {
   hydrateEditor: (snapshot: JournalEditorHydration) => void;
 }
 
+export type JournalEditorLoadState = 'idle' | 'loading' | 'loaded' | 'not_found' | 'error';
+
 export function useJournalEditorLoader({
   workplaceId,
   journalId,
   hydrateEditor,
-}: JournalEditorLoaderOptions): boolean {
+}: JournalEditorLoaderOptions): JournalEditorLoadState {
   // Derive loading from the id we have finished hydrating — avoids setState-in-effect
   // when journalId changes (edit → edit) while still blocking UI on the new id.
-  const [loadedJournalId, setLoadedJournalId] = useState<JournalId | null>(null);
-  const isLoading = Boolean(journalId) && loadedJournalId !== journalId;
+  const [loadResult, setLoadResult] = useState<{
+    journalId: JournalId;
+    state: Exclude<JournalEditorLoadState, 'idle' | 'loading'>;
+  } | null>(null);
+  const loadState: JournalEditorLoadState = !journalId
+    ? 'idle'
+    : loadResult?.journalId === journalId
+      ? loadResult.state
+      : 'loading';
 
   useEffect(() => {
     if (!journalId) {
@@ -55,11 +64,15 @@ export function useJournalEditorLoader({
             transactionType,
             isGuidedMode: forceAdvancedMode ? false : undefined,
           });
+          setLoadResult({ journalId, state: 'loaded' });
+        } else {
+          setLoadResult({ journalId, state: 'not_found' });
         }
       } catch {
-        if (isActive) showErrorAlert('Failed to load transaction');
-      } finally {
-        if (isActive) setLoadedJournalId(journalId);
+        if (isActive) {
+          showErrorAlert('Failed to load transaction');
+          setLoadResult({ journalId, state: 'error' });
+        }
       }
     };
 
@@ -69,5 +82,5 @@ export function useJournalEditorLoader({
     };
   }, [journalId, hydrateEditor, workplaceId]);
 
-  return isLoading;
+  return loadState;
 }

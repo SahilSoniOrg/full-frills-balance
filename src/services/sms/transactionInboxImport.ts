@@ -88,16 +88,28 @@ function resolveRuleAccounts(
   return { bankAccountId, counterpartyId, customDescription };
 }
 
-function buildNotes(item: TransactionInboxItem, customDescription?: string): string {
-  if (customDescription?.trim()) {
-    return customDescription
-      .trim()
-      .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
-      .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
-      .replace(/{ref}/gi, item.referenceNumber || '')
-      .replace(/{sender}/gi, item.senderAddress || '')
-      .replace(/\\n/g, '\n');
-  }
+function expandDescriptionTemplate(template: string, item: TransactionInboxItem): string {
+  return template
+    .trim()
+    .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
+    .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
+    .replace(/{ref}/gi, item.referenceNumber || '')
+    .replace(/{sender}/gi, item.senderAddress || '')
+    .replace(/\\n/g, '\n');
+}
+
+function buildDescription(
+  item: TransactionInboxItem,
+  type: 'expense' | 'income' | 'transfer',
+  customDescription?: string,
+): string {
+  if (customDescription?.trim()) return expandDescriptionTemplate(customDescription, item);
+  if (item.parsedMerchant?.trim()) return item.parsedMerchant.trim();
+  if (item.senderAddress?.trim()) return item.senderAddress.trim();
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function buildNotes(item: TransactionInboxItem): string {
   if (item.channel === 'voice') return `Spoken transcript: ${item.rawBody}`;
   if (item.channel === 'sms') {
     return `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}\n\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`;
@@ -124,8 +136,9 @@ export function buildTransactionInboxImportNavigation(
         : 'expense';
   const params: Record<string, string> = {
     type,
-    amount: String(item.parsedAmount || ''),
-    notes: buildNotes(item, customDescription),
+    amount: item.parsedAmount != null ? String(item.parsedAmount) : '',
+    description: buildDescription(item, type, customDescription),
+    notes: buildNotes(item),
     ...(options?.mode ? { mode: options.mode } : {}),
   };
 

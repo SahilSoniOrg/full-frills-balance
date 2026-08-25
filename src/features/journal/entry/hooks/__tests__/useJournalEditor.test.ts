@@ -1,6 +1,7 @@
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { showErrorAlert } from '@/src/utils/alerts';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -65,6 +66,23 @@ describe('useJournalEditor', () => {
     );
 
     expect(result.current.notes).toBe('Custom Notes');
+  });
+
+  it('initializes a prefilled draft without moving notes into the description', () => {
+    const { result } = renderHook(() =>
+      useJournalEditor('test-workplace' as WorkplaceId, {
+        initialDescription: 'Coffee Shop',
+        initialNotes: 'Imported from SMS',
+        initialAmount: '12.34',
+        initialDate: '2026-08-25T12:30:00+05:30',
+      }),
+    );
+
+    expect(result.current.description).toBe('Coffee Shop');
+    expect(result.current.notes).toBe('Imported from SMS');
+    expect(result.current.journalDate).toBe('2026-08-25');
+    expect(result.current.journalTime).toBe('12:30');
+    expect(result.current.lines.some(line => line.amount === '12.34')).toBe(true);
   });
 
   it('should update notes state using setNotes', () => {
@@ -163,6 +181,7 @@ describe('useJournalEditor', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    expect(result.current.loadState).toBe('loaded');
     expect(result.current.description).toBe('Test Load');
     expect(result.current.notes).toBe('Test Notes Loaded');
     expect(result.current.lines).toHaveLength(2);
@@ -222,5 +241,34 @@ describe('useJournalEditor', () => {
     });
 
     expect(result.current.description).toBe('Journal Two');
+  });
+
+  it('finishes a failed edit load and reports the failure', async () => {
+    (journalReadService.getJournalForEditor as jest.Mock).mockRejectedValue(
+      new Error('database unavailable'),
+    );
+
+    const { result } = renderHook(() =>
+      useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'missing' as JournalId }),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(showErrorAlert).toHaveBeenCalledWith('Failed to load transaction');
+    expect(result.current.loadState).toBe('error');
+    expect(result.current.description).toBe('');
+  });
+
+  it('reports a missing edit journal as not found', async () => {
+    (journalReadService.getJournalForEditor as jest.Mock).mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'missing' as JournalId }),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.loadState).toBe('not_found');
+    expect(showErrorAlert).not.toHaveBeenCalled();
   });
 });

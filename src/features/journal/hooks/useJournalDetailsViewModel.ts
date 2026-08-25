@@ -185,10 +185,10 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
       destinationAccountId,
       amount: amount != null ? String(amount) : undefined,
       notes: journalInfo?.notes || undefined,
+      description: journalInfo?.description || undefined,
       params: {
         ...(mode ? { mode } : {}),
         ...(type ? { type } : {}),
-        ...(journalInfo?.description ? { description: journalInfo.description } : {}),
       },
     });
   }, [journalId, transactions, journalInfo, amount]);

@@ -5,6 +5,12 @@ import { WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/services/journal/journalDomainService');
+jest.mock('@/src/utils/scheduler', () => ({
+  runAfterInteractions: (task: () => void) => {
+    task();
+    return jest.fn();
+  },
+}));
 
 describe('useJournalSuggestions', () => {
   const workplaceId = 'wp-suggestions-test' as WorkplaceId;
@@ -15,23 +21,40 @@ describe('useJournalSuggestions', () => {
   ];
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue(mockSuggestions);
   });
 
-  it('does not fetch suggestions on mount if searchQuery is empty', async () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('prefetches suggestions after the entry settles without blocking mount', async () => {
     const { result } = renderHook(() => useJournalSuggestions(workplaceId, ''));
 
     expect(result.current.suggestions).toEqual([]);
     expect(journalService.getJournalSuggestions).not.toHaveBeenCalled();
+
+    let loadPromise: Promise<void>;
+    act(() => {
+      jest.advanceTimersByTime(150);
+      loadPromise = result.current.loadSuggestions();
+    });
+    await act(async () => loadPromise);
+
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
   });
 
   it('fetches and filters suggestions when searchQuery is non-empty', async () => {
     const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'coff'));
+    let loadPromise: Promise<void>;
 
-    await act(async () => {
-      await Promise.resolve();
+    act(() => {
+      loadPromise = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
     });
+    await act(async () => loadPromise);
 
     expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
     expect(result.current.suggestions).toHaveLength(2);
@@ -41,12 +64,38 @@ describe('useJournalSuggestions', () => {
 
   it('fetches on-demand when loadSuggestions is invoked', async () => {
     const { result } = renderHook(() => useJournalSuggestions(workplaceId, ''));
+    let loadPromise: Promise<void>;
+
+    act(() => {
+      loadPromise = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+    await act(async () => loadPromise);
+
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+  });
+
+  it('coalesces repeated focus and typing loads, then reuses the cached result', async () => {
+    const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'coff'));
+    let firstLoad: Promise<void>;
+    let secondLoad: Promise<void>;
+
+    act(() => {
+      firstLoad = result.current.loadSuggestions();
+      secondLoad = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+    await act(async () => {
+      await Promise.all([firstLoad, secondLoad]);
+    });
+
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await result.current.loadSuggestions();
     });
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
   });
 
   it('keeps only target categories compatible with the active tab', async () => {
@@ -69,9 +118,12 @@ describe('useJournalSuggestions', () => {
 
     const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'mil', 'income'));
 
-    await act(async () => {
-      await Promise.resolve();
+    let loadPromise: Promise<void>;
+    act(() => {
+      loadPromise = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
     });
+    await act(async () => loadPromise);
 
     expect(result.current.suggestions).toEqual([
       expect.objectContaining({

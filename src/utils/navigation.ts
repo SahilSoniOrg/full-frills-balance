@@ -2,6 +2,9 @@ import { Href, router } from 'expo-router';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
 
+const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
+let lastJournalEntryNavigation: { href: string; timestamp: number } | null = null;
+
 /**
  * Builds a route with query parameters, filtering out null, undefined, and empty string values.
  */
@@ -29,6 +32,7 @@ export const AppNavigation = {
    * Navigate back to the previous screen.
    */
   back: () => {
+    lastJournalEntryNavigation = null;
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -84,11 +88,23 @@ export const AppNavigation = {
     sourceAccountId?: string;
     destinationAccountId?: string;
     amount?: string;
+    description?: string;
     notes?: string;
     params?: Record<string, string>;
   }) => {
     const { params, ...direct } = options ?? {};
-    router.push(buildRoute('/journal-entry', { ...direct, ...params }));
+    const href = buildRoute('/journal-entry', { ...direct, ...params });
+    const now = Date.now();
+    if (
+      lastJournalEntryNavigation &&
+      lastJournalEntryNavigation.href === href &&
+      now - lastJournalEntryNavigation.timestamp < JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS
+    ) {
+      return;
+    }
+
+    lastJournalEntryNavigation = { href: String(href), timestamp: now };
+    router.push(href);
   },
 
   /**

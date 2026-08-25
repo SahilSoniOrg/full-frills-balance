@@ -56,9 +56,14 @@ export interface JournalModeTransitionInput {
 function restoreLinesForMode(
   mode: JournalLinesOwningMode,
   snapshots: JournalModeLineSnapshots,
+  amount: string,
 ): JournalEntryLine[] {
   const other = mode === 'guided' ? 'advanced' : 'guided';
-  return snapshots[mode] ?? snapshots[other] ?? createTwoLegJournalScaffold();
+  return snapshots[mode] ?? snapshots[other] ?? createTwoLegJournalScaffold({ amount });
+}
+
+function resolveSharedAmount(lines: JournalEntryLine[]): string {
+  return lines.find(line => String(line.amount ?? '').trim() !== '')?.amount ?? '';
 }
 
 /** Resolves the mode, editor lines and snapshots to commit when the user picks a mode chip. */
@@ -66,6 +71,7 @@ export function resolveJournalModeTransition(
   input: JournalModeTransitionInput,
 ): JournalModeTransition {
   const { from, to, lines, snapshots } = input;
+  const amount = resolveSharedAmount(lines);
 
   if (to === from) {
     return { status: 'applied', nextMode: from, nextLines: lines, snapshots };
@@ -79,12 +85,14 @@ export function resolveJournalModeTransition(
     return {
       status: 'applied',
       nextMode: to,
-      nextLines: createTwoLegJournalScaffold(),
+      nextLines: createTwoLegJournalScaffold({ amount }),
       snapshots: nextSnapshots,
     };
   }
 
-  const nextLines = modeOwnsEditorLines(from) ? lines : restoreLinesForMode(to, nextSnapshots);
+  const nextLines = modeOwnsEditorLines(from)
+    ? lines
+    : restoreLinesForMode(to, nextSnapshots, amount);
 
   if (to !== 'guided') {
     return { status: 'applied', nextMode: to, nextLines, snapshots: nextSnapshots };

@@ -7,6 +7,7 @@ import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJourna
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
   JournalEditorHydration,
+  JournalEditorLoadState,
   useJournalEditorLoader,
 } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
@@ -161,11 +162,12 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setTransactionType,
     ],
   );
-  const isLoading = useJournalEditorLoader({
+  const loadState: JournalEditorLoadState = useJournalEditorLoader({
     workplaceId,
     journalId,
     hydrateEditor,
   });
+  const isLoading = loadState === 'loading';
 
   const { fetchRatesForLines } = useJournalEditorExchangeRates({
     lines,
@@ -281,6 +283,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setTransactionType,
       isEdit,
       isLoading,
+      loadState,
       lines,
       setLines,
       description,
@@ -311,6 +314,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       transactionType,
       isEdit,
       isLoading,
+      loadState,
       lines,
       description,
       notes,

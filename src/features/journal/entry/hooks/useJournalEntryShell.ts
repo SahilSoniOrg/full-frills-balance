@@ -50,6 +50,7 @@ export interface JournalEntryShell {
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
   isLoading: boolean;
+  loadState: ReturnType<typeof useJournalEditor>['loadState'];
   headerTitle: string;
   showEditBanner: boolean;
   editBannerText: string;
@@ -97,7 +98,8 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialMode: route.mode === 'bulk' || route.mode === 'split' ? undefined : route.mode,
     initialType: route.type,
     initialAmount: route.amount,
-    initialDescription: route.notes,
+    initialDescription: route.description,
+    initialNotes: route.notes,
     smsId: route.smsId,
     smsRecordId: route.smsRecordId,
     smsSender: route.smsSender,
@@ -254,6 +256,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onGuidedFooterAmountChange,
     guidedVoiceActionsRef,
     isLoading: editor.isLoading,
+    loadState: editor.loadState,
     headerTitle,
     showEditBanner: editor.isEdit,
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,

@@ -13,6 +13,7 @@ export type JournalEntryRouteParams = {
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
   amount?: string;
+  description?: string;
   notes?: string;
   smsId?: string;
   smsRecordId?: string;
@@ -56,6 +57,7 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
     sourceAccountId,
     destinationAccountId,
     amount: firstString(params.amount),
+    description: firstString(params.description),
     notes: firstString(params.notes),
     smsId: firstString(params.smsId),
     smsRecordId: firstString(params.smsRecordId),

@@ -9,24 +9,72 @@ import {
 } from '../journalEntryPresentation';
 
 describe('journalEntryPresentation', () => {
-  it('parseJournalEntryRouteParams maps aliases and filters invalid enums', () => {
+  it('parses a blank entry route as a clean draft', () => {
+    expect(parseJournalEntryRouteParams({})).toEqual({
+      mode: undefined,
+      type: undefined,
+      journalId: undefined,
+      sourceAccountId: undefined,
+      destinationAccountId: undefined,
+      amount: undefined,
+      description: undefined,
+      notes: undefined,
+      smsId: undefined,
+      smsRecordId: undefined,
+      smsSender: undefined,
+      rawSmsBody: undefined,
+      initialDate: undefined,
+      launchSource: undefined,
+    });
+  });
+
+  it('parses prefilled widget and SMS route data', () => {
     const parsed = parseJournalEntryRouteParams({
       mode: 'simple',
       type: 'expense',
       sourceId: 'acc-source',
       destinationId: 'acc-dest',
+      amount: '12.34',
+      notes: 'Imported from SMS: Coffee Shop',
+      smsId: 'sms-1',
+      smsRecordId: 'inbox-1',
+      smsSender: 'HDFCBK',
+      rawSmsBody: 'Card payment at Coffee Shop',
+      initialDate: '2026-08-25T12:30:00.000Z',
       journalId: 'j1',
-      source: 'dashboard',
+      description: 'Coffee Shop',
+      source: 'widget',
     });
     expect(parsed.mode).toBe('simple');
     expect(parsed.type).toBe('expense');
     expect(parsed.sourceAccountId).toBe('acc-source');
     expect(parsed.destinationAccountId).toBe('acc-dest');
-    expect(parsed.launchSource).toBe('dashboard');
+    expect(parsed.description).toBe('Coffee Shop');
+    expect(parsed.amount).toBe('12.34');
+    expect(parsed.notes).toBe('Imported from SMS: Coffee Shop');
+    expect(parsed.smsId).toBe('sms-1');
+    expect(parsed.smsRecordId).toBe('inbox-1');
+    expect(parsed.initialDate).toBe('2026-08-25T12:30:00.000Z');
+    expect(parsed.launchSource).toBe('widget');
+  });
+
+  it('preserves planned/edit/copy journal identity while filtering invalid route enums', () => {
+    const parsed = parseJournalEntryRouteParams({
+      journalId: 'planned-copy-1',
+      mode: 'not-a-mode',
+      type: 'not-a-type',
+    });
+
+    expect(parsed.journalId).toBe('planned-copy-1');
+    expect(parsed.mode).toBeUndefined();
+    expect(parsed.type).toBeUndefined();
   });
 
   it('resolveJournalEntryScreenMode maps simple to guided', () => {
     expect(resolveJournalEntryScreenMode('simple')).toBe('guided');
+    expect(resolveJournalEntryScreenMode('advanced')).toBe('advanced');
+    expect(resolveJournalEntryScreenMode('split')).toBe('split');
+    expect(resolveJournalEntryScreenMode('bulk')).toBe('bulk');
     expect(resolveJournalEntryScreenMode(undefined)).toBe('guided');
   });
 

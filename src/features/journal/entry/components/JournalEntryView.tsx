@@ -1,5 +1,6 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
+import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { Page } from '@/src/design-system';
 import { BulkSaveSummaryModal } from '@/src/features/journal/entry/components/BulkSaveSummaryModal';
@@ -24,6 +25,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
   const {
     isLoading,
+    loadState,
     headerTitle,
     showEditBanner,
     editBannerText,
@@ -45,9 +47,10 @@ export function JournalEntryView(vm: JournalEntryShell) {
   const setDescription = useCallback(
     (desc: string) => {
       setHideSuggestions(false);
+      loadSuggestions();
       editor.setDescription(desc);
     },
-    [editor],
+    [editor, loadSuggestions],
   );
   const onSelectSuggestion = useCallback(
     (suggestion: JournalAutofillSuggestion) => {
@@ -76,6 +79,24 @@ export function JournalEntryView(vm: JournalEntryShell) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
+      </Page>
+    );
+  }
+
+  if (loadState === 'not_found' || loadState === 'error') {
+    return (
+      <Page header={<JournalEntryHeader title={headerTitle} onClose={vm.onClose} />}>
+        <EmptyStateView
+          title={loadState === 'not_found' ? 'Transaction not found' : 'Unable to load transaction'}
+          subtitle={
+            loadState === 'error'
+              ? 'The transaction could not be loaded. Go back and try again.'
+              : 'This transaction may have been deleted or moved.'
+          }
+          icon="error"
+          primaryActionLabel="Go Back"
+          onPrimaryAction={vm.onClose}
+        />
       </Page>
     );
   }

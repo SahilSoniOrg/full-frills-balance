@@ -151,7 +151,19 @@ describe('resolveJournalModeTransition', () => {
 
     expect(transition.nextLines).toHaveLength(2);
     expect(transition.nextLines.every(l => l.accountId === EMPTY_ACCOUNT_ID)).toBe(true);
+    expect(transition.nextLines.every(l => l.amount === '10')).toBe(true);
     expect(transition.snapshots.advanced).toBe(threeSubstantiveLines);
+  });
+
+  it('carries the shared amount into a blank Split detour', () => {
+    const transition = applied({
+      from: 'guided',
+      to: 'split',
+      lines: [line('1', TransactionType.CREDIT, { amount: '125.50' }), line('2', TransactionType.DEBIT)],
+      snapshots: {},
+    });
+
+    expect(transition.nextLines.map(l => l.amount)).toEqual(['125.50', '125.50']);
   });
 
   it('restores the advanced work parked before the Split detour', () => {
