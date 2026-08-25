@@ -376,7 +376,7 @@ export class JournalService {
   ): Promise<JournalAutofillSuggestion[]> {
     if (!workplaceId) return [];
     const normalizedQuery = query.trim().toLowerCase();
-    const boundedLimit = Math.max(1, Math.min(50, limit));
+    const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
     const cacheKey = `${workplaceId}:${normalizedQuery}:${boundedLimit}`;
     if (this.suggestionsCache.has(cacheKey)) {
       return this.suggestionsCache.get(cacheKey)!;

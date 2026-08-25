@@ -85,7 +85,7 @@ export class JournalEnrichmentQueries {
   ): Promise<JournalAutofillSuggestion[]> {
     const query = typeof queryOrLimit === 'string' ? queryOrLimit.trim() : '';
     const limit = typeof queryOrLimit === 'number' ? queryOrLimit : requestedLimit;
-    const boundedLimit = Math.max(1, Math.min(50, limit));
+    const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
     const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
     const descriptionPattern = `%${query}%`;
     const sql = `
@@ -103,7 +103,7 @@ export class JournalEnrichmentQueries {
           AND LOWER(description) LIKE LOWER(?)
         GROUP BY description
         ORDER BY latest_date DESC
-        LIMIT ?
+        ${boundedLimit > 0 ? 'LIMIT ?' : ''}
       )
       SELECT
         d.description as description,
@@ -144,7 +144,7 @@ export class JournalEnrichmentQueries {
         workplaceId,
         cutoffDate,
         descriptionPattern,
-        boundedLimit,
+        ...(boundedLimit > 0 ? [boundedLimit] : []),
         workplaceId,
         cutoffDate,
         workplaceId,
@@ -214,10 +214,10 @@ export class JournalEnrichmentQueries {
               targetAccountName: account.accountName,
               targetAccountType: account.accountType,
             });
-            if (suggestions.length >= boundedLimit) break;
+            if (boundedLimit > 0 && suggestions.length >= boundedLimit) break;
           }
         }
-        if (suggestions.length >= boundedLimit) break;
+        if (boundedLimit > 0 && suggestions.length >= boundedLimit) break;
       }
 
       return suggestions;
@@ -245,7 +245,7 @@ export class JournalEnrichmentQueries {
         Q.where('description', Q.notEq('')),
         ...(query ? [Q.where('description', Q.like(`%${query}%`))] : []),
         Q.sortBy('journal_date', 'desc'),
-        Q.take(limit * 2),
+        ...(limit > 0 ? [Q.take(limit * 2)] : []),
       )
       .fetch();
 
@@ -329,10 +329,10 @@ export class JournalEnrichmentQueries {
             targetAccountName: account.accountName,
             targetAccountType: account.accountType,
           });
-          if (suggestions.length >= limit) break;
+          if (limit > 0 && suggestions.length >= limit) break;
         }
       }
-      if (suggestions.length >= limit) break;
+      if (limit > 0 && suggestions.length >= limit) break;
     }
 
     return suggestions;

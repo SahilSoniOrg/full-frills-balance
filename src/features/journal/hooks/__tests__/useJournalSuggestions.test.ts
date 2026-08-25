@@ -56,7 +56,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 20);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
     expect(result.current.suggestions).toEqual(mockSuggestions);
   });
 
@@ -70,7 +70,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, 'coff', 20);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
     expect(result.current.suggestions).toHaveLength(2);
     expect(result.current.suggestions[0].description).toBe('Coffee at Starbucks');
     expect(result.current.suggestions[1].description).toBe('Coffee at Blue Bottle');
@@ -86,7 +86,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 20);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
   });
 
   it('coalesces repeated focus and typing loads, then reuses the cached result', async () => {
@@ -112,12 +112,9 @@ describe('useJournalSuggestions', () => {
     expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a late response for the previous query from replacing current suggestions', async () => {
-    const first = deferred<typeof mockSuggestions>();
-    const second = deferred<typeof mockSuggestions>();
-    (journalService.getJournalSuggestions as jest.Mock)
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
+  it('filters the loaded catalog locally as the query changes', async () => {
+    const catalog = deferred<typeof mockSuggestions>();
+    (journalService.getJournalSuggestions as jest.Mock).mockReturnValue(catalog.promise);
 
     const { result, rerender } = renderHook(
       ({ query }: { query: string }) => useJournalSuggestions(workplaceId, query),
@@ -130,34 +127,23 @@ describe('useJournalSuggestions', () => {
       jest.advanceTimersByTime(150);
     });
 
-    rerender({ query: 'coffee' });
-    let secondLoad!: Promise<void>;
-    act(() => {
-      secondLoad = result.current.loadSuggestions();
-      jest.advanceTimersByTime(150);
-    });
-
     await act(async () => {
-      first.resolve([{ description: 'Coffee from old query', count: 1 }]);
+      catalog.resolve([
+        { description: 'Coffee result', count: 2 },
+        { description: 'Tea', count: 1 },
+      ]);
       await firstLoad;
     });
-    expect(result.current.suggestions).toEqual([]);
-
-    await act(async () => {
-      second.resolve([{ description: 'Coffee result', count: 2 }]);
-      await secondLoad;
-    });
+    rerender({ query: 'coffee' });
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
     expect(result.current.suggestions).toEqual([
       expect.objectContaining({ description: 'Coffee result' }),
     ]);
   });
 
-  it('lets the initial background query finish while a later query is active', async () => {
+  it('lets the initial catalog load finish while a later query is active', async () => {
     const initial = deferred<typeof mockSuggestions>();
-    const typed = deferred<typeof mockSuggestions>();
-    (journalService.getJournalSuggestions as jest.Mock)
-      .mockReturnValueOnce(initial.promise)
-      .mockReturnValueOnce(typed.promise);
+    (journalService.getJournalSuggestions as jest.Mock).mockReturnValue(initial.promise);
 
     const { result, rerender } = renderHook(
       ({ query }: { query: string }) => useJournalSuggestions(workplaceId, query),
@@ -171,28 +157,14 @@ describe('useJournalSuggestions', () => {
     });
 
     rerender({ query: 'coffee' });
-    let typedLoad!: Promise<void>;
-    act(() => {
-      typedLoad = result.current.loadSuggestions();
-      jest.advanceTimersByTime(150);
-    });
 
     await act(async () => {
-      initial.resolve([{ description: 'Coffee initial', count: 1 }]);
+      initial.resolve([{ description: 'Coffee typed', count: 2 }]);
       await initialLoad;
     });
-    await act(async () => {
-      typed.resolve([{ description: 'Coffee typed', count: 2 }]);
-      await typedLoad;
-    });
 
-    expect(journalService.getJournalSuggestions).toHaveBeenNthCalledWith(1, workplaceId, '', 20);
-    expect(journalService.getJournalSuggestions).toHaveBeenNthCalledWith(
-      2,
-      workplaceId,
-      'coffee',
-      20,
-    );
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
     expect(result.current.suggestions).toEqual([
       expect.objectContaining({ description: 'Coffee typed' }),
     ]);
@@ -218,7 +190,7 @@ describe('useJournalSuggestions', () => {
     expect(result.current.suggestions[0].description).toBe('Coffee 0');
   });
 
-  it('keeps only target categories compatible with the active tab', async () => {
+  it('only shows suggestions compatible with the active tab', async () => {
     (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue([
       {
         description: 'Milk',
@@ -252,6 +224,43 @@ describe('useJournalSuggestions', () => {
         targetAccountType: AccountType.INCOME,
       }),
     ]);
+  });
+
+  it('deduplicates descriptions returned for multiple historical accounts', async () => {
+    (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue([
+      {
+        description: 'Chicken breast',
+        count: 3,
+        confidence: 0.33,
+        targetAccountName: 'Other Food',
+      },
+      {
+        description: 'Chicken breast',
+        count: 3,
+        confidence: 1,
+        targetAccountName: 'Food & Drinks',
+      },
+      { description: 'chicken dinner', count: 1 },
+    ]);
+
+    const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'chicken'));
+
+    let loadPromise!: Promise<void>;
+    act(() => {
+      loadPromise = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+    await act(async () => loadPromise);
+
+    expect(result.current.suggestions).toHaveLength(3);
+    expect(result.current.suggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Chicken breast',
+          targetAccountName: 'Food & Drinks',
+        }),
+      ]),
+    );
   });
 });
 

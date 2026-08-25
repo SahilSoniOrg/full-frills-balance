@@ -57,6 +57,17 @@ export function JournalSuggestions({
   const accountsMap = useMemo(() => {
     return new Map<string, AccountFields>(accounts.map(a => [a.id, a]));
   }, [accounts]);
+  const visibleSuggestions = useMemo(() => {
+    const seen = new Set<string>();
+    return suggestions.filter(suggestion => {
+      const targetAccount = resolveVisibleAccount(suggestion, accountsMap, activeTabType);
+      const targetKey = targetAccount?.id ?? 'none';
+      const key = `${suggestion.description.trim().toLowerCase()}:${targetKey}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [accountsMap, activeTabType, suggestions]);
 
   return (
     <View
@@ -81,7 +92,7 @@ export function JournalSuggestions({
         </View>
       ) : (
         <ScrollView keyboardShouldPersistTaps="always" style={styles.scrollView}>
-          {suggestions.map((suggestion, index) => {
+          {visibleSuggestions.map((suggestion, index) => {
             const targetAccount = resolveVisibleAccount(suggestion, accountsMap, activeTabType);
             const fallbackBadgeName =
               !targetAccount && suggestion.targetAccountName && !activeTabType
@@ -150,13 +161,13 @@ export function JournalSuggestions({
 
             return (
               <TouchableOpacity
-                key={`${suggestion.description}-${index}`}
+                key={`${suggestion.description.trim().toLowerCase()}:${targetAccount?.id ?? 'none'}`}
                 style={[
                   styles.suggestionItem,
                   {
                     borderBottomColor: theme.border,
                     borderBottomWidth:
-                      index === suggestions.length - 1 ? 0 : StyleSheet.hairlineWidth,
+                      index === visibleSuggestions.length - 1 ? 0 : StyleSheet.hairlineWidth,
                   },
                 ]}
                 onPress={() => {
@@ -178,14 +189,7 @@ export function JournalSuggestions({
                     </AppText>
                   </View>
 
-                  <View style={styles.badgeContent}>
-                    {suggestion.confidence !== undefined && badgeContent && (
-                      <AppText variant="caption" color="secondary" style={styles.confidenceText}>
-                        {Math.round(suggestion.confidence * 100)}% match
-                      </AppText>
-                    )}
-                    {badgeContent}
-                  </View>
+                  <View style={styles.badgeContent}>{badgeContent}</View>
                 </View>
               </TouchableOpacity>
             );
@@ -233,9 +237,6 @@ const styles = StyleSheet.create({
   badgeContent: {
     alignItems: 'flex-end',
     gap: 2,
-  },
-  confidenceText: {
-    fontSize: 10,
   },
   leftContent: {
     flex: 1,

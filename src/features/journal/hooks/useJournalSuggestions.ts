@@ -8,6 +8,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { logger } from '@/src/utils/logger';
 
 const SUGGESTION_LOAD_DEBOUNCE_MS = 150;
+const SUGGESTION_CATALOG_KEY = '__catalog__';
 
 export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
 
@@ -17,9 +18,9 @@ export function resolveJournalSuggestionState(params: {
   error: Error | null;
   suggestions: JournalAutofillSuggestion[];
 }): JournalSuggestionState {
-  if (!params.query.trim()) return 'idle';
   if (params.isLoading) return 'loading';
   if (params.error) return 'error';
+  if (!params.query.trim()) return params.suggestions.length > 0 ? 'results' : 'idle';
   return params.suggestions.length > 0 ? 'results' : 'empty';
 }
 
@@ -38,7 +39,6 @@ export function useJournalSuggestions(
   const [error, setError] = useState<Error | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const activeWorkplaceRef = useRef(workplaceId);
-  const activeQueryRef = useRef(searchQuery.trim().toLowerCase());
   const requestRef = useRef<{
     workplaceId: WorkplaceId;
     queryKey: string;
@@ -51,10 +51,6 @@ export function useJournalSuggestions(
   const cancelInteractionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    activeQueryRef.current = searchQuery.trim().toLowerCase();
-  }, [searchQuery]);
-
-  useEffect(() => {
     if (activeWorkplaceRef.current === workplaceId) return;
 
     activeWorkplaceRef.current = workplaceId;
@@ -65,50 +61,50 @@ export function useJournalSuggestions(
     setError(null);
   }, [workplaceId]);
 
-  const fetchSuggestions = useCallback(
-    (query: string): Promise<void> => {
-      if (!workplaceId) return Promise.resolve();
+  const fetchSuggestions = useCallback((): Promise<void> => {
+    if (!workplaceId) return Promise.resolve();
 
-      const queryKey = query.trim().toLowerCase();
-      if (loadedKeyRef.current === queryKey) return Promise.resolve();
+    if (loadedKeyRef.current === SUGGESTION_CATALOG_KEY) return Promise.resolve();
 
-      const existingRequest = requestRef.current;
-      if (existingRequest?.workplaceId === workplaceId && existingRequest.queryKey === queryKey) {
-        return existingRequest.promise;
-      }
+    const existingRequest = requestRef.current;
+    if (
+      existingRequest?.workplaceId === workplaceId &&
+      existingRequest.queryKey === SUGGESTION_CATALOG_KEY
+    ) {
+      return existingRequest.promise;
+    }
 
-      setIsLoading(true);
-      setError(null);
-      const request = journalService.getJournalSuggestions(workplaceId, queryKey, 20);
-      const trackedRequest = request
-        .then(suggestions => {
-          if (activeWorkplaceRef.current !== workplaceId || activeQueryRef.current !== queryKey) {
-            return;
-          }
+    setIsLoading(true);
+    setError(null);
+    const request = journalService.getJournalSuggestions(workplaceId, '', 0);
+    const trackedRequest = request
+      .then(suggestions => {
+        if (activeWorkplaceRef.current !== workplaceId) return;
+        loadedKeyRef.current = SUGGESTION_CATALOG_KEY;
+        setAllSuggestions(suggestions);
+      })
+      .catch(error => {
+        if (activeWorkplaceRef.current === workplaceId) {
+          setError(error instanceof Error ? error : new Error('Suggestions unavailable'));
+          logger.error('Failed to fetch journal suggestions:', error);
+        }
+      })
+      .finally(() => {
+        if (requestRef.current?.promise !== trackedRequest) return;
 
-          loadedKeyRef.current = queryKey;
-          setAllSuggestions(suggestions);
-        })
-        .catch(error => {
-          if (activeWorkplaceRef.current === workplaceId) {
-            setError(error instanceof Error ? error : new Error('Suggestions unavailable'));
-            logger.error('Failed to fetch journal suggestions:', error);
-          }
-        })
-        .finally(() => {
-          if (requestRef.current?.promise !== trackedRequest) return;
+        requestRef.current = null;
+        if (activeWorkplaceRef.current === workplaceId) {
+          setIsLoading(false);
+        }
+      });
 
-          requestRef.current = null;
-          if (activeWorkplaceRef.current === workplaceId) {
-            setIsLoading(false);
-          }
-        });
-
-      requestRef.current = { workplaceId, queryKey, promise: trackedRequest };
-      return trackedRequest;
-    },
-    [workplaceId],
-  );
+    requestRef.current = {
+      workplaceId,
+      queryKey: SUGGESTION_CATALOG_KEY,
+      promise: trackedRequest,
+    };
+    return trackedRequest;
+  }, [workplaceId]);
 
   const cancelScheduledLoad = useCallback(() => {
     scheduledLoadIdRef.current += 1;
@@ -123,15 +119,17 @@ export function useJournalSuggestions(
     scheduledLoadRef.current = null;
   }, []);
 
-  useEffect(() => cancelScheduledLoad, [cancelScheduledLoad, searchQuery, workplaceId]);
+  useEffect(() => cancelScheduledLoad, [cancelScheduledLoad, workplaceId]);
 
   const loadSuggestions = useCallback((): Promise<void> => {
     if (!workplaceId) return Promise.resolve();
-    const queryKey = searchQuery.trim().toLowerCase();
-    if (loadedKeyRef.current === queryKey) return Promise.resolve();
+    if (loadedKeyRef.current === SUGGESTION_CATALOG_KEY) return Promise.resolve();
 
     const existingRequest = requestRef.current;
-    if (existingRequest?.workplaceId === workplaceId && existingRequest.queryKey === queryKey) {
+    if (
+      existingRequest?.workplaceId === workplaceId &&
+      existingRequest.queryKey === SUGGESTION_CATALOG_KEY
+    ) {
       return existingRequest.promise;
     }
     if (scheduledLoadRef.current) return scheduledLoadRef.current;
@@ -143,7 +141,7 @@ export function useJournalSuggestions(
         loadTimerRef.current = null;
         cancelInteractionRef.current = runAfterInteractions(() => {
           cancelInteractionRef.current = null;
-          void fetchSuggestions(queryKey).finally(() => {
+          void fetchSuggestions().finally(() => {
             // A newer query may already have scheduled another load. Do not let
             // this older request clear that load's bookkeeping.
             if (scheduledLoadIdRef.current !== scheduledLoadId) return;
@@ -156,7 +154,7 @@ export function useJournalSuggestions(
     });
 
     return scheduledLoadRef.current;
-  }, [fetchSuggestions, searchQuery, workplaceId]);
+  }, [fetchSuggestions, workplaceId]);
 
   useEffect(() => {
     if (!workplaceId) return;
@@ -165,28 +163,32 @@ export function useJournalSuggestions(
     void loadSuggestions();
   }, [loadSuggestions, workplaceId]);
 
-  useEffect(() => {
-    if (!workplaceId || !searchQuery.trim()) return;
-    const queryKey = searchQuery.trim().toLowerCase();
-    if (loadedKeyRef.current !== queryKey) {
-      setAllSuggestions([]);
-      setError(null);
-    }
-    void loadSuggestions();
-  }, [loadSuggestions, searchQuery, workplaceId]);
-
   const filteredSuggestions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return allSuggestions
-      .filter(
-        item =>
-          (!query ||
-            (item.description.toLowerCase().includes(query) &&
-              item.description.toLowerCase() !== query)) &&
-          isTargetAccountCompatible(item.targetAccountType, activeTabType),
-      )
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20);
+    const byDescription = new Map<string, JournalAutofillSuggestion>();
+
+    for (const item of allSuggestions) {
+      const normalizedDescription = item.description.trim().toLowerCase();
+      if (
+        query &&
+        (!item.description.toLowerCase().includes(query) ||
+          item.description.toLowerCase() === query)
+      ) {
+        continue;
+      }
+      if (!isTargetAccountCompatible(item.targetAccountType, activeTabType)) continue;
+
+      const targetKey =
+        item.targetAccountId ||
+        `${item.targetAccountType ?? 'none'}:${item.targetAccountName?.trim().toLowerCase() ?? 'none'}`;
+      const suggestionKey = `${normalizedDescription}:${targetKey}`;
+      const existing = byDescription.get(suggestionKey);
+      if (!existing || isStrongerSuggestion(item, existing)) {
+        byDescription.set(suggestionKey, item);
+      }
+    }
+
+    return [...byDescription.values()].sort((a, b) => b.count - a.count).slice(0, 20);
   }, [activeTabType, allSuggestions, searchQuery]);
 
   const suggestionState = useMemo(
@@ -217,4 +219,12 @@ function isTargetAccountCompatible(
   if (activeTabType === 'expense') return targetAccountType === AccountType.EXPENSE;
   if (activeTabType === 'income') return targetAccountType === AccountType.INCOME;
   return targetAccountType === AccountType.ASSET || targetAccountType === AccountType.LIABILITY;
+}
+
+function isStrongerSuggestion(
+  candidate: JournalAutofillSuggestion,
+  existing: JournalAutofillSuggestion,
+): boolean {
+  if (candidate.count !== existing.count) return candidate.count > existing.count;
+  return (candidate.confidence ?? 0) > (existing.confidence ?? 0);
 }
