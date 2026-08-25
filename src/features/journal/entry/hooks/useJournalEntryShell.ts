@@ -4,8 +4,6 @@ import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
-import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
@@ -42,17 +40,12 @@ import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } f
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
   splitDraft: ReturnType<typeof useSplitEntryState>;
-  bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   modeSubmitState: ModeSubmitState | null;
   onModeHandleChange: (handle: ModeHandle | null) => void;
   onSubmit: () => void;
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: JournalEntryScreenMode;
   onToggleMode: (mode: JournalEntryScreenMode) => void;
-  savedSummary: { count: number; items: SavedJournalSummary[] } | null;
-  setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;
-  onBulkSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
-  bulkActionsRef: MutableRefObject<{ clearRows: () => void } | null>;
   guidedFooterAmount: GuidedFooterAmount | null;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
@@ -125,6 +118,7 @@ export function useJournalEntryShell(): JournalEntryShell {
   );
 
   const splitDraft = useSplitEntryState(editor.lines.find(line => line.amount)?.amount);
+  const { totalAmount: splitTotalAmount, setTotalAmount: setSplitTotalAmount } = splitDraft;
   const previousModeRef = useRef(activeMode);
   useEffect(() => {
     const enteredSplit = activeMode === 'split' && previousModeRef.current !== 'split';
@@ -132,10 +126,10 @@ export function useJournalEntryShell(): JournalEntryShell {
     if (!enteredSplit) return;
 
     const sharedAmount = editor.lines.find(line => line.amount?.trim())?.amount;
-    if (sharedAmount && sharedAmount !== splitDraft.totalAmount) {
-      splitDraft.setTotalAmount(sharedAmount);
+    if (sharedAmount && sharedAmount !== splitTotalAmount) {
+      setSplitTotalAmount(sharedAmount);
     }
-  }, [activeMode, editor.lines, splitDraft.setTotalAmount, splitDraft.totalAmount]);
+  }, [activeMode, editor.lines, setSplitTotalAmount, splitTotalAmount]);
 
   const suggestionTabType = activeMode === 'guided' ? editor.transactionType : undefined;
   const { suggestions, loadSuggestions } = useJournalSuggestions(
@@ -218,24 +212,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     setGuidedFooterAmount(footer);
   }, []);
 
-  const [savedSummary, setSavedSummary] = useState<{
-    count: number;
-    items: SavedJournalSummary[];
-  } | null>(null);
-
-  const bulkActionsRef = useRef<{ clearRows: () => void } | null>(null);
-
-  const onBulkSaveSuccess = useCallback((count: number, summaries: SavedJournalSummary[]) => {
-    setSavedSummary({ count, items: summaries });
-  }, []);
-
-  const bulkEditor = useBulkJournalEditor({
-    workplaceId,
-    workplaceCurrency,
-    accounts,
-    onSaveSuccess: onBulkSaveSuccess,
-  });
-
   const onSelectSuggestion = useCallback(
     (suggestion: JournalAutofillSuggestion) => {
       analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
@@ -299,17 +275,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   return {
     editor,
     splitDraft,
-    bulkEditor,
     modeSubmitState,
     onModeHandleChange,
     onSubmit,
     accounts,
     activeMode,
     onToggleMode,
-    savedSummary,
-    setSavedSummary,
-    onBulkSaveSuccess,
-    bulkActionsRef,
     guidedFooterAmount,
     onGuidedFooterAmountChange,
     guidedVoiceActionsRef,

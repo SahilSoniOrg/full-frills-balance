@@ -3,7 +3,6 @@ import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { Page } from '@/src/design-system';
-import { BulkSaveSummaryModal } from '@/src/features/journal/entry/components/BulkSaveSummaryModal';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import {
   JournalEntryModeBody,
@@ -14,6 +13,7 @@ import { JournalModeBar } from '@/src/features/journal/entry/components/JournalM
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -32,8 +32,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     editBannerText,
     activeMode,
     onToggleMode,
-    savedSummary,
-    setSavedSummary,
     guidedFooterAmount,
     loadSuggestions,
     editor,
@@ -66,12 +64,10 @@ export function JournalEntryView(vm: JournalEntryShell) {
     accounts: vm.accounts,
     editor: vm.editor,
     splitDraft: vm.splitDraft,
-    bulkEditor: vm.bulkEditor,
     onModeHandleChange: vm.onModeHandleChange,
     workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,
-    bulkActionsRef: vm.bulkActionsRef,
     onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
     guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
   };
@@ -108,7 +104,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     <Page
       testID="journal-entry-screen"
       keyboardAvoiding
-      scrollable={activeMode !== 'bulk'}
+      scrollable
       scrollViewProps={{
         onScrollBeginDrag,
         scrollEventThrottle: 16,
@@ -120,6 +116,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
             mode={activeMode}
             onToggleMode={onToggleMode}
             isSimpleDisabled={vm.isSimpleModeDisabled}
+            onOpenBatch={AppNavigation.toBulkJournalEntry}
           />
         </>
       }
@@ -138,29 +135,27 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }
     >
       <View style={styles.content}>
-        {activeMode !== 'bulk' && (
-          <JournalMetaCard
-            date={vm.editor.journalDate}
-            setDate={vm.editor.setJournalDate}
-            time={vm.editor.journalTime}
-            setTime={vm.editor.setJournalTime}
-            description={vm.editor.description}
-            setDescription={setDescription}
-            onSelectSuggestion={onSelectSuggestion}
-            activeTabType={activeMode === 'guided' ? vm.editor.transactionType : undefined}
-            accounts={vm.accounts}
-            notes={vm.editor.notes}
-            setNotes={vm.editor.setNotes}
-            showBanner={showEditBanner}
-            bannerText={editBannerText}
-            suggestions={vm.suggestions}
-            hideSuggestions={hideSuggestions}
-            onDescriptionFocus={onDescriptionFocus}
-            onVoiceInputPress={
-              activeMode === 'guided' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
-            }
-          />
-        )}
+        <JournalMetaCard
+          date={vm.editor.journalDate}
+          setDate={vm.editor.setJournalDate}
+          time={vm.editor.journalTime}
+          setTime={vm.editor.setJournalTime}
+          description={vm.editor.description}
+          setDescription={setDescription}
+          onSelectSuggestion={onSelectSuggestion}
+          activeTabType={activeMode === 'guided' ? vm.editor.transactionType : undefined}
+          accounts={vm.accounts}
+          notes={vm.editor.notes}
+          setNotes={vm.editor.setNotes}
+          showBanner={showEditBanner}
+          bannerText={editBannerText}
+          suggestions={vm.suggestions}
+          hideSuggestions={hideSuggestions}
+          onDescriptionFocus={onDescriptionFocus}
+          onVoiceInputPress={
+            activeMode === 'guided' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
+          }
+        />
 
         <JournalEntryModeBody {...modeBodyProps} />
       </View>
@@ -174,19 +169,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
         onClose={vm.onCloseAccountPicker}
         onCreateRequest={vm.onCreateAccountRequest}
         excludeParentAccounts={true}
-      />
-
-      <BulkSaveSummaryModal
-        summary={savedSummary}
-        onClose={() => setSavedSummary(null)}
-        onContinueBulk={() => {
-          setSavedSummary(null);
-          vm.bulkActionsRef.current?.clearRows();
-        }}
-        onDone={() => {
-          setSavedSummary(null);
-          vm.onClose();
-        }}
       />
     </Page>
   );

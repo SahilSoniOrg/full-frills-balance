@@ -6,13 +6,12 @@ export type JournalModeOption = {
 };
 
 const JOURNAL_MODE_OPTIONS: readonly JournalModeOption[] = [
-  { id: 'guided', label: 'Simple' },
-  { id: 'split', label: 'Split' },
-  { id: 'advanced', label: 'Advanced' },
-  { id: 'bulk', label: 'Bulk' },
+  { id: 'guided', label: 'Basic' },
+  { id: 'split', label: 'Allocate' },
+  { id: 'advanced', label: 'Expert' },
 ];
 
-/** Shared mode chip labels for journal entry mode switchers. */
+/** User-facing detail levels for the transaction composer. */
 export function useJournalModeOptions(): readonly JournalModeOption[] {
   return JOURNAL_MODE_OPTIONS;
 }

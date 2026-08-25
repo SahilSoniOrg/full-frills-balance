@@ -115,6 +115,11 @@ export const AppNavigation = {
     router.push(href);
   },
 
+  /** Navigate to the isolated batch transaction workspace. */
+  toBulkJournalEntry: () => {
+    router.push('/journal-bulk');
+  },
+
   /**
    * Navigate to the journal editor in simple mode with a preselected type.
    */

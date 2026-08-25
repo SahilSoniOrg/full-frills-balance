@@ -15,11 +15,18 @@ Completed:
   callbacks.
 - Bounded suggestions by current description, visible-result limit, three-month policy, and
   workplace/query/version cache keys.
+- Replaced the permanent four-tab presentation with a detail-level disclosure control and added
+  an isolated Batch workspace route.
+- Redirected legacy bulk entry URLs to the Batch workspace and removed Bulk from the single-
+  transaction shell.
+- Returned single-transaction views to lazy mounting now that their drafts are shell-owned.
+- Removed the mode snapshot transition state machine; switching detail levels now changes the
+  active projection without parking or rebuilding editor lines.
 
 Next:
 
-- Separate Bulk into its own batch workspace and simplify the single-transaction surface.
-- Replace the remaining four-mode presentation with progressive capture/review/expand levels.
+- Replace the remaining guided/split/expert implementation modes with one session-backed
+  capture/review/expand surface.
 - Make the command path resolve and validate `PostingPlan` before persistence.
 
 ## Decision
