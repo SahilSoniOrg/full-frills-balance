@@ -56,7 +56,7 @@ export function NavigationStack() {
         name="account-management"
         options={{
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'card',
           headerBackButtonMenuEnabled: false,
         }}
       />
