@@ -1,6 +1,6 @@
 # Performance remediation plan
 
-Status: execution in progress. P-001, P-002, and the safe subset of P-004 are implemented on `main`; P-003 and bulk-entry virtualization remain unimplemented pending discriminating runtime evidence.
+Status: execution in progress. Safe subsets of P-001 through P-003 and P-004 are implemented on `main`; bulk-entry virtualization remains unimplemented pending focus/accessibility validation.
 
 Scope: P-001 through P-004 in [`report.md`](./report.md). The audit is L0 static; every implementation step is gated by a reproducible baseline. Do not optimize from source shape alone. P-003 is currently P2, not P1, until realistic horizons/cardinalities or runtime evidence justify escalation.
 
@@ -12,6 +12,8 @@ Scope: P-001 through P-004 in [`report.md`](./report.md). The audit is L0 static
 - Verification: focused functional tests passed (32 tests), `bun run typecheck` passed, `bun run lint` passed, and `bun run test:ci` passed (275 suites, 1659 passed, 1 skipped). Narrow coverage runs can fail repository per-file thresholds even when all selected tests pass; the full CI coverage gate passed.
 - iOS validation ceiling: no completed physical-device trace. The iPhone 17 simulator build was attempted but no release workload trace was completed, so runtime magnitude and frame/memory claims remain unverified.
 - iOS smoke validation: the Release iPhone 17 simulator build completed successfully and the seeded dashboard launch smoke test passed (1 suite, 1 test). This validates native integration and launch correctness only; it is not a performance profile.
+- `6caff88a perf: reuse quiet simulation snapshots` — P-003 now reuses immutable projection maps across quiet days, removes an unused account-map allocation, and creates independent maps on balance-change days. Focused simulation tests passed (18 tests); the full suite passed after the change (276 suites, 1660 passed, 1 skipped).
+- Bulk entry remains unchanged. Simulator smoke/build evidence does not establish a safe virtualization boundary for keyboard focus, auto-focus, validation, or accessibility.
 
 ## Operating rules
 
