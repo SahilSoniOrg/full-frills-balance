@@ -11,8 +11,8 @@ Completed:
 - Prevented stale in-flight suggestion requests from overwriting refreshed cache data.
 - Moved Split and Bulk draft/controller ownership into the journal-entry shell, so panels are
   presentation surfaces rather than durable state owners.
-- Removed the imperative mode registry; panels publish submit chrome only, while submit and
-  account-picker actions are explicit shell/session operations.
+- Removed the imperative mode registry; panels are presentation/editing surfaces, while submit
+  validation, labels, and account-picker actions are explicit shell/session operations.
 - Bounded suggestions by current description, visible-result limit, three-month policy, and
   workplace/query/version cache keys.
 - Replaced the permanent four-tab presentation with a detail-level disclosure control and added
@@ -41,6 +41,11 @@ Completed:
   expense creation smoke passed in the web harness.
 - Added a browser cold/warm composer probe; the observed run was 221ms cold and 116ms warm.
   These are web-harness observations, not universal device-performance claims.
+- Virtualized the native isolated Batch row workspace with `FlashList`, removing the previous
+  uncapped `ScrollView` mount cost for large batches; the web harness keeps a `ScrollView`
+  fallback because calculator sheets mounted inside virtualized rows are not stable in RN web.
+- Removed the panel-to-shell submit-state channel; the footer now derives its state directly
+  from session-owned posting-plan and allocation validation.
 
 Next:
 

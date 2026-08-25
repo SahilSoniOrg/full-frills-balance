@@ -12,6 +12,10 @@ import { JournalMetaCard } from '@/src/features/journal/entry/components/Journal
 import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import {
+  isJournalEntrySubmitDisabled,
+  resolveJournalEntrySubmitLabel,
+} from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
@@ -20,9 +24,30 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
-  const submitLabel = vm.modeSubmitState?.submitLabel ?? '';
-  const isSubmitDisabled = vm.modeSubmitState?.isSubmitDisabled ?? true;
-  const isSubmitting = vm.modeSubmitState?.isSubmitting ?? false;
+  const isSubmitting = vm.editor.isSubmitting;
+  const isPlanValid =
+    vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
+  const submitLabel = resolveJournalEntrySubmitLabel({
+    activeMode: vm.activeMode,
+    bulkSubmitting: false,
+    bulkRowCount: 0,
+    isAmountFocused: false,
+    isSimpleValid: isPlanValid,
+    simpleSubmitting: isSubmitting,
+    simpleType: vm.editor.transactionType,
+    isEdit: vm.editor.isEdit,
+    isSubmitting,
+    splitSubmitting: isSubmitting,
+  });
+  const isSubmitDisabled = isJournalEntrySubmitDisabled({
+    activeMode: vm.activeMode,
+    bulkSubmitting: false,
+    bulkValid: false,
+    isAmountFocused: false,
+    isSimpleValid: isPlanValid,
+    isAdvancedValid: isPlanValid,
+    isSplitValid: vm.splitValidation.valid,
+  });
 
   const {
     isLoading,
@@ -64,7 +89,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     accounts: vm.accounts,
     editor: vm.editor,
     splitDraft: vm.splitDraft,
-    onSubmitStateChange: vm.onSubmitStateChange,
     workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,

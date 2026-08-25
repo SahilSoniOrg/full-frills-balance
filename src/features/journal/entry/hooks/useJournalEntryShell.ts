@@ -17,7 +17,6 @@ import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
@@ -44,8 +43,7 @@ export interface JournalEntryShell {
   transactionIntent: ReturnType<typeof useTransactionComposerSession>['intent'];
   postingPlan: ReturnType<typeof useTransactionComposerSession>['postingPlan'];
   postingPlanValidation: ReturnType<typeof useTransactionComposerSession>['postingPlanValidation'];
-  modeSubmitState: ComposerSubmitState | null;
-  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
+  splitValidation: ReturnType<typeof useTransactionComposerSession>['splitValidation'];
   onSubmit: () => void;
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: JournalEntryScreenMode;
@@ -144,10 +142,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     suggestionTabType,
   );
 
-  const [modeSubmitState, setModeSubmitState] = useState<ComposerSubmitState | null>(null);
-  const onSubmitStateChange = useCallback((state: ComposerSubmitState | null) => {
-    setModeSubmitState(state);
-  }, []);
   const onSubmit = useCallback(() => {
     void session.submit(activeMode === 'allocation' ? 'allocation' : 'editor');
   }, [activeMode, session]);
@@ -260,8 +254,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     transactionIntent: session.intent,
     postingPlan: session.postingPlan,
     postingPlanValidation: session.postingPlanValidation,
-    modeSubmitState,
-    onSubmitStateChange,
+    splitValidation: session.splitValidation,
     onSubmit,
     accounts,
     activeMode,

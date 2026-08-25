@@ -115,12 +115,16 @@ export class JournalEntryPage extends BasePage {
     opts: { description: string; amount: string; source: string; destination: string },
   ) {
     const description = this.page.locator('[data-testid^="bulk-description-"]').nth(rowIndex);
-    const amount = this.page.locator('[data-testid^="bulk-amount-"]').nth(rowIndex);
     const source = this.page.locator('[data-testid^="bulk-source-"]').nth(rowIndex);
     const destination = this.page.locator('[data-testid^="bulk-destination-"]').nth(rowIndex);
     await expect(description).toBeVisible({ timeout: 15000 });
     await description.fill(opts.description);
-    await amount.fill(opts.amount);
+    await this.page
+      .locator('[data-testid^="bulk-amount-"][data-testid$="-calculator"]')
+      .nth(rowIndex)
+      .click({ force: true });
+    await this.page.getByRole('textbox', { name: /^Expression/ }).fill(opts.amount);
+    await this.page.getByTestId('amount-calculator-done').click();
     await source.click();
     await this.pickAccountFromDialog(opts.source);
     await destination.click();

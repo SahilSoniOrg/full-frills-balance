@@ -94,6 +94,16 @@ export function useTransactionComposerSession(
     [accounts, postingPlan],
   );
 
+  const splitValidation = useMemo(
+    () =>
+      validateSplitState({
+        sourceAccountId: splitDraft.sourceAccountId,
+        totalAmount: splitDraft.totalAmount,
+        splits: splitDraft.splits,
+      }),
+    [splitDraft.sourceAccountId, splitDraft.splits, splitDraft.totalAmount],
+  );
+
   const submit = useCallback(
     async (mode: 'editor' | 'allocation') => {
       if (mode === 'editor') return editor.submit();
@@ -129,6 +139,7 @@ export function useTransactionComposerSession(
     intent,
     postingPlan,
     postingPlanValidation,
+    splitValidation,
     submit,
   };
 }

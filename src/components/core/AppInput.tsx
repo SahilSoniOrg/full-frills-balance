@@ -26,6 +26,7 @@ export type AppInputBaseProps = BoxBaseProps & {
   containerStyle?: StyleProp<ViewStyle>;
   calculator?: boolean;
   onCalculatorPress?: () => void;
+  calculatorTestID?: string;
 };
 
 export type AppInputProps = AppInputBaseProps & TextInputProps;
@@ -40,6 +41,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
     containerStyle,
     calculator,
     onCalculatorPress,
+    calculatorTestID,
     style: textInputStyle,
     ...propsWithoutInputProps
   } = initialProps;
@@ -76,6 +78,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
         return calculator ? (
           <TouchableOpacity
             onPress={onCalculatorPress}
+            testID={calculatorTestID}
             accessibilityRole="button"
             accessibilityLabel="Open calculator"
             activeOpacity={0.8}

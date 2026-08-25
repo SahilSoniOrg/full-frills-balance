@@ -55,6 +55,7 @@ export function CalculatorAmountInput({
         ]}
         calculator
         onCalculatorPress={() => setVisible(true)}
+        calculatorTestID={testID ? `${testID}-calculator` : undefined}
         testID={testID}
       />
       <AmountCalculatorSheet

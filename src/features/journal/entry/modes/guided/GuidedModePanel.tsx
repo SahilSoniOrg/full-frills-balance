@@ -4,12 +4,7 @@ import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceIn
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import type { VoiceJournalApplyParams } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
-import {
-  isJournalEntrySubmitDisabled,
-  resolveJournalEntrySubmitLabel,
-  resolveSimpleTypeAccentColor,
-} from '@/src/features/journal/entry/journalEntryPresentation';
-import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
+import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
@@ -43,7 +38,6 @@ export type GuidedModePanelProps = {
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
   voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
   isActive?: boolean;
-  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
 };
 
 export function GuidedModePanel({
@@ -54,9 +48,7 @@ export function GuidedModePanel({
   onFooterAmountChange,
   voiceActionsRef,
   isActive = true,
-  onSubmitStateChange,
 }: GuidedModePanelProps) {
-  const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
   const { getLineIdByRole } = editor;
@@ -78,17 +70,8 @@ export function GuidedModePanel({
   });
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
 
-  const isSimpleValid =
-    simpleEditor.isValidAmount &&
-    !!simpleEditor.sourceId &&
-    !!simpleEditor.destinationId &&
-    simpleEditor.sourceId !== simpleEditor.destinationId &&
-    !simpleEditor.isSubmitting &&
-    !simpleEditor.isLoadingRate &&
-    !simpleEditor.rateError;
-
-  const onFocusAmount = useCallback(() => setIsAmountFocused(true), []);
-  const onBlurAmount = useCallback(() => setIsAmountFocused(false), []);
+  const onFocusAmount = useCallback(() => undefined, []);
+  const onBlurAmount = useCallback(() => undefined, []);
   const footerAmount = useMemo<GuidedFooterAmount>(
     () => ({
       amount: simpleEditor.amount,
@@ -151,45 +134,6 @@ export function GuidedModePanel({
     },
     [editor, simpleEditor],
   );
-
-  const submitState = useMemo<ComposerSubmitState>(
-    () => ({
-      submitLabel: resolveJournalEntrySubmitLabel({
-        activeMode: 'basic',
-        bulkSubmitting: false,
-        bulkRowCount: 0,
-        isAmountFocused,
-        isSimpleValid,
-        simpleSubmitting: simpleEditor.isSubmitting,
-        simpleType: simpleEditor.type,
-        isEdit: editor.isEdit,
-        isSubmitting: editor.isSubmitting,
-      }),
-      isSubmitDisabled: isJournalEntrySubmitDisabled({
-        activeMode: 'basic',
-        bulkSubmitting: false,
-        bulkValid: false,
-        isAmountFocused,
-        isSimpleValid,
-        isAdvancedValid: false,
-      }),
-      isSubmitting: simpleEditor.isSubmitting,
-    }),
-    [
-      isAmountFocused,
-      isSimpleValid,
-      simpleEditor.isSubmitting,
-      simpleEditor.type,
-      editor.isEdit,
-      editor.isSubmitting,
-    ],
-  );
-
-  useEffect(() => {
-    if (!isActive) return;
-    onSubmitStateChange(submitState);
-    return () => onSubmitStateChange(null);
-  }, [isActive, onSubmitStateChange, submitState]);
 
   return (
     <>

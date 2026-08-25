@@ -8,7 +8,6 @@ import {
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
-import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { MutableRefObject } from 'react';
@@ -18,7 +17,6 @@ export type JournalEntryModeBodyProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   splitDraft: ReturnType<typeof useSplitEntryState>;
-  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
@@ -32,7 +30,6 @@ export function JournalEntryModeBody({
   accounts,
   editor,
   splitDraft,
-  onSubmitStateChange,
   workplaceId,
   workplaceCurrency,
   onSelectAccountRequest,
@@ -46,10 +43,7 @@ export function JournalEntryModeBody({
         editor={editor}
         splitDraft={splitDraft}
         onSelectAccountRequest={onSelectAccountRequest}
-        isEdit={editor.isEdit}
-        isSubmitting={editor.isSubmitting}
         isActive
-        onSubmitStateChange={onSubmitStateChange}
       />
     );
   }
@@ -60,8 +54,6 @@ export function JournalEntryModeBody({
         editor={editor}
         workplaceCurrency={workplaceCurrency}
         onSelectAccountRequest={onSelectAccountRequest}
-        isActive
-        onSubmitStateChange={onSubmitStateChange}
       />
     );
   }
@@ -75,7 +67,6 @@ export function JournalEntryModeBody({
       onFooterAmountChange={onGuidedFooterAmountChange}
       voiceActionsRef={guidedVoiceActionsRef}
       isActive
-      onSubmitStateChange={onSubmitStateChange}
     />
   );
 }

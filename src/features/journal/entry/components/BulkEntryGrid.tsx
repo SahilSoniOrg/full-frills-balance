@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { Platform, ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { AppButton, AppText, AppIcon } from '@/src/components/core';
 import { AppConfig, Spacing, Shape, Size, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -97,6 +98,72 @@ export const BulkEntryGrid = React.memo(
       return activePicker.type === 'source' ? activeRow.sourceId : activeRow.destinationId;
     }, [activeRow, activePicker]);
 
+    const renderRow = useCallback(
+      ({ item: row, index }: { item: BulkJournalRow; index: number }) => (
+        <BulkEntryRow
+          row={row}
+          index={index}
+          accounts={accounts}
+          onUpdateField={updateRowField}
+          onRemove={removeRow}
+          onDatePickerRequest={handleDatePickerRequest}
+          onAccountPickerRequest={handleAccountPickerRequest}
+          autoFocus={index === rows.length - 1 && !allEmpty}
+        />
+      ),
+      [
+        accounts,
+        allEmpty,
+        handleAccountPickerRequest,
+        handleDatePickerRequest,
+        removeRow,
+        rows.length,
+        updateRowField,
+      ],
+    );
+
+    const listHeader = (
+      <>
+        {allEmpty && (
+          <View
+            style={[
+              styles.emptyHint,
+              {
+                backgroundColor: theme.surfaceSecondary,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <AppIcon name="info" size={Size.iconSm} color={theme.textTertiary} />
+            <AppText variant="caption" color="tertiary" style={styles.emptyHintText}>
+              {AppConfig.strings.transactionFlow.bulkEntryHint}
+            </AppText>
+          </View>
+        )}
+
+        {submitError && (
+          <View
+            style={[
+              styles.errorBanner,
+              { backgroundColor: theme.error + '1A', borderColor: theme.error },
+            ]}
+          >
+            <AppText variant="body" color="error" weight="semibold">
+              {submitError}
+            </AppText>
+          </View>
+        )}
+      </>
+    );
+
+    const listFooter = (
+      <AppButton variant="outline" onPress={addRow} style={styles.addButton}>
+        + Add Entry Row
+      </AppButton>
+    );
+
+    const webRows = rows.map((row, index) => renderRow({ item: row, index }));
+
     return (
       <View style={styles.container}>
         {/* Stats strip: row count, validation, clear all */}
@@ -127,64 +194,26 @@ export const BulkEntryGrid = React.memo(
           </View>
         )}
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Empty state hint */}
-          {allEmpty && (
-            <View
-              style={[
-                styles.emptyHint,
-                {
-                  backgroundColor: theme.surfaceSecondary,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <AppIcon name="info" size={Size.iconSm} color={theme.textTertiary} />
-              <AppText variant="caption" color="tertiary" style={styles.emptyHintText}>
-                {AppConfig.strings.transactionFlow.bulkEntryHint}
-              </AppText>
-            </View>
-          )}
-
-          {/* Submit error banner */}
-          {submitError && (
-            <View
-              style={[
-                styles.errorBanner,
-                { backgroundColor: theme.error + '1A', borderColor: theme.error },
-              ]}
-            >
-              <AppText variant="body" color="error" weight="semibold">
-                {submitError}
-              </AppText>
-            </View>
-          )}
-
-          {/* Row list */}
-          <View style={styles.list}>
-            {rows.map((row, index) => (
-              <BulkEntryRow
-                key={row.id}
-                row={row}
-                index={index}
-                accounts={accounts}
-                onUpdateField={updateRowField}
-                onRemove={removeRow}
-                onDatePickerRequest={handleDatePickerRequest}
-                onAccountPickerRequest={handleAccountPickerRequest}
-                autoFocus={index === rows.length - 1 && !allEmpty}
-              />
-            ))}
-          </View>
-
-          {/* Add Row button */}
-          <AppButton variant="outline" onPress={addRow} style={styles.addButton}>
-            + Add Entry Row
-          </AppButton>
-        </ScrollView>
+        {Platform.OS === 'web' ? (
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {listHeader}
+            {webRows}
+            {listFooter}
+          </ScrollView>
+        ) : (
+          <FlashList
+            data={rows}
+            renderItem={renderRow}
+            keyExtractor={row => row.id}
+            ListHeaderComponent={listHeader}
+            ListFooterComponent={listFooter}
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
 
         {/* Date & Time Picker Modal */}
         <DateTimePickerModal
@@ -259,9 +288,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: Shape.radius.r2,
     borderWidth: 1,
-    marginBottom: Spacing.md,
-  },
-  list: {
     marginBottom: Spacing.md,
   },
   addButton: {
