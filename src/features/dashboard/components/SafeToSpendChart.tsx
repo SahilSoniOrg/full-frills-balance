@@ -29,6 +29,7 @@ export const SafeToSpendChart = ({
   isLoading = false,
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
+  const [chartWidth, setChartWidth] = React.useState(0);
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
   const formatSts = useStsMoneyFormat(isLoading);
 
@@ -76,7 +77,13 @@ export const SafeToSpendChart = ({
   ];
 
   return (
-    <View style={{ overflow: 'visible', zIndex: 1 }}>
+    <View
+      style={{ width: '100%', minWidth: 0, overflow: 'visible', zIndex: 1 }}
+      onLayout={event => {
+        const width = event.nativeEvent.layout.width;
+        setChartWidth(previousWidth => (previousWidth === width ? previousWidth : width));
+      }}
+    >
       <View
         style={{
           flexDirection: 'row',
@@ -145,233 +152,236 @@ export const SafeToSpendChart = ({
           </View>
         )}
       </View>
-      <View style={{ overflow: 'visible' }}>
-        <LineChart
-          data={data}
-          currencyCode={currencyCode}
-          height={AppConfig.layout.safeToSpendChartHeight}
-          color={isOverCommitted ? theme.error : theme.primary}
-          xTicks={xTicks}
-          formatXTick={x => dayjs(x).format('MMM D')}
-          todayX={dayjs().endOf('day').valueOf()}
-          extraHorizontalLines={extraHorizontalLines}
-          avoidPointVertical={true}
-          onPress={index => {
-            if (index === -1) {
+      <View style={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+        {chartWidth > 0 ? (
+          <LineChart
+            data={data}
+            width={chartWidth}
+            currencyCode={currencyCode}
+            height={AppConfig.layout.safeToSpendChartHeight}
+            color={isOverCommitted ? theme.error : theme.primary}
+            xTicks={xTicks}
+            formatXTick={x => dayjs(x).format('MMM D')}
+            todayX={dayjs().endOf('day').valueOf()}
+            extraHorizontalLines={extraHorizontalLines}
+            avoidPointVertical={true}
+            onPress={index => {
+              if (index === -1) {
+                if (analyticsTimeoutRef.current) {
+                  clearTimeout(analyticsTimeoutRef.current);
+                  analyticsTimeoutRef.current = null;
+                }
+                return;
+              }
+              const point = data[index];
+              if (!point) return;
+
               if (analyticsTimeoutRef.current) {
                 clearTimeout(analyticsTimeoutRef.current);
-                analyticsTimeoutRef.current = null;
               }
-              return;
-            }
-            const point = data[index];
-            if (!point) return;
 
-            if (analyticsTimeoutRef.current) {
-              clearTimeout(analyticsTimeoutRef.current);
-            }
+              analyticsTimeoutRef.current = setTimeout(() => {
+                trackChartPoint({
+                  dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
+                  isHistory: point.isHistory,
+                  hasDetails: (point.details?.length ?? 0) > 0,
+                });
+                analyticsTimeoutRef.current = null;
+              }, 1000); // 1-second debounce to avoid tracking rapid scrubbing/swiping
+            }}
+            renderTooltipContent={index => {
+              const point = data[index];
+              if (!point) return null;
 
-            analyticsTimeoutRef.current = setTimeout(() => {
-              trackChartPoint({
-                dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
-                isHistory: point.isHistory,
-                hasDetails: (point.details?.length ?? 0) > 0,
-              });
-              analyticsTimeoutRef.current = null;
-            }, 1000); // 1-second debounce to avoid tracking rapid scrubbing/swiping
-          }}
-          renderTooltipContent={index => {
-            const point = data[index];
-            if (!point) return null;
+              const plannedDetails =
+                point.details?.filter(
+                  d =>
+                    d.context === 'PLANNED' ||
+                    d.context === 'PLANNED_PAYMENT' ||
+                    d.context === 'PLANNED_JOURNAL' ||
+                    d.context === 'RESOLVED' ||
+                    d.context?.includes('PLANNED'),
+                ) || [];
 
-            const plannedDetails =
-              point.details?.filter(
-                d =>
-                  d.context === 'PLANNED' ||
-                  d.context === 'PLANNED_PAYMENT' ||
-                  d.context === 'PLANNED_JOURNAL' ||
-                  d.context === 'RESOLVED' ||
-                  d.context?.includes('PLANNED'),
-              ) || [];
+              const plannedInflowTotal = plannedDetails
+                .filter(d => d.type === 'INFLOW')
+                .reduce((sum, d) => sum + d.amount, 0);
 
-            const plannedInflowTotal = plannedDetails
-              .filter(d => d.type === 'INFLOW')
-              .reduce((sum, d) => sum + d.amount, 0);
+              const toBeSpentDetails =
+                point.details?.filter(d => d.type === 'OUTFLOW' && d.context !== 'BUDGET') || [];
 
-            const toBeSpentDetails =
-              point.details?.filter(d => d.type === 'OUTFLOW' && d.context !== 'BUDGET') || [];
+              const toBeSpentTotal = toBeSpentDetails.reduce((sum, d) => sum + d.amount, 0);
 
-            const toBeSpentTotal = toBeSpentDetails.reduce((sum, d) => sum + d.amount, 0);
-
-            return (
-              <Stack gap="xs">
-                <Inline justifyContent="space-between" alignItems="center">
-                  <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
-                    {dayjs(point.x).format('MMM D, YYYY')}
-                  </AppText>
-                  {!point.isHistory && (
-                    <AppIcon
-                      name="trendingUpDown"
-                      size={12}
-                      color={theme.primary}
-                      style={{ opacity: Opacity.strong }}
-                    />
-                  )}
-                </Inline>
-
-                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
-                  {formatSts(point.y, currencyCode)}
-                </AppText>
-
-                {((point.dailyBurn ?? 0) > 0 || (point.details?.length ?? 0) > 0) && (
-                  <>
-                    <Separator opacity={Opacity.hover} marginVertical="xs" />
-
-                    {(point.dailyBurn ?? 0) > 0 && (
-                      <View
-                        style={{
-                          backgroundColor: withOpacity(theme.error, Opacity.shadow),
-                          paddingHorizontal: 6,
-                          paddingVertical: 4,
-                          borderRadius: 4,
-                          marginBottom: 2,
-                        }}
-                      >
-                        <Inline gap="xs" alignItems="center">
-                          <AppIcon name="flame" size={10} color={theme.error} />
-                          <AppText
-                            variant="caption"
-                            weight="bold"
-                            color="error"
-                            style={{ fontSize: 10 }}
-                          >
-                            Daily Burn: {formatSts(point.dailyBurn!, currencyCode)}
-                          </AppText>
-                        </Inline>
-                      </View>
+              return (
+                <Stack gap="xs">
+                  <Inline justifyContent="space-between" alignItems="center">
+                    <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                      {dayjs(point.x).format('MMM D, YYYY')}
+                    </AppText>
+                    {!point.isHistory && (
+                      <AppIcon
+                        name="trendingUpDown"
+                        size={12}
+                        color={theme.primary}
+                        style={{ opacity: Opacity.strong }}
+                      />
                     )}
+                  </Inline>
 
-                    {(plannedInflowTotal > 0 || toBeSpentTotal > 0) && (
-                      <View
-                        style={{
-                          backgroundColor: withOpacity(theme.warning, Opacity.shadow),
-                          paddingHorizontal: 6,
-                          paddingVertical: 4,
-                          borderRadius: 4,
-                          marginBottom: 2,
-                          gap: 2,
-                        }}
-                      >
-                        {plannedInflowTotal > 0 && (
+                  <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                    {formatSts(point.y, currencyCode)}
+                  </AppText>
+
+                  {((point.dailyBurn ?? 0) > 0 || (point.details?.length ?? 0) > 0) && (
+                    <>
+                      <Separator opacity={Opacity.hover} marginVertical="xs" />
+
+                      {(point.dailyBurn ?? 0) > 0 && (
+                        <View
+                          style={{
+                            backgroundColor: withOpacity(theme.error, Opacity.shadow),
+                            paddingHorizontal: 6,
+                            paddingVertical: 4,
+                            borderRadius: 4,
+                            marginBottom: 2,
+                          }}
+                        >
                           <Inline gap="xs" alignItems="center">
-                            <AppIcon name="calendar" size={10} color={theme.success} />
-                            <AppText
-                              variant="caption"
-                              weight="bold"
-                              color="success"
-                              style={{ fontSize: 10 }}
-                            >
-                              Planned Inflow:{' '}
-                              {formatSts(plannedInflowTotal, currencyCode, { prefix: '+' })}
-                            </AppText>
-                          </Inline>
-                        )}
-                        {toBeSpentTotal > 0 && (
-                          <Inline gap="xs" alignItems="center">
-                            <AppIcon name="creditCard" size={10} color={theme.error} />
+                            <AppIcon name="flame" size={10} color={theme.error} />
                             <AppText
                               variant="caption"
                               weight="bold"
                               color="error"
                               style={{ fontSize: 10 }}
                             >
-                              To Be Spent:{' '}
-                              {formatSts(toBeSpentTotal, currencyCode, { prefix: '-' })}
+                              Daily Burn: {formatSts(point.dailyBurn!, currencyCode)}
                             </AppText>
                           </Inline>
-                        )}
-                      </View>
-                    )}
+                        </View>
+                      )}
 
-                    {point.details
-                      ?.slice(0, AppConfig.defaults.maxTooltipDetails)
-                      .map((detail, idx) => {
-                        const isInflow = detail.type === 'INFLOW';
-                        const isCcDate = detail.type === 'CC_DATE';
-
-                        // Map context/type to consistent icons
-                        let iconName: IconName = 'receipt';
-                        if (detail.context === 'BUDGET') iconName = 'pieChart';
-                        else if (
-                          detail.context === 'PLANNED' ||
-                          detail.context === 'PLANNED_PAYMENT' ||
-                          detail.context === 'PLANNED_JOURNAL' ||
-                          detail.context === 'RESOLVED'
-                        )
-                          iconName = 'calendar';
-                        else if (detail.context === 'LIABILITY') iconName = 'creditCard';
-                        else if (detail.context === 'TRANSFER') iconName = 'refresh';
-                        else if (isCcDate) iconName = 'calendar';
-
-                        const color = isInflow
-                          ? theme.success
-                          : detail.context === 'LIABILITY' ||
-                              detail.context === 'BUDGET' ||
-                              detail.context === 'RESOLVED' ||
-                              detail.context === 'PLANNED' ||
-                              detail.context === 'PLANNED_PAYMENT' ||
-                              detail.context === 'PLANNED_JOURNAL'
-                            ? theme.error
-                            : theme.textSecondary;
-
-                        return (
-                          <Inline
-                            key={idx}
-                            space="md"
-                            justifyContent="space-between"
-                            alignItems="center"
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <AppIcon name={iconName} size={10} color={color} />
-                              <AppText
-                                variant="caption"
-                                color="secondary"
-                                numberOfLines={1}
-                                style={{ fontSize: 10, opacity: Opacity.high }}
-                              >
-                                {detail.name}
-                              </AppText>
-                            </View>
-                            {detail.amount !== 0 && (
+                      {(plannedInflowTotal > 0 || toBeSpentTotal > 0) && (
+                        <View
+                          style={{
+                            backgroundColor: withOpacity(theme.warning, Opacity.shadow),
+                            paddingHorizontal: 6,
+                            paddingVertical: 4,
+                            borderRadius: 4,
+                            marginBottom: 2,
+                            gap: 2,
+                          }}
+                        >
+                          {plannedInflowTotal > 0 && (
+                            <Inline gap="xs" alignItems="center">
+                              <AppIcon name="calendar" size={10} color={theme.success} />
                               <AppText
                                 variant="caption"
                                 weight="bold"
-                                color={isInflow ? 'success' : 'error'}
+                                color="success"
                                 style={{ fontSize: 10 }}
                               >
-                                {formatSts(Math.abs(detail.amount), currencyCode, {
-                                  prefix: isInflow ? '+' : '-',
-                                })}
+                                Planned Inflow:{' '}
+                                {formatSts(plannedInflowTotal, currencyCode, { prefix: '+' })}
                               </AppText>
-                            )}
-                          </Inline>
-                        );
-                      })}
-                    {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
-                      <AppText
-                        variant="caption"
-                        color="secondary"
-                        style={{ fontSize: 9, marginLeft: 14 }}
-                      >
-                        + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
-                      </AppText>
-                    )}
-                  </>
-                )}
-              </Stack>
-            );
-          }}
-        />
+                            </Inline>
+                          )}
+                          {toBeSpentTotal > 0 && (
+                            <Inline gap="xs" alignItems="center">
+                              <AppIcon name="creditCard" size={10} color={theme.error} />
+                              <AppText
+                                variant="caption"
+                                weight="bold"
+                                color="error"
+                                style={{ fontSize: 10 }}
+                              >
+                                To Be Spent:{' '}
+                                {formatSts(toBeSpentTotal, currencyCode, { prefix: '-' })}
+                              </AppText>
+                            </Inline>
+                          )}
+                        </View>
+                      )}
+
+                      {point.details
+                        ?.slice(0, AppConfig.defaults.maxTooltipDetails)
+                        .map((detail, idx) => {
+                          const isInflow = detail.type === 'INFLOW';
+                          const isCcDate = detail.type === 'CC_DATE';
+
+                          // Map context/type to consistent icons
+                          let iconName: IconName = 'receipt';
+                          if (detail.context === 'BUDGET') iconName = 'pieChart';
+                          else if (
+                            detail.context === 'PLANNED' ||
+                            detail.context === 'PLANNED_PAYMENT' ||
+                            detail.context === 'PLANNED_JOURNAL' ||
+                            detail.context === 'RESOLVED'
+                          )
+                            iconName = 'calendar';
+                          else if (detail.context === 'LIABILITY') iconName = 'creditCard';
+                          else if (detail.context === 'TRANSFER') iconName = 'refresh';
+                          else if (isCcDate) iconName = 'calendar';
+
+                          const color = isInflow
+                            ? theme.success
+                            : detail.context === 'LIABILITY' ||
+                                detail.context === 'BUDGET' ||
+                                detail.context === 'RESOLVED' ||
+                                detail.context === 'PLANNED' ||
+                                detail.context === 'PLANNED_PAYMENT' ||
+                                detail.context === 'PLANNED_JOURNAL'
+                              ? theme.error
+                              : theme.textSecondary;
+
+                          return (
+                            <Inline
+                              key={idx}
+                              space="md"
+                              justifyContent="space-between"
+                              alignItems="center"
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <AppIcon name={iconName} size={10} color={color} />
+                                <AppText
+                                  variant="caption"
+                                  color="secondary"
+                                  numberOfLines={1}
+                                  style={{ fontSize: 10, opacity: Opacity.high }}
+                                >
+                                  {detail.name}
+                                </AppText>
+                              </View>
+                              {detail.amount !== 0 && (
+                                <AppText
+                                  variant="caption"
+                                  weight="bold"
+                                  color={isInflow ? 'success' : 'error'}
+                                  style={{ fontSize: 10 }}
+                                >
+                                  {formatSts(Math.abs(detail.amount), currencyCode, {
+                                    prefix: isInflow ? '+' : '-',
+                                  })}
+                                </AppText>
+                              )}
+                            </Inline>
+                          );
+                        })}
+                      {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
+                        <AppText
+                          variant="caption"
+                          color="secondary"
+                          style={{ fontSize: 9, marginLeft: 14 }}
+                        >
+                          + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
+                        </AppText>
+                      )}
+                    </>
+                  )}
+                </Stack>
+              );
+            }}
+          />
+        ) : null}
       </View>
     </View>
   );
