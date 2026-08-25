@@ -296,41 +296,74 @@ export class JournalService {
     }
   }
 
-  private suggestionsCache = new Map<WorkplaceId, JournalAutofillSuggestion[]>();
-  private inFlightSuggestions = new Map<WorkplaceId, Promise<JournalAutofillSuggestion[]>>();
+  private suggestionsCache = new Map<string, JournalAutofillSuggestion[]>();
+  private inFlightSuggestions = new Map<string, Promise<JournalAutofillSuggestion[]>>();
+  private suggestionsGeneration = new Map<WorkplaceId, number>();
+
+  private getSuggestionsGeneration(workplaceId: WorkplaceId): number {
+    return this.suggestionsGeneration.get(workplaceId) ?? 0;
+  }
 
   clearSuggestionsCache(workplaceId?: WorkplaceId): void {
     if (workplaceId) {
-      this.suggestionsCache.delete(workplaceId);
-      this.inFlightSuggestions.delete(workplaceId);
+      this.suggestionsGeneration.set(workplaceId, this.getSuggestionsGeneration(workplaceId) + 1);
+      for (const key of this.suggestionsCache.keys()) {
+        if (key.startsWith(`${workplaceId}:`)) this.suggestionsCache.delete(key);
+      }
+      for (const key of this.inFlightSuggestions.keys()) {
+        if (key.startsWith(`${workplaceId}:`)) this.inFlightSuggestions.delete(key);
+      }
     } else {
+      const workplaces = new Set([
+        ...this.suggestionsGeneration.keys(),
+        ...[...this.suggestionsCache.keys(), ...this.inFlightSuggestions.keys()].map(
+          key => key.slice(0, key.indexOf(':')) as WorkplaceId,
+        ),
+      ]);
+      workplaces.forEach(id => {
+        this.suggestionsGeneration.set(id, this.getSuggestionsGeneration(id) + 1);
+      });
       this.suggestionsCache.clear();
       this.inFlightSuggestions.clear();
     }
   }
 
-  async getJournalSuggestions(workplaceId: WorkplaceId): Promise<JournalAutofillSuggestion[]> {
+  async getJournalSuggestions(
+    workplaceId: WorkplaceId,
+    query = '',
+    limit = 20,
+  ): Promise<JournalAutofillSuggestion[]> {
     if (!workplaceId) return [];
-    if (this.suggestionsCache.has(workplaceId)) {
-      return this.suggestionsCache.get(workplaceId)!;
+    const normalizedQuery = query.trim().toLowerCase();
+    const boundedLimit = Math.max(1, Math.min(50, limit));
+    const cacheKey = `${workplaceId}:${normalizedQuery}:${boundedLimit}`;
+    if (this.suggestionsCache.has(cacheKey)) {
+      return this.suggestionsCache.get(cacheKey)!;
     }
-    if (this.inFlightSuggestions.has(workplaceId)) {
-      return this.inFlightSuggestions.get(workplaceId)!;
+    if (this.inFlightSuggestions.has(cacheKey)) {
+      return this.inFlightSuggestions.get(cacheKey)!;
     }
 
-    const fetchPromise = journalEnrichmentQueries
-      .getRecentUniqueDescriptions(workplaceId)
+    const generation = this.getSuggestionsGeneration(workplaceId);
+    let fetchPromise: Promise<JournalAutofillSuggestion[]>;
+    fetchPromise = journalEnrichmentQueries
+      .getRecentUniqueDescriptions(workplaceId, normalizedQuery, boundedLimit)
       .then(suggestions => {
-        this.suggestionsCache.set(workplaceId, suggestions);
-        this.inFlightSuggestions.delete(workplaceId);
+        if (this.getSuggestionsGeneration(workplaceId) === generation) {
+          this.suggestionsCache.set(cacheKey, suggestions);
+        }
         return suggestions;
       })
-      .catch(err => {
-        this.inFlightSuggestions.delete(workplaceId);
-        throw err;
+      .finally(() => {
+        if (
+          this.getSuggestionsGeneration(workplaceId) === generation &&
+          this.inFlightSuggestions.get(cacheKey) === fetchPromise
+        ) {
+          this.inFlightSuggestions.delete(cacheKey);
+        }
       });
 
-    this.inFlightSuggestions.set(workplaceId, fetchPromise);
+    this.inFlightSuggestions.set(cacheKey, fetchPromise);
     return fetchPromise;
   }
 }

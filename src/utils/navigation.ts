@@ -1,4 +1,6 @@
 import { Href, router } from 'expo-router';
+import type { TransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
+import { toLegacyJournalEntryQueryParams } from '@/src/features/journal/entry/journalEntryRouteAdapter';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
 
@@ -79,6 +81,8 @@ export const AppNavigation = {
    * Navigate to the Journal Entry screen (Create or Edit).
    */
   toJournalEntry: (options?: {
+    /** New typed launch contract. Legacy fields below remain supported. */
+    seed?: TransactionIntentSeed;
     journalId?: string;
     smsId?: string;
     smsRecordId?: string;
@@ -92,8 +96,12 @@ export const AppNavigation = {
     notes?: string;
     params?: Record<string, string>;
   }) => {
-    const { params, ...direct } = options ?? {};
-    const href = buildRoute('/journal-entry', { ...direct, ...params });
+    const { seed, params, ...direct } = options ?? {};
+    const href = buildRoute('/journal-entry', {
+      ...(seed ? toLegacyJournalEntryQueryParams(seed) : {}),
+      ...direct,
+      ...params,
+    });
     const now = Date.now();
     if (
       lastJournalEntryNavigation &&

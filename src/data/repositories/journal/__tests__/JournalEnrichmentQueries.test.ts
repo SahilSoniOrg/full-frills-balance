@@ -279,9 +279,10 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
 
     const [sql, args = []] = queryRaw.mock.calls[0];
     expect(sql).toContain('journal_date >= ?');
-    expect(args).toHaveLength(7);
+    expect(args).toHaveLength(8);
     expect(typeof args[1]).toBe('number');
     expect(args[1]).toBeLessThan(Date.now());
+    expect(args[2]).toBe('%%');
   });
 
   it('isolates recent-suggestion fallback from malformed transaction and account links', async () => {
@@ -301,6 +302,21 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
         targetAccountType: AccountType.ASSET,
       },
     ]);
+  });
+
+  it('pushes the description search into the bounded recent-query contract', async () => {
+    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+
+    await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(
+      workplaceOne,
+      'coffee',
+      3,
+    );
+
+    const [sql, args = []] = queryRaw.mock.calls[0];
+    expect(sql).toContain('LOWER(description) LIKE LOWER(?)');
+    expect(args[2]).toBe('%coffee%');
+    expect(args[3]).toBe(3);
   });
 
   it('returns every target category used with the same description', async () => {

@@ -19,7 +19,7 @@ import { useSplitEntryState } from './useSplitEntryState';
 export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
-  initialAmount?: string;
+  splitDraft: ReturnType<typeof useSplitEntryState>;
   onSelectAccountRequest: (lineId: string) => void;
   isActive: boolean;
 }
@@ -27,7 +27,7 @@ export interface UseSplitJournalEditorProps {
 export function useSplitJournalEditor({
   accounts,
   editor,
-  initialAmount,
+  splitDraft,
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
@@ -52,7 +52,7 @@ export function useSplitJournalEditor({
     addSplitRow,
     removeSplitRow,
     updateSplitRow,
-  } = useSplitEntryState(initialAmount);
+  } = splitDraft;
 
   const setSharedTotalAmount = useCallback(
     (amount: string) => {
@@ -98,7 +98,7 @@ export function useSplitJournalEditor({
 
     setTransactionType('expense');
     setIsGuidedMode(false);
-  }, [isActive, setTransactionType, setIsGuidedMode]);
+  }, [isActive, setIsGuidedMode, setTransactionType]);
 
   const totals = useMemo(() => computeSplitTotals(totalAmount, splits), [totalAmount, splits]);
 

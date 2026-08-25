@@ -7,10 +7,9 @@ import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { Spacing } from '@/src/constants';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
@@ -20,6 +19,8 @@ export type AdvancedModePanelProps = {
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
+  isActive?: boolean;
+  onModeHandleChange: (handle: ModeHandle | null) => void;
 };
 
 export function AdvancedModePanel({
@@ -27,6 +28,8 @@ export function AdvancedModePanel({
   editor,
   workplaceCurrency,
   onSelectAccountRequest,
+  isActive = true,
+  onModeHandleChange,
 }: AdvancedModePanelProps) {
   const {
     totalDebits,
@@ -107,7 +110,11 @@ export function AdvancedModePanel({
     ],
   );
 
-  useRegisterModeHandle(handle);
+  useEffect(() => {
+    if (!isActive) return;
+    onModeHandleChange(handle);
+    return () => onModeHandleChange(null);
+  }, [handle, isActive, onModeHandleChange]);
 
   return (
     <View style={{ paddingHorizontal: Spacing.lg }}>

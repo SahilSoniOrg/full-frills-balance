@@ -21,10 +21,12 @@ export function useJournalSuggestions(
 ) {
   const [allSuggestions, setAllSuggestions] = useState<JournalAutofillSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const allSuggestionsRef = useRef<JournalAutofillSuggestion[] | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const loadedKeyRef = useRef<string | null>(null);
   const activeWorkplaceRef = useRef(workplaceId);
   const requestRef = useRef<{
     workplaceId: WorkplaceId;
+    queryKey: string;
     promise: Promise<void>;
   } | null>(null);
   const scheduledLoadRef = useRef<Promise<void> | null>(null);
@@ -36,46 +38,55 @@ export function useJournalSuggestions(
     if (activeWorkplaceRef.current === workplaceId) return;
 
     activeWorkplaceRef.current = workplaceId;
-    allSuggestionsRef.current = null;
+    loadedKeyRef.current = null;
     requestRef.current = null;
     setAllSuggestions([]);
     setIsLoading(false);
+    setError(null);
   }, [workplaceId]);
 
-  const fetchSuggestions = useCallback((): Promise<void> => {
-    if (!workplaceId) return Promise.resolve();
+  const fetchSuggestions = useCallback(
+    (query: string): Promise<void> => {
+      if (!workplaceId) return Promise.resolve();
 
-    if (allSuggestionsRef.current) return Promise.resolve();
+      const queryKey = query.trim().toLowerCase();
+      if (loadedKeyRef.current === queryKey) return Promise.resolve();
 
-    const existingRequest = requestRef.current;
-    if (existingRequest?.workplaceId === workplaceId) return existingRequest.promise;
+      const existingRequest = requestRef.current;
+      if (existingRequest?.workplaceId === workplaceId && existingRequest.queryKey === queryKey) {
+        return existingRequest.promise;
+      }
 
-    setIsLoading(true);
-    const request = journalService.getJournalSuggestions(workplaceId);
-    const trackedRequest = request
-      .then(suggestions => {
-        if (activeWorkplaceRef.current !== workplaceId) return;
+      setIsLoading(true);
+      setError(null);
+      const request = journalService.getJournalSuggestions(workplaceId, queryKey, 20);
+      const trackedRequest = request
+        .then(suggestions => {
+          if (activeWorkplaceRef.current !== workplaceId) return;
 
-        allSuggestionsRef.current = suggestions;
-        setAllSuggestions(suggestions);
-      })
-      .catch(error => {
-        if (activeWorkplaceRef.current === workplaceId) {
-          logger.error('Failed to fetch journal suggestions:', error);
-        }
-      })
-      .finally(() => {
-        if (requestRef.current?.promise !== trackedRequest) return;
+          loadedKeyRef.current = queryKey;
+          setAllSuggestions(suggestions);
+        })
+        .catch(error => {
+          if (activeWorkplaceRef.current === workplaceId) {
+            setError(error instanceof Error ? error : new Error('Suggestions unavailable'));
+            logger.error('Failed to fetch journal suggestions:', error);
+          }
+        })
+        .finally(() => {
+          if (requestRef.current?.promise !== trackedRequest) return;
 
-        requestRef.current = null;
-        if (activeWorkplaceRef.current === workplaceId) {
-          setIsLoading(false);
-        }
-      });
+          requestRef.current = null;
+          if (activeWorkplaceRef.current === workplaceId) {
+            setIsLoading(false);
+          }
+        });
 
-    requestRef.current = { workplaceId, promise: trackedRequest };
-    return trackedRequest;
-  }, [workplaceId]);
+      requestRef.current = { workplaceId, queryKey, promise: trackedRequest };
+      return trackedRequest;
+    },
+    [workplaceId],
+  );
 
   const cancelScheduledLoad = useCallback(() => {
     if (loadTimerRef.current) {
@@ -89,13 +100,17 @@ export function useJournalSuggestions(
     scheduledLoadRef.current = null;
   }, []);
 
-  useEffect(() => cancelScheduledLoad, [cancelScheduledLoad, workplaceId]);
+  useEffect(() => cancelScheduledLoad, [cancelScheduledLoad, searchQuery, workplaceId]);
 
   const loadSuggestions = useCallback((): Promise<void> => {
-    if (!workplaceId || allSuggestionsRef.current) return Promise.resolve();
+    if (!workplaceId) return Promise.resolve();
+    const queryKey = searchQuery.trim().toLowerCase();
+    if (loadedKeyRef.current === queryKey) return Promise.resolve();
 
     const existingRequest = requestRef.current;
-    if (existingRequest?.workplaceId === workplaceId) return existingRequest.promise;
+    if (existingRequest?.workplaceId === workplaceId && existingRequest.queryKey === queryKey) {
+      return existingRequest.promise;
+    }
     if (scheduledLoadRef.current) return scheduledLoadRef.current;
 
     scheduledLoadRef.current = new Promise<void>(resolve => {
@@ -104,7 +119,7 @@ export function useJournalSuggestions(
         loadTimerRef.current = null;
         cancelInteractionRef.current = runAfterInteractions(() => {
           cancelInteractionRef.current = null;
-          void fetchSuggestions().finally(() => {
+          void fetchSuggestions(queryKey).finally(() => {
             scheduledLoadRef.current = null;
             scheduledLoadResolveRef.current = null;
             resolve();
@@ -114,7 +129,7 @@ export function useJournalSuggestions(
     });
 
     return scheduledLoadRef.current;
-  }, [fetchSuggestions, workplaceId]);
+  }, [fetchSuggestions, searchQuery, workplaceId]);
 
   useEffect(() => {
     if (!workplaceId) return;
@@ -122,6 +137,16 @@ export function useJournalSuggestions(
     // Warm the workplace-scoped cache without delaying entry rendering.
     void loadSuggestions();
   }, [loadSuggestions, workplaceId]);
+
+  useEffect(() => {
+    if (!workplaceId || !searchQuery.trim()) return;
+    const queryKey = searchQuery.trim().toLowerCase();
+    if (loadedKeyRef.current !== queryKey) {
+      setAllSuggestions([]);
+      setError(null);
+    }
+    void loadSuggestions();
+  }, [loadSuggestions, searchQuery, workplaceId]);
 
   const filteredSuggestions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -141,6 +166,7 @@ export function useJournalSuggestions(
   return {
     suggestions: filteredSuggestions,
     isLoading,
+    error,
     loadSuggestions,
   };
 }

@@ -13,7 +13,6 @@ import { JournalMetaCard } from '@/src/features/journal/entry/components/Journal
 import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import { useModeSubmitBar } from '@/src/features/journal/entry/modes/ModeHandleContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -21,7 +20,9 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const [hideSuggestions, setHideSuggestions] = useState(false);
-  const { submitLabel, isSubmitDisabled, isSubmitting, submit } = useModeSubmitBar();
+  const submitLabel = vm.modeSubmitState?.submitLabel ?? '';
+  const isSubmitDisabled = vm.modeSubmitState?.isSubmitDisabled ?? true;
+  const isSubmitting = vm.modeSubmitState?.isSubmitting ?? false;
 
   const {
     isLoading,
@@ -64,10 +65,12 @@ export function JournalEntryView(vm: JournalEntryShell) {
     activeMode: vm.activeMode,
     accounts: vm.accounts,
     editor: vm.editor,
+    splitDraft: vm.splitDraft,
+    bulkEditor: vm.bulkEditor,
+    onModeHandleChange: vm.onModeHandleChange,
     workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,
-    onBulkSaveSuccess: vm.onBulkSaveSuccess,
     bulkActionsRef: vm.bulkActionsRef,
     onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
     guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
@@ -122,7 +125,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }
       footer={
         <SubmitFooter
-          onPress={submit}
+          onPress={vm.onSubmit}
           disabled={isSubmitDisabled}
           label={submitLabel}
           loading={isSubmitting}

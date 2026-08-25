@@ -10,8 +10,7 @@ import {
   resolveSimpleTypeAccentColor,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
-import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
@@ -45,6 +44,8 @@ export type GuidedModePanelProps = {
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
   voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
+  isActive?: boolean;
+  onModeHandleChange: (handle: ModeHandle | null) => void;
 };
 
 export function GuidedModePanel({
@@ -54,6 +55,8 @@ export function GuidedModePanel({
   onSelectAccountRequest,
   onFooterAmountChange,
   voiceActionsRef,
+  isActive = true,
+  onModeHandleChange,
 }: GuidedModePanelProps) {
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
@@ -137,19 +140,20 @@ export function GuidedModePanel({
   );
 
   useEffect(() => {
+    if (!isActive) return;
     onFooterAmountChange?.(footerAmount);
     return () => onFooterAmountChange?.(null);
-  }, [footerAmount, onFooterAmountChange]);
+  }, [footerAmount, isActive, onFooterAmountChange]);
 
   const openVoice = useCallback(() => setIsVoiceModalVisible(true), []);
 
   useEffect(() => {
-    if (!voiceActionsRef) return;
+    if (!isActive || !voiceActionsRef) return;
     voiceActionsRef.current = { open: openVoice };
     return () => {
       voiceActionsRef.current = null;
     };
-  }, [voiceActionsRef, openVoice]);
+  }, [isActive, voiceActionsRef, openVoice]);
 
   const handleApplyVoiceInput = useCallback(
     (params: GuidedVoiceApplyParams) => {
@@ -215,7 +219,11 @@ export function GuidedModePanel({
     ],
   );
 
-  useRegisterModeHandle(handle);
+  useEffect(() => {
+    if (!isActive) return;
+    onModeHandleChange(handle);
+    return () => onModeHandleChange(null);
+  }, [handle, isActive, onModeHandleChange]);
 
   return (
     <>

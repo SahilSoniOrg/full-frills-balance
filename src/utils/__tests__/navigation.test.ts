@@ -1,4 +1,5 @@
 import { AppNavigation, buildRoute } from '../navigation';
+import { asAccountId } from '@/src/types/ids';
 
 jest.mock('expo-router', () => ({
   router: {
@@ -82,6 +83,23 @@ describe('journal-entry navigation', () => {
     expect(route).toContain('notes=Imported+from+SMS');
     expect(route).toContain('mode=simple');
     expect(route).toContain('source=widget');
+  });
+
+  it('accepts a typed transaction intent seed while preserving the route contract', () => {
+    AppNavigation.toJournalEntry({
+      seed: {
+        editorMode: 'simple',
+        type: 'expense',
+        amount: '45.00',
+        sourceAccountId: asAccountId('cash'),
+        destinationAccountId: asAccountId('food'),
+        sourceContext: { launchSource: 'dashboard' },
+      },
+    });
+
+    expect(router.push).toHaveBeenCalledWith(
+      '/journal-entry?mode=simple&type=expense&sourceAccountId=cash&destinationAccountId=food&amount=45.00&source=dashboard',
+    );
   });
 
   it('supports advanced and split editor entry modes', () => {

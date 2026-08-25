@@ -1,45 +1,39 @@
 import { BulkEntryGrid } from '@/src/features/journal/entry/components/BulkEntryGrid';
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
-import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { WorkplaceId } from '@/src/types/ids';
 import { MutableRefObject, useCallback, useEffect, useMemo } from 'react';
 
 export type BulkModePanelProps = {
-  workplaceId: WorkplaceId;
-  workplaceCurrency: string;
   accounts: AccountFields[];
-  onSaveSuccess: (count: number, summaries: SavedJournalSummary[]) => void;
+  bulkEditor: ReturnType<typeof useBulkJournalEditor>;
   bulkActionsRef?: MutableRefObject<{ clearRows: () => void } | null>;
+  isActive?: boolean;
+  onModeHandleChange: (handle: ModeHandle | null) => void;
 };
 
 export function BulkModePanel({
-  workplaceId,
-  workplaceCurrency,
   accounts,
-  onSaveSuccess,
+  bulkEditor,
   bulkActionsRef,
+  isActive = true,
+  onModeHandleChange,
 }: BulkModePanelProps) {
-  const bulkEditor = useBulkJournalEditor({
-    workplaceId,
-    workplaceCurrency,
-    accounts,
-    onSaveSuccess,
-  });
-
   useEffect(() => {
     if (!bulkActionsRef) return;
+    if (!isActive) {
+      bulkActionsRef.current = null;
+      return;
+    }
     bulkActionsRef.current = { clearRows: bulkEditor.clearRows };
     return () => {
       bulkActionsRef.current = null;
     };
-  }, [bulkActionsRef, bulkEditor.clearRows]);
+  }, [bulkActionsRef, bulkEditor.clearRows, isActive]);
 
   const submit = useCallback(() => {
     bulkEditor.saveAll();
@@ -72,7 +66,11 @@ export function BulkModePanel({
     [bulkEditor.isSubmitting, bulkEditor.rows.length, bulkEditor.isValid, submit],
   );
 
-  useRegisterModeHandle(handle);
+  useEffect(() => {
+    if (!isActive) return;
+    onModeHandleChange(handle);
+    return () => onModeHandleChange(null);
+  }, [handle, isActive, onModeHandleChange]);
 
   return (
     <BulkEntryGrid

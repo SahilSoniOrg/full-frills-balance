@@ -8,7 +8,7 @@ import { JournalSuggestions } from '@/src/features/journal/entry/components/Jour
 import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
 import dayjs from 'dayjs';
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface JournalMetaCardProps {
@@ -57,12 +57,31 @@ export function JournalMetaCard({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotes, setShowNotes] = useState(!!notes);
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
+  const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (notes) {
-      setTimeout(() => setShowNotes(true), 0);
+      notesRevealTimerRef.current = setTimeout(() => {
+        notesRevealTimerRef.current = null;
+        setShowNotes(true);
+      }, 0);
     }
+
+    return () => {
+      if (notesRevealTimerRef.current) {
+        clearTimeout(notesRevealTimerRef.current);
+        notesRevealTimerRef.current = null;
+      }
+    };
   }, [notes]);
+
+  useEffect(
+    () => () => {
+      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    },
+    [],
+  );
 
   return (
     <View
@@ -85,6 +104,10 @@ export function JournalMetaCard({
               value={description}
               onChangeText={setDescription}
               onFocus={() => {
+                if (blurTimerRef.current) {
+                  clearTimeout(blurTimerRef.current);
+                  blurTimerRef.current = null;
+                }
                 setIsDescriptionFocused(true);
                 onDescriptionFocus?.();
               }}
@@ -93,7 +116,11 @@ export function JournalMetaCard({
               }}
               onBlur={() => {
                 // Small delay to allow tapping suggestions before they disappear
-                setTimeout(() => setIsDescriptionFocused(false), 200);
+                if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                blurTimerRef.current = setTimeout(() => {
+                  blurTimerRef.current = null;
+                  setIsDescriptionFocused(false);
+                }, 200);
               }}
               placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
               testID="journal-description-input"

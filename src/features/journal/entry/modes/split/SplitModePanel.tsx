@@ -3,38 +3,42 @@ import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
-import { useRegisterModeHandle } from '@/src/features/journal/entry/modes/ModeHandleContext';
+import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
 import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 export type SplitModePanelProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
-  initialAmount?: string;
+  splitDraft: ReturnType<typeof useSplitEntryState>;
   onSelectAccountRequest: (lineId: string) => void;
   isEdit: boolean;
   isSubmitting: boolean;
+  isActive?: boolean;
+  onModeHandleChange: (handle: ModeHandle | null) => void;
 };
 
 export function SplitModePanel({
   accounts,
   editor,
-  initialAmount,
+  splitDraft,
   onSelectAccountRequest,
   isEdit,
   isSubmitting,
+  isActive = true,
+  onModeHandleChange,
 }: SplitModePanelProps) {
   const splitEditor = useSplitJournalEditor({
     accounts,
     editor,
-    initialAmount,
+    splitDraft,
     onSelectAccountRequest,
-    isActive: true,
+    isActive,
   });
   const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
 
@@ -106,7 +110,11 @@ export function SplitModePanel({
     ],
   );
 
-  useRegisterModeHandle(handle);
+  useEffect(() => {
+    if (!isActive) return;
+    onModeHandleChange(handle);
+    return () => onModeHandleChange(null);
+  }, [handle, isActive, onModeHandleChange]);
 
   return <SplitForm {...splitEditor} />;
 }

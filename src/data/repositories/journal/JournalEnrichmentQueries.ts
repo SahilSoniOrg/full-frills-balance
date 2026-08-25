@@ -70,16 +70,22 @@ export class JournalEnrichmentQueries {
 
   async getRecentUniqueDescriptions(
     workplaceId: WorkplaceId,
-    limit: number = 500,
+    queryOrLimit: string | number = '',
+    limit: number = 20,
   ): Promise<JournalAutofillSuggestion[]> {
-    return this.getRecentSuggestionsWithTargetAccounts(workplaceId, limit);
+    return this.getRecentSuggestionsWithTargetAccounts(workplaceId, queryOrLimit, limit);
   }
 
   async getRecentSuggestionsWithTargetAccounts(
     workplaceId: WorkplaceId,
-    limit: number = 500,
+    queryOrLimit: string | number = '',
+    requestedLimit: number = 20,
   ): Promise<JournalAutofillSuggestion[]> {
+    const query = typeof queryOrLimit === 'string' ? queryOrLimit.trim() : '';
+    const limit = typeof queryOrLimit === 'number' ? queryOrLimit : requestedLimit;
+    const boundedLimit = Math.max(1, Math.min(50, limit));
     const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
+    const descriptionPattern = `%${query}%`;
     const sql = `
       WITH recent_descriptions AS (
         SELECT
@@ -92,6 +98,7 @@ export class JournalEnrichmentQueries {
           AND deleted_at IS NULL
           AND description IS NOT NULL
           AND description != ''
+          AND LOWER(description) LIKE LOWER(?)
         GROUP BY description
         ORDER BY latest_date DESC
         LIMIT ?
@@ -131,10 +138,19 @@ export class JournalEnrichmentQueries {
         account_usage_count: number;
         account_latest_date: number | null;
         latest_date: number;
-      }>(sql, [workplaceId, cutoffDate, limit, workplaceId, cutoffDate, workplaceId, workplaceId]);
+      }>(sql, [
+        workplaceId,
+        cutoffDate,
+        descriptionPattern,
+        boundedLimit,
+        workplaceId,
+        cutoffDate,
+        workplaceId,
+        workplaceId,
+      ]);
 
       if (!results) {
-        return this.getRecentSuggestionsFallback(workplaceId, limit);
+        return this.getRecentSuggestionsFallback(workplaceId, query, boundedLimit);
       }
 
       // Group rows by description preserving order of latest_date
@@ -195,10 +211,10 @@ export class JournalEnrichmentQueries {
               targetAccountName: account.accountName,
               targetAccountType: account.accountType,
             });
-            if (suggestions.length >= limit) break;
+            if (suggestions.length >= boundedLimit) break;
           }
         }
-        if (suggestions.length >= limit) break;
+        if (suggestions.length >= boundedLimit) break;
       }
 
       return suggestions;
@@ -213,6 +229,7 @@ export class JournalEnrichmentQueries {
 
   private async getRecentSuggestionsFallback(
     workplaceId: WorkplaceId,
+    query: string,
     limit: number,
   ): Promise<JournalAutofillSuggestion[]> {
     const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
@@ -223,6 +240,7 @@ export class JournalEnrichmentQueries {
         Q.where('deleted_at', Q.eq(null)),
         Q.where('description', Q.notEq(null)),
         Q.where('description', Q.notEq('')),
+        ...(query ? [Q.where('description', Q.like(`%${query}%`))] : []),
         Q.sortBy('journal_date', 'desc'),
         Q.take(limit * 2),
       )

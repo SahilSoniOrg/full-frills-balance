@@ -2,6 +2,7 @@ import { TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { journalEnrichmentQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 
@@ -150,3 +151,44 @@ describe('JournalService - saveJournalEntry', () => {
     });
   });
 });
+
+describe('JournalService - suggestion cache', () => {
+  let service: JournalService;
+
+  beforeEach(() => {
+    service = new JournalService();
+    jest.clearAllMocks();
+  });
+
+  it('does not let an invalidated request repopulate the cache with stale data', async () => {
+    const firstRequest = deferred<any>();
+    const secondRequest = deferred<any>();
+    (journalEnrichmentQueries.getRecentUniqueDescriptions as jest.Mock)
+      .mockReturnValueOnce(firstRequest.promise)
+      .mockReturnValueOnce(secondRequest.promise);
+
+    const initialLoad = service.getJournalSuggestions('wp-1' as WorkplaceId);
+    service.clearSuggestionsCache('wp-1' as WorkplaceId);
+    const refreshedLoad = service.getJournalSuggestions('wp-1' as WorkplaceId);
+
+    firstRequest.resolve([{ description: 'old' }] as any);
+    await initialLoad;
+    secondRequest.resolve([{ description: 'new' }] as any);
+    await refreshedLoad;
+
+    await expect(service.getJournalSuggestions('wp-1' as WorkplaceId)).resolves.toEqual([
+      { description: 'new' },
+    ]);
+    expect(journalEnrichmentQueries.getRecentUniqueDescriptions).toHaveBeenCalledTimes(2);
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (result: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}

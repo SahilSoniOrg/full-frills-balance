@@ -159,7 +159,10 @@ describe('resolveJournalModeTransition', () => {
     const transition = applied({
       from: 'guided',
       to: 'split',
-      lines: [line('1', TransactionType.CREDIT, { amount: '125.50' }), line('2', TransactionType.DEBIT)],
+      lines: [
+        line('1', TransactionType.CREDIT, { amount: '125.50' }),
+        line('2', TransactionType.DEBIT),
+      ],
       snapshots: {},
     });
 
