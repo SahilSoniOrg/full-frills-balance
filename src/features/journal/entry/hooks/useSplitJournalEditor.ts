@@ -54,17 +54,6 @@ export function useSplitJournalEditor({
     updateSplitRow,
   } = splitDraft;
 
-  const setSharedTotalAmount = useCallback(
-    (amount: string) => {
-      setTotalAmount(amount);
-      editor.updateLines({
-        '1': { amount },
-        '2': { amount },
-      });
-    },
-    [editor, setTotalAmount],
-  );
-
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [
       sourceAccountId !== EMPTY_ACCOUNT_ID ? sourceAccountId : undefined,
@@ -177,7 +166,7 @@ export function useSplitJournalEditor({
       sourceAccountId: resolvedSourceAccountId,
       setSourceAccountId,
       totalAmount,
-      setTotalAmount: setSharedTotalAmount,
+      setTotalAmount,
       splits,
       addSplitRow,
       removeSplitRow,
@@ -199,7 +188,6 @@ export function useSplitJournalEditor({
       resolvedSourceAccountId,
       setSourceAccountId,
       totalAmount,
-      setSharedTotalAmount,
       splits,
       addSplitRow,
       removeSplitRow,

@@ -104,4 +104,27 @@ describe('useTransactionComposerSession', () => {
       }),
     );
   });
+
+  it('carries the shared amount from allocation back to the editor projection', () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialAmount: '50',
+        initialDate: '2026-08-25',
+      }),
+    );
+
+    act(() => {
+      result.current.splitDraft.setTotalAmount('75');
+    });
+
+    expect(result.current.splitDraft.totalAmount).toBe('75');
+    expect(result.current.editor.lines).toEqual(
+      expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
+    );
+    expect(result.current.postingPlan.lines).toEqual(
+      expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
+    );
+  });
 });

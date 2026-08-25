@@ -32,7 +32,18 @@ export function useTransactionComposerSession(
 ) {
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
-  const splitDraft = useSplitEntryState(editor.lines.find(line => line.amount)?.amount);
+  const splitDraft = useSplitEntryState(
+    editor.lines.find(line => line.amount)?.amount,
+    useCallback(
+      amount => {
+        editor.updateLines({
+          '1': { amount },
+          '2': { amount },
+        });
+      },
+      [editor.updateLines],
+    ),
+  );
 
   const sourceLine = editor.lines.find(line => line.transactionType === TransactionType.CREDIT);
   const destinationLines = editor.lines.filter(

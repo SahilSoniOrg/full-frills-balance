@@ -1,6 +1,6 @@
 # Transaction Composer Architecture Plan
 
-Status: in progress
+Status: complete
 
 ## Implementation ledger
 
@@ -38,7 +38,7 @@ Completed:
   selection only, while Split line assembly also runs through the session.
 - Replaced internal presentation-mode names with `basic`, `allocation`, and `expert`; legacy
   route values remain confined to the compatibility adapter.
-- Verified the full Jest suite after the composer changes: 280 suites passed, with 1,694 tests
+- Verified the full Jest suite after the composer changes: 280 suites passed, with 1,695 tests
   passing and 1 skipped; added coverage for all supported launch contexts, late suggestion
   responses, oversized suggestion results, session-owned Split submission, and bounded
   exchange-rate requests.
@@ -68,8 +68,11 @@ Completed:
 - Isolated post-commit journal effects from the save result; SMS/integration bookkeeping now runs
   asynchronously after durable persistence and cannot delay navigation or turn a successful save
   into a reported failure. Added a regression test for rejected post-commit work.
+- Moved the Split total-amount bridge into the composer session, so changing the amount in
+  Allocation updates the canonical editor lines used by Basic and Expert. Added a regression test
+  proving the amount survives that projection change.
 
-Next:
+Deferred measurement follow-up:
 
 - Capture release-like native/device traces for cold/warm composer load and large journal
   datasets when that runtime is available.

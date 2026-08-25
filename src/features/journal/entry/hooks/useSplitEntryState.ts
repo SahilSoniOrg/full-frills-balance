@@ -3,7 +3,10 @@ import { createEmptySplitRow, SplitRowState } from '@/src/services/journal/split
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useCallback, useState } from 'react';
 
-export function useSplitEntryState(initialAmount?: string) {
+export function useSplitEntryState(
+  initialAmount?: string,
+  onTotalAmountChange?: (amount: string) => void,
+) {
   const [sourceAccountId, setSourceAccountId] = useState<AccountId>(EMPTY_ACCOUNT_ID);
   const [totalAmount, setTotalAmount] = useState(initialAmount || '');
   const [splits, setSplits] = useState<SplitRowState[]>(() => [
@@ -26,11 +29,19 @@ export function useSplitEntryState(initialAmount?: string) {
     [],
   );
 
+  const setSharedTotalAmount = useCallback(
+    (amount: string) => {
+      setTotalAmount(amount);
+      onTotalAmountChange?.(amount);
+    },
+    [onTotalAmountChange],
+  );
+
   return {
     sourceAccountId,
     setSourceAccountId,
     totalAmount,
-    setTotalAmount,
+    setTotalAmount: setSharedTotalAmount,
     splits,
     addSplitRow,
     removeSplitRow,
