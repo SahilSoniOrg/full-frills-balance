@@ -287,6 +287,7 @@ describe('ImportService import workflow (public executeImport contract)', () => 
         stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
         preferences: {
           theme: 'dark',
+          isAppLockEnabled: true,
           defaultCurrencyCode: 'USD',
           activeWorkplaceId: 'backup-workplace',
         },

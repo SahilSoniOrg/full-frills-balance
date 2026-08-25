@@ -39,6 +39,20 @@ describe('serializeExportPayload', () => {
     expect(JSON.parse(json).transactions).toEqual([{ id: 't1' }]);
   });
 
+  it('omits device-local app-lock configuration from exported preferences', async () => {
+    const json = await serializeExportPayload(
+      {
+        exportDate: '2026-01-01T00:00:00.000Z',
+        version: '1.4.0',
+        schemaVersion: 1,
+        preferences: { ...DEFAULT_UI_PREFERENCES, isAppLockEnabled: true },
+      },
+      [],
+    );
+
+    expect(JSON.parse(json).preferences).not.toHaveProperty('isAppLockEnabled');
+  });
+
   it('reports normalized 0..1 progress through serialization', async () => {
     const progress: number[] = [];
     await serializeExportPayload(

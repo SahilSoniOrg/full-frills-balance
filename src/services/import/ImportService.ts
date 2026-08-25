@@ -213,6 +213,10 @@ export class ImportService {
       if ('activeWorkplaceId' in sanitizedPrefs) {
         delete (sanitizedPrefs as { activeWorkplaceId?: string }).activeWorkplaceId;
       }
+      // App-lock state is device-local security configuration, never backup data.
+      if ('isAppLockEnabled' in sanitizedPrefs) {
+        delete (sanitizedPrefs as { isAppLockEnabled?: boolean }).isAppLockEnabled;
+      }
       await preferences.restorePreferences(sanitizedPrefs);
     }
 

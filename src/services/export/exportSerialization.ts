@@ -32,7 +32,7 @@ export async function serializeExportPayload(
   report('Serializing metadata...', tableCount === 0 ? 1 : 0.05);
   await yieldToEventLoop(16);
 
-  const chunks = [JSON.stringify(metadata).slice(0, -1)];
+  const chunks = [JSON.stringify(sanitizeExportMetadata(metadata)).slice(0, -1)];
   for (const [index, [key, data]] of tables.entries()) {
     const progress = tableCount === 0 ? 1 : 0.05 + ((index + 1) / tableCount) * 0.95;
     report(`Serializing ${key}...`, progress);
@@ -59,7 +59,7 @@ export async function serializeExportPayloadFromSources(
   report('Serializing metadata...', tableCount === 0 ? 1 : 0.05);
   await yieldToEventLoop(16);
 
-  const chunks = [JSON.stringify(metadata).slice(0, -1)];
+  const chunks = [JSON.stringify(sanitizeExportMetadata(metadata)).slice(0, -1)];
   for (const [index, [key, load]] of tables.entries()) {
     const progress = tableCount === 0 ? 1 : 0.05 + ((index + 1) / tableCount) * 0.95;
     report(`Serializing ${key}...`, progress);
@@ -79,6 +79,16 @@ export async function serializeExportPayloadFromSources(
 function exportReplacer(field: string, value: unknown): unknown {
   if (field === 'runningBalance' || field === 'originalSmsBody') return undefined;
   return value;
+}
+
+function sanitizeExportMetadata(metadata: ExportMetadata): Omit<ExportMetadata, 'preferences'> & {
+  preferences: Omit<UIPreferences, 'isAppLockEnabled'>;
+} {
+  const { isAppLockEnabled: _isAppLockEnabled, ...exportPreferences } = metadata.preferences;
+  return {
+    ...metadata,
+    preferences: exportPreferences,
+  };
 }
 
 function yieldToEventLoop(delayMs = 0): Promise<void> {
