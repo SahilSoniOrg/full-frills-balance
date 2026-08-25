@@ -48,7 +48,7 @@ export function resolveJournalEntrySelectableAccounts(input: {
   if (!activeLineId) return accounts;
 
   const modeTab =
-    activeMode === 'split' ? 'expense' : activeMode === 'guided' ? transactionType : null;
+    activeMode === 'allocation' ? 'expense' : activeMode === 'basic' ? transactionType : null;
   if (!modeTab) return accounts;
 
   const line = lines.find(l => l.id === activeLineId);
@@ -68,7 +68,7 @@ export function resolveJournalEntrySelectedAccountId(input: {
   splitRows: SplitRowPick[];
 }): AccountId | undefined {
   const { activeMode, activeLineId, lines, splitSourceAccountId, splitRows } = input;
-  if (activeMode === 'split' && activeLineId) {
+  if (activeMode === 'allocation' && activeLineId) {
     if (activeLineId === SPLIT_SOURCE_LINE_ID) {
       return splitSourceAccountId;
     }

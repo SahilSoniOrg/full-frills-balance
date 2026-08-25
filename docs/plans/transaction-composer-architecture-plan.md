@@ -11,8 +11,8 @@ Completed:
 - Prevented stale in-flight suggestion requests from overwriting refreshed cache data.
 - Moved Split and Bulk draft/controller ownership into the journal-entry shell, so panels are
   presentation surfaces rather than durable state owners.
-- Removed the imperative `ModeHandleContext`; submit and account-picker actions are explicit shell
-  callbacks.
+- Removed the imperative mode registry; panels publish submit chrome only, while submit and
+  account-picker actions are explicit shell/session operations.
 - Bounded suggestions by current description, visible-result limit, three-month policy, and
   workplace/query/version cache keys.
 - Replaced the permanent four-tab presentation with a detail-level disclosure control and added
@@ -22,12 +22,34 @@ Completed:
 - Returned single-transaction views to lazy mounting now that their drafts are shell-owned.
 - Removed the mode snapshot transition state machine; switching detail levels now changes the
   active projection without parking or rebuilding editor lines.
+- Added an explicit composer session boundary that owns the editor, Split draft, editable intent,
+  derived posting plan, and posting-plan validation.
+- Routed single-transaction editor saves through `postPostingPlan`, which validates the current
+  account snapshot and posting plan before delegating to journal persistence.
+- Moved footer submission into the composer session; panels now expose validation and account
+  selection only, while Split line assembly also runs through the session.
+- Replaced internal presentation-mode names with `basic`, `allocation`, and `expert`; legacy
+  route values remain confined to the compatibility adapter.
+- Verified the full Jest suite after the composer changes: 280 suites passed, with 1,687 tests
+  passing and 1 skipped; added coverage for all supported launch contexts, late suggestion
+  responses, oversized suggestion results, and session-owned Split submission.
+- Added a 10,000-line posting-plan validation guard; the current implementation completed it in
+  17ms in the Jest harness.
+- Verified typecheck, lint, E2E typecheck, and all architecture ratchets; the repository’s
+  performance audit remains the source of truth that device/runtime traces are unavailable.
+- Updated the browser transaction fixtures for the disclosure control and Batch route; the
+  expense creation smoke passed in the web harness.
+- Added a browser cold/warm composer probe; the observed run was 221ms cold and 116ms warm.
+  These are web-harness observations, not universal device-performance claims.
 
 Next:
 
-- Replace the remaining guided/split/expert implementation modes with one session-backed
-  capture/review/expand surface.
-- Make the command path resolve and validate `PostingPlan` before persistence.
+- Capture release-like native/device traces for cold/warm composer load and large journal
+  datasets when that runtime is available.
+
+Measurement note: this item requires a release-like device/browser run. The existing
+`docs/audits/ui-performance-memo-2026-08-25.md` records the exact workloads and prohibits making
+FPS, latency, memory, or TTI claims from static analysis alone.
 
 ## Decision
 

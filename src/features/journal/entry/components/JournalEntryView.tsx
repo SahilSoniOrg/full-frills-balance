@@ -64,7 +64,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     accounts: vm.accounts,
     editor: vm.editor,
     splitDraft: vm.splitDraft,
-    onModeHandleChange: vm.onModeHandleChange,
+    onSubmitStateChange: vm.onSubmitStateChange,
     workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,
@@ -143,7 +143,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
           description={vm.editor.description}
           setDescription={setDescription}
           onSelectSuggestion={onSelectSuggestion}
-          activeTabType={activeMode === 'guided' ? vm.editor.transactionType : undefined}
+          activeTabType={activeMode === 'basic' ? vm.editor.transactionType : undefined}
           accounts={vm.accounts}
           notes={vm.editor.notes}
           setNotes={vm.editor.setNotes}
@@ -153,7 +153,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
           hideSuggestions={hideSuggestions}
           onDescriptionFocus={onDescriptionFocus}
           onVoiceInputPress={
-            activeMode === 'guided' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
+            activeMode === 'basic' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
           }
         />
 

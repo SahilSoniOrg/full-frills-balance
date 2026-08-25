@@ -9,15 +9,13 @@ import {
   resolveJournalEntrySubmitLabel,
   resolveSimpleTypeAccentColor,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
-import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
+import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { Keyboard } from 'react-native';
 
 export type GuidedFooterAmount = {
   amount: string;
@@ -40,12 +38,12 @@ export type GuidedModePanelProps = {
   editor: ReturnType<typeof useJournalEditor>;
   workplaceId: WorkplaceId;
   onSelectAccountRequest: (lineId: string) => void;
-  /** Shell footer top slot — guided amount chrome (not ModeHandle). */
+  /** Shell footer top slot — basic amount chrome. */
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
   voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
   isActive?: boolean;
-  onModeHandleChange: (handle: ModeHandle | null) => void;
+  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
 };
 
 export function GuidedModePanel({
@@ -56,7 +54,7 @@ export function GuidedModePanel({
   onFooterAmountChange,
   voiceActionsRef,
   isActive = true,
-  onModeHandleChange,
+  onSubmitStateChange,
 }: GuidedModePanelProps) {
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
@@ -80,25 +78,6 @@ export function GuidedModePanel({
   });
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
 
-  const { handleSave } = simpleEditor;
-
-  const applyAccountToLine = useCallback(
-    (lineId: string, accountId: AccountId) => {
-      applyJournalLineAccountSelection({
-        lineId,
-        accountId,
-        accounts,
-        updateLine: editor.updateLine,
-      });
-    },
-    [accounts, editor.updateLine],
-  );
-
-  const resolveSelectedAccountId = useCallback(
-    (lineId: string) => editor.lines.find(line => line.id === lineId)?.accountId,
-    [editor.lines],
-  );
-
   const isSimpleValid =
     simpleEditor.isValidAmount &&
     !!simpleEditor.sourceId &&
@@ -107,14 +86,6 @@ export function GuidedModePanel({
     !simpleEditor.isSubmitting &&
     !simpleEditor.isLoadingRate &&
     !simpleEditor.rateError;
-
-  const submit = useCallback(() => {
-    if (isAmountFocused && !isSimpleValid) {
-      Keyboard.dismiss();
-    } else {
-      void handleSave();
-    }
-  }, [isAmountFocused, isSimpleValid, handleSave]);
 
   const onFocusAmount = useCallback(() => setIsAmountFocused(true), []);
   const onBlurAmount = useCallback(() => setIsAmountFocused(false), []);
@@ -181,10 +152,10 @@ export function GuidedModePanel({
     [editor, simpleEditor],
   );
 
-  const handle = useMemo<ModeHandle>(
+  const submitState = useMemo<ComposerSubmitState>(
     () => ({
       submitLabel: resolveJournalEntrySubmitLabel({
-        activeMode: 'guided',
+        activeMode: 'basic',
         bulkSubmitting: false,
         bulkRowCount: 0,
         isAmountFocused,
@@ -195,16 +166,14 @@ export function GuidedModePanel({
         isSubmitting: editor.isSubmitting,
       }),
       isSubmitDisabled: isJournalEntrySubmitDisabled({
-        activeMode: 'guided',
+        activeMode: 'basic',
         bulkSubmitting: false,
         bulkValid: false,
         isAmountFocused,
         isSimpleValid,
         isAdvancedValid: false,
       }),
-      submit,
-      applyAccountToLine,
-      resolveSelectedAccountId,
+      isSubmitting: simpleEditor.isSubmitting,
     }),
     [
       isAmountFocused,
@@ -213,17 +182,14 @@ export function GuidedModePanel({
       simpleEditor.type,
       editor.isEdit,
       editor.isSubmitting,
-      submit,
-      applyAccountToLine,
-      resolveSelectedAccountId,
     ],
   );
 
   useEffect(() => {
     if (!isActive) return;
-    onModeHandleChange(handle);
-    return () => onModeHandleChange(null);
-  }, [handle, isActive, onModeHandleChange]);
+    onSubmitStateChange(submitState);
+    return () => onSubmitStateChange(null);
+  }, [isActive, onSubmitStateChange, submitState]);
 
   return (
     <>
@@ -253,7 +219,7 @@ export function GuidedModePanel({
   );
 }
 
-/** Renders guided amount strip for SubmitFooter topSlot from shell-held chrome. */
+/** Renders basic amount strip for SubmitFooter topSlot from shell-held chrome. */
 export function GuidedFooterAmountSlot({
   footerAmount,
 }: {

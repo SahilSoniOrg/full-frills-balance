@@ -7,29 +7,25 @@ import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
+import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import { Spacing } from '@/src/constants';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
-import type { AccountFields } from '@/src/types/plainDtos';
-import { AccountId } from '@/src/types/ids';
 
 export type AdvancedModePanelProps = {
-  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
   isActive?: boolean;
-  onModeHandleChange: (handle: ModeHandle | null) => void;
+  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
 };
 
 export function AdvancedModePanel({
-  accounts,
   editor,
   workplaceCurrency,
   onSelectAccountRequest,
   isActive = true,
-  onModeHandleChange,
+  onSubmitStateChange,
 }: AdvancedModePanelProps) {
   const {
     totalDebits,
@@ -51,33 +47,10 @@ export function AdvancedModePanel({
     isSubmitting: editor.isSubmitting,
   });
 
-  const submit = useCallback(() => {
-    editor.submit();
-  }, [editor]);
-
-  const applyAccountToLine = useCallback(
-    (lineId: string, accountId: AccountId) => {
-      const account = accounts.find(candidate => candidate.id === accountId);
-      if (!account) return;
-      editor.updateLine(lineId, {
-        accountId,
-        accountName: account.name,
-        accountType: account.accountType,
-        accountCurrency: account.currencyCode,
-      });
-    },
-    [accounts, editor],
-  );
-
-  const resolveSelectedAccountId = useCallback(
-    (lineId: string) => editor.lines.find(line => line.id === lineId)?.accountId,
-    [editor.lines],
-  );
-
-  const handle = useMemo<ModeHandle>(
+  const submitState = useMemo<ComposerSubmitState>(
     () => ({
       submitLabel: resolveJournalEntrySubmitLabel({
-        activeMode: 'advanced',
+        activeMode: 'expert',
         bulkSubmitting: false,
         bulkRowCount: 0,
         isAmountFocused: false,
@@ -88,33 +61,23 @@ export function AdvancedModePanel({
         isSubmitting: editor.isSubmitting,
       }),
       isSubmitDisabled: isJournalEntrySubmitDisabled({
-        activeMode: 'advanced',
+        activeMode: 'expert',
         bulkSubmitting: false,
         bulkValid: false,
         isAmountFocused: false,
         isSimpleValid: false,
         isAdvancedValid,
       }),
-      submit,
       isSubmitting: editor.isSubmitting,
-      applyAccountToLine,
-      resolveSelectedAccountId,
     }),
-    [
-      editor.isEdit,
-      editor.isSubmitting,
-      isAdvancedValid,
-      submit,
-      applyAccountToLine,
-      resolveSelectedAccountId,
-    ],
+    [editor.isEdit, editor.isSubmitting, isAdvancedValid],
   );
 
   useEffect(() => {
     if (!isActive) return;
-    onModeHandleChange(handle);
-    return () => onModeHandleChange(null);
-  }, [handle, isActive, onModeHandleChange]);
+    onSubmitStateChange(submitState);
+    return () => onSubmitStateChange(null);
+  }, [isActive, onSubmitStateChange, submitState]);
 
   return (
     <View style={{ paddingHorizontal: Spacing.lg }}>

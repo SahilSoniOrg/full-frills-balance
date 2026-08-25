@@ -5,12 +5,15 @@ import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
+import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
 import {
   journalEnrichmentQueries,
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import type { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -27,6 +30,44 @@ export interface SubmitJournalResult {
 }
 
 export class JournalService {
+  async postPostingPlan(params: {
+    plan: PostingPlan;
+    journalId?: JournalId;
+    smsId?: string;
+    smsRecordId?: string;
+    smsSender?: string;
+    rawSmsBody?: string;
+    mode?: 'simple' | 'advanced' | 'import';
+    workplaceId: WorkplaceId;
+  }): Promise<SubmitJournalResult> {
+    const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
+    const accounts = await accountQueryRepository.findAllByIds(params.workplaceId, accountIds);
+    const resolverAccounts: TransactionResolverAccount[] = accounts.map(account => ({
+      id: account.id,
+      name: account.name,
+      accountType: account.accountType,
+      currencyCode: account.currencyCode,
+    }));
+    const validation = validatePostingPlan(params.plan, resolverAccounts);
+    if (!validation.valid) {
+      return { success: false, error: validation.issues[0]?.message || 'Invalid posting plan' };
+    }
+
+    return this.saveJournalEntry({
+      lines: params.plan.lines,
+      description: params.plan.description,
+      notes: params.plan.notes,
+      journalDate: params.plan.date,
+      journalId: params.journalId,
+      smsId: params.smsId,
+      smsRecordId: params.smsRecordId,
+      smsSender: params.smsSender,
+      rawSmsBody: params.rawSmsBody,
+      mode: params.mode,
+      workplaceId: params.workplaceId,
+    });
+  }
+
   async createJournal(
     data: CreateJournalData,
     workplaceId: WorkplaceId,

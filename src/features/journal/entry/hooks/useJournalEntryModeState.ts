@@ -23,8 +23,8 @@ export function useJournalEntryModeState(
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, setTransactionType, lines } = editor;
 
   useEffect(() => {
-    setIsGuidedMode(activeMode === 'guided');
-    if (activeMode === 'split') setTransactionType('expense');
+    setIsGuidedMode(activeMode === 'basic');
+    if (activeMode === 'allocation') setTransactionType('expense');
   }, [activeMode, setIsGuidedMode, setTransactionType]);
 
   const wasEditorGuidedRef = useRef(editorIsGuidedMode);
@@ -32,13 +32,13 @@ export function useJournalEntryModeState(
     const wasGuided = wasEditorGuidedRef.current;
     wasEditorGuidedRef.current = editorIsGuidedMode;
     if (wasGuided && !editorIsGuidedMode) {
-      setActiveMode(current => (current === 'guided' ? 'advanced' : current));
+      setActiveMode(current => (current === 'basic' ? 'expert' : current));
     }
   }, [editorIsGuidedMode]);
 
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {
-      if (mode === 'guided' && isSimpleModeDisabledByLines(lines)) {
+      if (mode === 'basic' && isSimpleModeDisabledByLines(lines)) {
         showErrorAlert(
           'This transaction has more than two lines. Use Expert level to edit it.',
           undefined,

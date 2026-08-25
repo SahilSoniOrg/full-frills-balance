@@ -16,7 +16,7 @@ describe('journalEntryAccountPickerPolicy', () => {
   it('resolveJournalEntrySelectedAccountId reads split source and row ids', () => {
     expect(
       resolveJournalEntrySelectedAccountId({
-        activeMode: 'split',
+        activeMode: 'allocation',
         activeLineId: SPLIT_SOURCE_LINE_ID,
         lines: [],
         splitSourceAccountId: 'a1' as AccountId,
@@ -26,7 +26,7 @@ describe('journalEntryAccountPickerPolicy', () => {
 
     expect(
       resolveJournalEntrySelectedAccountId({
-        activeMode: 'split',
+        activeMode: 'allocation',
         activeLineId: 'row-1',
         lines: [],
         splitSourceAccountId: EMPTY_ACCOUNT_ID,
@@ -40,7 +40,7 @@ describe('journalEntryAccountPickerPolicy', () => {
       resolveJournalEntrySelectableAccounts({
         accounts,
         activeLineId: null,
-        activeMode: 'guided',
+        activeMode: 'basic',
         transactionType: 'expense',
         lines: [],
       }),

@@ -51,7 +51,7 @@ export interface UseJournalEditorOptions {
 export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
   const { advancedMode, setAdvancedMode } = useAdvancedModePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { saveJournalEntry } = useJournalActions(workplaceId);
+  const { postPostingPlan } = useJournalActions(workplaceId);
   const {
     journalId,
     initialMode,
@@ -193,12 +193,15 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           setLines(overrides.lines);
         }
 
-        const result = await saveJournalEntry({
+        const plan = {
           lines: linesToSave,
+          currencyCode: workplaceCurrency,
           description: finalDescription,
-          notes: notes.trim(),
-          journalDate,
-          journalTime,
+          date: new Date(`${journalDate}T${journalTime || '00:00'}:00`).getTime(),
+          notes: notes.trim() || undefined,
+        };
+        const result = await postPostingPlan({
+          plan,
           journalId: isEdit ? journalId : undefined,
           mode: isGuidedMode ? 'simple' : 'advanced',
           smsId,
@@ -240,7 +243,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       onAfterSave,
       onSuccess,
       setLines,
-      saveJournalEntry,
+      postPostingPlan,
+      workplaceCurrency,
     ],
   );
 

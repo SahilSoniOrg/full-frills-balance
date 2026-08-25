@@ -8,7 +8,7 @@ import {
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
-import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
+import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { MutableRefObject } from 'react';
@@ -18,7 +18,7 @@ export type JournalEntryModeBodyProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   splitDraft: ReturnType<typeof useSplitEntryState>;
-  onModeHandleChange: (handle: ModeHandle | null) => void;
+  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
@@ -32,14 +32,14 @@ export function JournalEntryModeBody({
   accounts,
   editor,
   splitDraft,
-  onModeHandleChange,
+  onSubmitStateChange,
   workplaceId,
   workplaceCurrency,
   onSelectAccountRequest,
   onGuidedFooterAmountChange,
   guidedVoiceActionsRef,
 }: JournalEntryModeBodyProps) {
-  if (activeMode === 'split') {
+  if (activeMode === 'allocation') {
     return (
       <SplitModePanel
         accounts={accounts}
@@ -49,20 +49,19 @@ export function JournalEntryModeBody({
         isEdit={editor.isEdit}
         isSubmitting={editor.isSubmitting}
         isActive
-        onModeHandleChange={onModeHandleChange}
+        onSubmitStateChange={onSubmitStateChange}
       />
     );
   }
 
-  if (activeMode === 'advanced') {
+  if (activeMode === 'expert') {
     return (
       <AdvancedModePanel
-        accounts={accounts}
         editor={editor}
         workplaceCurrency={workplaceCurrency}
         onSelectAccountRequest={onSelectAccountRequest}
         isActive
-        onModeHandleChange={onModeHandleChange}
+        onSubmitStateChange={onSubmitStateChange}
       />
     );
   }
@@ -76,7 +75,7 @@ export function JournalEntryModeBody({
       onFooterAmountChange={onGuidedFooterAmountChange}
       voiceActionsRef={guidedVoiceActionsRef}
       isActive
-      onModeHandleChange={onModeHandleChange}
+      onSubmitStateChange={onSubmitStateChange}
     />
   );
 }

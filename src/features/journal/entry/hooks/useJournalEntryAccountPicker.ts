@@ -18,17 +18,15 @@ export interface UseJournalEntryAccountPickerOptions {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   activeMode: JournalEntryScreenMode;
-  /** Mode-agnostic apply; parent routes via switch(activeMode). */
+  /** Mode-agnostic apply; the shell owns the canonical draft. */
   applyAccountToActiveLine: (lineId: string, accountId: AccountId) => void;
-  /** Mode-local picker highlight override (e.g. split draft). */
-  resolveModeSelectedAccountId?: (activeLineId: string) => AccountId | undefined;
   splitSourceAccountId?: AccountId;
   splitRows?: SplitRowPick[];
 }
 
 /**
  * AccountFields picker UI state — mode-agnostic.
- * Split / guided / advanced account application is injected via callback.
+ * Account application is injected by the composer shell; this hook owns only picker UI state.
  */
 export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPickerOptions) {
   const {
@@ -36,7 +34,6 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     editor,
     activeMode,
     applyAccountToActiveLine,
-    resolveModeSelectedAccountId,
     splitSourceAccountId,
     splitRows = [],
   } = options;
@@ -46,7 +43,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
 
   const onSelectAccountRequest = useCallback(
     (idOrRole: string) => {
-      const lineId = activeMode === 'split' ? idOrRole : editor.resolveActiveLineId(idOrRole);
+      const lineId = activeMode === 'allocation' ? idOrRole : editor.resolveActiveLineId(idOrRole);
       setActiveLineId(lineId);
       setShowAccountPicker(true);
     },
@@ -75,7 +72,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       let inferredType: AccountType | undefined;
       const activeLine = editor.lines.find(l => l.id === activeLineId);
 
-      if (activeMode === 'guided' && activeLine) {
+      if (activeMode === 'basic' && activeLine) {
         inferredType = getInferredAccountType(editor.transactionType, activeLine.transactionType);
       }
 
@@ -100,10 +97,6 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   );
 
   const selectedAccountId = useMemo(() => {
-    if (activeLineId && resolveModeSelectedAccountId) {
-      const resolved = resolveModeSelectedAccountId(activeLineId);
-      if (resolved !== undefined) return resolved;
-    }
     return resolveJournalEntrySelectedAccountId({
       activeMode,
       activeLineId,
@@ -111,14 +104,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       splitSourceAccountId,
       splitRows,
     });
-  }, [
-    activeMode,
-    activeLineId,
-    editor.lines,
-    resolveModeSelectedAccountId,
-    splitSourceAccountId,
-    splitRows,
-  ]);
+  }, [activeMode, activeLineId, editor.lines, splitSourceAccountId, splitRows]);
 
   return {
     showAccountPicker,

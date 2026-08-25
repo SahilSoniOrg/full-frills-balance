@@ -3,14 +3,12 @@ import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import type { ModeHandle } from '@/src/features/journal/entry/modes/ModeHandle';
+import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import { useSplitJournalEditor } from '@/src/features/journal/entry/hooks/useSplitJournalEditor';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 export type SplitModePanelProps = {
   accounts: AccountFields[];
@@ -20,7 +18,7 @@ export type SplitModePanelProps = {
   isEdit: boolean;
   isSubmitting: boolean;
   isActive?: boolean;
-  onModeHandleChange: (handle: ModeHandle | null) => void;
+  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
 };
 
 export function SplitModePanel({
@@ -31,7 +29,7 @@ export function SplitModePanel({
   isEdit,
   isSubmitting,
   isActive = true,
-  onModeHandleChange,
+  onSubmitStateChange,
 }: SplitModePanelProps) {
   const splitEditor = useSplitJournalEditor({
     accounts,
@@ -42,39 +40,10 @@ export function SplitModePanel({
   });
   const isSplitValid = splitEditor.isValid && !splitEditor.isSubmitting;
 
-  const { setSourceAccountId, updateSplitRow, handleSave } = splitEditor;
-
-  const applyAccountToLine = useCallback(
-    (lineId: string, accountId: AccountId) => {
-      if (lineId === SPLIT_SOURCE_LINE_ID) {
-        setSourceAccountId(accountId);
-      } else {
-        updateSplitRow(lineId, { accountId });
-      }
-    },
-    [setSourceAccountId, updateSplitRow],
-  );
-
-  const resolveSelectedAccountId = useCallback(
-    (lineId: string) => {
-      if (lineId === SPLIT_SOURCE_LINE_ID) {
-        return splitEditor.sourceAccountId !== EMPTY_ACCOUNT_ID
-          ? splitEditor.sourceAccountId
-          : undefined;
-      }
-      return splitEditor.splits.find(row => row.id === lineId)?.accountId;
-    },
-    [splitEditor.sourceAccountId, splitEditor.splits],
-  );
-
-  const submit = useCallback(() => {
-    void handleSave();
-  }, [handleSave]);
-
-  const handle = useMemo<ModeHandle>(
+  const submitState = useMemo<ComposerSubmitState>(
     () => ({
       submitLabel: resolveJournalEntrySubmitLabel({
-        activeMode: 'split',
+        activeMode: 'allocation',
         bulkSubmitting: false,
         bulkRowCount: 0,
         isAmountFocused: false,
@@ -86,7 +55,7 @@ export function SplitModePanel({
         splitSubmitting: splitEditor.isSubmitting,
       }),
       isSubmitDisabled: isJournalEntrySubmitDisabled({
-        activeMode: 'split',
+        activeMode: 'allocation',
         bulkSubmitting: false,
         bulkValid: false,
         isAmountFocused: false,
@@ -94,27 +63,16 @@ export function SplitModePanel({
         isAdvancedValid: false,
         isSplitValid,
       }),
-      submit,
       isSubmitting: splitEditor.isSubmitting,
-      applyAccountToLine,
-      resolveSelectedAccountId,
     }),
-    [
-      isEdit,
-      isSubmitting,
-      splitEditor.isSubmitting,
-      isSplitValid,
-      submit,
-      applyAccountToLine,
-      resolveSelectedAccountId,
-    ],
+    [isEdit, isSubmitting, splitEditor.isSubmitting, isSplitValid],
   );
 
   useEffect(() => {
     if (!isActive) return;
-    onModeHandleChange(handle);
-    return () => onModeHandleChange(null);
-  }, [handle, isActive, onModeHandleChange]);
+    onSubmitStateChange(submitState);
+    return () => onSubmitStateChange(null);
+  }, [isActive, onSubmitStateChange, submitState]);
 
   return <SplitForm {...splitEditor} />;
 }

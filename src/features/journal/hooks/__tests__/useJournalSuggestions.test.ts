@@ -43,7 +43,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 20);
   });
 
   it('fetches and filters suggestions when searchQuery is non-empty', async () => {
@@ -56,7 +56,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, 'coff', 20);
     expect(result.current.suggestions).toHaveLength(2);
     expect(result.current.suggestions[0].description).toBe('Coffee at Starbucks');
     expect(result.current.suggestions[1].description).toBe('Coffee at Blue Bottle');
@@ -72,7 +72,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 20);
   });
 
   it('coalesces repeated focus and typing loads, then reuses the cached result', async () => {
@@ -96,6 +96,66 @@ describe('useJournalSuggestions', () => {
     });
 
     expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a late response for the previous query from replacing current suggestions', async () => {
+    const first = deferred<typeof mockSuggestions>();
+    const second = deferred<typeof mockSuggestions>();
+    (journalService.getJournalSuggestions as jest.Mock)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+
+    const { result, rerender } = renderHook(
+      ({ query }: { query: string }) => useJournalSuggestions(workplaceId, query),
+      { initialProps: { query: '' } },
+    );
+
+    let firstLoad!: Promise<void>;
+    act(() => {
+      firstLoad = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+
+    rerender({ query: 'coffee' });
+    let secondLoad!: Promise<void>;
+    act(() => {
+      secondLoad = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+
+    await act(async () => {
+      first.resolve([{ description: 'Old result', count: 1 }]);
+      await firstLoad;
+    });
+    expect(result.current.suggestions).toEqual([]);
+
+    await act(async () => {
+      second.resolve([{ description: 'Coffee result', count: 2 }]);
+      await secondLoad;
+    });
+    expect(result.current.suggestions).toEqual([
+      expect.objectContaining({ description: 'Coffee result' }),
+    ]);
+  });
+
+  it('keeps rendering bounded when a legacy service returns an oversized result', async () => {
+    (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue(
+      Array.from({ length: 10_000 }, (_, index) => ({
+        description: `Coffee ${index}`,
+        count: 10_000 - index,
+      })),
+    );
+    const { result } = renderHook(() => useJournalSuggestions(workplaceId, 'coffee'));
+
+    let loadPromise!: Promise<void>;
+    act(() => {
+      loadPromise = result.current.loadSuggestions();
+      jest.advanceTimersByTime(150);
+    });
+    await act(async () => loadPromise);
+
+    expect(result.current.suggestions).toHaveLength(20);
+    expect(result.current.suggestions[0].description).toBe('Coffee 0');
   });
 
   it('keeps only target categories compatible with the active tab', async () => {
@@ -134,3 +194,11 @@ describe('useJournalSuggestions', () => {
     ]);
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(res => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}

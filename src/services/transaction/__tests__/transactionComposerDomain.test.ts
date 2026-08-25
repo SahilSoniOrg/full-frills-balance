@@ -1,5 +1,5 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { asAccountId } from '@/src/types/ids';
+import { asAccountId, asTransactionId } from '@/src/types/ids';
 import { PostingPlan, TransactionIntent } from '@/src/types/domainTransaction';
 import {
   isPostingPlan,
@@ -136,6 +136,33 @@ describe('transaction composer domain', () => {
       const resolved = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
       if (!resolved.resolved) throw new Error('expected a resolved plan');
       expect(isPostingPlan(resolved.plan, accounts)).toBe(true);
+    });
+
+    it('validates a 10,000-line plan within the large-input guardrail', () => {
+      const lines = Array.from({ length: 10_000 }, (_, index) => ({
+        id: asTransactionId(`line-${index}`),
+        accountId: asAccountId(index % 2 === 0 ? 'bank' : 'food'),
+        accountName: index % 2 === 0 ? 'Bank' : 'Food',
+        accountType: index % 2 === 0 ? AccountType.ASSET : AccountType.EXPENSE,
+        accountCurrency: 'USD',
+        amount: '1',
+        transactionType: index % 2 === 0 ? TransactionType.DEBIT : TransactionType.CREDIT,
+        notes: '',
+        exchangeRate: '',
+      }));
+      const plan: PostingPlan = {
+        lines: lines as PostingPlan['lines'],
+        currencyCode: 'USD',
+        description: 'Large synthetic plan',
+        date: Date.now(),
+      };
+
+      const startedAt = performance.now();
+      const result = validatePostingPlan(plan, accounts);
+      const elapsedMs = performance.now() - startedAt;
+
+      expect(result.valid).toBe(true);
+      expect(elapsedMs).toBeLessThan(5_000);
     });
   });
 });

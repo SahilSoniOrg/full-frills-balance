@@ -1,5 +1,6 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalEntryLine } from '@/src/types/domainJournal';
+import type { PostingPlan } from '@/src/types/domainTransaction';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback } from 'react';
 
@@ -7,6 +8,16 @@ type SaveJournalEntryParams = Omit<
   Parameters<typeof journalService.saveJournalEntry>[0],
   'workplaceId'
 >;
+
+type PostPostingPlanParams = {
+  plan: PostingPlan;
+  journalId?: JournalId;
+  smsId?: string;
+  smsRecordId?: string;
+  smsSender?: string;
+  rawSmsBody?: string;
+  mode?: 'simple' | 'advanced' | 'import';
+};
 
 type BulkJournalEntry = {
   lines: JournalEntryLine[];
@@ -55,6 +66,13 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
+  const postPostingPlan = useCallback(
+    async (params: PostPostingPlanParams) => {
+      return journalService.postPostingPlan({ ...params, workplaceId });
+    },
+    [workplaceId],
+  );
+
   const saveBulkJournalEntries = useCallback(async (entries: BulkJournalEntry[]) => {
     return journalService.saveBulkJournalEntries(entries);
   }, []);
@@ -65,6 +83,7 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     postJournal,
     revertToPlanned,
     saveJournalEntry,
+    postPostingPlan,
     saveBulkJournalEntries,
   };
 }

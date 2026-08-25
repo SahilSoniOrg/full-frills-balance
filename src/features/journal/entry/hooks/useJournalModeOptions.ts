@@ -6,9 +6,9 @@ export type JournalModeOption = {
 };
 
 const JOURNAL_MODE_OPTIONS: readonly JournalModeOption[] = [
-  { id: 'guided', label: 'Basic' },
-  { id: 'split', label: 'Allocate' },
-  { id: 'advanced', label: 'Expert' },
+  { id: 'basic', label: 'Basic' },
+  { id: 'allocation', label: 'Allocate' },
+  { id: 'expert', label: 'Expert' },
 ];
 
 /** User-facing detail levels for the transaction composer. */

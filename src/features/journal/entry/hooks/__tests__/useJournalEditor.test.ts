@@ -128,7 +128,7 @@ describe('useJournalEditor', () => {
       useJournalEditor('test-workplace' as WorkplaceId, { onSuccess: mockOnSuccess }),
     );
 
-    (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({
+    (journalService.postPostingPlan as jest.Mock).mockResolvedValue({
       success: false,
       error: 'fail',
     });
@@ -137,7 +137,7 @@ describe('useJournalEditor', () => {
       await result.current.submit();
     });
 
-    expect(journalService.saveJournalEntry).toHaveBeenCalled();
+    expect(journalService.postPostingPlan).toHaveBeenCalled();
     expect(mockOnSuccess).not.toHaveBeenCalled();
   });
 
@@ -147,7 +147,7 @@ describe('useJournalEditor', () => {
       useJournalEditor('test-workplace' as WorkplaceId, { onSuccess: mockOnSuccess }),
     );
 
-    (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
+    (journalService.postPostingPlan as jest.Mock).mockResolvedValue({ success: true });
 
     await act(async () => {
       await result.current.submit();

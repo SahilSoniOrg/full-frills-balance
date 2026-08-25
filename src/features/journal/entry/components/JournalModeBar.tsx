@@ -60,7 +60,7 @@ export function JournalModeBar({
             style={[styles.options, { borderColor: theme.border, backgroundColor: theme.surface }]}
           >
             {modes.map(option => {
-              const disabled = option.id === 'guided' && isSimpleDisabled;
+              const disabled = option.id === 'basic' && isSimpleDisabled;
               return (
                 <TouchableOpacity
                   key={option.id}
@@ -84,7 +84,7 @@ export function JournalModeBar({
 
       <TouchableOpacity
         style={[styles.batchButton, { borderColor: theme.border }]}
-        onPress={onOpenBatch ?? (() => onToggleMode('bulk'))}
+        onPress={onOpenBatch ?? (() => undefined)}
         accessibilityRole="button"
         accessibilityLabel="Open batch workspace"
       >

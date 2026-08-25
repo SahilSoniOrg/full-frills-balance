@@ -99,4 +99,24 @@ describe('journalEntryRouteAdapter', () => {
       sourceContext: { launchSource: 'dashboard' },
     });
   });
+
+  it.each([
+    'dashboard',
+    'activity',
+    'account',
+    'sms',
+    'widget',
+    'voice',
+    'duplicate',
+    'edit',
+    'planned-payment',
+  ])('preserves %s launch context at the adapter boundary', launchSource => {
+    expect(
+      parseTransactionIntentSeed({ source: launchSource, amount: '10', description: 'Coffee' }),
+    ).toMatchObject({
+      amount: '10',
+      description: 'Coffee',
+      sourceContext: { launchSource },
+    });
+  });
 });

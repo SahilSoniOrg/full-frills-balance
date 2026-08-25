@@ -2,7 +2,8 @@ import { AppConfig } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 
-export type JournalEntryScreenMode = 'guided' | 'advanced' | 'bulk' | 'split';
+/** Internal composer views. Legacy route names are translated at the adapter boundary below. */
+export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert';
 export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
 export type JournalEntrySimpleType = 'expense' | 'income' | 'transfer';
 
@@ -71,11 +72,11 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
 export function resolveJournalEntryScreenMode(
   routeMode?: JournalEntryRouteEditorMode,
 ): JournalEntryScreenMode {
-  if (routeMode === 'simple') return 'guided';
-  if (routeMode === 'advanced') return 'advanced';
-  if (routeMode === 'bulk') return 'bulk';
-  if (routeMode === 'split') return 'split';
-  return 'guided';
+  if (routeMode === 'simple') return 'basic';
+  if (routeMode === 'advanced') return 'expert';
+  if (routeMode === 'split') return 'allocation';
+  // Bulk is redirected before the single-transaction shell mounts.
+  return 'basic';
 }
 
 export function resolveJournalEntryHeaderTitle(input: { isEdit: boolean }): string {
@@ -115,17 +116,12 @@ export function resolveJournalEntrySubmitLabel(input: {
   isSubmitting: boolean;
   splitSubmitting?: boolean;
 }): string {
-  if (input.activeMode === 'bulk') {
-    return input.bulkSubmitting
-      ? AppConfig.strings.transactionFlow.bulkSaving
-      : AppConfig.strings.transactionFlow.postBulk(input.bulkRowCount);
-  }
-  if (input.activeMode === 'split') {
+  if (input.activeMode === 'allocation') {
     return input.splitSubmitting
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
-  if (input.activeMode === 'guided') {
+  if (input.activeMode === 'basic') {
     if (input.isAmountFocused && !input.isSimpleValid) {
       return AppConfig.strings.transactionFlow.continue;
     }
@@ -154,13 +150,10 @@ export function isJournalEntrySubmitDisabled(input: {
   isAdvancedValid: boolean;
   isSplitValid?: boolean;
 }): boolean {
-  if (input.activeMode === 'bulk') {
-    return input.bulkSubmitting || !input.bulkValid;
-  }
-  if (input.activeMode === 'split') {
+  if (input.activeMode === 'allocation') {
     return !input.isSplitValid;
   }
-  if (input.activeMode === 'guided') {
+  if (input.activeMode === 'basic') {
     return input.isAmountFocused ? false : !input.isSimpleValid;
   }
   return !input.isAdvancedValid;

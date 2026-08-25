@@ -89,6 +89,13 @@ export function useSplitJournalEditor({
   }, [sourceAccountId, isActive, isEdit, transactionAccounts]);
 
   useEffect(() => {
+    if (!isActive || sourceAccountId !== EMPTY_ACCOUNT_ID) return;
+    if (resolvedSourceAccountId !== EMPTY_ACCOUNT_ID) {
+      setSourceAccountId(resolvedSourceAccountId);
+    }
+  }, [isActive, resolvedSourceAccountId, setSourceAccountId, sourceAccountId]);
+
+  useEffect(() => {
     if (!isActive) {
       initializedRef.current = false;
       return;

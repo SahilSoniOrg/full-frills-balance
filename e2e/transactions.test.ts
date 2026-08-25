@@ -66,7 +66,7 @@ test.describe('Transaction Management', () => {
     journalEntryPage,
   }) => {
     await dashboardPage.clickPlusButton();
-    await journalEntryPage.switchMode('Advanced');
+    await journalEntryPage.switchMode('Expert');
     await journalEntryPage.enterDescription('Split groceries');
 
     // Pin types explicitly — guided/advanced scaffolds can differ in leg order.
@@ -90,7 +90,7 @@ test.describe('Transaction Management', () => {
 
   test('should create journals via bulk entry', async ({ dashboardPage, journalEntryPage }) => {
     await dashboardPage.clickPlusButton();
-    await journalEntryPage.switchMode('Bulk');
+    await journalEntryPage.switchMode('Batch');
 
     await journalEntryPage.fillBulkRow(0, {
       description: 'Bulk Coffee',

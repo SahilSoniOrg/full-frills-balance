@@ -17,9 +17,9 @@ import {
   GuidedFooterAmount,
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import type { ModeHandle, ModeSubmitState } from '@/src/features/journal/entry/modes/ModeHandle';
+import type { ComposerSubmitState } from '@/src/features/journal/entry/composerSubmitState';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
-import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
+import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { analytics } from '@/src/services/analytics';
 import {
@@ -29,19 +29,23 @@ import {
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Shell-facing contract for journal entry.
- * Owns screen mode + ModeHandle (submit) wiring; mode panels own mode-local UI.
+ * Owns the composer view, canonical drafts, submit state, and account-picker routing.
  */
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
-  splitDraft: ReturnType<typeof useSplitEntryState>;
-  modeSubmitState: ModeSubmitState | null;
-  onModeHandleChange: (handle: ModeHandle | null) => void;
+  splitDraft: ReturnType<typeof useTransactionComposerSession>['splitDraft'];
+  transactionIntent: ReturnType<typeof useTransactionComposerSession>['intent'];
+  postingPlan: ReturnType<typeof useTransactionComposerSession>['postingPlan'];
+  postingPlanValidation: ReturnType<typeof useTransactionComposerSession>['postingPlanValidation'];
+  modeSubmitState: ComposerSubmitState | null;
+  onSubmitStateChange: (state: ComposerSubmitState | null) => void;
   onSubmit: () => void;
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: JournalEntryScreenMode;
@@ -93,7 +97,9 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const onSuccess = useCallback(() => AppNavigation.back(), []);
 
-  const editor = useJournalEditor(workplaceId, {
+  const session = useTransactionComposerSession(workplaceId, {
+    accounts,
+    currencyCode: workplaceCurrency,
     journalId: seed.journalId,
     initialMode:
       seed.editorMode === 'bulk' || seed.editorMode === 'split' ? undefined : seed.editorMode,
@@ -111,17 +117,17 @@ export function useJournalEntryShell(): JournalEntryShell {
     onAfterSave,
     onSuccess,
   });
+  const { editor, splitDraft } = session;
 
   const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
     editor,
     seed.editorMode,
   );
 
-  const splitDraft = useSplitEntryState(editor.lines.find(line => line.amount)?.amount);
   const { totalAmount: splitTotalAmount, setTotalAmount: setSplitTotalAmount } = splitDraft;
   const previousModeRef = useRef(activeMode);
   useEffect(() => {
-    const enteredSplit = activeMode === 'split' && previousModeRef.current !== 'split';
+    const enteredSplit = activeMode === 'allocation' && previousModeRef.current !== 'allocation';
     previousModeRef.current = activeMode;
     if (!enteredSplit) return;
 
@@ -131,41 +137,24 @@ export function useJournalEntryShell(): JournalEntryShell {
     }
   }, [activeMode, editor.lines, setSplitTotalAmount, splitTotalAmount]);
 
-  const suggestionTabType = activeMode === 'guided' ? editor.transactionType : undefined;
+  const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, loadSuggestions } = useJournalSuggestions(
     workplaceId,
     editor.description,
     suggestionTabType,
   );
 
-  const modeHandleRef = useRef<ModeHandle | null>(null);
-  const [modeSubmitState, setModeSubmitState] = useState<ModeSubmitState | null>(null);
-  const onModeHandleChange = useCallback((handle: ModeHandle | null) => {
-    modeHandleRef.current = handle;
-    setModeSubmitState(current => {
-      const next = handle
-        ? {
-            submitLabel: handle.submitLabel,
-            isSubmitDisabled: handle.isSubmitDisabled,
-            isSubmitting: handle.isSubmitting ?? false,
-          }
-        : null;
-      return current &&
-        next &&
-        current.submitLabel === next.submitLabel &&
-        current.isSubmitDisabled === next.isSubmitDisabled &&
-        current.isSubmitting === next.isSubmitting
-        ? current
-        : next;
-    });
+  const [modeSubmitState, setModeSubmitState] = useState<ComposerSubmitState | null>(null);
+  const onSubmitStateChange = useCallback((state: ComposerSubmitState | null) => {
+    setModeSubmitState(state);
   }, []);
   const onSubmit = useCallback(() => {
-    modeHandleRef.current?.submit();
-  }, []);
+    void session.submit(activeMode === 'allocation' ? 'allocation' : 'editor');
+  }, [activeMode, session]);
 
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {
-      if (activeMode === 'guided' || activeMode === 'advanced') {
+      if (activeMode === 'basic' || activeMode === 'expert') {
         applyJournalLineAccountSelection({
           lineId,
           accountId,
@@ -174,19 +163,13 @@ export function useJournalEntryShell(): JournalEntryShell {
         });
         return;
       }
-      modeHandleRef.current?.applyAccountToLine?.(lineId, accountId);
-    },
-    [activeMode, accounts, editor.updateLine],
-  );
-
-  const resolvePickerSelectedAccountId = useCallback(
-    (lineId: string) => {
-      if (activeMode === 'guided' || activeMode === 'advanced') {
-        return editor.lines.find(line => line.id === lineId)?.accountId;
+      if (lineId === SPLIT_SOURCE_LINE_ID) {
+        splitDraft.setSourceAccountId(accountId);
+      } else {
+        splitDraft.updateSplitRow(lineId, { accountId });
       }
-      return modeHandleRef.current?.resolveSelectedAccountId?.(lineId);
     },
-    [activeMode, editor.lines],
+    [activeMode, accounts, editor.updateLine, splitDraft],
   );
 
   const {
@@ -202,7 +185,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     editor,
     activeMode,
     applyAccountToActiveLine,
-    resolveModeSelectedAccountId: resolvePickerSelectedAccountId,
     splitSourceAccountId: splitDraft.sourceAccountId,
     splitRows: splitDraft.splits,
   });
@@ -222,7 +204,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
       editor.setDescription(suggestion.description);
 
-      if (activeMode !== 'guided') return;
+      if (activeMode !== 'basic') return;
 
       const sourceLine = editor.lines.find(l => l.transactionType === TransactionType.CREDIT);
       const destLine = editor.lines.find(l => l.transactionType === TransactionType.DEBIT);
@@ -275,8 +257,11 @@ export function useJournalEntryShell(): JournalEntryShell {
   return {
     editor,
     splitDraft,
+    transactionIntent: session.intent,
+    postingPlan: session.postingPlan,
+    postingPlanValidation: session.postingPlanValidation,
     modeSubmitState,
-    onModeHandleChange,
+    onSubmitStateChange,
     onSubmit,
     accounts,
     activeMode,

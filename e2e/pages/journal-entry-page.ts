@@ -3,7 +3,11 @@ import { BasePage } from './base-page';
 
 export class JournalEntryPage extends BasePage {
   async enterAmount(amount: string) {
-    await this.page.getByTestId('amount-input').fill(amount);
+    const amountButton = this.page.getByTestId('amount-input');
+    await amountButton.click();
+    const expression = this.page.getByRole('textbox', { name: /^Expression/ });
+    await expression.fill(amount);
+    await this.page.getByTestId('amount-calculator-done').click();
   }
 
   async selectType(type: 'EXPENSE' | 'INCOME' | 'TRANSFER') {
@@ -11,8 +15,24 @@ export class JournalEntryPage extends BasePage {
     await this.page.getByRole('tab', { name: label, exact: true }).click();
   }
 
-  async switchMode(mode: 'Simple' | 'Split' | 'Advanced' | 'Bulk') {
-    await this.page.getByText(mode, { exact: true }).click();
+  async switchMode(
+    mode: 'Basic' | 'Allocate' | 'Expert' | 'Batch' | 'Simple' | 'Split' | 'Advanced' | 'Bulk',
+  ) {
+    const normalized =
+      mode === 'Simple'
+        ? 'Basic'
+        : mode === 'Split'
+          ? 'Allocate'
+          : mode === 'Advanced'
+            ? 'Expert'
+            : mode;
+    if (normalized === 'Batch' || normalized === 'Bulk') {
+      await this.page.getByRole('button', { name: 'Open batch workspace' }).click();
+      return;
+    }
+
+    await this.page.getByRole('button', { name: /Detail level:/ }).click();
+    await this.page.getByText(normalized, { exact: true }).click();
   }
 
   async selectSourceAccount(accountName: string) {
@@ -53,15 +73,19 @@ export class JournalEntryPage extends BasePage {
 
     await expect(section).toBeVisible({ timeout: 15000 });
 
-    const quickPick = section
-      .locator('[data-testid^="account-option-"]')
-      .filter({ hasText: accountName });
-    if ((await quickPick.count()) > 0) {
-      await quickPick.first().click();
+    const visibleAccount = this.page.getByText(accountName, { exact: true });
+    if ((await visibleAccount.count()) > 0) {
+      await visibleAccount.last().click({ force: true });
       return;
     }
 
-    await section.getByText('Browse all', { exact: true }).click();
+    const quickPick = section.getByText(accountName, { exact: true });
+    if ((await quickPick.count()) > 0) {
+      await quickPick.first().click({ force: true });
+      return;
+    }
+
+    await section.getByText('Browse all', { exact: true }).click({ force: true });
     await this.pickAccountFromDialog(accountName);
   }
 
@@ -116,7 +140,7 @@ export class JournalEntryPage extends BasePage {
       .filter({ hasText: accountName })
       .or(this.page.getByRole('button', { name: accountName, exact: true }));
     await expect(option.first()).toBeVisible({ timeout: 15000 });
-    await option.first().click();
+    await option.first().click({ force: true });
     await expect(search.first()).not.toBeVisible({ timeout: 15000 });
   }
 

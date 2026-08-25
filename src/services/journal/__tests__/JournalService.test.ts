@@ -1,4 +1,4 @@
-import { TransactionType } from '@/src/types/enums';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -148,6 +148,76 @@ describe('JournalService - saveJournalEntry', () => {
         }),
         'wp-1' as WorkplaceId,
       );
+    });
+  });
+
+  describe('postPostingPlan', () => {
+    const postingPlan = {
+      lines: [
+        {
+          id: 'line-1',
+          accountId: 'acc1',
+          accountName: 'Cash',
+          accountType: AccountType.ASSET,
+          accountCurrency: 'USD',
+          amount: '100',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '',
+        },
+        {
+          id: 'line-2',
+          accountId: 'acc2',
+          accountName: 'Income',
+          accountType: AccountType.INCOME,
+          accountCurrency: 'USD',
+          amount: '100',
+          transactionType: TransactionType.CREDIT,
+          notes: '',
+          exchangeRate: '',
+        },
+      ],
+      currencyCode: 'USD',
+      description: 'Salary',
+      date: Date.now(),
+    };
+
+    it('validates the plan against current accounts before saving', async () => {
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
+        { id: 'acc1', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+        { id: 'acc2', name: 'Income', accountType: AccountType.INCOME, currencyCode: 'USD' },
+      ]);
+      const saveSpy = jest.spyOn(service, 'saveJournalEntry').mockResolvedValue({
+        success: true,
+        action: 'created',
+      });
+
+      const result = await service.postPostingPlan({
+        plan: postingPlan as any,
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toEqual({ success: true, action: 'created' });
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lines: postingPlan.lines,
+          description: 'Salary',
+          journalDate: postingPlan.date,
+          workplaceId: 'wp-1',
+        }),
+      );
+    });
+
+    it('does not save a plan with stale account metadata', async () => {
+      const saveSpy = jest.spyOn(service, 'saveJournalEntry');
+
+      const result = await service.postPostingPlan({
+        plan: postingPlan as any,
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toEqual({ success: false, error: 'Posting line account metadata is stale' });
+      expect(saveSpy).not.toHaveBeenCalled();
     });
   });
 });

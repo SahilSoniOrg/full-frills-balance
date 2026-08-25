@@ -70,12 +70,12 @@ describe('journalEntryPresentation', () => {
     expect(parsed.type).toBeUndefined();
   });
 
-  it('resolveJournalEntryScreenMode maps simple to guided', () => {
-    expect(resolveJournalEntryScreenMode('simple')).toBe('guided');
-    expect(resolveJournalEntryScreenMode('advanced')).toBe('advanced');
-    expect(resolveJournalEntryScreenMode('split')).toBe('split');
-    expect(resolveJournalEntryScreenMode('bulk')).toBe('bulk');
-    expect(resolveJournalEntryScreenMode(undefined)).toBe('guided');
+  it('maps legacy route names to composer views', () => {
+    expect(resolveJournalEntryScreenMode('simple')).toBe('basic');
+    expect(resolveJournalEntryScreenMode('advanced')).toBe('expert');
+    expect(resolveJournalEntryScreenMode('split')).toBe('allocation');
+    expect(resolveJournalEntryScreenMode('bulk')).toBe('basic');
+    expect(resolveJournalEntryScreenMode(undefined)).toBe('basic');
   });
 
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
@@ -104,7 +104,7 @@ describe('journalEntryPresentation', () => {
 
   it('submit label and disabled state for guided focus edge case', () => {
     const label = resolveJournalEntrySubmitLabel({
-      activeMode: 'guided',
+      activeMode: 'basic',
       bulkSubmitting: false,
       bulkRowCount: 0,
       isAmountFocused: true,
@@ -118,7 +118,7 @@ describe('journalEntryPresentation', () => {
 
     expect(
       isJournalEntrySubmitDisabled({
-        activeMode: 'guided',
+        activeMode: 'basic',
         bulkSubmitting: false,
         bulkValid: true,
         isAmountFocused: true,
