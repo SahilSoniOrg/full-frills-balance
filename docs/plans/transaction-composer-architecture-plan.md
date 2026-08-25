@@ -15,6 +15,8 @@ Completed:
   validation, labels, and account-picker actions are explicit shell/session operations.
 - Bounded suggestions by current description, visible-result limit, three-month policy, and
   workplace/query/version cache keys.
+- Guarded suggestion state writes by the active workplace and query, so a late prior query
+  cannot mark the current query loaded or replace its result set.
 - Replaced the permanent four-tab presentation with a detail-level disclosure control and added
   an isolated Batch workspace route.
 - Redirected legacy bulk entry URLs to the Batch workspace and removed Bulk from the single-
@@ -46,6 +48,9 @@ Completed:
   fallback because calculator sheets mounted inside virtualized rows are not stable in RN web.
 - Removed the panel-to-shell submit-state channel; the footer now derives its state directly
   from session-owned posting-plan and allocation validation.
+- Attempted a release-like iOS simulator composer probe: the native Release build succeeded,
+  but Detox could not connect its localhost synchronization socket (`:52374`), so no native
+  composer timing was recorded and the probe was not kept as a CI test.
 
 Next:
 
@@ -54,7 +59,9 @@ Next:
 
 Measurement note: this item requires a release-like device/browser run. The existing
 `docs/audits/ui-performance-memo-2026-08-25.md` records the exact workloads and prohibits making
-FPS, latency, memory, or TTI claims from static analysis alone.
+FPS, latency, memory, or TTI claims from static analysis alone. The web probe is complete; the
+native attempt is currently blocked by the Detox synchronization runtime rather than by a
+measured composer result.
 
 ## Decision
 

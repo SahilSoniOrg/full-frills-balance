@@ -124,7 +124,7 @@ describe('useJournalSuggestions', () => {
     });
 
     await act(async () => {
-      first.resolve([{ description: 'Old result', count: 1 }]);
+      first.resolve([{ description: 'Coffee from old query', count: 1 }]);
       await firstLoad;
     });
     expect(result.current.suggestions).toEqual([]);

@@ -24,6 +24,7 @@ export function useJournalSuggestions(
   const [error, setError] = useState<Error | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const activeWorkplaceRef = useRef(workplaceId);
+  const activeQueryRef = useRef(searchQuery.trim().toLowerCase());
   const requestRef = useRef<{
     workplaceId: WorkplaceId;
     queryKey: string;
@@ -33,6 +34,10 @@ export function useJournalSuggestions(
   const scheduledLoadResolveRef = useRef<(() => void) | null>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelInteractionRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    activeQueryRef.current = searchQuery.trim().toLowerCase();
+  }, [searchQuery]);
 
   useEffect(() => {
     if (activeWorkplaceRef.current === workplaceId) return;
@@ -62,7 +67,9 @@ export function useJournalSuggestions(
       const request = journalService.getJournalSuggestions(workplaceId, queryKey, 20);
       const trackedRequest = request
         .then(suggestions => {
-          if (activeWorkplaceRef.current !== workplaceId) return;
+          if (activeWorkplaceRef.current !== workplaceId || activeQueryRef.current !== queryKey) {
+            return;
+          }
 
           loadedKeyRef.current = queryKey;
           setAllSuggestions(suggestions);
