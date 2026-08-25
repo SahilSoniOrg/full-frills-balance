@@ -31,7 +31,6 @@ export interface SplitJournalActions {
   updateSplitRow: (id: string, patch: Partial<Pick<SplitRowState, 'accountId' | 'amount'>>) => void;
   openSourceAccountPicker: () => void;
   openSplitAccountPicker: (splitId: string) => void;
-  handleSave: () => void | Promise<void>;
 }
 
 /** Full split-mode controller contract used by SplitForm and shell wiring. */

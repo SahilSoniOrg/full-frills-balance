@@ -46,6 +46,7 @@ export function useJournalSuggestions(
   } | null>(null);
   const scheduledLoadRef = useRef<Promise<void> | null>(null);
   const scheduledLoadResolveRef = useRef<(() => void) | null>(null);
+  const scheduledLoadIdRef = useRef(0);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelInteractionRef = useRef<(() => void) | null>(null);
 
@@ -110,6 +111,7 @@ export function useJournalSuggestions(
   );
 
   const cancelScheduledLoad = useCallback(() => {
+    scheduledLoadIdRef.current += 1;
     if (loadTimerRef.current) {
       clearTimeout(loadTimerRef.current);
       loadTimerRef.current = null;
@@ -135,12 +137,16 @@ export function useJournalSuggestions(
     if (scheduledLoadRef.current) return scheduledLoadRef.current;
 
     scheduledLoadRef.current = new Promise<void>(resolve => {
+      const scheduledLoadId = scheduledLoadIdRef.current;
       scheduledLoadResolveRef.current = resolve;
       loadTimerRef.current = setTimeout(() => {
         loadTimerRef.current = null;
         cancelInteractionRef.current = runAfterInteractions(() => {
           cancelInteractionRef.current = null;
           void fetchSuggestions(queryKey).finally(() => {
+            // A newer query may already have scheduled another load. Do not let
+            // this older request clear that load's bookkeeping.
+            if (scheduledLoadIdRef.current !== scheduledLoadId) return;
             scheduledLoadRef.current = null;
             scheduledLoadResolveRef.current = null;
             resolve();

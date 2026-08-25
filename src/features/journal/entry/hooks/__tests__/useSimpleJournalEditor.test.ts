@@ -44,7 +44,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   }),
 }));
 
-function createEditor(success: boolean, options?: { crossCurrency?: boolean }) {
+function createEditor(options?: { crossCurrency?: boolean }) {
   const crossCurrency = options?.crossCurrency ?? false;
   const lines = [
     {
@@ -90,7 +90,6 @@ function createEditor(success: boolean, options?: { crossCurrency?: boolean }) {
     }),
     description: 'Lunch',
     setDescription: jest.fn(),
-    submit: jest.fn().mockResolvedValue({ success }),
     isSubmitting: false,
     journalDate: '2026-01-01',
     journalTime: '12:00',
@@ -113,42 +112,6 @@ describe('useSimpleJournalEditor', () => {
     mockFetchRate.mockResolvedValue(1.0);
   });
 
-  it('navigates via onSuccess when submit succeeds', async () => {
-    const editor = createEditor(true);
-
-    const { result } = renderHook(() =>
-      useSimpleJournalEditor({
-        accounts,
-        editor: editor as any,
-        onSelectAccountRequest: jest.fn(),
-      }),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(editor.submit).toHaveBeenCalled();
-  });
-
-  it('does not navigate via onSuccess when submit fails', async () => {
-    const editor = createEditor(false);
-
-    const { result } = renderHook(() =>
-      useSimpleJournalEditor({
-        accounts,
-        editor: editor as any,
-        onSelectAccountRequest: jest.fn(),
-      }),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(editor.submit).toHaveBeenCalled();
-  });
-
   it('applies cross-currency rates to editor lines when they differ', async () => {
     mockFetchRate.mockImplementation(async (from: string) => {
       if (from === 'EUR') return 1.1;
@@ -156,7 +119,7 @@ describe('useSimpleJournalEditor', () => {
       return 1;
     });
 
-    const editor = createEditor(true, { crossCurrency: true });
+    const editor = createEditor({ crossCurrency: true });
     editor.lines[0].accountId = 'eur-source';
     editor.lines[1].accountId = 'gbp-dest';
 
@@ -187,7 +150,7 @@ describe('useSimpleJournalEditor', () => {
       return 1;
     });
 
-    const editor = createEditor(true, { crossCurrency: true });
+    const editor = createEditor({ crossCurrency: true });
     editor.lines[0].accountId = 'eur-source';
     editor.lines[0].exchangeRate = (1.1).toFixed(6);
     editor.lines[1].accountId = 'gbp-dest';
@@ -228,7 +191,7 @@ describe('useSimpleJournalEditor', () => {
 
     mockFetchRate.mockReturnValueOnce(firstRatePromise).mockReturnValueOnce(secondRatePromise);
 
-    const editor = createEditor(true, { crossCurrency: true });
+    const editor = createEditor({ crossCurrency: true });
     editor.lines[0].accountId = 'eur-source';
     editor.lines[1].accountId = 'usd-dest';
     editor.lines[1].accountCurrency = 'USD';

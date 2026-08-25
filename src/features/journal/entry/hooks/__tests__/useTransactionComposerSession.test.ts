@@ -1,6 +1,6 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { AccountType } from '@/src/types/enums';
-import { asAccountId, WorkplaceId } from '@/src/types/ids';
+import { asAccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useTransactionComposerSession } from '../useTransactionComposerSession';
 
 jest.mock('@/src/services/journal/journalDomainService');
@@ -76,12 +76,22 @@ describe('useTransactionComposerSession', () => {
     );
 
     act(() => {
-      result.current.splitDraft.setSourceAccountId(asAccountId('cash'));
-      result.current.splitDraft.updateSplitRow(result.current.splitDraft.splits[0].id, {
+      result.current.editor.addLine();
+    });
+
+    act(() => {
+      const sourceLine = result.current.editor.lines.find(
+        line => line.transactionType === 'CREDIT',
+      );
+      const destinationLines = result.current.editor.lines.filter(
+        line => line.transactionType === 'DEBIT',
+      );
+      result.current.editor.updateLine(sourceLine!.id, { accountId: asAccountId('cash') });
+      result.current.editor.updateLine(destinationLines[0].id, {
         accountId: asAccountId('food'),
         amount: '30',
       });
-      result.current.splitDraft.updateSplitRow(result.current.splitDraft.splits[1].id, {
+      result.current.editor.updateLine(destinationLines[1].id, {
         accountId: asAccountId('food'),
         amount: '20',
       });
@@ -116,15 +126,66 @@ describe('useTransactionComposerSession', () => {
     );
 
     act(() => {
-      result.current.splitDraft.setTotalAmount('75');
+      result.current.editor.updateLines({
+        '1': { amount: '75' },
+        '2': { amount: '75' },
+      });
     });
 
-    expect(result.current.splitDraft.totalAmount).toBe('75');
+    expect(result.current.splitState.totalAmount).toBe('75');
     expect(result.current.editor.lines).toEqual(
       expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
     );
     expect(result.current.postingPlan.lines).toEqual(
       expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
     );
+  });
+
+  it('hydrates the allocation amount after an async edit load', async () => {
+    const { journalReadService } = jest.requireMock('@/src/services/journal/journalReadService');
+    journalReadService.getJournalForEditor.mockResolvedValue({
+      journal: {
+        journalDate: '2026-08-25T12:00:00.000Z',
+        description: 'Loaded allocation',
+        notes: '',
+      },
+      lines: [
+        {
+          id: '1',
+          accountId: asAccountId('food'),
+          accountName: 'Food',
+          accountType: AccountType.EXPENSE,
+          accountCurrency: 'USD',
+          amount: '75',
+          transactionType: 'DEBIT',
+          notes: '',
+          exchangeRate: '',
+        },
+        {
+          id: '2',
+          accountId: asAccountId('cash'),
+          accountName: 'Cash',
+          accountType: AccountType.ASSET,
+          accountCurrency: 'USD',
+          amount: '75',
+          transactionType: 'CREDIT',
+          notes: '',
+          exchangeRate: '',
+        },
+      ],
+      transactionType: 'expense',
+      forceAdvancedMode: false,
+    });
+
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        journalId: 'journal-1' as JournalId,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.editor.loadState).toBe('loaded'));
+    expect(result.current.splitState.totalAmount).toBe('75');
   });
 });

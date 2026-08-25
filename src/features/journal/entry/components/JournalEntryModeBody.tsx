@@ -7,7 +7,6 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useSplitEntryState } from '@/src/features/journal/entry/hooks/useSplitEntryState';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { MutableRefObject } from 'react';
@@ -16,7 +15,6 @@ export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
-  splitDraft: ReturnType<typeof useSplitEntryState>;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
   onSelectAccountRequest: (lineId: string) => void;
@@ -29,7 +27,6 @@ export function JournalEntryModeBody({
   activeMode,
   accounts,
   editor,
-  splitDraft,
   workplaceId,
   workplaceCurrency,
   onSelectAccountRequest,
@@ -41,7 +38,6 @@ export function JournalEntryModeBody({
       <SplitModePanel
         accounts={accounts}
         editor={editor}
-        splitDraft={splitDraft}
         onSelectAccountRequest={onSelectAccountRequest}
         isActive
       />

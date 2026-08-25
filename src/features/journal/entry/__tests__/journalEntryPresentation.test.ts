@@ -102,12 +102,9 @@ describe('journalEntryPresentation', () => {
     ).toBe(false);
   });
 
-  it('submit label and disabled state for guided focus edge case', () => {
+  it('requires a valid basic plan before submit', () => {
     const label = resolveJournalEntrySubmitLabel({
       activeMode: 'basic',
-      bulkSubmitting: false,
-      bulkRowCount: 0,
-      isAmountFocused: true,
       isSimpleValid: false,
       simpleSubmitting: false,
       simpleType: 'expense',
@@ -119,13 +116,10 @@ describe('journalEntryPresentation', () => {
     expect(
       isJournalEntrySubmitDisabled({
         activeMode: 'basic',
-        bulkSubmitting: false,
-        bulkValid: true,
-        isAmountFocused: true,
         isSimpleValid: false,
         isAdvancedValid: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   describe('limitQuickTileAccounts', () => {

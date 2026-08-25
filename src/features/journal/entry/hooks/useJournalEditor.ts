@@ -2,7 +2,8 @@ import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import { AccountRole, TabType } from '@/src/types/domainJournal';
+import type { PostingPlan } from '@/src/types/domainTransaction';
 
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
@@ -178,33 +179,14 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     updateLines,
   });
 
-  const submit = useCallback(
-    async (overrides?: { description?: string; lines?: JournalEntryLine[] }) => {
+  const submitPlan = useCallback(
+    async (plan: PostingPlan, mode: 'simple' | 'advanced' | 'import') => {
       setIsSubmitting(true);
       try {
-        // Default description to transaction type if empty
-        let finalDescription = overrides?.description || description.trim();
-        if (!finalDescription) {
-          finalDescription = transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
-          setDescription(finalDescription);
-        }
-
-        const linesToSave = overrides?.lines ?? lines;
-        if (overrides?.lines) {
-          setLines(overrides.lines);
-        }
-
-        const plan = {
-          lines: linesToSave,
-          currencyCode: workplaceCurrency,
-          description: finalDescription,
-          date: new Date(`${journalDate}T${journalTime || '00:00'}:00`).getTime(),
-          notes: notes.trim() || undefined,
-        };
         const result = await postPostingPlan({
           plan,
           journalId: isEdit ? journalId : undefined,
-          mode: isGuidedMode ? 'simple' : 'advanced',
+          mode,
           smsId,
           smsRecordId,
           smsSender,
@@ -240,24 +222,15 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       }
     },
     [
-      description,
-      transactionType,
-      lines,
-      notes,
-      journalDate,
-      journalTime,
       isEdit,
       journalId,
-      isGuidedMode,
       smsId,
       smsRecordId,
       smsSender,
       rawSmsBody,
       onAfterSave,
       onSuccess,
-      setLines,
       postPostingPlan,
-      workplaceCurrency,
     ],
   );
 
@@ -320,7 +293,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
-      submit,
+      submitPlan,
       imbalance,
       isUnbalanced,
       isEntryReadyToBalance,
@@ -346,7 +319,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
-      submit,
+      submitPlan,
       imbalance,
       isUnbalanced,
       isEntryReadyToBalance,

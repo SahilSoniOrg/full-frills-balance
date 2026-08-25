@@ -2,6 +2,27 @@
 
 Status: in progress
 
+Progress:
+
+- Moved shared amount reconciliation into the composer session and added async edit-hydration
+  coverage for Allocation. The remaining canonical-draft work will remove this temporary bridge.
+- Removed the separate Split draft store. Allocation rows now project directly from editor lines,
+  so row edits, amount changes, validation, and submit all observe the same line state.
+- Routed session submission through `resolveTransactionIntent` and the editor’s shared
+  `submitPlan` command for Basic, Allocation, and Expert. The editor remains a UI/persistence
+  adapter temporarily; the session now owns the live intent-to-plan decision.
+- Removed the legacy editor `submit` adapter. The session is now the only production submit
+  command for single-entry saves; the editor exposes only the persistence-facing `submitPlan`.
+- Removed the dead Simple/Split save handlers, Bulk-only presentation arguments, and no-op amount
+  focus callbacks. Added coverage proving the initial background suggestion query can finish while
+  a later typed query is active, and fixed scheduled-load bookkeeping from being cleared by an old
+  request.
+- Verification: composer-focused tests, full typecheck, lint, architecture ratchets, e2e typecheck,
+  and diff checks pass. The full Jest run is otherwise green (278/279 suites); the remaining
+  `src/services/__tests__/sms-service.test.ts` failure is an existing order assertion that expects
+  insertion order while `SmsRuleEngine.previewRuleMatches` explicitly sorts newest-first. It is
+  outside this composer change and remains intentionally untouched.
+
 This plan addresses the thermo-nuclear review of the unpushed transaction-composer work. The
 original architecture plan remains the design reference:
 [`transaction-composer-architecture-plan.md`](./transaction-composer-architecture-plan.md).
@@ -17,7 +38,7 @@ editor.lines + splitDraft → mode-specific synchronization → save-time branch
 The intended model is:
 
 ```text
-one ComposerDraft → TransactionIntent → resolve → validate → post
+one composer draft boundary → TransactionIntent → resolve → validate → post
 ```
 
 The remediation must reduce concepts, not add another synchronization layer.
@@ -26,8 +47,9 @@ The remediation must reduce concepts, not add another synchronization layer.
 
 ### Phase 1: Define the canonical draft boundary
 
-- Introduce one session-owned draft shape containing description, date, notes, amount, accounts,
-  and allocations.
+- Establish one draft boundary containing description, date, notes, amount, accounts, and
+  allocations. The editor line state is the current mutable implementation of that boundary;
+  session and mode hooks must project from it rather than maintain another durable copy.
 - Make Basic, Allocation, and Expert editors projections/adapters over that draft.
 - Remove the shell’s enter-Allocation synchronization effect.
 - Hydrate the canonical draft after async edit loads, including direct Allocation deep links.
@@ -41,7 +63,8 @@ Exit criteria:
 
 ### Phase 2: Make intent resolution the live command path
 
-- Build `TransactionIntent` from the canonical draft, not from posting lines.
+- Build `TransactionIntent` from the canonical draft boundary, not from a mode-specific save
+  branch.
 - Resolve intent into one `PostingPlan` inside the session.
 - Validate that plan once against the current account snapshot.
 - Make the session submit that validated plan through `postPostingPlan`.
@@ -69,7 +92,9 @@ Exit criteria:
 
 ### Phase 4: Simplify suggestions and measurement
 
-- Reduce suggestion scheduling to one cancellable query lifecycle with stale-result protection.
+- Reduce suggestion scheduling to one query lifecycle with versioned stale-result protection. The
+  current service has no abort-signal contract, so completion is intentionally allowed after the
+  user types again; only the latest query may update visible state.
 - Move suggestion application behind the session or a narrow journal-domain command.
 - Propagate cancellation through the service if the repository supports it; otherwise document the
   guarantee as versioned, not cancellable.

@@ -34,7 +34,7 @@ import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
 
 /**
  * Shell-facing contract for journal entry.
@@ -42,7 +42,7 @@ import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } f
  */
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
-  splitDraft: ReturnType<typeof useTransactionComposerSession>['splitDraft'];
+  splitState: ReturnType<typeof useTransactionComposerSession>['splitState'];
   transactionIntent: ReturnType<typeof useTransactionComposerSession>['intent'];
   postingPlan: ReturnType<typeof useTransactionComposerSession>['postingPlan'];
   postingPlanValidation: ReturnType<typeof useTransactionComposerSession>['postingPlanValidation'];
@@ -78,7 +78,7 @@ export interface JournalEntryShell {
 
 /**
  * Journal entry shell: screen mode SSOT, shared editor, account picker.
- * Mode panels own their draft and account application through the active mode handle.
+ * Panels are projections over the session-owned editor draft.
  */
 export function useJournalEntryShell(): JournalEntryShell {
   const params = useLocalSearchParams();
@@ -119,25 +119,12 @@ export function useJournalEntryShell(): JournalEntryShell {
     onAfterSave,
     onSuccess,
   });
-  const { editor, splitDraft } = session;
+  const { editor, splitState } = session;
 
   const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
     editor,
     seed.editorMode,
   );
-
-  const { totalAmount: splitTotalAmount, setTotalAmount: setSplitTotalAmount } = splitDraft;
-  const previousModeRef = useRef(activeMode);
-  useEffect(() => {
-    const enteredSplit = activeMode === 'allocation' && previousModeRef.current !== 'allocation';
-    previousModeRef.current = activeMode;
-    if (!enteredSplit) return;
-
-    const sharedAmount = editor.lines.find(line => line.amount?.trim())?.amount;
-    if (sharedAmount && sharedAmount !== splitTotalAmount) {
-      setSplitTotalAmount(sharedAmount);
-    }
-  }, [activeMode, editor.lines, setSplitTotalAmount, splitTotalAmount]);
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
@@ -152,22 +139,23 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {
-      if (activeMode === 'basic' || activeMode === 'expert') {
-        applyJournalLineAccountSelection({
-          lineId,
-          accountId,
-          accounts,
-          updateLine: editor.updateLine,
-        });
-        return;
-      }
+      let targetLineId = lineId;
       if (lineId === SPLIT_SOURCE_LINE_ID) {
-        splitDraft.setSourceAccountId(accountId);
-      } else {
-        splitDraft.updateSplitRow(lineId, { accountId });
+        const sourceLine = editor.lines.find(
+          line => line.transactionType === TransactionType.CREDIT,
+        );
+        if (!sourceLine) return;
+        targetLineId = sourceLine.id;
       }
+
+      applyJournalLineAccountSelection({
+        lineId: targetLineId,
+        accountId,
+        accounts,
+        updateLine: editor.updateLine,
+      });
     },
-    [activeMode, accounts, editor.updateLine, splitDraft],
+    [accounts, editor.lines, editor.updateLine],
   );
 
   const {
@@ -183,8 +171,8 @@ export function useJournalEntryShell(): JournalEntryShell {
     editor,
     activeMode,
     applyAccountToActiveLine,
-    splitSourceAccountId: splitDraft.sourceAccountId,
-    splitRows: splitDraft.splits,
+    splitSourceAccountId: splitState.sourceAccountId,
+    splitRows: splitState.splits,
   });
 
   const [guidedFooterAmount, setGuidedFooterAmount] = useState<GuidedFooterAmount | null>(null);
@@ -254,7 +242,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   return {
     editor,
-    splitDraft,
+    splitState,
     transactionIntent: session.intent,
     postingPlan: session.postingPlan,
     postingPlanValidation: session.postingPlanValidation,

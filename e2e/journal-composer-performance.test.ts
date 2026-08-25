@@ -14,8 +14,8 @@ test.describe('Transaction Composer performance probes', () => {
 
     const coldStart = Date.now();
     await dashboardPage.clickPlusButton();
-    const coldMs = Date.now() - coldStart;
     await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
+    const coldMs = Date.now() - coldStart;
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByRole('button', { name: /Open new entry options/i })).toBeVisible({
@@ -24,8 +24,8 @@ test.describe('Transaction Composer performance probes', () => {
 
     const warmStart = Date.now();
     await dashboardPage.clickPlusButton();
-    const warmMs = Date.now() - warmStart;
     await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
+    const warmMs = Date.now() - warmStart;
 
     console.info(`[PERF] composer cold_open_ms=${coldMs} warm_open_ms=${warmMs}`);
 

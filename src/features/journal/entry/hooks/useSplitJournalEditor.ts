@@ -1,9 +1,7 @@
-import { AppConfig } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import {
-  buildJournalLinesFromSplitState,
   computeSplitTotals,
   SPLIT_SOURCE_LINE_ID,
   validateSplitState,
@@ -14,12 +12,10 @@ import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
-import { useSplitEntryState } from './useSplitEntryState';
 
 export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
-  splitDraft: ReturnType<typeof useSplitEntryState>;
   onSelectAccountRequest: (lineId: string) => void;
   isActive: boolean;
 }
@@ -27,32 +23,56 @@ export interface UseSplitJournalEditorProps {
 export function useSplitJournalEditor({
   accounts,
   editor,
-  splitDraft,
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
   const initializedRef = useRef(false);
 
-  const {
-    setTransactionType,
-    setIsGuidedMode,
-    isEdit,
-    submit,
-    isSubmitting,
-    description,
-    setDescription,
-  } = editor;
+  const { setTransactionType, setIsGuidedMode, isEdit, isSubmitting } = editor;
 
-  const {
-    sourceAccountId,
-    setSourceAccountId,
-    totalAmount,
-    setTotalAmount,
-    splits,
-    addSplitRow,
-    removeSplitRow,
-    updateSplitRow,
-  } = splitDraft;
+  const sourceLine = editor.lines.find(line => line.transactionType === 'CREDIT');
+  const destinationLines = editor.lines.filter(line => line.transactionType === 'DEBIT');
+  const sourceAccountId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
+  const totalAmount = sourceLine?.amount ?? '';
+  const splits = useMemo(
+    () =>
+      destinationLines.map(line => ({
+        id: line.id,
+        accountId: line.accountId,
+        amount: line.amount,
+      })),
+    [destinationLines],
+  );
+
+  const setSourceAccountId = useCallback(
+    (accountId: AccountId) => {
+      if (!sourceLine) return;
+      const account = accounts.find(candidate => candidate.id === accountId);
+      editor.updateLine(sourceLine.id, {
+        accountId,
+        accountName: account?.name ?? '',
+        accountType: account?.accountType,
+        accountCurrency: account?.currencyCode,
+      });
+    },
+    [accounts, editor, sourceLine],
+  );
+
+  const setTotalAmount = useCallback(
+    (amount: string) => {
+      editor.updateLines(Object.fromEntries(editor.lines.map(line => [line.id, { amount }])));
+    },
+    [editor],
+  );
+
+  const addSplitRow = editor.addLine;
+  const removeSplitRow = editor.removeLine;
+  const updateSplitRow = useCallback(
+    (id: string, patch: Partial<Pick<(typeof splits)[number], 'accountId' | 'amount'>>) => {
+      editor.updateLine(id, patch);
+    },
+    [editor],
+  );
 
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [
@@ -128,39 +148,6 @@ export function useSplitJournalEditor({
     [onSelectAccountRequest],
   );
 
-  const handleSave = useCallback(async () => {
-    if (!isValid) return;
-
-    const lines = buildJournalLinesFromSplitState({
-      sourceAccountId: resolvedSourceAccountId,
-      sourceAmount: totalAmount,
-      splits,
-      accounts,
-    });
-
-    let overrides: { description?: string; lines: typeof lines } = { lines };
-    if (!description.trim()) {
-      const defaultDesc = AppConfig.strings.transactionFlow.splitEntry.defaultDescription;
-      setDescription(defaultDesc);
-      overrides = { description: defaultDesc, lines };
-    }
-
-    if (resolvedSourceAccountId) {
-      preferences.journalNav.setLastUsedSourceAccountId(resolvedSourceAccountId);
-    }
-
-    await submit(overrides);
-  }, [
-    isValid,
-    description,
-    setDescription,
-    submit,
-    resolvedSourceAccountId,
-    totalAmount,
-    splits,
-    accounts,
-  ]);
-
   return useMemo(
     () => ({
       sourceAccountId: resolvedSourceAccountId,
@@ -180,7 +167,6 @@ export function useSplitJournalEditor({
       displayCurrency,
       openSourceAccountPicker,
       openSplitAccountPicker,
-      handleSave,
       isSubmitting,
       isValidTotal: parseSimpleAmountInput(totalAmount) > 0,
     }),
@@ -201,7 +187,6 @@ export function useSplitJournalEditor({
       displayCurrency,
       openSourceAccountPicker,
       openSplitAccountPicker,
-      handleSave,
       isSubmitting,
     ],
   );

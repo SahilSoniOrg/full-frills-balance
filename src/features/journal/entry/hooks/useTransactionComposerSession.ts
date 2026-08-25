@@ -5,17 +5,16 @@ import type {
   PostingPlanValidationResult,
 } from '@/src/types/domainTransaction';
 import { TransactionType } from '@/src/types/enums';
-import type { WorkplaceId } from '@/src/types/ids';
+import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
-import {
-  buildJournalLinesFromSplitState,
-  validateSplitState,
-} from '@/src/services/journal/splitJournalHelpers';
+import { validateSplitState } from '@/src/services/journal/splitJournalHelpers';
 import dayjs from 'dayjs';
 import { useCallback, useMemo } from 'react';
-import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
+import {
+  resolveTransactionIntent,
+  validatePostingPlan,
+} from '@/src/services/transaction/transactionComposerDomain';
 import { useJournalEditor, UseJournalEditorOptions } from './useJournalEditor';
-import { useSplitEntryState } from './useSplitEntryState';
 
 export type UseTransactionComposerSessionOptions = UseJournalEditorOptions & {
   accounts: AccountFields[];
@@ -32,32 +31,32 @@ export function useTransactionComposerSession(
 ) {
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
-  const splitDraft = useSplitEntryState(
-    editor.lines.find(line => line.amount)?.amount,
-    useCallback(
-      amount => {
-        editor.updateLines({
-          '1': { amount },
-          '2': { amount },
-        });
-      },
-      [editor.updateLines],
-    ),
-  );
 
   const sourceLine = editor.lines.find(line => line.transactionType === TransactionType.CREDIT);
   const destinationLines = editor.lines.filter(
     line => line.transactionType === TransactionType.DEBIT,
+  );
+  const splitState = useMemo(
+    () => ({
+      sourceAccountId: sourceLine?.accountId ?? EMPTY_ACCOUNT_ID,
+      totalAmount: sourceLine?.amount ?? '',
+      splits: destinationLines.map(line => ({
+        id: line.id,
+        accountId: line.accountId,
+        amount: line.amount,
+      })),
+    }),
+    [destinationLines, sourceLine],
   );
 
   const intent = useMemo<TransactionIntent>(
     () => ({
       description: editor.description,
       amount: sourceLine?.amount || destinationLines[0]?.amount,
-      date: editor.journalDate,
+      date: `${editor.journalDate}T${editor.journalTime || '00:00'}`,
       notes: editor.notes,
       type: editor.transactionType,
-      sourceAccountId: sourceLine?.accountId,
+      sourceAccountId: sourceLine?.accountId ?? EMPTY_ACCOUNT_ID,
       destinationAccountId: destinationLines[0]?.accountId,
       sourceExchangeRate: sourceLine?.exchangeRate,
       destinationExchangeRate: destinationLines[0]?.exchangeRate,
@@ -76,13 +75,19 @@ export function useTransactionComposerSession(
       destinationLines,
       editor.description,
       editor.journalDate,
+      editor.journalTime,
       editor.notes,
       editor.transactionType,
       sourceLine,
     ],
   );
 
-  const postingPlan = useMemo<PostingPlan>(
+  const intentResolution = useMemo(
+    () => resolveTransactionIntent(intent, { accounts, currencyCode }),
+    [accounts, currencyCode, intent],
+  );
+
+  const fallbackPostingPlan = useMemo<PostingPlan>(
     () => ({
       lines: editor.lines,
       currencyCode,
@@ -99,6 +104,7 @@ export function useTransactionComposerSession(
       editor.notes,
     ],
   );
+  const postingPlan = intentResolution.resolved ? intentResolution.plan : fallbackPostingPlan;
 
   const postingPlanValidation = useMemo<PostingPlanValidationResult>(
     () => validatePostingPlan(postingPlan, accounts),
@@ -108,45 +114,46 @@ export function useTransactionComposerSession(
   const splitValidation = useMemo(
     () =>
       validateSplitState({
-        sourceAccountId: splitDraft.sourceAccountId,
-        totalAmount: splitDraft.totalAmount,
-        splits: splitDraft.splits,
+        sourceAccountId: splitState.sourceAccountId,
+        totalAmount: splitState.totalAmount,
+        splits: splitState.splits,
       }),
-    [splitDraft.sourceAccountId, splitDraft.splits, splitDraft.totalAmount],
+    [splitState],
   );
 
   const submit = useCallback(
     async (mode: 'editor' | 'allocation') => {
-      if (mode === 'editor') return editor.submit();
-
-      const splitValidation = validateSplitState({
-        sourceAccountId: splitDraft.sourceAccountId,
-        totalAmount: splitDraft.totalAmount,
-        splits: splitDraft.splits,
-      });
-      if (!splitValidation.valid) {
+      if (mode === 'allocation' && !splitValidation.valid) {
         return { success: false, error: splitValidation.error } as const;
       }
 
-      const lines = buildJournalLinesFromSplitState({
-        sourceAccountId: splitDraft.sourceAccountId,
-        sourceAmount: splitDraft.totalAmount,
-        splits: splitDraft.splits,
-        accounts,
-      });
       const description =
         editor.description.trim() ||
-        AppConfig.strings.transactionFlow.splitEntry.defaultDescription;
+        (mode === 'allocation'
+          ? AppConfig.strings.transactionFlow.splitEntry.defaultDescription
+          : `${editor.transactionType.charAt(0).toUpperCase()}${editor.transactionType.slice(1)}`);
       if (!editor.description.trim()) editor.setDescription(description);
 
-      return editor.submit({ description, lines });
+      const submissionIntent = { ...intent, description };
+      const resolution = resolveTransactionIntent(submissionIntent, { accounts, currencyCode });
+      if (!resolution.resolved) {
+        return {
+          success: false,
+          error: resolution.issues[0]?.message || 'Invalid transaction',
+        } as const;
+      }
+
+      return editor.submitPlan(
+        resolution.plan,
+        mode === 'allocation' ? 'advanced' : editor.isGuidedMode ? 'simple' : 'advanced',
+      );
     },
-    [accounts, editor, splitDraft],
+    [accounts, currencyCode, editor, intent, splitValidation],
   );
 
   return {
     editor,
-    splitDraft,
+    splitState,
     intent,
     postingPlan,
     postingPlanValidation,

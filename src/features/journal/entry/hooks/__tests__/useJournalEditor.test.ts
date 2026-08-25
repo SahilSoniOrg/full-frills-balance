@@ -134,7 +134,15 @@ describe('useJournalEditor', () => {
     });
 
     await act(async () => {
-      await result.current.submit();
+      await result.current.submitPlan(
+        {
+          lines: result.current.lines,
+          currencyCode: 'USD',
+          description: 'Expense',
+          date: Date.now(),
+        },
+        'simple',
+      );
     });
 
     expect(journalService.postPostingPlan).toHaveBeenCalled();
@@ -150,7 +158,15 @@ describe('useJournalEditor', () => {
     (journalService.postPostingPlan as jest.Mock).mockResolvedValue({ success: true });
 
     await act(async () => {
-      await result.current.submit();
+      await result.current.submitPlan(
+        {
+          lines: result.current.lines,
+          currencyCode: 'USD',
+          description: 'Expense',
+          date: Date.now(),
+        },
+        'simple',
+      );
     });
 
     expect(mockOnSuccess).toHaveBeenCalled();
@@ -171,7 +187,15 @@ describe('useJournalEditor', () => {
     });
 
     await act(async () => {
-      await result.current.submit();
+      await result.current.submitPlan(
+        {
+          lines: result.current.lines,
+          currencyCode: 'USD',
+          description: 'Expense',
+          date: Date.now(),
+        },
+        'simple',
+      );
     });
 
     expect(onAfterSave).toHaveBeenCalledWith({ journalId: 'journal-1', action: 'created' });

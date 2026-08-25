@@ -29,9 +29,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: vm.activeMode,
-    bulkSubmitting: false,
-    bulkRowCount: 0,
-    isAmountFocused: false,
     isSimpleValid: isPlanValid,
     simpleSubmitting: isSubmitting,
     simpleType: vm.editor.transactionType,
@@ -41,9 +38,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
   });
   const isSubmitDisabled = isJournalEntrySubmitDisabled({
     activeMode: vm.activeMode,
-    bulkSubmitting: false,
-    bulkValid: false,
-    isAmountFocused: false,
     isSimpleValid: isPlanValid,
     isAdvancedValid: isPlanValid,
     isSplitValid: vm.splitValidation.valid,
@@ -88,7 +82,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     activeMode: vm.activeMode,
     accounts: vm.accounts,
     editor: vm.editor,
-    splitDraft: vm.splitDraft,
     workplaceId: vm.workplaceId,
     workplaceCurrency: vm.workplaceCurrency,
     onSelectAccountRequest: vm.onSelectAccountRequest,

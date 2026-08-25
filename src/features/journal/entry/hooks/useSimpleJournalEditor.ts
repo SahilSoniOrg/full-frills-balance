@@ -8,14 +8,12 @@ import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guid
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
   buildSimpleCrossCurrencyLineUpdates,
-  buildSimpleDefaultDescription,
   buildSimpleFormAccountSections,
   computeSimpleConvertedAmount,
   parseSimpleAmountInput,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
@@ -47,9 +45,6 @@ export function useSimpleJournalEditor({
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  // journalNav prefs are global today; workplace scoping is F9.
-  const journalNav = preferences.journalNav;
-
   // Derived State from Editor
   const type = editor.transactionType;
   const isGuidedMode = editor.isGuidedMode;
@@ -264,31 +259,6 @@ export function useSimpleJournalEditor({
     [accounts, editor, type],
   );
 
-  const handleSave = useCallback(async () => {
-    if (numAmount <= 0) {
-      return;
-    }
-    if (!sourceId || !destinationId) {
-      return;
-    }
-
-    let overrides;
-    // Default description to type if empty
-    if (!editor.description.trim()) {
-      const defaultDesc = buildSimpleDefaultDescription(type, sourceAccount, destAccount);
-      editor.setDescription(defaultDesc);
-      overrides = { description: defaultDesc };
-    }
-
-    // Save preferences
-    if (type === 'expense' || type === 'transfer') journalNav.setLastUsedSourceAccountId(sourceId);
-    if (type === 'income' || type === 'transfer')
-      journalNav.setLastUsedDestinationAccountId(destinationId);
-
-    // Use the main editor submit
-    await editor.submit(overrides);
-  }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount, journalNav]);
-
   const accountSections = useMemo((): SimpleFormSection[] => {
     return buildSimpleFormAccountSections(type, {
       leafAccounts,
@@ -336,7 +306,6 @@ export function useSimpleJournalEditor({
       sourceCurrency,
       destCurrency,
       displayCurrency: sourceCurrency || destCurrency || workplaceCurrency,
-      handleSave,
       openAccountPicker,
       isValidAmount: numAmount > 0,
       accountSections,
@@ -365,7 +334,6 @@ export function useSimpleJournalEditor({
       accounts,
       sourceCurrency,
       destCurrency,
-      handleSave,
       openAccountPicker,
       numAmount,
       accountSections,

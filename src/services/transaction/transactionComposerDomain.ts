@@ -23,7 +23,7 @@ function parsePositiveAmount(value: string | undefined): number | null {
 
 function parseDate(value: string): number | null {
   if (!value.trim()) return null;
-  const timestamp = new Date(`${value}T00:00:00`).getTime();
+  const timestamp = new Date(value.includes('T') ? value : `${value}T00:00:00`).getTime();
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 

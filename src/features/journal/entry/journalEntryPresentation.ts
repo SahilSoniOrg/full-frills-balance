@@ -106,9 +106,6 @@ export function isAdvancedJournalFormValid(input: {
 
 export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;
-  bulkSubmitting: boolean;
-  bulkRowCount: number;
-  isAmountFocused: boolean;
   isSimpleValid: boolean;
   simpleSubmitting: boolean;
   simpleType: string;
@@ -122,9 +119,6 @@ export function resolveJournalEntrySubmitLabel(input: {
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
   if (input.activeMode === 'basic') {
-    if (input.isAmountFocused && !input.isSimpleValid) {
-      return AppConfig.strings.transactionFlow.continue;
-    }
     return input.simpleSubmitting
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.save(input.simpleType);
@@ -143,9 +137,6 @@ export function resolveJournalEntrySubmitLabel(input: {
 
 export function isJournalEntrySubmitDisabled(input: {
   activeMode: JournalEntryScreenMode;
-  bulkSubmitting: boolean;
-  bulkValid: boolean;
-  isAmountFocused: boolean;
   isSimpleValid: boolean;
   isAdvancedValid: boolean;
   isSplitValid?: boolean;
@@ -154,7 +145,7 @@ export function isJournalEntrySubmitDisabled(input: {
     return !input.isSplitValid;
   }
   if (input.activeMode === 'basic') {
-    return input.isAmountFocused ? false : !input.isSimpleValid;
+    return !input.isSimpleValid;
   }
   return !input.isAdvancedValid;
 }

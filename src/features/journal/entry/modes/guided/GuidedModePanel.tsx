@@ -17,8 +17,6 @@ export type GuidedFooterAmount = {
   setAmount: (amount: string) => void;
   accentType: TabType;
   displayCurrency: string;
-  onFocus: () => void;
-  onBlur: () => void;
   precision: number;
 };
 
@@ -70,8 +68,6 @@ export function GuidedModePanel({
   });
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
 
-  const onFocusAmount = useCallback(() => undefined, []);
-  const onBlurAmount = useCallback(() => undefined, []);
   const footerAmount = useMemo<GuidedFooterAmount>(
     () => ({
       amount: simpleEditor.amount,
@@ -79,16 +75,12 @@ export function GuidedModePanel({
       accentType: simpleEditor.type,
       displayCurrency: simpleEditor.displayCurrency,
       precision,
-      onFocus: onFocusAmount,
-      onBlur: onBlurAmount,
     }),
     [
       simpleEditor.amount,
       simpleEditor.setAmount,
       simpleEditor.type,
       simpleEditor.displayCurrency,
-      onFocusAmount,
-      onBlurAmount,
       precision,
     ],
   );
@@ -177,8 +169,6 @@ export function GuidedFooterAmountSlot({
       readOnly={false}
       activeColor={resolveSimpleTypeAccentColor(footerAmount.accentType, theme)}
       displayCurrency={footerAmount.displayCurrency}
-      onFocus={footerAmount.onFocus}
-      onBlur={footerAmount.onBlur}
       precision={footerAmount.precision}
       variant="default"
     />
