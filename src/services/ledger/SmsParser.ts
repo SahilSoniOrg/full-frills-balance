@@ -37,7 +37,7 @@ export class SmsParser {
     });
 
     const isPhoneNumber = /^\+?\d{10,14}$/.test(sms.address);
-    if (isPhoneNumber) {
+    if (isPhoneNumber && info.direction === 'unknown') {
       return {
         id: sms.id,
         type: 'unknown',

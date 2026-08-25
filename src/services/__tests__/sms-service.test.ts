@@ -69,7 +69,7 @@ describe('smsService.parseTransactionMessage', () => {
     const parsed = await smsService.parseTransactionMessageAsync({
       id: 'sms-4',
       address: '+919999999999',
-      body: 'Paid INR 100 to friend',
+      body: 'Hey, can you send me 500?',
       date: 1700000003000,
     });
 
@@ -226,16 +226,20 @@ describe('smsService workplace isolation', () => {
     const sharedJournalId = 'shared-journal' as JournalId;
     const foreignRecord = await createRecord(otherWorkplaceId, sharedJournalId);
     const currentRecord = await createRecord(workplaceId, sharedJournalId);
+    const secondCurrentRecord = await createRecord(workplaceId, sharedJournalId);
 
     const preview = await smsService.previewRuleMatches(workplaceId, {
       mode: 'regex',
       senderMatch: 'BANK',
     });
-    expect(preview.map(record => record.id)).toEqual([currentRecord.id]);
+    expect(preview.map(record => record.id)).toEqual([currentRecord.id, secondCurrentRecord.id]);
     expect(await smsService.getInboxRecord(workplaceId, foreignRecord.id)).toBeNull();
-    expect((await smsService.findByLinkedJournalId(workplaceId, sharedJournalId))?.id).toBe(
-      currentRecord.id,
+    expect([currentRecord.id, secondCurrentRecord.id]).toContain(
+      (await smsService.findByLinkedJournalId(workplaceId, sharedJournalId))?.id,
     );
+    expect(
+      (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId)).map(r => r.id),
+    ).toEqual(expect.arrayContaining([currentRecord.id, secondCurrentRecord.id]));
 
     await smsService.markInboxRecordStatus(
       workplaceId,

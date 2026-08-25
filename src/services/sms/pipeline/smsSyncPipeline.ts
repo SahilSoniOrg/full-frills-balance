@@ -190,29 +190,30 @@ export class SmsSyncPipeline {
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
-      // Re-fetch records and journals inside the write transaction to guard
-      // against concurrent mutations that may have occurred since Phase 1.
+      // Re-fetch before preparing models. WatermelonDB requires prepareUpdate/
+      // prepareCreate to be followed by database.batch synchronously; awaiting
+      // these reads inside the batch builder triggers its diagnostic error.
+      const messageIds = analysisResults.map(result => result.message.id);
+      const fingerprints = analysisResults.map(result => result.fingerprint);
+      const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
+        this.inbox
+          .query(
+            Q.where('workplace_id', workplaceId),
+            Q.where('channel', 'sms'),
+            Q.where('device_source_id', Q.oneOf(messageIds)),
+          )
+          .fetch(),
+        smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+        smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+      ]);
+      const latestRecordsByMessageId = new Map(
+        latestRecords.map(record => [record.deviceSourceId, record]),
+      );
+      const latestProcessedIds = new Set<string>();
+
       const committed = await transactionInboxRepository.persistScanBatch(
-        async () => {
+        () => {
           if (signal?.aborted) return [];
-          const messageIds = analysisResults.map(result => result.message.id);
-          const fingerprints = analysisResults.map(result => result.fingerprint);
-          const [latestRecords, latestJournalsById, latestJournalsByFingerprint] =
-            await Promise.all([
-              this.inbox
-                .query(
-                  Q.where('workplace_id', workplaceId),
-                  Q.where('channel', 'sms'),
-                  Q.where('device_source_id', Q.oneOf(messageIds)),
-                )
-                .fetch(),
-              smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-              smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
-            ]);
-          const latestRecordsByMessageId = new Map(
-            latestRecords.map(record => [record.deviceSourceId, record]),
-          );
-          const latestProcessedIds = new Set<string>();
           const allOps: Model[] = [];
 
           for (const result of analysisResults) {

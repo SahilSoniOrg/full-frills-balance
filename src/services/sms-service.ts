@@ -129,14 +129,22 @@ class SmsService {
     workplaceId: WorkplaceId,
     journalId: string,
   ): Promise<TransactionInboxRecord | null> {
-    const records = await this.inbox
+    const records = await this.findAllByLinkedJournalId(workplaceId, journalId);
+    return records[0] || null;
+  }
+
+  async findAllByLinkedJournalId(
+    workplaceId: WorkplaceId,
+    journalId: string,
+  ): Promise<TransactionInboxRecord[]> {
+    return this.inbox
       .query(
         Q.where('workplace_id', workplaceId),
         Q.where('linked_journal_id', journalId),
-        Q.take(1),
+        Q.where('channel', 'sms'),
+        Q.sortBy('input_date', Q.asc),
       )
       .fetch();
-    return records[0] || null;
   }
 
   async markInboxRecordStatus(

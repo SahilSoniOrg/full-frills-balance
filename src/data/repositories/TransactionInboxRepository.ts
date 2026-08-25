@@ -117,16 +117,18 @@ export class TransactionInboxRepository {
   }
 
   async persistScanBatch(
-    buildOps: () => Promise<Model[]>,
+    buildOps: () => Model[],
     afterBatch?: () => void,
     signal?: AbortSignal,
   ): Promise<boolean> {
     let committed = false;
 
     await database.write(async () => {
-      const ops = await buildOps();
-      // The builder yields while analysis/rechecks run. Re-check cancellation at the last
-      // possible point so an aborted scan cannot enter the write batch or its bookkeeping.
+      // Model prepare* calls must be followed by database.batch synchronously.
+      // Keep all async reads outside this callback and only prepare operations here.
+      const ops = buildOps();
+      // Re-check cancellation at the last possible point so an aborted scan cannot enter the
+      // write batch or its bookkeeping.
       if (ops.length === 0 || signal?.aborted) return;
 
       await database.batch(ops);

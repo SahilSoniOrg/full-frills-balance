@@ -23,6 +23,9 @@ export interface TransactionLinkedJournalInfo {
   description?: string;
   journalDate: number;
   status: string;
+  totalAmount?: number;
+  currencyCode?: string;
+  displayType?: string;
 }
 
 export type TransactionChannel = 'sms' | 'voice';

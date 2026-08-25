@@ -60,6 +60,9 @@ export async function enrichTransactionInboxRecords(
             description: journalMap.get(record.linkedJournalId)?.description,
             journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.inputDate,
             status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
+            totalAmount: journalMap.get(record.linkedJournalId)?.totalAmount,
+            currencyCode: journalMap.get(record.linkedJournalId)?.currencyCode,
+            displayType: journalMap.get(record.linkedJournalId)?.displayType,
           }
         : undefined,
       duplicateCandidate,

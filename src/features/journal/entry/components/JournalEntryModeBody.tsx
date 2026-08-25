@@ -57,6 +57,7 @@ export function JournalEntryModeBody({
       <SplitModePanel
         accounts={accounts}
         editor={editor}
+        initialAmount={editor.lines.find(line => line.amount)?.amount}
         onSelectAccountRequest={onSelectAccountRequest}
         isEdit={editor.isEdit}
         isSubmitting={editor.isSubmitting}

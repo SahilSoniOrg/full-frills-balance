@@ -156,10 +156,12 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
       });
       AppNavigation.toJournalDetails(item.linkedJournal.journalId, {
         title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress || '',
-        amount: item.parsedAmount || 0,
-        currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
+        amount: item.linkedJournal.totalAmount ?? item.parsedAmount ?? 0,
+        currencyCode:
+          item.linkedJournal.currencyCode || item.parsedCurrencyCode || defaultCurrencyCode,
         date: item.linkedJournal.journalDate,
-        displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
+        displayType:
+          item.linkedJournal.displayType || (item.direction === 'credit' ? 'INCOME' : 'EXPENSE'),
       });
     },
     [defaultCurrencyCode],

@@ -71,7 +71,7 @@ export function JournalDetailsView({
               onHistoryPress={readyVm.onHistoryPress}
             />
 
-            {readyVm.smsInfo && (
+            {readyVm.smsInfo?.length ? (
               <>
                 <Separator />
                 <JournalDetailsSmsSection
@@ -79,7 +79,7 @@ export function JournalDetailsView({
                   onOpenSmsInbox={readyVm.onOpenSmsInbox}
                 />
               </>
-            )}
+            ) : null}
 
             {readyVm.statusNotice && (
               <AppText variant="caption" color="warning">

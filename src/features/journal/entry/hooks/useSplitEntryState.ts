@@ -3,9 +3,9 @@ import { createEmptySplitRow, SplitRowState } from '@/src/services/journal/split
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useCallback, useState } from 'react';
 
-export function useSplitEntryState() {
+export function useSplitEntryState(initialAmount?: string) {
   const [sourceAccountId, setSourceAccountId] = useState<AccountId>(EMPTY_ACCOUNT_ID);
-  const [totalAmount, setTotalAmount] = useState('');
+  const [totalAmount, setTotalAmount] = useState(initialAmount || '');
   const [splits, setSplits] = useState<SplitRowState[]>(() => [
     createEmptySplitRow(generateId()),
     createEmptySplitRow(generateId()),

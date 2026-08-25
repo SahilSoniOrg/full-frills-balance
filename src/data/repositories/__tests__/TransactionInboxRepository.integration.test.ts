@@ -35,7 +35,7 @@ describe('TransactionInboxRepository integration', () => {
 
     let preparedRecordId!: string;
     await expect(
-      repository.persistScanBatch(async () => {
+      repository.persistScanBatch(() => {
         const prepared = repository.prepareUpsert(firstPayload, null);
         preparedRecordId = prepared.record.id;
         return prepared.ops;
@@ -57,7 +57,7 @@ describe('TransactionInboxRepository integration', () => {
     };
 
     await expect(
-      repository.persistScanBatch(async () => {
+      repository.persistScanBatch(() => {
         const prepared = repository.prepareUpsert(secondPayload, created!);
         return prepared.ops;
       }),
@@ -85,7 +85,7 @@ describe('TransactionInboxRepository integration', () => {
     };
 
     let preparedRecord!: ReturnType<typeof repository.prepareUpsert>['record'];
-    await repository.persistScanBatch(async () => {
+    await repository.persistScanBatch(() => {
       const prepared = repository.prepareUpsert(payload, null);
       preparedRecord = prepared.record;
       return prepared.ops;
@@ -117,7 +117,7 @@ describe('TransactionInboxRepository integration', () => {
 
     await expect(
       repository.persistScanBatch(
-        async () => {
+        () => {
           const prepared = repository.prepareUpsert(payload, null);
           controller.abort();
           return prepared.ops;

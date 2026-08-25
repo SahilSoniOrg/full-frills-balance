@@ -1,8 +1,10 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { Section } from '@/src/components/common/Section';
-import { AppButton, AppText, ListRow } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Box, Inset, Stack } from '@/src/design-system';
-import React, { useMemo } from 'react';
+import { useTheme } from '@/src/hooks/use-theme';
+import React, { useMemo, useState } from 'react';
+import { Pressable } from 'react-native';
 
 export interface SmsInfo {
   sender?: string;
@@ -13,10 +15,11 @@ export interface SmsInfo {
   accountSource?: string;
   parseReason?: string;
   rawBody?: string;
+  inboxRecordId?: string;
 }
 
 interface JournalDetailsSmsSectionProps {
-  smsInfo: SmsInfo;
+  smsInfo: SmsInfo[];
   onOpenSmsInbox?: () => void;
 }
 
@@ -26,79 +29,107 @@ type SmsField =
 
 export const JournalDetailsSmsSection = React.memo(
   ({ smsInfo, onOpenSmsInbox }: JournalDetailsSmsSectionProps) => {
-    const fields = useMemo(() => {
-      const list: SmsField[] = [];
-
-      if (smsInfo.sender) list.push({ kind: 'text', label: 'Sender', value: smsInfo.sender });
-      if (smsInfo.smsDate) list.push({ kind: 'text', label: 'SMS Date', value: smsInfo.smsDate });
-      if (typeof smsInfo.amount === 'number') {
-        list.push({
-          kind: 'money',
-          label: 'Parsed Amount',
-          amount: smsInfo.amount,
-          currencyCode: smsInfo.currencyCode ?? '',
-        });
-      }
-      if (smsInfo.referenceNumber)
-        list.push({ kind: 'text', label: 'Reference', value: smsInfo.referenceNumber });
-      if (smsInfo.accountSource)
-        list.push({ kind: 'text', label: 'Account Source', value: smsInfo.accountSource });
-      if (smsInfo.parseReason)
-        list.push({ kind: 'text', label: 'Parse Note', value: smsInfo.parseReason });
-
-      return list;
+    const { theme } = useTheme();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const smsSections = useMemo(() => {
+      return smsInfo.map(sms => {
+        const fields: SmsField[] = [];
+        if (sms.sender) fields.push({ kind: 'text', label: 'Sender', value: sms.sender });
+        if (sms.smsDate) fields.push({ kind: 'text', label: 'SMS Date', value: sms.smsDate });
+        if (typeof sms.amount === 'number') {
+          fields.push({
+            kind: 'money',
+            label: 'Parsed Amount',
+            amount: sms.amount,
+            currencyCode: sms.currencyCode ?? '',
+          });
+        }
+        if (sms.referenceNumber)
+          fields.push({ kind: 'text', label: 'Reference', value: sms.referenceNumber });
+        if (sms.accountSource)
+          fields.push({ kind: 'text', label: 'Account Source', value: sms.accountSource });
+        if (sms.parseReason)
+          fields.push({ kind: 'text', label: 'Parse Note', value: sms.parseReason });
+        return { sms, fields };
+      });
     }, [smsInfo]);
 
     return (
       <Stack space="md">
-        <Section<SmsField>
-          title="Imported From SMS"
-          items={fields}
-          emptyText="No SMS fields parsed."
-          keyExtractor={item => item.label}
-          renderItem={item => (
-            <ListRow
-              title={item.label}
-              trailing={
-                item.kind === 'money' ? (
-                  <MoneyText
-                    amount={item.amount}
-                    currencyCode={item.currencyCode}
-                    variant="body"
-                    color="secondary"
-                  />
-                ) : (
-                  <AppText variant="body" color="secondary">
-                    {item.value}
-                  </AppText>
-                )
-              }
-              padding="md"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isExpanded }}
+          accessibilityLabel={`${isExpanded ? 'Collapse' : 'Expand'} imported SMS section`}
+          onPress={() => setIsExpanded(value => !value)}
+        >
+          <Box flexDirection="row" justifyContent="space-between" alignItems="center">
+            <AppText variant="subheading" weight="bold">
+              Imported From SMS{smsInfo.length > 1 ? ` (${smsInfo.length})` : ''}
+            </AppText>
+            <AppIcon
+              name={isExpanded ? 'chevronDown' : 'chevronRight'}
+              size={18}
+              color={theme.textSecondary}
             />
-          )}
-        />
+          </Box>
+        </Pressable>
 
-        {smsInfo.rawBody && (
-          <Section title="SMS Raw Body">
-            <Inset horizontal="md" vertical="md">
-              <AppText variant="caption" color="secondary">
-                RAW SMS
-              </AppText>
-              <Box marginTop="xs">
-                <AppText variant="body" color="secondary">
-                  {smsInfo.rawBody}
-                </AppText>
-              </Box>
-            </Inset>
-          </Section>
-        )}
+        {isExpanded && (
+          <Stack space="md">
+            {smsSections.map(({ sms, fields }, index) => (
+              <Stack key={sms.inboxRecordId || `sms-${index}`} space="md">
+                <Section<SmsField>
+                  title={`SMS${smsInfo.length > 1 ? ` ${index + 1}` : ''}`}
+                  items={fields}
+                  emptyText="No SMS fields parsed."
+                  keyExtractor={item => item.label}
+                  renderItem={item => (
+                    <ListRow
+                      title={item.label}
+                      trailing={
+                        item.kind === 'money' ? (
+                          <MoneyText
+                            amount={item.amount}
+                            currencyCode={item.currencyCode}
+                            variant="body"
+                            color="secondary"
+                          />
+                        ) : (
+                          <AppText variant="body" color="secondary">
+                            {item.value}
+                          </AppText>
+                        )
+                      }
+                      padding="md"
+                    />
+                  )}
+                />
 
-        {onOpenSmsInbox && (
-          <Inset horizontal="md" vertical="md">
-            <AppButton variant="ghost" onPress={onOpenSmsInbox} style={{ width: '100%' }}>
-              Open SMS Inbox
-            </AppButton>
-          </Inset>
+                {sms.rawBody && (
+                  <Section title="SMS Raw Body">
+                    <Inset horizontal="md" vertical="md">
+                      <AppText variant="caption" color="secondary">
+                        RAW SMS
+                      </AppText>
+                      <Box marginTop="xs">
+                        <AppText variant="body" color="secondary">
+                          {sms.rawBody}
+                        </AppText>
+                      </Box>
+                    </Inset>
+                  </Section>
+                )}
+              </Stack>
+            ))}
+
+            {onOpenSmsInbox && (
+              <Inset horizontal="md" vertical="md">
+                <AppButton variant="ghost" onPress={onOpenSmsInbox} style={{ width: '100%' }}>
+                  Open SMS Inbox
+                </AppButton>
+              </Inset>
+            )}
+          </Stack>
         )}
       </Stack>
     );

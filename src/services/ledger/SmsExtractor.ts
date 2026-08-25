@@ -13,14 +13,6 @@ export class SmsExtractor implements TransactionExtractor {
 
   async extract(input: RawTransactionInput): Promise<ExtractedInfo> {
     const text = input.rawText.toLowerCase();
-    const isPhoneNumber = /^\+?\d{10,14}$/.test(input.senderAddress || '');
-
-    if (isPhoneNumber) {
-      return {
-        direction: 'unknown',
-        date: input.date,
-      };
-    }
 
     const direction = this.classifyDirection(text);
     const currencyMatch = this.extractCurrencyAndAmount(input.rawText);

@@ -19,6 +19,7 @@ import { useSplitEntryState } from './useSplitEntryState';
 export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
+  initialAmount?: string;
   onSelectAccountRequest: (lineId: string) => void;
   isActive: boolean;
 }
@@ -26,6 +27,7 @@ export interface UseSplitJournalEditorProps {
 export function useSplitJournalEditor({
   accounts,
   editor,
+  initialAmount,
   onSelectAccountRequest,
   isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
@@ -50,7 +52,7 @@ export function useSplitJournalEditor({
     addSplitRow,
     removeSplitRow,
     updateSplitRow,
-  } = useSplitEntryState();
+  } = useSplitEntryState(initialAmount);
 
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [

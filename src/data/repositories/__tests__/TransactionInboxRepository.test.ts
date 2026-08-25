@@ -24,7 +24,7 @@ describe('TransactionInboxRepository.persistScanBatch', () => {
   it('does not batch or run post-commit bookkeeping when cancelled after building ops', async () => {
     const controller = new AbortController();
     const afterBatch = jest.fn();
-    const buildOps = jest.fn(async () => {
+    const buildOps = jest.fn(() => {
       controller.abort();
       return ['prepared-op'] as any[];
     });
@@ -39,7 +39,7 @@ describe('TransactionInboxRepository.persistScanBatch', () => {
 
   it('runs post-commit bookkeeping only after batching', async () => {
     const afterBatch = jest.fn();
-    const buildOps = jest.fn(async () => ['prepared-op'] as any[]);
+    const buildOps = jest.fn(() => ['prepared-op'] as any[]);
 
     await expect(repository.persistScanBatch(buildOps, afterBatch)).resolves.toBe(true);
 

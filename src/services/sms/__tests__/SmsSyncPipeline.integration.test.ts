@@ -495,6 +495,20 @@ describe('SmsSyncPipeline integration', () => {
       const inbox = await fetchInboxByDeviceId('sms-edge-e3');
       expect(inbox).toBeNull();
     });
+
+    it('parses transaction SMS from numeric sender addresses', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-edge-e4',
+        address: '+16505551212',
+        body: 'Debited Rs 80.00 from a/c X0144 via UPI to PRAVEEN KUMA. Ref 623763721919.',
+        date: baseDate,
+      });
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+
+      const inbox = await fetchInboxByDeviceId('sms-edge-e4');
+      expect(inbox?.parsedAmount).toBe(80);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+    });
   });
 
   describe('workplace isolation', () => {

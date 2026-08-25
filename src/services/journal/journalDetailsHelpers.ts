@@ -194,17 +194,29 @@ export function mapSmsJournalMetadataDisplay(input: {
     referenceNumber?: string;
     parseReason?: string;
     parsedAccountSource?: string;
+    parsedAmount?: number;
+    parsedCurrencyCode?: string;
+    senderAddress?: string;
+    rawBody?: string;
+    metadataJson?: string;
     inputDate?: number;
     id?: string;
   } | null;
 }): SmsJournalInfoDisplay {
-  const parsedMetadata = safeParseJSON<SmsMetadataFields>(input.metadataJson, {});
+  const parsedMetadata = safeParseJSON<SmsMetadataFields>(
+    input.inboxRecord?.metadataJson || input.metadataJson,
+    {},
+  );
   return {
-    sender: input.originalSmsSender || undefined,
-    rawBody: input.originalSmsBody || undefined,
+    sender: input.inboxRecord?.senderAddress || input.originalSmsSender || undefined,
+    rawBody: input.inboxRecord?.rawBody || input.originalSmsBody || undefined,
     amount:
-      typeof parsedMetadata.parsedAmount === 'number' ? parsedMetadata.parsedAmount : undefined,
-    currencyCode: parsedMetadata.parsedCurrencyCode,
+      typeof input.inboxRecord?.parsedAmount === 'number'
+        ? input.inboxRecord.parsedAmount
+        : typeof parsedMetadata.parsedAmount === 'number'
+          ? parsedMetadata.parsedAmount
+          : undefined,
+    currencyCode: input.inboxRecord?.parsedCurrencyCode || parsedMetadata.parsedCurrencyCode,
     referenceNumber: parsedMetadata.referenceNumber || input.inboxRecord?.referenceNumber,
     accountSource: parsedMetadata.accountSource || input.inboxRecord?.parsedAccountSource,
     parseReason: input.inboxRecord?.parseReason,

@@ -63,7 +63,7 @@ export interface JournalDetailsViewModel {
     parseReason?: string;
     smsDate?: string;
     inboxRecordId?: string;
-  };
+  }[];
   onOpenSmsInbox?: () => void;
   onPost?: () => void;
   onRevertToScheduled?: () => void;
@@ -259,7 +259,9 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     journalIdShort: journalId?.substring(0, 8) || '...',
     onHistoryPress,
     smsInfo,
-    onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toTransactionInbox : undefined,
+    onOpenSmsInbox: smsInfo?.some(item => item.inboxRecordId)
+      ? AppNavigation.toTransactionInbox
+      : undefined,
     statusNotice: isOrphaned ? ORPHANED_PLANNED_JOURNAL_NOTICE : undefined,
     onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
     onRevertToScheduled:

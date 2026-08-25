@@ -15,6 +15,7 @@ import { useCallback, useMemo } from 'react';
 export type SplitModePanelProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
+  initialAmount?: string;
   onSelectAccountRequest: (lineId: string) => void;
   isEdit: boolean;
   isSubmitting: boolean;
@@ -23,6 +24,7 @@ export type SplitModePanelProps = {
 export function SplitModePanel({
   accounts,
   editor,
+  initialAmount,
   onSelectAccountRequest,
   isEdit,
   isSubmitting,
@@ -30,6 +32,7 @@ export function SplitModePanel({
   const splitEditor = useSplitJournalEditor({
     accounts,
     editor,
+    initialAmount,
     onSelectAccountRequest,
     isActive: true,
   });
