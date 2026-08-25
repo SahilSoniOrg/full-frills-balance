@@ -95,6 +95,9 @@ const SplitRowItem = React.memo(function SplitRowItem({
             onChangeText={amount => onUpdateAmount(row.id, amount)}
             placeholder={str.amountPlaceholder}
             currencySymbol={currencySymbol}
+            variant="minimal"
+            containerStyle={styles.splitAmountContainer}
+            inputStyle={styles.splitAmountInput}
             testID={`split-amount-input-${row.id}`}
           />
         </View>
@@ -228,6 +231,9 @@ export function SplitForm({
                   onChangeText={setTotalAmount}
                   placeholder={str.amountPlaceholder}
                   currencySymbol={currencySymbol}
+                  variant="minimal"
+                  containerStyle={styles.totalAmountContainer}
+                  inputStyle={styles.totalAmountInput}
                   testID="split-total-amount-input"
                 />
               </View>

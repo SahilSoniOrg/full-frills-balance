@@ -3,7 +3,7 @@ import { AppInput } from '@/src/components/core/AppInput';
 import { Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleProp, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 
 interface CalculatorAmountInputProps {
   value: string;
@@ -13,6 +13,8 @@ interface CalculatorAmountInputProps {
   placeholder?: string;
   label?: string;
   variant?: 'default' | 'hero' | 'minimal';
+  inputStyle?: TextInputProps['style'];
+  containerStyle?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
@@ -24,6 +26,8 @@ export function CalculatorAmountInput({
   placeholder = '0.00',
   label,
   variant = 'default',
+  inputStyle,
+  containerStyle,
   testID,
 }: CalculatorAmountInputProps) {
   const { theme, fonts } = useTheme();
@@ -37,19 +41,18 @@ export function CalculatorAmountInput({
         value={value}
         placeholder={placeholder}
         variant={isHero ? 'minimal' : variant}
-        containerStyle={isHero ? styles.heroInput : undefined}
-        inputStyle={
-          isHero
-            ? {
-                color: theme.text,
-                fontFamily: fonts.semibold,
-                fontSize: Typography.sizes.hero / 1.5,
-                letterSpacing: -1,
-                minWidth: 150,
-                textAlign: 'center',
-              }
-            : undefined
-        }
+        containerStyle={[isHero && styles.heroInput, containerStyle]}
+        inputStyle={[
+          isHero && {
+            color: theme.text,
+            fontFamily: fonts.semibold,
+            fontSize: Typography.sizes.hero / 1.5,
+            letterSpacing: -1,
+            minWidth: 150,
+            textAlign: 'center',
+          },
+          inputStyle,
+        ]}
         calculator
         onCalculatorPress={() => setVisible(true)}
         testID={testID}

@@ -1,4 +1,5 @@
 import { AppInput } from '@/src/components/core/AppInput';
+import { Spacing } from '@/src/constants';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { StyleSheet } from 'react-native';
 
@@ -59,5 +60,17 @@ describe('AppInput', () => {
     const flattenedStyle = StyleSheet.flatten(input.props.style);
 
     expect(flattenedStyle.textAlignVertical).toBe('top');
+  });
+
+  it('reserves space for the calculator icon without dropping custom input styles', () => {
+    render(
+      <AppInput calculator inputStyle={{ paddingRight: 4, fontSize: 18 }} placeholder="Amount" />,
+    );
+
+    const input = screen.getByPlaceholderText('Amount');
+    const flattenedStyle = StyleSheet.flatten(input.props.style);
+
+    expect(flattenedStyle.paddingRight).toBe(Spacing.xxxl + Spacing.sm);
+    expect(flattenedStyle.fontSize).toBe(18);
   });
 });

@@ -65,10 +65,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
               variant={variant}
               leftIcon={leftIcon}
               style={textInputStyle}
-              inputStyle={[
-                inputStyle,
-                calculator && variant !== 'minimal' && styles.calculatorTextInput,
-              ]}
+              inputStyle={[inputStyle, calculator && styles.calculatorTextInput]}
               borderColor={error ? 'error' : undefined}
               {...fieldProps}
               editable={calculator ? false : fieldProps.editable}
@@ -125,6 +122,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   calculatorTextInput: {
-    paddingRight: Spacing.xl,
+    // Keep right-aligned values clear of the 20px icon and its hit area.
+    paddingRight: Spacing.xxxl + Spacing.sm,
   },
 });

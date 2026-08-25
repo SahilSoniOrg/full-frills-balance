@@ -87,6 +87,9 @@ export const JournalLineItem = React.memo(
                 onChangeText={(value: string) => onUpdate('amount', value)}
                 placeholder="0.00"
                 currencySymbol={CURRENCY_SYMBOLS[line.accountCurrency || workplaceCurrency] || ''}
+                variant="minimal"
+                containerStyle={{ minHeight: 0, marginTop: -4 }}
+                inputStyle={styles.amountInput}
                 testID={`amount-input-${line.id}`}
               />
             </View>

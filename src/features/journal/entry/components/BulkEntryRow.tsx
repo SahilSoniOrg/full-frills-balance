@@ -143,6 +143,9 @@ export const BulkEntryRow = React.memo(
               onChangeText={val => onUpdateField(row.id, 'amount', val)}
               placeholder="0.00"
               currencySymbol={sourceCurrency || ''}
+              variant="minimal"
+              containerStyle={[styles.inputContainer, { flex: 1 }]}
+              inputStyle={styles.amountInput}
               testID={`bulk-amount-${row.id}`}
             />
           </View>
