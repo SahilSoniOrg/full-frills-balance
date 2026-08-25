@@ -27,6 +27,7 @@ export function computeDominantTargetAccount(
   targetAccountId?: AccountId;
   targetAccountName?: string;
   targetAccountType?: AccountType;
+  confidence?: number;
 } {
   if (accountEntries.length === 0) return {};
 
@@ -52,6 +53,7 @@ export function computeDominantTargetAccount(
       targetAccountId: top.accountId,
       targetAccountName: top.accountName,
       targetAccountType: top.accountType,
+      confidence: Math.min(1, top.count / totalCount),
     };
   }
 
@@ -207,6 +209,7 @@ export class JournalEnrichmentQueries {
             suggestions.push({
               description: group.description,
               count: group.journalCount,
+              confidence: Math.min(1, account.count / group.journalCount),
               targetAccountId: account.accountId,
               targetAccountName: account.accountName,
               targetAccountType: account.accountType,
@@ -321,6 +324,7 @@ export class JournalEnrichmentQueries {
           suggestions.push({
             description,
             count: jList.length,
+            confidence: Math.min(1, account.count / jList.length),
             targetAccountId: account.accountId,
             targetAccountName: account.accountName,
             targetAccountType: account.accountType,

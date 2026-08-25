@@ -1,4 +1,7 @@
-import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import {
+  resolveJournalSuggestionState,
+  useJournalSuggestions,
+} from '@/src/features/journal/hooks/useJournalSuggestions';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
@@ -24,6 +27,16 @@ describe('useJournalSuggestions', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     (journalService.getJournalSuggestions as jest.Mock).mockResolvedValue(mockSuggestions);
+  });
+
+  it.each([
+    ['idle', { query: '', isLoading: false, error: null, suggestions: [] }],
+    ['loading', { query: 'cof', isLoading: true, error: null, suggestions: [] }],
+    ['error', { query: 'cof', isLoading: false, error: new Error('down'), suggestions: [] }],
+    ['empty', { query: 'cof', isLoading: false, error: null, suggestions: [] }],
+    ['results', { query: 'cof', isLoading: false, error: null, suggestions: mockSuggestions }],
+  ])('classifies %s suggestion state', (expected, params) => {
+    expect(resolveJournalSuggestionState(params)).toBe(expected);
   });
 
   afterEach(() => {

@@ -33,6 +33,7 @@ describe('computeDominantTargetAccount', () => {
       targetAccountId: 'acc-coffee',
       targetAccountName: 'Coffee & Dining',
       targetAccountType: AccountType.EXPENSE,
+      confidence: 1,
     });
   });
 
@@ -64,6 +65,7 @@ describe('computeDominantTargetAccount', () => {
       targetAccountId: 'acc-rides',
       targetAccountName: 'Rideshare',
       targetAccountType: AccountType.EXPENSE,
+      confidence: 0.8,
     });
   });
 
@@ -120,6 +122,7 @@ describe('computeDominantTargetAccount', () => {
       targetAccountId: 'acc-salary',
       targetAccountName: 'Main Salary',
       targetAccountType: AccountType.INCOME,
+      confidence: 1,
     });
   });
 });
@@ -297,6 +300,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       {
         description: 'Coffee',
         count: 1,
+        confidence: 1,
         targetAccountId: workplaceOneAccountId,
         targetAccountName: 'Workplace One Checking',
         targetAccountType: AccountType.ASSET,

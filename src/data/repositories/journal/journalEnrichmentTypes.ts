@@ -16,6 +16,8 @@ export type JournalEnrichmentRow = {
 export type JournalAutofillSuggestion = {
   description: string;
   count: number;
+  /** Historical share of matching journals represented by the suggested target account. */
+  confidence?: number;
   targetAccountId?: AccountId;
   targetAccountName?: string;
   targetAccountType?: AccountType;

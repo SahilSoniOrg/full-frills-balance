@@ -19,7 +19,10 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
-import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import {
+  JournalSuggestionState,
+  useJournalSuggestions,
+} from '@/src/features/journal/hooks/useJournalSuggestions';
 import { analytics } from '@/src/services/analytics';
 import {
   isSimpleTargetAccountUnset,
@@ -66,6 +69,7 @@ export interface JournalEntryShell {
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   suggestions: JournalAutofillSuggestion[];
+  suggestionState: JournalSuggestionState;
   onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
   loadSuggestions: () => void;
   workplaceCurrency: string;
@@ -136,7 +140,7 @@ export function useJournalEntryShell(): JournalEntryShell {
   }, [activeMode, editor.lines, setSplitTotalAmount, splitTotalAmount]);
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
-  const { suggestions, loadSuggestions } = useJournalSuggestions(
+  const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
     workplaceId,
     editor.description,
     suggestionTabType,
@@ -277,6 +281,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     isSimpleModeDisabled,
     onCreateAccountRequest,
     suggestions,
+    suggestionState,
     onSelectSuggestion,
     loadSuggestions,
     workplaceCurrency,

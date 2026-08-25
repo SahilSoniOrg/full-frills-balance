@@ -1,0 +1,30 @@
+appId: in.sahilsoni.fullfrillsbalance
+env:
+  SEED_PROFILE: journal-ready
+---
+- runFlow: subflows/launch-seeded.yml
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- tapOn:
+    text: Open new entry options
+- extendedWaitUntil:
+    visible:
+      id: journal-entry-screen
+    timeout: 60000
+- assertVisible:
+    id: journal-browse-destination
+- assertVisible:
+    id: journal-browse-source
+- tapOn: Cancel
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    text: Open new entry options
+- extendedWaitUntil:
+    visible:
+      id: journal-entry-screen
+    timeout: 60000

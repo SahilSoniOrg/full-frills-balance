@@ -13,6 +13,7 @@ import {
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import { showErrorAlert } from '@/src/utils/alerts';
+import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
@@ -215,7 +216,19 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           return result;
         }
 
-        await onAfterSave?.({ journalId: result.journalId, action: result.action });
+        // The journal is already durable at this point. Post-commit integrations
+        // (for example SMS inbox bookkeeping) must not delay navigation or turn a
+        // successful save into a reported failure if they are slow or unavailable.
+        void Promise.resolve()
+          .then(() =>
+            onAfterSave?.({
+              journalId: result.journalId,
+              action: result.action,
+            }),
+          )
+          .catch(error => {
+            logger.error('Post-commit journal effect failed:', error);
+          });
 
         onSuccess?.();
         return result;

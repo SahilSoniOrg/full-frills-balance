@@ -174,6 +174,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
           showBanner={showEditBanner}
           bannerText={editBannerText}
           suggestions={vm.suggestions}
+          suggestionState={vm.suggestionState}
           hideSuggestions={hideSuggestions}
           onDescriptionFocus={onDescriptionFocus}
           onVoiceInputPress={

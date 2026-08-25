@@ -17,6 +17,12 @@ Completed:
   workplace/query/version cache keys.
 - Guarded suggestion state writes by the active workplace and query, so a late prior query
   cannot mark the current query loaded or replace its result set.
+- Exposed explicit suggestion idle, loading, empty, error, and results states through the
+  composer UI instead of silently rendering nothing when a query is pending or unavailable.
+- Added historical target-account confidence to inferred suggestions; selecting a suggestion
+  remains the explicit confirmation before the account is applied to the intent.
+- Bounded background exchange-rate requests with an abort timeout, preventing an unavailable
+  network from holding app-idle and composer interaction indefinitely.
 - Replaced the permanent four-tab presentation with a detail-level disclosure control and added
   an isolated Batch workspace route.
 - Redirected legacy bulk entry URLs to the Batch workspace and removed Bulk from the single-
@@ -32,15 +38,21 @@ Completed:
   selection only, while Split line assembly also runs through the session.
 - Replaced internal presentation-mode names with `basic`, `allocation`, and `expert`; legacy
   route values remain confined to the compatibility adapter.
-- Verified the full Jest suite after the composer changes: 280 suites passed, with 1,687 tests
+- Verified the full Jest suite after the composer changes: 280 suites passed, with 1,694 tests
   passing and 1 skipped; added coverage for all supported launch contexts, late suggestion
-  responses, oversized suggestion results, and session-owned Split submission.
+  responses, oversized suggestion results, session-owned Split submission, and bounded
+  exchange-rate requests.
 - Added a 10,000-line posting-plan validation guard; the current implementation completed it in
   17ms in the Jest harness.
 - Verified typecheck, lint, E2E typecheck, and all architecture ratchets; the repository’s
   performance audit remains the source of truth that device/runtime traces are unavailable.
 - Updated the browser transaction fixtures for the disclosure control and Batch route; the
   expense creation smoke passed in the web harness.
+- Added and passed a native iOS Maestro smoke for seeded composer open, close, and reopen,
+  covering the Release app path independently of Detox.
+- Captured a coarse native Maestro JUnit duration for that Release smoke: 10.0s on the iPhone
+  17 simulator. This includes app launch, driver setup, waits, and the full smoke flow; it is
+  not a composer cold/warm interaction measurement.
 - Added a browser cold/warm composer probe; the observed run was 221ms cold and 116ms warm.
   These are web-harness observations, not universal device-performance claims.
 - Virtualized the native isolated Batch row workspace with `FlashList`, removing the previous
@@ -50,7 +62,12 @@ Completed:
   from session-owned posting-plan and allocation validation.
 - Attempted a release-like iOS simulator composer probe: the native Release build succeeded,
   but Detox could not connect its localhost synchronization socket (`:52374`), so no native
-  composer timing was recorded and the probe was not kept as a CI test.
+  composer timing was recorded and the probe was not kept as a CI test. The generated iOS app
+  also contains no Detox native framework; the installed config plugin only configures Android,
+  so this requires a separate mobile-test harness repair before it can produce valid timings.
+- Isolated post-commit journal effects from the save result; SMS/integration bookkeeping now runs
+  asynchronously after durable persistence and cannot delay navigation or turn a successful save
+  into a reported failure. Added a regression test for rejected post-commit work.
 
 Next:
 

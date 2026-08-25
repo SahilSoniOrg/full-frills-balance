@@ -156,6 +156,29 @@ describe('useJournalEditor', () => {
     expect(mockOnSuccess).toHaveBeenCalled();
   });
 
+  it('does not report a durable save as failed when a post-commit effect rejects', async () => {
+    const mockOnSuccess = jest.fn();
+    const postCommitError = new Error('SMS bookkeeping unavailable');
+    const onAfterSave = jest.fn().mockRejectedValue(postCommitError);
+    const { result } = renderHook(() =>
+      useJournalEditor('test-workplace' as WorkplaceId, { onAfterSave, onSuccess: mockOnSuccess }),
+    );
+
+    (journalService.postPostingPlan as jest.Mock).mockResolvedValue({
+      success: true,
+      journalId: 'journal-1',
+      action: 'created',
+    });
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(onAfterSave).toHaveBeenCalledWith({ journalId: 'journal-1', action: 'created' });
+    expect(mockOnSuccess).toHaveBeenCalled();
+    expect(showErrorAlert).not.toHaveBeenCalled();
+  });
+
   it('should load journal data on edit', async () => {
     const mockEditorData = {
       journal: {

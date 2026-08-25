@@ -9,6 +9,20 @@ import { logger } from '@/src/utils/logger';
 
 const SUGGESTION_LOAD_DEBOUNCE_MS = 150;
 
+export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
+
+export function resolveJournalSuggestionState(params: {
+  query: string;
+  isLoading: boolean;
+  error: Error | null;
+  suggestions: JournalAutofillSuggestion[];
+}): JournalSuggestionState {
+  if (!params.query.trim()) return 'idle';
+  if (params.isLoading) return 'loading';
+  if (params.error) return 'error';
+  return params.suggestions.length > 0 ? 'results' : 'empty';
+}
+
 /**
  * Hook to provide journal description suggestions based on past entries.
  * Fetches recent unique descriptions in the background after the entry settles,
@@ -170,8 +184,20 @@ export function useJournalSuggestions(
       .slice(0, 20);
   }, [activeTabType, allSuggestions, searchQuery]);
 
+  const suggestionState = useMemo(
+    () =>
+      resolveJournalSuggestionState({
+        query: searchQuery,
+        isLoading,
+        error,
+        suggestions: filteredSuggestions,
+      }),
+    [error, filteredSuggestions, isLoading, searchQuery],
+  );
+
   return {
     suggestions: filteredSuggestions,
+    suggestionState,
     isLoading,
     error,
     loadSuggestions,

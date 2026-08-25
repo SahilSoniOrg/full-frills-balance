@@ -27,6 +27,7 @@ interface JournalMetaCardProps {
   showBanner?: boolean;
   bannerText?: string;
   suggestions?: JournalAutofillSuggestion[];
+  suggestionState?: 'idle' | 'loading' | 'empty' | 'error' | 'results';
   hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
   onVoiceInputPress?: () => void;
@@ -49,6 +50,7 @@ export function JournalMetaCard({
   showBanner,
   bannerText,
   suggestions = [],
+  suggestionState = suggestions.length > 0 ? 'results' : 'idle',
   hideSuggestions = false,
   onDescriptionFocus,
   onVoiceInputPress,
@@ -146,9 +148,10 @@ export function JournalMetaCard({
             )}
           </View>
 
-          {isDescriptionFocused && !hideSuggestions && suggestions.length > 0 && (
+          {isDescriptionFocused && !hideSuggestions && suggestionState !== 'idle' && (
             <JournalSuggestions
               suggestions={suggestions}
+              state={suggestionState}
               accounts={accounts}
               activeTabType={activeTabType}
               onSelect={suggestion => {

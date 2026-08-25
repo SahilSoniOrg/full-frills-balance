@@ -12,6 +12,7 @@ import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepo
 import { logger } from '@/src/utils/logger';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
+const NETWORK_REQUEST_TIMEOUT_MS = 10_000;
 
 export class ExchangeRateService {
   private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
@@ -118,8 +119,15 @@ export class ExchangeRateService {
         // B. Network Fetch (Final Fallback or Forced)
         const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`;
         const fetchStart = Date.now();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), NETWORK_REQUEST_TIMEOUT_MS);
 
-        const response = await fetch(url);
+        let response: Response;
+        try {
+          response = await fetch(url, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
         const fetchDuration = Date.now() - fetchStart;
 
         if (!response.ok) {
