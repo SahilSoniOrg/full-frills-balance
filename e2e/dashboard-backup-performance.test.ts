@@ -71,8 +71,14 @@ test.describe('Dashboard performance with a local backup', () => {
 
     const restartButton = page.getByRole('button', { name: /Restart/i });
     await expect(restartButton).toBeVisible({ timeout: 9 * 60 * 1000 });
+    const appLoadStart = Date.now();
     await restartButton.click();
     await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByTestId('dashboard-screen')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByLabel('Open safe-to-spend calculation info')).toBeVisible({
+      timeout: 120000,
+    });
+    const appLoadMs = Date.now() - appLoadStart;
 
     const coldStart = Date.now();
     await dashboardPage.switchToDashboard();
@@ -95,7 +101,7 @@ test.describe('Dashboard performance with a local backup', () => {
     }
 
     console.info(
-      `[PERF] dashboard backup=${backupPath!.split('/').pop()} first_open_ms=${coldMs} warm_samples_ms=${warmSamples.join(',')} warm_median_ms=${median(warmSamples)}`,
+      `[PERF] dashboard backup=${backupPath!.split('/').pop()} app_reload_ms=${appLoadMs} first_open_ms=${coldMs} warm_samples_ms=${warmSamples.join(',')} warm_median_ms=${median(warmSamples)}`,
     );
   });
 });

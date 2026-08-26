@@ -13,8 +13,8 @@ extracted to an operating-system temporary directory because the web file
 compression adapter does not extract archives. The source archive is never
 modified, copied into the repository, or committed.
 
-The test measures the dashboard after import, then records one cold navigation
-and five activity-to-dashboard warm navigations. It prints the timings as a
-`[PERF]` line. Run it against the same backup after code changes to compare
-results.
-
+The test measures reload-to-usable-app time with the imported data already
+present, then records one dashboard navigation and five activity-to-dashboard
+warm navigations. It prints `app_reload_ms`, `first_open_ms`, and the warm
+samples as a `[PERF]` line. Run it against the same backup after code changes
+to compare results.
