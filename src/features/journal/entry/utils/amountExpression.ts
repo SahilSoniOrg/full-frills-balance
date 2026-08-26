@@ -1,5 +1,3 @@
-import { evaluate } from 'mathjs';
-
 import { roundToPrecision } from '@/src/utils/money';
 
 export type AmountExpressionResult =
@@ -126,6 +124,67 @@ function validateTokenSequence(tokens: Token[]): AmountExpressionResult | null {
   return null;
 }
 
+/**
+ * Evaluates the deliberately small calculator grammar accepted by `tokenize`.
+ * It supports the same binary operators and implicit multiplication as the
+ * previous evaluator, without importing a general-purpose expression engine.
+ */
+function evaluateTokens(tokens: Token[]): number {
+  let index = 0;
+
+  const peek = () => tokens[index];
+  const consume = () => tokens[index++];
+
+  const parseFactor = (): number => {
+    const token = consume();
+    if (token === '(') {
+      const value = parseExpression();
+      if (consume() !== ')') throw new Error('Unbalanced parentheses');
+      return value;
+    }
+    if (typeof token !== 'string' || isOperator(token) || token === ')') {
+      throw new Error('Expected number');
+    }
+    const value = Number(token);
+    if (!Number.isFinite(value)) throw new Error('Invalid number');
+    return value;
+  };
+
+  const parseTerm = (): number => {
+    let value = parseFactor();
+    while (true) {
+      const token = peek();
+      if (token === '*' || token === '/') {
+        consume();
+        const right = parseFactor();
+        value = token === '*' ? value * right : value / right;
+        continue;
+      }
+      // `2(3)` and `(2+3)(4+5)` are valid implicit multiplication.
+      if (token === '(') {
+        value *= parseFactor();
+        continue;
+      }
+      return value;
+    }
+  };
+
+  const parseExpression = (): number => {
+    let value = parseTerm();
+    while (true) {
+      const token = peek();
+      if (token !== '+' && token !== '-') return value;
+      consume();
+      const right = parseTerm();
+      value = token === '+' ? value + right : value - right;
+    }
+  };
+
+  const value = parseExpression();
+  if (index !== tokens.length) throw new Error('Unexpected token');
+  return value;
+}
+
 export function evaluateAmountExpression(
   expression: string,
   precision: number,
@@ -142,7 +201,7 @@ export function evaluateAmountExpression(
   if (validationError) return validationError;
 
   try {
-    const value = Number(evaluate(normalizedExpression));
+    const value = evaluateTokens(tokenizedResult);
     if (!Number.isFinite(value)) {
       return {
         ok: false,
