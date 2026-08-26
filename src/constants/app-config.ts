@@ -82,7 +82,8 @@ export const AppConfig = {
   features: {
     enableAnalytics: true, // Analytics collection
     enableSentry: !__DEV__, // Error tracking
-    enablePostHog: !__DEV__, // Product analytics
+    // Keep deterministic E2E performance runs free of analytics network work.
+    enablePostHog: !__DEV__ && process.env.EXPO_PUBLIC_E2E !== '1', // Product analytics
     enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
     debug: {
