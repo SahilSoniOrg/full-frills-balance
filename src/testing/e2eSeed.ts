@@ -243,10 +243,13 @@ export async function executeE2eBootstrap(config: {
       let rawBytes = await files.readBytes(config.backupPath);
       rawBytes = await extractIfZip(rawBytes);
       const text = sanitizeContent(decodeContent(rawBytes));
-      await importService.executeImport(
+      const stats = await importService.executeImport(
         nativePlugin,
         { uri: config.backupPath, name: 'e2e-backup.json', rawBytes, text, json: JSON.parse(text) },
         workplaceId,
+      );
+      console.log(
+        `[E2E-BACKUP] imported accounts=${stats.accounts} journals=${stats.journals} transactions=${stats.transactions}`,
       );
     }
   }

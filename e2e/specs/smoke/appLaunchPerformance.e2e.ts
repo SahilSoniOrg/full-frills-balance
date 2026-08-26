@@ -4,6 +4,9 @@
  * @platform ios
  */
 import { by, device, element, waitFor } from 'detox';
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { basename } from 'node:path';
 import { launchOnboardedApp, waitForDashboard } from '../../actions/launch';
 import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
 
@@ -11,10 +14,21 @@ jest.setTimeout(180000);
 
 describe('iOS cold start performance', () => {
   it('records cold, resume, and tab-navigation timings in one run', async () => {
-    const backupPath = process.env.FFB_IOS_BACKUP_PATH;
-    if (!backupPath) {
-      throw new Error('Set FFB_IOS_BACKUP_PATH to a simulator-local backup file');
+    const hostBackupPath = process.env.FFB_IOS_BACKUP_PATH;
+    const simulatorUdid = process.env.FFB_IOS_SIMULATOR_UDID;
+    if (!hostBackupPath || !simulatorUdid) {
+      throw new Error('Set FFB_IOS_BACKUP_PATH and FFB_IOS_SIMULATOR_UDID');
     }
+    const appDataPath = execFileSync(
+      'xcrun',
+      ['simctl', 'get_app_container', simulatorUdid, 'in.sahilsoni.fullfrillsbalance', 'data'],
+      { encoding: 'utf8' },
+    ).trim();
+    const appDataUuid = basename(appDataPath);
+    const hostStagedPath = `${appDataPath}/Documents/benchmark-backup.zip`;
+    mkdirSync(`${appDataPath}/Documents`, { recursive: true });
+    copyFileSync(hostBackupPath, hostStagedPath);
+    const backupPath = `file:///var/mobile/Containers/Data/Application/${appDataUuid}/Documents/benchmark-backup.zip`;
     // Seed once. Do not include database reset or fixture creation in the
     // startup measurement.
     await launchOnboardedApp({
