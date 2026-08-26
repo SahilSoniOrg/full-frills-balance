@@ -22,7 +22,8 @@ Replace the guided journal entry amount field's system-keyboard-first flow with 
 - Cancel/backdrop/close discard the draft expression.
 - Done commits the evaluated result through the existing `setAmount` path.
 - Results are rounded to the selected currency precision.
-- Implicit multiplication is supported for number/parenthesis and parenthesis/parenthesis adjacency.
+- Implicit multiplication is supported across parenthesis boundaries: `2(3)`, `(2)(3)`, and `(2)3`.
+- Empty parentheses are completed with a context-appropriate identity, so partial keypad input such as `2()` remains usable.
 - Recoverable unfinished expressions preview using arithmetic identities and balanced parentheses.
 - Invalid non-positive results are visible but muted, with Done disabled.
 

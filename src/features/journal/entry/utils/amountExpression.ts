@@ -70,6 +70,35 @@ function completeTrailingEmptyParentheses(expression: string): string {
   )}`;
 }
 
+function completeEmptyParentheses(expression: string): string {
+  let normalized = expression;
+  let previous: string;
+  do {
+    previous = normalized;
+    normalized = normalized.replace(/\(\s*\)/g, (emptyGroup, offset: number, input: string) => {
+      const prefix = input.slice(0, offset).trimEnd();
+      const suffix = input.slice(offset + emptyGroup.length).trimStart();
+      if (!prefix && !suffix) return '';
+
+      const precedingToken = prefix.at(-1);
+      const identity = precedingToken === '+' || precedingToken === '-' ? '0' : '1';
+      return `(${identity})`;
+    });
+  } while (normalized !== previous);
+  return normalized;
+}
+
+function insertImplicitMultiplication(tokens: Token[]): Token[] {
+  const normalized: Token[] = [];
+  for (const token of tokens) {
+    const previous = normalized.at(-1);
+    const isNumber = !isOperator(String(token)) && token !== '(' && token !== ')';
+    if (previous === ')' && isNumber) normalized.push('*');
+    normalized.push(token);
+  }
+  return normalized;
+}
+
 function balanceOpenParentheses(expression: string): string {
   let balance = 0;
   for (const char of expression) {
@@ -189,19 +218,23 @@ export function evaluateAmountExpression(
   expression: string,
   precision: number,
 ): AmountExpressionResult {
+  const expressionWithCompletedEmptyParentheses = completeEmptyParentheses(expression);
   const normalizedExpression = balanceOpenParentheses(
-    completeTrailingOperator(completeTrailingEmptyParentheses(expression)),
+    completeTrailingOperator(
+      completeTrailingEmptyParentheses(expressionWithCompletedEmptyParentheses),
+    ),
   );
   const tokenizedResult = tokenize(normalizedExpression);
   if (!Array.isArray(tokenizedResult)) return tokenizedResult;
   if (tokenizedResult.length === 0)
     return { ok: false, error: 'Enter an amount', incomplete: true };
+  const normalizedTokens = insertImplicitMultiplication(tokenizedResult);
 
-  const validationError = validateTokenSequence(tokenizedResult);
+  const validationError = validateTokenSequence(normalizedTokens);
   if (validationError) return validationError;
 
   try {
-    const value = evaluateTokens(tokenizedResult);
+    const value = evaluateTokens(normalizedTokens);
     if (!Number.isFinite(value)) {
       return {
         ok: false,
