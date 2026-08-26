@@ -8,29 +8,40 @@ test.describe('Transaction Composer performance probes', () => {
     dashboardPage,
     page,
   }) => {
-    await onboardingPage.clearAppState();
-    await onboardingPage.goto('/');
-    await onboardingPage.completeOnboarding('Composer Performance User');
+    const coldSamples: number[] = [];
+    const warmSamples: number[] = [];
 
-    const coldStart = Date.now();
-    await dashboardPage.clickPlusButton();
-    await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
-    const coldMs = Date.now() - coldStart;
+    for (let sample = 0; sample < 7; sample += 1) {
+      await onboardingPage.clearAppState();
+      await onboardingPage.goto('/');
+      await onboardingPage.completeOnboarding(`Composer Performance User ${sample}`);
 
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(page.getByRole('button', { name: /Open new entry options/i })).toBeVisible({
-      timeout: 30000,
-    });
+      const coldStart = Date.now();
+      await dashboardPage.clickPlusButton();
+      await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
+      coldSamples.push(Date.now() - coldStart);
 
-    const warmStart = Date.now();
-    await dashboardPage.clickPlusButton();
-    await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
-    const warmMs = Date.now() - warmStart;
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(page.getByRole('button', { name: /Open new entry options/i })).toBeVisible();
 
-    console.info(`[PERF] composer cold_open_ms=${coldMs} warm_open_ms=${warmMs}`);
+      const warmStart = Date.now();
+      await dashboardPage.clickPlusButton();
+      await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
+      warmSamples.push(Date.now() - warmStart);
+    }
 
-    // These are harness guards, not universal device-performance claims.
-    expect(coldMs).toBeLessThan(30000);
-    expect(warmMs).toBeLessThan(30000);
+    const median = (values: number[]) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)];
+    };
+    const coldMedian = median(coldSamples);
+    const warmMedian = median(warmSamples);
+
+    console.info(`[PERF] composer cold_median_ms=${coldMedian} warm_median_ms=${warmMedian}`);
+
+    // Budgets are local regression guards, calibrated against a seven-sample
+    // browser baseline. Median measurements avoid failing on a single GC spike.
+    expect(coldMedian).toBeLessThan(225);
+    expect(warmMedian).toBeLessThan(65);
   });
 });
