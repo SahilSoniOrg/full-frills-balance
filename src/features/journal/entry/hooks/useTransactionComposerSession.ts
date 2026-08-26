@@ -7,8 +7,8 @@ import type {
 import { TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
+import { sanitizeAmount } from '@/src/utils/validation';
 import { validateSplitState } from '@/src/services/journal/splitJournalHelpers';
-import dayjs from 'dayjs';
 import { useCallback, useMemo } from 'react';
 import {
   resolveTransactionIntent,
@@ -49,10 +49,19 @@ export function useTransactionComposerSession(
     [destinationLines, sourceLine],
   );
 
-  const intent = useMemo<TransactionIntent>(
-    () => ({
+  const intent = useMemo<TransactionIntent>(() => {
+    const allocationTotal = destinationLines.reduce(
+      (sum, line) => sum + (sanitizeAmount(line.amount) ?? 0),
+      0,
+    );
+
+    return {
       description: editor.description,
-      amount: sourceLine?.amount || destinationLines[0]?.amount,
+      amount:
+        sourceLine?.amount ||
+        (destinationLines.length > 1 && allocationTotal > 0
+          ? String(allocationTotal)
+          : destinationLines[0]?.amount),
       date: `${editor.journalDate}T${editor.journalTime || '00:00'}`,
       notes: editor.notes,
       type: editor.transactionType,
@@ -70,44 +79,28 @@ export function useTransactionComposerSession(
               notes: line.notes,
             }))
           : undefined,
-    }),
-    [
-      destinationLines,
-      editor.description,
-      editor.journalDate,
-      editor.journalTime,
-      editor.notes,
-      editor.transactionType,
-      sourceLine,
-    ],
-  );
+    };
+  }, [
+    destinationLines,
+    editor.description,
+    editor.journalDate,
+    editor.journalTime,
+    editor.notes,
+    editor.transactionType,
+    sourceLine,
+  ]);
 
   const intentResolution = useMemo(
     () => resolveTransactionIntent(intent, { accounts, currencyCode }),
     [accounts, currencyCode, intent],
   );
 
-  const fallbackPostingPlan = useMemo<PostingPlan>(
-    () => ({
-      lines: editor.lines,
-      currencyCode,
-      description: editor.description,
-      date: dayjs(`${editor.journalDate}T${editor.journalTime}`).valueOf(),
-      notes: editor.notes,
-    }),
-    [
-      currencyCode,
-      editor.description,
-      editor.journalDate,
-      editor.journalTime,
-      editor.lines,
-      editor.notes,
-    ],
-  );
-  const postingPlan = intentResolution.resolved ? intentResolution.plan : fallbackPostingPlan;
+  const postingPlan: PostingPlan | undefined = intentResolution.resolved
+    ? intentResolution.plan
+    : undefined;
 
   const postingPlanValidation = useMemo<PostingPlanValidationResult>(
-    () => validatePostingPlan(postingPlan, accounts),
+    () => (postingPlan ? validatePostingPlan(postingPlan, accounts) : { valid: false, issues: [] }),
     [accounts, postingPlan],
   );
 

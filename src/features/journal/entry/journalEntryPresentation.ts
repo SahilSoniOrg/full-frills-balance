@@ -106,7 +106,6 @@ export function isAdvancedJournalFormValid(input: {
 
 export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;
-  isSimpleValid: boolean;
   simpleSubmitting: boolean;
   simpleType: string;
   isEdit: boolean;
@@ -118,7 +117,6 @@ export function resolveJournalEntrySubmitLabel(input: {
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
-  if (input.activeMode === 'batch') return AppConfig.strings.transactionFlow.saving;
   if (input.activeMode === 'basic') {
     return input.simpleSubmitting
       ? AppConfig.strings.transactionFlow.saving
@@ -145,7 +143,6 @@ export function isJournalEntrySubmitDisabled(input: {
   if (input.activeMode === 'allocation') {
     return !input.isSplitValid;
   }
-  if (input.activeMode === 'batch') return false;
   if (input.activeMode === 'basic') {
     return !input.isSimpleValid;
   }

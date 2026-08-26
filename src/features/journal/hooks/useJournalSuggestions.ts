@@ -2,12 +2,10 @@ import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/
 import { WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { TabType } from '@/src/types/domainJournal';
-import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { logger } from '@/src/utils/logger';
 
-const SUGGESTION_LOAD_DEBOUNCE_MS = 150;
 const SUGGESTION_CATALOG_KEY = '__catalog__';
 
 export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
@@ -44,11 +42,6 @@ export function useJournalSuggestions(
     queryKey: string;
     promise: Promise<void>;
   } | null>(null);
-  const scheduledLoadRef = useRef<Promise<void> | null>(null);
-  const scheduledLoadResolveRef = useRef<(() => void) | null>(null);
-  const scheduledLoadIdRef = useRef(0);
-  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelInteractionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (activeWorkplaceRef.current === workplaceId) return;
@@ -106,62 +99,9 @@ export function useJournalSuggestions(
     return trackedRequest;
   }, [workplaceId]);
 
-  const cancelScheduledLoad = useCallback(() => {
-    scheduledLoadIdRef.current += 1;
-    if (loadTimerRef.current) {
-      clearTimeout(loadTimerRef.current);
-      loadTimerRef.current = null;
-    }
-    cancelInteractionRef.current?.();
-    cancelInteractionRef.current = null;
-    scheduledLoadResolveRef.current?.();
-    scheduledLoadResolveRef.current = null;
-    scheduledLoadRef.current = null;
-  }, []);
-
-  useEffect(() => cancelScheduledLoad, [cancelScheduledLoad, workplaceId]);
-
-  const loadSuggestions = useCallback((): Promise<void> => {
-    if (!workplaceId) return Promise.resolve();
-    if (loadedKeyRef.current === SUGGESTION_CATALOG_KEY) return Promise.resolve();
-
-    const existingRequest = requestRef.current;
-    if (
-      existingRequest?.workplaceId === workplaceId &&
-      existingRequest.queryKey === SUGGESTION_CATALOG_KEY
-    ) {
-      return existingRequest.promise;
-    }
-    if (scheduledLoadRef.current) return scheduledLoadRef.current;
-
-    scheduledLoadRef.current = new Promise<void>(resolve => {
-      const scheduledLoadId = scheduledLoadIdRef.current;
-      scheduledLoadResolveRef.current = resolve;
-      loadTimerRef.current = setTimeout(() => {
-        loadTimerRef.current = null;
-        cancelInteractionRef.current = runAfterInteractions(() => {
-          cancelInteractionRef.current = null;
-          void fetchSuggestions().finally(() => {
-            // A newer query may already have scheduled another load. Do not let
-            // this older request clear that load's bookkeeping.
-            if (scheduledLoadIdRef.current !== scheduledLoadId) return;
-            scheduledLoadRef.current = null;
-            scheduledLoadResolveRef.current = null;
-            resolve();
-          });
-        });
-      }, SUGGESTION_LOAD_DEBOUNCE_MS);
-    });
-
-    return scheduledLoadRef.current;
-  }, [fetchSuggestions, workplaceId]);
-
-  useEffect(() => {
-    if (!workplaceId) return;
-
-    // Warm the workplace-scoped cache without delaying entry rendering.
-    void loadSuggestions();
-  }, [loadSuggestions, workplaceId]);
+  // Suggestions are loaded on focus, not on screen mount. The service-level
+  // in-flight cache coalesces repeated focus/typing requests.
+  const loadSuggestions = fetchSuggestions;
 
   const filteredSuggestions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

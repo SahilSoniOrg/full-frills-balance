@@ -68,11 +68,6 @@ const ROUTE_METADATA_MAP: Record<
 
   // Journal & Transactions
   'journal-entry': { screenType: 'journal', flowContext: 'transaction_creation', isModal: true },
-  'journal-bulk': {
-    screenType: 'journal',
-    flowContext: 'batch_transaction_creation',
-    isModal: true,
-  },
   'journal-details': { screenType: 'journal', flowContext: 'transaction_review', isModal: false },
   'journal-search': { screenType: 'journal', flowContext: 'transaction_search', isModal: false },
 

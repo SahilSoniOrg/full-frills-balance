@@ -146,15 +146,16 @@ export function useJournalEntryShell(): JournalEntryShell {
     accounts,
     onSaveSuccess: onBatchSaveSuccess,
   });
+  const { clearRows: clearBatchRows, saveAll: saveBatch } = batchEditor;
   const onContinueBatch = useCallback(() => {
     setBatchSummary(null);
-    batchEditor.clearRows();
-  }, [batchEditor.clearRows]);
+    clearBatchRows();
+  }, [clearBatchRows]);
   const onDoneBatch = useCallback(() => {
     setBatchSummary(null);
-    batchEditor.clearRows();
+    clearBatchRows();
     onToggleMode('basic');
-  }, [batchEditor.clearRows, onToggleMode]);
+  }, [clearBatchRows, onToggleMode]);
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
@@ -165,11 +166,11 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const onSubmit = useCallback(() => {
     if (activeMode === 'batch') {
-      void batchEditor.saveAll();
+      void saveBatch();
       return;
     }
     void session.submit(activeMode === 'allocation' ? 'allocation' : 'editor');
-  }, [activeMode, batchEditor.saveAll, session]);
+  }, [activeMode, saveBatch, session]);
 
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {

@@ -105,7 +105,6 @@ describe('journalEntryPresentation', () => {
   it('requires a valid basic plan before submit', () => {
     const label = resolveJournalEntrySubmitLabel({
       activeMode: 'basic',
-      isSimpleValid: false,
       simpleSubmitting: false,
       simpleType: 'expense',
       isEdit: false,

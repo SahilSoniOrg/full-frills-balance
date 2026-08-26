@@ -1,11 +1,9 @@
-import { AppSegmentedControl, IconButton } from '@/src/components/core';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppSegmentedControl } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import { useJournalModeOptions } from '@/src/features/journal/entry/hooks/useJournalModeOptions';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
 export type JournalModeBarProps = {
   mode: JournalEntryScreenMode;
@@ -23,7 +21,6 @@ export function JournalModeBar({
   isSimpleDisabled,
 }: JournalModeBarProps) {
   const { theme } = useTheme();
-  const [infoModalVisible, setInfoModalVisible] = useState(false);
   const isBar = variant === 'bar';
   const modes = useJournalModeOptions();
 
@@ -44,21 +41,6 @@ export function JournalModeBar({
           testID="journal-mode-switcher"
         />
       </View>
-
-      <IconButton
-        name="helpCircle"
-        variant="clear"
-        size={Size.iconSm}
-        onPress={() => setInfoModalVisible(true)}
-        accessibilityLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
-        style={isBar ? styles.infoIconBar : styles.infoIconChips}
-      />
-
-      <AdvancedModeInfoModal
-        visible={infoModalVisible}
-        onClose={() => setInfoModalVisible(false)}
-        mode={mode}
-      />
     </View>
   );
 }
@@ -77,14 +59,5 @@ const styles = StyleSheet.create({
   barContainer: {
     flex: 1,
     minWidth: 0,
-  },
-  infoIconChips: {
-    width: Size.buttonMd,
-    height: Size.buttonMd,
-  },
-  infoIconBar: {
-    width: Size.buttonMd,
-    height: Size.buttonMd,
-    marginRight: -Spacing.xs,
   },
 });

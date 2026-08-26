@@ -57,8 +57,8 @@ describe('useTransactionComposerSession', () => {
       sourceAccountId: asAccountId('cash'),
       destinationAccountId: asAccountId('food'),
     });
-    expect(result.current.postingPlan.lines).toHaveLength(2);
-    expect(result.current.postingPlan.currencyCode).toBe('USD');
+    expect(result.current.postingPlan!.lines).toHaveLength(2);
+    expect(result.current.postingPlan!.currencyCode).toBe('USD');
     expect(result.current.postingPlanValidation).toHaveProperty('valid');
   });
 
@@ -115,7 +115,7 @@ describe('useTransactionComposerSession', () => {
     );
   });
 
-  it('carries the shared amount from allocation back to the editor projection', () => {
+  it('keeps allocation amounts independent from the source amount', () => {
     const { result } = renderHook(() =>
       useTransactionComposerSession('wp-1' as WorkplaceId, {
         accounts,
@@ -125,20 +125,37 @@ describe('useTransactionComposerSession', () => {
       }),
     );
 
+    act(() => result.current.editor.addLine());
+    const rows = result.current.editor.lines.filter(line => line.transactionType === 'DEBIT');
+    const sourceLine = result.current.editor.lines.find(line => line.transactionType === 'CREDIT')!;
     act(() => {
-      result.current.editor.updateLines({
-        '1': { amount: '75' },
-        '2': { amount: '75' },
-      });
+      result.current.editor.updateLine(rows[0].id, { amount: '30' });
+      result.current.editor.updateLine(rows[1].id, { amount: '20' });
+      result.current.editor.updateLine(sourceLine.id, { amount: '75' });
     });
 
     expect(result.current.splitState.totalAmount).toBe('75');
-    expect(result.current.editor.lines).toEqual(
-      expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
+    expect(result.current.editor.lines.find(line => line.id === rows[0].id)?.amount).toBe('30');
+    expect(result.current.editor.lines.find(line => line.id === rows[1].id)?.amount).toBe('20');
+  });
+
+  it('derives intent amount from allocations when the source amount is empty', () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialDate: '2026-08-25',
+      }),
     );
-    expect(result.current.postingPlan.lines).toEqual(
-      expect.arrayContaining([expect.objectContaining({ amount: '75' })]),
-    );
+
+    act(() => result.current.editor.addLine());
+    const rows = result.current.editor.lines.filter(line => line.transactionType === 'DEBIT');
+    act(() => {
+      result.current.editor.updateLine(rows[0].id, { amount: '30' });
+      result.current.editor.updateLine(rows[1].id, { amount: '20' });
+    });
+
+    expect(result.current.intent.amount).toBe('50');
   });
 
   it('hydrates the allocation amount after an async edit load', async () => {

@@ -25,7 +25,7 @@ export function useJournalEntryModeState(
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'basic');
-    if (activeMode === 'allocation' || activeMode === 'batch') setTransactionType('expense');
+    if (activeMode === 'allocation') setTransactionType('expense');
   }, [activeMode, setIsGuidedMode, setTransactionType]);
 
   const wasEditorGuidedRef = useRef(editorIsGuidedMode);

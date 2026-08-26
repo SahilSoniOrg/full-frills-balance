@@ -60,9 +60,9 @@ export function useSplitJournalEditor({
 
   const setTotalAmount = useCallback(
     (amount: string) => {
-      editor.updateLines(Object.fromEntries(editor.lines.map(line => [line.id, { amount }])));
+      if (sourceLine) editor.updateLine(sourceLine.id, { amount });
     },
-    [editor],
+    [editor, sourceLine],
   );
 
   const addSplitRow = editor.addLine;
@@ -188,6 +188,7 @@ export function useSplitJournalEditor({
       openSourceAccountPicker,
       openSplitAccountPicker,
       isSubmitting,
+      setTotalAmount,
     ],
   );
 }

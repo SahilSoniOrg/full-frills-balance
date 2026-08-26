@@ -1,16 +1,20 @@
-import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppIcon, AppText, IconButton } from '@/src/components/core';
+import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AdvancedModeInfoModal } from '@/src/features/journal/entry/components/AdvancedModeInfoModal';
+import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalEntryHeaderProps {
   title: string;
   onClose: () => void;
-  onOpenBatch?: () => void;
+  mode: JournalEntryScreenMode;
 }
 
-export const JournalEntryHeader = ({ title, onClose, onOpenBatch }: JournalEntryHeaderProps) => {
+export const JournalEntryHeader = ({ title, onClose, mode }: JournalEntryHeaderProps) => {
   const { theme, fonts } = useTheme();
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   return (
     <View style={[styles.header, { backgroundColor: theme.background }]}>
@@ -32,18 +36,18 @@ export const JournalEntryHeader = ({ title, onClose, onOpenBatch }: JournalEntry
           {title}
         </AppText>
       </View>
-      {onOpenBatch && (
-        <TouchableOpacity
-          style={[styles.batchButton, { borderColor: theme.border }]}
-          onPress={onOpenBatch}
-          accessibilityRole="button"
-          accessibilityLabel="Open batch workspace"
-        >
-          <AppText variant="caption" color="secondary" weight="medium">
-            Batch
-          </AppText>
-        </TouchableOpacity>
-      )}
+      <IconButton
+        name="helpCircle"
+        variant="clear"
+        size={Size.iconSm}
+        onPress={() => setInfoModalVisible(true)}
+        accessibilityLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
+      />
+      <AdvancedModeInfoModal
+        visible={infoModalVisible}
+        onClose={() => setInfoModalVisible(false)}
+        mode={mode}
+      />
     </View>
   );
 };
@@ -68,13 +72,5 @@ const styles = StyleSheet.create({
   headerTitle: {
     textAlign: 'left',
     // dynamic font
-  },
-  batchButton: {
-    minHeight: Size.buttonMd,
-    borderRadius: Shape.radius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

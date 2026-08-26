@@ -29,7 +29,6 @@ export function JournalEntryView(vm: JournalEntryShell) {
     vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: vm.activeMode,
-    isSimpleValid: isPlanValid,
     simpleSubmitting: isSubmitting,
     simpleType: vm.editor.transactionType,
     isEdit: vm.editor.isEdit,
@@ -96,7 +95,11 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
   if (isLoading) {
     return (
-      <Page header={<JournalEntryHeader title={headerTitle} onClose={vm.onClose} />}>
+      <Page
+        header={
+          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={vm.activeMode} />
+        }
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -106,7 +109,11 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
   if (loadState === 'not_found' || loadState === 'error') {
     return (
-      <Page header={<JournalEntryHeader title={headerTitle} onClose={vm.onClose} />}>
+      <Page
+        header={
+          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={vm.activeMode} />
+        }
+      >
         <EmptyStateView
           title={loadState === 'not_found' ? 'Transaction not found' : 'Unable to load transaction'}
           subtitle={
@@ -133,7 +140,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
       }}
       header={
         <>
-          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} />
+          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={activeMode} />
           <JournalModeBar
             mode={activeMode}
             onToggleMode={onToggleMode}
