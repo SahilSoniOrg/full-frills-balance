@@ -11,9 +11,18 @@ jest.setTimeout(180000);
 
 describe('iOS cold start performance', () => {
   it('records cold, resume, and tab-navigation timings in one run', async () => {
+    const backupPath = process.env.FFB_IOS_BACKUP_PATH;
+    if (!backupPath) {
+      throw new Error('Set FFB_IOS_BACKUP_PATH to a simulator-local backup file');
+    }
     // Seed once. Do not include database reset or fixture creation in the
     // startup measurement.
-    await launchOnboardedApp({ seedProfile: 'journal-ready', newInstance: true });
+    await launchOnboardedApp({
+      seedProfile: 'journal-ready',
+      newInstance: true,
+      backupPath,
+      preserveData: true,
+    });
 
     const coldStarts: number[] = [];
     await device.terminateApp();

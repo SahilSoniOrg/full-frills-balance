@@ -23,6 +23,10 @@ import { storage } from '@/src/utils/storage';
 import { setE2eSmsInboxMessages } from './e2eSmsInject';
 import { E2eSeedProfile } from './e2eConstants';
 import { smsMessageFromFixture } from './smsFixtures';
+import { files } from '@/src/utils/files';
+import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/import/orchestrator';
+import { importService } from '@/src/services/import/ImportService';
+import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 
 const DEFAULT_SEED = {
   name: 'E2E User',
@@ -204,7 +208,7 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
   ]);
 }
 
-export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<void> {
+export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<WorkplaceId> {
   logger.info(`[E2E] Seeding profile: ${profile}`);
   const workplaceId = await seedOnboarded(profile);
 
@@ -219,11 +223,14 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<void> 
   if (profile === 'sms-sync') {
     await seedSmsSyncHarness(workplaceId);
   }
+
+  return workplaceId;
 }
 
 export async function executeE2eBootstrap(config: {
   reset: boolean;
   seedProfile?: E2eSeedProfile;
+  backupPath?: string;
 }): Promise<void> {
   if (config.reset) {
     await clearAppStorage();
@@ -231,6 +238,16 @@ export async function executeE2eBootstrap(config: {
   }
 
   if (config.seedProfile) {
-    await runE2eSeedProfile(config.seedProfile);
+    const workplaceId = await runE2eSeedProfile(config.seedProfile);
+    if (config.backupPath) {
+      let rawBytes = await files.readBytes(config.backupPath);
+      rawBytes = await extractIfZip(rawBytes);
+      const text = sanitizeContent(decodeContent(rawBytes));
+      await importService.executeImport(
+        nativePlugin,
+        { uri: config.backupPath, name: 'e2e-backup.json', rawBytes, text, json: JSON.parse(text) },
+        workplaceId,
+      );
+    }
   }
 }

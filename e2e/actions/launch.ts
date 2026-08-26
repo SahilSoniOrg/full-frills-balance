@@ -5,9 +5,11 @@ import { E2E_AUTH_TOKEN } from '../utils/launchArgs';
 export type LaunchOnboardedOptions = {
   seedProfile?: E2eSeedProfile;
   newInstance?: boolean;
+  backupPath?: string;
+  preserveData?: boolean;
 };
 
-function e2eLaunchArgs(seedProfile?: E2eSeedProfile): Record<string, string> {
+function e2eLaunchArgs(seedProfile?: E2eSeedProfile, backupPath?: string): Record<string, string> {
   const args: Record<string, string> = {
     e2eAuth: E2E_AUTH_TOKEN,
     e2eReset: '1',
@@ -15,6 +17,7 @@ function e2eLaunchArgs(seedProfile?: E2eSeedProfile): Record<string, string> {
   if (seedProfile) {
     args.e2eSeedProfile = seedProfile;
   }
+  if (backupPath) args.e2eBackupPath = backupPath;
   return args;
 }
 
@@ -56,9 +59,9 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
   const seedProfile = options.seedProfile ?? 'journal-ready';
   await device.launchApp({
     newInstance: options.newInstance ?? true,
-    delete: true,
+    delete: !options.preserveData,
     permissions: { notifications: 'YES' },
-    launchArgs: e2eLaunchArgs(seedProfile),
+    launchArgs: e2eLaunchArgs(seedProfile, options.backupPath),
   });
   await waitForDashboard();
 }

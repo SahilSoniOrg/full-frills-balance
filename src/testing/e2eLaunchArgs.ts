@@ -6,6 +6,7 @@ import { E2E_AUTH_TOKEN, E2E_SEED_PROFILES, E2eSeedProfile } from './e2eConstant
 export type E2eLaunchConfig = {
   reset: boolean;
   seedProfile?: E2eSeedProfile;
+  backupPath?: string;
 };
 
 function isSeedProfile(value: unknown): value is E2eSeedProfile {
@@ -18,9 +19,11 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
   }
   const reset = args.e2eReset === '1' || args.e2eReset === true || args.e2eReset === 'true';
   const seedProfile = isSeedProfile(args.e2eSeedProfile) ? args.e2eSeedProfile : undefined;
+  const backupPath = typeof args.e2eBackupPath === 'string' ? args.e2eBackupPath : undefined;
   return {
     reset: reset || Boolean(seedProfile),
     seedProfile,
+    backupPath,
   };
 }
 
