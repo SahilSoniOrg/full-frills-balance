@@ -32,9 +32,15 @@ export function useTransactionComposerSession(
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
 
-  const sourceLine = editor.lines.find(line => line.transactionType === TransactionType.CREDIT);
-  const destinationLines = editor.lines.filter(
-    line => line.transactionType === TransactionType.DEBIT,
+  // Keep the projections stable while unrelated shell state changes (for example,
+  // suggestion visibility or account-picker state). Previously `filter` allocated
+  // a new array per render and invalidated every downstream derivation.
+  const { sourceLine, destinationLines } = useMemo(
+    () => ({
+      sourceLine: editor.lines.find(line => line.transactionType === TransactionType.CREDIT),
+      destinationLines: editor.lines.filter(line => line.transactionType === TransactionType.DEBIT),
+    }),
+    [editor.lines],
   );
   const splitState = useMemo(
     () => ({
