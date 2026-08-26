@@ -52,6 +52,7 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadPreferences = async () => {
+      const start = performance.now();
       try {
         setReady(prev => ({ ...prev, isLoading: true }));
         await preferences.loadPreferences();
@@ -61,9 +62,13 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
           await preferences.loadPreferences();
         }
         setReady(prev => ({ ...prev, isLoading: false, isInitialized: true }));
+        logger.info(`[Startup] Preferences ready in ${Math.round(performance.now() - start)}ms`);
       } catch (error) {
         logger.warn('[UIProvider] Failed to load preferences', { error });
         setReady(prev => ({ ...prev, isLoading: false, isInitialized: true }));
+        logger.info(
+          `[Startup] Preferences fallback ready in ${Math.round(performance.now() - start)}ms`,
+        );
       }
     };
 
