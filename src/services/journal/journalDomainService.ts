@@ -20,6 +20,7 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
+import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 
 export interface SubmitJournalResult {
@@ -254,6 +255,13 @@ export class JournalService {
   }> {
     if (entries.length === 0) {
       return { success: false, error: 'No entries to save', summaries: [] };
+    }
+    if (entries.length > MAX_BULK_JOURNAL_ROWS) {
+      return {
+        success: false,
+        error: `You can post at most ${MAX_BULK_JOURNAL_ROWS} entries at once.`,
+        summaries: [],
+      };
     }
 
     const workplaceId = entries[0].workplaceId;

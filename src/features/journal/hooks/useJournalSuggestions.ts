@@ -7,6 +7,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { logger } from '@/src/utils/logger';
 
 const SUGGESTION_CATALOG_KEY = '__catalog__';
+const SUGGESTION_CATALOG_LIMIT = 50;
 
 export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
 
@@ -69,7 +70,7 @@ export function useJournalSuggestions(
 
     setIsLoading(true);
     setError(null);
-    const request = journalService.getJournalSuggestions(workplaceId, '', 0);
+    const request = journalService.getJournalSuggestions(workplaceId, '', SUGGESTION_CATALOG_LIMIT);
     const trackedRequest = request
       .then(suggestions => {
         if (activeWorkplaceRef.current !== workplaceId) return;

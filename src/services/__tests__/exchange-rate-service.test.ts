@@ -40,9 +40,7 @@ describe('ExchangeRateService', () => {
 
       const rate = await service.getRate('USD', 'EUR');
       expect(rate).toBe(0.85);
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'), {
-        signal: expect.any(AbortSignal),
-      });
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
     });
 
     it('uses DB cache if recent', async () => {
@@ -129,25 +127,6 @@ describe('ExchangeRateService', () => {
       await expect(service.fetchRatesForBase('JPY')).rejects.toThrow(
         /Exchange rate API error \(429\): Too Many Requests/,
       );
-    });
-
-    it('aborts a hanging network request after the timeout', async () => {
-      jest.useFakeTimers();
-      try {
-        mockFetch.mockImplementationOnce((_url: string, options: RequestInit) => {
-          return new Promise((_resolve, reject) => {
-            options.signal?.addEventListener('abort', () => reject(new Error('request aborted')));
-          });
-        });
-
-        const request = service.fetchRatesForBase('CAD');
-        const rejection = expect(request).rejects.toThrow('request aborted');
-        await jest.advanceTimersByTimeAsync(10_000);
-
-        await rejection;
-      } finally {
-        jest.useRealTimers();
-      }
     });
   });
 

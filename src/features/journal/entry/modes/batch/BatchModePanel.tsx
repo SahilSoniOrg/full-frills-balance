@@ -29,6 +29,7 @@ export function BatchModePanel({
         removeRow={editor.removeRow}
         clearRows={editor.clearRows}
         updateRowField={editor.updateRowField}
+        isAtMaxRows={editor.isAtMaxRows}
       />
       <BulkSaveSummaryModal
         summary={summary}

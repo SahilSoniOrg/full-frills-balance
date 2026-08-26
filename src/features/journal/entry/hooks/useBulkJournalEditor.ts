@@ -3,6 +3,7 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
@@ -71,6 +72,7 @@ export function useBulkJournalEditor({
 
   const addRow = useCallback(() => {
     setRows(prev => {
+      if (prev.length >= MAX_BULK_JOURNAL_ROWS) return prev;
       const lastRow = prev[prev.length - 1];
       const nextRows = [...prev, createRow(lastRow)];
       latestRowsRef.current = nextRows;
@@ -231,6 +233,8 @@ export function useBulkJournalEditor({
     return rows.every(row => validateBulkJournalRow(row) === undefined && !row.isLoadingRate);
   }, [rows]);
 
+  const isAtMaxRows = rows.length >= MAX_BULK_JOURNAL_ROWS;
+
   const saveAll = useCallback(async () => {
     if (isSubmitting) return;
 
@@ -286,6 +290,7 @@ export function useBulkJournalEditor({
 
   return {
     rows,
+    isAtMaxRows,
     isValid,
     isSubmitting,
     submitError,

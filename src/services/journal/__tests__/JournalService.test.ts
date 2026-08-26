@@ -151,6 +151,23 @@ describe('JournalService - saveJournalEntry', () => {
     });
   });
 
+  describe('saveBulkJournalEntries', () => {
+    it('rejects batches larger than the bridge-safe limit', async () => {
+      const result = await service.saveBulkJournalEntries(
+        Array.from({ length: 101 }, (_, index) => ({
+          lines: [],
+          description: `Entry ${index}`,
+          journalDate: Date.now(),
+          workplaceId: 'wp-1' as WorkplaceId,
+        })),
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('at most 100 entries');
+      expect(ledgerWriteService.createMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('postPostingPlan', () => {
     const postingPlan = {
       lines: [

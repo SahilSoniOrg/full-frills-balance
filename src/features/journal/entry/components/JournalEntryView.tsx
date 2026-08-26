@@ -133,7 +133,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     <Page
       testID="journal-entry-screen"
       keyboardAvoiding
-      scrollable
+      scrollable={!isBatchMode}
       scrollViewProps={{
         onScrollBeginDrag,
         scrollEventThrottle: 16,

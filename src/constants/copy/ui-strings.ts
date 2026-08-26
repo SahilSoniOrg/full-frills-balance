@@ -446,6 +446,7 @@ export const UI_STRINGS = {
     },
     bulkEntryHint:
       "Add multiple entries at once. Each new row copies the previous one's values for fast data entry.",
+    bulkEntryMaxRows: (max: number) => `Maximum ${max} entries per post.`,
     splitEntry: {
       title: 'Split entry',
       fromAccount: 'From Account',

@@ -2,7 +2,14 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { FlashList } from '@shopify/flash-list';
 import { Platform, ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { AppButton, AppText, AppIcon } from '@/src/components/core';
-import { AppConfig, Spacing, Shape, Size, Typography } from '@/src/constants';
+import {
+  AppConfig,
+  MAX_BULK_JOURNAL_ROWS,
+  Spacing,
+  Shape,
+  Size,
+  Typography,
+} from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
@@ -19,6 +26,7 @@ interface BulkEntryGridProps {
   removeRow: (id: string) => void;
   clearRows: () => void;
   updateRowField: (rowId: string, field: keyof BulkJournalRow, value: BulkRowFieldValue) => void;
+  isAtMaxRows: boolean;
 }
 
 export const BulkEntryGrid = React.memo(
@@ -30,6 +38,7 @@ export const BulkEntryGrid = React.memo(
     removeRow,
     clearRows,
     updateRowField,
+    isAtMaxRows,
   }: BulkEntryGridProps) => {
     const { theme } = useTheme();
 
@@ -157,7 +166,7 @@ export const BulkEntryGrid = React.memo(
     );
 
     const listFooter = (
-      <AppButton variant="outline" onPress={addRow} style={styles.addButton}>
+      <AppButton variant="outline" onPress={addRow} disabled={isAtMaxRows} style={styles.addButton}>
         + Add Entry Row
       </AppButton>
     );
@@ -182,6 +191,11 @@ export const BulkEntryGrid = React.memo(
               <AppText variant="caption" color={errorCount > 0 ? 'error' : 'secondary'}>
                 {errorCount > 0 ? `${errorCount} need attention` : 'All valid'}
               </AppText>
+              {isAtMaxRows && (
+                <AppText variant="caption" color="tertiary">
+                  {AppConfig.strings.transactionFlow.bulkEntryMaxRows(MAX_BULK_JOURNAL_ROWS)}
+                </AppText>
+              )}
             </View>
             <TouchableOpacity
               onPress={clearRows}
@@ -255,6 +269,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   statsLeft: {
+    flex: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,

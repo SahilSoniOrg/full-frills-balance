@@ -103,6 +103,28 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows).toHaveLength(1);
   });
 
+  it('caps rows at the bridge-safe bulk limit', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    act(() => {
+      for (let index = 1; index < 100; index += 1) result.current.addRow();
+    });
+
+    expect(result.current.rows).toHaveLength(100);
+    expect(result.current.isAtMaxRows).toBe(true);
+
+    act(() => result.current.addRow());
+
+    expect(result.current.rows).toHaveLength(100);
+  });
+
   it('removing the last row resets to a single empty row', () => {
     const { result } = renderHook(() =>
       useBulkJournalEditor({

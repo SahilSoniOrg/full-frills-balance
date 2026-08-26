@@ -56,7 +56,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 50);
     expect(result.current.suggestions).toEqual(mockSuggestions);
   });
 
@@ -70,7 +70,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 50);
     expect(result.current.suggestions).toHaveLength(2);
     expect(result.current.suggestions[0].description).toBe('Coffee at Starbucks');
     expect(result.current.suggestions[1].description).toBe('Coffee at Blue Bottle');
@@ -86,7 +86,7 @@ describe('useJournalSuggestions', () => {
     });
     await act(async () => loadPromise);
 
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 50);
   });
 
   it('coalesces repeated focus and typing loads, then reuses the cached result', async () => {
@@ -164,7 +164,7 @@ describe('useJournalSuggestions', () => {
     });
 
     expect(journalService.getJournalSuggestions).toHaveBeenCalledTimes(1);
-    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 0);
+    expect(journalService.getJournalSuggestions).toHaveBeenCalledWith(workplaceId, '', 50);
     expect(result.current.suggestions).toEqual([
       expect.objectContaining({ description: 'Coffee typed' }),
     ]);

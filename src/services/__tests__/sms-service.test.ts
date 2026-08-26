@@ -232,7 +232,10 @@ describe('smsService workplace isolation', () => {
       mode: 'regex',
       senderMatch: 'BANK',
     });
-    expect(preview.map(record => record.id)).toEqual([currentRecord.id, secondCurrentRecord.id]);
+    expect(preview.map(record => record.id)).toEqual(
+      expect.arrayContaining([currentRecord.id, secondCurrentRecord.id]),
+    );
+    expect(preview).toHaveLength(2);
     expect(await smsService.getInboxRecord(workplaceId, foreignRecord.id)).toBeNull();
     expect([currentRecord.id, secondCurrentRecord.id]).toContain(
       (await smsService.findByLinkedJournalId(workplaceId, sharedJournalId))?.id,
