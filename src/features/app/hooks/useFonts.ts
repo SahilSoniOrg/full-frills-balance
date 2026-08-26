@@ -62,16 +62,19 @@ export function useFonts() {
       const start = performance.now();
       logger.info(`[Fonts] Starting load for: ${fontId}`);
 
+      // Custom fonts are a visual enhancement, not a reason to block the
+      // first interactive frame. React Native can render with its fallback
+      // font while the selected family is loaded in the background.
+      if (isActive) setFontsReady(true, fontId);
+
       if (loadedFontSetsRef.current.has(fontId)) {
         logger.debug(`[Fonts] Font already loaded: ${fontId}`);
-        if (isActive) setFontsReady(true, fontId);
         return;
       }
 
       const fontsToLoad = FONT_MAP[fontId];
       if (!fontsToLoad) {
         logger.warn(`[Fonts] No configuration found for: ${fontId}`);
-        if (isActive) setFontsReady(true, fontId);
         return;
       }
 
@@ -87,7 +90,6 @@ export function useFonts() {
         }
       } catch (err) {
         logger.error(`[Fonts] Failed to load: ${fontId}`, err);
-        if (isActive) setFontsReady(true, fontId);
       }
     }
 
