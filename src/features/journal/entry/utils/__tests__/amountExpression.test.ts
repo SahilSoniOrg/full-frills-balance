@@ -13,6 +13,25 @@ describe('amount expression evaluator', () => {
     expect(evaluateAmountExpression('2((3+1)(5-2))', 2)).toEqual({ ok: true, value: 24 });
   });
 
+  it.each([
+    ['2 (3+4)', 14],
+    ['2(3)(4)', 24],
+    ['2((3+4))', 14],
+    ['(2+3)(4)(5+1)', 120],
+  ])('supports number/open and close/open adjacency: %s', (expression, value) => {
+    expect(evaluateAmountExpression(expression, 2)).toEqual({ ok: true, value });
+  });
+
+  it.each([
+    ['2+(', 2],
+    ['2+((', 2],
+    ['12/(', 12],
+    ['12/((', 12],
+    ['((2+3)', 5],
+  ])('recovers unfinished nested parentheses: %s', (expression, value) => {
+    expect(evaluateAmountExpression(expression, 2)).toEqual({ ok: true, value });
+  });
+
   it('supports decimal values and currency precision', () => {
     expect(evaluateAmountExpression('16.99*1.1', 2)).toEqual({ ok: true, value: 18.69 });
     expect(evaluateAmountExpression(' 1.005 + 0.005 ', 2)).toEqual({ ok: true, value: 1.01 });
@@ -61,7 +80,27 @@ describe('amount expression evaluator', () => {
       ok: false,
       error: 'Invalid expression',
     });
+    expect(evaluateAmountExpression('2()', 2)).toEqual({
+      ok: false,
+      error: 'Invalid expression',
+    });
+    expect(evaluateAmountExpression('(2+3)4', 2)).toEqual({
+      ok: false,
+      error: 'Invalid expression',
+    });
+    expect(evaluateAmountExpression('2 3', 2)).toEqual({
+      ok: false,
+      error: 'Invalid expression',
+    });
+    expect(evaluateAmountExpression('(2+)', 2)).toEqual({
+      ok: false,
+      error: 'Invalid expression',
+    });
     expect(evaluateAmountExpression('20/0', 2)).toEqual({
+      ok: false,
+      error: 'Cannot divide by zero',
+    });
+    expect(evaluateAmountExpression('2/(1-1)', 2)).toEqual({
       ok: false,
       error: 'Cannot divide by zero',
     });

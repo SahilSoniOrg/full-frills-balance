@@ -99,7 +99,7 @@ function validateTokenSequence(tokens: Token[]): AmountExpressionResult | null {
 
     if (token === '(') {
       // A number or closing parenthesis immediately followed by an opening
-      // parenthesis is intentionally allowed: mathjs treats it as implicit ×.
+      // parenthesis is intentionally allowed as implicit multiplication.
       parenthesisBalance += 1;
       expectsValue = true;
       continue;
