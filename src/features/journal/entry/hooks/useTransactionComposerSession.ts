@@ -14,6 +14,7 @@ import {
   resolveTransactionIntent,
   validatePostingPlan,
 } from '@/src/services/transaction/transactionComposerDomain';
+import { buildSimpleDefaultDescription } from '@/src/services/journal/simpleJournalHelpers';
 import { useJournalEditor, UseJournalEditorOptions } from './useJournalEditor';
 
 export type UseTransactionComposerSessionOptions = UseJournalEditorOptions & {
@@ -61,8 +62,18 @@ export function useTransactionComposerSession(
       0,
     );
 
+    const description =
+      editor.description.trim() ||
+      (editor.isGuidedMode
+        ? buildSimpleDefaultDescription(
+            editor.transactionType,
+            accounts.find(account => account.id === sourceLine?.accountId),
+            accounts.find(account => account.id === destinationLines[0]?.accountId),
+          )
+        : editor.description);
+
     return {
-      description: editor.description,
+      description,
       amount:
         sourceLine?.amount ||
         (destinationLines.length > 1 && allocationTotal > 0
@@ -89,6 +100,7 @@ export function useTransactionComposerSession(
   }, [
     destinationLines,
     editor.description,
+    editor.isGuidedMode,
     editor.journalDate,
     editor.journalTime,
     editor.notes,
@@ -130,7 +142,13 @@ export function useTransactionComposerSession(
         editor.description.trim() ||
         (mode === 'allocation'
           ? AppConfig.strings.transactionFlow.splitEntry.defaultDescription
-          : `${editor.transactionType.charAt(0).toUpperCase()}${editor.transactionType.slice(1)}`);
+          : editor.isGuidedMode
+            ? buildSimpleDefaultDescription(
+                editor.transactionType,
+                accounts.find(account => account.id === sourceLine?.accountId),
+                accounts.find(account => account.id === destinationLines[0]?.accountId),
+              )
+            : `${editor.transactionType.charAt(0).toUpperCase()}${editor.transactionType.slice(1)}`);
       if (!editor.description.trim()) editor.setDescription(description);
 
       const submissionIntent = { ...intent, description };
@@ -147,7 +165,7 @@ export function useTransactionComposerSession(
         mode === 'allocation' ? 'advanced' : editor.isGuidedMode ? 'simple' : 'advanced',
       );
     },
-    [accounts, currencyCode, editor, intent, splitValidation],
+    [accounts, currencyCode, destinationLines, editor, intent, sourceLine, splitValidation],
   );
 
   return {

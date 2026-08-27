@@ -26,6 +26,18 @@ jest.mock('@/src/utils/preferences', () => ({
   },
 }));
 
+jest.mock('@/src/services/ReactiveDataService', () => ({
+  reactiveDataService: {
+    clearCache: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/utils/SnapshotService', () => ({
+  snapshotService: {
+    clearSnapshotsForWorkplace: jest.fn(),
+  },
+}));
+
 jest.mock('@/src/data/database/Database', () => ({
   database: {
     collections: {
@@ -67,7 +79,10 @@ jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
 
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { importService } from '@/src/services/import/ImportService';
+import { database } from '@/src/data/database/Database';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { WorkplaceId } from '@/src/types/ids';
 
@@ -103,5 +118,27 @@ describe('ImportService post-import wiring', () => {
   it('does not call rebuild helper when fetched account list is empty', async () => {
     await importService.executeImport(mockPlugin, context, workplaceId);
     expect(rebuildAllAccountBalancesAfterImport).not.toHaveBeenCalled();
+  });
+
+  it('invalidates account caches and snapshots after replacing the workplace', async () => {
+    const account = { id: 'imported-account', name: 'Imported account' };
+    const collectionsGet = database.collections.get as jest.Mock;
+    collectionsGet.mockReturnValueOnce({
+      find: jest.fn().mockResolvedValue({ defaultCurrencyCode: 'USD' }),
+    });
+    collectionsGet.mockReturnValueOnce({
+      query: jest.fn().mockReturnValue({ fetch: jest.fn().mockResolvedValue([account]) }),
+    });
+
+    await importService.executeImport(mockPlugin, context, workplaceId);
+
+    expect(reactiveDataService.clearCache).toHaveBeenCalledWith(workplaceId);
+    expect(snapshotService.clearSnapshotsForWorkplace).toHaveBeenCalledWith(workplaceId);
+    expect(rebuildAllAccountBalancesAfterImport).toHaveBeenCalledWith(
+      workplaceId,
+      [account],
+      expect.any(Number),
+      expect.any(Function),
+    );
   });
 });

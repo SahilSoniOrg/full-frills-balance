@@ -62,6 +62,23 @@ describe('useTransactionComposerSession', () => {
     expect(result.current.postingPlanValidation).toHaveProperty('valid');
   });
 
+  it('allows simple journals with an empty description by using the default name', () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialAmount: '12.50',
+        initialSourceId: asAccountId('cash'),
+        initialDestinationId: asAccountId('food'),
+        initialDate: '2026-08-25',
+      }),
+    );
+
+    expect(result.current.editor.description).toBe('');
+    expect(result.current.postingPlanValidation.valid).toBe(true);
+    expect(result.current.postingPlan?.description).toBeTruthy();
+  });
+
   it('assembles Split allocations through the session submit command', async () => {
     const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');
     journalService.postPostingPlan.mockResolvedValue({ success: true, action: 'created' });

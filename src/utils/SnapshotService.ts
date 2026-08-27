@@ -235,6 +235,38 @@ class SnapshotService {
       logger.warn('[SnapshotService] Failed to clear snapshots', { error });
     }
   }
+
+  /** Clears persisted and queued snapshots for one workplace after a full data replacement. */
+  clearSnapshotsForWorkplace(workplaceId: string): void {
+    const suffix = `_${workplaceId}`;
+    for (const key of this.pendingWrites.keys()) {
+      if (key.endsWith(suffix)) this.pendingWrites.delete(key);
+    }
+
+    try {
+      const keys = storage.getAllKeys();
+      for (const key of keys) {
+        const stored = storage.getString(key);
+        if (!stored) continue;
+
+        try {
+          const snapshot = JSON.parse(stored) as Partial<Snapshot>;
+          if (
+            snapshot.workplaceId === workplaceId &&
+            typeof snapshot.timestamp === 'number' &&
+            'data' in snapshot
+          ) {
+            storage.remove(key);
+            this.lastPersistedPayloads.delete(key);
+          }
+        } catch {
+          // Ignore unrelated non-JSON storage entries.
+        }
+      }
+    } catch (error) {
+      logger.warn('[SnapshotService] Failed to clear workplace snapshots', { error });
+    }
+  }
 }
 
 export const snapshotService = new SnapshotService();

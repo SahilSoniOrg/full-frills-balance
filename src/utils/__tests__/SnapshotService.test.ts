@@ -93,4 +93,18 @@ describe('SnapshotService', () => {
     jest.runAllTimers();
     expect(mockSnapshotStore.has('dashboard_data_snapshot_workplace-1')).toBe(false);
   });
+
+  it('clears all snapshot types for one workplace without touching another', () => {
+    snapshotService.saveDashboardSnapshot('workplace-1', { value: 1 });
+    snapshotService.saveCustomSnapshot('workplace-1', 'accounts_list_data', { value: 1 });
+    snapshotService.saveCustomSnapshot('workplace-2', 'accounts_list_data', { value: 2 });
+
+    snapshotService.clearSnapshotsForWorkplace('workplace-1');
+
+    expect(snapshotService.getDashboardSnapshot('workplace-1')).toBeNull();
+    expect(snapshotService.getCustomSnapshot('workplace-1', 'accounts_list_data')).toBeNull();
+    expect(snapshotService.getCustomSnapshot('workplace-2', 'accounts_list_data')).toEqual({
+      value: 2,
+    });
+  });
 });

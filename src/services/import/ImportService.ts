@@ -25,6 +25,8 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { Q } from '@nozbe/watermelondb';
 
 export class ImportService {
@@ -124,6 +126,11 @@ export class ImportService {
       swapProgress('Applying import to workplace...', 0);
       await commitStagedImport(workplaceId, stagingWorkplaceId);
       swapProgress('Applying import to workplace...', 1);
+
+      // The workplace replacement bypasses normal WatermelonDB mutations. Drop
+      // replayed reactive data and boot snapshots before the new ledger is read.
+      reactiveDataService.clearCache(workplaceId);
+      snapshotService.clearSnapshotsForWorkplace(workplaceId);
     } catch (error) {
       await discardImportStagingWorkplace(stagingWorkplaceId).catch(cleanupError => {
         logger.error('[ImportService] Staging cleanup after failed import:', cleanupError);
