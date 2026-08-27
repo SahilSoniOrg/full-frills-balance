@@ -4,6 +4,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 export type AccountDisplayPrefsState = {
   showAccountMonthlyStats: boolean;
   setShowAccountMonthlyStats: (show: boolean) => void;
+  useCompactAccountPicker: boolean;
+  setUseCompactAccountPicker: (useCompact: boolean) => void;
 };
 
 /**
@@ -25,8 +27,25 @@ export function useAccountDisplayPrefs(): AccountDisplayPrefsState {
     preferences.setShowAccountMonthlyStats(show);
   }, []);
 
+  const useCompactAccountPicker = useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.observe('useCompactAccountPicker').subscribe(() => {
+        onStoreChange();
+      });
+      return () => sub.unsubscribe();
+    },
+    () => preferences.useCompactAccountPicker,
+    () => preferences.useCompactAccountPicker,
+  );
+
+  const setUseCompactAccountPicker = useCallback((useCompact: boolean) => {
+    preferences.setUseCompactAccountPicker(useCompact);
+  }, []);
+
   return {
     showAccountMonthlyStats,
     setShowAccountMonthlyStats,
+    useCompactAccountPicker,
+    setUseCompactAccountPicker,
   };
 }

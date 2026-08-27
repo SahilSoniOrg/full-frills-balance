@@ -311,6 +311,10 @@ export const UI_STRINGS = {
       customize: 'Customize',
       preview: 'Aa',
     },
+    accountPicker: {
+      title: 'Compact account picker',
+      description: 'Show accounts as space-saving pills when choosing an account',
+    },
     privacy: {
       title: 'Privacy Mode',
       description: 'Hide balances across the app',

@@ -20,6 +20,7 @@ export interface UIPreferences {
   isWidgetPrivacyEnabled: boolean;
   isAppLockEnabled: boolean;
   showAccountMonthlyStats: boolean;
+  useCompactAccountPicker: boolean;
   advancedMode: boolean;
   archetype?: string;
   dismissedPatternIds: string[];
@@ -64,6 +65,7 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   isWidgetPrivacyEnabled: false,
   isAppLockEnabled: false,
   showAccountMonthlyStats: true,
+  useCompactAccountPicker: false,
   advancedMode: false,
   themeId: ThemeIds.DEEP_SPACE,
   fontId: FontIds.DEEP_SPACE,

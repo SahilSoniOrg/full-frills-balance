@@ -13,12 +13,19 @@ export interface AppearanceSettingsViewModel {
   setFontId: (value: FontId) => void;
   showAccountMonthlyStats: boolean;
   onToggleAccountMonthlyStats: () => void;
+  useCompactAccountPicker: boolean;
+  onToggleCompactAccountPicker: () => void;
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   const { themePreference, setThemePreference, themeId, setThemeId, fontId, setFontId } =
     useThemePrefs();
-  const { showAccountMonthlyStats, setShowAccountMonthlyStats } = useAccountDisplayPrefs();
+  const {
+    showAccountMonthlyStats,
+    setShowAccountMonthlyStats,
+    useCompactAccountPicker,
+    setUseCompactAccountPicker,
+  } = useAccountDisplayPrefs();
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
@@ -60,6 +67,13 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     });
   }, [setShowAccountMonthlyStats, showAccountMonthlyStats]);
 
+  const onToggleCompactAccountPicker = useCallback(() => {
+    setUseCompactAccountPicker(!useCompactAccountPicker);
+    analytics.trackFeatureUsage('settings', 'toggle_compact_account_picker', {
+      new_state: !useCompactAccountPicker,
+    });
+  }, [setUseCompactAccountPicker, useCompactAccountPicker]);
+
   return {
     themePreference,
     setThemePreference: handleSetThemePreference,
@@ -69,5 +83,7 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     setFontId: handleSetFontId,
     showAccountMonthlyStats,
     onToggleAccountMonthlyStats,
+    useCompactAccountPicker,
+    onToggleCompactAccountPicker,
   };
 }

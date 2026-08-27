@@ -28,6 +28,18 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
 
         <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
           <SettingsMenuItem
+            leftIcon="wallet"
+            title={AppConfig.strings.settings.accountPicker.title}
+            description={AppConfig.strings.settings.accountPicker.description}
+            hasArrow={false}
+            rightContent={
+              <AppToggle
+                value={vm.useCompactAccountPicker}
+                onValueChange={vm.onToggleCompactAccountPicker}
+              />
+            }
+          />
+          <SettingsMenuItem
             leftIcon="barChart"
             title={AppConfig.strings.settings.stats.title}
             description={AppConfig.strings.settings.stats.description}

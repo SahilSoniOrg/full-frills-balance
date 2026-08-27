@@ -1,6 +1,6 @@
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
@@ -8,6 +8,7 @@ import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPi
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
+import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
@@ -84,6 +85,78 @@ const AccountPickerRow = React.memo(
 
 AccountPickerRow.displayName = 'AccountPickerRow';
 
+const AccountPickerPill = React.memo(
+  ({
+    item,
+    isSelected,
+    isMultiple,
+    isPinnedArchived,
+    onPress,
+  }: {
+    item: AccountFields | PlainAccount;
+    isSelected: boolean;
+    isMultiple: boolean;
+    isPinnedArchived: boolean;
+    onPress: () => void;
+  }) => {
+    const { theme } = useTheme();
+    const archived = isAccountArchived(item);
+    const { accentColor } = useAccountColors(item);
+    const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
+      archived,
+      isPinnedArchived,
+    );
+
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+        accessibilityState={{ selected: isSelected }}
+        testID={`account-picker-option-${item.id}`}
+        onPress={onPress}
+        activeOpacity={Opacity.medium}
+        style={[
+          styles.pill,
+          {
+            backgroundColor: withOpacity(accentColor, isSelected ? 0.22 : 0.1),
+            borderColor: isSelected ? withOpacity(accentColor, 0.55) : 'transparent',
+            opacity,
+          },
+        ]}
+      >
+        <AppIcon
+          name={getAccountIcon(item)}
+          size={Size.iconSm}
+          color={accentColor}
+          fallbackIcon="wallet"
+        />
+        <AppText
+          variant="caption"
+          weight="bold"
+          color="secondary"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={styles.pillLabel}
+        >
+          {item.name}
+        </AppText>
+        {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
+        {isMultiple ? (
+          <AppIcon
+            name={isSelected ? 'checkCircle' : 'circle'}
+            size={Size.iconSm}
+            color={isSelected ? accentColor : theme.textTertiary}
+          />
+        ) : isSelected ? (
+          <AppIcon name="check" size={Size.iconSm} color={accentColor} />
+        ) : null}
+      </TouchableOpacity>
+    );
+  },
+);
+
+AccountPickerPill.displayName = 'AccountPickerPill';
+
 type AccountPickerListProps = {
   accounts: (AccountFields | PlainAccount)[];
   selectedIds: Set<AccountId>;
@@ -100,6 +173,11 @@ type AccountPickerListProps = {
   | { isMultiple: false; onSelect: (id: AccountId) => void; onApply?: never; onToggle?: never }
 );
 
+type PickerAccount = AccountFields | PlainAccount;
+type DisplaySection = Omit<AccountSection, 'data'> & {
+  data: (PickerAccount | PickerAccount[])[];
+};
+
 export function AccountPickerList(props: AccountPickerListProps) {
   const {
     accounts,
@@ -113,6 +191,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     excludeParentAccounts = false,
   } = props;
   const { theme } = useTheme();
+  const { useCompactAccountPicker } = useAccountDisplayPrefs();
 
   const accountsById = useMemo(
     () => new Map(accounts.map(account => [account.id, account])),
@@ -134,6 +213,13 @@ export function AccountPickerList(props: AccountPickerListProps) {
     totalCount,
     filteredCount,
   } = useAccountPickerList({ accounts, excludeParentAccounts, pinnedAccountIds });
+  const displaySections = useMemo<DisplaySection[]>(
+    () =>
+      useCompactAccountPicker
+        ? sections.map(section => ({ ...section, data: [section.data] }))
+        : sections,
+    [sections, useCompactAccountPicker],
+  );
   const extraData = useMemo(
     () => ({ selectedIds, collapsedSections, isSearchMode }),
     [selectedIds, collapsedSections, isSearchMode],
@@ -174,8 +260,13 @@ export function AccountPickerList(props: AccountPickerListProps) {
     [isSearchMode, searchQuery, onCreateRequest, onClose, theme],
   );
   const renderSectionHeader = useCallback(
-    ({ section }: { section: AccountSection }) => {
+    ({ section }: { section: DisplaySection }) => {
       const { title, data, type, key } = section;
+      const accountCount = useCompactAccountPicker
+        ? Array.isArray(data[0])
+          ? data[0].length
+          : 0
+        : data.length;
       const isCollapsed = collapsedSections.has(key) && !isSearchMode;
       return (
         <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
@@ -193,7 +284,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
               </AppText>
               <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
                 <AppText variant="caption" weight="bold" color="tertiary">
-                  {data.length}
+                  {accountCount}
                 </AppText>
               </View>
             </View>
@@ -223,19 +314,45 @@ export function AccountPickerList(props: AccountPickerListProps) {
         </View>
       );
     },
-    [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
+    [
+      collapsedSections,
+      isSearchMode,
+      theme,
+      toggleSection,
+      onCreateRequest,
+      onClose,
+      useCompactAccountPicker,
+    ],
   );
   const renderItem = useCallback(
-    ({ item, section }: { item: AccountFields | PlainAccount; section: AccountSection }) => {
+    ({ item, section }: { item: PickerAccount | PickerAccount[]; section: DisplaySection }) => {
       const { key } = section;
       if (collapsedSections.has(key) && !isSearchMode) return null;
+      if (useCompactAccountPicker) {
+        const accountsInRow = item as PickerAccount[];
+        return (
+          <View style={styles.pillGrid}>
+            {accountsInRow.map(account => (
+              <AccountPickerPill
+                key={account.id}
+                item={account}
+                isSelected={selectedIds.has(account.id)}
+                isMultiple={isMultiple}
+                isPinnedArchived={pinnedAccountIds.has(account.id)}
+                onPress={() => handleToggleSelection(account.id)}
+              />
+            ))}
+          </View>
+        );
+      }
+      const account = item as PickerAccount;
       return (
         <AccountPickerRow
-          item={item}
-          isSelected={selectedIds.has(item.id)}
+          item={account}
+          isSelected={selectedIds.has(account.id)}
           isMultiple={isMultiple}
-          isPinnedArchived={pinnedAccountIds.has(item.id)}
-          onPress={() => handleToggleSelection(item.id)}
+          isPinnedArchived={pinnedAccountIds.has(account.id)}
+          onPress={() => handleToggleSelection(account.id)}
         />
       );
     },
@@ -246,6 +363,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       selectedIds,
       pinnedAccountIds,
       handleToggleSelection,
+      useCompactAccountPicker,
     ],
   );
   return (
@@ -276,10 +394,14 @@ export function AccountPickerList(props: AccountPickerListProps) {
         )}
       </View>
       <View style={styles.listWrapper}>
-        <SectionList
-          sections={sections}
-          keyExtractor={item => item.id}
+        <SectionList<PickerAccount | PickerAccount[], DisplaySection>
+          sections={displaySections}
+          keyExtractor={(item, index) => {
+            if (Array.isArray(item)) return `account-picker-row-${index}`;
+            return (item as PickerAccount).id;
+          }}
           extraData={extraData}
+          contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled
           ListEmptyComponent={renderEmpty}
           renderSectionHeader={renderSectionHeader}
@@ -320,6 +442,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1 },
   countIndicator: { marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
   listWrapper: { flex: 1, minHeight: 400 },
+  listContent: { paddingBottom: Spacing.xl },
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
   sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -342,5 +465,24 @@ const styles = StyleSheet.create({
   emptyContainer: { padding: Spacing.xxxxl, alignItems: 'center', justifyContent: 'center' },
   emptyText: { marginTop: Spacing.lg, textAlign: 'center' },
   emptyButton: { marginTop: Spacing.xl },
+  pillGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
+  pill: {
+    minHeight: Size.touchTarget,
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderWidth: 1,
+    borderRadius: Shape.radius.full,
+  },
+  pillLabel: { flexShrink: 1 },
   trailing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 });

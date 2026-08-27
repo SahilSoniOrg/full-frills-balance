@@ -262,6 +262,14 @@ export class PreferencesStore {
     this.update({ showAccountMonthlyStats: show });
   }
 
+  get useCompactAccountPicker(): boolean {
+    return this.preferences.useCompactAccountPicker;
+  }
+
+  setUseCompactAccountPicker(useCompactAccountPicker: boolean): void {
+    this.update({ useCompactAccountPicker });
+  }
+
   get advancedMode(): boolean {
     return this.preferences.advancedMode;
   }
