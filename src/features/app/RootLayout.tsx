@@ -19,7 +19,7 @@ import PostHog, { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect } from 'react';
 import { View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
@@ -46,7 +46,7 @@ function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1, backgroundColor: '#000000' }}>
         <ChartInteractionProvider>
-          <SafeAreaProvider>
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             <ErrorBoundary>
               <DatabaseProvider database={database}>
                 <UIProvider>
