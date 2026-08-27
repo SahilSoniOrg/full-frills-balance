@@ -7,13 +7,14 @@ Organize accounts in one place and enter amounts faster, with more reliable impo
 Also in this update:
 
 * Account organization: Drag accounts into a new order or hierarchy, collapse account-type sections, and save multiple changes together.
-* Calculator amounts: Use quick calculations in journal entries, budgets, planned payments, account forms, and transaction matching.
-* Transaction inbox: Resolve duplicate transactions, edit SMS details, and re-parse them when needed.
+* Calculator amounts: Use quick calculations in journal entries, budgets, planned payments, account forms, and transaction matching, including unfinished parentheses.
+* Transaction inbox: Resolve duplicate transactions, edit SMS details, and re-parse them when needed. Linked bank SMS also shows on the matching journal entry.
 * CSV imports: Import transaction history from CSV files with more accurate account and category matching.
 * Clearer account totals: Expense debits are now included correctly in Month Spent.
-* Better suggestions: Journal suggestions preserve the right target categories for multi-category entries.
+* Better suggestions: Journal suggestions preserve the right target categories for multi-category entries and no longer repeat.
 * More reliable planning: Recurring payments and cash-flow projections handle dates, pending entries, and updates more accurately.
-* Faster screens: Journal editing, account lists, charts, exports, and simulations are more responsive.
+* Faster screens: Journal editing, account lists, charts, exports, and simulations are more responsive, and home shows last Safe-to-Spend right away.
+* App lock: Lock settings stay on this device and are left out of backups.
 
 ---
 
