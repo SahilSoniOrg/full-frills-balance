@@ -37,6 +37,7 @@ export interface ImportAccountInput {
   accountSubtype?: AccountSubtype | string;
   description?: string;
   icon?: IconName;
+  color?: string;
   orderNum?: number;
 }
 
@@ -46,7 +47,7 @@ export interface ImportCategoryInput {
   defaultType?: AccountType.EXPENSE | AccountType.INCOME;
   description?: string;
   icon?: IconName;
-  color?: number;
+  color?: string;
 }
 
 export interface ImportTransactionInput {
@@ -332,6 +333,7 @@ export class CanonicalImportBuilder {
         currencyCode: raw.currencyCode || this.defaultCurrency,
         description: raw.description,
         icon: raw.icon,
+        color: raw.color,
         orderNum: raw.orderNum ?? canonicalAccounts.length + 1,
       });
     }
@@ -420,6 +422,7 @@ export class CanonicalImportBuilder {
             currencyCode: currency,
             description: catInfo.description,
             icon: catInfo.icon,
+            color: catInfo.color,
             orderNum: accountCountOffset + categoryAccounts.length + 1,
           });
         }

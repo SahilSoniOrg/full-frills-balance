@@ -1,6 +1,10 @@
 import { generator } from '@/src/data/database/idGenerator';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
-import { parseTimestampMs } from '@/src/services/import/plugins/importPluginHelpers';
+import {
+  mapToNearestAccountColor,
+  normalizeHexColor,
+  parseTimestampMs,
+} from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountSubtype,
@@ -237,6 +241,7 @@ export const cashewPlugin: ImportPlugin = {
           accountType: AccountType.ASSET,
           currencyCode: currency,
           icon: getAppIconFromCashewIcon(w.icon_name),
+          color: mapToNearestAccountColor(normalizeHexColor(w.colour)),
           orderNum: w.order,
         });
       }
@@ -252,6 +257,7 @@ export const cashewPlugin: ImportPlugin = {
             accountSubtype: AccountSubtype.LOAN,
             currencyCode: walletCurrencies.get(objective.wallet_fk) || workplaceCurrency,
             icon: (objective.icon_name as IconName) || 'handshake',
+            color: mapToNearestAccountColor(normalizeHexColor(objective.colour)),
             orderNum: objective.order,
           });
         }
@@ -264,6 +270,7 @@ export const cashewPlugin: ImportPlugin = {
           name: c.name || (c.category_pk === '0' ? 'Balance Adjustment' : 'Uncategorized'),
           defaultType: c.income === 1 ? AccountType.INCOME : AccountType.EXPENSE,
           icon: getAppIconFromCashewIcon(c.icon_name),
+          color: mapToNearestAccountColor(normalizeHexColor(c.colour)),
         });
       }
 

@@ -200,6 +200,7 @@ export const nativePlugin: ImportPlugin = {
             parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
             description: acc.description,
             icon: acc.icon,
+            color: acc.color,
             orderNum: acc.orderNum,
             reconciledAt: parseTimestamp(acc.reconciledAt),
             createdAt: parseTimestamp(acc.createdAt),

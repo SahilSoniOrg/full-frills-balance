@@ -25,6 +25,20 @@ describe('serializeExportPayload', () => {
     expect(parsed.journals).toEqual([{ id: 'j1' }]);
   });
 
+  it('preserves account color in the native export payload', async () => {
+    const json = await serializeExportPayload(
+      {
+        exportDate: '2026-01-01T00:00:00.000Z',
+        version: '1.4.0',
+        schemaVersion: 42,
+        preferences: DEFAULT_UI_PREFERENCES,
+      },
+      [['accounts', [{ id: 'a1', name: 'Cash', color: '#3B82F6' }]]],
+    );
+
+    expect(JSON.parse(json).accounts[0].color).toBe('#3B82F6');
+  });
+
   it('omits excluded export fields from table payloads', async () => {
     const json = await serializeExportPayload(
       {

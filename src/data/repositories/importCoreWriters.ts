@@ -40,6 +40,7 @@ export function prepareCoreImportRecords(
       record.parentAccountId = account.parentAccountId;
       record.description = account.description;
       record.icon = account.icon;
+      record.color = account.color;
       record.orderNum = account.orderNum;
       if (account.reconciledAt !== undefined && account.reconciledAt !== null) {
         record.reconciledAt = new Date(account.reconciledAt);

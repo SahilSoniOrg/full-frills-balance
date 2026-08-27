@@ -86,6 +86,7 @@ describe('NativeImportPlugin', () => {
         name: 'Acc 1',
         accountType: 'ASSET',
         currencyCode: 'USD',
+        color: '#3B82F6',
         reconciledAt: '2024-01-01T00:00:00Z',
       },
     ],
@@ -237,6 +238,9 @@ describe('NativeImportPlugin', () => {
       expect(integrityService.forceRunCheck).toHaveBeenCalled();
 
       expect(stats.accounts).toBe(1);
+      expect((importRepository.batchInsert as jest.Mock).mock.calls[0][1].accounts[0].color).toBe(
+        '#3B82F6',
+      );
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2);
       expect(stats.budgets).toBe(1);

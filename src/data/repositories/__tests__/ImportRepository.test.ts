@@ -17,7 +17,13 @@ describe('ImportRepository', () => {
     it('should use type defaults when accountSubtype is missing', async () => {
       await importRepository.batchInsert('test-wp' as WorkplaceId, {
         accounts: [
-          { id: 'a_asset', name: 'Asset A', accountType: AccountType.ASSET, currencyCode: 'USD' },
+          {
+            id: 'a_asset',
+            name: 'Asset A',
+            accountType: AccountType.ASSET,
+            currencyCode: 'USD',
+            color: '#3B82F6',
+          },
           {
             id: 'a_liability',
             name: 'Liability A',
@@ -69,6 +75,7 @@ describe('ImportRepository', () => {
       );
 
       expect(asset?.accountSubtype).toBe(AccountSubtype.CASH);
+      expect(asset?.color).toBe('#3B82F6');
       expect(liability?.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
       expect(equity?.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE);
       expect(income?.accountSubtype).toBe(AccountSubtype.SALARY);

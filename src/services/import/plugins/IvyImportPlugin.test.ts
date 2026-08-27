@@ -84,12 +84,12 @@ describe('IvyImportPlugin', () => {
         id: 'ivy-a1',
         name: 'Wallet',
         currency: 'USD',
-        color: 0,
+        color: 0xff336699,
         accountCategory: 'ASSET',
         icon: 'wallet-icon',
       },
     ],
-    categories: [{ id: 'ivy-c1', name: 'Food', color: 0, icon: 'food-icon' }],
+    categories: [{ id: 'ivy-c1', name: 'Food', color: 0xffcc8844, icon: 'food-icon' }],
     transactions: [
       {
         id: 'ivy-t1',
@@ -158,7 +158,9 @@ describe('IvyImportPlugin', () => {
       const foodAcc = lastBatch.accounts.find((a: any) => a.name === 'Food (USD)');
 
       expect(walletAcc.icon).toBe('wallet-icon');
+      expect(walletAcc.color).toBe('#155E75');
       expect(foodAcc.icon).toBe('food-icon');
+      expect(foodAcc.color).toBe('#FB923C');
 
       // Should create 3 accounts (1 original + 1 transaction category + 1 budget category)
       // Food Budget is linked to "Food" category, which is also used in a transaction.

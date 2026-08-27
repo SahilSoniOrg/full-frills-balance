@@ -3,6 +3,8 @@ import type { IconName } from '@/src/types/domainIcons';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import {
   advanceOccurrence,
+  mapToNearestAccountColor,
+  normalizeIvyColor,
   parseSerializedIds,
   parseTimestampMs,
 } from '@/src/services/import/plugins/importPluginHelpers';
@@ -167,6 +169,7 @@ export const ivyPlugin: ImportPlugin = {
           ? '[ARCHIVED] ' + (ivyAcc.name || '')
           : 'Imported from Ivy Wallet',
         icon: ivyAcc.icon as IconName,
+        color: mapToNearestAccountColor(normalizeIvyColor(ivyAcc.color)),
       });
     });
 
@@ -178,7 +181,7 @@ export const ivyPlugin: ImportPlugin = {
         id: c.id,
         name: c.name,
         icon: c.icon as IconName,
-        color: c.color,
+        color: mapToNearestAccountColor(normalizeIvyColor(c.color)),
       });
     });
 

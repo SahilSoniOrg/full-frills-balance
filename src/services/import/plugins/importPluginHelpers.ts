@@ -1,8 +1,57 @@
 import { AppConfig } from '@/src/constants';
+import { ACCOUNT_COLOR_PALETTE } from '@/src/constants/account-constants';
 import { generator } from '@/src/data/database/idGenerator';
 import { ImportedAccount } from '@/src/data/repositories/importTypes';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
+
+/** Accept source colors only when they can be represented as opaque 6-digit hex. */
+export function normalizeHexColor(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) return normalized.toUpperCase();
+  if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+    const hex = normalized.slice(1).toUpperCase();
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+  }
+  return undefined;
+}
+
+/** Ivy stores Android color-int values. Zero is Ivy's unset/default value. */
+export function normalizeIvyColor(value: number | null | undefined): string | undefined {
+  if (value === undefined || value === null || !Number.isInteger(value) || value === 0) {
+    return undefined;
+  }
+  const unsigned = value >>> 0;
+  const rgb = unsigned > 0xffffff ? unsigned & 0xffffff : unsigned;
+  if (rgb < 0x100000) return undefined;
+  return `#${rgb.toString(16).padStart(6, '0').toUpperCase()}`;
+}
+
+/** Maps an external color to the nearest supported account swatch. */
+export function mapToNearestAccountColor(value: string | undefined): string | undefined {
+  const normalized = normalizeHexColor(value);
+  if (!normalized) return undefined;
+
+  const source = normalized
+    .slice(1)
+    .match(/../g)!
+    .map(component => parseInt(component, 16));
+
+  return ACCOUNT_COLOR_PALETTE.reduce(
+    (nearest, candidate) => {
+      const target = candidate
+        .slice(1)
+        .match(/../g)!
+        .map(component => parseInt(component, 16));
+      const distance = source.reduce((total, component, index) => {
+        return total + (component - target[index]!) ** 2;
+      }, 0);
+      return distance < nearest.distance ? { color: candidate, distance } : nearest;
+    },
+    { color: ACCOUNT_COLOR_PALETTE[0]!, distance: Number.POSITIVE_INFINITY },
+  ).color;
+}
 
 /**
  * Resolves or dynamically registers a system Equity account for Opening Balances or Balance Corrections.
