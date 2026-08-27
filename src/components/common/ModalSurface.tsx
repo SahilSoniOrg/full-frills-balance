@@ -2,7 +2,16 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ModalSurfaceProps {
@@ -22,6 +31,7 @@ interface ModalSurfaceProps {
   useNativeModal?: boolean;
   position?: 'center' | 'bottomSheet';
   animationType?: 'fade' | 'slide';
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 export function ModalSurface({
@@ -37,6 +47,7 @@ export function ModalSurface({
   useNativeModal = process.env.NODE_ENV !== 'test',
   position = 'center',
   animationType,
+  contentStyle,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -96,7 +107,7 @@ export function ModalSurface({
               {children}
             </ScrollView>
           ) : (
-            <View style={styles.staticContent}>{children}</View>
+            <View style={[styles.staticContent, contentStyle]}>{children}</View>
           )}
 
           {footer}
@@ -187,7 +198,5 @@ const styles = StyleSheet.create({
   staticContent: {
     marginTop: Spacing.md,
     gap: Spacing.md,
-    flex: 1,
-    minHeight: 0,
   },
 });

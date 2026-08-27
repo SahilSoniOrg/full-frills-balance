@@ -415,7 +415,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginTop: Spacing.lg,
-    paddingBottom: Spacing.xxxxl,
   },
   actionButton: {
     flex: 1,

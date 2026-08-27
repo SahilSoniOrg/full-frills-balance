@@ -13,6 +13,7 @@ interface FABProps {
   icon?: IconName;
   placement?: 'end' | 'center';
   accessibilityLabel?: string;
+  bottomOffset?: number;
 }
 
 export const FloatingActionButton = ({
@@ -22,11 +23,12 @@ export const FloatingActionButton = ({
   icon = 'add',
   placement = 'end',
   accessibilityLabel,
+  bottomOffset,
 }: FABProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const isExtended = Boolean(label);
-  const bottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
+  const safeBottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
 
   return (
     <TouchableOpacity
@@ -36,7 +38,7 @@ export const FloatingActionButton = ({
         isExtended ? styles.extended : styles.fab,
         {
           backgroundColor: theme.primary,
-          bottom: bottomOffset,
+          bottom: bottomOffset ?? safeBottomOffset,
         },
         style,
       ]}

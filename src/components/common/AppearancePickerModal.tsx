@@ -128,6 +128,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
       maxHeightPercent={86}
       fixedHeight
       scrollable={false}
+      contentStyle={styles.modalContent}
       animationType="fade"
       accessibilityCloseLabel="Close appearance picker"
       footer={
@@ -270,6 +271,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  modalContent: { flex: 1, minHeight: 0 },
   preview: {
     minHeight: Size.appearancePreviewHeight,
     borderWidth: BorderWidth.thin,

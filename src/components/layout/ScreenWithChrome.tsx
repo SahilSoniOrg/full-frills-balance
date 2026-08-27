@@ -1,5 +1,6 @@
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout/Screen';
+import { Spacing } from '@/src/constants';
 import type { ScreenProps } from '@/src/components/layout/Screen';
 import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 
@@ -36,6 +37,9 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
           icon={fab.icon}
           placement={fab.placement}
           accessibilityLabel={fab.accessibilityLabel}
+          // Tab roots already sit above the tab bar; don't add the system
+          // bottom inset a second time. Pushed screens retain safe-area spacing.
+          bottomOffset={showBack ? undefined : Spacing.xl}
         />
       ) : null}
     </Screen>
