@@ -66,7 +66,7 @@ describe('buildTransactionInboxImportNavigation', () => {
 
     expect(navigation.params.description).toBe('Coffee Shop');
     expect(navigation.params.notes).toContain('Imported from SMS: Coffee Shop');
-    expect(navigation.params.notes).toContain('Card payment at Coffee Shop');
+    expect(navigation.params.notes).not.toContain(item.rawBody);
   });
 
   it('passes mode option when provided', () => {

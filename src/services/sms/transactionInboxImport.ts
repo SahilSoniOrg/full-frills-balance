@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { AccountFields, PlainSmsRule } from '@/src/types/plainDtos';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
@@ -112,7 +111,7 @@ function buildDescription(
 function buildNotes(item: TransactionInboxItem): string {
   if (item.channel === 'voice') return `Spoken transcript: ${item.rawBody}`;
   if (item.channel === 'sms') {
-    return `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}\n\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`;
+    return `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}`;
   }
   return `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`;
 }
