@@ -5,7 +5,11 @@ import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import type {
+  SafeToSpendDashboard,
+  SafeToSpendProjection,
+} from '@/src/services/simulation/safeToSpendDashboardProjection';
+import type { AccountFields } from '@/src/types/plainDtos';
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
@@ -15,11 +19,39 @@ import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
+const EMPTY_REPORT: SafeToSpendDashboard['report'] = {
+  allFlows: [],
+  liabilities: {
+    total: 0,
+    totalCreditCard: 0,
+    totalOther: 0,
+    committed: 0,
+    committedCreditCard: 0,
+    committedOther: 0,
+  },
+  budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
+  summary: {
+    firstMajorInflowDay: null,
+    totalFutureInflow: 0,
+    totalPlannedInflow: 0,
+    totalPlannedOutflow: 0,
+    totalCommittedPlanned: 0,
+  },
+};
+const EMPTY_PROJECTION: SafeToSpendProjection = {
+  history: [],
+  projection: [],
+  safeDaysCount: null,
+  safeToSpend: 0,
+};
+const EMPTY_ACCOUNT_MAP = new Map<string, AccountFields>();
+
 export function DashboardScreenView({
   hasCompletedOnboarding,
   recentJournalEntries,
   plannedOccurrences,
   safeToSpendData,
+  safeToSpendDetailsReady,
   journalSectionTitle,
   listRef,
   explanationModalState,
@@ -27,6 +59,16 @@ export function DashboardScreenView({
   showSafeToSpendChart,
   chrome,
 }: DashboardViewModel & { listRef?: React.RefObject<FlatList | null>; chrome: TabScreenChrome }) {
+  const fullSafeToSpendData =
+    safeToSpendDetailsReady && safeToSpendData && !('snapshotKind' in safeToSpendData)
+      ? safeToSpendData
+      : null;
+  const displayReport: SafeToSpendDashboard['report'] = fullSafeToSpendData
+    ? fullSafeToSpendData.report
+    : safeToSpendData
+      ? { ...safeToSpendData.report, allFlows: [] }
+      : EMPTY_REPORT;
+
   const uiState = React.useMemo(
     () => ({
       isInfoVisible: explanationModalState.visible,
@@ -59,37 +101,12 @@ export function DashboardScreenView({
       totalCommittedPlanned: 0,
       firstMajorInflowDay: null,
     },
-    report: safeToSpendData?.report ?? {
-      allFlows: [],
-      liabilities: {
-        total: 0,
-        totalCreditCard: 0,
-        totalOther: 0,
-        committed: 0,
-        committedCreditCard: 0,
-        committedOther: 0,
-      },
-      budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
-      summary: {
-        firstMajorInflowDay: null,
-        totalFutureInflow: 0,
-        totalPlannedInflow: 0,
-        totalPlannedOutflow: 0,
-        totalCommittedPlanned: 0,
-      },
-    },
+    report: displayReport,
     accountSummaries: safeToSpendData?.accountSummaries ?? [],
     totalLiquidAssets: safeToSpendData?.totalLiquidAssets ?? 0,
     currencyCode: safeToSpendData?.currencyCode ?? '',
     liquidAssetSubtypes: safeToSpendData?.liquidAssetSubtypes ?? [],
-    dailyBudgetBurn: safeToSpendData?.dailyBudgetBurn ?? 0,
-    projection: safeToSpendData?.projection ?? {
-      history: [],
-      projection: [],
-      safeDaysCount: null,
-      safeToSpend: 0,
-    },
-    accountMap: safeToSpendData?.accountMap ?? new Map(),
+    accountMap: fullSafeToSpendData?.accountMap ?? EMPTY_ACCOUNT_MAP,
     safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
     uiState,
     isLoading: !safeToSpendData,
@@ -137,11 +154,12 @@ export function DashboardScreenView({
             <View style={{ zIndex: 10 }}>
               <View style={{ zIndex: 10 }}>
                 <SafeToSpendCard
-                  {...(safeToSpendData || ({} as unknown as SafeToSpendDashboard))}
+                  projection={safeToSpendData?.projection ?? EMPTY_PROJECTION}
                   viewModel={safeToSpendViewModel}
                   onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
                   onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
                   isLoading={!safeToSpendData}
+                  detailsReady={safeToSpendDetailsReady}
                   showChart={showSafeToSpendChart}
                 />
               </View>

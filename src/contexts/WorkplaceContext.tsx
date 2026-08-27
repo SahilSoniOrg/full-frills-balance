@@ -6,6 +6,7 @@ import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkp
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
 
 export interface WorkplaceContextType {
@@ -70,6 +71,13 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     prevWorkplaceIdRef.current = activeWorkplaceId;
   }, [activeWorkplaceId]);
 
+  useEffect(() => {
+    if (!workplace) return;
+    snapshotService.deferCustomSnapshot(workplace.id, 'workplace', {
+      defaultCurrencyCode: workplace.defaultCurrencyCode,
+    });
+  }, [workplace]);
+
   const setWorkplaceId = useCallback((id: WorkplaceId) => {
     if (!id) {
       throw new Error('Invalid workplaceId');
@@ -85,13 +93,33 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     throw error;
   }
 
-  if (!workplace) {
+  const activeMissing =
+    isWorkplaceNotFoundError(error) && workplaceIdFromNotFoundError(error) === activeWorkplaceId;
+  if (activeMissing) {
+    return null;
+  }
+
+  const workplaceId = workplace?.id ?? activeWorkplaceId;
+  if (!workplaceId) {
+    return null;
+  }
+
+  const cachedWorkplace =
+    workplace?.defaultCurrencyCode != null
+      ? null
+      : snapshotService.getCustomSnapshot<{ defaultCurrencyCode?: string }>(
+          workplaceId,
+          'workplace',
+        );
+  const defaultCurrencyCode =
+    workplace?.defaultCurrencyCode ?? cachedWorkplace?.defaultCurrencyCode;
+  if (!defaultCurrencyCode) {
     return null;
   }
 
   const value: WorkplaceContextType = {
-    workplaceId: workplace.id,
-    defaultCurrencyCode: workplace.defaultCurrencyCode,
+    workplaceId,
+    defaultCurrencyCode,
     setWorkplaceId,
   };
 

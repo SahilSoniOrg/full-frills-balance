@@ -16,7 +16,6 @@ import { sharingService } from '@/src/services/SharingService';
 import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { notificationService } from '@/src/services/notification/NotificationService';
-import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
 import { LatestGenerationCoordinator } from './latestGeneration';
@@ -27,84 +26,24 @@ import { LatestGenerationCoordinator } from './latestGeneration';
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useAppReady();
-  const hydrationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
   const stabilizationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
 
-  hydrationCoordinatorRef.current ??= new LatestGenerationCoordinator();
   stabilizationCoordinatorRef.current ??= new LatestGenerationCoordinator();
 
   // Register audit revert handlers once on cold start (idempotent).
   runAppBootstrapSideEffects();
 
   useEffect(() => {
-    const lease = hydrationCoordinatorRef.current!.begin();
-
     if (workplaceId) {
       analytics.syncActiveWorkplace(workplaceId, defaultCurrencyCode);
     }
 
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const bootStart = performance.now();
-    logger.info(
-      `[Bootstrap] Starting initialization for workplace ${workplaceId} at ${Math.round(bootStart)}ms`,
-    );
+    logger.info(`[Bootstrap] Starting initialization for workplace ${workplaceId}`);
 
-    // 1. Unblock UI IMMEDIATELY
-    // This hides the splash screen and mounts the Dashboard.
-    // Dashboard hooks will hit the MMKV cache synchronously (<20ms).
+    // Unblock UI immediately so cached dashboard can paint. Currency seeding
+    // and precision warmup share the delayed batch below — a 50ms timer is
+    // Detox-tracked and contended with first-paint SQLite.
     setDataHydrated(true);
-
-    // 2. Background Hydration (Completely Parallel)
-    // We wrap this in a timeout to ensure the splash hide
-    // and initial frame paint happen before we saturate the bridge with DB work.
-    timeoutId = setTimeout(() => {
-      const bgHydrationStart = performance.now();
-      logger.info(
-        `[Bootstrap] Starting background hydration for workplace ${workplaceId} at ${Math.round(
-          bgHydrationStart - bootStart,
-        )}ms`,
-      );
-      void (async () => {
-        try {
-          // Stage A: Critical Data Seeding
-          await currencyInitService.initialize();
-
-          // Safe guard: check if workplace didn't change while we were waiting for the timeout or seed
-          if (!lease.isCurrent()) {
-            logger.info(
-              `[Bootstrap] Workplace changed during background initialization, aborting.`,
-            );
-            return;
-          }
-
-          // Stage B: Lean Cache Warming (Shared SQL Streams)
-          await Promise.allSettled([
-            currencyReadService.getAllPrecisions(),
-            reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
-            safeToSpendReadModel.forWorkplace(workplaceId).preWarm(),
-          ]);
-
-          if (!lease.isCurrent()) return;
-
-          logger.info(
-            `[Bootstrap] Core background hydration complete for workplace ${workplaceId} in ${Math.round(
-              performance.now() - bgHydrationStart,
-            )}ms (Total since boot: ${Math.round(performance.now() - bootStart)}ms)`,
-          );
-        } catch (error) {
-          if (!lease.isCurrent()) return;
-          logger.error(
-            `[Bootstrap] Background initialization failed partially for ${workplaceId}`,
-            error,
-          );
-        }
-      })();
-    }, 50); // 50ms is enough for one clear UI frame and splash hide
-
-    return () => {
-      lease.cancel();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
   }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
   // Background stabilization tasks - run once the app is ready and idle
@@ -146,6 +85,9 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           const notifMinute = preferences.notifications.notificationMinute;
 
           await Promise.allSettled([
+            currencyInitService.initialize(),
+            currencyReadService.getAllPrecisions(),
+            reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
             integrityService.runStartupCheck(workplaceId, lease.signal),
             processDuePlannedPayments(workplaceId, lease.signal),

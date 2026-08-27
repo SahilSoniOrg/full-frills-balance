@@ -4,6 +4,7 @@ import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { preferences } from '@/src/utils/preferences';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
+import { snapshotService } from '@/src/utils/SnapshotService';
 
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
@@ -30,6 +31,13 @@ jest.mock('@/src/services/analytics', () => ({
 
 jest.mock('@/src/hooks/useObservable');
 jest.mock('@/src/hooks/useWorkplaceSnapshot');
+
+jest.mock('@/src/utils/SnapshotService', () => ({
+  snapshotService: {
+    deferCustomSnapshot: jest.fn(),
+    getCustomSnapshot: jest.fn(() => null),
+  },
+}));
 
 const mockUseObservable = useObservable as jest.Mock;
 const mockUseWorkplaceSnapshot = useWorkplaceSnapshot as jest.Mock;
@@ -71,5 +79,37 @@ describe('WorkplaceProvider recovery', () => {
 
     expect(preferences.setActiveWorkplaceId).toHaveBeenCalledWith(undefined);
     expect(preferences.setOnboardingCompleted).toHaveBeenCalledWith(false);
+  });
+
+  it('renders children from the cached workplace id before the database row arrives', () => {
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: null,
+      error: null,
+    });
+    (snapshotService.getCustomSnapshot as jest.Mock).mockReturnValue({
+      defaultCurrencyCode: 'INR',
+    });
+
+    const { getByText } = render(
+      <WorkplaceProvider>
+        <Text>child</Text>
+      </WorkplaceProvider>,
+    );
+
+    expect(getByText('child')).toBeTruthy();
+    expect(preferences.setOnboardingCompleted).not.toHaveBeenCalled();
+  });
+
+  it('waits for the database instead of inventing a currency on a cache miss', () => {
+    mockUseWorkplaceSnapshot.mockReturnValue({ data: null, error: null });
+    (snapshotService.getCustomSnapshot as jest.Mock).mockReturnValue(null);
+
+    const { queryByText } = render(
+      <WorkplaceProvider>
+        <Text>child</Text>
+      </WorkplaceProvider>,
+    );
+
+    expect(queryByText('child')).toBeNull();
   });
 });

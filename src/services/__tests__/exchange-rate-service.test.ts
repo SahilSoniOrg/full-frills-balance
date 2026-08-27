@@ -58,6 +58,22 @@ describe('ExchangeRateService', () => {
       expect(rate).toBe(0.9);
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('uses stale DB cache without hitting the network', async () => {
+      const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.91,
+          effectiveDate: twoDaysAgo,
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
+
+      const rate = await service.getRate('USD', 'EUR');
+      expect(rate).toBe(0.91);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('request deduplication (thundering herd)', () => {
@@ -149,11 +165,12 @@ describe('ExchangeRateService', () => {
   describe('fetchRatesForBase fallback', () => {
     it('uses stale DB records if API fails', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
-        { toCurrency: 'EUR', rate: 0.88 },
-        { toCurrency: 'GBP', rate: 0.75 },
-      ]);
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { toCurrency: 'EUR', rate: 0.88 },
+          { toCurrency: 'GBP', rate: 0.75 },
+        ]);
 
       const rates = await service.fetchRatesForBase('CHF');
       expect(rates['EUR']).toBe(0.88);

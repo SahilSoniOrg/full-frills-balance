@@ -45,12 +45,14 @@ export class BalanceService {
     asOfDate?: number,
     targetDefaultCurrency?: string,
     parentTrace?: Trace,
+    accountIds?: AccountId[],
   ): Promise<AccountBalance[]> {
     return balanceReadService.getAccountBalances(
       workplaceId,
       asOfDate,
       targetDefaultCurrency,
       parentTrace,
+      accountIds,
     );
   }
 }

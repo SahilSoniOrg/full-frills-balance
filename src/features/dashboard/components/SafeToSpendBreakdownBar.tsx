@@ -12,6 +12,7 @@ interface SafeToSpendBreakdownBarProps {
   safeToSpend: number;
   currencyCode: string;
   loading?: boolean;
+  detailsReady?: boolean;
   onLegendPress: (item: 'safe' | 'committed' | 'debts') => void;
 }
 
@@ -22,6 +23,7 @@ export const SafeToSpendBreakdownBar = ({
   safeToSpend,
   currencyCode,
   loading = false,
+  detailsReady = true,
   onLegendPress,
 }: SafeToSpendBreakdownBarProps) => {
   const { theme } = useTheme();
@@ -61,7 +63,11 @@ export const SafeToSpendBreakdownBar = ({
       </Box>
 
       <Row gap="sm" wrap="wrap" justify="space-between">
-        <TouchableOpacity onPress={() => onLegendPress('safe')} style={{ flexShrink: 1 }}>
+        <TouchableOpacity
+          onPress={() => onLegendPress('safe')}
+          disabled={!detailsReady}
+          style={{ flexShrink: 1 }}
+        >
           <Row align="center" gap="xs">
             <ColoredDot color={theme.primary} />
             <Row gap="xs" style={{ flexShrink: 1 }}>
@@ -75,7 +81,11 @@ export const SafeToSpendBreakdownBar = ({
           </Row>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => onLegendPress('committed')} style={{ flexShrink: 1 }}>
+        <TouchableOpacity
+          onPress={() => onLegendPress('committed')}
+          disabled={!detailsReady}
+          style={{ flexShrink: 1 }}
+        >
           <Row align="center" gap="xs">
             <ColoredDot color={theme.warning} />
             <Row gap="xs" style={{ flexShrink: 1 }}>
@@ -89,7 +99,11 @@ export const SafeToSpendBreakdownBar = ({
           </Row>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => onLegendPress('debts')} style={{ flexShrink: 1 }}>
+        <TouchableOpacity
+          onPress={() => onLegendPress('debts')}
+          disabled={!detailsReady}
+          style={{ flexShrink: 1 }}
+        >
           <Row align="center" gap="xs">
             <ColoredDot color={theme.error} />
             <Row gap="xs" style={{ flexShrink: 1 }}>

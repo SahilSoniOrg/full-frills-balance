@@ -69,14 +69,6 @@ jest.mock('@/src/utils/scheduler', () => ({
   runAfterInteractions: jest.fn((task: () => void) => task()),
 }));
 
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>(resolvePromise => {
-    resolve = resolvePromise;
-  });
-  return { promise, resolve };
-}
-
 describe('useAppBootstrap generation safety', () => {
   const setDataHydrated = jest.fn();
 
@@ -90,12 +82,7 @@ describe('useAppBootstrap generation safety', () => {
     jest.useRealTimers();
   });
 
-  it('does not warm or stabilize workplace A after switching to B', async () => {
-    const workplaceAInitialization = deferred();
-    (currencyInitService.initialize as jest.Mock)
-      .mockImplementationOnce(() => workplaceAInitialization.promise)
-      .mockResolvedValue(undefined);
-
+  it('does not run first-paint work at 50ms and only stabilizes the current workplace', async () => {
     const { rerender } = renderHook<void, { workplaceId: WorkplaceId; currencyCode: string }>(
       ({ workplaceId, currencyCode }) => useAppBootstrap(workplaceId, currencyCode),
       {
@@ -109,7 +96,8 @@ describe('useAppBootstrap generation safety', () => {
     await act(async () => {
       jest.advanceTimersByTime(50);
     });
-    expect(currencyInitService.initialize).toHaveBeenCalledTimes(1);
+    expect(currencyInitService.initialize).not.toHaveBeenCalled();
+    expect(reactiveDataService.preWarm).not.toHaveBeenCalled();
 
     rerender({ workplaceId: 'workplace-b' as WorkplaceId, currencyCode: 'EUR' });
 
@@ -117,22 +105,20 @@ describe('useAppBootstrap generation safety', () => {
       jest.advanceTimersByTime(50);
       await Promise.resolve();
     });
-
-    workplaceAInitialization.resolve();
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(reactiveDataService.preWarm).not.toHaveBeenCalledWith(
-      'USD',
-      'workplace-a' as WorkplaceId,
-    );
-    expect(reactiveDataService.preWarm).toHaveBeenCalledWith('EUR', 'workplace-b' as WorkplaceId);
+    expect(currencyInitService.initialize).not.toHaveBeenCalled();
+    expect(reactiveDataService.preWarm).not.toHaveBeenCalled();
 
     await act(async () => {
       jest.advanceTimersByTime(3000);
       await Promise.resolve();
     });
+
+    expect(currencyInitService.initialize).toHaveBeenCalledTimes(1);
+    expect(reactiveDataService.preWarm).not.toHaveBeenCalledWith(
+      'USD',
+      'workplace-a' as WorkplaceId,
+    );
+    expect(reactiveDataService.preWarm).toHaveBeenCalledWith('EUR', 'workplace-b' as WorkplaceId);
 
     expect(insightService.preWarm).toHaveBeenCalledTimes(1);
     expect(insightService.preWarm).toHaveBeenCalledWith('workplace-b' as WorkplaceId);

@@ -1,7 +1,7 @@
 import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
 import { Column, Row, Separator } from '@/src/design-system';
-import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';
@@ -10,8 +10,10 @@ import { SafeToSpendHeader } from './SafeToSpendHeader';
 /** Width threshold where the card switches to side-by-side layout. */
 const TABLET_BREAKPOINT = 600;
 
-export interface SafeToSpendCardProps extends SafeToSpendDashboard {
+export interface SafeToSpendCardProps {
+  projection: SafeToSpendProjection;
   isLoading?: boolean;
+  detailsReady?: boolean;
   onInfoPress: () => void;
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;
   viewModel: SafeToSpendViewModel;
@@ -20,7 +22,15 @@ export interface SafeToSpendCardProps extends SafeToSpendDashboard {
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
-  const { viewModel, projection, isLoading, onInfoPress, onLegendPress, showChart = true } = props;
+  const {
+    viewModel,
+    projection,
+    isLoading,
+    detailsReady = true,
+    onInfoPress,
+    onLegendPress,
+    showChart = true,
+  } = props;
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= TABLET_BREAKPOINT;
 
@@ -46,6 +56,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       safeToSpend={safeToSpend}
       currencyCode={currencyCode}
       loading={loading}
+      detailsReady={detailsReady}
       onLegendPress={onLegendPress}
     />
   );
@@ -67,6 +78,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       amount={isOverCommitted ? shortfall : safeToSpend}
       currencyCode={currencyCode}
       loading={loading}
+      infoDisabled={!detailsReady}
       onInfoPress={onInfoPress}
     />
   );

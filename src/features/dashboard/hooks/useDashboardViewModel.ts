@@ -13,6 +13,10 @@ import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDa
 import { useObservable } from '@/src/hooks/useObservable';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import {
+  restoreSafeToSpendPaintSnapshot,
+  type SafeToSpendPaintSnapshot,
+} from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -25,7 +29,8 @@ export interface DashboardViewModel {
   recentJournalEntries: RecentJournalEntries;
   plannedOccurrences: PlannedOccurrencesResult;
   journalSectionTitle: string;
-  safeToSpendData: SafeToSpendDashboard | null;
+  safeToSpendData: SafeToSpendDashboard | SafeToSpendPaintSnapshot | null;
+  safeToSpendDetailsReady: boolean;
   explanationModalState: {
     visible: boolean;
     setVisible: (v: boolean) => void;
@@ -60,13 +65,22 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [isInitialized]);
 
-  const { data: safeToSpendData } = useObservable<SafeToSpendDashboard | null>(
+  const { data: safeToSpendData } = useObservable<
+    SafeToSpendDashboard | SafeToSpendPaintSnapshot | null
+  >(
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
     [workplaceId, isAppReady],
-    () => snapshotService.getCustomSnapshot<SafeToSpendDashboard>(workplaceId, `safe_to_spend`),
+    () => {
+      const cached = snapshotService.getCustomSnapshot<
+        SafeToSpendPaintSnapshot | SafeToSpendDashboard
+      >(workplaceId, 'safe_to_spend');
+      appLogger.info(`[Dashboard] STS snapshot ${cached ? 'hit' : 'miss'}`);
+      return cached ? restoreSafeToSpendPaintSnapshot(cached) : null;
+    },
   );
 
   const hasSafeToSpendData = !!safeToSpendData;
+  const safeToSpendDetailsReady = !!safeToSpendData && !('snapshotKind' in safeToSpendData);
   // Log Safe To Spend Data arrival
   useEffect(() => {
     if (hasSafeToSpendData) {
@@ -123,8 +137,8 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const plannedOccurrences = usePlannedOccurrences({
     workplaceId,
-    allFlows: safeToSpendData?.report?.allFlows,
-    accountMap: safeToSpendData?.accountMap,
+    allFlows: safeToSpendDetailsReady ? safeToSpendData.report.allFlows : undefined,
+    accountMap: safeToSpendDetailsReady ? safeToSpendData.accountMap : undefined,
     currencyCode: safeToSpendData?.currencyCode,
   });
 
@@ -156,6 +170,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       plannedOccurrences,
       journalSectionTitle: sectionTitle,
       safeToSpendData,
+      safeToSpendDetailsReady,
       explanationModalState,
       legendModalState,
     }),
@@ -166,6 +181,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       plannedOccurrences,
       sectionTitle,
       safeToSpendData,
+      safeToSpendDetailsReady,
       explanationModalState,
       legendModalState,
     ],

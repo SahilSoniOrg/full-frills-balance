@@ -63,9 +63,29 @@ export class ExchangeRateService {
     return age < CACHE_DURATION_MS;
   }
 
+  private hydrateMemoryFromRecords(
+    fromCurrency: string,
+    records: { toCurrency: string; rate: number; effectiveDate?: number }[],
+  ): Record<string, number> {
+    const rates: Record<string, number> = {};
+    let latestTimestamp = 0;
+    records.forEach(r => {
+      rates[r.toCurrency] = r.rate;
+      if ((r.effectiveDate || 0) > latestTimestamp) latestTimestamp = r.effectiveDate || 0;
+    });
+    this.memoryCache.set(fromCurrency, {
+      rates,
+      timestamp: latestTimestamp || Date.now(),
+    });
+    return rates;
+  }
+
   /**
    * Fetch all rates for a base currency and cache them
    * Prevents "thundering herd" by deduplicating concurrent requests for the same base.
+   *
+   * Any local rate (even stale) wins over the network so first paint / STS never
+   * block on exchangerate-api.com. Freshness is repaired by syncTodayRates.
    */
   async fetchRatesForBase(
     fromCurrency: string,
@@ -75,47 +95,32 @@ export class ExchangeRateService {
       throw new Error('Base currency is required for fetching rates');
     }
 
-    // 1. Check Memory Cache first (unless forcing refresh)
     if (!forceRefresh) {
       const memCached = this.memoryCache.get(fromCurrency);
-      if (memCached && this.isRateFresh(memCached.timestamp)) {
+      if (memCached) {
         return memCached.rates;
       }
     }
 
-    // 2. Check for existing in-flight request to prevent "thundering herd"
     const existingRequest = this.inFlightRequests.get(fromCurrency);
     if (existingRequest) {
       return existingRequest;
     }
 
-    // 3. Start resolution process
     const requestPromise = (async () => {
       try {
-        // A. Check DB Cache (unless forcing refresh)
         if (!forceRefresh) {
           const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
-          const freshRecords = cachedRecords.filter(r => this.isRateFresh(r.effectiveDate));
+          if (cachedRecords.length > 0) {
+            return this.hydrateMemoryFromRecords(fromCurrency, cachedRecords);
+          }
 
-          if (freshRecords.length > 0) {
-            const rates: Record<string, number> = {};
-            let latestTimestamp = 0;
-            freshRecords.forEach(r => {
-              rates[r.toCurrency] = r.rate;
-              if (r.effectiveDate > latestTimestamp) latestTimestamp = r.effectiveDate;
-            });
-
-            // Update memory cache
-            this.memoryCache.set(fromCurrency, {
-              rates,
-              timestamp: latestTimestamp,
-            });
-
-            return rates;
+          // Detox waits for in-flight fetch(); E2E first-load must not hit the API.
+          if (process.env.EXPO_PUBLIC_E2E === '1') {
+            return {};
           }
         }
 
-        // B. Network Fetch (Final Fallback or Forced)
         const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`;
         const fetchStart = Date.now();
         const response = await fetch(url);
@@ -136,16 +141,13 @@ export class ExchangeRateService {
 
         if (!rates) throw new Error('Missing rates in response');
 
-        // Structured metric replaces fragile string logging
         logger.metric('ExchangeRateService.fetchNetwork', fetchDuration, { base: fromCurrency });
 
-        // Update memory cache
         this.memoryCache.set(fromCurrency, {
           rates,
           timestamp: Date.now(),
         });
 
-        // Background persist to DB (fixed: now using batch to avoid IO inflation)
         const rateArray = Object.entries(rates).map(([to, rate]) => ({
           toCurrency: to,
           rate,
@@ -165,12 +167,9 @@ export class ExchangeRateService {
           error,
         });
 
-        // Ultimate Fallback: Any stale rate from DB
         const staleRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
         if (staleRecords.length > 0) {
-          const staleRates: Record<string, number> = {};
-          staleRecords.forEach(r => (staleRates[r.toCurrency] = r.rate));
-          return staleRates;
+          return this.hydrateMemoryFromRecords(fromCurrency, staleRecords);
         }
 
         throw error || new Error(`Failed to fetch rates for ${fromCurrency}`);
@@ -220,8 +219,7 @@ export class ExchangeRateService {
         return; // Already fresh
       }
 
-      // fetchRatesForBase already handles DB-then-Network sequence and de-duplication
-      await this.fetchRatesForBase(currencyCode);
+      await this.fetchRatesForBase(currencyCode, true);
       logger.info(`[ExchangeRateService] Synchronized rates for ${currencyCode}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -262,8 +260,9 @@ export class ExchangeRateService {
         `[Trace] ExchangeRateService.preWarmCache: ${duration}ms (rates: ${recentRates.length})`,
       );
 
-      // Trigger background sync for the base currency if provided
-      if (baseCurrency) {
+      // Network refresh is Detox-tracked and can dwarf first-load. E2E builds
+      // stay on the imported/DB rates; production still repairs staleness.
+      if (baseCurrency && process.env.EXPO_PUBLIC_E2E !== '1') {
         void this.syncTodayRates(baseCurrency);
       }
     } catch (error) {

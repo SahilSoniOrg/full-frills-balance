@@ -147,6 +147,24 @@ describe('useObservable', () => {
       expect(result.current.data).toBe('Updated');
     });
   });
+
+  it('keeps a cache-hit object from flipping back to loading on subscribe', async () => {
+    const cached = { safeToSpend: 12 };
+    const subject = new Subject<typeof cached>();
+    const { result } = renderHook(() => useObservable(() => subject, [], cached));
+
+    expect(result.current.data).toBe(cached);
+    expect(result.current.isLoading).toBe(false);
+
+    act(() => {
+      subject.next({ safeToSpend: 15 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ safeToSpend: 15 });
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
 });
 
 describe('useObservableWithEnrichment', () => {

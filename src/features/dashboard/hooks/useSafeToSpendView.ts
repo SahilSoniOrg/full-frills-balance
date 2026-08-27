@@ -1,10 +1,11 @@
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
-import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import React, { useCallback, useMemo } from 'react';
 import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
+import type { SafeToSpendMapperInput } from '../mappers/SafeToSpendMapper';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
-export interface SafeToSpendViewProps extends SafeToSpendDashboard {
+export interface SafeToSpendViewProps extends SafeToSpendMapperInput {
+  currencyCode: string;
   isLoading?: boolean;
   uiState?: {
     isInfoVisible?: boolean;

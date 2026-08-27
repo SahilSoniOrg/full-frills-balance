@@ -197,6 +197,8 @@ export function observeSafeToSpendInputSnapshot(
             workplaceId,
             now.valueOf(),
             mapped.defaultCurrencyCode,
+            undefined,
+            [...mapped.liquidAssetIds, ...mapped.liquidLiabilities.map(l => l.id)],
           );
           const balancesMapByAccountId = new Map(allBalances.map(b => [b.accountId, b.balance]));
 

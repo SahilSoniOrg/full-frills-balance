@@ -93,11 +93,16 @@ export class BalanceReadService {
     asOfDate?: number,
     targetDefaultCurrency?: string,
     parentTrace?: Trace,
+    requestedAccountIds?: AccountId[],
   ): Promise<AccountBalance[]> {
     const start = performance.now();
     const trace = parentTrace || traceService.startTrace('BalanceReadService.getAccountBalances');
     try {
-      const accounts = await accountQueryRepository.findAll(workplaceId);
+      const wantedIds =
+        requestedAccountIds && requestedAccountIds.length > 0 ? new Set(requestedAccountIds) : null;
+      const accounts = (await accountQueryRepository.findAll(workplaceId)).filter(account =>
+        wantedIds ? wantedIds.has(account.id) : true,
+      );
       if (accounts.length === 0) return [];
       trace.metric('fetchAccounts');
 

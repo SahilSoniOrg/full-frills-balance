@@ -3,10 +3,9 @@ import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants'
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
-import { logger } from '@/src/utils/logger';
-import * as Updates from 'expo-updates';
+import { reloadApp } from '@/src/utils/reloadApp';
 import { useCallback } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /**
  * RestartRequiredScreen - Blocking UI shown after sensitive operations (Factory Reset, Import)
@@ -16,17 +15,8 @@ export const RestartRequiredScreen = () => {
   const { theme } = useTheme();
   const { restartType, importStats } = useAppRestart();
 
-  const handleRestart = useCallback(async () => {
-    if (Platform.OS === 'web') {
-      window.location.reload();
-    } else {
-      try {
-        await Updates.reloadAsync();
-      } catch (e) {
-        // Fallback if expo-updates isn't available/configured
-        logger.error('Failed to reload app', e);
-      }
-    }
+  const handleRestart = useCallback(() => {
+    void reloadApp();
   }, []);
 
   const isImport = restartType === 'IMPORT';
@@ -164,6 +154,7 @@ export const RestartRequiredScreen = () => {
             size="md"
             onPress={handleRestart}
             style={styles.restartButton}
+            testID="restart-app-button"
           >
             {AppConfig.strings.maintenance.restartBtn}
           </AppButton>

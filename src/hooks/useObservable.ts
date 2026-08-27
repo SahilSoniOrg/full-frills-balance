@@ -23,6 +23,14 @@ export interface UseObservableResult<T> {
   version: number;
 }
 
+function isPlaceholderInitial(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  if (value instanceof Map && value.size === 0) return true;
+  if (value instanceof Set && value.size === 0) return true;
+  return false;
+}
+
 export interface UseObservableOptions<T> {
   /** Keep previous data while loading new data */
   keepPreviousData?: boolean;
@@ -64,21 +72,7 @@ export function useObservable<T>(
 
   // If we have a non-null initial value (cache hit), we are not "loading" the first frame.
   // Standard initial values like empty arrays [], empty maps/sets, or null/undefined are treated as loading.
-  const [isLoading, setIsLoading] = useState(() => {
-    if (resolvedInitialValue === null || resolvedInitialValue === undefined) {
-      return true;
-    }
-    if (Array.isArray(resolvedInitialValue) && resolvedInitialValue.length === 0) {
-      return true;
-    }
-    if (resolvedInitialValue instanceof Map && resolvedInitialValue.size === 0) {
-      return true;
-    }
-    if (resolvedInitialValue instanceof Set && resolvedInitialValue.size === 0) {
-      return true;
-    }
-    return false;
-  });
+  const [isLoading, setIsLoading] = useState(() => isPlaceholderInitial(resolvedInitialValue));
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
 
@@ -97,7 +91,10 @@ export function useObservable<T>(
     if (!keepPreviousData) {
       setData(resolvedInitialValue);
       setIsLoading(true);
-    } else if (dataRef.current === resolvedInitialValue) {
+    } else if (
+      dataRef.current === resolvedInitialValue &&
+      isPlaceholderInitial(resolvedInitialValue)
+    ) {
       setIsLoading(true);
     }
 

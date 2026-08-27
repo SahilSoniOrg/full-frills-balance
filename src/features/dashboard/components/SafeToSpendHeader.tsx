@@ -10,6 +10,7 @@ interface SafeToSpendHeaderProps {
   amount: number;
   currencyCode: string;
   loading?: boolean;
+  infoDisabled?: boolean;
   onInfoPress: () => void;
 }
 
@@ -19,6 +20,7 @@ export const SafeToSpendHeader = ({
   amount,
   currencyCode,
   loading = false,
+  infoDisabled = false,
   onInfoPress,
 }: SafeToSpendHeaderProps) => {
   const { theme } = useTheme();
@@ -44,11 +46,13 @@ export const SafeToSpendHeader = ({
           size={Size.sm}
           iconColor={isOverCommitted ? theme.error : theme.textSecondary}
           onPress={onInfoPress}
+          disabled={infoDisabled}
           accessibilityLabel="Open safe-to-spend calculation info"
         />
       </Row>
 
       <Text
+        testID="safe-to-spend-amount"
         variant="hero"
         color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
         weight="bold"
