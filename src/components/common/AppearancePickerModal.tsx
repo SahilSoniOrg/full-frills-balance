@@ -15,7 +15,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { withOpacity } from '@/src/utils/color-math';
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type AppearanceTab = 'icon' | 'color';
 
@@ -125,8 +125,9 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
       visible={visible}
       title={resolvedTitle}
       onClose={onClose}
-      maxHeightPercent={82}
-      fixedHeight={false}
+      maxHeightPercent={86}
+      fixedHeight
+      scrollable={false}
       animationType="fade"
       accessibilityCloseLabel="Close appearance picker"
       footer={
@@ -186,76 +187,84 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
         </View>
       )}
 
-      {currentTab === 'icon' ? (
-        <View style={styles.iconGrid}>
-          {ACCOUNT_ICON_PALETTE.map(icon => {
-            const selected = effectiveIcon === icon;
-            return (
-              <TouchableOpacity
-                key={icon}
-                onPress={() => void handleIconPress(icon)}
-                style={[
-                  styles.iconButton,
-                  {
-                    backgroundColor: selected
-                      ? withOpacity(theme.primary, Opacity.soft)
-                      : 'transparent',
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Select icon ${icon}`}
-              >
-                <AppIcon
-                  name={icon}
-                  size={Size.iconLg}
-                  color={selected ? theme.primary : theme.text}
-                />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : (
-        <View>
-          <TouchableOpacity
-            onPress={() => void handleColorPress('')}
-            style={styles.autoColorRow}
-            accessibilityLabel="Auto color (from account type)"
-            accessibilityRole="button"
-          >
-            <View
-              style={[
-                styles.swatch,
-                styles.autoSwatch,
-                { borderColor: theme.border },
-                !effectiveColor && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
-              ]}
-            />
-            <AppText variant="body" color={!effectiveColor ? 'primary' : 'secondary'}>
-              {AppConfig.strings.accounts.form.colorAuto}
-            </AppText>
-          </TouchableOpacity>
-          <View style={styles.colorGrid}>
-            {ACCOUNT_COLOR_PALETTE.map(color => {
-              const selected = effectiveColor.toUpperCase() === color.toUpperCase();
+      <ScrollView
+        style={styles.pickerSection}
+        contentContainerStyle={styles.pickerSectionContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {currentTab === 'icon' ? (
+          <View style={styles.iconGrid}>
+            {ACCOUNT_ICON_PALETTE.map(icon => {
+              const selected = effectiveIcon === icon;
               return (
                 <TouchableOpacity
-                  key={color}
-                  onPress={() => void handleColorPress(color)}
+                  key={icon}
+                  onPress={() => void handleIconPress(icon)}
                   style={[
-                    styles.swatch,
-                    { backgroundColor: color },
-                    selected && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
+                    styles.iconButton,
+                    {
+                      backgroundColor: selected
+                        ? withOpacity(theme.primary, Opacity.soft)
+                        : 'transparent',
+                    },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Color ${color}`}
+                  accessibilityLabel={`Select icon ${icon}`}
                 >
-                  {selected && <AppIcon name="check" size={Size.iconSm} color={theme.background} />}
+                  <AppIcon
+                    name={icon}
+                    size={Size.iconLg}
+                    color={selected ? theme.primary : theme.text}
+                  />
                 </TouchableOpacity>
               );
             })}
           </View>
-        </View>
-      )}
+        ) : (
+          <View>
+            <TouchableOpacity
+              onPress={() => void handleColorPress('')}
+              style={styles.autoColorRow}
+              accessibilityLabel="Auto color (from account type)"
+              accessibilityRole="button"
+            >
+              <View
+                style={[
+                  styles.swatch,
+                  styles.autoSwatch,
+                  { borderColor: theme.border },
+                  !effectiveColor && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
+                ]}
+              />
+              <AppText variant="body" color={!effectiveColor ? 'primary' : 'secondary'}>
+                {AppConfig.strings.accounts.form.colorAuto}
+              </AppText>
+            </TouchableOpacity>
+            <View style={styles.colorGrid}>
+              {ACCOUNT_COLOR_PALETTE.map(color => {
+                const selected = effectiveColor.toUpperCase() === color.toUpperCase();
+                return (
+                  <TouchableOpacity
+                    key={color}
+                    onPress={() => void handleColorPress(color)}
+                    style={[
+                      styles.swatch,
+                      { backgroundColor: color },
+                      selected && { borderColor: theme.primary, borderWidth: BorderWidth.focus },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Color ${color}`}
+                  >
+                    {selected && (
+                      <AppIcon name="check" size={Size.iconSm} color={theme.background} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </ScrollView>
     </ModalSurface>
   );
 };
@@ -297,6 +306,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
+  pickerSection: { flex: 1, minHeight: 0 },
+  pickerSectionContent: { paddingBottom: Spacing.md },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm },
   swatch: {
     width: Size.xxl,

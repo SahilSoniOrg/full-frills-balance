@@ -187,5 +187,7 @@ const styles = StyleSheet.create({
   staticContent: {
     marginTop: Spacing.md,
     gap: Spacing.md,
+    flex: 1,
+    minHeight: 0,
   },
 });
