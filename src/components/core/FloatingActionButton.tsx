@@ -4,6 +4,7 @@ import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FABProps {
   onPress: () => void;
@@ -23,7 +24,9 @@ export const FloatingActionButton = ({
   accessibilityLabel,
 }: FABProps) => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const isExtended = Boolean(label);
+  const bottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
 
   return (
     <TouchableOpacity
@@ -33,6 +36,7 @@ export const FloatingActionButton = ({
         isExtended ? styles.extended : styles.fab,
         {
           backgroundColor: theme.primary,
+          bottom: bottomOffset,
         },
         style,
       ]}
@@ -59,7 +63,6 @@ export const FloatingActionButton = ({
 const styles = StyleSheet.create({
   base: {
     position: 'absolute',
-    bottom: Spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
     ...(Shape.elevation.lg as ViewStyle),

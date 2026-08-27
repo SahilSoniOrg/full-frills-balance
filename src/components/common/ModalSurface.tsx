@@ -3,6 +3,7 @@ import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ModalSurfaceProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export function ModalSurface({
   animationType,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const isBottomSheet = position === 'bottomSheet';
 
   const content = (
@@ -68,6 +70,7 @@ export function ModalSurface({
             styles.modalCard,
             isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
             fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
+            isBottomSheet && { paddingBottom: insets.bottom + Spacing.lg },
             { backgroundColor: theme.surface },
           ]}
         >
