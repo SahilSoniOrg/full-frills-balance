@@ -203,6 +203,7 @@ export const nativePlugin: ImportPlugin = {
             color: acc.color,
             orderNum: acc.orderNum,
             reconciledAt: parseTimestamp(acc.reconciledAt),
+            archivedAt: parseTimestamp(acc.archivedAt),
             createdAt: parseTimestamp(acc.createdAt),
             updatedAt: parseTimestamp(acc.updatedAt),
             deletedAt: parseTimestamp(acc.deletedAt),

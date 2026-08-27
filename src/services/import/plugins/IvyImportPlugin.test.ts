@@ -87,6 +87,8 @@ describe('IvyImportPlugin', () => {
         color: 0xff336699,
         accountCategory: 'ASSET',
         icon: 'wallet-icon',
+        archived: true,
+        reconciliationDate: 1704067200000,
       },
     ],
     categories: [{ id: 'ivy-c1', name: 'Food', color: 0xffcc8844, icon: 'food-icon' }],
@@ -159,6 +161,8 @@ describe('IvyImportPlugin', () => {
 
       expect(walletAcc.icon).toBe('wallet-icon');
       expect(walletAcc.color).toBe('#155E75');
+      expect(walletAcc.archivedAt).toEqual(expect.any(Number));
+      expect(walletAcc.reconciledAt).toBe(1704067200000);
       expect(foodAcc.icon).toBe('food-icon');
       expect(foodAcc.color).toBe('#FB923C');
 

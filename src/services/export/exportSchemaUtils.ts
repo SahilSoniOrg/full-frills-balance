@@ -10,6 +10,8 @@ export const DATE_COLUMN_NAMES = [
   'deleted_at',
   'journal_date',
   'transaction_date',
+  'reconciled_at',
+  'archived_at',
   'start_date',
   'end_date',
   'next_occurrence',

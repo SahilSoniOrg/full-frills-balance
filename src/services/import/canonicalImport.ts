@@ -68,6 +68,7 @@ export interface CanonicalAccount {
   color?: string;
   orderNum?: number;
   reconciledAt?: number;
+  archivedAt?: number;
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;

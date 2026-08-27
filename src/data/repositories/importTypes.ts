@@ -21,6 +21,7 @@ export interface ImportedAccount {
   color?: string;
   orderNum?: number;
   reconciledAt?: number;
+  archivedAt?: number;
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;

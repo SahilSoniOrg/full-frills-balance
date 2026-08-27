@@ -39,6 +39,8 @@ export interface ImportAccountInput {
   icon?: IconName;
   color?: string;
   orderNum?: number;
+  reconciledAt?: number;
+  archivedAt?: number;
 }
 
 export interface ImportCategoryInput {
@@ -335,6 +337,8 @@ export class CanonicalImportBuilder {
         icon: raw.icon,
         color: raw.color,
         orderNum: raw.orderNum ?? canonicalAccounts.length + 1,
+        reconciledAt: raw.reconciledAt,
+        archivedAt: raw.archivedAt,
       });
     }
 

@@ -20,6 +20,7 @@ interface IvyAccount {
   icon?: string;
   accountCategory?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
   archived?: boolean;
+  reconciliationDate?: number;
 }
 
 interface IvyBudget {
@@ -165,11 +166,11 @@ export const ivyPlugin: ImportPlugin = {
         name: ivyAcc.name,
         currencyCode: ivyAcc.currency || ivyBaseCurrency,
         accountType: mappedType,
-        description: ivyAcc.archived
-          ? '[ARCHIVED] ' + (ivyAcc.name || '')
-          : 'Imported from Ivy Wallet',
+        description: 'Imported from Ivy Wallet',
         icon: ivyAcc.icon as IconName,
         color: mapToNearestAccountColor(normalizeIvyColor(ivyAcc.color)),
+        reconciledAt: ivyAcc.reconciliationDate,
+        archivedAt: ivyAcc.archived ? Date.now() : undefined,
       });
     });
 

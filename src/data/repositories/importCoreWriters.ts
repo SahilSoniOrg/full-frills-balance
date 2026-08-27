@@ -45,6 +45,9 @@ export function prepareCoreImportRecords(
       if (account.reconciledAt !== undefined && account.reconciledAt !== null) {
         record.reconciledAt = new Date(account.reconciledAt);
       }
+      if (account.archivedAt !== undefined && account.archivedAt !== null) {
+        record.archivedAt = new Date(account.archivedAt);
+      }
       record._raw._status = 'synced';
       setRecordTimestamps(record, {
         createdAt: account.createdAt,

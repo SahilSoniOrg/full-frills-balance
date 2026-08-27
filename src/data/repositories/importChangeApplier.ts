@@ -112,6 +112,9 @@ export async function applyImportChanges(
         if (account.reconciledAt !== undefined && account.reconciledAt !== null) {
           record.reconciledAt = new Date(account.reconciledAt);
         }
+        if (account.archivedAt !== undefined && account.archivedAt !== null) {
+          record.archivedAt = new Date(account.archivedAt);
+        }
         setRecordTimestamps(record, {
           createdAt: account.createdAt,
           updatedAt: account.updatedAt,
