@@ -18,7 +18,7 @@ export function TabsLayout() {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
-          backgroundColor: theme.surface,
+          backgroundColor: theme.background,
           borderTopColor: theme.border,
           borderTopWidth: 1,
           ...Shape.elevation.md,
