@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import { ModelRegistry } from 'react-native-litert-lm';
 import type { AIModelMetadata, ModelDownloadStatus } from './types';
 
@@ -181,7 +182,26 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
  * Model files are acquired via LiteRT (`ModelRegistry` / provider load), not this service.
  */
 export class ModelManagementService {
+  /**
+   * LiteRT-LM only ships Android native code for arm64. Some phones, including
+   * this Samsung A13 configuration, run a 32-bit Android userspace even though
+   * the physical CPU may be 64-bit. Calling ModelRegistry on those devices
+   * creates a Nitro HybridObject that was never registered and can blank the
+   * entire React tree.
+   */
+  isLiteRTSupported(): boolean {
+    if (Platform.OS !== 'android') return true;
+
+    return Boolean(
+      Device.supportedCpuArchitectures?.some(architecture =>
+        /^(arm64|aarch64|arm64-v8a)/i.test(architecture.trim()),
+      ),
+    );
+  }
+
   getAllModels(): AIModelMetadata[] {
+    if (!this.isLiteRTSupported()) return [];
+
     const supportedPlatform =
       Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
     return SUPPORTED_MODELS.filter(
