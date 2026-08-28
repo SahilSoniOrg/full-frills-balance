@@ -31,7 +31,9 @@ export interface SelectableGridProps {
   renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
   accentColor?: string;
   footerActionLabel?: string;
-  bottomContent?: React.ReactNode;
+  headerContent?: React.ReactNode;
+  listFooterContent?: React.ReactNode;
+  emptyMessage?: string;
   disableAnimation?: boolean;
 }
 
@@ -74,6 +76,7 @@ const SelectableGridItem = React.memo(
         onPress={() => onToggle(id)}
         disabled={isAtMax}
         activeOpacity={Opacity.heavy}
+        style={styles.itemPressable}
         accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected, disabled: isAtMax }}
@@ -201,7 +204,9 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   renderSubtitle,
   accentColor,
   footerActionLabel = 'Continue',
-  bottomContent,
+  headerContent,
+  listFooterContent,
+  emptyMessage,
   disableAnimation = false,
 }) => {
   const { theme } = useTheme();
@@ -271,45 +276,61 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
+        keyboardDismissMode="interactive"
         ListHeaderComponent={
-          <Stack align="center" paddingTop="lg" paddingBottom="md" space="xs">
-            <AppText variant="title" style={{ textAlign: 'center' }}>
-              {title}
-            </AppText>
-            <AppText
-              variant="body"
-              color="secondary"
-              style={{ textAlign: 'center', paddingHorizontal: Spacing.xl }}
-            >
-              {subtitle}
-            </AppText>
+          <Stack paddingTop="xl" paddingBottom="xxl" space="lg">
+            <Stack align="center" space="xs">
+              <AppText variant="title" style={styles.headerTitle}>
+                {title}
+              </AppText>
+              <AppText variant="body" color="secondary" style={styles.headerSubtitle}>
+                {subtitle}
+              </AppText>
+            </Stack>
+            {headerContent}
           </Stack>
+        }
+        ListEmptyComponent={
+          emptyMessage ? (
+            <Box paddingVertical="xxxxl" alignItems="center">
+              <AppText variant="body" color="secondary" style={styles.emptyMessage}>
+                {emptyMessage}
+              </AppText>
+            </Box>
+          ) : null
+        }
+        ListFooterComponent={
+          listFooterContent ? (
+            <Box paddingTop="lg" paddingBottom="xxl">
+              {listFooterContent}
+            </Box>
+          ) : null
         }
       />
 
-      {bottomContent && <Box paddingHorizontal="lg">{bottomContent}</Box>}
-
-      <Stack paddingBottom={0} space="sm">
-        <AppButton
-          variant="primary"
-          size="lg"
-          onPress={onContinue}
-          disabled={isCompleting}
-          style={{ width: '100%' }}
-          testID="selectable-grid-continue-button"
-        >
-          {footerActionLabel}
-        </AppButton>
-        <AppButton
-          variant="ghost"
-          size="md"
-          onPress={onBack}
-          disabled={isCompleting}
-          testID="selectable-grid-back-button"
-        >
-          Back
-        </AppButton>
-      </Stack>
+      <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
+        <Stack space="xs">
+          <AppButton
+            variant="primary"
+            size="lg"
+            onPress={onContinue}
+            disabled={isCompleting}
+            style={{ width: '100%' }}
+            testID="selectable-grid-continue-button"
+          >
+            {footerActionLabel}
+          </AppButton>
+          <AppButton
+            variant="ghost"
+            size="md"
+            onPress={onBack}
+            disabled={isCompleting}
+            testID="selectable-grid-back-button"
+          >
+            Back
+          </AppButton>
+        </Stack>
+      </Box>
     </Box>
   );
 };
@@ -319,8 +340,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.lg,
     paddingHorizontal: Spacing.xs,
+  },
+  headerTitle: {
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyMessage: {
+    textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
@@ -332,7 +363,11 @@ const styles = StyleSheet.create({
     flexBasis: '46%',
     margin: '2%',
   },
+  itemPressable: {
+    flex: 1,
+  },
   itemContainer: {
+    flex: 1,
     minHeight: Layout.touchTarget.minHeight,
   },
   iconCircleBase: {

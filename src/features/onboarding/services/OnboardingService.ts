@@ -13,6 +13,10 @@ import { analytics } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { insightService } from '@/src/services/insight/InsightService';
+import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
+import { snapshotService } from '@/src/utils/SnapshotService';
 
 export interface OnboardingData {
   name: string;
@@ -175,6 +179,13 @@ export class OnboardingService {
     }
 
     await Promise.all(accountCreationInputs.map(input => createAccount(targetWorkplaceId, input)));
+
+    // Onboarding can reuse the bootstrapped workplace. Drop any pre-onboarding
+    // USD caches before the dashboard mounts with the newly selected currency.
+    reactiveDataService.clearCache(targetWorkplaceId);
+    safeToSpendReadModel.clearCache();
+    insightService.clearCache(targetWorkplaceId);
+    snapshotService.clearSnapshotsForWorkplace(targetWorkplaceId);
 
     // 5. Complete basic onboarding (sets name and default currency)
     // This is moved to the end to ensure it only persists if DB operations succeed

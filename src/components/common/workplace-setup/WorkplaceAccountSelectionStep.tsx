@@ -54,7 +54,7 @@ export function WorkplaceAccountSelectionStep({
       onBack={onBack}
       isCompleting={isCompleting}
       disableAnimation={true}
-      bottomContent={
+      listFooterContent={
         <CategoryCreationBar
           placeholder={AppConfig.strings.onboarding.accounts.placeholder}
           onAdd={onAddCustomAccount}

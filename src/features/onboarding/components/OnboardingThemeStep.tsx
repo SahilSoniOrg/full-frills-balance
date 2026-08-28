@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 
 type OnboardingThemeStepProps = {
+  currencyCode: string;
   onContinue: () => void;
   onBack: () => void;
   isCompleting: boolean;
@@ -34,6 +35,7 @@ type OnboardingThemeStepProps = {
 let globalThemeId: ThemeId | null = null;
 
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
+  const { currencyCode } = props;
   const { theme } = useTheme();
   const { themeId, fontId, setThemeId, setFontId } = useThemePrefs();
 
@@ -101,14 +103,6 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
     }),
   );
 
-  const styles = StyleSheet.create({
-    optionsContainer: {
-      flexDirection: 'row',
-      gap: Spacing.sm,
-      marginBottom: Spacing.xl,
-    },
-  });
-
   const THEME_LABELS: Record<ThemeId, string> = {
     [ThemeIds.DEEP_SPACE]: settingsStrings.deepSpace.label,
     [ThemeIds.GOLD_OBSIDIAN]: settingsStrings.goldObsidian.label,
@@ -159,27 +153,27 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
 
   return (
     <Box flex={1}>
-      <View style={{ paddingHorizontal: 4, paddingBottom: 16 }}>
-        <AppText variant="hero" weight="bold" style={{ fontSize: 28, marginBottom: 8 }}>
+      <Stack align="center" paddingTop="xl" paddingBottom="xxl" space="xs">
+        <AppText variant="title" style={styles.headerTitle}>
           {strings.title}
         </AppText>
-        <AppText variant="body" color="secondary">
+        <AppText variant="body" color="secondary" style={styles.headerSubtitle}>
           {strings.subtitle}
         </AppText>
-      </View>
+      </Stack>
 
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 100 }}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* PREVIEW */}
-        <AppText variant="title" weight="bold" style={{ marginBottom: 16 }}>
+        <AppText variant="subheading" weight="semibold" style={styles.sectionTitle}>
           {strings.previewLabel}
         </AppText>
         <View {...panResponder.panHandlers}>
           <View pointerEvents="none">
-            <OnboardingStsPreview />
+            <OnboardingStsPreview currencyCode={currencyCode} />
           </View>
         </View>
 
@@ -249,7 +243,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           </Pressable>
         </View>
 
-        <AppText variant="title" weight="bold" style={{ marginBottom: 16 }}>
+        <AppText variant="subheading" weight="semibold" style={styles.sectionTitle}>
           {strings.fontTitle}
         </AppText>
         <View style={styles.optionsContainer}>
@@ -257,26 +251,47 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           {renderFontOption(FontIds.IVY, settingsStrings.modernGeometric.label)}
           {renderFontOption(FontIds.EDITORIAL, settingsStrings.classicSerif.label)}
         </View>
-
-        <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
 
-      {/* Sticky Actions */}
-      <Stack paddingBottom={0} space="sm" style={{ marginTop: 'auto', paddingTop: Spacing.md }}>
-        <AppButton
-          variant="primary"
-          size="lg"
-          onPress={props.onContinue}
-          disabled={props.isCompleting}
-          style={{ width: '100%' }}
-          testID="onboarding-theme-continue-button"
-        >
-          Continue
-        </AppButton>
-        <AppButton variant="ghost" size="md" onPress={props.onBack} disabled={props.isCompleting}>
-          Back
-        </AppButton>
-      </Stack>
+      <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
+        <Stack space="xs">
+          <AppButton
+            variant="primary"
+            size="lg"
+            onPress={props.onContinue}
+            disabled={props.isCompleting}
+            style={{ width: '100%' }}
+            testID="onboarding-theme-continue-button"
+          >
+            Continue
+          </AppButton>
+          <AppButton variant="ghost" size="md" onPress={props.onBack} disabled={props.isCompleting}>
+            Back
+          </AppButton>
+        </Stack>
+      </Box>
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  headerTitle: {
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.xs,
+    paddingBottom: Spacing.xxl,
+  },
+  sectionTitle: {
+    marginBottom: Spacing.lg,
+  },
+  optionsContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+});

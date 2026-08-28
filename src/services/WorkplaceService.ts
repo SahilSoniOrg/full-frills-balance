@@ -20,6 +20,7 @@ export class WorkplaceService {
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
       currencyCode: string;
+      bootstrapAccounts?: boolean;
     },
   ): Promise<Workplace> {
     const workplace = await workplaceRepository.create({
@@ -29,7 +30,9 @@ export class WorkplaceService {
       defaultCurrencyCode: options.currencyCode,
     });
 
-    await this.bootstrapWorkplace(workplace.id, options);
+    if (options.bootstrapAccounts !== false) {
+      await this.bootstrapWorkplace(workplace.id, options);
+    }
     analytics.logWorkplaceCreated(name, icon);
     return workplace;
   }
@@ -111,6 +114,7 @@ export class WorkplaceService {
           result = await this.createWorkplace('Personal workplace', 'briefcase', {
             id: forceId,
             currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
+            bootstrapAccounts: false,
           });
           preferences.setActiveWorkplaceId(result.id);
         }

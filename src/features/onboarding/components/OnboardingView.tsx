@@ -84,6 +84,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
         return (
           <OnboardingThemeStep
             key={step}
+            currencyCode={selectedCurrency}
             onContinue={onContinue}
             onBack={onBack}
             isCompleting={false}

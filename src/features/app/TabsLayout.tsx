@@ -1,9 +1,10 @@
 import { AppIcon } from '@/src/components/core';
+import { Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Tabs } from 'expo-router';
 
 export function TabsLayout() {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
 
   return (
     <Tabs
@@ -11,9 +12,19 @@ export function TabsLayout() {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
-          backgroundColor: theme.background,
+          backgroundColor: theme.surface,
           borderTopColor: theme.border,
+          borderTopWidth: 1,
+          paddingTop: Spacing.sm,
+          ...Shape.elevation.md,
         },
+        tabBarLabelStyle: {
+          fontSize: Typography.sizes.xs,
+          fontFamily: fonts.medium,
+          letterSpacing: Typography.letterSpacing.normal,
+        },
+        tabBarItemStyle: { borderRadius: Shape.radius.md },
+        tabBarHideOnKeyboard: true,
         headerShown: false,
       }}
     >

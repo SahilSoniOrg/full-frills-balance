@@ -89,7 +89,7 @@ export function WorkplaceCategorySelectionStep({
       onBack={onBack}
       isCompleting={isCompleting}
       disableAnimation={true}
-      bottomContent={
+      listFooterContent={
         <CategoryCreationBar
           placeholder={AppConfig.strings.onboarding.categories.placeholder}
           onAdd={onAddCustomCategory}

@@ -1,9 +1,9 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Typography } from '@/src/constants';
+import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
 import React from 'react';
 import { Keyboard, ScrollView, StyleSheet } from 'react-native';
-import { Box, Inline, Inset, Stack } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 
 interface StepSplashProps {
   name: string;
@@ -25,33 +25,38 @@ export const StepSplash: React.FC<StepSplashProps> = ({
   return (
     <Box flex={1}>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingVertical: 24 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Stack gap="xl" flex={1} justifyContent="space-between">
-          <Stack gap="md" align="center" paddingTop="xl">
-            <AppText variant="hero" style={{ textAlign: 'center' }}>
-              {AppConfig.strings.onboarding.splash.title}
-            </AppText>
-            <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              {AppConfig.strings.onboarding.splash.subtitle}
-            </AppText>
-          </Stack>
+        <Stack gap="xxxl" flex={1} justify="center">
+          <Stack gap={Spacing.xxxxl + Spacing.xxl}>
+            <Stack gap="md" paddingTop="xl" align="center">
+              <AppText variant="caption" color="primary" weight="semibold" style={styles.eyebrow}>
+                {AppConfig.strings.onboarding.splash.eyebrow}
+              </AppText>
+              <AppText variant="hero" style={styles.title}>
+                {AppConfig.strings.onboarding.splash.title}
+              </AppText>
+              <AppText variant="body" color="secondary" style={styles.subtitle}>
+                {AppConfig.strings.onboarding.splash.subtitle}
+              </AppText>
+            </Stack>
 
-          <Inset space="md">
-            <Stack gap="xl">
+            <Stack gap="lg" marginHorizontal="md">
               <AppInput
                 label={AppConfig.strings.onboarding.splash.inputLabel}
                 placeholder={AppConfig.strings.onboarding.splash.inputPlaceholder}
                 value={name}
                 onChangeText={setName}
-                autoFocus
                 accessibilityLabel={AppConfig.strings.onboarding.splash.inputLabel}
                 testID="onboarding-name-input"
+                returnKeyType="next"
                 onSubmitEditing={() => {
-                  Keyboard.dismiss();
-                  onContinue();
+                  if (name.trim()) {
+                    Keyboard.dismiss();
+                    onContinue();
+                  }
                 }}
               />
 
@@ -69,17 +74,12 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                 {AppConfig.strings.onboarding.splash.btnGetStarted}
               </AppButton>
             </Stack>
-          </Inset>
+          </Stack>
 
-          <Stack gap="lg" paddingBottom="lg">
-            <Inline align="center" space="md" paddingHorizontal="xl">
-              <Box flex={1} height={1} background="border" />
-              <AppText variant="caption" color="secondary" style={styles.orText}>
-                {AppConfig.strings.onboarding.splash.dividerOr}
-              </AppText>
-              <Box flex={1} height={1} background="border" />
-            </Inline>
-
+          <Stack gap="xs" align="center">
+            <AppText variant="caption" color="secondary">
+              {AppConfig.strings.onboarding.splash.restorePrompt}
+            </AppText>
             <AppButton
               variant="ghost"
               size="md"
@@ -98,9 +98,25 @@ export const StepSplash: React.FC<StepSplashProps> = ({
 };
 
 const styles = StyleSheet.create({
-  orText: {
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontSize: Typography.sizes.xs,
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  eyebrow: {
+    letterSpacing: Typography.letterSpacing.wide,
+    textAlign: 'center',
+  },
+  title: {
+    maxWidth: 350,
+    fontSize: Typography.sizes.jumbo,
+    lineHeight: Typography.sizes.jumbo * 1.04,
+    letterSpacing: Typography.letterSpacing.tight,
+    textAlign: 'center',
+  },
+  subtitle: {
+    maxWidth: 330,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+    textAlign: 'center',
   },
 });

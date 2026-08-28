@@ -1,7 +1,6 @@
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, withOpacity } from '@/src/constants';
-import { Box } from '@/src/design-system';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
@@ -64,16 +63,16 @@ export function WorkplaceCurrencyStep({
       onBack={onBack}
       isCompleting={isCompleting}
       disableAnimation={true}
-      bottomContent={
-        <Box>
-          <AppInput
-            placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            accessibilityLabel="Search currency"
-          />
-        </Box>
+      headerContent={
+        <AppInput
+          placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          accessibilityLabel="Search currency"
+          returnKeyType="search"
+        />
       }
+      emptyMessage={AppConfig.strings.onboarding.currency.emptySearch}
       renderSubtitle={(item, isSelected) => (
         <AppText
           variant="caption"
