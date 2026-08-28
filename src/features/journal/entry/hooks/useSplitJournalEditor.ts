@@ -17,14 +17,12 @@ export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   onSelectAccountRequest: (lineId: string) => void;
-  isActive: boolean;
 }
 
 export function useSplitJournalEditor({
   accounts,
   editor,
   onSelectAccountRequest,
-  isActive,
 }: UseSplitJournalEditorProps): SplitJournalController {
   const initializedRef = useRef(false);
 
@@ -89,32 +87,28 @@ export function useSplitJournalEditor({
 
   const resolvedSourceAccountId = useMemo(() => {
     if (sourceAccountId !== EMPTY_ACCOUNT_ID) return sourceAccountId;
-    if (!isActive || isEdit) return EMPTY_ACCOUNT_ID;
+    if (isEdit) return EMPTY_ACCOUNT_ID;
     const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
     if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
       return lastSourceId;
     }
     return EMPTY_ACCOUNT_ID;
-  }, [sourceAccountId, isActive, isEdit, transactionAccounts]);
+  }, [sourceAccountId, isEdit, transactionAccounts]);
 
   useEffect(() => {
-    if (!isActive || sourceAccountId !== EMPTY_ACCOUNT_ID) return;
+    if (sourceAccountId !== EMPTY_ACCOUNT_ID) return;
     if (resolvedSourceAccountId !== EMPTY_ACCOUNT_ID) {
       setSourceAccountId(resolvedSourceAccountId);
     }
-  }, [isActive, resolvedSourceAccountId, setSourceAccountId, sourceAccountId]);
+  }, [resolvedSourceAccountId, setSourceAccountId, sourceAccountId]);
 
   useEffect(() => {
-    if (!isActive) {
-      initializedRef.current = false;
-      return;
-    }
     if (initializedRef.current) return;
     initializedRef.current = true;
 
     setTransactionType('expense');
     setIsGuidedMode(false);
-  }, [isActive, setIsGuidedMode, setTransactionType]);
+  }, [setIsGuidedMode, setTransactionType]);
 
   const totals = useMemo(() => computeSplitTotals(totalAmount, splits), [totalAmount, splits]);
 

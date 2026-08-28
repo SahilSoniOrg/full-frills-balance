@@ -61,7 +61,6 @@ export function JournalEntryModeBody({
         accounts={accounts}
         editor={editor}
         onSelectAccountRequest={onSelectAccountRequest}
-        isActive
       />
     );
   }
@@ -84,7 +83,6 @@ export function JournalEntryModeBody({
       onSelectAccountRequest={onSelectAccountRequest}
       onFooterAmountChange={onGuidedFooterAmountChange}
       voiceActionsRef={guidedVoiceActionsRef}
-      isActive
     />
   );
 }

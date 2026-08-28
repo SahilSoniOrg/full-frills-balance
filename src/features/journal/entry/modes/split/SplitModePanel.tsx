@@ -7,20 +7,13 @@ export type SplitModePanelProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   onSelectAccountRequest: (lineId: string) => void;
-  isActive?: boolean;
 };
 
-export function SplitModePanel({
-  accounts,
-  editor,
-  onSelectAccountRequest,
-  isActive = true,
-}: SplitModePanelProps) {
+export function SplitModePanel({ accounts, editor, onSelectAccountRequest }: SplitModePanelProps) {
   const splitEditor = useSplitJournalEditor({
     accounts,
     editor,
     onSelectAccountRequest,
-    isActive,
   });
   return <SplitForm {...splitEditor} />;
 }
