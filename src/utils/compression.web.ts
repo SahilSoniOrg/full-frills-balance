@@ -1,3 +1,4 @@
+import { unzipSync } from 'fflate';
 import { logger } from './logger';
 
 export interface ZipResult {
@@ -7,8 +8,8 @@ export interface ZipResult {
 }
 
 /**
- * Web Implementation of Unified Compression Utility
- * Mocks native ZIP operations for the browser.
+ * Web Implementation of Unified Compression Utility.
+ * Uses fflate because browsers do not provide a general-purpose ZIP API.
  */
 export const compression = {
   /**
@@ -30,10 +31,20 @@ export const compression = {
    * Unzips an archive and returns the content of the first valid file found.
    */
   async extractFirstFile(
-    _zipBytes: Uint8Array,
-    _options: { filterMac?: boolean } = { filterMac: true },
+    zipBytes: Uint8Array,
+    options: { filterMac?: boolean } = { filterMac: true },
   ): Promise<{ bytes: Uint8Array; name: string } | null> {
-    logger.debug(`[Compression.web] extractFirstFile (mock)`);
-    return null;
+    const entries = unzipSync(zipBytes);
+    const entry = Object.entries(entries).find(([name, bytes]) => {
+      if (!name || name.endsWith('/')) return false;
+      if (options.filterMac !== false && name.includes('__MACOSX')) return false;
+      return bytes instanceof Uint8Array;
+    });
+
+    if (!entry) return null;
+
+    const [name, bytes] = entry;
+    logger.debug(`[Compression.web] Extracted ZIP entry`, { name });
+    return { name, bytes };
   },
 };

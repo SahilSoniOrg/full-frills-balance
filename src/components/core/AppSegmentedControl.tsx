@@ -407,7 +407,7 @@ export const AppSegmentedControl = <T extends string | number>({
         { backgroundColor: colors.track },
         isMinimal && { padding: 0 },
         isVertical
-          ? { minHeight: 0, minWidth: minWidth || 44 }
+          ? { flex: 1, minHeight: 0, minWidth: minWidth || 44 }
           : {
               height: layout.horizontalHeight,
               width: flex ? '100%' : 'auto',
@@ -438,6 +438,7 @@ export const AppSegmentedControl = <T extends string | number>({
       >
         <ScrollView
           ref={scrollViewRef}
+          style={isVertical ? styles.verticalScroll : undefined}
           horizontal={!isVertical}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
@@ -482,6 +483,10 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  verticalScroll: {
+    flex: 1,
+    userSelect: 'none',
   },
   containerSm: {
     minHeight: 28,
