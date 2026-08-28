@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import {
   analyzeJournalsForMerge,
@@ -14,8 +16,15 @@ import {
   undoBulkChangeJournalAccount,
 } from '@/src/services/journal/bulk';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { AccountType, JournalDisplayType, TransactionType } from '@/src/types/enums';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import {
+  AccountType,
+  InboxParseStatus,
+  InboxProcessingStatus,
+  JournalDisplayType,
+  TransactionDirection,
+  TransactionType,
+} from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-bulk-cmd' as WorkplaceId;
@@ -216,6 +225,100 @@ describe('journalBulkCommands', () => {
     const reloaded2 = await database.collections.get<Journal>('journals').find(j2.id);
     expect(reloaded1.deletedAt).toBeTruthy();
     expect(reloaded2.deletedAt).toBeTruthy();
+  });
+
+  it('mergeJournals carries planned-payment and SMS links to the merged journal', async () => {
+    const plannedPaymentId = 'planned-rent' as PlannedPaymentId;
+    const j1 = await ledgerWriteService.createJournal(
+      {
+        journalDate: 1000,
+        description: 'Rent part 1',
+        currencyCode: 'USD',
+        plannedPaymentId,
+        metadata: {
+          importSource: 'sms',
+          originalSmsId: 'sms-rent',
+          originalSmsSender: 'BANK',
+          originalSmsBody: 'Rent debit',
+        },
+        transactions: [
+          { accountId: expenseAccId, amount: 10, transactionType: TransactionType.DEBIT },
+          { accountId: assetAccId, amount: 10, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      WP,
+    );
+    const j2 = await ledgerWriteService.createJournal(
+      {
+        journalDate: 2000,
+        description: 'Rent part 2',
+        currencyCode: 'USD',
+        plannedPaymentId,
+        transactions: [
+          { accountId: expenseAccId, amount: 20, transactionType: TransactionType.DEBIT },
+          { accountId: assetAccId, amount: 20, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      WP,
+    );
+
+    const inboxRecord = await database.write(async () =>
+      database.collections
+        .get<TransactionInboxRecord>('transaction_inbox_records')
+        .create(record => {
+          record.workplaceId = WP;
+          record.channel = 'sms';
+          record.deviceSourceId = 'sms-rent';
+          record.inputDate = 1000;
+          record.inputFingerprint = 'rent-fingerprint';
+          record.parseStatus = InboxParseStatus.PARSED;
+          record.direction = TransactionDirection.DEBIT;
+          record.processingStatus = InboxProcessingStatus.IMPORTED;
+          record.linkedJournalId = j1.id;
+          record.duplicateJournalId = j2.id;
+          record.firstSeenAt = 1000;
+          record.lastScannedAt = 1000;
+        }),
+    );
+
+    const merged = await mergeJournals(WP, [j1.id, j2.id]);
+
+    expect(merged.plannedPaymentId).toBe(plannedPaymentId);
+    const metadata = await database.collections
+      .get<JournalMetadata>('journal_metadata')
+      .query(Q.where('original_sms_id', 'sms-rent'))
+      .fetch();
+    expect(metadata).toHaveLength(1);
+    expect(metadata[0].journalId).toBe(merged.id);
+    const reloadedInbox = await database.collections
+      .get<TransactionInboxRecord>('transaction_inbox_records')
+      .find(inboxRecord.id);
+    expect(reloadedInbox.linkedJournalId).toBe(merged.id);
+    expect(reloadedInbox.duplicateJournalId).toBe(merged.id);
+  });
+
+  it('analyzeJournalsForMerge rejects different planned-payment links', async () => {
+    const createLinkedJournal = (plannedPaymentId: PlannedPaymentId, description: string) =>
+      ledgerWriteService.createJournal(
+        {
+          journalDate: 1000,
+          description,
+          currencyCode: 'USD',
+          plannedPaymentId,
+          transactions: [
+            { accountId: expenseAccId, amount: 10, transactionType: TransactionType.DEBIT },
+            { accountId: assetAccId, amount: 10, transactionType: TransactionType.CREDIT },
+          ],
+        },
+        WP,
+      );
+    const j1 = await createLinkedJournal('planned-a' as PlannedPaymentId, 'Payment A');
+    const j2 = await createLinkedJournal('planned-b' as PlannedPaymentId, 'Payment B');
+
+    const analysis = await analyzeJournalsForMerge(WP, [j1.id, j2.id]);
+
+    expect(analysis.canMerge).toBe(false);
+    expect(analysis.reason).toBe('Cannot merge transactions linked to different planned payments.');
   });
 
   it('checkJournalAccountEditEligibility validates single debit / credit rules', async () => {

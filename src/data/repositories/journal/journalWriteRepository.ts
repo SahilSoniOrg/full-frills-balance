@@ -5,6 +5,7 @@ import { JournalStatus, JournalDisplayType, TransactionType } from '@/src/types/
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
@@ -54,6 +55,10 @@ export class JournalWriteRepository {
 
   private get journalMetadata() {
     return database.collections.get<JournalMetadata>('journal_metadata');
+  }
+
+  private get transactionInboxRecords() {
+    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
   }
 
   private prepareTransaction(
@@ -838,6 +843,18 @@ export class JournalWriteRepository {
         Q.where('workplace_id', workplaceId),
       )
       .fetch();
+    const sourceMetadata = await this.journalMetadata
+      .query(Q.where('journal_id', Q.oneOf(sourceJournalIds)), Q.where('workplace_id', workplaceId))
+      .fetch();
+    const sourceInboxRecords = await this.transactionInboxRecords
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.or(
+          Q.where('linked_journal_id', Q.oneOf(sourceJournalIds)),
+          Q.where('duplicate_journal_id', Q.oneOf(sourceJournalIds)),
+        ),
+      )
+      .fetch();
 
     const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
       newJournalData,
@@ -869,10 +886,28 @@ export class JournalWriteRepository {
           record.updatedAt = now;
         }),
       );
+      const metadataRetargets = sourceMetadata.map(metadata =>
+        metadata.prepareUpdate(record => {
+          record.journalId = journal.id;
+          record.updatedAt = now;
+        }),
+      );
+      const inboxRetargets = sourceInboxRecords.map(inboxRecord =>
+        inboxRecord.prepareUpdate(record => {
+          if (record.linkedJournalId && sourceJournalIds.includes(record.linkedJournalId)) {
+            record.linkedJournalId = journal.id;
+          }
+          if (record.duplicateJournalId && sourceJournalIds.includes(record.duplicateJournalId)) {
+            record.duplicateJournalId = journal.id;
+          }
+        }),
+      );
 
       const batchOps: Model[] = [
         journal,
         ...transactions,
+        ...metadataRetargets,
+        ...inboxRetargets,
         ...sourceJournalDeletes,
         ...sourceTxDeletes,
       ];

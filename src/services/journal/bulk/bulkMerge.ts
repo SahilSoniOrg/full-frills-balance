@@ -2,7 +2,7 @@ import Journal from '@/src/data/models/Journal';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { safeAdd } from '@/src/utils/money';
 import { enqueueRebuildIfNeeded } from './bulkHelpers';
@@ -23,6 +23,7 @@ export interface MergeJournalsAnalysis {
   combinedDescription: string;
   suggestedDate: number;
   suggestedDisplayType: JournalDisplayType;
+  plannedPaymentId?: PlannedPaymentId;
   combinedLines: MergeLine[];
 }
 
@@ -78,6 +79,21 @@ export async function analyzeJournalsForMerge(
       currencyCode,
     });
   }
+
+  const plannedPaymentIds = Array.from(
+    new Set(
+      orderedJournals
+        .map(journal => journal.plannedPaymentId)
+        .filter((id): id is PlannedPaymentId => Boolean(id)),
+    ),
+  );
+  if (plannedPaymentIds.length > 1) {
+    return mergeFailure('Cannot merge transactions linked to different planned payments.', {
+      sourceJournals: orderedJournals,
+      currencyCode,
+    });
+  }
+  const plannedPaymentId = plannedPaymentIds[0];
 
   const firstDisplayType = orderedJournals[0]?.displayType as JournalDisplayType | undefined;
   const allSameDisplayType =
@@ -148,6 +164,7 @@ export async function analyzeJournalsForMerge(
     combinedDescription,
     suggestedDate: maxDate,
     suggestedDisplayType,
+    plannedPaymentId,
     combinedLines: Array.from(lineMap.values()),
   };
 }
@@ -175,6 +192,7 @@ export async function mergeJournals(
         currencyCode: analysis.currencyCode,
         totalAmount: analysis.totalDebit,
         displayType: options?.displayType ?? analysis.suggestedDisplayType,
+        plannedPaymentId: analysis.plannedPaymentId,
         transactions: analysis.combinedLines.map(line => ({
           accountId: line.accountId,
           amount: line.amount,
