@@ -1,7 +1,10 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
-import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
+import {
+  resolveExchangeRatePresentation,
+  resolveSimpleTypeAccentColor,
+} from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
@@ -46,6 +49,13 @@ export const SimpleForm = ({
   const { theme } = useTheme();
 
   const activeColor = resolveSimpleTypeAccentColor(type, theme);
+  const displayedRate = exchangeRate
+    ? resolveExchangeRatePresentation({
+        sourceCurrency,
+        destinationCurrency: destCurrency,
+        exchangeRate,
+      })
+    : null;
 
   return (
     <View style={styles.container}>
@@ -65,12 +75,13 @@ export const SimpleForm = ({
             <AppText variant="caption" color="error">
               {rateError}
             </AppText>
-          ) : exchangeRate ? (
+          ) : displayedRate ? (
             <View style={styles.fxContent}>
               <View style={styles.fxRateRow}>
                 <AppIcon name="refresh" size={Size.iconXs} color={theme.primary} />
                 <AppText variant="body" color="primary" weight="bold">
-                  1 {sourceCurrency} = {exchangeRate.toFixed(4)} {destCurrency}
+                  1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
+                  {displayedRate.destinationCurrency}
                 </AppText>
               </View>
               {parseFloat(amount) > 0 && (
