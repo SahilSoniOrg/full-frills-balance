@@ -8,10 +8,10 @@ import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalE
 import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import {
-  createSmsJournalAfterSaveHandler,
   JournalEntryScreenMode,
   resolveJournalEntryHeaderTitle,
 } from '@/src/features/journal/entry/journalEntryPresentation';
+import { createSmsJournalAfterSaveHandler } from '@/src/features/journal/entry/journalEntryPostSave';
 import { parseTransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
 import {
   GuidedFooterAmount,
@@ -19,19 +19,16 @@ import {
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
-import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { useBatchJournalSession } from '@/src/features/journal/entry/hooks/useBatchJournalSession';
+import type { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
+import { useJournalSuggestionApplication } from '@/src/features/journal/entry/hooks/useJournalSuggestionApplication';
 import {
   JournalSuggestionState,
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { analytics } from '@/src/services/analytics';
-import {
-  isSimpleTargetAccountUnset,
-  resolveTargetAccountIdForSimpleTab,
-} from '@/src/services/journal/simpleJournalHelpers';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -132,30 +129,13 @@ export function useJournalEntryShell(): JournalEntryShell {
     seed.editorMode,
   );
 
-  const [batchSummary, setBatchSummary] = useState<{
-    count: number;
-    items: SavedJournalSummary[];
-  } | null>(null);
-  const onBatchSaveSuccess = useCallback(
-    (count: number, items: SavedJournalSummary[]) => setBatchSummary({ count, items }),
-    [],
-  );
-  const batchEditor = useBulkJournalEditor({
+  const { batchEditor, batchSummary, onContinueBatch, onDoneBatch } = useBatchJournalSession(
     workplaceId,
     workplaceCurrency,
     accounts,
-    onSaveSuccess: onBatchSaveSuccess,
-  });
-  const { clearRows: clearBatchRows, saveAll: saveBatch } = batchEditor;
-  const onContinueBatch = useCallback(() => {
-    setBatchSummary(null);
-    clearBatchRows();
-  }, [clearBatchRows]);
-  const onDoneBatch = useCallback(() => {
-    setBatchSummary(null);
-    clearBatchRows();
-    onToggleMode('basic');
-  }, [clearBatchRows, onToggleMode]);
+    onToggleMode,
+  );
+  const { saveAll: saveBatch } = batchEditor;
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
@@ -215,58 +195,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     setGuidedFooterAmount(footer);
   }, []);
 
-  const onSelectSuggestion = useCallback(
-    (suggestion: JournalAutofillSuggestion) => {
-      analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
-        has_target_account: !!suggestion.targetAccountId,
-        target_account_type: suggestion.targetAccountType || 'none',
-        mode: activeMode,
-      });
-
-      editor.setDescription(suggestion.description);
-
-      if (activeMode !== 'basic') return;
-
-      const sourceLine = editor.lines.find(l => l.transactionType === TransactionType.CREDIT);
-      const destLine = editor.lines.find(l => l.transactionType === TransactionType.DEBIT);
-      const sourceId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
-      const destId = destLine?.accountId ?? EMPTY_ACCOUNT_ID;
-
-      const tabType = editor.transactionType;
-      // Non-destructive: only auto-select if target category is currently unset
-      if (!isSimpleTargetAccountUnset(tabType, sourceId, destId)) {
-        return;
-      }
-
-      const targetAccountId = resolveTargetAccountIdForSimpleTab(suggestion, tabType);
-      if (!targetAccountId) return;
-
-      const account = accounts.find(a => a.id === targetAccountId);
-      if (!account) return;
-
-      if (tabType === 'income') {
-        if (sourceLine) {
-          editor.updateLine(sourceLine.id, {
-            accountId: targetAccountId,
-            accountName: account.name,
-            accountType: account.accountType,
-            accountCurrency: account.currencyCode,
-          });
-        }
-      } else {
-        // expense or transfer: target is the destination (DEBIT) line
-        if (destLine) {
-          editor.updateLine(destLine.id, {
-            accountId: targetAccountId,
-            accountName: account.name,
-            accountType: account.accountType,
-            accountCurrency: account.currencyCode,
-          });
-        }
-      }
-    },
-    [editor, activeMode, accounts],
-  );
+  const onSelectSuggestion = useJournalSuggestionApplication(editor, accounts, activeMode);
 
   const headerTitle = useMemo(
     () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit }),

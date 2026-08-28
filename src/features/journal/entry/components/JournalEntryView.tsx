@@ -1,47 +1,32 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { Page } from '@/src/design-system';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
-import {
-  JournalEntryModeBody,
-  JournalEntryModeBodyProps,
-} from '@/src/features/journal/entry/components/JournalEntryModeBody';
+import { JournalEntryModeBody } from '@/src/features/journal/entry/components/JournalEntryModeBody';
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
-import {
-  isJournalEntrySubmitDisabled,
-  resolveJournalEntrySubmitLabel,
-} from '@/src/features/journal/entry/journalEntryPresentation';
+import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
-  const [hideSuggestions, setHideSuggestions] = useState(false);
-  const isSubmitting = vm.editor.isSubmitting;
-  const isBatchMode = vm.activeMode === 'batch';
-  const isPlanValid =
-    vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
-  const submitLabel = resolveJournalEntrySubmitLabel({
-    activeMode: vm.activeMode,
-    simpleSubmitting: isSubmitting,
-    simpleType: vm.editor.transactionType,
-    isEdit: vm.editor.isEdit,
+  const {
+    hideSuggestions,
     isSubmitting,
-    splitSubmitting: isSubmitting,
-  });
-  const isSubmitDisabled = isJournalEntrySubmitDisabled({
-    activeMode: vm.activeMode,
-    isSimpleValid: isPlanValid,
-    isAdvancedValid: isPlanValid,
-    isSplitValid: vm.splitValidation.valid,
-  });
-  const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;
+    isBatchMode,
+    submitLabel,
+    isSubmitDisabled,
+    batchSubmitDisabled,
+    onScrollBeginDrag,
+    onDescriptionFocus,
+    setDescription,
+    onSelectSuggestion,
+    modeBodyProps,
+  } = useJournalEntryPresentationState(vm);
 
   const {
     isLoading,
@@ -52,46 +37,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
     activeMode,
     onToggleMode,
     guidedFooterAmount,
-    loadSuggestions,
-    editor,
-    onSelectSuggestion: handleSelectSuggestion,
   } = vm;
-
-  const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
-  const onDescriptionFocus = useCallback(() => {
-    setHideSuggestions(false);
-    loadSuggestions();
-  }, [loadSuggestions]);
-  const setDescription = useCallback(
-    (desc: string) => {
-      setHideSuggestions(false);
-      loadSuggestions();
-      editor.setDescription(desc);
-    },
-    [editor, loadSuggestions],
-  );
-  const onSelectSuggestion = useCallback(
-    (suggestion: JournalAutofillSuggestion) => {
-      setHideSuggestions(false);
-      handleSelectSuggestion(suggestion);
-    },
-    [handleSelectSuggestion],
-  );
-
-  const modeBodyProps: JournalEntryModeBodyProps = {
-    activeMode: vm.activeMode,
-    accounts: vm.accounts,
-    editor: vm.editor,
-    workplaceId: vm.workplaceId,
-    workplaceCurrency: vm.workplaceCurrency,
-    onSelectAccountRequest: vm.onSelectAccountRequest,
-    onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
-    guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
-    batchEditor: vm.batchEditor,
-    batchSummary: vm.batchSummary,
-    onContinueBatch: vm.onContinueBatch,
-    onDoneBatch: vm.onDoneBatch,
-  };
 
   if (isLoading) {
     return (
