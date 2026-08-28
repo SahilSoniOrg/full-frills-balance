@@ -3,6 +3,7 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import { useGuidedVoiceApplication } from '@/src/features/journal/entry/hooks/useGuidedVoiceApplication';
 import type { VoiceJournalApplyParams } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -35,7 +36,6 @@ export type GuidedModePanelProps = {
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
   voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
-  isActive?: boolean;
 };
 
 export function GuidedModePanel({
@@ -45,7 +45,6 @@ export function GuidedModePanel({
   onSelectAccountRequest,
   onFooterAmountChange,
   voiceActionsRef,
-  isActive = true,
 }: GuidedModePanelProps) {
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
 
@@ -86,46 +85,21 @@ export function GuidedModePanel({
   );
 
   useEffect(() => {
-    if (!isActive) return;
     onFooterAmountChange?.(footerAmount);
     return () => onFooterAmountChange?.(null);
-  }, [footerAmount, isActive, onFooterAmountChange]);
+  }, [footerAmount, onFooterAmountChange]);
 
   const openVoice = useCallback(() => setIsVoiceModalVisible(true), []);
 
   useEffect(() => {
-    if (!isActive || !voiceActionsRef) return;
+    if (!voiceActionsRef) return;
     voiceActionsRef.current = { open: openVoice };
     return () => {
       voiceActionsRef.current = null;
     };
-  }, [isActive, voiceActionsRef, openVoice]);
+  }, [voiceActionsRef, openVoice]);
 
-  const handleApplyVoiceInput = useCallback(
-    (params: GuidedVoiceApplyParams) => {
-      if (params.merchantName) {
-        editor.setDescription(params.merchantName);
-      }
-      if (params.transcription) {
-        editor.setNotes(`Spoken transcript: ${params.transcription}`);
-      }
-
-      const mappedType =
-        params.transactionType || (params.direction === 'credit' ? 'income' : 'expense');
-      simpleEditor.setType(mappedType);
-      if (params.amount) {
-        simpleEditor.setAmount(String(params.amount));
-      }
-      if (mappedType === 'income') {
-        if (params.categoryAccountId) simpleEditor.setSourceId(params.categoryAccountId);
-        if (params.sourceAccountId) simpleEditor.setDestinationId(params.sourceAccountId);
-      } else {
-        if (params.sourceAccountId) simpleEditor.setSourceId(params.sourceAccountId);
-        if (params.categoryAccountId) simpleEditor.setDestinationId(params.categoryAccountId);
-      }
-    },
-    [editor, simpleEditor],
-  );
+  const handleApplyVoiceInput = useGuidedVoiceApplication(editor, simpleEditor);
 
   return (
     <>
