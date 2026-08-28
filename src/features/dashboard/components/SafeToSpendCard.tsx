@@ -1,14 +1,11 @@
-import { useWindowDimensions, View } from 'react-native';
 import { AppSurface } from '@/src/components/core';
-import { Column, Row, Separator } from '@/src/design-system';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
+import { SafeToSpendBreakdownMetrics } from './SafeToSpendBreakdownMetrics';
 import { SafeToSpendChart } from './SafeToSpendChart';
+import { SafeToSpendCardLayout } from './SafeToSpendCardLayout';
 import { SafeToSpendHeader } from './SafeToSpendHeader';
-
-/** Width threshold where the card switches to side-by-side layout. */
-const TABLET_BREAKPOINT = 600;
 
 export interface SafeToSpendCardProps {
   projection: SafeToSpendProjection;
@@ -31,9 +28,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     onLegendPress,
     showChart = true,
   } = props;
-  const { width: screenWidth } = useWindowDimensions();
-  const isWide = screenWidth >= TABLET_BREAKPOINT;
-
   const {
     isOverCommitted,
     isPositiveSafeToSpend,
@@ -47,29 +41,40 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
   } = viewModel;
 
   const loading = isLoading ?? vmLoading;
+  const hasBreakdownData = effectiveTotal > 0;
+  const hasProjectionData = projection.history.length > 0 || projection.projection.length > 0;
 
-  const breakdown = (
+  const breakdown = hasBreakdownData ? (
     <SafeToSpendBreakdownBar
       effectiveTotal={effectiveTotal}
       committedTotal={committedTotal}
       committedLiabilities={committedLiabilities}
       safeToSpend={safeToSpend}
+    />
+  ) : null;
+
+  const metrics = hasBreakdownData ? (
+    <SafeToSpendBreakdownMetrics
+      safeToSpend={safeToSpend}
+      committedTotal={committedTotal}
+      committedLiabilities={committedLiabilities}
       currencyCode={currencyCode}
       loading={loading}
       detailsReady={detailsReady}
-      onLegendPress={onLegendPress}
-    />
-  );
-
-  const chart = showChart ? (
-    <SafeToSpendChart
-      projection={projection}
-      safeToSpend={safeToSpend}
-      isOverCommitted={isOverCommitted}
-      currencyCode={currencyCode}
-      isLoading={loading}
+      onPress={onLegendPress}
     />
   ) : null;
+
+  const chart =
+    showChart && hasProjectionData ? (
+      <SafeToSpendChart
+        projection={projection}
+        safeToSpend={safeToSpend}
+        isOverCommitted={isOverCommitted}
+        currencyCode={currencyCode}
+        isLoading={loading}
+      />
+    ) : null;
 
   const header = (
     <SafeToSpendHeader
@@ -83,25 +88,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     />
   );
 
-  const body =
-    isWide && chart ? (
-      <Row gap="lg" align="stretch" style={{ minHeight: 0 }}>
-        <View style={{ flex: 2, minWidth: 0 }}>{breakdown}</View>
-        <View style={{ flex: 3, minWidth: 0 }}>{chart}</View>
-      </Row>
-    ) : (
-      <>
-        {breakdown}
-        {chart ? (
-          <>
-            <Separator />
-            {chart}
-            <Separator />
-          </>
-        ) : null}
-      </>
-    );
-
   return (
     <AppSurface
       elevation="none"
@@ -109,10 +95,12 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       paddingHorizontal="none"
       paddingVertical="none"
     >
-      <Column gap="lg">
-        {header}
-        {body}
-      </Column>
+      <SafeToSpendCardLayout
+        summary={header}
+        breakdown={breakdown}
+        metrics={metrics}
+        chart={chart}
+      />
     </AppSurface>
   );
 };

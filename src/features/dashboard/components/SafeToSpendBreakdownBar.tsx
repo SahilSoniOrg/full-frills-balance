@@ -1,19 +1,11 @@
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
-import { AppText, ColoredDot } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
-import { Box, Column, Row } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TouchableOpacity } from 'react-native';
 
 interface SafeToSpendBreakdownBarProps {
   effectiveTotal: number;
   committedTotal: number;
   committedLiabilities: number;
   safeToSpend: number;
-  currencyCode: string;
-  loading?: boolean;
-  detailsReady?: boolean;
-  onLegendPress: (item: 'safe' | 'committed' | 'debts') => void;
 }
 
 export const SafeToSpendBreakdownBar = ({
@@ -21,102 +13,31 @@ export const SafeToSpendBreakdownBar = ({
   committedTotal,
   committedLiabilities,
   safeToSpend,
-  currencyCode,
-  loading = false,
-  detailsReady = true,
-  onLegendPress,
 }: SafeToSpendBreakdownBarProps) => {
   const { theme } = useTheme();
-  const labels = AppConfig.strings.dashboard.safeToSpendUi;
-  const formatSts = useStsMoneyFormat(loading);
 
   if (effectiveTotal <= 0) {
-    return (
-      <Box paddingVertical="sm" alignItems="center">
-        <AppText variant="caption" color="secondary">
-          {AppConfig.strings.dashboard.noDataForBreakdown}
-        </AppText>
-      </Box>
-    );
+    return null;
   }
 
   return (
-    <Column gap="md">
-      <Box
-        background="pureInverse"
-        backgroundOpacity="active"
-        height={10}
-        borderRadius="full"
-        flexDirection="row"
-        overflow="hidden"
-        marginBottom="md"
-      >
-        {committedTotal > 0 && (
-          <Box height="100%" flex={committedTotal} unsafe_backgroundRaw={theme.warning} />
-        )}
-        {committedLiabilities > 0 && (
-          <Box height="100%" flex={committedLiabilities} unsafe_backgroundRaw={theme.error} />
-        )}
-        {safeToSpend > 0 && (
-          <Box height="100%" flex={safeToSpend} unsafe_backgroundRaw={theme.primary} />
-        )}
-      </Box>
-
-      <Row gap="sm" wrap="wrap" justify="space-between">
-        <TouchableOpacity
-          onPress={() => onLegendPress('safe')}
-          disabled={!detailsReady}
-          style={{ flexShrink: 1 }}
-        >
-          <Row align="center" gap="xs">
-            <ColoredDot color={theme.primary} />
-            <Row gap="xs" style={{ flexShrink: 1 }}>
-              <AppText variant="caption" color="secondary" numberOfLines={1}>
-                {labels.safePrefix}
-              </AppText>
-              <AppText variant="caption" weight="bold" color="primary" numberOfLines={1}>
-                {formatSts(safeToSpend, currencyCode)}
-              </AppText>
-            </Row>
-          </Row>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => onLegendPress('committed')}
-          disabled={!detailsReady}
-          style={{ flexShrink: 1 }}
-        >
-          <Row align="center" gap="xs">
-            <ColoredDot color={theme.warning} />
-            <Row gap="xs" style={{ flexShrink: 1 }}>
-              <AppText variant="caption" color="secondary" numberOfLines={1}>
-                {labels.committedPrefix}
-              </AppText>
-              <AppText variant="caption" weight="bold" color="warning" numberOfLines={1}>
-                {formatSts(committedTotal, currencyCode)}
-              </AppText>
-            </Row>
-          </Row>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => onLegendPress('debts')}
-          disabled={!detailsReady}
-          style={{ flexShrink: 1 }}
-        >
-          <Row align="center" gap="xs">
-            <ColoredDot color={theme.error} />
-            <Row gap="xs" style={{ flexShrink: 1 }}>
-              <AppText variant="caption" color="secondary" numberOfLines={1}>
-                {labels.debtsPrefix}
-              </AppText>
-              <AppText variant="caption" weight="bold" color="error" numberOfLines={1}>
-                {formatSts(committedLiabilities, currencyCode)}
-              </AppText>
-            </Row>
-          </Row>
-        </TouchableOpacity>
-      </Row>
-    </Column>
+    <Box
+      background="pureInverse"
+      backgroundOpacity="active"
+      height={10}
+      borderRadius="full"
+      flexDirection="row"
+      overflow="hidden"
+    >
+      {committedTotal > 0 && (
+        <Box height="100%" flex={committedTotal} unsafe_backgroundRaw={theme.warning} />
+      )}
+      {committedLiabilities > 0 && (
+        <Box height="100%" flex={committedLiabilities} unsafe_backgroundRaw={theme.error} />
+      )}
+      {safeToSpend > 0 && (
+        <Box height="100%" flex={safeToSpend} unsafe_backgroundRaw={theme.primary} />
+      )}
+    </Box>
   );
 };
