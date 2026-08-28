@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
@@ -13,6 +12,10 @@ import type {
   BulkRowFieldValue,
   UseBulkJournalEditorProps,
 } from '../types/bulkJournal';
+import {
+  convertCrossCurrencyAmount,
+  resolveCrossCurrencyRate,
+} from './crossCurrencyRateCoordinator';
 
 const generateRowId = () => generateId();
 
@@ -141,16 +144,24 @@ export function useBulkJournalEditor({
       setRows(loadingRows);
 
       try {
-        const rates = await fetchCrossCurrencyRates(
+        const rates = await resolveCrossCurrencyRate(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
           fetchRate,
         );
-        if (!rates) return;
+        if (!rates) {
+          const noRateRows = latestRowsRef.current.map(row => {
+            if (row.id !== rowId) return row;
+            if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
+            return { ...row, isLoadingRate: false, error: 'Rate unavailable' };
+          });
+          latestRowsRef.current = noRateRows;
+          setRows(noRateRows);
+          return;
+        }
         const { sourceBaseRate: srcRate, destBaseRate: dstRate, exchangeRate: crossRate } = rates;
-        const numAmount = parseFloat(amountStr) || 0;
-        const convertedAmount = sanitizeAmount(numAmount * crossRate) || 0;
+        const convertedAmount = convertCrossCurrencyAmount(amountStr, crossRate);
 
         const successRows = latestRowsRef.current.map(row => {
           if (row.id !== rowId) return row;
