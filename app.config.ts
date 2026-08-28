@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import { ConfigContext, ExpoConfig } from 'expo/config';
+import appVariants from './app-variants.json';
 
 // Automatically generate PNG assets from the SVG if they don't exist, are out of date, or during prebuild
 try {
@@ -19,25 +20,19 @@ const getGitCommit = () => {
 
 const gitCommit = getGitCommit();
 
+type AppVariant = keyof typeof appVariants;
+
 const getAppConfig = () => {
-  const APP_VARIANT = process.env.APP_VARIANT;
+  const variant = (process.env.APP_VARIANT ?? 'production') as AppVariant;
+  const appConfig = appVariants[variant];
 
-  let appName = 'Full Frills Balance';
-  let packageName = 'in.sahilsoni.fullfrillsbalance';
-
-  if (APP_VARIANT === 'development') {
-    packageName = `${packageName}.dev`;
-    appName = `${appName} (Dev)`;
-  } else if (APP_VARIANT === 'preview') {
-    packageName = `${packageName}.preview`;
-    appName = `${appName} (Preview)`;
+  if (!appConfig) {
+    throw new Error(
+      `Unknown APP_VARIANT "${variant}". Expected one of: ${Object.keys(appVariants).join(', ')}.`,
+    );
   }
 
-  return {
-    bundleIdentifier: packageName,
-    package: packageName,
-    name: appName,
-  };
+  return appConfig;
 };
 
 const appConfig = getAppConfig();
@@ -54,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   ios: {
     supportsTablet: true,
-    bundleIdentifier: appConfig.bundleIdentifier,
+    bundleIdentifier: appConfig.iosBundleIdentifier,
   },
   android: {
     adaptiveIcon: {
@@ -64,7 +59,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
-    package: appConfig.package,
+    // Gradle build types derive dev/preview IDs from this stable production base.
+    package: appVariants.production.androidApplicationId,
     permissions: ['READ_SMS'],
   },
   web: {
@@ -114,6 +110,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-localization',
     './plugins/withTelephony',
     './plugins/withGradleOptimizations',
+    './plugins/withAndroidBuildVariants',
     './plugins/withAndroidNativeLibPackaging',
     './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',

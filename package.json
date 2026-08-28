@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
+    "android": "node scripts/run-android.mjs development",
+    "android:preview": "node scripts/run-android.mjs preview",
+    "android:release": "node scripts/run-android.mjs production",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",

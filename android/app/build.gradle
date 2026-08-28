@@ -199,3 +199,23 @@ apply from: new File(["node", "--print", "require('path').dirname(require.resolv
         implementation jscFlavor
     }
 }
+
+// @generated begin android-build-variants - expo prebuild (DO NOT MODIFY)
+android {
+    buildTypes {
+        debug {
+            applicationIdSuffix ".dev"
+            resValue "string", "app_name", "Full Frills Balance (Dev)"
+        }
+        release {
+            resValue "string", "app_name", "Full Frills Balance"
+        }
+        preview {
+            initWith release
+            applicationIdSuffix ".preview"
+            resValue "string", "app_name", "Full Frills Balance (Preview)"
+            matchingFallbacks = ['release']
+        }
+    }
+}
+// @generated end android-build-variants

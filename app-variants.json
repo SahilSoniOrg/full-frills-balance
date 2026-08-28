@@ -1,0 +1,17 @@
+{
+  "development": {
+    "name": "Full Frills Balance (Dev)",
+    "androidApplicationId": "in.sahilsoni.fullfrillsbalance.dev",
+    "iosBundleIdentifier": "in.sahilsoni.fullfrillsbalance.dev"
+  },
+  "preview": {
+    "name": "Full Frills Balance (Preview)",
+    "androidApplicationId": "in.sahilsoni.fullfrillsbalance.preview",
+    "iosBundleIdentifier": "in.sahilsoni.fullfrillsbalance.preview"
+  },
+  "production": {
+    "name": "Full Frills Balance",
+    "androidApplicationId": "in.sahilsoni.fullfrillsbalance",
+    "iosBundleIdentifier": "in.sahilsoni.fullfrillsbalance"
+  }
+}
