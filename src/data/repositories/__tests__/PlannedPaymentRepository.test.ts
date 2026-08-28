@@ -113,5 +113,37 @@ describe('PlannedPaymentRepository', () => {
       expect(toOnly.fromAccountId).toBe('other');
       expect(toOnly.toAccountId).toBe(targetAccountId);
     });
+
+    it('uses target payments for collision detection without preparing updates for them', () => {
+      const repository = new PlannedPaymentRepository();
+      const sourceAccountId = 'source' as AccountId;
+      const targetAccountId = 'target' as AccountId;
+      const payment = (id: string, accountId: AccountId) =>
+        ({
+          id,
+          name: 'Rent',
+          amount: 100,
+          currencyCode: 'USD',
+          fromAccountId: accountId,
+          toAccountId: accountId,
+          intervalN: 1,
+          intervalType: 'MONTHLY',
+          startDate: 1,
+          nextOccurrence: 2,
+          isAutoPost: true,
+          prepareUpdate: jest.fn().mockReturnValue({ id }),
+        }) as unknown as PlannedPayment;
+      const source = payment('source-payment', sourceAccountId);
+      const target = payment('target-payment', targetAccountId);
+
+      repository.prepareLoadedMergeOperations(
+        { sourceFrom: [source], sourceTo: [source], targetFrom: [target], targetTo: [target] },
+        [sourceAccountId],
+        targetAccountId,
+      );
+
+      expect(source.prepareUpdate).toHaveBeenCalledTimes(1);
+      expect(target.prepareUpdate).not.toHaveBeenCalled();
+    });
   });
 });

@@ -17,7 +17,46 @@ export type AccountMergeShape = {
   accountType: AccountType;
   accountSubtype?: AccountSubtype;
   currencyCode: string;
+  parentAccountId?: AccountId | null;
+  archivedAt?: Date | null;
 };
+
+export function assertMergeDoesNotCreateHierarchyCycle(
+  targetAccountId: AccountId,
+  sourceAccountIds: AccountId[],
+  accounts: Pick<AccountMergeShape, 'id' | 'parentAccountId'>[],
+): void {
+  const parentById = new Map(
+    accounts.map(account => [account.id, account.parentAccountId || null]),
+  );
+  for (const sourceAccountId of sourceAccountIds) {
+    let current = parentById.get(targetAccountId) || null;
+    while (current) {
+      if (current === sourceAccountId) {
+        throw new Error('Cannot merge an account into one of its descendants');
+      }
+      current = parentById.get(current) || null;
+    }
+  }
+}
+
+export function assertMergeAccountsHaveSameHierarchyRole(
+  targetAccountId: AccountId,
+  sourceAccountIds: AccountId[],
+  accounts: Pick<AccountMergeShape, 'id' | 'parentAccountId'>[],
+): void {
+  const parentIds = new Set(
+    accounts
+      .map(account => account.parentAccountId)
+      .filter((parentId): parentId is AccountId => Boolean(parentId)),
+  );
+  const targetIsParent = parentIds.has(targetAccountId);
+  for (const sourceAccountId of sourceAccountIds) {
+    if (parentIds.has(sourceAccountId) !== targetIsParent) {
+      throw new Error('Parent accounts can only be merged with other parent accounts');
+    }
+  }
+}
 
 export function resolveAccountSubtype(
   accountType: AccountType,
@@ -92,12 +131,14 @@ export function assertMergeAccountsCompatible(
 ): void {
   if (!target) throw new Error('Target account not found or deleted');
   if (target.workplaceId !== workplaceId) throw new Error('Target account workplace mismatch');
+  if (target.archivedAt) throw new Error('Archived accounts cannot be merged');
 
   if (sources.length !== requestedSourceCount) {
     throw new Error('One or more source accounts not found or deleted');
   }
 
   for (const source of sources) {
+    if (source.archivedAt) throw new Error('Archived accounts cannot be merged');
     if (source.id === targetAccountId) {
       throw new Error('Cannot merge an account into itself');
     }

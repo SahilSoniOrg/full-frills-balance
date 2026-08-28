@@ -4,6 +4,14 @@ import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 
+export type AccountMergeRecords = {
+  metadataToRetarget: AccountMetadata[];
+  sourceMetadata: AccountMetadata[];
+  sourceChildren: Account[];
+  targetChildren: Account[];
+  sourceAccounts: Account[];
+};
+
 /** Account merge read + prepareUpdate batching (metadata, sub-accounts, soft-delete sources). */
 export class AccountMergeOperations {
   private get accounts() {
@@ -19,82 +27,90 @@ export class AccountMergeOperations {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<(Account | AccountMetadata)[]> {
-    const metaToUpdate = await this.metadata
-      .query(
-        Q.where('pay_from_account_id', Q.oneOf(sourceAccountIds)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
+    const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
+    return this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId);
+  }
 
-    const sourceMetadata = await this.metadata
-      .query(Q.where('account_id', Q.oneOf(sourceAccountIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
+  async loadMergeRecords(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<AccountMergeRecords> {
+    const [metadataToRetarget, sourceMetadata, sourceChildren, targetChildren, sourceAccounts] =
+      await Promise.all([
+        this.metadata
+          .query(
+            Q.where('pay_from_account_id', Q.oneOf(sourceAccountIds)),
+            Q.where('workplace_id', workplaceId),
+          )
+          .fetch(),
+        this.metadata
+          .query(
+            Q.where('account_id', Q.oneOf(sourceAccountIds)),
+            Q.where('workplace_id', workplaceId),
+          )
+          .fetch(),
+        this.accounts
+          .query(
+            Q.where('parent_account_id', Q.oneOf(sourceAccountIds)),
+            Q.where('workplace_id', workplaceId),
+            Q.where('deleted_at', Q.eq(null)),
+          )
+          .fetch(),
+        this.accounts
+          .query(
+            Q.where('parent_account_id', targetAccountId),
+            Q.where('workplace_id', workplaceId),
+            Q.where('deleted_at', Q.eq(null)),
+          )
+          .fetch(),
+        this.accounts
+          .query(Q.where('id', Q.oneOf(sourceAccountIds)), Q.where('workplace_id', workplaceId))
+          .fetch(),
+      ]);
+    return { metadataToRetarget, sourceMetadata, sourceChildren, targetChildren, sourceAccounts };
+  }
 
-    const subAccounts = await this.accounts
-      .query(
-        Q.where('parent_account_id', Q.oneOf(sourceAccountIds)),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-
-    const sourceAccounts = await this.accounts
-      .query(Q.where('id', Q.oneOf(sourceAccountIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    const accountMutations = new Map<
-      string,
-      { parentId?: AccountId; deleted?: boolean; record: Account }
-    >();
-    const metadataMutations = new Map<string, { payFromId?: AccountId; record: AccountMetadata }>();
-
-    metaToUpdate.forEach((m: AccountMetadata) => {
-      if (!metadataMutations.has(m.id)) {
-        metadataMutations.set(m.id, { record: m });
-      }
-      metadataMutations.get(m.id)!.payFromId = targetAccountId;
-    });
-
-    subAccounts.forEach((sa: Account) => {
-      if (!accountMutations.has(sa.id)) {
-        accountMutations.set(sa.id, { record: sa });
-      }
-      accountMutations.get(sa.id)!.parentId = targetAccountId;
-    });
-
-    sourceAccounts.forEach((s: Account) => {
-      if (!accountMutations.has(s.id)) {
-        accountMutations.set(s.id, { record: s });
-      }
-      accountMutations.get(s.id)!.deleted = true;
-    });
-
-    sourceMetadata.forEach((m: AccountMetadata) => {
-      if (!metadataMutations.has(m.id)) {
-        metadataMutations.set(m.id, { record: m });
-      }
-    });
-
+  prepareLoadedMergeOperations(
+    records: AccountMergeRecords,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): (Account | AccountMetadata)[] {
+    const sourceIds = new Set<string>(sourceAccountIds);
+    const movedChildren = records.sourceChildren
+      .filter(child => !sourceIds.has(child.id))
+      .sort((a, b) => (a.orderNum ?? 0) - (b.orderNum ?? 0) || a.id.localeCompare(b.id));
+    const nextOrder =
+      records.targetChildren.reduce((max, child) => Math.max(max, child.orderNum ?? -1), -1) + 1;
     const ops: (Account | AccountMetadata)[] = [];
-
-    accountMutations.forEach(({ record, parentId, deleted }) => {
+    movedChildren.forEach((record, index) => {
       ops.push(
-        record.prepareUpdate((r: Account) => {
-          if (parentId) r.parentAccountId = parentId;
-          if (deleted) r.deletedAt = new Date();
-          r.updatedAt = new Date();
+        record.prepareUpdate(updated => {
+          updated.parentAccountId = targetAccountId;
+          updated.orderNum = nextOrder + index;
+          updated.updatedAt = new Date();
         }),
       );
     });
-
-    metadataMutations.forEach(({ record, payFromId }) => {
+    records.sourceAccounts.forEach(record => {
       ops.push(
-        record.prepareUpdate((r: AccountMetadata) => {
-          if (payFromId) r.payFromAccountId = payFromId;
-          r.updatedAt = new Date();
+        record.prepareUpdate(updated => {
+          updated.deletedAt = new Date();
+          updated.updatedAt = new Date();
         }),
       );
     });
+    records.metadataToRetarget
+      .filter(record => !sourceIds.has(record.accountId))
+      .forEach(record => {
+        ops.push(
+          record.prepareUpdate(updated => {
+            updated.payFromAccountId = targetAccountId;
+            updated.updatedAt = new Date();
+          }),
+        );
+      });
+    ops.push(...records.sourceMetadata.map(record => record.prepareDestroyPermanently()));
 
     return ops;
   }

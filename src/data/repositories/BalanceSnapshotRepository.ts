@@ -267,9 +267,17 @@ export class BalanceSnapshotRepository {
     workplaceId: WorkplaceId,
     accountIds: AccountId[],
   ): Promise<BalanceSnapshot[]> {
-    const snapshots = await this.snapshots
+    const snapshots = await this.loadMergeRecords(workplaceId, accountIds);
+    return this.prepareLoadedMergeOperations(snapshots);
+  }
+
+  loadMergeRecords(workplaceId: WorkplaceId, accountIds: AccountId[]) {
+    return this.snapshots
       .query(Q.where('workplace_id', workplaceId), Q.where('account_id', Q.oneOf(accountIds)))
       .fetch();
+  }
+
+  prepareLoadedMergeOperations(snapshots: BalanceSnapshot[]): BalanceSnapshot[] {
     return snapshots.map(s => s.prepareDestroyPermanently());
   }
 }

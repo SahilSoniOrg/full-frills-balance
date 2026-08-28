@@ -451,3 +451,31 @@ export async function deleteBlockers(
 
   return blockers;
 }
+
+/**
+ * Post-merge invariant: a soft-deleted source account must have no live
+ * references in any account-owned site. Rebuildable balance snapshots are
+ * intentionally excluded because they are not delete blockers.
+ */
+export async function assertNoLiveAccountReferences(
+  workplaceId: WorkplaceId,
+  accountIds: AccountId[],
+): Promise<void> {
+  const violations = await Promise.all(
+    [...new Set(accountIds)].map(async accountId => ({
+      accountId,
+      blockers: await deleteBlockers(workplaceId, accountId),
+    })),
+  );
+
+  const remaining = violations.filter(({ blockers }) => blockers.length > 0);
+  if (remaining.length === 0) return;
+
+  const details = remaining
+    .map(
+      ({ accountId, blockers }) =>
+        `${accountId}: ${blockers.map(blocker => blocker.code).join(', ')}`,
+    )
+    .join('; ');
+  throw new Error(`Account merge left live references to source account(s): ${details}`);
+}

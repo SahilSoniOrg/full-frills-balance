@@ -3,19 +3,22 @@ import { AuditAction, AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionWriteRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
 import {
   AccountReferenceSiteKey,
+  assertNoLiveAccountReferences,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
 import {
   assertMergeAccountsCompatible,
+  assertMergeAccountsHaveSameHierarchyRole,
+  assertMergeDoesNotCreateHierarchyCycle,
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -23,9 +26,9 @@ import { logger } from '@/src/utils/logger';
 import { Model } from '@nozbe/watermelondb';
 
 /**
- * Merge rewrite/destroy preparers keyed by Account reference site.
- * Multiple sites may share one preparer; iteration of `referenceSites` decides
- * which run — rewrite ops stay here, not in the graph.
+ * Merge rewrite/destroy paths keyed by Account reference site.
+ * Multiple sites may share one path; iteration of `referenceSites` decides
+ * which paths are required.
  */
 type MergePrepareKind =
   'transactions' | 'plannedPayments' | 'smsRules' | 'budgets' | 'accounts' | 'snapshots';
@@ -82,8 +85,9 @@ async function validateMergeEligibility(
  * Merge command: moves transactions, planned payments, rules, budgets, and
  * snapshots from source accounts into a target account atomically, then queues
  * a rebuild. Owns merge eligibility and dependent-record migration policy.
- * Sites to retarget/destroy come from `referenceSites`; preparation is delegated
- * to the owning repositories.
+ * Sites to retarget/destroy come from `referenceSites`. The command loads all
+ * records before preparing one database batch so failed preparation cannot
+ * leave a partially-mutated merge.
  */
 export async function mergeAccounts(
   workplaceId: WorkplaceId,
@@ -102,101 +106,132 @@ export async function mergeAccounts(
     return;
   }
 
-  const [targetAccount, sourceAccounts] = await Promise.all([
-    accountQueryRepository.find(workplaceId, targetAccountId),
-    accountQueryRepository.findAllByIds(workplaceId, filteredSourceIds),
-  ]);
-
-  await validateMergeEligibility(
-    workplaceId,
-    targetAccountId,
-    filteredSourceIds,
-    targetAccount,
-    sourceAccounts,
-  );
-
   const prepareKinds = mergePrepareKindsFromSites();
-
-  const prepareTasks: Promise<Model[]>[] = [];
-
-  if (prepareKinds.has('transactions')) {
-    prepareTasks.push(
-      transactionWriteRepository.prepareMergeOperations(
-        workplaceId,
-        filteredSourceIds,
-        targetAccountId,
-      ) as Promise<Model[]>,
-    );
-  }
-  if (prepareKinds.has('plannedPayments')) {
-    prepareTasks.push(
-      plannedPaymentRepository.prepareMergeOperations(
-        workplaceId,
-        filteredSourceIds,
-        targetAccountId,
-      ) as Promise<Model[]>,
-    );
-  }
-  if (prepareKinds.has('smsRules')) {
-    prepareTasks.push(
-      transactionAutoPostRuleRepository.prepareMergeOperations(
-        workplaceId,
-        filteredSourceIds,
-        targetAccountId,
-      ) as Promise<Model[]>,
-    );
-  }
-  if (prepareKinds.has('budgets')) {
-    prepareTasks.push(
-      budgetRepository.prepareMergeOperations(
-        workplaceId,
-        filteredSourceIds,
-        targetAccountId,
-      ) as Promise<Model[]>,
-    );
-  }
-  if (prepareKinds.has('accounts')) {
-    prepareTasks.push(
-      accountWriteRepository.prepareMergeOperations(
-        workplaceId,
-        filteredSourceIds,
-        targetAccountId,
-      ) as Promise<Model[]>,
-    );
-  }
-  if (prepareKinds.has('snapshots')) {
-    prepareTasks.push(
-      balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
-        ...filteredSourceIds,
-        targetAccountId,
-      ]) as Promise<Model[]>,
-    );
-  }
-
-  const opGroups = await Promise.all(prepareTasks);
-  const auditOp = auditRepository.prepareLog(
-    {
-      entityType: 'account',
-      entityId: targetAccountId,
-      action: AuditAction.UPDATE,
-      changes: {
-        action: 'MERGE_ACCOUNTS',
-        mergedAccountIds: filteredSourceIds,
-      },
-    },
-    workplaceId,
-  );
+  let targetAccountType: AccountType = AccountType.ASSET;
 
   await persistBatch(
-    () => [...opGroups.flat(), auditOp],
-    () => {
-      rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
+    async () => {
+      const [currentTarget, sourceAccounts] = await Promise.all([
+        accountQueryRepository.find(workplaceId, targetAccountId),
+        accountQueryRepository.findAllByIds(workplaceId, filteredSourceIds),
+      ]);
+      targetAccountType = currentTarget?.accountType ?? AccountType.ASSET;
+      const allAccounts = await accountQueryRepository.findAll(workplaceId);
+      await validateMergeEligibility(
+        workplaceId,
+        targetAccountId,
+        filteredSourceIds,
+        currentTarget,
+        sourceAccounts,
+      );
+      assertMergeAccountsHaveSameHierarchyRole(targetAccountId, filteredSourceIds, allAccounts);
+      assertMergeDoesNotCreateHierarchyCycle(targetAccountId, filteredSourceIds, allAccounts);
+      const [transactions, plannedPayments, smsRules, budgets, accounts, snapshots] =
+        await Promise.all([
+          prepareKinds.has('transactions')
+            ? transactionWriteRepository.loadMergeRecords(workplaceId, filteredSourceIds)
+            : Promise.resolve(null),
+          prepareKinds.has('plannedPayments')
+            ? plannedPaymentRepository.loadMergeRecords(
+                workplaceId,
+                filteredSourceIds,
+                targetAccountId,
+              )
+            : Promise.resolve(null),
+          prepareKinds.has('smsRules')
+            ? transactionAutoPostRuleRepository.loadMergeRecords(workplaceId, filteredSourceIds)
+            : Promise.resolve(null),
+          prepareKinds.has('budgets')
+            ? budgetRepository.loadMergeRecords(workplaceId, filteredSourceIds, targetAccountId)
+            : Promise.resolve(null),
+          prepareKinds.has('accounts')
+            ? accountWriteRepository.loadMergeRecords(
+                workplaceId,
+                filteredSourceIds,
+                targetAccountId,
+              )
+            : Promise.resolve(null),
+          prepareKinds.has('snapshots')
+            ? balanceSnapshotRepository.loadMergeRecords(workplaceId, [
+                ...filteredSourceIds,
+                targetAccountId,
+              ])
+            : Promise.resolve(null),
+        ]);
+
+      const opGroups: Model[][] = [];
+      if (transactions) {
+        opGroups.push(
+          transactionWriteRepository.prepareLoadedMergeOperations(transactions, targetAccountId),
+        );
+      }
+      if (plannedPayments) {
+        opGroups.push(
+          plannedPaymentRepository.prepareLoadedMergeOperations(
+            plannedPayments,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+        );
+      }
+      if (smsRules) {
+        opGroups.push(
+          transactionAutoPostRuleRepository.prepareLoadedMergeOperations(
+            smsRules,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+        );
+      }
+      if (budgets) {
+        opGroups.push(
+          budgetRepository.prepareLoadedMergeOperations(
+            budgets,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+        );
+      }
+      if (accounts) {
+        opGroups.push(
+          accountWriteRepository.prepareLoadedMergeOperations(
+            accounts,
+            filteredSourceIds,
+            targetAccountId,
+          ),
+        );
+      }
+      if (snapshots) {
+        opGroups.push(balanceSnapshotRepository.prepareLoadedMergeOperations(snapshots));
+      }
+
+      const auditOp = auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: targetAccountId,
+          action: AuditAction.UPDATE,
+          changes: { action: 'MERGE_ACCOUNTS', mergedAccountIds: filteredSourceIds },
+        },
+        workplaceId,
+      );
+      return [...opGroups.flat(), auditOp];
     },
+    () => rebuildQueueService.enqueue(targetAccountId, 0, workplaceId),
   );
+
+  try {
+    await assertNoLiveAccountReferences(workplaceId, filteredSourceIds);
+  } catch (error) {
+    logger.error('[AccountMergeCommand] Post-merge reference invariant failed', error, {
+      workplaceId,
+      targetAccountId,
+      sourceAccountIds: filteredSourceIds,
+    });
+  }
 
   analytics.trackFeatureUsage('account', 'merge', {
     source_count: filteredSourceIds.length,
-    account_type: targetAccount?.accountType || AccountType.ASSET,
+    account_type: targetAccountType,
   });
 
   logger.info('[AccountMergeCommand] mergeAccounts completed successfully', {

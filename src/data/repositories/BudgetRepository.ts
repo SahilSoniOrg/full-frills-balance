@@ -19,6 +19,11 @@ export interface BudgetInput {
   assetAccountIds?: AccountId[];
 }
 
+export type BudgetMergeRecords = {
+  scopes: BudgetScope[];
+  budgets: Budget[];
+};
+
 export class BudgetRepository {
   private get db() {
     return database;
@@ -210,12 +215,16 @@ export class BudgetRepository {
     workplaceId: WorkplaceId,
     accountId: AccountId,
   ): Promise<Budget[]> {
-    return this.budgets
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('asset_account_ids', Q.like(`%${accountId}%`)),
-      )
+    const candidates = await this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('asset_account_ids', Q.notEq(null)))
       .fetch();
+    return candidates.filter(budget =>
+      budget.assetAccountIds
+        ?.split(',')
+        .map(id => id.trim())
+        .filter(Boolean)
+        .includes(accountId),
+    );
   }
 
   /**
@@ -227,17 +236,53 @@ export class BudgetRepository {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<(Budget | BudgetScope)[]> {
-    const scopes = await this.findAllScopesByAccountIds(workplaceId, sourceAccountIds);
-    const budgets = await this.findAllWithAssetAccountIds(workplaceId);
+    const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
+    return this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId);
+  }
 
-    const scopeOps = scopes.map(scope =>
-      scope.prepareUpdate(record => {
-        record.accountId = targetAccountId;
-        record.updatedAt = new Date();
-      }),
-    );
+  async loadMergeRecords(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<BudgetMergeRecords> {
+    const [scopes, budgets] = await Promise.all([
+      this.findAllScopesByAccountIds(workplaceId, [...sourceAccountIds, targetAccountId]),
+      this.findAllWithAssetAccountIds(workplaceId),
+    ]);
+    return { scopes, budgets };
+  }
 
+  prepareLoadedMergeOperations(
+    { scopes, budgets }: BudgetMergeRecords,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): (Budget | BudgetScope)[] {
     const sourceIds = new Set(sourceAccountIds);
+    const scopesByBudget = new Map<string, BudgetScope[]>();
+
+    for (const scope of scopes) {
+      const budgetScopes = scopesByBudget.get(scope.budget.id) ?? [];
+      budgetScopes.push(scope);
+      scopesByBudget.set(scope.budget.id, budgetScopes);
+    }
+
+    const scopeOps: BudgetScope[] = [];
+    for (const budgetScopes of scopesByBudget.values()) {
+      const targetScope = budgetScopes.find(scope => scope.accountId === targetAccountId);
+      const sourceScopes = budgetScopes.filter(scope => sourceIds.has(scope.accountId));
+      if (targetScope) {
+        scopeOps.push(...sourceScopes.map(scope => scope.prepareDestroyPermanently()));
+      } else if (sourceScopes.length > 0) {
+        scopeOps.push(
+          sourceScopes[0].prepareUpdate(record => {
+            record.accountId = targetAccountId;
+            record.updatedAt = new Date();
+          }),
+          ...sourceScopes.slice(1).map(scope => scope.prepareDestroyPermanently()),
+        );
+      }
+    }
+
     const budgetOps: Budget[] = [];
     for (const budget of budgets) {
       if (!budget.assetAccountIds) continue;

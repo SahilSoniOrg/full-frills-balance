@@ -5,6 +5,7 @@ import { transactionAutoPostRuleRepository } from '@/src/data/repositories/Trans
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   assertWritable,
+  assertNoLiveAccountReferences,
   deleteBlockers,
   formatFundingAccountIds,
   importPlan,
@@ -217,6 +218,42 @@ describe('Account reference graph', () => {
       expect(referenceSites().find(s => s.key === 'balanceSnapshot.accountId')?.deletePolicy).toBe(
         'allow',
       );
+    });
+  });
+
+  describe('assertNoLiveAccountReferences', () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (accountQueryRepository.queryByParentId as jest.Mock).mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      });
+      (budgetRepository.findAllScopesByAccountIds as jest.Mock).mockResolvedValue([]);
+      (budgetRepository.findAllReferencingAssetAccountId as jest.Mock).mockResolvedValue([]);
+      (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([]);
+      (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([]);
+      (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
+      (
+        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
+      ).mockResolvedValue([]);
+      (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
+    });
+
+    it('resolves when no live references remain', async () => {
+      await expect(
+        assertNoLiveAccountReferences(workplaceId, ['source-1'] as AccountId[]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails with the remaining reference site when a source is still referenced', async () => {
+      (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'tx-1' },
+      ]);
+
+      await expect(
+        assertNoLiveAccountReferences(workplaceId, ['source-1'] as AccountId[]),
+      ).rejects.toThrow('source-1: transactions');
     });
   });
 

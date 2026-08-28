@@ -1,9 +1,11 @@
 import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import {
   assertNotSelfParent,
   assertParentMatchesChildType,
+  assertMergeAccountsCompatible,
+  assertMergeAccountsHaveSameHierarchyRole,
   dedupeMergeSourceAccountIds,
   isBalanceAdjustmentNeeded,
   journalLegTypesForSignedAmount,
@@ -69,6 +71,72 @@ describe('accountRules', () => {
         'a',
         'b',
       ]);
+    });
+
+    it('rejects accounts with different currencies', () => {
+      const target = {
+        id: 'target',
+        name: 'USD account',
+        workplaceId: 'wp-1' as WorkplaceId,
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+      };
+      const source = {
+        id: 'source',
+        name: 'EUR account',
+        workplaceId: 'wp-1' as WorkplaceId,
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'EUR',
+      };
+
+      expect(() =>
+        assertMergeAccountsCompatible(
+          'wp-1' as WorkplaceId,
+          'target' as AccountId,
+          target,
+          [source],
+          1,
+        ),
+      ).toThrow('different currencies');
+    });
+
+    it('rejects merging a parent with a leaf', () => {
+      expect(() =>
+        assertMergeAccountsHaveSameHierarchyRole('target' as AccountId, ['source'] as AccountId[], [
+          { id: 'target', parentAccountId: null },
+          { id: 'target-child', parentAccountId: 'target' as AccountId },
+          { id: 'source', parentAccountId: null },
+        ]),
+      ).toThrow('Parent accounts can only be merged with other parent accounts');
+    });
+
+    it('allows merging two parents', () => {
+      expect(() =>
+        assertMergeAccountsHaveSameHierarchyRole('target' as AccountId, ['source'] as AccountId[], [
+          { id: 'target', parentAccountId: null },
+          { id: 'target-child', parentAccountId: 'target' as AccountId },
+          { id: 'source', parentAccountId: null },
+          { id: 'source-child', parentAccountId: 'source' as AccountId },
+        ]),
+      ).not.toThrow();
+    });
+
+    it('rejects archived accounts', () => {
+      const target = {
+        id: 'target' as AccountId,
+        name: 'Archived',
+        workplaceId: 'wp-1' as WorkplaceId,
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+        archivedAt: new Date(),
+      };
+
+      expect(() =>
+        assertMergeAccountsCompatible('wp-1' as WorkplaceId, target.id, target, [], 0),
+      ).toThrow('Archived accounts cannot be merged');
     });
   });
 });

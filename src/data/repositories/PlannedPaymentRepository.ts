@@ -23,6 +23,13 @@ export interface PlannedPaymentPersistenceInput {
   recurrenceMonth?: number;
 }
 
+export type PlannedPaymentMergeRecords = {
+  sourceFrom: PlannedPayment[];
+  sourceTo: PlannedPayment[];
+  targetFrom: PlannedPayment[];
+  targetTo: PlannedPayment[];
+};
+
 export class PlannedPaymentRepository {
   private get db() {
     return database;
@@ -189,32 +196,80 @@ export class PlannedPaymentRepository {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<PlannedPayment[]> {
-    const plannedFrom = await this.findAllByFromAccountIds(workplaceId, sourceAccountIds);
-    const plannedTo = await this.findAllByToAccountIds(workplaceId, sourceAccountIds);
+    const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
+    return this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId);
+  }
 
-    const mutations = new Map<
-      string,
-      { from?: AccountId; to?: AccountId; record: PlannedPayment }
-    >();
+  async loadMergeRecords(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<PlannedPaymentMergeRecords> {
+    const [sourceFrom, sourceTo, targetFrom, targetTo] = await Promise.all([
+      this.findAllByFromAccountIds(workplaceId, sourceAccountIds),
+      this.findAllByToAccountIds(workplaceId, sourceAccountIds),
+      this.findAllByFromAccountIds(workplaceId, [targetAccountId]),
+      this.findAllByToAccountIds(workplaceId, [targetAccountId]),
+    ]);
+    return { sourceFrom, sourceTo, targetFrom, targetTo };
+  }
 
-    plannedFrom.forEach(record => {
-      if (!mutations.has(record.id)) {
-        mutations.set(record.id, { record });
+  prepareLoadedMergeOperations(
+    records: PlannedPaymentMergeRecords,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): PlannedPayment[] {
+    const sourceIds = new Set(sourceAccountIds);
+
+    const sourceRecords = new Map(
+      [...records.sourceFrom, ...records.sourceTo].map(record => [record.id, record]),
+    );
+    const collisionCandidates = new Map(
+      [...sourceRecords.values(), ...records.targetFrom, ...records.targetTo].map(record => [
+        record.id,
+        record,
+      ]),
+    );
+    const collisionGroups = new Map<string, PlannedPayment[]>();
+
+    for (const record of collisionCandidates.values()) {
+      const key = JSON.stringify([
+        record.name,
+        record.description,
+        record.amount,
+        record.currencyCode,
+        sourceIds.has(record.fromAccountId) ? targetAccountId : record.fromAccountId,
+        sourceIds.has(record.toAccountId) ? targetAccountId : record.toAccountId,
+        record.intervalN,
+        record.intervalType,
+        record.startDate,
+        record.endDate,
+        record.nextOccurrence,
+        record.isAutoPost,
+        record.recurrenceDay,
+        record.recurrenceMonth,
+      ]);
+      const group = collisionGroups.get(key) ?? [];
+      group.push(record);
+      collisionGroups.set(key, group);
+    }
+
+    const pausedSourceIds = new Set<string>();
+    for (const group of collisionGroups.values()) {
+      if (group.length < 2) continue;
+      const winner = group.find(record => !sourceRecords.has(record.id)) ?? group[0];
+      for (const record of group) {
+        if (record.id !== winner.id && sourceRecords.has(record.id)) {
+          pausedSourceIds.add(record.id);
+        }
       }
-      mutations.get(record.id)!.from = targetAccountId;
-    });
+    }
 
-    plannedTo.forEach(record => {
-      if (!mutations.has(record.id)) {
-        mutations.set(record.id, { record });
-      }
-      mutations.get(record.id)!.to = targetAccountId;
-    });
-
-    return Array.from(mutations.values()).map(({ record, from, to }) =>
+    return [...sourceRecords.values()].map(record =>
       record.prepareUpdate(updated => {
-        if (from) updated.fromAccountId = from;
-        if (to) updated.toAccountId = to;
+        if (sourceIds.has(updated.fromAccountId)) updated.fromAccountId = targetAccountId;
+        if (sourceIds.has(updated.toAccountId)) updated.toAccountId = targetAccountId;
+        if (pausedSourceIds.has(record.id)) updated.status = PlannedPaymentStatus.PAUSED;
         updated.updatedAt = new Date();
       }),
     );

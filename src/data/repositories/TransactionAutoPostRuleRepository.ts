@@ -144,8 +144,20 @@ export class TransactionAutoPostRuleRepository {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<TransactionAutoPostRule[]> {
+    const rules = await this.loadMergeRecords(workplaceId, sourceAccountIds);
+    return this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId);
+  }
+
+  loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
+    return this.findAllReferencingAccountIds(workplaceId, sourceAccountIds);
+  }
+
+  prepareLoadedMergeOperations(
+    rules: TransactionAutoPostRule[],
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): TransactionAutoPostRule[] {
     const sourceIds = new Set(sourceAccountIds);
-    const rules = await this.findAllReferencingAccountIds(workplaceId, sourceAccountIds);
 
     return rules.map(record => {
       const source = sourceIds.has(record.sourceAccountId) ? targetAccountId : undefined;
@@ -157,7 +169,6 @@ export class TransactionAutoPostRuleRepository {
           sourceAccountId: source ?? r.sourceAccountId,
           categoryAccountId: category ?? r.categoryAccountId,
         });
-        r.updatedAt = new Date();
       });
     });
   }

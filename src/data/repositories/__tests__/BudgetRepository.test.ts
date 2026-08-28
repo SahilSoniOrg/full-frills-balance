@@ -155,6 +155,39 @@ describe('BudgetRepository', () => {
       const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(updated?.assetAccountIds).toBe('');
     });
+
+    it('finds exact funding-account references without substring collisions', async () => {
+      await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Source budget',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          assetAccountIds: ['acc-1' as AccountId],
+        },
+        [],
+      );
+      await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Prefix collision budget',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          assetAccountIds: ['acc-10' as AccountId],
+        },
+        [],
+      );
+
+      const matches = await budgetRepository.findAllReferencingAssetAccountId(
+        'wp-1' as WorkplaceId,
+        'acc-1' as AccountId,
+      );
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].name).toBe('Source budget');
+    });
   });
 
   describe('prepareMergeOperations', () => {

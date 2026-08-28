@@ -125,11 +125,18 @@ export class TransactionWriteRepository {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<Transaction[]> {
-    const transactions = await transactionQueryRepository.findAllByAccountIds(
-      workplaceId,
-      sourceAccountIds,
-    );
+    const transactions = await this.loadMergeRecords(workplaceId, sourceAccountIds);
+    return this.prepareLoadedMergeOperations(transactions, targetAccountId);
+  }
 
+  loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
+    return transactionQueryRepository.findAllByAccountIds(workplaceId, sourceAccountIds);
+  }
+
+  prepareLoadedMergeOperations(
+    transactions: Transaction[],
+    targetAccountId: AccountId,
+  ): Transaction[] {
     return transactions.map(transaction =>
       transaction.prepareUpdate(record => {
         record.accountId = targetAccountId;

@@ -373,6 +373,26 @@ export class AccountWriteRepository {
       targetAccountId,
     );
   }
+
+  loadMergeRecords(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ) {
+    return accountMergeOperations.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
+  }
+
+  prepareLoadedMergeOperations(
+    records: Parameters<typeof accountMergeOperations.prepareLoadedMergeOperations>[0],
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ) {
+    return accountMergeOperations.prepareLoadedMergeOperations(
+      records,
+      sourceAccountIds,
+      targetAccountId,
+    );
+  }
 }
 
 export const accountWriteRepository = new AccountWriteRepository();
