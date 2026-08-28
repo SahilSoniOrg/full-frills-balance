@@ -1,6 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { FlashList } from '@shopify/flash-list';
-import { Platform, ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
+import {
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  TouchableOpacity,
+} from 'react-native';
 import { AppButton, AppText, AppIcon } from '@/src/components/core';
 import {
   AppConfig,
@@ -73,6 +81,21 @@ export const BulkEntryGrid = React.memo(
       setActivePicker(null);
     }, []);
 
+    const handleAddRow = useCallback(() => {
+      Keyboard.dismiss();
+      const focused = TextInput.State.currentlyFocusedInput();
+      if (focused) {
+        TextInput.State.blurTextInput(focused);
+      }
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement) {
+          active.blur();
+        }
+      }
+      addRow();
+    }, [addRow]);
+
     const handleDateSelect = useCallback(
       (dateStr: string, timeStr: string) => {
         if (!activePicker || activePicker.type !== 'date') return;
@@ -117,18 +140,9 @@ export const BulkEntryGrid = React.memo(
           onRemove={removeRow}
           onDatePickerRequest={handleDatePickerRequest}
           onAccountPickerRequest={handleAccountPickerRequest}
-          autoFocus={index === rows.length - 1 && !allEmpty}
         />
       ),
-      [
-        accounts,
-        allEmpty,
-        handleAccountPickerRequest,
-        handleDatePickerRequest,
-        removeRow,
-        rows.length,
-        updateRowField,
-      ],
+      [accounts, handleAccountPickerRequest, handleDatePickerRequest, removeRow, updateRowField],
     );
 
     const listHeader = (
@@ -166,7 +180,12 @@ export const BulkEntryGrid = React.memo(
     );
 
     const listFooter = (
-      <AppButton variant="outline" onPress={addRow} disabled={isAtMaxRows} style={styles.addButton}>
+      <AppButton
+        variant="outline"
+        onPress={handleAddRow}
+        disabled={isAtMaxRows}
+        style={styles.addButton}
+      >
         + Add Entry Row
       </AppButton>
     );

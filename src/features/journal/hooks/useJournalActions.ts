@@ -22,6 +22,7 @@ type PostPostingPlanParams = {
 type BulkJournalEntry = {
   lines: JournalEntryLine[];
   description: string;
+  notes?: string;
   journalDate: number;
   workplaceId: WorkplaceId;
 };

@@ -45,6 +45,7 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows).toHaveLength(1);
     const firstRow = result.current.rows[0];
     expect(firstRow.description).toBe('');
+    expect(firstRow.notes).toBe('');
     expect(firstRow.amount).toBe('');
     expect(firstRow.sourceId).toBe('');
     expect(firstRow.destinationId).toBe('');
@@ -63,6 +64,7 @@ describe('useBulkJournalEditor', () => {
 
     act(() => {
       result.current.updateRowField(result.current.rows[0].id, 'description', 'Lunch');
+      result.current.updateRowField(result.current.rows[0].id, 'notes', 'Office cafeteria');
       result.current.updateRowField(result.current.rows[0].id, 'amount', '15.50');
       result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc1');
       result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc2');
@@ -75,6 +77,7 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows).toHaveLength(2);
     const secondRow = result.current.rows[1];
     expect(secondRow.description).toBe('Lunch');
+    expect(secondRow.notes).toBe('Office cafeteria');
     expect(secondRow.amount).toBe('15.50');
     expect(secondRow.sourceId).toBe('acc1');
     expect(secondRow.destinationId).toBe('acc2');
@@ -240,6 +243,7 @@ describe('useBulkJournalEditor', () => {
 
     act(() => {
       result.current.updateRowField(result.current.rows[0].id, 'description', 'Salary');
+      result.current.updateRowField(result.current.rows[0].id, 'notes', 'March payroll');
       result.current.updateRowField(result.current.rows[0].id, 'amount', '500');
       result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc1');
       result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc2');
@@ -252,6 +256,14 @@ describe('useBulkJournalEditor', () => {
     });
 
     expect(journalService.saveBulkJournalEntries).toHaveBeenCalledTimes(1);
+    expect(journalService.saveBulkJournalEntries).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Salary',
+          notes: 'March payroll',
+        }),
+      ]),
+    );
     expect(onSaveSuccessMock).toHaveBeenCalledWith(1, [
       { description: 'Salary', amount: 500, currency: 'USD' },
     ]);

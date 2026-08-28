@@ -36,6 +36,7 @@ export function useBulkJournalEditor({
       return {
         id: generateRowId(),
         description: prevRow.description,
+        notes: prevRow.notes,
         amount: prevRow.amount,
         sourceId: prevRow.sourceId,
         destinationId: prevRow.destinationId,
@@ -52,6 +53,7 @@ export function useBulkJournalEditor({
     return {
       id: generateRowId(),
       description: '',
+      notes: '',
       amount: '',
       sourceId: EMPTY_ACCOUNT_ID,
       destinationId: EMPTY_ACCOUNT_ID,

@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, Keyboard, TextInput } from 'react-native';
+import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, Keyboard } from 'react-native';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -18,7 +18,6 @@ interface BulkEntryRowProps {
   onRemove: (id: string) => void;
   onDatePickerRequest: (id: string) => void;
   onAccountPickerRequest: (id: string, role: 'source' | 'destination') => void;
-  autoFocus?: boolean;
 }
 
 export const BulkEntryRow = React.memo(
@@ -30,10 +29,26 @@ export const BulkEntryRow = React.memo(
     onRemove,
     onDatePickerRequest,
     onAccountPickerRequest,
-    autoFocus,
   }: BulkEntryRowProps) => {
     const { theme } = useTheme();
-    const descriptionRef = useRef<TextInput>(null);
+    const [showNotes, setShowNotes] = useState(!!row.notes);
+    const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+      if (row.notes) {
+        notesRevealTimerRef.current = setTimeout(() => {
+          notesRevealTimerRef.current = null;
+          setShowNotes(true);
+        }, 0);
+      }
+
+      return () => {
+        if (notesRevealTimerRef.current) {
+          clearTimeout(notesRevealTimerRef.current);
+          notesRevealTimerRef.current = null;
+        }
+      };
+    }, [row.notes]);
 
     const sourceAccount = useMemo(
       () => accounts.find(a => a.id === row.sourceId),
@@ -87,7 +102,6 @@ export const BulkEntryRow = React.memo(
           </View>
           <View style={styles.descriptionWrapper}>
             <AppInput
-              ref={descriptionRef}
               value={row.description}
               onChangeText={val => onUpdateField(row.id, 'description', val)}
               placeholder="What was this for?"
@@ -95,7 +109,6 @@ export const BulkEntryRow = React.memo(
               style={styles.descriptionInput}
               containerStyle={styles.inputContainer}
               testID={`bulk-description-${row.id}`}
-              autoFocus={autoFocus}
             />
           </View>
           <TouchableOpacity
@@ -106,6 +119,55 @@ export const BulkEntryRow = React.memo(
             <AppIcon name="delete" size={Size.iconXs} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
+
+        {showNotes && (
+          <View
+            style={[
+              styles.notesBox,
+              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+            ]}
+          >
+            <AppIcon
+              name="document"
+              size={Size.iconXs}
+              color={theme.textTertiary}
+              style={styles.notesIcon}
+            />
+            <AppInput
+              value={row.notes}
+              onChangeText={val => onUpdateField(row.id, 'notes', val)}
+              placeholder="Add any extra journal details..."
+              multiline
+              variant="minimal"
+              style={[styles.notesInput, { color: theme.textSecondary }]}
+              containerStyle={styles.notesInputContainer}
+              testID={`bulk-notes-${row.id}`}
+            />
+            <TouchableOpacity
+              onPress={() => {
+                onUpdateField(row.id, 'notes', '');
+                setShowNotes(false);
+              }}
+              style={styles.notesClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <AppIcon name="x" size={14} color={theme.textTertiary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!showNotes && (
+          <TouchableOpacity
+            onPress={() => setShowNotes(true)}
+            style={styles.addNotesButton}
+            testID={`bulk-add-notes-${row.id}`}
+          >
+            <AppIcon name="plus" size={14} color={theme.primary} />
+            <AppText variant="caption" color="primary" weight="medium">
+              Add Notes
+            </AppText>
+          </TouchableOpacity>
+        )}
 
         {/* Row 2: date left | amount fills remaining, right-aligned */}
         <View style={styles.metaRow}>
@@ -276,6 +338,44 @@ const styles = StyleSheet.create({
   },
   descriptionWrapper: {
     flex: 1,
+  },
+  notesBox: {
+    borderRadius: Shape.radius.md,
+    padding: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    borderWidth: 1,
+    position: 'relative',
+  },
+  notesIcon: {
+    marginTop: 4,
+  },
+  notesInputContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
+  notesInput: {
+    flex: 1,
+    textAlignVertical: 'top',
+    fontSize: 13,
+    fontWeight: '400',
+    padding: 0,
+    margin: 0,
+    marginRight: Spacing.lg,
+  },
+  notesClose: {
+    position: 'absolute',
+    top: Spacing.xs,
+    right: Spacing.xs,
+    padding: 6,
+    zIndex: 1,
+  },
+  addNotesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    alignSelf: 'flex-end',
   },
   inputContainer: {
     minHeight: 0,

@@ -59,6 +59,12 @@ export function buildBulkJournalEntries(
       },
     ];
 
-    return { lines, description: row.description, journalDate: row.journalDate, workplaceId };
+    return {
+      lines,
+      description: row.description,
+      notes: row.notes,
+      journalDate: row.journalDate,
+      workplaceId,
+    };
   });
 }

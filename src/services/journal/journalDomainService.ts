@@ -245,6 +245,7 @@ export class JournalService {
     entries: {
       lines: JournalEntryLine[];
       description: string;
+      notes?: string;
       journalDate: number;
       workplaceId: WorkplaceId;
     }[],
@@ -292,6 +293,7 @@ export class JournalService {
         const assembled = await assembleCreateJournalData({
           lines: entry.lines,
           description: entry.description,
+          notes: entry.notes,
           journalDate: entry.journalDate,
           workplaceId,
           currencyCode,

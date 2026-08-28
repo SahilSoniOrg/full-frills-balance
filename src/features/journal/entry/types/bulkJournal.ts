@@ -4,6 +4,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 export interface BulkJournalRow {
   id: string;
   description: string;
+  notes: string;
   amount: string;
   sourceId: AccountId;
   destinationId: AccountId;
