@@ -2,8 +2,10 @@ import { useMoneyFormat } from '@/src/components/common/moneyFormat';
 import { AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
+import { useMemo } from 'react';
 import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentHistoryCardProps {
@@ -51,8 +53,12 @@ export const PlannedPaymentHistoryCard = ({
   onLongPress,
 }: PlannedPaymentHistoryCardProps) => {
   const { theme, themeMode } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat();
-  const formattedDate = formatDate(journalDate, { includeTime: true });
+  const formattedDate = useMemo(
+    () => formatDate(journalDate, { includeTime: true, hourCycle: resolvedHourCycle }),
+    [journalDate, resolvedHourCycle],
+  );
 
   // Check for deviations from the base rule configuration
   const isAmountDeviated = Math.abs(journalAmount - plannedAmount) > 0.01; // float safety

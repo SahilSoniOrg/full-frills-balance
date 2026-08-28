@@ -3,7 +3,9 @@ import { TimeView } from '@/src/components/common/CustomDateTimePicker/TimeView'
 import { AppButton, AppSegmentedControl, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatClockTime, formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -34,6 +36,7 @@ export function DateTimePickerModal({
   weekday = 1,
 }: DateTimePickerModalProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const insets = useSafeAreaInsets();
 
   const [selectedValue, setSelectedValue] = useState(() => dayjs(`${date}T${time}`));
@@ -89,7 +92,9 @@ export function DateTimePickerModal({
                 {hideDate ? 'Select Time' : 'Date & Time'}
               </AppText>
               <AppText variant="caption" color="secondary">
-                {selectedValue.format('DD MMM YYYY, HH:mm')}
+                {hideDate
+                  ? formatClockTime(selectedValue, resolvedHourCycle)
+                  : formatDateKeepingPattern(selectedValue, 'DD MMM YYYY', resolvedHourCycle)}
               </AppText>
             </View>
             <View style={{ width: Size.md + Spacing.md }} />

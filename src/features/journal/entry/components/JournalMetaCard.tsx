@@ -5,9 +5,10 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { TabType } from '@/src/types/domainJournal';
-import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
 
@@ -56,6 +57,7 @@ export function JournalMetaCard({
   onVoiceInputPress,
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotes, setShowNotes] = useState(!!notes);
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
@@ -265,7 +267,7 @@ export function JournalMetaCard({
           >
             <AppIcon name="calendar" size={Size.iconXs} color={theme.textSecondary} />
             <AppText variant="caption" color="secondary" weight="medium">
-              {dayjs(`${date}T${time}`).format('DD MMM YYYY, HH:mm')}
+              {formatDateKeepingPattern(`${date}T${time}`, 'DD MMM YYYY', resolvedHourCycle)}
             </AppText>
             <AppIcon name="chevronDown" size={12} color={theme.textTertiary} />
           </TouchableOpacity>

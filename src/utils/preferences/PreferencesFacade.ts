@@ -7,10 +7,12 @@ import { NotificationPreferences } from './domains/NotificationPreferences';
 import { PrivacyPreferences } from './domains/PrivacyPreferences';
 import { SmsPreferences } from './domains/SmsPreferences';
 import { StsPreferences } from './domains/StsPreferences';
+import { HourCyclePreferences } from './domains/HourCyclePreferences';
 import { ThemePreferences } from './domains/ThemePreferences';
 
 export type PreferencesFacade = PreferencesStore & {
   readonly themePrefs: ThemePreferences;
+  readonly hourCycle: HourCyclePreferences;
   readonly privacy: PrivacyPreferences;
   readonly ai: AiPreferences;
   readonly sms: SmsPreferences;
@@ -29,6 +31,7 @@ export function createPreferencesFacade(): PreferencesFacade {
   const store = new PreferencesStore();
   return Object.assign(store, {
     themePrefs: new ThemePreferences(store),
+    hourCycle: new HourCyclePreferences(store),
     privacy: new PrivacyPreferences(store),
     ai: new AiPreferences(store),
     sms: new SmsPreferences(store),

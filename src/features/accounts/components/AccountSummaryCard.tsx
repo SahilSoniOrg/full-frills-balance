@@ -3,6 +3,7 @@ import { AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/c
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
@@ -33,6 +34,7 @@ export function AccountSummaryCard({
   onAuditPress,
 }: AccountSummaryCardProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const { accentColor, categoryColor } = resolveAccountAppearance(
     { accountType, color: accountColor },
     theme,
@@ -84,7 +86,7 @@ export function AccountSummaryCard({
             ) : null}
             {reconciledAtMs != null ? (
               <Badge variant="success" icon="shieldCheck">
-                {formatRelativeReconciledDate(reconciledAtMs)}
+                {formatRelativeReconciledDate(reconciledAtMs, resolvedHourCycle)}
               </Badge>
             ) : null}
           </View>

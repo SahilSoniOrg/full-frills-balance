@@ -87,6 +87,7 @@ export type FeatureEventMap = {
     | 'change_theme'
     | 'change_theme_preference'
     | 'change_font'
+    | 'change_hour_cycle'
     | 'toggle_monthly_stats'
     | 'toggle_compact_account_picker'
     | 'toggle_privacy_mode'

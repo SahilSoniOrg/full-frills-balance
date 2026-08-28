@@ -82,3 +82,26 @@ _Avoid_: global position; category position
 **Subtree move**:
 A tree operation that changes an account’s parent while preserving that account’s descendants, their parent links, and their relative sibling order.
 _Avoid_: move-and-flatten; reattach children
+
+### Time display
+
+**Hour cycle**:
+Whether clock hours are presented in a 12-hour cycle or a 24-hour cycle. A display concern only; stored journal times and editor `HH:mm` values stay 24-hour. Date patterns on a screen (`DD MMM YYYY` vs `MMM D, YYYY`) are not part of hour cycle.
+_Avoid_: Time format (when meaning 12 vs 24); clock format
+
+**Hour cycle preference**:
+The user’s choice of hour cycle: system, 12-hour, or 24-hour. Default is system. App-wide. Lives under Appearance, beside theme mode. A regular-weight hint next to the Time heading shows `System(12 hour)` / `System(24 hour)` when following the OS, or `12 Hour` / `24 Hour` when overridden. Applies to every human-readable clock (UI, share copy, notification text we write), including the time picker. Canonical file fields stay 24-hour `HH:mm` / ISO.
+_Avoid_: Device-level time format; time format preference; workplace-scoped clock
+
+**System hour cycle**:
+The device OS 24-hour clock setting. If the OS does not report it, the 12-hour cycle is used. Not the locale’s typical cycle (e.g. `en-US` vs `de-DE`). Re-read when the app becomes active (cheap sync API). On iOS the OS value is frozen for the process lifetime.
+_Avoid_: Locale hour cycle (as the meaning of system)
+
+**Resolved hour cycle**:
+The 12-hour or 24-hour cycle in effect after applying Hour cycle preference to System hour cycle.
+
+**12-hour clock**:
+Hours 1–12 with English `AM` / `PM`. Midnight is 12:00 AM; noon is 12:00 PM. Labels use an unpadded hour (`2:05 PM`). The time picker is three wheels: hour 1–12, minute 00–59, AM/PM.
+
+**24-hour clock**:
+Hours 00–23. Labels are `14:05`. The time picker is two wheels: hour 00–23, minute 00–59.

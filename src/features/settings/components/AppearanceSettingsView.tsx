@@ -2,6 +2,7 @@ import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { FontSelectorView } from '@/src/features/settings/components/FontSelectorView';
+import { HourCycleSelectorView } from '@/src/features/settings/components/HourCycleSelectorView';
 import { ModeSelectorView } from '@/src/features/settings/components/ModeSelectorView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
@@ -22,6 +23,12 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
         <ModeSelectorView
           themePreference={vm.themePreference}
           setThemePreference={vm.setThemePreference}
+        />
+
+        <HourCycleSelectorView
+          hourCyclePreference={vm.hourCyclePreference}
+          resolvedHourCycle={vm.resolvedHourCycle}
+          setHourCyclePreference={vm.setHourCyclePreference}
         />
 
         <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />

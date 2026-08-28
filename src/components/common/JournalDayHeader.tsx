@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -25,6 +26,7 @@ export function JournalDayHeader({
   reconciledAt,
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
@@ -55,7 +57,7 @@ export function JournalDayHeader({
             {isCollapsed && reconciledAt && (
               <View style={styles.reconciledBadgeWrapper}>
                 <Badge variant="success" size="sm" icon="shieldCheck">
-                  {formatReconciledTime(reconciledAt)}
+                  {formatReconciledTime(reconciledAt, resolvedHourCycle)}
                 </Badge>
               </View>
             )}

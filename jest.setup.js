@@ -132,7 +132,8 @@ jest.mock('expo-device', () => ({
 }));
 jest.mock('expo-localization', () => ({
   getLocales: () => [{ languageTag: 'en-US', currencyCode: 'USD' }],
-  getCalendars: () => [{ timeZone: 'UTC' }],
+  getCalendars: () => [{ timeZone: 'UTC', uses24hourClock: false }],
+  useCalendars: () => [{ timeZone: 'UTC', uses24hourClock: false }],
 }));
 jest.mock(
   '@react-navigation/native',

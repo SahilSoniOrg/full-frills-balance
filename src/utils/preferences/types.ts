@@ -2,6 +2,7 @@ import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-token
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
 import { AppConfig } from '@/src/constants/app-config';
+import type { HourCyclePreference } from '@/src/utils/hourCycle';
 
 export interface UIPreferences {
   onboardingCompleted: boolean;
@@ -12,6 +13,7 @@ export interface UIPreferences {
     endDate: number;
   };
   theme?: 'light' | 'dark' | 'system';
+  hourCyclePreference?: HourCyclePreference;
   themeId?: ThemeId;
   fontId?: FontId;
   lastUsedSourceAccountId?: AccountId;
@@ -69,6 +71,7 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   advancedMode: false,
   themeId: ThemeIds.DEEP_SPACE,
   fontId: FontIds.DEEP_SPACE,
+  hourCyclePreference: 'system',
   archetype: undefined,
   dismissedPatternIds: [],
   anonymizedId: undefined,

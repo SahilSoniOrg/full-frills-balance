@@ -9,6 +9,7 @@ import {
   parseAuditChanges,
 } from '@/src/features/audit/auditLogTypes';
 import { formatDate } from '@/src/utils/dateUtils';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useMemo } from 'react';
 const AUDIT_ID_PREVIEW_LEN = 12;
 
@@ -18,6 +19,7 @@ interface UseAuditLogItemMetaParams {
 }
 
 export function useAuditLogItemMeta({ item, entityStatusMap }: UseAuditLogItemMetaParams) {
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const actionColor = useMemo((): ColorKey => {
     switch (item.action) {
       case AuditAction.CREATE:
@@ -50,13 +52,18 @@ export function useAuditLogItemMeta({ item, entityStatusMap }: UseAuditLogItemMe
 
   const canRevert = useMemo(() => computeCanRevert(item, entityStatusMap), [item, entityStatusMap]);
 
+  const timestampLabel = useMemo(
+    () => formatDate(item.timestamp, { includeTime: true, hourCycle: resolvedHourCycle }),
+    [item.timestamp, resolvedHourCycle],
+  );
+
   return {
     actionColor,
     actionIcon,
     parsedChanges,
     entityLabel: AppConfig.strings.audit.entityLabels[item.entityType] || item.entityType,
     entityDisplayName,
-    timestampLabel: formatDate(item.timestamp, { includeTime: true }),
+    timestampLabel,
     entityIdLabel: AppConfig.strings.audit.idLabel(
       item.entityId.substring(0, AUDIT_ID_PREVIEW_LEN),
     ),

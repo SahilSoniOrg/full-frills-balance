@@ -1,10 +1,11 @@
 import { StyleSheet, View } from 'react-native';
-import dayjs from 'dayjs';
 import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { MoneyText } from '@/src/components/common/MoneyText';
 import { ModalSurface } from '@/src/components/common/ModalSurface';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 
 interface DuplicateConflictResolutionModalProps {
@@ -29,6 +30,7 @@ export function DuplicateConflictResolutionModal({
   onViewJournal,
 }: DuplicateConflictResolutionModalProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
 
   if (!item || !item.duplicateCandidate) {
     return null;
@@ -176,7 +178,7 @@ export function DuplicateConflictResolutionModal({
                 Date & Time
               </AppText>
               <AppText variant="caption">
-                {dayjs(item.inputDate).format('MMM D, YYYY h:mm A')}
+                {formatDateKeepingPattern(item.inputDate, 'MMM D, YYYY', resolvedHourCycle, ' ')}
               </AppText>
             </View>
 
@@ -247,7 +249,12 @@ export function DuplicateConflictResolutionModal({
                 Date & Time
               </AppText>
               <AppText variant="caption">
-                {dayjs(candidate.journalDate).format('MMM D, YYYY h:mm A')}
+                {formatDateKeepingPattern(
+                  candidate.journalDate,
+                  'MMM D, YYYY',
+                  resolvedHourCycle,
+                  ' ',
+                )}
               </AppText>
             </View>
 

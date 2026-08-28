@@ -1,11 +1,12 @@
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
 import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { Shape, Spacing, Typography, type Theme } from '@/src/constants';
@@ -85,6 +86,7 @@ function highlightSmsBody(
 
 export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const {
     mode,
     senderContains,
@@ -133,7 +135,12 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
                     {match.senderAddress || 'Unknown Origin'}
                   </AppText>
                   <AppText variant="caption" color="secondary" style={styles.smsTimestamp}>
-                    {dayjs(match.inputDate).format('MMM D, YYYY · h:mm A')}
+                    {formatDateKeepingPattern(
+                      match.inputDate,
+                      'MMM D, YYYY',
+                      resolvedHourCycle,
+                      ' · ',
+                    )}
                   </AppText>
                 </View>
               </View>

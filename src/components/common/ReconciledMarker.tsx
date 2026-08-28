@@ -1,5 +1,6 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { StyleSheet, View } from 'react-native';
@@ -10,7 +11,10 @@ export interface ReconciledMarkerProps {
 
 export function ReconciledMarker({ date }: ReconciledMarkerProps) {
   const { theme } = useTheme();
-  const label = AppConfig.strings.journal.reconciledUntilHere(formatRelativeReconciledDate(date));
+  const { resolvedHourCycle } = useHourCyclePrefs();
+  const label = AppConfig.strings.journal.reconciledUntilHere(
+    formatRelativeReconciledDate(date, resolvedHourCycle),
+  );
 
   return (
     <View

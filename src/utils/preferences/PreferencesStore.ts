@@ -5,6 +5,7 @@ import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { AppConfig } from '@/src/constants/app-config';
+import { isHourCyclePreference } from '@/src/utils/hourCycle';
 import { migrateFromAsyncStorage, storage } from '../storage';
 import {
   DEFAULT_UI_PREFERENCES,
@@ -91,6 +92,12 @@ export class PreferencesStore {
 
     if (sanitized.theme && !['light', 'dark', 'system'].includes(sanitized.theme)) {
       delete sanitized.theme;
+    }
+    if (
+      sanitized.hourCyclePreference !== undefined &&
+      !isHourCyclePreference(sanitized.hourCyclePreference)
+    ) {
+      delete sanitized.hourCyclePreference;
     }
     if (sanitized.themeId && !Object.values(ThemeIds).includes(sanitized.themeId)) {
       delete sanitized.themeId;

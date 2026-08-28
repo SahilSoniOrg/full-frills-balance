@@ -2,6 +2,7 @@ import { MoneyText } from '@/src/components/common/MoneyText';
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -63,12 +64,13 @@ const JournalEntryCardComponent = ({
   contentScale = 1,
 }: JournalEntryCardProps) => {
   const { theme, themeMode } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
 
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
 
   const formattedDate = useMemo(
-    () => formatDate(transactionDate, { includeTime: true }),
-    [transactionDate],
+    () => formatDate(transactionDate, { includeTime: true, hourCycle: resolvedHourCycle }),
+    [transactionDate, resolvedHourCycle],
   );
 
   const Wrapper = onPress || onLongPress ? TouchableOpacity : View;

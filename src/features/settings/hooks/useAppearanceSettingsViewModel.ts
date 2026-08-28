@@ -1,7 +1,9 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics';
+import type { HourCyclePreference, ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { useCallback } from 'react';
 
 export interface AppearanceSettingsViewModel {
@@ -11,6 +13,9 @@ export interface AppearanceSettingsViewModel {
   setThemeId: (value: ThemeId) => void;
   fontId: FontId;
   setFontId: (value: FontId) => void;
+  hourCyclePreference: HourCyclePreference;
+  resolvedHourCycle: ResolvedHourCycle;
+  setHourCyclePreference: (value: HourCyclePreference) => void;
   showAccountMonthlyStats: boolean;
   onToggleAccountMonthlyStats: () => void;
   useCompactAccountPicker: boolean;
@@ -20,6 +25,7 @@ export interface AppearanceSettingsViewModel {
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   const { themePreference, setThemePreference, themeId, setThemeId, fontId, setFontId } =
     useThemePrefs();
+  const { hourCyclePreference, resolvedHourCycle, setHourCyclePreference } = useHourCyclePrefs();
   const {
     showAccountMonthlyStats,
     setShowAccountMonthlyStats,
@@ -74,6 +80,16 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     });
   }, [setUseCompactAccountPicker, useCompactAccountPicker]);
 
+  const handleSetHourCyclePreference = useCallback(
+    (value: HourCyclePreference) => {
+      setHourCyclePreference(value);
+      analytics.trackFeatureUsage('settings', 'change_hour_cycle', {
+        preference: value,
+      });
+    },
+    [setHourCyclePreference],
+  );
+
   return {
     themePreference,
     setThemePreference: handleSetThemePreference,
@@ -81,6 +97,9 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     setThemeId: handleSetThemeId,
     fontId,
     setFontId: handleSetFontId,
+    hourCyclePreference,
+    resolvedHourCycle,
+    setHourCyclePreference: handleSetHourCyclePreference,
     showAccountMonthlyStats,
     onToggleAccountMonthlyStats,
     useCompactAccountPicker,

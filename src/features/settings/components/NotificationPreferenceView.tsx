@@ -4,7 +4,9 @@ import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { NotificationCadence } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatClockTime } from '@/src/utils/dateUtils';
 import { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 
@@ -28,6 +30,7 @@ export const NotificationPreferenceView = ({
   onSendTest,
 }: NotificationPreferenceViewProps) => {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
 
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -44,7 +47,7 @@ export const NotificationPreferenceView = ({
   };
 
   const formattedTime = dayjs().hour(hour).minute(minute).format('HH:mm');
-  const displayTime = dayjs().hour(hour).minute(minute).format('hh:mm A');
+  const displayTime = formatClockTime(dayjs().hour(hour).minute(minute), resolvedHourCycle);
 
   return (
     <Stack space="sm" paddingHorizontal="md" paddingBottom="md">

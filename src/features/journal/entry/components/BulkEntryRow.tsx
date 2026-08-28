@@ -2,13 +2,14 @@ import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react'
 import { StyleSheet, View, TouchableOpacity, Keyboard } from 'react-native';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
 import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
-import dayjs from 'dayjs';
 
 interface BulkEntryRowProps {
   row: BulkJournalRow;
@@ -31,6 +32,7 @@ export const BulkEntryRow = React.memo(
     onAccountPickerRequest,
   }: BulkEntryRowProps) => {
     const { theme } = useTheme();
+    const { resolvedHourCycle } = useHourCyclePrefs();
     const [showNotes, setShowNotes] = useState(!!row.notes);
     const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -62,8 +64,8 @@ export const BulkEntryRow = React.memo(
     const sourceCurrency = sourceAccount?.currencyCode;
 
     const formattedDate = useMemo(() => {
-      return dayjs(row.journalDate).format('DD MMM, HH:mm');
-    }, [row.journalDate]);
+      return formatDateKeepingPattern(row.journalDate, 'DD MMM', resolvedHourCycle);
+    }, [row.journalDate, resolvedHourCycle]);
 
     const getAccountStyles = useCallback(
       (account: AccountFields | undefined, hasConflictError: boolean): AccountChipColors => {

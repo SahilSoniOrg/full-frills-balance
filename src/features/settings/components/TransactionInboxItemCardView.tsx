@@ -4,8 +4,9 @@ import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { alert } from '@/src/utils/alerts';
-import dayjs from 'dayjs';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { StyleSheet, View } from 'react-native';
 
 interface TransactionInboxItemCardViewProps {
@@ -36,6 +37,7 @@ export function TransactionInboxItemCardView({
   testID,
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
 
   const channelIcon = item.channel === 'voice' ? 'mic' : 'messageSquare';
   const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
@@ -56,7 +58,7 @@ export function TransactionInboxItemCardView({
               : item.parsedMerchant || item.senderAddress || 'Unknown Origin'}
           </AppText>
           <AppText variant="caption" color="secondary">
-            {dayjs(item.inputDate).format('MMM D, YYYY h:mm A')}
+            {formatDateKeepingPattern(item.inputDate, 'MMM D, YYYY', resolvedHourCycle, ' ')}
           </AppText>
         </View>
         <View style={styles.amountColumn}>

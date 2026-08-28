@@ -5,6 +5,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalLegs } from '@/src/features/journal/hooks/useJournals';
 import { useJournalDetailsSmsInfo } from '@/src/features/journal/hooks/useJournalDetailsSmsInfo';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
   buildJournalSplitItems,
@@ -148,7 +149,15 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     [journalInfo, paramTypeColor, journal],
   );
 
-  const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
+  const { resolvedHourCycle } = useHourCyclePrefs();
+
+  const formattedDate = useMemo(
+    () =>
+      journalInfo
+        ? formatDate(journalInfo.date, { includeTime: true, hourCycle: resolvedHourCycle })
+        : '',
+    [journalInfo, resolvedHourCycle],
+  );
   const descriptionText = journalInfo?.description || 'No description';
 
   const statusVariant = useMemo(() => resolveJournalStatusChipVariant(journalInfo), [journalInfo]);

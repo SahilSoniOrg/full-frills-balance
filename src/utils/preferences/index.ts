@@ -25,6 +25,7 @@ export { PrivacyPreferences } from './domains/PrivacyPreferences';
 export { SmsPreferences } from './domains/SmsPreferences';
 export { StsPreferences } from './domains/StsPreferences';
 export { ThemePreferences } from './domains/ThemePreferences';
+export { HourCyclePreferences } from './domains/HourCyclePreferences';
 
 export const preferences = createPreferencesFacade();
 

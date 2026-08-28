@@ -8,6 +8,7 @@ import { AccountId } from '@/src/types/ids';
 
 import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountCardStatsConfig';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
@@ -40,6 +41,7 @@ export function AccountCardBase({
   isSelectionModeActive = false,
 }: AccountCardProps) {
   const { fonts, theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat({ loading: isLoading });
   // The account color owns the card surface, so this contrast color is derived
   // from the account surface rather than the category marker.
@@ -54,8 +56,11 @@ export function AccountCardBase({
   const categoryIconBg = account.categoryIconBg || withOpacity(account.categoryColor, Opacity.soft);
 
   const reconciledDateText = useMemo(
-    () => (account.reconciledAt ? formatRelativeReconciledDate(account.reconciledAt) : null),
-    [account.reconciledAt],
+    () =>
+      account.reconciledAt
+        ? formatRelativeReconciledDate(account.reconciledAt, resolvedHourCycle)
+        : null,
+    [account.reconciledAt, resolvedHourCycle],
   );
 
   return (

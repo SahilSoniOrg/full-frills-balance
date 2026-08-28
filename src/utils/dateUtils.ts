@@ -1,4 +1,8 @@
 import { AppConfig } from '@/src/constants';
+import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
+// TODO: Split hour-cycle lookup out of dateUtils. Formatters should take a
+// ResolvedHourCycle (or a tiny resolver module), not import the preferences façade.
+import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import calendar from 'dayjs/plugin/calendar';
 import * as Localization from 'expo-localization';
@@ -9,6 +13,52 @@ export interface DateRange {
   startDate: number;
   endDate: number;
   label?: string;
+}
+
+export const CLOCK_DAYJS_FORMAT: Record<ResolvedHourCycle, string> = {
+  '12-hour': 'h:mm A',
+  '24-hour': 'HH:mm',
+};
+
+export function formatClockTime(value: dayjs.ConfigType, cycle: ResolvedHourCycle): string {
+  return dayjs(value).format(CLOCK_DAYJS_FORMAT[cycle]);
+}
+
+export function formatDateKeepingPattern(
+  value: dayjs.ConfigType,
+  datePattern: string,
+  cycle: ResolvedHourCycle,
+  separator = ', ',
+): string {
+  const d = dayjs(value);
+  return `${d.format(datePattern)}${separator}${d.format(CLOCK_DAYJS_FORMAT[cycle])}`;
+}
+
+export function localeClockOptions(cycle: ResolvedHourCycle): Intl.DateTimeFormatOptions {
+  return {
+    hour: cycle === '12-hour' ? 'numeric' : '2-digit',
+    minute: '2-digit',
+    hour12: cycle === '12-hour',
+  };
+}
+
+export function calendarClockTemplates(cycle: ResolvedHourCycle): {
+  sameDay: string;
+  nextDay: string;
+  nextWeek: string;
+  lastDay: string;
+  lastWeek: string;
+  sameElse: string;
+} {
+  const clock = CLOCK_DAYJS_FORMAT[cycle];
+  return {
+    sameDay: `[Today at] ${clock}`,
+    nextDay: `[Tomorrow at] ${clock}`,
+    nextWeek: `dddd [at] ${clock}`,
+    lastDay: `[Yesterday at] ${clock}`,
+    lastWeek: `[Last] dddd [at] ${clock}`,
+    sameElse: `MMM D, YYYY [at] ${clock}`,
+  };
 }
 
 export type PeriodType = 'MONTH' | 'CUSTOM' | 'LAST_N' | 'ALL_TIME';
@@ -34,19 +84,20 @@ export const formatDate = (
   options: {
     includeTime?: boolean;
     locale?: string;
-  } = {}
+    hourCycle?: ResolvedHourCycle;
+  } = {},
 ): string => {
   const { includeTime = false, locale = 'en-US' } = options;
   const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
 
   if (includeTime) {
+    const hourCycle = options.hourCycle ?? preferences.hourCycle.resolved;
     return date.toLocaleString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      ...localeClockOptions(hourCycle),
     });
   }
 
@@ -77,13 +128,13 @@ export const formatShortDate = (value: number | Date): string => {
  * @param timestamp Unix timestamp in milliseconds
  * @returns Time string
  */
-export const formatTime = (value: number | Date): string => {
+export const formatTime = (
+  value: number | Date,
+  hourCycle: ResolvedHourCycle = preferences.hourCycle.resolved,
+): string => {
   const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return date.toLocaleTimeString('en-US', localeClockOptions(hourCycle));
 };
 
 /**
@@ -192,7 +243,7 @@ export const getEndOfMonth = (timestamp: number): number => {
  */
 export const createDateRange = (
   period: 'today' | 'week' | 'month' | 'quarter' | 'year',
-  timestamp: number = Date.now()
+  timestamp: number = Date.now(),
 ): DateRange => {
   const now = timestamp;
   const date = new Date(now);
@@ -201,19 +252,19 @@ export const createDateRange = (
     case 'today':
       return {
         startDate: getStartOfDay(now),
-        endDate: getEndOfDay(now)
+        endDate: getEndOfDay(now),
       };
 
     case 'week':
       return {
         startDate: getStartOfWeek(now),
-        endDate: getEndOfWeek(now)
+        endDate: getEndOfWeek(now),
       };
 
     case 'month':
       return {
         startDate: getStartOfMonth(now),
-        endDate: getEndOfMonth(now)
+        endDate: getEndOfMonth(now),
       };
 
     case 'quarter':
@@ -231,7 +282,7 @@ export const createDateRange = (
 
       return {
         startDate: quarterStart.getTime(),
-        endDate: quarterEnd.getTime()
+        endDate: quarterEnd.getTime(),
       };
 
     case 'year':
@@ -245,13 +296,13 @@ export const createDateRange = (
 
       return {
         startDate: yearStart.getTime(),
-        endDate: yearEnd.getTime()
+        endDate: yearEnd.getTime(),
       };
 
     default:
       return {
         startDate: getStartOfDay(now),
-        endDate: getEndOfDay(now)
+        endDate: getEndOfDay(now),
       };
   }
 };
@@ -275,14 +326,14 @@ export const getLastNRange = (n: number, unit: 'days' | 'weeks' | 'months'): Dat
   if (unit === 'days') {
     startDate.setDate(startDate.getDate() - n);
   } else if (unit === 'weeks') {
-    startDate.setDate(startDate.getDate() - (n * 7));
+    startDate.setDate(startDate.getDate() - n * 7);
   } else if (unit === 'months') {
     startDate.setMonth(startDate.getMonth() - n);
   }
 
   return {
     startDate: getStartOfDay(startDate.getTime()),
-    endDate: getEndOfDay(now)
+    endDate: getEndOfDay(now),
   };
 };
 
@@ -300,7 +351,10 @@ export const getCurrentMonthRange = (): DateRange => {
 /**
  * Gets the previous month range
  */
-export const getPreviousMonthRange = (currentMonth: number, currentYear: number): { range: DateRange, month: number, year: number } => {
+export const getPreviousMonthRange = (
+  currentMonth: number,
+  currentYear: number,
+): { range: DateRange; month: number; year: number } => {
   let prevMonth = currentMonth - 1;
   let prevYear = currentYear;
 
@@ -310,13 +364,20 @@ export const getPreviousMonthRange = (currentMonth: number, currentYear: number)
   }
 
   const range = getMonthRange(prevMonth, prevYear);
-  return { range: { ...range, label: getMonthLabel(prevMonth, prevYear) }, month: prevMonth, year: prevYear };
+  return {
+    range: { ...range, label: getMonthLabel(prevMonth, prevYear) },
+    month: prevMonth,
+    year: prevYear,
+  };
 };
 
 /**
  * Gets the next month range
  */
-export const getNextMonthRange = (currentMonth: number, currentYear: number): { range: DateRange, month: number, year: number } => {
+export const getNextMonthRange = (
+  currentMonth: number,
+  currentYear: number,
+): { range: DateRange; month: number; year: number } => {
   let nextMonth = currentMonth + 1;
   let nextYear = currentYear;
 
@@ -326,14 +387,31 @@ export const getNextMonthRange = (currentMonth: number, currentYear: number): { 
   }
 
   const range = getMonthRange(nextMonth, nextYear);
-  return { range: { ...range, label: getMonthLabel(nextMonth, nextYear) }, month: nextMonth, year: nextYear };
+  return {
+    range: { ...range, label: getMonthLabel(nextMonth, nextYear) },
+    month: nextMonth,
+    year: nextYear,
+  };
 };
 
 /**
  * Helper to get a formatted label for a month range (e.g. "Jan 2024")
  */
 export const getMonthLabel = (month: number, year: number): string => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   return `${months[month]} ${year}`;
 };
 
@@ -350,7 +428,10 @@ export const isDateInRange = (timestamp: number, range: DateRange): boolean => {
 /**
  * Formats a timestamp for the day separator in lists (e.g. "Monday, Feb 23, 2026")
  */
-export const formatDaySeparator = (timestamp: number, locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale): string => {
+export const formatDaySeparator = (
+  timestamp: number,
+  locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale,
+): string => {
   const date = new Date(timestamp);
   return date.toLocaleDateString(locale, {
     weekday: 'long',
@@ -363,22 +444,21 @@ export const formatDaySeparator = (timestamp: number, locale: string = Localizat
 /**
  * Formats a timestamp as a relative date for reconciliation (e.g., "Today at 1:48 AM")
  */
-export const formatRelativeReconciledDate = (value: number | Date): string => {
+export const formatRelativeReconciledDate = (
+  value: number | Date,
+  hourCycle: ResolvedHourCycle = preferences.hourCycle.resolved,
+): string => {
   const timestamp = typeof value === 'number' ? value : value.getTime();
-  return dayjs(timestamp).calendar(null, {
-    sameDay: '[Today at] h:mm A',
-    nextDay: '[Tomorrow at] h:mm A',
-    nextWeek: 'dddd [at] h:mm A',
-    lastDay: '[Yesterday at] h:mm A',
-    lastWeek: '[Last] dddd [at] h:mm A',
-    sameElse: 'MMM D, YYYY [at] h:mm A',
-  });
+  return dayjs(timestamp).calendar(null, calendarClockTemplates(hourCycle));
 };
 
 /**
- * Formats a timestamp as just time for reconciliation (e.g., "1:48 AM")
+ * Formats a timestamp as just time for reconciliation (e.g., "1:48 AM" or "13:48")
  */
-export const formatReconciledTime = (value: number | Date): string => {
+export const formatReconciledTime = (
+  value: number | Date,
+  hourCycle: ResolvedHourCycle = preferences.hourCycle.resolved,
+): string => {
   const timestamp = typeof value === 'number' ? value : value.getTime();
-  return dayjs(timestamp).format('h:mm A');
+  return formatClockTime(timestamp, hourCycle);
 };
