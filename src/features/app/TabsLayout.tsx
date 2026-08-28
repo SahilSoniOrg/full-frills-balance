@@ -1,13 +1,19 @@
 import { AppIcon } from '@/src/components/core';
-import { Shape, Spacing, Typography } from '@/src/constants';
+import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const TAB_BAR_BOTTOM_CLEARANCE = Spacing.md;
 
 export function TabsLayout() {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarBottomInset = insets.bottom + TAB_BAR_BOTTOM_CLEARANCE;
 
   return (
     <Tabs
+      safeAreaInsets={{ bottom: tabBarBottomInset }}
       screenOptions={{
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,
@@ -15,13 +21,7 @@ export function TabsLayout() {
           backgroundColor: theme.surface,
           borderTopColor: theme.border,
           borderTopWidth: 1,
-          paddingTop: Spacing.sm,
           ...Shape.elevation.md,
-        },
-        tabBarLabelStyle: {
-          fontSize: Typography.sizes.xs,
-          fontFamily: fonts.medium,
-          letterSpacing: Typography.letterSpacing.normal,
         },
         tabBarItemStyle: { borderRadius: Shape.radius.md },
         tabBarHideOnKeyboard: true,
