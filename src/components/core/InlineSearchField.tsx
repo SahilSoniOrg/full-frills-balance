@@ -33,6 +33,7 @@ export const InlineSearchField = ({
       <TouchableOpacity
         onPress={handleExpand}
         style={[styles.iconButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
+        hitSlop={Spacing.sm}
         activeOpacity={Opacity.heavy}
         accessibilityRole="search"
         accessibilityLabel={placeholder}
@@ -67,6 +68,8 @@ export const InlineSearchField = ({
       <TouchableOpacity
         onPress={value.length > 0 ? handleClear : handleCollapse}
         style={styles.clearButton}
+        hitSlop={Spacing.sm}
+        accessibilityRole="button"
         accessibilityLabel={value.length > 0 ? 'Clear search' : 'Collapse search'}
       >
         <AppIcon name="close" size={Size.sm} color={theme.textSecondary} />
