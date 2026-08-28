@@ -84,6 +84,7 @@ export function SafeToSpendBreakdownMetrics({
             disabled={!detailsReady}
             style={useColumns ? styles.columnMetric : styles.compactMetric}
             accessibilityRole="button"
+            accessibilityLabel={`${item.label} ${item.value}`}
           >
             {useColumns ? (
               <Column gap="xs">
