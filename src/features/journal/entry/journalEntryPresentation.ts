@@ -166,31 +166,3 @@ export function isJournalEntrySubmitDisabled(input: {
   }
   return !input.isAdvancedValid;
 }
-
-export function createSmsJournalAfterSaveHandler(input: {
-  smsId?: string;
-  markSmsAsProcessed: (smsId: string) => Promise<void>;
-}): ((result: { journalId?: JournalId; success?: boolean }) => Promise<void>) | undefined {
-  if (!input.smsId) return undefined;
-  return async () => input.markSmsAsProcessed(input.smsId!);
-}
-
-export const DEFAULT_MAX_QUICK_TILES = 15;
-
-/** Limit quick horizontal tile list for initial fast render while ensuring selected choice is visible. */
-export function limitQuickTileAccounts<T extends { id: string }>(
-  accounts: T[],
-  selectedId: string,
-  limit: number = DEFAULT_MAX_QUICK_TILES,
-): T[] {
-  if (accounts.length <= limit) return accounts;
-
-  const top = accounts.slice(0, limit);
-  if (selectedId && !top.some(a => a.id === selectedId)) {
-    const selected = accounts.find(a => a.id === selectedId);
-    if (selected) {
-      return [...top.slice(0, limit - 1), selected];
-    }
-  }
-  return top;
-}

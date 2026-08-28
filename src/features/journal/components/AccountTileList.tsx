@@ -7,7 +7,7 @@ import {
   getArchivedAccountTilePresentation,
   getAccountIcon,
 } from '@/src/components/account-selection';
-import { limitQuickTileAccounts } from '@/src/features/journal/entry/journalEntryPresentation';
+import { limitQuickTileAccounts } from './accountTilePolicy';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/utils/accountArchive';

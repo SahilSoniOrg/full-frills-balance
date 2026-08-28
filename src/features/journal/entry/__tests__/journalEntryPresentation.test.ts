@@ -1,13 +1,13 @@
 import {
   isAdvancedJournalFormValid,
   isJournalEntrySubmitDisabled,
-  limitQuickTileAccounts,
   parseJournalEntryRouteParams,
   resolveExchangeRatePresentation,
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
 } from '../journalEntryPresentation';
+import { limitQuickTileAccounts } from '@/src/features/journal/components/accountTilePolicy';
 
 describe('journalEntryPresentation', () => {
   describe('resolveExchangeRatePresentation', () => {
