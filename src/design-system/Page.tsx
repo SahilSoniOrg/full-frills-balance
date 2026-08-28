@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollViewProps, StyleSheet, View, ViewProps } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 import { Box } from './Box';
 import { KeyboardAvoidingView } from './Keyboard';
 
@@ -66,8 +66,6 @@ export const Page = ({
   const resolvedStatusBar =
     statusBar === 'auto' ? (themeMode === 'dark' ? 'light' : 'dark') : statusBar;
 
-  const insets = useSafeAreaInsets();
-
   const backgroundColor = React.useMemo(() => {
     return background in theme ? theme[background as keyof Theme] : background;
   }, [background, theme]);
@@ -92,7 +90,7 @@ export const Page = ({
       style={[styles.scrollView, scrollViewProps?.style]}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingBottom: insets.bottom + Spacing.xxl },
+        { paddingBottom: Spacing.xxl },
         scrollViewProps?.contentContainerStyle,
       ]}
     >

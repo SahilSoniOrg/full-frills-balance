@@ -16,10 +16,12 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
   const fab = chrome.fab;
 
   const showBack = chrome.showBack ?? false;
+  const edges: ScreenProps['edges'] = rest.edges ?? (showBack ? ['top', 'bottom'] : ['top']);
 
   return (
     <Screen
       {...rest}
+      edges={edges}
       title={chrome.screenTitle}
       backIcon={chrome.backIcon}
       headerActions={chrome.headerActions}

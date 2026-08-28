@@ -2,6 +2,7 @@ import { Screen } from '@/src/components/layout/Screen';
 import { render, screen } from '@/src/utils/test-utils';
 import React from 'react';
 import { ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
@@ -20,6 +21,18 @@ const MockView = ({ children, testID, ...props }: any) =>
   React.createElement('mock-view', { testID, ...props }, children);
 
 describe('Screen', () => {
+  it('protects standalone screen content from the bottom system inset by default', () => {
+    render(
+      <Screen>
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(
+      expect.arrayContaining(['top', 'bottom']),
+    );
+  });
+
   it('renders correctly with children', () => {
     render(
       <Screen>
