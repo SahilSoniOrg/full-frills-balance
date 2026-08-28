@@ -6,6 +6,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { repairAccountBalance } from './integrityRepair';
+import { backfillAccountSnapshotsIfNeeded } from './accountSnapshotBackfill';
 import {
   scanForNullAccountTransactions,
   verifyAccountBalance,
@@ -58,6 +59,11 @@ export async function forceRunCheck(
 
   onProgress?.('Scanning for orphaned transactions...', 0.02);
   await scanForNullAccountTransactions(workplaceId);
+
+  await backfillAccountSnapshotsIfNeeded(workplaceId, undefined, (completed, total) => {
+    const backfillProgress = total > 0 ? 0.02 + (completed / total) * 0.18 : 0.02;
+    onProgress?.(`Rebuilding account checkpoints: ${completed}/${total}`, backfillProgress);
+  });
 
   const accounts = await accountQueryRepository.findAll(workplaceId);
   const total = accounts.length;
@@ -193,6 +199,10 @@ export async function runStartupCheck(
       results: [],
     };
   }
+
+  await backfillAccountSnapshotsIfNeeded(workplaceId, signal, (completed, total) => {
+    logger.info(`[IntegrityOrchestrator] Rebuilt account checkpoints (${completed}/${total})`);
+  });
 
   const accountsExist = await accountQueryRepository.exists(workplaceId);
   if (!accountsExist) {

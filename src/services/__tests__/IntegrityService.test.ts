@@ -429,7 +429,7 @@ describe('IntegrityService', () => {
 
         expect(scanSpy).toHaveBeenCalledWith('wp-1');
         expect(verifySpy).toHaveBeenCalledTimes(3);
-        expect(rebuildSpy).toHaveBeenCalledTimes(3);
+        expect(rebuildSpy).toHaveBeenCalledTimes(6);
         expect(batchSpy).toHaveBeenCalledTimes(1);
         expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
         expect(secondAccount.updatedAt.getTime()).toBeGreaterThan(300);

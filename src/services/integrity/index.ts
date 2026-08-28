@@ -20,6 +20,7 @@ export * from './integrityVerification';
 export * from './integrityRepair';
 export * from './integrityOrchestrator';
 export * from './integrityMaintenance';
+export * from './accountSnapshotBackfill';
 
 /**
  * IntegrityService

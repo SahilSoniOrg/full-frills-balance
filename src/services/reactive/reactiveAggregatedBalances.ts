@@ -62,10 +62,11 @@ export function clearReactiveAggregatedBalancesCache(workplaceId?: WorkplaceId):
 export function observeAggregatedAccountBalances(
   targetCurrency: string,
   workplaceId: WorkplaceId,
+  includeTotalCount: boolean = false,
 ): Observable<AggregatedAccountBalances> {
   return reactiveCacheCoordinator.getOrCreate({
     namespace: REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-    key: `${targetCurrency}_${workplaceId}`,
+    key: `${targetCurrency}_${workplaceId}_${includeTotalCount ? 'with-count' : 'period-only'}`,
     workplaceId,
     createSource: () => {
       let disposed = false;
@@ -108,7 +109,7 @@ export function observeAggregatedAccountBalances(
               startOfMonth,
               endOfMonth,
               workplaceId,
-              false,
+              includeTotalCount,
               false,
             );
 

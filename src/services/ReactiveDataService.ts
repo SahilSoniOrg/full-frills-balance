@@ -238,7 +238,7 @@ class ReactiveDataService {
       key: cacheKey,
       workplaceId,
       createSource: () =>
-        observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
+        observeAggregatedAccountBalances(targetCurrency, workplaceId, true).pipe(
           switchMap(async ({ accounts, balancesMap }) => {
             const plainAccounts = toPlainAccounts(accounts);
             const targetAccount = plainAccounts.find(a => a.id === accountId);
