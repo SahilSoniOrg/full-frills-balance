@@ -89,6 +89,18 @@ apply from: new File(["node", "--print", "require('path').dirname(require.resolv
              pickFirst '**/libc++_shared.so' 
           }
         
+    // detox-plugin-resolution-strategy
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.test:core:1.6.1'
+            force 'androidx.test:runner:1.6.1'
+            force 'androidx.test:rules:1.6.1'
+            force 'androidx.test:monitor:1.7.1'
+            force 'androidx.test.ext:junit:1.2.1'
+            force 'androidx.test.espresso:espresso-core:3.6.1'
+        }
+    }
+
     ndkVersion rootProject.ext.ndkVersion
 
     buildToolsVersion rootProject.ext.buildToolsVersion
