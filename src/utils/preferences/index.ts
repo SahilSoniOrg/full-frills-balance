@@ -1,7 +1,6 @@
 import { createPreferencesFacade } from './PreferencesFacade';
 
 export type {
-  AiPrefs,
   DashboardPrefs,
   NotificationPrefs,
   PrivacyPrefs,
@@ -15,7 +14,6 @@ export type {
 export { PreferencesStore } from './PreferencesStore';
 export { createPreferencesFacade } from './PreferencesFacade';
 export type { PreferencesFacade } from './PreferencesFacade';
-export { AiPreferences } from './domains/AiPreferences';
 export { DashboardPreferences } from './domains/DashboardPreferences';
 export { InsightPreferences } from './domains/InsightPreferences';
 export { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';

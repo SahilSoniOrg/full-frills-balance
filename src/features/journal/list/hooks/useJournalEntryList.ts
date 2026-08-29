@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';

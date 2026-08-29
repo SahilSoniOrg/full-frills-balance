@@ -1,4 +1,4 @@
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { analytics } from '@/src/services/analytics';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -18,6 +18,7 @@ import { processDuePlannedPayments } from '@/src/services/planned-payment/planne
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
+import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
 import { LatestGenerationCoordinator } from './latestGeneration';
 
 /**
@@ -85,6 +86,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           const notifMinute = preferences.notifications.notificationMinute;
 
           await Promise.allSettled([
+            purgeLocalAiCachesOnce(),
             currencyInitService.initialize(),
             currencyReadService.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),

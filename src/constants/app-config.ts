@@ -169,8 +169,6 @@ export const AppConfig = {
 
   // Default Values
   defaults: {
-    /** Default AI model ID — used as the download prompt and initial model. Must be publicly accessible. */
-    defaultAiModelId: 'qwen-2.5-1.5b',
     reportDays: 30,
     safeToSpendDays: 30,
     chartTickCount: 5,

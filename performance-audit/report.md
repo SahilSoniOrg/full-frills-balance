@@ -38,7 +38,7 @@ Principal data path:
 
 `workplace/account/journal/exchange-rate change → Watermelon/RxJS observers → debounced shared aggregate/read models → raw SQL/materialization → JS hierarchy/FX/wealth/report/simulation transforms → snapshots/replay caches → React screens/lists/charts/widgets`.
 
-Writes flow through ledger/import/SMS services into Watermelon batches, rebuild queues, observer emissions, and downstream projections. Native boundaries include SQLite JSI, SMS, LiteRT, crypto, filesystem/zip, notifications, and widgets. Explicit cache disposal, workplace scoping, generation cancellation, debouncing, and queue coalescing are present; generic leak/bridge/list claims were rejected.
+Writes flow through ledger/import/SMS services into Watermelon batches, rebuild queues, observer emissions, and downstream projections. Native boundaries include SQLite JSI, SMS, crypto, filesystem/zip, notifications, and widgets. Explicit cache disposal, workplace scoping, generation cancellation, debouncing, and queue coalescing are present; generic leak/bridge/list claims were rejected.
 
 ## Highest-leverage static risks
 
@@ -165,8 +165,7 @@ Confidence limits: no frame/input/commit/memory measurements.
 - Startup stabilization concurrently launches integrity, insight, planned-payment, sharing, exchange-rate, notification, and optional SMS work after delay; overlap with resume/first interaction is unknown (`H-008`, `H-014`).
 - Cold-start module/font evaluation is broad; module evaluation and selected-font load are unmeasured (`H-019` and the UI memo UI-04).
 - Reporting can load aggregate queries plus a full transaction range and convert rows (`H-017`); SMS can return full bodies, parse concurrently, and issue duplicate/rule work (`H-018`).
-- LiteRT models range from hundreds of MB to multiple GB and can run up to three passes (`H-016`); model memory/thermal lifecycle is device-blocked.
-- Rebuild queue, widget sync, model switching, network timeout/cancellation, and lifecycle retention remain open questions, not findings.
+- Rebuild queue, widget sync, network timeout/cancellation, and lifecycle retention remain open questions, not findings.
 
 ## Rejected hypotheses
 

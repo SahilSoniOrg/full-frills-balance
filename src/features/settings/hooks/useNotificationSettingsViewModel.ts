@@ -1,15 +1,12 @@
-import { useAiPrefs } from '@/src/hooks/useAiPrefs';
 import { useNotificationPrefs } from '@/src/hooks/useNotificationPrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { analytics } from '@/src/services/analytics';
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
-import { AIModelMetadata } from '@/src/services/ai/types';
 import {
   notificationService,
   NotificationCadence,
 } from '@/src/services/notification/NotificationService';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 
 export interface NotificationSettingsViewModel {
   notificationCadence: NotificationCadence;
@@ -21,16 +18,8 @@ export interface NotificationSettingsViewModel {
   onSendTestNotification: () => void;
   isSmsImportEnabled: boolean;
   setIsSmsImportEnabled: (enabled: boolean) => void;
-  isNativeAiEnabled: boolean;
-  setIsNativeAiEnabled: (enabled: boolean) => void;
-  preferredAiModelId?: string;
-  setPreferredAiModelId: (modelId: string) => void;
-  aiInferenceMode: 'single' | 'multi';
-  setAiInferenceMode: (mode: 'single' | 'multi') => void;
-  downloadedModels: AIModelMetadata[];
   onOpenInbox: () => void;
   onOpenSmsRules: () => void;
-  onOpenAiLab: () => void;
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
@@ -44,40 +33,7 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     setNotificationWeekday,
   } = useNotificationPrefs();
   const { isSmsImportEnabled, setIsSmsImportEnabled } = useSmsPrefs();
-  const {
-    isNativeAiEnabled,
-    setIsNativeAiEnabled,
-    preferredAiModelId,
-    setPreferredAiModelId,
-    aiInferenceMode,
-    setAiInferenceMode,
-  } = useAiPrefs();
-  const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
   const notificationUpdateGenerationRef = useRef(0);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const checkModels = async () => {
-      const allModels = modelManagementService.getAllModels();
-      const downloaded: AIModelMetadata[] = [];
-      for (const model of allModels) {
-        const status = await modelManagementService.getDownloadStatus(model.id);
-        if (status.isDownloaded) {
-          downloaded.push(model);
-        }
-      }
-      if (!cancelled) {
-        setDownloadedModels(downloaded);
-      }
-    };
-
-    checkModels();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isNativeAiEnabled]);
 
   const onUpdateNotificationCadence = useCallback(
     async (cadence: NotificationCadence) => {
@@ -140,15 +96,7 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     onSendTestNotification: () => notificationService.sendImmediateTest(),
     isSmsImportEnabled,
     setIsSmsImportEnabled: handleSetIsSmsImportEnabled,
-    isNativeAiEnabled,
-    setIsNativeAiEnabled,
-    preferredAiModelId,
-    setPreferredAiModelId,
-    aiInferenceMode,
-    setAiInferenceMode,
-    downloadedModels,
     onOpenInbox: AppNavigation.toTransactionInbox,
     onOpenSmsRules: AppNavigation.toSmsRules,
-    onOpenAiLab: AppNavigation.toAiExample,
   };
 }

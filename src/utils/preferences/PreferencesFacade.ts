@@ -1,5 +1,4 @@
 import { PreferencesStore } from './PreferencesStore';
-import { AiPreferences } from './domains/AiPreferences';
 import { DashboardPreferences } from './domains/DashboardPreferences';
 import { InsightPreferences } from './domains/InsightPreferences';
 import { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
@@ -14,7 +13,6 @@ export type PreferencesFacade = PreferencesStore & {
   readonly themePrefs: ThemePreferences;
   readonly hourCycle: HourCyclePreferences;
   readonly privacy: PrivacyPreferences;
-  readonly ai: AiPreferences;
   readonly sms: SmsPreferences;
   readonly sts: StsPreferences;
   readonly dashboard: DashboardPreferences;
@@ -33,7 +31,6 @@ export function createPreferencesFacade(): PreferencesFacade {
     themePrefs: new ThemePreferences(store),
     hourCycle: new HourCyclePreferences(store),
     privacy: new PrivacyPreferences(store),
-    ai: new AiPreferences(store),
     sms: new SmsPreferences(store),
     sts: new StsPreferences(store),
     dashboard: new DashboardPreferences(store),

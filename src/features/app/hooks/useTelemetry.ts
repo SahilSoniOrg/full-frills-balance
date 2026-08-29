@@ -131,7 +131,6 @@ const ROUTE_METADATA_MAP: Record<
   onboarding: { screenType: 'onboarding', flowContext: 'user_setup', isModal: true },
 
   // Dev & Preview
-  'ai-example': { screenType: 'developer', flowContext: 'ai_sandbox', isModal: false },
   '_design-preview': { screenType: 'developer', flowContext: 'design_preview', isModal: false },
 };
 

@@ -1,6 +1,3 @@
-import type { InferenceStats } from '@/src/services/ai/types';
-import type { MemoryTrackerSummary } from 'react-native-litert-lm';
-
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'unknown';
 
 export type TransactionSemanticTag = 'refund' | 'cashback' | 'chargeback' | 'reversal' | undefined;
@@ -30,8 +27,6 @@ export interface ParserOutput {
   debugMetrics?: {
     passTimings?: Record<string, number>;
     totalInferenceMs?: number;
-    lastPassStats?: InferenceStats;
-    memorySummary?: MemoryTrackerSummary;
   };
 }
 
@@ -52,7 +47,6 @@ export interface TransactionFallbackAIProvider {
     transcript: string,
     context: AIContext,
     options?: {
-      mode?: 'single' | 'multi';
       timeout?: number;
     },
   ): Promise<ParserOutput | null>;

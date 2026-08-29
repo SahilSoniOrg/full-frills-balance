@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';

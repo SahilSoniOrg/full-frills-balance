@@ -1,34 +1,15 @@
 import { FontId, FontIds } from '@/src/constants/design-tokens';
-import { requireShellContext } from '@/src/contexts/app-shell/requireShellContext';
+import { AppReadyContext, type AppReadyValue } from '@/src/contexts/app-shell/appReady';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
-export interface AppReadyValue {
-  isLoading: boolean;
-  isInitialized: boolean;
-  fontsReady: boolean;
-  loadedFontId: FontId | null;
-  isDataHydrated: boolean;
-  isAppReady: boolean;
-  setFontsReady: (ready: boolean, fontId?: FontId) => void;
-  setDataHydrated: (hydrated: boolean) => void;
-}
-
-export const AppReadyContext = createContext<AppReadyValue | undefined>(undefined);
-
-export function useAppReady(): AppReadyValue {
-  return requireShellContext(useContext(AppReadyContext), 'useAppReady');
-}
+export {
+  AppReadyContext,
+  useAppReady,
+  type AppReadyValue,
+} from '@/src/contexts/app-shell/appReady';
 
 const INITIAL_READY = {
   isLoading: false,

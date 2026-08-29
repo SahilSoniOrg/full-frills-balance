@@ -100,7 +100,6 @@ Next measurement: cold-start release builds on low/mid/high Android and iOS devi
 2. “All list render callbacks are unstable.” Rejected as a broad claim. Accounts explicitly memoizes `renderItem`/`keyExtractor`; journal uses FlashList and type keys. Remaining inline callbacks are not enough to infer material cost.
 3. “Startup background hydration blocks the first frame.” Rejected from static tracing. The app marks data hydrated immediately, delays core work 50 ms, and schedules stabilization after interactions. Its actual impact still needs a trace.
 4. “The chart interaction registry broadcasts on every chart gesture.” Rejected for the observed path. Global reset is responder-capture/tap driven; chart gesture updates are local. Bar-chart scroll state remains a separate risk.
-5. “The DEV AI example proves a production chat/list issue.” Rejected for production scope. Its token-by-token state updates and unvirtualized chat are dev benchmark UI in [AiExampleChatPanel.tsx](/Users/sahilsoni/me/projects/full-frills-balance/src/features/journal/components/AiExampleChatPanel.tsx:42), not a production route finding.
 
 ## Blockers and prohibited claims
 

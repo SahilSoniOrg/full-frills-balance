@@ -612,13 +612,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the on-device AI dev lab (litert-lm chat + benchmark).
-   */
-  toAiExample: () => {
-    router.push('/ai-example' as Href);
-  },
-
-  /**
    * Dismiss current modal or navigate back.
    */
   dismiss: () => {

@@ -1,4 +1,4 @@
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
@@ -6,10 +6,14 @@ import { integrityService } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/ids';
+import { purgeLocalAiCachesOnce } from '@/src/features/app/purgeLocalAiCaches';
 import { act, renderHook } from '@testing-library/react-native';
 
-jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({ useAppReady: jest.fn() }));
+jest.mock('@/src/contexts/app-shell/appReady', () => ({ useAppReady: jest.fn() }));
 jest.mock('@/src/features/app/bootstrap', () => ({ runAppBootstrapSideEffects: jest.fn() }));
+jest.mock('@/src/features/app/purgeLocalAiCaches', () => ({
+  purgeLocalAiCachesOnce: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/src/services/analytics', () => ({
   analytics: {
     delayedInitializePostHog: jest.fn(),
@@ -114,6 +118,7 @@ describe('useAppBootstrap generation safety', () => {
     });
 
     expect(currencyInitService.initialize).toHaveBeenCalledTimes(1);
+    expect(purgeLocalAiCachesOnce).toHaveBeenCalled();
     expect(reactiveDataService.preWarm).not.toHaveBeenCalledWith(
       'USD',
       'workplace-a' as WorkplaceId,

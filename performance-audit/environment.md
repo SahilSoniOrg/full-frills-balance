@@ -19,7 +19,7 @@
 | Database | WatermelonDB `^0.28.1-0`, native SQLite JSI; LokiJS used by web/tests per audit profile |
 | Lists | FlashList `2.0.2`, FlatList/SectionList/ScrollView also present |
 | Reactive layer | RxJS `^7.8.2`, managed replay caches |
-| Native/platform scope | Android/iOS native projects, custom SMS module, widgets, notifications, LiteRT, crypto, filesystem/zip |
+| Native/platform scope | Android/iOS native projects, custom SMS module, widgets, notifications, crypto, filesystem/zip |
 | Runtime measurement | No physical-device run established at audit start |
 | Synthetic-data policy | Required; no private financial/SMS/model data in artifacts |
 

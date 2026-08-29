@@ -3,7 +3,6 @@ export {
   transactionIngestionService,
 } from './TransactionIngestionService';
 export { TransactionService, transactionService } from './TransactionService';
-export { NativeAIProvider, nativeAIProvider } from './NativeAIProvider';
 export { MockTransactionFallbackAIProvider, mockAIProvider } from './TransactionFallbackAIProvider';
 export type {
   ParserOutput,

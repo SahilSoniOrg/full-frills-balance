@@ -2,17 +2,6 @@ import { act, renderHook } from '@testing-library/react-native';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { useNotificationSettingsViewModel } from '../useNotificationSettingsViewModel';
 
-jest.mock('@/src/hooks/useAiPrefs', () => ({
-  useAiPrefs: () => ({
-    isNativeAiEnabled: false,
-    setIsNativeAiEnabled: jest.fn(),
-    preferredAiModelId: undefined,
-    setPreferredAiModelId: jest.fn(),
-    aiInferenceMode: 'single',
-    setAiInferenceMode: jest.fn(),
-  }),
-}));
-
 const mockSetNotificationCadence = jest.fn();
 
 jest.mock('@/src/hooks/useNotificationPrefs', () => ({
@@ -29,10 +18,6 @@ jest.mock('@/src/hooks/useNotificationPrefs', () => ({
 
 jest.mock('@/src/hooks/useSmsPrefs', () => ({
   useSmsPrefs: () => ({ isSmsImportEnabled: false, setIsSmsImportEnabled: jest.fn() }),
-}));
-
-jest.mock('@/src/services/ai/ModelManagementService', () => ({
-  modelManagementService: { getAllModels: () => [] },
 }));
 
 jest.mock('@/src/services/analytics', () => ({

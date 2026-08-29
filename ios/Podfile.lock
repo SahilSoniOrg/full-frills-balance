@@ -1810,30 +1810,6 @@ PODS:
     - React-Core
   - react-native-launch-arguments (4.1.1):
     - React
-  - react-native-litert-lm (0.5.1):
-    - hermes-engine
-    - NitroModules
-    - RCTRequired
-    - RCTTypeSafety
-    - React-callinvoker
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - react-native-quick-base64 (3.0.0):
     - hermes-engine
     - RCTRequired
@@ -2778,7 +2754,6 @@ DEPENDENCIES:
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-launch-arguments (from `../node_modules/react-native-launch-arguments`)
-  - react-native-litert-lm (from `../node_modules/react-native-litert-lm`)
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -3013,8 +2988,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-get-random-values"
   react-native-launch-arguments:
     :path: "../node_modules/react-native-launch-arguments"
-  react-native-litert-lm:
-    :path: "../node_modules/react-native-litert-lm"
   react-native-quick-base64:
     :path: "../node_modules/react-native-quick-base64"
   react-native-safe-area-context:
@@ -3205,7 +3178,6 @@ SPEC CHECKSUMS:
   React-mutationobservernativemodule: 530bff1bba9511a5133e3cf8170e3b2c0df49e89
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-launch-arguments: eab68037b01ea7c78a0b3b55da3a5e967e9aaf92
-  react-native-litert-lm: 9a2ad6a4507e14a84c92112d31ccb21acf1249f3
   react-native-quick-base64: 53393ee5ea472a7486e6652ad3d7a640ebf6ebda
   react-native-safe-area-context: 6b4966397ada0f7dd481e4486a2ef936834861a1
   React-NativeModulesApple: 2b658272ca69df0694cf5d54f9510aa7c33977bc

@@ -20,7 +20,7 @@ The UI pass identified four E2 static risks: uncapped bulk-entry rows in `Scroll
 
 ## Compute/native/lifecycle
 
-The compute/native pass identified E2 static risks in Safe-to-Spend simulation (`O(D × A)` map snapshots plus budget/recurrence cardinality), delayed stabilization concurrency, complete export/import representation retention, large opt-in LiteRT models and up to three inference passes, report range loading/conversion, SMS full-body/concurrent analysis, sequential rebuild contention, and widget/native model lifecycle boundaries.
+The compute/native pass identified E2 static risks in Safe-to-Spend simulation (`O(D × A)` map snapshots plus budget/recurrence cardinality), delayed stabilization concurrency, complete export/import representation retention, report range loading/conversion, SMS full-body/concurrent analysis, sequential rebuild contention, and widget/native model lifecycle boundaries.
 
 Positive controls: cache invalidation, single-flight SMS, debounced widget sync, cancellable bootstrap leases, explicit AI dispose, and bounded rebuild queue state. Native claims remain blocked without device traces.
 

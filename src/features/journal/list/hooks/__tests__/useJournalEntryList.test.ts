@@ -13,7 +13,7 @@ jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: { toJournalDetails: jest.fn() },
 }));
 
-jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({
+jest.mock('@/src/contexts/app-shell/appReady', () => ({
   useAppReady: () => ({ isInitialized: true }),
 }));
 

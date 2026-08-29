@@ -1,6 +1,5 @@
 import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { useAiPrefs } from '@/src/hooks/useAiPrefs';
 import { Separator } from '@/src/design-system';
 import {
   useVoiceJournalParse,
@@ -39,7 +38,6 @@ const PREDEFINED_TEMPLATES = [
 
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
-  const { isNativeAiEnabled } = useAiPrefs();
   const insets = useSafeAreaInsets();
 
   const { animValues, onVolumeChange, setRecording } = useVoiceVisualizer();
@@ -169,23 +167,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                     >
                       <AppText variant="caption" weight="bold" color="primary">
                         {isParsing ? '...' : 'Auto'}
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-                  {isNativeAiEnabled && transcription.trim().length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => void parseTranscription(transcription, true)}
-                      disabled={isParsing}
-                      style={[styles.parseTextTouch, { backgroundColor: theme.primary }]}
-                    >
-                      <AppIcon
-                        name="sparkles"
-                        size={12}
-                        color={theme.onPrimary}
-                        style={{ marginRight: 4 }}
-                      />
-                      <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
-                        {isParsing ? '...' : 'AI'}
                       </AppText>
                     </TouchableOpacity>
                   )}

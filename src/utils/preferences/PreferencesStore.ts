@@ -11,6 +11,7 @@ import {
   DEFAULT_UI_PREFERENCES,
   LEGACY_PREFERENCE_KEYS,
   PREFERENCES_KEY,
+  REMOVED_PREFERENCE_KEYS,
   UIPreferences,
 } from './types';
 
@@ -75,8 +76,12 @@ export class PreferencesStore {
               }
             });
 
+            const hadRemovedKeys = REMOVED_PREFERENCE_KEYS.some(key => key in parsed);
             this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
             this.preferencesSubject.next(this.preferences);
+            if (hadRemovedKeys) {
+              this.savePreferences();
+            }
           }
         } catch (parseError) {
           logger.error('Failed to parse preferences, using defaults', { error: parseError });
@@ -89,6 +94,10 @@ export class PreferencesStore {
 
   private sanitizePreferences(input: Partial<UIPreferences>): Partial<UIPreferences> {
     const sanitized: Partial<UIPreferences> = { ...input };
+    const stale = sanitized as Record<string, unknown>;
+    for (const key of REMOVED_PREFERENCE_KEYS) {
+      delete stale[key];
+    }
 
     if (sanitized.theme && !['light', 'dark', 'system'].includes(sanitized.theme)) {
       delete sanitized.theme;

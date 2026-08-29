@@ -1,5 +1,5 @@
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 import { loadWidgetModule } from '@/src/features/app/hooks/loadWidgetModule';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
@@ -13,7 +13,7 @@ import expoWidgetsModule from '@/modules/expo-widgets';
 jest.mock('@/src/contexts/app-shell/AppLockProvider', () => ({
   useAppLock: jest.fn(),
 }));
-jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({
+jest.mock('@/src/contexts/app-shell/appReady', () => ({
   useAppReady: jest.fn(),
 }));
 jest.mock('@/src/hooks/usePrivacyPrefs', () => ({ usePrivacyPrefs: jest.fn() }));

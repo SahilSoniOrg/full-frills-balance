@@ -32,9 +32,6 @@ export interface UIPreferences {
   notificationMinute: number;
   notificationWeekday: number; // 1-7 (Mon-Sun)
   isSmsImportEnabled: boolean;
-  isNativeAiEnabled: boolean;
-  preferredAiModelId?: string;
-  aiInferenceMode: 'single' | 'multi';
   defaultShareFormat?: ShareFormat;
   safeToSpendDays: number;
   showSafeToSpendChart: boolean;
@@ -47,10 +44,6 @@ export type ThemePrefs = Pick<UIPreferences, 'theme' | 'themeId' | 'fontId'>;
 export type PrivacyPrefs = Pick<
   UIPreferences,
   'isPrivacyMode' | 'isWidgetPrivacyEnabled' | 'isAppLockEnabled'
->;
-export type AiPrefs = Pick<
-  UIPreferences,
-  'isNativeAiEnabled' | 'preferredAiModelId' | 'aiInferenceMode'
 >;
 export type SmsPrefs = Pick<UIPreferences, 'isSmsImportEnabled'>;
 export type StsPrefs = Pick<UIPreferences, 'safeToSpendDays'>;
@@ -80,9 +73,6 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationMinute: 0,
   notificationWeekday: 1, // Monday
   isSmsImportEnabled: false,
-  isNativeAiEnabled: false,
-  preferredAiModelId: AppConfig.defaults.defaultAiModelId,
-  aiInferenceMode: 'multi',
   defaultShareFormat: ShareFormat.TEXT,
   safeToSpendDays: AppConfig.defaults.safeToSpendDays,
   showSafeToSpendChart: true,
@@ -91,3 +81,9 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
 
 export const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 export const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode', 'defaultCurrency'] as const;
+/** Dropped with the local LiteRT stack (FUL-43). Stripped on load so they leave MMKV. */
+export const REMOVED_PREFERENCE_KEYS = [
+  'isNativeAiEnabled',
+  'preferredAiModelId',
+  'aiInferenceMode',
+] as const;

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { useTheme } from '@/src/hooks/use-theme';

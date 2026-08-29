@@ -1,11 +1,6 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceId } from '@/src/types/ids';
-import { preferences } from '@/src/utils/preferences';
 import { ParserOutput, TransactionFallbackAIProvider } from './types/ai-parsing';
-import { nativeAIProvider } from './NativeAIProvider';
 import { mockAIProvider } from './TransactionFallbackAIProvider';
-import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 
 import { PipelineContext, PipelineStep } from './pipeline/types';
 import { ContextGatheringStep } from './pipeline/steps/ContextGatheringStep';
@@ -25,16 +20,7 @@ export class TransactionIngestionService {
   }
 
   private getEffectiveAiProvider(): TransactionFallbackAIProvider {
-    if (this.customAiProvider) return this.customAiProvider;
-
-    if (preferences.ai.isNativeAiEnabled && modelManagementService.isLiteRTSupported()) {
-      smallModelProvider.switchModel(
-        preferences.ai.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
-      );
-      return nativeAIProvider;
-    }
-
-    return mockAIProvider;
+    return this.customAiProvider ?? mockAIProvider;
   }
 
   async ingest(

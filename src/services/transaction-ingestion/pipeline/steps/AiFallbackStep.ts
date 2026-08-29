@@ -3,7 +3,6 @@ import { AccountType } from '@/src/types/enums';
 import { analytics } from '@/src/services/analytics';
 import { accountResolutionService } from '@/src/services/ledger/resolution';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
 
@@ -37,9 +36,7 @@ export class AiFallbackStep implements PipelineStep {
     try {
       let timeoutOccurred = false;
       const aiParsed = await Promise.race([
-        context.aiProvider.parse(context.transcript, aiContext, {
-          mode: preferences.ai.aiInferenceMode,
-        }),
+        context.aiProvider.parse(context.transcript, aiContext),
         new Promise<null>(resolve =>
           setTimeout(() => {
             timeoutOccurred = true;
