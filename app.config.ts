@@ -142,7 +142,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      '@config-plugins/detox',
+      'expo-detox-config-plugin',
       {
         subdomains: '*',
       },

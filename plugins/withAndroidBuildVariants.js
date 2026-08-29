@@ -1,4 +1,4 @@
-const { withAppBuildGradle } = require('@expo/config-plugins');
+const { withAppBuildGradle } = require('expo/config-plugins');
 const appVariants = require('../app-variants.json');
 
 const MARKER_START = '// @generated begin android-build-variants - expo prebuild (DO NOT MODIFY)';

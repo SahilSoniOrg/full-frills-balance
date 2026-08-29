@@ -9,7 +9,7 @@ const {
   withStringsXml,
   withXcodeProject,
   AndroidConfig,
-} = require('@expo/config-plugins');
+} = require('expo/config-plugins');
 const {
   addBuildSourceFileToGroup,
   addFileToGroupAndLink,

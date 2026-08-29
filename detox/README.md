@@ -25,7 +25,7 @@ cp .env.e2e.example .env.local
 EXPO_PUBLIC_E2E=1 bun run e2e:build:ios
 ```
 
-Android Detox/Maestro native setup (`@config-plugins/detox`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
+Android Detox/Maestro native setup (`expo-detox-config-plugin`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
 
 ## Run tests locally
 

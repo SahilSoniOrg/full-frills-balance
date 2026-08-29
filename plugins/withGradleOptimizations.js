@@ -1,4 +1,4 @@
-const { withGradleProperties } = require('@expo/config-plugins');
+const { withGradleProperties } = require('expo/config-plugins');
 
 const OPTIMIZATIONS = {
   'org.gradle.jvmargs': '-Xmx8192m -XX:MaxMetaspaceSize=2048m -XX:+UseParallelGC',

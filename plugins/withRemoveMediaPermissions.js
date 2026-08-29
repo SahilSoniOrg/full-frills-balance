@@ -1,4 +1,4 @@
-const { withAndroidManifest } = require('@expo/config-plugins');
+const { withAndroidManifest } = require('expo/config-plugins');
 
 module.exports = function withRemoveMediaPermissions(config) {
   return withAndroidManifest(config, async config => {
