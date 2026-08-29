@@ -1,7 +1,6 @@
 import { AppInput, AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
-import { ArchetypePreferenceView } from '@/src/features/settings/components/ArchetypePreferenceView';
 import { CurrencyPreferenceView } from '@/src/features/settings/components/CurrencyPreferenceView';
 import { SafeToSpendPreferenceView } from '@/src/features/settings/components/SafeToSpendPreferenceView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -45,10 +44,6 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
                 />
               </View>
             }
-          />
-          <ArchetypePreferenceView
-            currentArchetypeId={vm.archetype}
-            onSelect={vm.onUpdateArchetype}
           />
         </SettingsMenu>
 

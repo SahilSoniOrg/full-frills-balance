@@ -24,7 +24,6 @@ export interface UIPreferences {
   showAccountMonthlyStats: boolean;
   useCompactAccountPicker: boolean;
   advancedMode: boolean;
-  archetype?: string;
   dismissedPatternIds: string[];
   anonymizedId?: string;
   notificationCadence: 'none' | 'daily' | 'weekly';
@@ -65,7 +64,6 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   themeId: ThemeIds.DEEP_SPACE,
   fontId: FontIds.DEEP_SPACE,
   hourCyclePreference: 'system',
-  archetype: undefined,
   dismissedPatternIds: [],
   anonymizedId: undefined,
   notificationCadence: 'none',
@@ -81,9 +79,10 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
 
 export const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 export const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode', 'defaultCurrency'] as const;
-/** Dropped with the local LiteRT stack (FUL-43). Stripped on load so they leave MMKV. */
+/** Dropped keys stripped on load so they leave MMKV. */
 export const REMOVED_PREFERENCE_KEYS = [
   'isNativeAiEnabled',
   'preferredAiModelId',
   'aiInferenceMode',
+  'archetype',
 ] as const;

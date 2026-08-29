@@ -294,14 +294,6 @@ export class PreferencesStore {
     this.update({ advancedMode });
   }
 
-  get archetype(): string | undefined {
-    return this.preferences.archetype;
-  }
-
-  setArchetype(archetype: string): void {
-    this.update({ archetype });
-  }
-
   get defaultShareFormat(): ShareFormat {
     return this.preferences.defaultShareFormat || ShareFormat.TEXT;
   }

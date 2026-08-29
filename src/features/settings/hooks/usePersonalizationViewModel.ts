@@ -12,8 +12,6 @@ import { useCallback } from 'react';
 export interface PersonalizationViewModel {
   userName: string;
   setUserName: (value: string) => void;
-  archetype: string;
-  onUpdateArchetype: (id: string) => Promise<void>;
   workplaceCurrency: string;
   currencies: PlainCurrency[];
   workplaceName: string;
@@ -27,7 +25,7 @@ export interface PersonalizationViewModel {
 export function usePersonalizationViewModel(): PersonalizationViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { data: workplace } = useWorkplaceSnapshot(workplaceId);
-  const { userName, archetype, updateUserDetails, setArchetype } = useProfilePrefs();
+  const { userName, setUserName: persistUserName } = useProfilePrefs();
   const { safeToSpendDays, setSafeToSpendDays: setStsSafeToSpendDays } = useStsPreferences();
   const { showSafeToSpendChart, setShowSafeToSpendChart: setDashboardShowChart } =
     useDashboardPreferences();
@@ -38,21 +36,13 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
   const setUserName = useCallback(
     (newName: string) => {
       if (newName.trim() && newName !== userName) {
-        updateUserDetails(newName.trim(), archetype);
+        persistUserName(newName.trim());
         analytics.trackFeatureUsage('settings', 'change_name', {
           name_length: newName.trim().length,
         });
       }
     },
-    [archetype, updateUserDetails, userName],
-  );
-
-  const onUpdateArchetype = useCallback(
-    async (id: string) => {
-      setArchetype(id);
-      analytics.trackFeatureUsage('settings', 'change_archetype', { archetype_id: id });
-    },
-    [setArchetype],
+    [persistUserName, userName],
   );
 
   const onUpdateCurrency = useCallback(
@@ -86,8 +76,6 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
   return {
     userName,
     setUserName,
-    archetype,
-    onUpdateArchetype,
     workplaceCurrency,
     currencies,
     workplaceName,

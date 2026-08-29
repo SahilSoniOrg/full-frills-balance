@@ -196,7 +196,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
 
       // Then update UI state & preferences via Context
-      await completeOnboarding(name, 'balance-glancer');
+      await completeOnboarding(name);
 
       analytics.trackFeatureUsage('onboarding', 'completed', {
         accounts_count: selectedAccounts.length + customAccounts.length,

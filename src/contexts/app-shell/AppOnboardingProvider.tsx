@@ -11,7 +11,7 @@ import React, {
 
 export interface AppOnboardingValue {
   hasCompletedOnboarding: boolean;
-  completeOnboarding: (name: string, archetype?: string) => Promise<void>;
+  completeOnboarding: (name: string) => Promise<void>;
 }
 
 export const AppOnboardingContext = createContext<AppOnboardingValue | undefined>(undefined);
@@ -30,10 +30,9 @@ export function AppOnboardingProvider({ children }: { children: React.ReactNode 
     () => preferences.onboardingCompleted,
   );
 
-  const completeOnboarding = useCallback(async (name: string, archetypeValue?: string) => {
+  const completeOnboarding = useCallback(async (name: string) => {
     try {
       await preferences.setUserName(name);
-      if (archetypeValue) await preferences.setArchetype(archetypeValue);
       await preferences.setOnboardingCompleted(true);
     } catch (error) {
       logger.warn('[UIContext] Failed to complete onboarding', { error });

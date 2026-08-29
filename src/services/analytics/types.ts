@@ -109,7 +109,6 @@ export type FeatureEventMap = {
     | 'share_bug_report'
     | 'save_bug_report'
     | 'change_name'
-    | 'change_archetype'
     | 'change_currency'
     | 'change_safe_to_spend_days'
     | 'toggle_safe_to_spend_chart';
