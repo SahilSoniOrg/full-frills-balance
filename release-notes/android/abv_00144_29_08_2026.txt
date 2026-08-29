@@ -1,0 +1,26 @@
+New release 🚀
+
+Choose how times appear throughout the app, add notes to individual rows in bulk journal entries, and move through onboarding more smoothly. To change the new display options, open Settings > Appearance & Display.
+
+---
+
+Also in this update:
+
+* Clock format: Under Time, choose System, 12-hour, or 24-hour.
+* Bulk journal notes: Add an optional note to each row while entering several transactions at once.
+* Account pickers: Turn on Compact account picker under Display Options to see more accounts at once.
+* Account appearance: Choose from more icons and colors, with imported colors and account settings kept intact.
+* Safer account cleanup: Merging accounts now preserves linked journals, budgets, planned payments, and other account details.
+* More accurate balances: Historical account transactions are counted correctly.
+* Clearer journal entries: Exchange rates are easier to read, and imported bank messages no longer fill journal notes with the original SMS text.
+* Smoother screens: Onboarding, bottom navigation, time pickers, and inline search controls behave more reliably.
+
+---
+
+Big difference you’ll notice:
+
+* Dates and times now use your chosen clock format consistently across the app.
+
+---
+
+Under the hood, account merges and journal updates now complete more safely and consistently.
