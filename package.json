@@ -147,6 +147,9 @@
     ]
   },
   "private": true,
+  "trustedDependencies": [
+    "react-native-litert-lm"
+  ],
   "experiments": {
     "reactCompiler": true
   },

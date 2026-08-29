@@ -1,9 +1,12 @@
 // Polyfill secure randomness for libraries like PostHog (Fixes RangeError on Huawei/Hermes)
 import 'react-native-get-random-values';
 
+// Hold the native splash before expo-router boots. Too late and the first
+// full-screen frame is visible before safe-area insets apply (FUL-42).
+import '@/src/features/app/preventSplashAutoHide';
+
 // Stage 1: Early Bootstrap (Critical Error Tracking)
-import * as SplashScreen from 'expo-splash-screen';
-import { analytics, navigationIntegration } from '@/src/services/analytics';
+import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';
 
@@ -16,8 +19,6 @@ if (process.env.EXPO_OS !== 'web') {
 
 logger.info('[Boot] JS execution started');
 
-// Prevent splash from hiding until we control it
-SplashScreen.preventAutoHideAsync().catch(() => {});
 analytics.earlyInitializeSentry();
 
 if (typeof global !== 'undefined') {

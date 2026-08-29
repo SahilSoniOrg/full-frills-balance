@@ -19,7 +19,11 @@ import PostHog, { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect } from 'react';
 import { View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
@@ -27,6 +31,12 @@ import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { useWidgetSync } from './hooks/useWidgetSync';
+import {
+  NATIVE_SPLASH_BACKGROUND,
+  hasMeasuredSafeAreaInsets,
+  resolveSafeAreaInitialMetrics,
+  shouldHideNativeSplash,
+} from './splashHandoff';
 
 /**
  * Root Layout
@@ -44,9 +54,12 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <View style={{ flex: 1, backgroundColor: NATIVE_SPLASH_BACKGROUND }}>
         <ChartInteractionProvider>
-          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <SafeAreaProvider
+            initialMetrics={resolveSafeAreaInitialMetrics(initialWindowMetrics)}
+            style={{ flex: 1, backgroundColor: NATIVE_SPLASH_BACKGROUND }}
+          >
             <ErrorBoundary>
               <DatabaseProvider database={database}>
                 <UIProvider>
@@ -100,46 +113,66 @@ function WorkplaceBootstrap() {
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
+  const insets = useSafeAreaInsets();
   const hasTrackedColdStartRef = React.useRef(false);
 
-  // If onboarding is done, we wait for both UI and Data hydration.
-  // Otherwise, we just wait for UI assets to show the onboarding shell.
-  const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
+  const canHideSplash = shouldHideNativeSplash({
+    isAppReady,
+    isDataHydrated,
+    hasCompletedOnboarding,
+    hasSafeAreaInsets: hasMeasuredSafeAreaInsets(insets),
+  });
 
   useEffect(() => {
     logger.debug(
-      `[Splash] Status update: isAppReady=${isAppReady}, isDataHydrated=${isDataHydrated}, hasCompletedOnboarding=${hasCompletedOnboarding}, isFullyReady=${isFullyReady}`,
+      `[Splash] Status update: isAppReady=${isAppReady}, isDataHydrated=${isDataHydrated}, hasCompletedOnboarding=${hasCompletedOnboarding}, canHideSplash=${canHideSplash}`,
     );
-  }, [isAppReady, isDataHydrated, hasCompletedOnboarding, isFullyReady]);
+  }, [isAppReady, isDataHydrated, hasCompletedOnboarding, canHideSplash]);
 
   useEffect(() => {
-    if (isFullyReady) {
-      const hideStart = performance.now();
-      logger.info(
-        `[Splash] Hiding splash screen at ${Math.round(hideStart)}ms (isAppReady: ${isAppReady}, isDataHydrated: ${isDataHydrated})`,
-      );
-      SplashScreen.hideAsync()
-        .then(() => {
-          const totalTtiMs = Math.round(performance.now());
-          logger.info(
-            `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (TTI: ${totalTtiMs}ms)`,
-          );
-
-          if (!hasTrackedColdStartRef.current) {
-            hasTrackedColdStartRef.current = true;
-            analytics.track('app_cold_start', {
-              time_to_interactive_ms: totalTtiMs,
-              time_to_interactive_sec: Math.round(totalTtiMs / 1000),
-              is_onboarding_completed: hasCompletedOnboarding,
-              is_data_hydrated: isDataHydrated,
-            });
-          }
-        })
-        .catch(err => {
-          logger.warn('[Splash] Failed to hide splash screen', err);
-        });
+    if (!canHideSplash) {
+      return;
     }
-  }, [isFullyReady, isAppReady, isDataHydrated, hasCompletedOnboarding]);
+
+    let cancelled = false;
+    const hideStart = performance.now();
+    logger.info(
+      `[Splash] Hiding splash screen at ${Math.round(hideStart)}ms (isAppReady: ${isAppReady}, isDataHydrated: ${isDataHydrated})`,
+    );
+
+    const hideAfterLayout = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
+        SplashScreen.hideAsync()
+          .then(() => {
+            const totalTtiMs = Math.round(performance.now());
+            logger.info(
+              `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (TTI: ${totalTtiMs}ms)`,
+            );
+
+            if (!hasTrackedColdStartRef.current) {
+              hasTrackedColdStartRef.current = true;
+              analytics.track('app_cold_start', {
+                time_to_interactive_ms: totalTtiMs,
+                time_to_interactive_sec: Math.round(totalTtiMs / 1000),
+                is_onboarding_completed: hasCompletedOnboarding,
+                is_data_hydrated: isDataHydrated,
+              });
+            }
+          })
+          .catch(err => {
+            logger.warn('[Splash] Failed to hide splash screen', err);
+          });
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(hideAfterLayout);
+    };
+  }, [canHideSplash, isAppReady, isDataHydrated, hasCompletedOnboarding]);
 
   return null;
 }
