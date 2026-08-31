@@ -80,7 +80,7 @@ export interface SetupCoordinator {
   readonly finish: () => Promise<SetupOutcome>;
 }
 
-function initialDraft(
+export function createSetupDraft(
   journeyId: SetupJourneyId,
   operationId: SetupDraft['operationId'],
   entryPolicyOverride?: SetupDraft['entryPolicy'],
@@ -173,7 +173,7 @@ function terminalSlice(recipe: SetupRecipe): SetupSliceId {
 export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupCoordinator {
   const recipe = options.recipe ?? getSetupRecipe(options.journeyId);
   const store = options.draftStore ?? setupDraftStore;
-  let draft = options.draft ?? initialDraft(options.journeyId, options.operationId);
+  let draft = options.draft ?? createSetupDraft(options.journeyId, options.operationId);
   store.save(draft);
 
   const persist = (next: SetupDraft): void => {
