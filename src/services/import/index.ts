@@ -30,13 +30,3 @@ export {
 } from '@/src/services/import/orchestrator';
 export { importRegistry } from '@/src/services/import/registry';
 export type { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-export { prepareRestore, fingerprintRestoreSource } from '@/src/services/import/prepareRestore';
-export { publishRestore } from '@/src/services/import/publishRestore';
-export type {
-  PreparedRestore,
-  PrepareRestoreOptions,
-  PublishRestoreOptions,
-  RestoreFacts,
-  RestoreHandoff,
-  RestorePublicationCorrections,
-} from '@/src/services/import/restoreTypes';

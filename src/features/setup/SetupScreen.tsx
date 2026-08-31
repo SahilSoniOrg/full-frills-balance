@@ -18,7 +18,7 @@ import { View } from 'react-native';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { createSetupCoordinator } from './SetupCoordinator';
 import { loadSetupDraft } from './SetupDraftStore';
-import { finishSetup } from './setupFinishers';
+import { finishDeviceSetup, finishSetup } from './setupFinishers';
 import type { SetupSliceId, StarterAccountInput, StarterCategoryInput } from './setupTypes';
 
 function defaultsFor(
@@ -104,6 +104,7 @@ function SetupScreen() {
   ) => {
     setBusy(true);
     try {
+      if (slice === 'device') finishDeviceSetup(output as any);
       await coordinator.accept(slice as any, output as any);
       setSlice(nextSlice);
     } finally {
