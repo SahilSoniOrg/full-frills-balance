@@ -1,3 +1,0 @@
-# Keep onboarding temporary until final confirmation
-
-Onboarding stores the User, Workplace, starter-account/category, and appearance choices as a Device-scoped MMKV draft through the profile, Workplace setup, and appearance checkpoints. The final Setup summary confirmation is the sole first-run database commit point: it publishes the Workplace books, marks onboarding complete, and grants app entry. Imported onboarding follows the same appearance and summary confirmation sequence while skipping Workplace setup because those books already exist. This preserves resumability and prevents abandoned or half-configured Workplace data, at the cost of requiring a draft schema and a final transactional write.

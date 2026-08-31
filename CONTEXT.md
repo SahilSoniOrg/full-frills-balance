@@ -35,15 +35,31 @@ The current product has exactly three domain entities: User, Device, and Workpla
 _Avoid_: introducing membership or RBAC state before online identity exists
 
 **Device onboarding**:
-Registering this Device to a User. Completes when identity exists on this install — display name today; login/signup later, after which registration is automatic (one User, many Devices). Does not create ledger accounts. Display name cannot be skipped in the UI; first-run Import preserves an already-entered name and uses **Default display name** only when neither the backup nor Device has one. The only identity ritual; appearance and SMS listen are not first-run setup.
-_Avoid_: App onboarding (as a single blob); workplace setup; User onboarding; stacking extra first-run wizards
+The first-run product experience that includes Device setup as one part of a broader Setup journey. It is product language, not a state-owning domain object or a synonym for every setup activity.
+_Avoid_: onboarding state; onboarding completion as a catch-all; workplace setup; User onboarding
+
+**Setup journey**:
+An ordered recipe of Setup slices selected for one purpose, such as first run, restore, or later Workplace creation. A blocking journey must resume before app entry; an optional journey leaves existing books available and resumes only when requested.
+_Avoid_: onboarding blob; wizard mode; hard-coded screen sequence
+
+**Active Setup journey**:
+The single unfinished Setup journey on this Device. Its Setup draft, not a separate completion flag or route marker, is the authority; only a blocking journey takes precedence over normal launch resolution.
+_Avoid_: onboarding stage; onboarding completed flag; route state as progress
+
+**Setup slice**:
+One independently completable setup requirement with explicit inputs, completion criteria, and accepted output. A recipe may require it, include it only when authoritative facts are missing, or always present it for confirmation; a future Demo journal may be another slice.
+_Avoid_: screen; step number; conditional branch
+
+**Device setup**:
+Registering this Device to a User. Completes when a non-empty display name exists and this install is registered; it does not create books or choose appearance. During first-run restore, an imported name takes precedence over an entered name; an entered name is used only when the backup has none, and Device setup remains required when neither exists.
+_Avoid_: Device onboarding; Workplace setup; Appearance setup; silently defaulting a missing first-run name
 
 **Default display name**:
-`User` — the display name written when Device onboarding must complete and no name is present (import with an empty name).
-_Avoid_: skip; anonymous; guest
+`User` — the repair name used when existing Workplace data proves a previously completed install but its User name is missing. It never satisfies missing identity during a new Setup journey.
+_Avoid_: first-run fallback; skip; anonymous; guest
 
 **Default workplace**:
-The first Workplace established on this Device by Default setup or Import restore. Under Default setup its initial identity is `{trimmed User display name}'s Personal workplace` with the `briefcase` icon; an imported Workplace keeps its imported identity.
+The first Workplace established on this Device by Default setup or Import restore. Under Default setup its initial identity is `{trimmed User display name}'s Personal workplace` with the `briefcase` icon; the derived name follows display-name edits until the User edits the Workplace name directly. An imported Workplace keeps its imported identity.
 _Avoid_: ghost workplace; Personal (as the domain term); ensure-default-on-launch; create-on-Device-onboarding
 
 **Workplace creation**:
@@ -54,32 +70,72 @@ _Avoid_: Separate first-run onboarding vs Create Workplace as two products; Devi
 Workplace creation configured for the first Workplace: name/icon derived from the User; currency and starter accounts/categories are still asked in the same flow. Not a second wizard and not a silent stamp of defaults.
 _Avoid_: Ghost Personal; skip Workplace creation; a third setup process
 
-**Onboarding checkpoint**:
-A resumable boundary in the onboarding flow where the current setup decision is accepted and must survive interruption. Name submission, Workplace confirmation, and appearance selection are checkpoints; final confirmation completes onboarding.
+**Setup checkpoint**:
+A resumable boundary in a Setup journey where the current slice output is accepted and must survive interruption. Checkpoints retain whether each fact was entered, imported, existing, or defaulted.
 _Avoid_: screen; page; draft step
 
 **Setup summary**:
-The final review of the User name, Workplace currency, starter-account count, starter-category count, and selected appearance before onboarding is committed. It is a confirmation surface, not another configuration step.
+The final review of the accepted slice outputs before Setup acceptance. Auto-completed facts remain visible; Change opens the owning slice directly and returns to the summary after dependent facts are revalidated.
 _Avoid_: completion splash; success screen; dashboard preview
 
 **Workplace setup confirmation**:
-The checkpoint that accepts the temporary Workplace configuration and advances to User appearance. It persists the draft for recovery but does not create a Workplace or write ledger data.
-_Avoid_: database commit; final confirmation; onboarding complete
+The checkpoint that accepts temporary Workplace configuration within a Setup journey. During fresh setup it does not create a Workplace or write ledger data.
+_Avoid_: database commit; Setup acceptance; Workplace publication
 
-**Onboarding completion confirmation**:
-The final user action that writes the accepted Workplace, starter accounts/categories, and appearance, marks onboarding complete, and grants entry to the app. It is the only database commit point for first-run setup.
-_Avoid_: Workplace setup checkpoint; finish; submit
+**Setup acceptance**:
+The final user action that accepts the Setup summary and authorizes app entry. In fresh setup it publishes the Workplace and commits User appearance; after restore it activates the already-published imported Workplace and commits the accepted User choices.
+_Avoid_: Device registration; Workplace setup confirmation; universal database commit; finish
 
-**Onboarding draft**:
-The temporary, resumable setup state held before Onboarding completion confirmation. It includes the User name, Workplace identity and currency, starter-account/category choices, and appearance choices; it is not ledger data.
+**Setup draft**:
+The temporary, versioned, resumable state held before Setup acceptance. It contains the journey recipe, accepted slice outputs and their provenance, and any operation identity needed to resume safely; it is not ledger data.
 _Avoid_: partial Workplace; temporary Workplace; database draft
 
-**Imported onboarding**:
-The same appearance and Setup summary sequence applied after an imported Workplace has been validated. Workplace setup choices are skipped because the imported identity, currency, accounts, and categories already exist; final confirmation still completes onboarding.
-_Avoid_: import completion; direct-to-dashboard import
+**Setup fact provenance**:
+The source of a value offered to a Setup slice: User-entered, imported, existing, or defaulted. A slice may auto-complete only from authoritative facts that satisfy all of its requirements; a default never conceals a missing required fact.
+_Avoid_: inferred completion; truthy field; fallback as supplied data
+
+**Restore setup**:
+A blocking Setup journey that uses a Workplace restore before resolving the setup requirements needed for app entry. Imported facts prefill or auto-complete their owning slices; a missing User name still requires Device setup, Appearance setup is always shown during first run, and Setup acceptance activates the Workplace. Workplace identity remains editable, while imported books remain unchanged until normal app use.
+_Avoid_: Imported onboarding; import completion; direct-to-dashboard import
+
+**Workplace restore**:
+The operation that owns restore-source selection, validation, required pre-publication corrections, private Workplace publication, and its Restore handoff. First-run Restore setup, the Workplace picker, and Settings may use it without sharing unrelated User or Appearance setup.
+_Avoid_: User restore; Device restore; onboarding import; in-place Workplace replacement
+
+**Restore source**:
+The backup or supported external file selected for a Restore setup. It may be parsed and validated before publication; missing publication-critical facts such as base currency must be resolved rather than silently defaulted.
+_Avoid_: imported Workplace; active books; arbitrary fallback currency
+
+**Staged restore**:
+A validated restore operation that has not yet published a Workplace because required publication facts remain unresolved. It is operation state, not usable books.
+_Avoid_: temporary Workplace; partially imported Workplace; active restore
+
+**Restore handoff**:
+The accepted result of a restore operation: its identity, published Workplace, available User, Workplace, and appearance facts with provenance, and any warnings. It carries no navigation, Device-registration, User-preference, or activation decision.
+_Avoid_: import stats as setup state; restored global preferences; route parameters as handoff
+
+**Restore summary**:
+The resumable slice that acknowledges the restored Workplace and any warnings before the caller continues setup, activates it, opens it, or stays in the current context. Failure to read the restored Workplace blocks acceptance and offers retry or explicit discard.
+_Avoid_: transient success screen; import complete as app entry
+
+**Workplace replacement**:
+The maintenance operation that replaces one existing Workplace's books from a backup while preserving its identity in the surrounding app flow. It reuses restore parsing and validation but is not a Setup journey or a Workplace restore.
+_Avoid_: Restore setup; new Workplace import; Setup acceptance
+
+**Discard restore**:
+The explicit, confirmed abandonment of an inactive Workplace created by the current restore operation. App termination or Back never implies discard.
+_Avoid_: cancel import; automatic rollback after publication; deleting an unrelated Workplace
+
+**Appearance setup**:
+The Setup slice where the User confirms theme and font. Valid imported appearance prefills the slice but never skips it during first run; changes remain in the Setup draft until Setup acceptance.
+_Avoid_: Theme onboarding; Device theme; immediate preference write
+
+**Appearance preview**:
+The temporary theme and font presentation scoped to Appearance setup. It changes no User preference and disappears when Setup is discarded; Setup acceptance writes the confirmed appearance.
+_Avoid_: saved theme; preference rollback; Device appearance
 
 **Starter account**:
-An Account selected or added during Workplace setup as part of the initial ledger configuration. Onboarding supports asset and liability starter accounts; income and expense choices belong to starter categories.
+An Account selected or added during Workplace setup as part of the initial ledger configuration. Setup supports asset and liability starter accounts; income and expense choices belong to starter categories.
 _Avoid_: wallet; category account
 
 **Starter category**:
@@ -91,20 +147,20 @@ Workplace creation configured for every later Workplace: name, icon, currency, s
 _Avoid_: Default setup
 
 **Workplace onboarding**:
-Workplace creation when this Device has no Workplace yet (Default setup). Same flow as Create Workplace, different config.
-_Avoid_: Device onboarding; user setup
+Default setup within a first-run Setup journey. This is product shorthand only; the domain operation is Workplace creation configured as Default setup.
+_Avoid_: Device setup; User setup; a separate Workplace-creation product
 
 **Active workplace**:
 The Workplace this Device currently has open. Stored on the Device. May be unset or point at a Workplace that no longer exists.
 _Avoid_: Default workplace; session workplace (as a fake id)
 
 **Workplace picker**:
-Shown when Device onboarding is done, Active workplace is missing or invalid, and **two or more** Workplaces exist. If exactly one Workplace exists, it is opened and written as Active workplace — no picker. If none exist, Workplace creation (Default setup) runs instead.
-_Avoid_: Device onboarding; ensure-default-on-launch
+Shown when Device setup is complete, Active workplace is missing or invalid, and **two or more** Workplaces exist. If exactly one Workplace exists, it is opened and written as Active workplace — no picker. If none exist, Workplace creation or Workplace restore runs instead.
+_Avoid_: Device setup; ensure-default-on-launch
 
 **Device recovery**:
-When the Device bag is missing: write Device defaults (listen off, lock off, Active workplace unset, Device onboarding not completed). If Workplaces already exist, Device onboarding is treated as done and Active workplace is recovered (one → open, many → picker). If none exist, Device onboarding still runs. Does not create a Workplace.
-_Avoid_: ensureDefaultWorkplace; synthesizing onboarding-complete with zero books
+Repairing Device registration and Active workplace from durable local evidence when Device preferences are missing or invalid. Existing Workplaces may prove prior registration; zero Workplaces never do. Recovery does not create or modify a Workplace.
+_Avoid_: ensureDefaultWorkplace; onboarding-complete repair; synthesizing registration with zero books
 
 **Device session**:
 The current visit on a Device: unlocked-or-locked, app active. Ephemeral. Not persisted preferences.
@@ -130,7 +186,7 @@ _Avoid_: Resurface; show consumed as pending (the feed already shows them)
 
 **Device SMS listen**:
 Device preference: this install may scan the OS SMS inbox and run auto-post. Default **off** on a fresh Device; the User turns it on. Off is Device-wide — no Workplace can listen independently. OS SMS permission is also Device.
-_Avoid_: Per-Workplace SMS import enabled; workplace participates; scan during Device onboarding
+_Avoid_: Per-Workplace SMS import enabled; workplace participates; scan during Device setup
 
 ### Interaction
 

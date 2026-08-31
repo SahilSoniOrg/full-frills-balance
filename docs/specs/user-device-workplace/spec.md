@@ -1,186 +1,336 @@
-# Spec — User, Device, and Workplace tenancy
+# Spec — User, Device, Workplace, and Setup
 
 **Product:** Full Frills Balance
-**Date:** 2026-08-30
-**Status:** Tenancy slices 1–3 and launch/transition remediation implemented; Slice 4 (Device inbox tenancy) deferred
-**Related:** glossary in [`CONTEXT.md`](../../../CONTEXT.md), and durable launch/import/transition decisions in [`docs/adr`](../../adr/)
+**Date:** 2026-09-01
+**Status:** Approved behavior; implementation pending
+**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [`docs/plans/onboarding-workplace-setup-plan.md`](../../plans/onboarding-workplace-setup-plan.md)
 
-This is the canonical tenancy contract. The implementation is delivered in slices; the current release boundary and deferred Device inbox work are stated in the acceptance and non-goals sections below.
+This is the canonical behavior and ownership contract. Terms follow `CONTEXT.md`. File paths and component names are intentionally excluded.
 
-This spec is behavior and ownership. File paths will rot; do not treat them as the contract. Terms follow `CONTEXT.md`.
+## 1. Domain ownership
 
-## 1. Current vs target
+| Concern                                                                                                        | Owner       |
+| -------------------------------------------------------------------------------------------------------------- | ----------- |
+| Display name, theme, font, privacy mask, notifications                                                         | User        |
+| Device registration, app lock, Active workplace, telemetry ID, Device inbox, Device SMS listen                 | Device      |
+| Journals, accounts, currency, budgets, planned payments, Workplace settings, SMS rules, Workplace inbox copies | Workplace   |
+| Unfinished journey recipe, accepted setup outputs, limited fact provenance, operation identity                 | Setup draft |
 
-| Area                  | Current                                                                                                                        | Target                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| First-run             | One wizard: name + currency + accounts + categories + theme; then name + Device claimed + Workplace writes                     | Device onboarding (name) then Workplace creation, followed by User theme selection before entering the app |
-| Workplace at launch   | Launch coordinator resolves Device state and discovered Workplaces; historical v23 Personal migration remains upgrade backfill | No Workplace until creation or Import **finishes** on fresh installs         |
-| `onboardingCompleted` | Set after books exist                                                                                                          | Set when Device is claimed (name)                                            |
-| SMS enable            | Combined blob / briefly Workplace                                                                                              | Device SMS listen, default off (Slice 1)                                     |
-| Inbox rows            | `workplace_id` required; pending cloned per Workplace                                                                          | Device feed; Workplace copies only on consume                                |
-| Export                | User prefs + Workplace prefs; Device keys omitted; inbox is Workplace-scoped rows                                              | Unchanged Device omission; Device feed never in Workplace backup; copies yes |
+There is no general “onboarding state.” Device registration, Workplace publication, Setup acceptance, and app-entry eligibility are different facts.
 
-## 2. Ownership
+The canonical persisted launch inputs are:
 
-| Concern                                                                                                                                         | Owner     |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| Display name, theme, privacy mask, notifications                                                                                                | User      |
-| App lock, Active workplace, Device claimed, telemetry id, Device inbox, Device SMS listen                                                       | Device    |
-| Journals, accounts, currency, STS horizon, dismissed insights, last-used accounts, SMS rules, Workplace inbox copies, Cross-workplace auto-post | Workplace |
+- whether this Device is registered;
+- the Active workplace ID, when one is selected;
+- the single validated Setup draft, when a journey is unfinished;
+- the Workplaces actually present in the database.
 
-Ledger **Account** is a Workplace bucket. Native export is a Workplace document plus User chrome that travels with the person. Device bag and Device inbox do not travel.
+Do not persist parallel `onboardingCompleted`, `onboardingStage`, onboarding Workplace, pending Workplace, numeric step, or route-derived completion state.
 
-## 3. Launch resolver
+## 2. Launch contract
 
-Run **Device recovery** first if the Device bag is absent.
+Launch runs above books providers.
 
-Workplace discovery has explicit loading and failure states. A query failure is never interpreted as zero Workplaces: show retry/error recovery rather than offering creation and risking duplicate books.
+1. If a valid blocking Setup draft exists, resolve `setup(journeyId)`.
+2. Otherwise discover Workplaces. Discovery has loading and failure states; failure is never treated as zero Workplaces.
+3. Resolve from Device registration, Active workplace, and discovered Workplace IDs:
 
-After successful discovery, the pure resolver returns a discriminated result. `open` includes the exact `workplaceId` and whether the launch coordinator must persist it as Active workplace; callers never rediscover the selected Workplace.
-
-```
-if Device onboarding is not complete
-  → Device onboarding
+```text
+if Device is not registered
+  → Device setup
 else if no Workplaces exist
-  → Workplace creation (Default setup)  // or User chooses Import
-else if Active workplace is missing or not in the list
-  if exactly one Workplace
-    → open(that id, persistAsActive: true)
-  else
-    → Workplace picker
+  → Workplace setup or Workplace restore
+else if Active workplace exists in the discovered set
+  → open(Active workplace)
+else if exactly one Workplace exists
+  → open(that Workplace) and repair Active workplace
 else
-  → open(that Active workplace, persistAsActive: false)
+  → Workplace picker
 ```
 
-The resolver performs no writes and never inserts a Workplace. The launch coordinator applies explicit effects from the result before mounting books providers.
+An optional Setup draft never blocks ordinary launch. It is offered only when the User returns to the corresponding action.
 
-### 3.1 Device onboarding
+Books providers mount only for `open(workplaceId)` after that exact row is observed. Cached Workplace data, a Setup result, an import result, or a stale pointer cannot authorize books mounting.
 
-- Required display name (non-empty after trim). Persist on User. Set Device claimed.
-- Import-from-splash: if backup has a name, use it; else preserve the name entered during Device onboarding; if neither exists, use Default display name `User`; then restore is Workplace creation by restore (section 5).
-- No Workplace write. No Device SMS listen on.
-- Draft name may live in ephemeral/Device storage; that is not a Workplace.
+Bare books deep links received before a valid `open` target are rejected because their Workplace is ambiguous. After a blocking journey completes, launch resolves again and lands on the opened Workplace rather than replaying the ambiguous deep link.
 
-### 3.2 Device recovery
+### 2.1 Device recovery
 
-Capture whether the Device bag exists before legacy preference migration can synthesize defaults. The legacy User mirror must not silently fabricate Device state.
+Existing valid Workplace rows may prove that an older or recovered install had usable books. Recovery may repair Device registration, Active workplace, and a missing display name without creating or modifying a Workplace. `User` is permitted only as this recovery name; it is never a first-run fallback.
 
-Device bag missing:
+Recovery is not a compatibility layer for any unreleased Setup draft or onboarding flag.
 
-1. Write Device defaults: claimed false, lock off, listen off, Active workplace unset, new or absent telemetry id per existing analytics rules.
-2. If `count(Workplaces) > 0`: set Device claimed true (do not re-ask name). Resolve Active workplace as in the table above. Workplace existence is the upgrade/recovery proof that old setup completed; do not inspect whether the Workplace appears empty.
-3. If `count(Workplaces) == 0`: leave unclaimed; Device onboarding.
+## 3. Setup model
 
-Do not create a Workplace here. Device claimed is the canonical registration state. If User name is missing while claimed is true or Workplaces exist, set Default display name `User` so claimed is honest; a name alone does not claim a Device outside successful Device onboarding.
+A Setup journey is an ordered recipe of Setup slices. The Setup Coordinator performs a linear scan from the current position:
 
-### 3.3 Workplace-optional shell
+1. ignore slices not included by the recipe;
+2. auto-complete a `when_missing` slice only when all required authoritative facts are present;
+3. stop at the first slice requiring presentation;
+4. persist only accepted checkpoints;
+5. execute a recipe-specific finisher after the terminal confirmation.
 
-Books surfaces (Hub, journal, accounts, Workplace-scoped SMS rules, Workplace inbox copies) require a valid Active workplace. Without it, expose only the focused launch gate: Device onboarding, Workplace creation, picker, Import, and editing the display name where relevant. Do not mount a general Device shell or Settings.
+Slice participation policies are:
 
-`WorkplaceContext` must not call ensure-default. The launch coordinator mounts it only for `open(workplaceId)`.
+- **required** — must be presented and accepted;
+- **when missing** — auto-complete from authoritative facts, otherwise present;
+- **always show** — prefill available facts but require explicit confirmation.
 
-Books deep links received before `open(workplaceId)` are rejected unless they carry a valid Workplace identity. Bare entity ids are not replayed after onboarding, creation, Import, or picker because the intended Workplace is ambiguous; finish the launch gate and land on Hub.
+Defaults may prefill a field, but never turn a required missing fact into an auto-completed slice.
 
-## 4. Workplace creation
+### 3.1 Fact provenance
 
-One flow. Config:
+Provenance is retained only for facts that affect prefilling, auto-completion, or dependent derivation:
 
-|                                        | Default setup                                                                                             | Full setup                     |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| When                                   | Zero Workplaces (first books)                                                                             | User creates another Workplace |
-| Name / icon                            | Exact name: `{trimmed name}'s Personal workplace`; fallback `User's Personal workplace`; icon `briefcase` | Asked                          |
-| Currency, starter accounts, categories | Asked                                                                                                     | Asked                          |
-| Persist                                | On finish only                                                                                            | On finish only                 |
+- User-entered;
+- imported;
+- existing;
+- defaulted.
 
-Creation and Import use an operation identity for the active attempt, but wizard fields are ephemeral. A process restart returns to the launch gate instead of replaying a stale form. Backing out mid-flow creates zero new rows; factory reset also removes any legacy draft keys left by older releases.
+At minimum this applies to User display name, Workplace identity and required configuration, and appearance. Ordinary selections made inside Workplace setup do not need provenance wrappers.
 
-Finish: one database transaction inserts the Workplace, system accounts, and selected starters. Database publication is the commit point; setting Active workplace and other preference pointers follows and is recoverable on the next launch if it fails.
+### 3.2 Draft behavior
 
-Import: stage and validate privately, then publish the restored Workplace, set Active workplace, and set Device claimed true on successful finish. Database publication is the commit point; preference pointers are repaired on the next launch if their writes fail. **No** empty Default workplace exists beforehand, and failure leaves zero new Workplace, account, or journal rows.
+There is at most one active Setup draft per Device.
 
-First-run restore may adopt exported User preferences. If the backup has no display name, preserve the name entered during Device onboarding; use Default display name `User` only when neither exists. Settings Import preserves the current User bag and restores only Workplace data and Workplace preferences.
+The draft contains:
 
-Only an observed database row whose ID matches the coordinator's resolved Active workplace may authorize books providers. Cached Workplace data may render non-authoritative chrome but cannot mount books surfaces.
+- journey identity and whether it blocks launch;
+- stable operation identity;
+- accepted slice outputs;
+- limited fact provenance;
+- presentation history for Back;
+- a reference and fingerprint for an uncommitted Restore source, when present;
+- a Restore handoff after publication, when present.
 
-### 4.1 Transitions
+Parsed accounts, journals, transactions, and other imported books are never serialized into the Setup draft. Before publication, a resumed restore reparses the selected source. After publication, the Workplace row and its books are authoritative.
 
-Deleting an Active Workplace first unmounts books providers, deletes its scoped rows and Workplace shell atomically, then reruns the resolver. Zero remaining Workplaces goes to Default setup/Import, one is opened and persisted Active, and several go to the picker. Deleting the last Workplace is allowed after explicit confirmation.
+A corrupt draft is rejected. Rejecting it never deletes published books. Normal launch recovery handles valid Workplaces; an unpublished restore returns to source selection.
 
-Switching Workplaces validates the target row, blocks books during the transition, durably persists Active workplace, evicts the old scope, mounts the target, and resets navigation to the target Hub. A failure to persist leaves the old Workplace active.
+## 4. Journey recipes
 
-The picker presents existing Workplaces as the primary action, with Create Workplace and Import Workplace as secondary actions. It cannot cancel to Hub without a valid Active workplace.
+| Journey                                | Entry policy            | Presented order                                                                                                             |
+| -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| First run                              | Blocking                | Device setup → Workplace setup → Appearance setup → Setup summary                                                           |
+| First-run restore                      | Blocking                | Restore source → missing publication facts → Restore summary → Device setup when missing → Appearance setup → Setup summary |
+| Registered Device with zero Workplaces | Blocking                | Workplace setup → Setup summary, or Restore source → missing publication facts → Restore summary → Activate                 |
+| Restore from picker                    | Blocking while selected | Restore source → missing publication facts → Restore summary → Open or return to picker                                     |
+| Restore from Settings                  | Optional                | Restore source → missing publication facts → Restore summary → Open or stay                                                 |
+| Later Workplace creation               | Optional                | Workplace setup → Setup summary                                                                                             |
 
-## 5. Inbox
+Workplace replacement is maintenance, not a Setup journey. It may reuse restore parsing and validation but keeps separate confirmation and completion behavior.
 
-### 5.1 Device inbox
+### 4.1 Progress, Back, and editing
 
-- One feed per install of incoming SMS (identity = existing fingerprint / device source id).
-- Same list for every Active workplace.
-- Not in native Workplace export.
-- Survives Workplace delete.
+Progress reflects presented top-level slices only. A slice owns any internal progress display. Fixed global labels such as “3 of 6” are prohibited.
 
-### 5.2 Consume
+Back returns through presentation history. It does not reveal slices that auto-completed without presentation. Auto-completed facts remain visible on Setup summary and may be edited through an explicit Change action.
 
-Consume in Workplace W = post (manual or auto-post) or dismiss in W.
+A Change action opens the owning slice directly. Accepting the edit reruns dependent derivations and validation, then returns directly to Setup summary.
 
-Effect:
+## 5. Slice contracts
 
-- Upsert a **Workplace inbox** copy for W (linked journal if posted).
-- Device feed row remains visible.
-- If any other Workplace has a copy, Device UI shows Elsewhere-consumed with that Workplace’s name (if several, show all or the set — product: at least one name; spec: all Workplaces that consumed).
+Each slice has a stable identity and owns:
 
-Manual consume in W is always allowed even if U already consumed.
+- its accepted output type;
+- completion predicate;
+- validation;
+- presentation;
+- optional internal checkpoints.
 
-Dismiss in W is consume-without-journal for W. It does not remove the Device feed row. Other Workplaces still see it, tagged.
+A slice does not choose routes, activate a Workplace, mark a journey complete, or mutate unrelated preferences.
 
-### 5.3 Cross-workplace auto-post
+### 5.1 Device setup
 
-Workplace boolean, default **off**.
+Device setup requires a non-empty trimmed User display name. Acceptance writes the User name and registers the Device at that checkpoint; it does not create books or choose appearance.
 
-When running auto-post for Active workplace W:
+During first-run restore, precedence is:
 
-- If the Device message has no copy in any Workplace, or only W’s copy is pending (N/A — pending is Device-only): apply W’s rules as today.
-- If any Workplace other than W has a consumed copy: apply W’s rules only if W’s Cross-workplace auto-post is on; otherwise skip auto-post (still show in Device inbox; User may post by hand).
+1. non-empty imported name;
+2. non-empty User-entered candidate;
+3. otherwise Device setup remains required.
 
-### 5.4 Device SMS listen
+No first-run path synthesizes `User`.
 
-Device boolean, default **off**. Off → no OS scan for anyone. On → scan; auto-post uses Active workplace + section 5.3. OS permission is separate and Device/OS.
+Restore remains available from the Device setup surface. Selecting it starts a Restore setup journey. A non-empty typed name is carried forward as a User-entered candidate; a blank value remains missing.
 
-Do not turn listen on during Device onboarding. Settings after the User has books is the path.
+### 5.2 Workplace setup
 
-### 5.5 Delete Workplace W
+Workplace setup is one slice with private internal checkpoints:
 
-Delete W’s copies. Device feed unchanged. Tags recompute from remaining copies.
+- identity;
+- base currency;
+- starter asset/liability accounts;
+- starter income/expense categories.
 
-### 5.6 Export / import
+Default setup derives `{trimmed User display name}'s Personal workplace` and `briefcase`. The derived name follows display-name edits until the Workplace name is edited directly, after which its provenance is User-entered and it remains stable.
 
-Workplace backup includes Workplace inbox copies (and journals, rules). Excludes Device inbox, Device bag (lock, listen, Active workplace, claimed flag, telemetry).
+Full setup presents identity. Restore presents only publication-critical checkpoints not authoritatively supplied by the source. Missing Workplace identity receives a visible suggestion, not silent completion. Missing or ambiguous base currency must be resolved before publication.
 
-Restore writes copies into the restored Workplace. Pending Device messages on the destination phone stay whatever that Device already had.
+Fresh setup requires at least one starter account, one income category, and one expense category. Imported books retain their imported accounts and categories; Restore setup does not turn into a financial editor.
 
-## 6. Migration (existing installs)
+### 5.3 Appearance setup
 
-- Any Workplace present when an existing install upgrades is treated as completed setup. Preserve it, mark the recovered Device claimed, and resolve it normally; do not classify it by name, row contents, or whether it began as boot-created Personal. This intentionally favors continuity over detecting abandoned empty installs.
-- After ship, fresh installs must not create a Workplace until Default setup or Import finishes.
-- Inbox: existing Workplace-scoped pending rows become Device feed identities (dedupe by fingerprint across Workplaces); consumed rows become copies. Exact SQL is an implementation task; invariant is one Device identity per SMS, copies only where consumed.
-- `isSmsImportEnabled` on Workplace: migrate OR to Device listen (if any Workplace had it on, Device listen on) or keep off unless User had it on for the Active workplace — **decision: if any Workplace had listen on, Device listen on** so we do not silently stop scanning for people who already opted in.
+Appearance setup owns theme and font selection. It is always shown during first run, including when a backup contains valid appearance.
 
-## 7. Acceptance (engineering)
+Imported or existing appearance may prefill the slice. Preview is scoped to Setup and does not mutate User preferences. Discarding Setup removes the preview. The accepted appearance is written by the journey finisher.
 
-1. Fresh DB after Device onboarding, before Workplace finish: `workplaces` count = 0.
-2. Kill app in that state: next launch is Workplace creation, not name, count still 0.
-3. Finish Default setup: count = 1, Active workplace set, Device claimed true.
-4. Resolver: 0 / 1 / N Workplaces as section 3.
-5. Device bag deleted, 1 Workplace in DB: no name screen; that Workplace opens.
-6. Native export JSON has no Device inbox array of pending OS messages; has Workplace copies if any.
-7. Post in A, switch to B: message visible, tagged A, hand post in B allowed; auto-post in B skipped if flag off.
-8. Delete A: B’s copy remains if B consumed; Device row remains.
-9. Active books unmount before Active Workplace deletion begins.
-10. Pointer cleanup failure after database success never produces “books were not changed.”
-11. Pointer repair failure does not strand a valid Workplace on a loading screen.
-12. Settings does not choose the post-delete Workplace or route.
-13. Repeated deletion of an already-deleted Workplace is a successful no-op.
+Later Workplace creation, picker restore, zero-Workplace restore for an already registered Device, and Settings restore do not repeat Appearance setup.
 
-## 8. Non-goals
+### 5.4 Restore source
 
-Cloud login, Device theme override, Device-wide “drop this SMS for every Workplace,” listen as a first-run step.
+Restore source owns file selection, parsing, validation feedback, source fingerprinting, and publication progress. The stable operation identity is persisted before publication begins.
+
+Preparation returns available User, Workplace, and appearance facts with provenance, warnings, and publishable in-memory data. Required missing Workplace facts are collected through Workplace setup before publication.
+
+If a resumed source reference is unavailable, retain the resolved facts and operation identity, then ask the User to reselect a file. The new file must match the stored fingerprint.
+
+### 5.5 Restore summary
+
+Restore summary reads the published inactive Workplace and shows its identity, currency, account/category and journal statistics, skipped items, and warnings.
+
+Failure to read or verify the published Workplace blocks continuation. The User may retry or explicitly discard the operation-owned restore.
+
+Actions vary by recipe:
+
+- first run: Continue setup;
+- registered Device with no Workplace: Activate;
+- picker: Open imported Workplace or return to picker;
+- Settings: Open imported Workplace or stay in the current Workplace.
+
+The surface reports intent. Its caller owns the resulting transition.
+
+### 5.6 Setup summary
+
+Setup summary displays every accepted or auto-completed fact relevant to the recipe. For first run this includes User name, Workplace identity, base currency, starter account/category counts, theme, and font.
+
+Fresh Workplace fields are editable through their owning slices. During restore, Workplace name and icon are editable; imported currency, accounts, categories, journals, and other books are read-only until normal app use.
+
+Acceptance is disabled while required facts are missing, dependent derivations are stale, Restore summary is unreadable, or a finisher is running.
+
+## 6. Workplace restore
+
+The restore persistence boundary has two operations:
+
+1. **Prepare** — parse, normalize, validate, collect facts and warnings, and hold publishable data in memory.
+2. **Publish** — atomically insert the Workplace shell and validated books under the stable operation ID, then return a Restore handoff.
+
+The Restore handoff contains the operation ID, published Workplace ID, imported facts and provenance, counts, metadata, and warnings. It contains no navigation or completion decision.
+
+Publication does not:
+
+- activate the Workplace;
+- register the Device;
+- mutate User name, theme, or font;
+- mark Setup accepted;
+- navigate.
+
+Settings and picker restore ignore imported User facts. First-run Restore setup may use them as draft input.
+
+Cancelling before publication creates no rows. After publication, Back or app termination retains the inactive Workplace and resumes the journey. Only explicit Discard restore deletes the Workplace created by that operation, after confirmation.
+
+## 7. Finishers and commit semantics
+
+There are three explicit finishers:
+
+- first run;
+- Restore setup;
+- later Workplace creation.
+
+Each finisher is idempotent under the draft's stable operation ID.
+
+### 7.1 First-run finisher
+
+1. Validate the full accepted draft.
+2. Publish or verify the operation-owned Workplace, system accounts, selected starters, and any future draft journal in one database transaction.
+3. Write accepted User name and appearance.
+4. Persist Device registration and Active workplace.
+5. Clear the Setup draft last.
+6. Emit the terminal outcome.
+
+### 7.2 Restore-setup finisher
+
+1. Verify the published Workplace matches the Restore handoff.
+2. Validate all remaining accepted Setup facts.
+3. Apply allowed Workplace identity edits.
+4. Write accepted User name and appearance when the recipe includes them.
+5. Persist Device registration and Active workplace.
+6. Clear the Setup draft last.
+7. Emit the terminal outcome.
+
+### 7.3 Later-creation finisher
+
+1. Validate the Workplace draft.
+2. Publish or verify the operation-owned Workplace and starter books atomically.
+3. Clear the optional Setup draft.
+4. Emit `workplace_created(id)`.
+5. Let the launch coordinator validate and perform the normal Workplace transition.
+
+Database publication is the books commit point. A failure afterward never reports valid books as uncommitted. The retained draft lets the same finisher verify publication and retry remaining idempotent writes.
+
+## 8. Cancellation and concurrency
+
+- Only one active Setup draft exists per Device.
+- A blocking journey cannot be displaced by another journey.
+- First-run Setup has no cancellation path into the app. The User may restart fresh setup or choose restore.
+- Restore may explicitly discard its operation and return to the appropriate previous gate.
+- Leaving later Workplace creation returns to the current Workplace and retains the optional draft. The next attempt offers Resume or Discard.
+- Starting another optional journey requires resolving the existing optional draft first.
+
+## 9. Device inbox tenancy
+
+Device inbox behavior remains separate from Setup:
+
+- one pending SMS feed per Device;
+- Workplace copies only after consume or dismiss;
+- Device SMS listen is Device-owned and default off;
+- Workplace restore includes consumed Workplace copies but never the Device feed or Device preferences;
+- no SMS-listen or inbox step is added to first-run Setup.
+
+## 10. Acceptance matrix
+
+### Launch and state
+
+1. A valid blocking draft always resumes before normal launch resolution.
+2. An optional creation draft never blocks opening the current Workplace.
+3. Fresh Device setup with no Workplace creates zero database rows.
+4. After Device setup acceptance and app termination, launch resumes Workplace setup.
+5. No books provider mounts before a validated `open(workplaceId)` result.
+6. No persisted onboarding-complete or onboarding-stage flag is consulted.
+
+### Fresh setup
+
+7. Workplace, account, category, and journal counts remain zero until Setup summary acceptance.
+8. First-run publication is atomic and retry-safe under one operation ID.
+9. Appearance preview does not change User preferences before acceptance.
+10. Editing a defaulted User name updates the derived Workplace name; editing the Workplace name breaks that derivation.
+
+### Restore
+
+11. Backup name present → Device setup auto-completes; Restore summary is followed by Appearance.
+12. Backup name absent, typed candidate present → candidate satisfies Device setup.
+13. Both names absent → Device setup is presented after Restore summary.
+14. Missing Workplace identity → identity checkpoint appears before publication.
+15. Missing or ambiguous base currency → currency checkpoint appears before publication.
+16. Published imported identity is preserved unless the User explicitly edits name or icon.
+17. Settings and picker restore do not modify User name, theme, or font.
+18. Crash after publication but before acknowledgement resumes from the persisted operation and published Workplace.
+19. Explicit discard deletes only the current operation-owned inactive Workplace.
+20. Restore summary read failure blocks activation and offers retry or discard.
+
+### Extensibility
+
+21. Adding a Demo journal slice requires a slice module, recipe entry, accepted draft output, and finisher handling; it does not modify Setup Coordinator control flow.
+22. Recipe progress contains no fixed global step count.
+
+## 11. Non-goals
+
+- Cloud identity, membership, or role-based access.
+- Runtime or remote Setup plugins.
+- A graph/state-machine library.
+- A dependency-injection container or event bus.
+- A universal effect journal or workflow database.
+- Generic schema-driven forms.
+- Migrating any unreleased named-stage or Setup-draft shape.
+- Editing imported financial data during Restore setup.
+- Device SMS listen or app-lock setup during first run.
