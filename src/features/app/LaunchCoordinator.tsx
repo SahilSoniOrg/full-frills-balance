@@ -5,7 +5,11 @@ import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { resolveLaunchGate, LaunchResolution } from '@/src/services/launch/launchResolver';
+import {
+  resolveLaunchGate,
+  LaunchResolution,
+  LaunchSetupDraft,
+} from '@/src/services/launch/launchResolver';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
@@ -29,6 +33,7 @@ import { Redirect, usePathname, useRouter } from 'expo-router';
 export type LaunchCoordinatorState =
   | { kind: 'loading'; retry: () => void }
   | { kind: 'error'; error: Error; retry: () => void }
+  | Extract<LaunchResolution, { kind: 'setup' }>
   | (LaunchResolution & {
       kind: 'device_onboarding' | 'workplace_creation';
     })
@@ -50,7 +55,10 @@ export function shouldRenderGateChildren(
   const isGateRoute = pathname === '/onboarding' || pathname === '/import-selection';
   return (
     isGateRoute &&
-    (kind === 'device_onboarding' || kind === 'workplace_creation' || kind === 'picker')
+    (kind === 'setup' ||
+      kind === 'device_onboarding' ||
+      kind === 'workplace_creation' ||
+      kind === 'picker')
   );
 }
 
@@ -104,7 +112,14 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
   return result;
 }
 
-export function LaunchCoordinatorProvider({ children }: { children: React.ReactNode }) {
+export function LaunchCoordinatorProvider({
+  children,
+  setupDraft,
+}: {
+  children: React.ReactNode;
+  /** Validated projection of the device-local Setup draft, when present. */
+  setupDraft?: LaunchSetupDraft;
+}) {
   const { isInitialized } = useAppReady();
   const [retryToken, setRetryToken] = useState(0);
   const activeWorkplaceId = useSyncExternalStore(
@@ -143,6 +158,7 @@ export function LaunchCoordinatorProvider({ children }: { children: React.ReactN
     if (discovery.error) return { kind: 'error' as const, error: discovery.error, retry };
     if (!isInitialized || discovery.loading) return { kind: 'loading' as const, retry };
     const next = resolveLaunchGate({
+      setupDraft,
       deviceClaimed,
       activeWorkplaceId,
       pendingWorkplaceId,
@@ -160,6 +176,7 @@ export function LaunchCoordinatorProvider({ children }: { children: React.ReactN
     activeWorkplaceId,
     deviceClaimed,
     pendingWorkplaceId,
+    setupDraft,
     discovery.error,
     discovery.loading,
     discovery.workplaces,
@@ -234,7 +251,11 @@ export function LaunchCoordinatorContent({
     reject: (error: unknown) => void;
   } | null>(null);
   useEffect(() => {
-    if (state.kind === 'device_onboarding' || state.kind === 'workplace_creation') {
+    if (
+      state.kind === 'setup' ||
+      state.kind === 'device_onboarding' ||
+      state.kind === 'workplace_creation'
+    ) {
       if (pathname !== '/onboarding' && pathname !== '/import-selection') {
         // Prevent a direct books deep link from mounting without a Workplace.
         router.replace('/onboarding');
@@ -443,7 +464,9 @@ export function LaunchCoordinatorContent({
   }
   if (
     gateChildren &&
-    (state.kind === 'device_onboarding' || state.kind === 'workplace_creation') &&
+    (state.kind === 'setup' ||
+      state.kind === 'device_onboarding' ||
+      state.kind === 'workplace_creation') &&
     pathname !== '/onboarding' &&
     pathname !== '/import-selection'
   ) {
@@ -466,7 +489,13 @@ export function LaunchCoordinatorContent({
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>{state.kind === 'device_onboarding' ? 'Device setup' : 'Create a workplace'}</Text>
+      <Text>
+        {state.kind === 'setup'
+          ? 'Setup'
+          : state.kind === 'device_onboarding'
+            ? 'Device setup'
+            : 'Create a workplace'}
+      </Text>
     </View>
   );
 }

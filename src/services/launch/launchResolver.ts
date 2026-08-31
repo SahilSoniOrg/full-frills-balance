@@ -1,8 +1,20 @@
 import { WorkplaceId } from '@/src/types/ids';
 
+/**
+ * The launch layer only needs these two facts from Setup. The Setup feature
+ * owns the full draft and validates it before handing this projection to
+ * launch. Keeping the projection small prevents launch from learning about
+ * individual setup slices.
+ */
+export interface LaunchSetupDraft {
+  readonly journeyId: string;
+  readonly entryPolicy: 'blocking' | 'optional';
+}
+
 export type LaunchResolution =
   | { readonly kind: 'device_onboarding' }
   | { readonly kind: 'workplace_creation' }
+  | { readonly kind: 'setup'; readonly journeyId: string }
   | { readonly kind: 'picker' }
   | {
       readonly kind: 'open';
@@ -11,6 +23,8 @@ export type LaunchResolution =
     };
 
 export interface LaunchResolverInput {
+  /** A validated Setup projection. Blocking drafts take precedence. */
+  readonly setupDraft?: LaunchSetupDraft;
   readonly deviceClaimed: boolean;
   readonly activeWorkplaceId?: WorkplaceId;
   readonly pendingWorkplaceId?: WorkplaceId;
@@ -23,6 +37,10 @@ export interface LaunchResolverInput {
  */
 export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution {
   const { deviceClaimed, activeWorkplaceId, pendingWorkplaceId, workplaceIds } = input;
+
+  if (input.setupDraft?.entryPolicy === 'blocking' && input.setupDraft.journeyId.trim()) {
+    return { kind: 'setup', journeyId: input.setupDraft.journeyId };
+  }
 
   if (!deviceClaimed) return { kind: 'device_onboarding' };
   if (workplaceIds.length === 0) return { kind: 'workplace_creation' };
