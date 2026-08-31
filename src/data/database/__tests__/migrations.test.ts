@@ -25,6 +25,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import type { AppSchema } from '@nozbe/watermelondb';
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
+import { migrations } from '@/src/data/database/migrations';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -71,6 +73,23 @@ describe('database migrations (LokiJS)', () => {
 
     const persistedVersion = await database.adapter.getLocal(LOKI_SCHEMA_VERSION_KEY);
     expect(Number(persistedVersion)).toBe(EXPECTED_SCHEMA_VERSION);
+  });
+
+  it('starts a current-schema install with no Workplace rows', async () => {
+    expect(await workplaceRepository.findAll()).toHaveLength(0);
+  });
+
+  it('keeps the v23 Personal backfill for legacy upgrades', () => {
+    const v23 = migrations.sortedMigrations.find(migration => migration.toVersion === 23);
+    const workplaceInsert = v23?.steps.find(
+      step => step.type === 'sql' && step.sql.includes('INSERT INTO workplaces'),
+    );
+
+    expect(workplaceInsert).toBeDefined();
+    expect((workplaceInsert as { sql: string }).sql).toContain("'Personal workplace'");
+    expect((workplaceInsert as { sql: string }).sql).toContain(
+      'WHERE (SELECT COUNT(*) FROM workplaces) = 0',
+    );
   });
 
   it('supports journal + transaction writes and balance fold after reset', async () => {

@@ -1,10 +1,16 @@
 import { AppConfig } from '@/src/constants';
-import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
+
+import { getOpeningBalancesAccountInput } from './accountSystemAccountInputs';
+
+export {
+  getBalanceCorrectionAccountInput,
+  getOpeningBalancesAccountInput,
+} from './accountSystemAccountInputs';
 
 export function isSystemAccount(account: { name: string }): boolean {
   const { openingBalances, balanceCorrections } = AppConfig.systemAccounts;
@@ -22,30 +28,6 @@ export async function findAccountByName(
   name: string,
 ): Promise<import('@/src/data/models/Account').default | null> {
   return accountQueryRepository.findByName(workplaceId, name);
-}
-
-export function getOpeningBalancesAccountInput(
-  currencyCode: string,
-  workplaceId: WorkplaceId,
-): {
-  name: string;
-  accountType: AccountType;
-  accountSubtype: AccountSubtype;
-  currencyCode: string;
-  description: string;
-  icon: IconName;
-  workplaceId: WorkplaceId;
-} {
-  const { openingBalances } = AppConfig.systemAccounts;
-  return {
-    name: `${openingBalances.namePrefix} (${currencyCode})`,
-    accountType: AccountType.EQUITY,
-    accountSubtype: getDefaultSubtypeForType(AccountType.EQUITY),
-    currencyCode,
-    description: openingBalances.description,
-    icon: openingBalances.icon as IconName,
-    workplaceId,
-  };
 }
 
 export async function getOpeningBalancesAccountId(

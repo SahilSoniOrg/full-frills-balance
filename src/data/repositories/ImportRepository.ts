@@ -2,7 +2,6 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { applyImportChanges, ImportChanges } from '@/src/data/repositories/importChangeApplier';
 import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importAuxiliaryWriters';
 import { prepareCoreImportRecords } from '@/src/data/repositories/importCoreWriters';
 import {
@@ -12,53 +11,136 @@ import {
 import type { BatchImportData } from '@/src/data/repositories/importTypes';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
+import Workplace from '@/src/data/models/Workplace';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { Model, Q } from '@nozbe/watermelondb';
+import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 
 export class ImportRepository {
-  async batchInsert(
-    workplaceId: WorkplaceId,
+  private async prepareImportData(
     data: BatchImportData,
     onProgress?: (message: string, progress?: number) => void,
   ): Promise<void> {
     const balancePatches = await calculateImportRunningBalances(data, onProgress);
     applyImportBalancePatches(data, balancePatches);
+  }
+
+  private prepareOperations(workplaceId: WorkplaceId, data: BatchImportData): Model[] {
+    return [
+      ...prepareCoreImportRecords(
+        workplaceId,
+        {
+          accounts: database.collections.get<Account>('accounts'),
+          journals: database.collections.get<Journal>('journals'),
+          transactions: database.collections.get<Transaction>('transactions'),
+        },
+        { accounts: data.accounts, journals: data.journals, transactions: data.transactions },
+      ),
+      ...prepareAuxiliaryImportRecords(workplaceId, data),
+    ];
+  }
+
+  private async batchPreparedOperations(
+    operations: Model[],
+    onProgress?: (message: string, progress?: number) => void,
+    atomic = false,
+  ): Promise<void> {
+    if (operations.length === 0) return;
+    if (atomic) {
+      onProgress?.(`Saving ${operations.length} records...`, 0);
+      await database.batch(operations);
+      onProgress?.('Saving records complete.', 1);
+      return;
+    }
+    const chunkSize = 5000;
+    logger.info(
+      `[ImportRepository] Starting batch insert of ${operations.length} operations in chunks of ${chunkSize}...`,
+    );
+    for (let index = 0; index < operations.length; index += chunkSize) {
+      const chunk = operations.slice(index, index + chunkSize);
+      const currentCount = index + chunk.length;
+      onProgress?.(
+        `Saving records (${Math.min(currentCount, operations.length)}/${operations.length})...`,
+        index / operations.length,
+      );
+      await database.batch(chunk);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    onProgress?.('Saving records complete.', 1);
+    logger.info('[ImportRepository] Batch insert complete.');
+  }
+
+  async batchInsert(
+    workplaceId: WorkplaceId,
+    data: BatchImportData,
+    onProgress?: (message: string, progress?: number) => void,
+  ): Promise<void> {
+    await this.prepareImportData(data, onProgress);
 
     await database.write(async () => {
-      const operations = [
-        ...prepareCoreImportRecords(
-          workplaceId,
-          {
-            accounts: database.collections.get<Account>('accounts'),
-            journals: database.collections.get<Journal>('journals'),
-            transactions: database.collections.get<Transaction>('transactions'),
-          },
-          { accounts: data.accounts, journals: data.journals, transactions: data.transactions },
-        ),
-        ...prepareAuxiliaryImportRecords(workplaceId, data),
-      ];
-
-      if (operations.length === 0) return;
-
-      const chunkSize = 5000;
-      logger.info(
-        `[ImportRepository] Starting batch insert of ${operations.length} operations in chunks of ${chunkSize}...`,
-      );
-      for (let index = 0; index < operations.length; index += chunkSize) {
-        const chunk = operations.slice(index, index + chunkSize);
-        const currentCount = index + chunk.length;
-        onProgress?.(
-          `Saving records (${Math.min(currentCount, operations.length)}/${operations.length})...`,
-          index / operations.length,
-        );
-        await database.batch(chunk);
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-      onProgress?.('Saving records complete.', 1);
-      logger.info('[ImportRepository] Batch insert complete.');
+      await this.batchPreparedOperations(this.prepareOperations(workplaceId, data), onProgress);
     });
   }
 
-  async applyChanges(workplaceId: WorkplaceId, data: ImportChanges): Promise<void> {
-    await applyImportChanges(workplaceId, data);
+  /** Replace a published Workplace atomically; failed writes leave old books intact. */
+  async replaceWorkplace(
+    workplaceId: WorkplaceId,
+    data: BatchImportData,
+    onProgress?: (message: string, progress?: number) => void,
+    metadata?: { name?: string; icon?: string; defaultCurrencyCode?: string },
+  ): Promise<void> {
+    await this.prepareImportData(data, onProgress);
+    const operations = this.prepareOperations(workplaceId, data);
+    await database.write(async () => {
+      const deletions: Model[] = [];
+      for (const table of WORKPLACE_SCOPED_TABLE_NAMES) {
+        const records = await database.collections
+          .get<Model>(table)
+          .query(Q.where('workplace_id', workplaceId))
+          .fetch();
+        deletions.push(...records.map(record => record.prepareDestroyPermanently()));
+      }
+      const workplace = await workplaceRepository.find(workplaceId);
+      if (!workplace) throw new Error(`Workplace not found: ${workplaceId}`);
+      const workplaceUpdate = workplace.prepareUpdate(record => {
+        if (metadata?.name) record.name = metadata.name;
+        if (metadata?.icon) record.icon = metadata.icon;
+        if (metadata?.defaultCurrencyCode) {
+          record.defaultCurrencyCode = metadata.defaultCurrencyCode;
+        }
+        record.updatedAt = new Date();
+      });
+      await this.batchPreparedOperations(
+        [...deletions, workplaceUpdate, ...operations],
+        onProgress,
+        true,
+      );
+    });
+  }
+
+  /** Publishes a new Workplace and its imported records in one transaction. */
+  async batchInsertNewWorkplace(
+    workplace: {
+      id: WorkplaceId;
+      name: string;
+      icon: string;
+      defaultCurrencyCode: string;
+    },
+    data: BatchImportData,
+    onProgress?: (message: string, progress?: number) => void,
+  ): Promise<Workplace> {
+    await this.prepareImportData(data, onProgress);
+
+    let created!: Workplace;
+    await database.write(async () => {
+      created = workplaceRepository.prepareCreate(workplace);
+      await this.batchPreparedOperations(
+        [created, ...this.prepareOperations(workplace.id, data)],
+        onProgress,
+        true,
+      );
+    });
+    return created;
   }
 }
 

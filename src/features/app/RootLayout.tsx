@@ -6,7 +6,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider } from '@/src/contexts/UIContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
-import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
@@ -26,6 +26,11 @@ import {
 } from 'react-native-safe-area-context';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
+import {
+  LaunchCoordinatorContent,
+  LaunchCoordinatorProvider,
+  useLaunchCoordinator,
+} from './LaunchCoordinator';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
@@ -64,19 +69,21 @@ function RootLayout() {
               <DatabaseProvider database={database}>
                 <UIProvider>
                   <EarlyBootstrap />
-                  <WorkplaceProvider>
+                  <LaunchCoordinatorProvider>
                     <MaybeAnalyticsProvider client={analytics.posthog}>
                       <ThemeProvider value={theme}>
-                        <WorkplaceBootstrap />
-                        <AppLockInterceptor>
-                          <AppContent />
-                        </AppLockInterceptor>
+                        <LaunchCoordinatorContent gateChildren={<AppContent />}>
+                          <WorkplaceBootstrap />
+                          <AppLockInterceptor>
+                            <AppContent />
+                          </AppLockInterceptor>
+                        </LaunchCoordinatorContent>
                         <AlertContainer />
                         <ToastContainer />
                         <SplashOrchestrator />
                       </ThemeProvider>
                     </MaybeAnalyticsProvider>
-                  </WorkplaceProvider>
+                  </LaunchCoordinatorProvider>
                 </UIProvider>
               </DatabaseProvider>
             </ErrorBoundary>
@@ -113,6 +120,7 @@ function WorkplaceBootstrap() {
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
+  const launch = useLaunchCoordinator();
   const insets = useSafeAreaInsets();
   const hasTrackedColdStartRef = React.useRef(false);
 
@@ -120,6 +128,12 @@ function SplashOrchestrator() {
     isAppReady,
     isDataHydrated,
     hasCompletedOnboarding,
+    launchState:
+      launch.kind === 'open'
+        ? 'open'
+        : launch.kind === 'loading' || launch.kind === 'error'
+          ? 'loading'
+          : 'gate',
     hasSafeAreaInsets: hasMeasuredSafeAreaInsets(insets),
   });
 

@@ -73,10 +73,10 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           analytics.delayedInitializePostHog();
           analytics.logAppOpened();
 
-          let anonId = preferences.anonymizedId;
+          let anonId = preferences.device.anonymizedId;
           if (!anonId) {
             anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-            preferences.setAnonymizedId(anonId);
+            preferences.device.setAnonymizedId(anonId);
           }
           analytics.identify(anonId);
 

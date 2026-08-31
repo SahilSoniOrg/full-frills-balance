@@ -1,6 +1,7 @@
 import { requireShellContext } from '@/src/contexts/app-shell/requireShellContext';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { onboardingService } from '@/src/features/onboarding/services/OnboardingService';
 import React, {
   createContext,
   useCallback,
@@ -11,7 +12,8 @@ import React, {
 
 export interface AppOnboardingValue {
   hasCompletedOnboarding: boolean;
-  completeOnboarding: (name: string) => Promise<void>;
+  persistDisplayName: (name: string) => void;
+  completeDeviceOnboarding: (name: string) => Promise<void>;
 }
 
 export const AppOnboardingContext = createContext<AppOnboardingValue | undefined>(undefined);
@@ -23,33 +25,35 @@ export function useOnboardingSession(): AppOnboardingValue {
 export function AppOnboardingProvider({ children }: { children: React.ReactNode }) {
   const hasCompletedOnboarding = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.observe('onboardingCompleted').subscribe(() => onStoreChange());
+      const sub = preferences.device
+        .observe('onboardingCompleted')
+        .subscribe(() => onStoreChange());
       return () => sub.unsubscribe();
     },
-    () => preferences.onboardingCompleted,
-    () => preferences.onboardingCompleted,
+    () => preferences.device.onboardingCompleted,
+    () => preferences.device.onboardingCompleted,
   );
 
-  const completeOnboarding = useCallback(async (name: string) => {
+  const completeDeviceOnboarding = useCallback(async (name: string) => {
     try {
-      await preferences.setUserName(name);
-      await preferences.setOnboardingCompleted(true);
+      onboardingService.claimDevice(name);
     } catch (error) {
       logger.warn('[UIContext] Failed to complete onboarding', { error });
-      try {
-        preferences.setOnboardingCompleted(true);
-      } catch {
-        /* ignore */
-      }
+      throw error;
     }
+  }, []);
+
+  const persistDisplayName = useCallback((name: string) => {
+    onboardingService.persistDisplayName(name);
   }, []);
 
   const value = useMemo<AppOnboardingValue>(
     () => ({
       hasCompletedOnboarding,
-      completeOnboarding,
+      persistDisplayName,
+      completeDeviceOnboarding,
     }),
-    [hasCompletedOnboarding, completeOnboarding],
+    [hasCompletedOnboarding, persistDisplayName, completeDeviceOnboarding],
   );
 
   return <AppOnboardingContext.Provider value={value}>{children}</AppOnboardingContext.Provider>;

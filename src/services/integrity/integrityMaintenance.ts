@@ -11,6 +11,14 @@ import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { preferences } from '@/src/utils/preferences';
+import { storage } from '@/src/utils/storage';
+
+const RESETTABLE_DRAFT_KEYS = [
+  'onboarding_resume_state_v1',
+  'onboarding_draft_v1',
+  'import_resume_state_v1',
+  'import_draft_v1',
+] as const;
 
 export async function resetWorkplace(
   workplaceId: WorkplaceId,
@@ -38,6 +46,7 @@ export async function resetDatabase(): Promise<void> {
     await databaseRepository.resetDatabase();
     await smsService.clearProcessedMessages();
     preferences.clearPreferences();
+    RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
     logger.info('[IntegrityMaintenance] Database reset successful.');
   } catch (error) {
     logger.error('[IntegrityMaintenance] CRITICAL: Factory reset failed:', error);

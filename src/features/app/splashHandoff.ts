@@ -43,13 +43,19 @@ export function shouldHideNativeSplash({
   isAppReady,
   isDataHydrated,
   hasCompletedOnboarding,
+  launchState,
   hasSafeAreaInsets,
 }: {
   isAppReady: boolean;
   isDataHydrated: boolean;
   hasCompletedOnboarding: boolean;
+  /** Launch gates do not require books hydration; an open Workplace does. */
+  launchState?: 'loading' | 'open' | 'gate';
   hasSafeAreaInsets: boolean;
 }): boolean {
-  const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
+  if (launchState === 'loading') return false;
+  const requiresDataHydration =
+    launchState === 'open' || (launchState === undefined && hasCompletedOnboarding);
+  const isFullyReady = isAppReady && (!requiresDataHydration || isDataHydrated);
   return isFullyReady && hasSafeAreaInsets;
 }

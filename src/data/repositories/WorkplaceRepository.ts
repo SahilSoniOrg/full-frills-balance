@@ -3,6 +3,13 @@ import Workplace from '@/src/data/models/Workplace';
 import { WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
+import { AccountType } from '@/src/types/enums';
+import { IconName } from '@/src/types/domainIcons';
+import { accountWriteRepository } from './account/AccountWriteRepository';
+import {
+  getBalanceCorrectionAccountInput,
+  getOpeningBalancesAccountInput,
+} from '@/src/services/accounts/accountSystemAccountInputs';
 
 export class WorkplaceRepository {
   private get workplaces() {
@@ -34,6 +41,63 @@ export class WorkplaceRepository {
         w.createdAt = new Date();
         w.updatedAt = new Date();
       });
+    });
+  }
+
+  async createWithStarterAccounts(data: {
+    id: WorkplaceId;
+    name: string;
+    icon: IconName;
+    defaultCurrencyCode: string;
+    accounts: { name: string; type: AccountType; icon: IconName }[];
+    categories: { name: string; type: AccountType; icon: IconName }[];
+  }): Promise<Workplace> {
+    const workplace = this.prepareCreate(data);
+    const opening = accountWriteRepository.prepareCreateOps(
+      getOpeningBalancesAccountInput(data.defaultCurrencyCode, data.id),
+    );
+    const correction = accountWriteRepository.prepareCreateOps(
+      getBalanceCorrectionAccountInput(data.defaultCurrencyCode, data.id),
+    );
+    const accountOps = [...opening.ops, ...correction.ops];
+    const names = new Set([
+      opening.account.name.toLowerCase(),
+      correction.account.name.toLowerCase(),
+    ]);
+    for (const starter of [...data.accounts, ...data.categories]) {
+      const name = starter.name.trim();
+      if (!name || names.has(name.toLowerCase())) continue;
+      names.add(name.toLowerCase());
+      accountOps.push(
+        ...accountWriteRepository.prepareCreateOps({
+          name,
+          accountType: starter.type,
+          currencyCode: data.defaultCurrencyCode,
+          icon: starter.icon,
+          workplaceId: data.id,
+        }).ops,
+      );
+    }
+    await database.write(async () => {
+      await database.batch(workplace, ...accountOps);
+    });
+    return workplace;
+  }
+
+  /** Prepare a workplace row for a caller-owned database transaction. */
+  prepareCreate(data: {
+    id?: WorkplaceId;
+    name: string;
+    icon: string;
+    defaultCurrencyCode: string;
+  }): Workplace {
+    return this.workplaces.prepareCreate(w => {
+      if (data.id) w._raw.id = data.id;
+      w.name = data.name.trim();
+      w.icon = data.icon;
+      w.defaultCurrencyCode = data.defaultCurrencyCode;
+      w.createdAt = new Date();
+      w.updatedAt = new Date();
     });
   }
 

@@ -59,14 +59,16 @@ jest.mock('@/src/utils/logger', () => ({
 }));
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
-    anonymizedId: 'anonymous-test-id',
+    device: {
+      anonymizedId: 'anonymous-test-id',
+      setAnonymizedId: jest.fn(),
+    },
     notifications: {
       notificationCadence: 'daily',
       notificationHour: 9,
       notificationMinute: 0,
     },
     sms: { isSmsImportEnabled: false },
-    setAnonymizedId: jest.fn(),
   },
 }));
 jest.mock('@/src/utils/scheduler', () => ({

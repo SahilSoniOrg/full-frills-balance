@@ -7,9 +7,6 @@ export type WorkplaceDataTableTask = {
   table: string;
 };
 
-/** Included in JSON export but not keyed by workplace_id (see schema.ts). */
-export const WORKPLACE_EXPORT_GLOBAL_TABLE_NAMES = [] as const;
-
 export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Accounts', table: 'accounts' },
   { name: 'Journals', table: 'journals' },
@@ -25,9 +22,7 @@ export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Balance Snapshots', table: 'balance_snapshots' },
 ] as const;
 
-const globalExportTableSet = new Set<string>(WORKPLACE_EXPORT_GLOBAL_TABLE_NAMES);
-
-/** Tables with workplace_id — used for purge and staged-import swap. */
+/** Tables with workplace_id — used for workplace purge and replacement. */
 export const WORKPLACE_SCOPED_TABLE_NAMES: readonly string[] = WORKPLACE_DATA_TABLES.map(
   ({ table }) => table,
-).filter(table => !globalExportTableSet.has(table));
+);

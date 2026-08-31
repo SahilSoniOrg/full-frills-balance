@@ -69,6 +69,35 @@ describe('shouldHideNativeSplash', () => {
     ).toBe(true);
   });
 
+  it('hides for a resolved non-books gate without data hydration', () => {
+    expect(
+      shouldHideNativeSplash({
+        ...ready,
+        isDataHydrated: false,
+        launchState: 'gate',
+      }),
+    ).toBe(true);
+  });
+
+  it('keeps the splash up while Workplace discovery is still loading', () => {
+    expect(
+      shouldHideNativeSplash({
+        ...ready,
+        launchState: 'loading',
+      }),
+    ).toBe(false);
+  });
+
+  it('still requires data hydration for an open Workplace', () => {
+    expect(
+      shouldHideNativeSplash({
+        ...ready,
+        isDataHydrated: false,
+        launchState: 'open',
+      }),
+    ).toBe(false);
+  });
+
   it('hides only when layout insets and app readiness agree', () => {
     expect(shouldHideNativeSplash(ready)).toBe(true);
   });

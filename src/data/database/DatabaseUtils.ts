@@ -2,9 +2,10 @@ import { Database } from '@nozbe/watermelondb';
 
 export type RawSqlArg = string | number | boolean | null;
 
-/** Named seam for Watermelon JSI `unsafeQueryRaw`. Callers must not reach the private adapter. */
+/** Named seam for Watermelon raw SQL. Callers must not reach private adapter internals. */
 export interface RawSqlAdapter {
   queryRaw: (sql: string, args: RawSqlArg[], table?: string) => Promise<unknown>;
+  executeRawBatch?: (statements: [string, RawSqlArg[]][]) => Promise<void>;
 }
 
 interface WatermelonJsiDispatcher {
@@ -29,11 +30,22 @@ export function getRawAdapter(database: Database): RawSqlAdapter | null {
 
   if (db && typeof db.unsafeQueryRaw === 'function') {
     const unsafeQueryRaw = db.unsafeQueryRaw;
-    return {
+    const rawAdapter: RawSqlAdapter = {
       queryRaw: async (sql: string, args: RawSqlArg[], _table?: string) => {
         return unsafeQueryRaw(sql, args);
       },
     };
+    const execute = (
+      database.adapter as unknown as {
+        unsafeExecute?: (operations: { sqls: [string, RawSqlArg[]][] }) => Promise<void>;
+      }
+    ).unsafeExecute;
+    if (execute) {
+      rawAdapter.executeRawBatch = async (statements: [string, RawSqlArg[]][]) => {
+        await execute.call(database.adapter, { sqls: statements });
+      };
+    }
+    return rawAdapter;
   }
 
   return null;

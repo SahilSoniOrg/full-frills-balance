@@ -60,148 +60,39 @@ describe('DatabaseRepository', () => {
     expect(mockDatabase.batch).toHaveBeenCalledWith(['delete-record']);
   });
 
-  it('reassigns staged records through the ORM fallback', async () => {
-    const target = { prepareDestroyPermanently: jest.fn(() => 'delete-target') };
-    const staging = {
-      workplaceId: 'staging' as WorkplaceId,
-      prepareUpdate: jest.fn((update: (record: typeof staging) => void) => {
-        update(staging);
-        return 'update-staging';
-      }),
-    };
-    const fetchResults = [[target], [staging]];
-    let fetchIndex = 0;
-    mockDatabase.collections.get.mockImplementation(() => ({
-      query: jest.fn(() => ({
-        fetch: jest.fn().mockResolvedValue(fetchResults[fetchIndex++]),
-      })),
-    }));
+  it('destroys scoped rows and the workplace shell in one write', async () => {
+    const scoped = { prepareDestroyPermanently: jest.fn(() => 'delete-scoped') };
+    const shell = { prepareDestroyPermanently: jest.fn(() => 'delete-shell') };
+    mockDatabase.collections.get.mockImplementation((table: string) => {
+      if (table === 'workplaces') {
+        return {
+          find: jest.fn().mockResolvedValue(shell),
+        };
+      }
+      return {
+        query: jest.fn(() => ({ fetch: jest.fn().mockResolvedValue([scoped]) })),
+      };
+    });
 
-    await repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
-      'accounts',
-    ]);
+    await repository.destroyWorkplace('workplace-1' as WorkplaceId, ['accounts']);
 
-    expect(staging.workplaceId).toBe('target');
-    expect(mockDatabase.batch).toHaveBeenCalledWith(['delete-target', 'update-staging']);
+    expect(mockDatabase.write).toHaveBeenCalledTimes(1);
+    expect(scoped.prepareDestroyPermanently).toHaveBeenCalled();
+    expect(shell.prepareDestroyPermanently).toHaveBeenCalled();
+    expect(mockDatabase.batch).toHaveBeenCalledWith(['delete-scoped', 'delete-shell']);
   });
 
-  it('syncs RecordCache after raw SQL staged import swap', async () => {
-    const queryRaw = jest.fn().mockResolvedValue(undefined);
-    mockGetRawAdapter.mockReturnValue({ queryRaw });
+  it('serializes raw workplace destruction through the database write queue', async () => {
+    const executeRawBatch = jest.fn().mockResolvedValue(undefined);
+    mockGetRawAdapter.mockReturnValue({ executeRawBatch });
 
-    const targetCached = { id: 'old-acc', _raw: { workplace_id: 'target' } };
-    const stagingCached = { id: 'new-acc', _raw: { workplace_id: 'staging' } };
-    const cacheMap = new Map<string, typeof targetCached | typeof stagingCached>([
-      [targetCached.id, targetCached],
-      [stagingCached.id, stagingCached],
+    await repository.destroyWorkplace('workplace-1' as WorkplaceId, ['accounts']);
+
+    expect(mockDatabase.write).toHaveBeenCalledTimes(1);
+    expect(executeRawBatch).toHaveBeenCalledWith([
+      ['DELETE FROM accounts WHERE workplace_id = ?', ['workplace-1']],
+      ['DELETE FROM workplaces WHERE id = ?', ['workplace-1']],
     ]);
-    const cacheDelete = jest.fn((record: { id: string }) => {
-      cacheMap.delete(record.id);
-    });
-    const notify = jest.fn();
-
-    mockDatabase.collections.get.mockReturnValue({
-      _cache: { map: cacheMap, delete: cacheDelete },
-      _notify: notify,
-    });
-
-    await repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
-      'accounts',
-    ]);
-
-    expect(queryRaw).toHaveBeenCalledWith('SAVEPOINT import_swap', []);
-    expect(queryRaw).toHaveBeenCalledWith('DELETE FROM accounts WHERE workplace_id = ?', [
-      'target',
-    ]);
-    expect(queryRaw).toHaveBeenCalledWith(
-      'UPDATE accounts SET workplace_id = ? WHERE workplace_id = ?',
-      ['target', 'staging'],
-    );
-    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
-    expect(cacheDelete).toHaveBeenCalledWith(targetCached);
-    expect(cacheMap.has('old-acc')).toBe(false);
-    expect(stagingCached._raw.workplace_id).toBe('target');
-    expect(notify).toHaveBeenCalledWith([
-      { record: targetCached, type: 'destroyed' },
-      { record: stagingCached, type: 'updated' },
-    ]);
-  });
-
-  it('rolls the raw staged import swap back to a savepoint when a later UPDATE fails', async () => {
-    const queryRaw = jest.fn().mockImplementation(async (sql: string) => {
-      if (sql.startsWith('UPDATE')) {
-        throw new Error('update failed');
-      }
-    });
-    mockGetRawAdapter.mockReturnValue({ queryRaw });
-
-    const targetCached = { id: 'old-acc', _raw: { workplace_id: 'target' } };
-    const cacheMap = new Map([[targetCached.id, targetCached]]);
-    mockDatabase.collections.get.mockReturnValue({
-      _cache: { map: cacheMap, delete: jest.fn() },
-      _notify: jest.fn(),
-    });
-
-    await expect(
-      repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
-        'accounts',
-      ]),
-    ).rejects.toThrow('update failed');
-
-    expect(queryRaw).toHaveBeenCalledWith('SAVEPOINT import_swap', []);
-    expect(queryRaw).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT import_swap', []);
-    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
-    expect(cacheMap.get('old-acc')).toBe(targetCached);
-  });
-
-  it('restores simulated rows when a later table fails during the swap', async () => {
-    const rows = new Map([
-      ['accounts:target', 1],
-      ['accounts:staging', 2],
-      ['journals:target', 3],
-      ['journals:staging', 4],
-    ]);
-    let savepointRows: Map<string, number> | undefined;
-    const queryRaw = jest.fn().mockImplementation(async (sql: string, args: string[]) => {
-      if (sql === 'SAVEPOINT import_swap') {
-        savepointRows = new Map(rows);
-        return;
-      }
-      if (sql.startsWith('DELETE FROM')) {
-        const table = sql.split(' ')[2];
-        rows.delete(`${table}:${args[0]}`);
-        return;
-      }
-      if (sql.startsWith('UPDATE journals')) {
-        throw new Error('native update failed');
-      }
-      if (sql.startsWith('UPDATE accounts')) {
-        rows.delete('accounts:staging');
-        rows.set('accounts:target', 2);
-        return;
-      }
-      if (sql === 'ROLLBACK TO SAVEPOINT import_swap') {
-        rows.clear();
-        for (const [key, value] of savepointRows ?? []) rows.set(key, value);
-      }
-    });
-    mockGetRawAdapter.mockReturnValue({ queryRaw });
-
-    await expect(
-      repository.swapStagedWorkplaceInto('target' as WorkplaceId, 'staging' as WorkplaceId, [
-        'accounts',
-        'journals',
-      ]),
-    ).rejects.toThrow('native update failed');
-
-    expect([...rows.entries()]).toEqual([
-      ['accounts:target', 1],
-      ['accounts:staging', 2],
-      ['journals:target', 3],
-      ['journals:staging', 4],
-    ]);
-    expect(queryRaw).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT import_swap', []);
-    expect(queryRaw).toHaveBeenCalledWith('RELEASE SAVEPOINT import_swap', []);
   });
 
   it('drops purged workplace rows from RecordCache after raw SQL purge', async () => {

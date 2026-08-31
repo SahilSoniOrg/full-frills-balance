@@ -49,6 +49,10 @@ export const AppNavigation = {
     router.replace('/');
   },
 
+  toWorkplaceCreation: () => {
+    router.push({ pathname: '/onboarding', params: { mode: 'full' } });
+  },
+
   /**
    * Navigate to the Accounts List tab.
    */
@@ -468,8 +472,8 @@ export const AppNavigation = {
   /**
    * Navigate to import selection screen.
    */
-  toImportSelection: () => {
-    router.push('/import-selection' as Href);
+  toImportSelection: (newWorkplace = false) => {
+    router.push(buildRoute('/import-selection', { newWorkplace }));
   },
 
   /**

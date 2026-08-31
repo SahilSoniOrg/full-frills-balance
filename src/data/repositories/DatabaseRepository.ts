@@ -5,16 +5,7 @@ import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
 import { logger } from '@/src/utils/logger';
 import { WorkplaceId } from '@/src/types/ids';
-
-type WorkplaceScopedRaw = { workplace_id?: string };
-
-type CollectionCacheOps = {
-  _cache?: {
-    map: Map<string, Model>;
-    delete: (record: Model) => void;
-  };
-  _notify?: (operations: { record: Model; type: 'updated' | 'destroyed' }[]) => void;
-};
+import { syncWatermelonWorkplaceCache } from '@/src/data/database/WatermelonWorkplaceCacheBridge';
 
 export class DatabaseRepository {
   private getCollection<T extends Model = Model>(tableName: string): Collection<T> | undefined {
@@ -29,44 +20,6 @@ export class DatabaseRepository {
    * Raw SQL mutations bypass WatermelonDB's RecordCache. Keep JS models aligned so
    * subsequent `find()` / workplace-scoped checks do not see stale workplace_id values.
    */
-  private syncCachesAfterRawWorkplaceMutation(
-    tables: readonly string[],
-    options: {
-      reassignFrom?: WorkplaceId;
-      reassignTo?: WorkplaceId;
-      deletedWorkplaceId?: WorkplaceId;
-    },
-  ): void {
-    const { reassignFrom, reassignTo, deletedWorkplaceId } = options;
-
-    for (const table of tables) {
-      const collection = this.getCollection(table) as
-        (Collection<Model> & CollectionCacheOps) | undefined;
-      const cache = collection?._cache;
-      if (!cache?.map) continue;
-
-      const operations: { record: Model; type: 'updated' | 'destroyed' }[] = [];
-
-      for (const record of [...cache.map.values()]) {
-        const raw = record._raw as unknown as WorkplaceScopedRaw;
-        const workplaceId = raw.workplace_id;
-        if (deletedWorkplaceId && workplaceId === deletedWorkplaceId) {
-          cache.delete(record);
-          operations.push({ record, type: 'destroyed' });
-          continue;
-        }
-        if (reassignFrom && reassignTo && workplaceId === reassignFrom) {
-          raw.workplace_id = reassignTo;
-          operations.push({ record, type: 'updated' });
-        }
-      }
-
-      if (operations.length > 0 && typeof collection?._notify === 'function') {
-        collection._notify(operations);
-      }
-    }
-  }
-
   async resetDatabase(): Promise<void> {
     // unsafeResetDatabase MUST be wrapped in a write() block (Writer)
     await database.write(async () => {
@@ -133,9 +86,12 @@ export class DatabaseRepository {
             }
           }
         }
-        this.syncCachesAfterRawWorkplaceMutation(tables, {
-          deletedWorkplaceId: workplaceId,
-        });
+        syncWatermelonWorkplaceCache(
+          tables.map(table => this.getCollection(table)).filter(Boolean) as Collection<Model>[],
+          {
+            deletedWorkplaceId: workplaceId,
+          },
+        );
         logger.info(
           `[DatabaseRepository] Purged ${tables.length} tables for workplace ${workplaceId} using raw SQL.`,
         );
@@ -166,118 +122,46 @@ export class DatabaseRepository {
   }
 
   /**
-   * Atomically replaces target workplace ledger data with rows currently stored under staging.
-   * Purges the target first, then reassigns all staging rows to the target workplace_id.
+   * Removes a workplace shell and every scoped row in the same database write.
+   * Callers can safely rerun this after a failed pointer repair: the operation
+   * is a no-op when the shell is already gone.
    */
-  async swapStagedWorkplaceInto(
-    targetWorkplaceId: WorkplaceId,
-    stagingWorkplaceId: WorkplaceId,
-    tables: readonly string[],
-  ): Promise<void> {
-    await database.write(async () => {
-      const adapter = getRawAdapter(database);
-      if (adapter && typeof adapter.queryRaw === 'function') {
-        const savepoint = 'import_swap';
-        let savepointOpen = false;
-        try {
-          await adapter.queryRaw(`SAVEPOINT ${savepoint}`, []);
-          savepointOpen = true;
-          for (const table of tables) {
-            try {
-              await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [
-                targetWorkplaceId,
-              ]);
-            } catch (err) {
-              const errorMsg = String(err);
-              if (!errorMsg.includes('no such table')) {
-                logger.error(
-                  `[DatabaseRepository] Failed to purge ${table} before import swap`,
-                  err,
-                );
-                throw err;
-              }
-            }
-          }
-          for (const table of tables) {
-            try {
-              await adapter.queryRaw(
-                `UPDATE ${table} SET workplace_id = ? WHERE workplace_id = ?`,
-                [targetWorkplaceId, stagingWorkplaceId],
-              );
-            } catch (err) {
-              const errorMsg = String(err);
-              if (!errorMsg.includes('no such table')) {
-                logger.error(
-                  `[DatabaseRepository] Failed to reassign ${table} during import swap`,
-                  err,
-                );
-                throw err;
-              }
-            }
-          }
-          await adapter.queryRaw(`RELEASE SAVEPOINT ${savepoint}`, []);
-          savepointOpen = false;
-        } catch (err) {
-          if (savepointOpen) {
-            let rolledBack = false;
-            try {
-              await adapter.queryRaw(`ROLLBACK TO SAVEPOINT ${savepoint}`, []);
-              rolledBack = true;
-            } catch (rollbackErr) {
-              logger.error(
-                '[DatabaseRepository] Failed to roll back staged import swap savepoint',
-                rollbackErr,
-              );
-            }
-            if (rolledBack) {
-              try {
-                await adapter.queryRaw(`RELEASE SAVEPOINT ${savepoint}`, []);
-              } catch (releaseErr) {
-                logger.error(
-                  '[DatabaseRepository] Failed to release rolled-back staged import savepoint',
-                  releaseErr,
-                );
-              }
-            }
-          }
-          throw err;
-        }
-        this.syncCachesAfterRawWorkplaceMutation(tables, {
-          deletedWorkplaceId: targetWorkplaceId,
-          reassignFrom: stagingWorkplaceId,
-          reassignTo: targetWorkplaceId,
-        });
-        logger.info(
-          `[DatabaseRepository] Swapped staged import ${stagingWorkplaceId} → ${targetWorkplaceId}.`,
+  async destroyWorkplace(workplaceId: WorkplaceId, tables: readonly string[]): Promise<void> {
+    const adapter = getRawAdapter(database);
+    if (adapter?.executeRawBatch) {
+      const executeRawBatch = adapter.executeRawBatch;
+      await database.write(async () => {
+        await executeRawBatch([
+          ...tables.map(
+            table =>
+              [`DELETE FROM ${table} WHERE workplace_id = ?`, [workplaceId]] as [string, string[]],
+          ),
+          ['DELETE FROM workplaces WHERE id = ?', [workplaceId]],
+        ]);
+        syncWatermelonWorkplaceCache(
+          tables.map(table => this.getCollection(table)).filter(Boolean) as Collection<Model>[],
+          { deletedWorkplaceId: workplaceId },
         );
-        return;
-      }
+        syncWatermelonWorkplaceCache(
+          [this.getCollection('workplaces')].filter(Boolean) as Collection<Model>[],
+          { deletedRecordId: workplaceId },
+        );
+      });
+      return;
+    }
 
-      logger.warn(
-        '[DatabaseRepository] swapStagedWorkplaceInto falling back to ORM (purge + update).',
-      );
+    await database.write(async () => {
       const batchOps: Model[] = [];
       for (const table of tables) {
-        const targetRecords = await this.getCollection(table)
-          ?.query(Q.where('workplace_id', targetWorkplaceId))
+        const records = await this.getCollection(table)
+          ?.query(Q.where('workplace_id', workplaceId))
           .fetch();
-        batchOps.push(...(targetRecords || []).map(record => record.prepareDestroyPermanently()));
+        batchOps.push(...(records || []).map(record => record.prepareDestroyPermanently()));
       }
-      for (const table of tables) {
-        const stagingRecords = await this.getCollection<Model & { workplaceId: WorkplaceId }>(table)
-          ?.query(Q.where('workplace_id', stagingWorkplaceId))
-          .fetch();
-        batchOps.push(
-          ...(stagingRecords || []).map(record =>
-            record.prepareUpdate(r => {
-              r.workplaceId = targetWorkplaceId;
-            }),
-          ),
-        );
-      }
-      if (batchOps.length > 0) {
-        await database.batch(batchOps);
-      }
+      const workplaces = this.getCollection('workplaces');
+      const workplace = await workplaces?.find(workplaceId).catch(() => undefined);
+      if (workplace) batchOps.push(workplace.prepareDestroyPermanently());
+      if (batchOps.length > 0) await database.batch(batchOps);
     });
   }
 }
