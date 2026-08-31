@@ -53,6 +53,10 @@ export const AppNavigation = {
     router.push({ pathname: '/onboarding', params: { mode: 'full' } });
   },
 
+  toOnboarding: (stage?: 'post_import') => {
+    router.replace(buildRoute('/onboarding', { stage }));
+  },
+
   /**
    * Navigate to the Accounts List tab.
    */
@@ -472,8 +476,8 @@ export const AppNavigation = {
   /**
    * Navigate to import selection screen.
    */
-  toImportSelection: (newWorkplace = false) => {
-    router.push(buildRoute('/import-selection', { newWorkplace }));
+  toImportSelection: (newWorkplace = false, source?: 'onboarding' | 'settings') => {
+    router.push(buildRoute('/import-selection', { newWorkplace, source }));
   },
 
   /**

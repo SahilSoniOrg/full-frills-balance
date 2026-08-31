@@ -39,11 +39,15 @@ export interface OnboardingFlowViewModel {
 }
 
 export function useOnboardingFlow(): OnboardingFlowViewModel {
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const { mode, stage: routeStage } = useLocalSearchParams<{ mode?: string; stage?: string }>();
   const isFullSetup = mode === 'full';
-  const deviceOnboardingRequired = !preferences.device.onboardingCompleted;
+  const deviceOnboardingRequired = !preferences.device.deviceRegistered;
+  const isPostImport =
+    routeStage === 'post_import' || preferences.device.onboardingStage === 'post_import';
   const { completeDeviceOnboarding, persistDisplayName } = useOnboardingSession();
-  const [step, setStep] = useState(isFullSetup ? 2 : deviceOnboardingRequired ? 1 : 3);
+  const [step, setStep] = useState(
+    isPostImport ? 7 : isFullSetup ? 2 : deviceOnboardingRequired ? 1 : 3,
+  );
   const [name, setName] = useState(preferences.userName ?? '');
   const [workplaceName, setWorkplaceName] = useState(
     isFullSetup ? '' : `${preferences.userName?.trim() || 'User'}'s Personal workplace`,
@@ -166,6 +170,14 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     if (isCompleting) return;
     setIsCompleting(true);
     try {
+      if (isPostImport) {
+        const workplaceId = preferences.device.onboardingWorkplaceId;
+        if (!workplaceId) throw new Error('Imported Workplace is missing');
+        onboardingService.completeImportedWorkplace(workplaceId);
+        void triggerHaptic('success');
+        AppNavigation.toDashboard();
+        return;
+      }
       // Perform DB operations
       await onboardingService.completeOnboarding({
         operationId,
@@ -212,6 +224,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     operationId,
     completeDeviceOnboarding,
     isFullSetup,
+    isPostImport,
   ]);
 
   return {
@@ -236,7 +249,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     onContinue,
     onRestore: () => {
       persistDisplayName(name);
-      AppNavigation.toImportSelection(isFullSetup);
+      AppNavigation.toImportSelection(isFullSetup, 'onboarding');
     },
     onBack,
     onFinish,

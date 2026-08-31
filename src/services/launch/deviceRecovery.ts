@@ -6,6 +6,7 @@ export interface DeviceRecoveryInput {
   readonly deviceClaimed: boolean;
   readonly workplaceCount: number;
   readonly userName?: string;
+  readonly onboardingStage?: 'user_profile' | 'workplace_setup' | 'post_import' | 'complete';
 }
 
 export interface DeviceRecoveryResult {
@@ -29,7 +30,8 @@ export interface DeviceRecoveryResult {
 export function decideDeviceRecovery(input: DeviceRecoveryInput): DeviceRecoveryResult {
   const existingBooksProveCompletion = input.workplaceCount > 0;
   const needsMissingBagRecovery = !input.deviceBagPresent;
-  const needsClaimRepair = existingBooksProveCompletion && !input.deviceClaimed;
+  const needsClaimRepair =
+    existingBooksProveCompletion && !input.deviceClaimed && input.onboardingStage !== 'post_import';
   if (!needsMissingBagRecovery && !needsClaimRepair) {
     return { kind: 'not_needed', shouldClaimDevice: false, shouldPersistDeviceDefaults: false };
   }
@@ -46,6 +48,10 @@ export function decideDeviceRecovery(input: DeviceRecoveryInput): DeviceRecovery
 
 export function applyDeviceRecovery(result: DeviceRecoveryResult): void {
   if (result.shouldPersistDeviceDefaults) preferences.device.persist();
-  if (result.shouldClaimDevice) preferences.device.setOnboardingCompleted(true);
+  if (result.shouldClaimDevice) {
+    preferences.device.setDeviceRegistered(true);
+    preferences.device.setOnboardingStage('complete');
+    preferences.device.setOnboardingCompleted(true);
+  }
   if (result.userNameRepair) preferences.setUserName(result.userNameRepair);
 }

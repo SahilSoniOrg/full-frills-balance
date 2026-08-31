@@ -51,7 +51,7 @@ export class ImportService {
     context: ImportFileContext,
     workplaceId?: WorkplaceId,
     onProgress?: (message: string, progress?: number) => void,
-    options?: { operationId?: WorkplaceId },
+    options?: { operationId?: WorkplaceId; deferActivation?: boolean },
   ): Promise<ImportStats> {
     logger.info(`[ImportService] Executing import for plugin: ${plugin.id}`);
 
@@ -100,7 +100,14 @@ export class ImportService {
     const publishedWorkplaceId =
       workplaceId ?? options?.operationId ?? (generator() as WorkplaceId);
     const targetlessOperationAlreadyExists = Boolean(existingTargetlessOperation);
-    preferences.device.setPendingWorkplaceId(publishedWorkplaceId);
+    const replacingActiveWorkplace =
+      Boolean(workplaceId) && preferences.device.activeWorkplaceId === workplaceId;
+    // Replacing the active Workplace does not change the launch target.
+    // Updating its pointers needlessly wakes the launch coordinator and
+    // remounts the app shell during an in-place import.
+    if (!replacingActiveWorkplace && !options?.deferActivation) {
+      preferences.device.setPendingWorkplaceId(publishedWorkplaceId);
+    }
 
     const initProgress = run.phaseReporter('init');
     initProgress('Initializing native currencies...', 0);
@@ -233,18 +240,13 @@ export class ImportService {
       run.recordWarning('Imported preferences could not be restored');
     }
 
-    try {
-      preferences.device.setActiveWorkplaceId(publishedWorkplaceId);
-    } catch (error) {
-      logger.warn('[ImportService] Active Workplace pointer could not be saved', { error });
-      run.recordWarning('Active Workplace pointer could not be saved');
-    }
-
-    try {
-      preferences.device.setOnboardingCompleted(true);
-    } catch (error) {
-      logger.warn('[ImportService] Device completion state could not be saved', { error });
-      run.recordWarning('Device completion state could not be saved');
+    if (!replacingActiveWorkplace && !options?.deferActivation) {
+      try {
+        preferences.device.setActiveWorkplaceId(publishedWorkplaceId);
+      } catch (error) {
+        logger.warn('[ImportService] Active Workplace pointer could not be saved', { error });
+        run.recordWarning('Active Workplace pointer could not be saved');
+      }
     }
 
     logger.info('[ImportService] Import completed successfully.');
@@ -252,6 +254,7 @@ export class ImportService {
 
     return {
       ...parsedResult.stats,
+      workplaceId: publishedWorkplaceId,
       ...(preImportBackupPath ? { preImportBackupPath } : {}),
     };
   }

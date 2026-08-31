@@ -5,6 +5,7 @@ import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/Wo
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingWorkplaceStep } from '@/src/features/onboarding/components/OnboardingWorkplaceStep';
+import { PostImportOnboardingStep } from '@/src/features/onboarding/components/PostImportOnboardingStep';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import { View } from 'react-native';
 
@@ -100,6 +101,10 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
         );
       case 6:
         return <StepFinalize key={step} onFinish={onFinish} isCompleting={isCompleting} />;
+      case 7:
+        return (
+          <PostImportOnboardingStep key={step} onFinish={onFinish} isCompleting={isCompleting} />
+        );
       default:
         return null;
     }

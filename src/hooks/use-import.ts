@@ -1,4 +1,4 @@
-import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
+import type { ImportStats } from '@/src/contexts/app-shell/AppRestartProvider';
 import { analytics } from '@/src/services/analytics';
 import {
   decodeContent,
@@ -22,12 +22,11 @@ function createOperationId(): WorkplaceId {
 
 export type ImportFormat = string;
 
-export function useImport() {
-  const { requireRestart } = useAppRestart();
-
+export function useImport(deferActivation = false) {
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
+  const [importStats, setImportStats] = useState<ImportStats | null>(null);
 
   const handleImport = useCallback(
     async (targetWorkplaceId?: WorkplaceId, expectedType?: ImportFormat) => {
@@ -37,6 +36,7 @@ export function useImport() {
         setIsImporting(true);
         setProgress(0);
         setProgressMessage('Initializing...');
+        setImportStats(null);
         didSetImporting = true;
 
         try {
@@ -113,16 +113,16 @@ export function useImport() {
               setProgressMessage(msg);
               if (prog !== undefined) setProgress(prog);
             },
-            operationId ? { operationId } : undefined,
+            operationId ? { operationId, deferActivation } : { deferActivation },
           );
 
           const finalStats = {
             ...stats,
             skippedItems: stats.skippedItems?.slice(0, 100), // Prevent UI state bloat
           };
-          logger.info('[useImport] Import task complete. Requesting restart...');
+          logger.info('[useImport] Import task complete. Preparing post-import acknowledgement...');
           analytics.logImportCompleted(plugin.id, finalStats);
-          requireRestart({ type: 'IMPORT', stats: finalStats });
+          setImportStats(finalStats);
         } catch (error) {
           logger.error('[useImport] Import failed', error);
           analytics.trackFeatureUsage('import', 'failed', {
@@ -176,7 +176,7 @@ export function useImport() {
         toast.error('Could not select file');
       }
     },
-    [requireRestart],
+    [deferActivation],
   );
 
   return {
@@ -184,5 +184,6 @@ export function useImport() {
     isImporting,
     progress,
     progressMessage,
+    importStats,
   };
 }

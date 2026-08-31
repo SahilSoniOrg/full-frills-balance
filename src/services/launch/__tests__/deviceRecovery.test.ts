@@ -39,6 +39,21 @@ describe('decideDeviceRecovery', () => {
     },
   );
 
+  it('does not claim a Device while imported onboarding is awaiting acknowledgement', () => {
+    expect(
+      decideDeviceRecovery({
+        deviceBagPresent: true,
+        deviceClaimed: false,
+        workplaceCount: 1,
+        onboardingStage: 'post_import',
+      }),
+    ).toEqual({
+      kind: 'not_needed',
+      shouldClaimDevice: false,
+      shouldPersistDeviceDefaults: false,
+    });
+  });
+
   it('repairs a missing or whitespace-only User name for a claimed recovery', () => {
     expect(
       decideDeviceRecovery({

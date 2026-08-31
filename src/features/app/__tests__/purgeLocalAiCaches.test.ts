@@ -11,6 +11,7 @@ function createOps(overrides: Partial<LocalAiCacheFileOps> = {}): LocalAiCacheFi
   return {
     cache: 'file:///cache/',
     document: 'file:///documents/',
+    directoryExists: jest.fn().mockResolvedValue(true),
     listDirectory: jest.fn().mockResolvedValue([]),
     deleteFile: jest.fn().mockResolvedValue(undefined),
     deleteDirectory: jest.fn().mockResolvedValue(undefined),
@@ -88,6 +89,17 @@ describe('purgeLocalAiCaches', () => {
     await purgeLocalAiCaches(ops);
 
     expect(ops.deleteDirectory).toHaveBeenCalledWith(androidModels);
+  });
+
+  it('does not list an Android models directory that is absent', async () => {
+    const ops = createOps({
+      directoryExists: jest.fn(async (uri: string) => uri !== 'file:///documents/models'),
+    });
+
+    await purgeLocalAiCaches(ops);
+
+    expect(ops.listDirectory).not.toHaveBeenCalledWith('file:///documents/models');
+    expect(ops.deleteDirectory).not.toHaveBeenCalledWith('file:///documents/models');
   });
 
   it('runs the purge only once per JS runtime', async () => {

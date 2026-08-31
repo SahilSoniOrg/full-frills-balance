@@ -71,9 +71,10 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
         if (!recoveryAppliedRef.current) {
           const recovery = decideDeviceRecovery({
             deviceBagPresent: preferences.rawDeviceBagPresentAtStartup,
-            deviceClaimed: preferences.device.onboardingCompleted,
+            deviceClaimed: preferences.device.deviceRegistered,
             workplaceCount: workplaces.length,
             userName: preferences.userName,
+            onboardingStage: preferences.device.onboardingStage,
           });
           try {
             applyDeviceRecovery(recovery);
@@ -126,13 +127,11 @@ export function LaunchCoordinatorProvider({ children }: { children: React.ReactN
   );
   const deviceClaimed = useSyncExternalStore(
     onStoreChange => {
-      const subscription = preferences.device
-        .observe('onboardingCompleted')
-        .subscribe(onStoreChange);
+      const subscription = preferences.device.observe('deviceRegistered').subscribe(onStoreChange);
       return () => subscription.unsubscribe();
     },
-    () => preferences.device.onboardingCompleted,
-    () => preferences.device.onboardingCompleted,
+    () => preferences.device.deviceRegistered,
+    () => preferences.device.deviceRegistered,
   );
   const discovery = useWorkplaceDiscovery(isInitialized, retryToken);
   const [failedPointerRepairId, setFailedPointerRepairId] = useState<WorkplaceId | null>(null);
@@ -256,7 +255,8 @@ export function LaunchCoordinatorContent({
     if (
       state.kind === 'open' &&
       previousOpenWorkplaceId.current !== null &&
-      previousOpenWorkplaceId.current !== state.workplaceId
+      previousOpenWorkplaceId.current !== state.workplaceId &&
+      pathname !== '/import-selection'
     ) {
       router.replace('/');
     }

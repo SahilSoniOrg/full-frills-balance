@@ -110,6 +110,17 @@ export const files = {
   },
 
   /**
+   * Checks whether a directory exists without attempting to list it.
+   */
+  async directoryExists(uri: string): Promise<boolean> {
+    try {
+      return new Directory(uri).exists;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Safely deletes a file if it exists.
    */
   async deleteFile(uri: string): Promise<void> {

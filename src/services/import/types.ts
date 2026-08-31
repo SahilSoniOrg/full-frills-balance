@@ -12,6 +12,7 @@ import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceType
  * Statistics returned after an import operation.
  */
 export interface ImportStats {
+  workplaceId?: string;
   accounts: number;
   journals: number;
   transactions: number;

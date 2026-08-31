@@ -2,6 +2,7 @@ import { requireShellContext } from '@/src/contexts/app-shell/requireShellContex
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 export interface ImportStats {
+  workplaceId?: string;
   accounts: number;
   journals: number;
   transactions: number;

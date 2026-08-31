@@ -8,7 +8,7 @@ const ANDROID_LITERT_MODELS_DIR = 'models';
 
 export type LocalAiCacheFileOps = Pick<
   typeof files,
-  'cache' | 'document' | 'listDirectory' | 'deleteFile' | 'deleteDirectory'
+  'cache' | 'document' | 'directoryExists' | 'listDirectory' | 'deleteFile' | 'deleteDirectory'
 >;
 
 type DirEntry = { uri?: string; name?: string };
@@ -35,6 +35,10 @@ function entryName(entry: DirEntry): string {
 }
 
 async function listEntries(ops: LocalAiCacheFileOps, directoryUri: string): Promise<DirEntry[]> {
+  if (!(await ops.directoryExists(directoryUri))) {
+    return [];
+  }
+
   try {
     return await ops.listDirectory(directoryUri);
   } catch {
@@ -70,10 +74,12 @@ export async function purgeLocalAiCaches(ops: LocalAiCacheFileOps = files): Prom
 
     if (documentRoot) {
       const androidModels = joinFsUri(documentRoot, ANDROID_LITERT_MODELS_DIR);
-      await deleteMatchingArtifacts(ops, androidModels);
-      const remaining = await listEntries(ops, androidModels);
-      if (remaining.length === 0) {
-        await ops.deleteDirectory(androidModels);
+      if (await ops.directoryExists(androidModels)) {
+        await deleteMatchingArtifacts(ops, androidModels);
+        const remaining = await listEntries(ops, androidModels);
+        if (remaining.length === 0) {
+          await ops.deleteDirectory(androidModels);
+        }
       }
     }
   } catch (error) {

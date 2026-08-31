@@ -31,12 +31,21 @@ export class OnboardingService {
     const trimmedName = name.trim();
     if (!trimmedName) throw new Error('Display name is required');
     preferences.setUserName(trimmedName);
-    preferences.device.setOnboardingCompleted(true);
+    preferences.device.setDeviceRegistered(true);
+    preferences.device.setOnboardingStage('workplace_setup');
   }
 
   persistDisplayName(name: string): void {
     const trimmedName = name.trim();
     if (trimmedName) preferences.setUserName(trimmedName);
+  }
+
+  completeImportedWorkplace(workplaceId: WorkplaceId): void {
+    preferences.device.setActiveWorkplaceId(workplaceId);
+    preferences.device.setOnboardingWorkplaceId(undefined);
+    preferences.device.setOnboardingStage('complete');
+    preferences.device.setDeviceRegistered(true);
+    preferences.device.setOnboardingCompleted(true);
   }
 
   /**
@@ -109,6 +118,8 @@ export class OnboardingService {
     try {
       preferences.device.setActiveWorkplaceId(workplace.id);
       preferences.device.setPendingWorkplaceId(undefined);
+      preferences.device.setOnboardingStage('complete');
+      preferences.device.setOnboardingCompleted(true);
     } catch (error) {
       // The database publication is the commit point. The launch coordinator
       // can repair this pointer on the next boot, so do not report creation as

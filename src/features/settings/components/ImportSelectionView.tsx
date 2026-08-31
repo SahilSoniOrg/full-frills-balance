@@ -1,6 +1,7 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { ImportPlugin } from '@/src/services/import/types';
+import type { ImportStats } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
@@ -54,6 +55,11 @@ interface ImportSelectionViewProps {
   progress: number;
   progressMessage?: string;
   onSelect: (id: string) => void;
+  importStats: ImportStats | null;
+  onImportComplete: () => void;
+  onOpenImportedWorkplace: () => void;
+  onStayOnCurrentWorkplace: () => void;
+  isOnboardingImport: boolean;
   isNewWorkplace: boolean;
 }
 
@@ -63,34 +69,94 @@ export function ImportSelectionView({
   progress,
   progressMessage,
   onSelect,
+  importStats,
+  onImportComplete,
+  onOpenImportedWorkplace,
+  onStayOnCurrentWorkplace,
+  isOnboardingImport,
   isNewWorkplace,
 }: ImportSelectionViewProps) {
   return (
     <SettingsLayout title={AppConfig.strings.settings.importTitle}>
       <View style={styles.container}>
-        <AppText variant="body" style={styles.intro}>
-          {isNewWorkplace
-            ? AppConfig.strings.settings.newWorkplaceImportIntro
-            : AppConfig.strings.settings.importIntro}
-        </AppText>
+        {importStats ? (
+          <AppCard elevation="sm" paddingSize="lg" style={styles.completeCard}>
+            <AppText variant="title" align="center">
+              Import complete
+            </AppText>
+            <AppText variant="body" color="secondary" align="center" style={styles.completeText}>
+              {isOnboardingImport
+                ? 'Your data is ready. Let’s continue to the app.'
+                : 'Your workplace data is ready to use.'}
+            </AppText>
+            <View style={styles.statsList}>
+              <ImportStatRow label="Accounts" value={importStats.accounts} />
+              <ImportStatRow label="Journals" value={importStats.journals} />
+              <ImportStatRow label="Entries" value={importStats.transactions} />
+              {typeof importStats.budgets === 'number' && (
+                <ImportStatRow label="Budgets" value={importStats.budgets} />
+              )}
+              {typeof importStats.plannedPayments === 'number' && (
+                <ImportStatRow label="Planned payments" value={importStats.plannedPayments} />
+              )}
+              {typeof importStats.auditLogs === 'number' && (
+                <ImportStatRow label="Audit logs" value={importStats.auditLogs} />
+              )}
+              {importStats.skippedTransactions > 0 && (
+                <ImportStatRow
+                  label="Skipped items"
+                  value={importStats.skippedTransactions}
+                  warning
+                />
+              )}
+              {importStats.preImportBackupPath ? (
+                <ImportStatRow label="Safety backup" value="Created" />
+              ) : null}
+            </View>
+            {isOnboardingImport ? (
+              <AppButton variant="primary" onPress={onImportComplete}>
+                Continue onboarding
+              </AppButton>
+            ) : (
+              <>
+                <AppButton variant="primary" onPress={onOpenImportedWorkplace}>
+                  Open imported Workplace
+                </AppButton>
+                <AppButton variant="outline" onPress={onStayOnCurrentWorkplace}>
+                  Stay here
+                </AppButton>
+              </>
+            )}
+          </AppCard>
+        ) : null}
 
-        {plugins.map((plugin, index) => (
-          <ImportPluginCard
-            key={plugin.id}
-            plugin={plugin}
-            index={index}
-            onSelect={onSelect}
-            isImporting={isImporting}
-          />
-        ))}
+        {!importStats ? (
+          <>
+            <AppText variant="body" style={styles.intro}>
+              {isNewWorkplace
+                ? AppConfig.strings.settings.newWorkplaceImportIntro
+                : AppConfig.strings.settings.importIntro}
+            </AppText>
 
-        <View style={styles.note}>
-          <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-            {isNewWorkplace
-              ? AppConfig.strings.settings.newWorkplaceImportNote
-              : AppConfig.strings.settings.importNote}
-          </AppText>
-        </View>
+            {plugins.map((plugin, index) => (
+              <ImportPluginCard
+                key={plugin.id}
+                plugin={plugin}
+                index={index}
+                onSelect={onSelect}
+                isImporting={isImporting}
+              />
+            ))}
+
+            <View style={styles.note}>
+              <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                {isNewWorkplace
+                  ? AppConfig.strings.settings.newWorkplaceImportNote
+                  : AppConfig.strings.settings.importNote}
+              </AppText>
+            </View>
+          </>
+        ) : null}
       </View>
 
       <SettingsMaintenanceOverlay
@@ -102,6 +168,27 @@ export function ImportSelectionView({
         icon="refresh"
       />
     </SettingsLayout>
+  );
+}
+
+function ImportStatRow({
+  label,
+  value,
+  warning = false,
+}: {
+  label: string;
+  value: number | string;
+  warning?: boolean;
+}) {
+  return (
+    <View style={styles.statRow}>
+      <AppText variant="body" color={warning ? 'warning' : 'secondary'}>
+        {label}
+      </AppText>
+      <AppText variant="body" weight="bold" color={warning ? 'warning' : 'success'}>
+        {value}
+      </AppText>
+    </View>
   );
 }
 
@@ -141,5 +228,21 @@ const styles = StyleSheet.create({
   note: {
     marginTop: Spacing.xl,
     paddingHorizontal: Spacing.xl,
+  },
+  completeCard: {
+    marginTop: Spacing.xl,
+  },
+  completeText: {
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  statsList: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });

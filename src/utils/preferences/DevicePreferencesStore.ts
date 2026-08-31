@@ -54,6 +54,22 @@ export class DevicePreferencesStore {
     this.update({ onboardingCompleted: completed });
   }
 
+  get deviceRegistered(): boolean {
+    return this.preferences.deviceRegistered;
+  }
+
+  setDeviceRegistered(registered: boolean): void {
+    this.update({ deviceRegistered: registered });
+  }
+
+  get onboardingStage(): DevicePreferences['onboardingStage'] {
+    return this.preferences.onboardingStage;
+  }
+
+  setOnboardingStage(stage: DevicePreferences['onboardingStage']): void {
+    this.update({ onboardingStage: stage });
+  }
+
   get isAppLockEnabled(): boolean {
     return this.preferences.isAppLockEnabled;
   }
@@ -76,6 +92,14 @@ export class DevicePreferencesStore {
 
   setPendingWorkplaceId(workplaceId?: WorkplaceId): void {
     this.update({ pendingWorkplaceId: workplaceId });
+  }
+
+  get onboardingWorkplaceId(): WorkplaceId | undefined {
+    return this.preferences.onboardingWorkplaceId;
+  }
+
+  setOnboardingWorkplaceId(workplaceId?: WorkplaceId): void {
+    this.update({ onboardingWorkplaceId: workplaceId });
   }
 
   get anonymizedId(): string | undefined {
@@ -126,6 +150,15 @@ export class DevicePreferencesStore {
     const value = input as Record<string, unknown>;
     return {
       ...DEFAULT_DEVICE_PREFERENCES,
+      ...(typeof value.deviceRegistered === 'boolean'
+        ? { deviceRegistered: value.deviceRegistered }
+        : typeof value.onboardingCompleted === 'boolean'
+          ? { deviceRegistered: value.onboardingCompleted }
+          : {}),
+      ...(typeof value.onboardingStage === 'string' &&
+      ['user_profile', 'workplace_setup', 'post_import', 'complete'].includes(value.onboardingStage)
+        ? { onboardingStage: value.onboardingStage as DevicePreferences['onboardingStage'] }
+        : {}),
       ...(typeof value.onboardingCompleted === 'boolean'
         ? { onboardingCompleted: value.onboardingCompleted }
         : {}),
@@ -138,6 +171,9 @@ export class DevicePreferencesStore {
         : {}),
       ...(typeof value.pendingWorkplaceId === 'string' && value.pendingWorkplaceId
         ? { pendingWorkplaceId: value.pendingWorkplaceId as WorkplaceId }
+        : {}),
+      ...(typeof value.onboardingWorkplaceId === 'string' && value.onboardingWorkplaceId
+        ? { onboardingWorkplaceId: value.onboardingWorkplaceId as WorkplaceId }
         : {}),
       ...(typeof value.isSmsImportEnabled === 'boolean'
         ? { isSmsImportEnabled: value.isSmsImportEnabled }

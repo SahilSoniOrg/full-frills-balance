@@ -43,6 +43,13 @@ export const files = {
   },
 
   /**
+   * Checks whether a directory exists. Web has no local model cache.
+   */
+  async directoryExists(_uri: string): Promise<boolean> {
+    return false;
+  },
+
+  /**
    * Safely deletes a file if it exists.
    */
   async deleteFile(uri: string): Promise<void> {

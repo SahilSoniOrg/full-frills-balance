@@ -196,7 +196,7 @@ describe('IvyImportPlugin', () => {
         'w1',
         'workplace',
       );
-      expect(preferences.device.setOnboardingCompleted).toHaveBeenCalledWith(true);
+      expect(preferences.device.setOnboardingCompleted).not.toHaveBeenCalled();
     });
 
     it('handles multi-currency transfers correctly', async () => {
