@@ -30,5 +30,8 @@
   ],
   "settings": [
     "accounts"
+  ],
+  "setup": [
+    "onboarding"
   ]
 }

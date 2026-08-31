@@ -4,7 +4,11 @@ export {
   saveSetupDraft,
   SetupDraftStore,
 } from './SetupDraftStore';
-export { createSetupCoordinator, projectBlockingSetupLaunch } from './SetupCoordinator';
+export {
+  createSetupCoordinator,
+  createSetupDraft,
+  projectBlockingSetupLaunch,
+} from './SetupCoordinator';
 export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';
 export {
@@ -13,4 +17,5 @@ export {
   finishSetup,
   finishWorkplaceSetup,
 } from './setupFinishers';
+export { default as SetupScreen } from './SetupScreen';
 export type * from './setupTypes';

@@ -1,2 +1,2 @@
-import { OnboardingScreen } from '@/src/features/onboarding';
-export default OnboardingScreen;
+import { SetupScreen } from '@/src/features/setup';
+export default SetupScreen;

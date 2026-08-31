@@ -29,6 +29,7 @@ import React, {
 import { Text, View } from 'react-native';
 import { Observable } from 'rxjs';
 import { Redirect, usePathname, useRouter } from 'expo-router';
+export type { LaunchSetupDraft } from '@/src/services/launch/launchResolver';
 
 export type LaunchCoordinatorState =
   | { kind: 'loading'; retry: () => void }
@@ -82,7 +83,6 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
             deviceClaimed: preferences.device.deviceRegistered,
             workplaceCount: workplaces.length,
             userName: preferences.userName,
-            onboardingStage: preferences.device.onboardingStage,
           });
           try {
             applyDeviceRecovery(recovery);
@@ -130,16 +130,6 @@ export function LaunchCoordinatorProvider({
     () => preferences.device.activeWorkplaceId,
     () => preferences.device.activeWorkplaceId,
   );
-  const pendingWorkplaceId = useSyncExternalStore(
-    onStoreChange => {
-      const subscription = preferences.device
-        .observe('pendingWorkplaceId')
-        .subscribe(onStoreChange);
-      return () => subscription.unsubscribe();
-    },
-    () => preferences.device.pendingWorkplaceId,
-    () => preferences.device.pendingWorkplaceId,
-  );
   const deviceClaimed = useSyncExternalStore(
     onStoreChange => {
       const subscription = preferences.device.observe('deviceRegistered').subscribe(onStoreChange);
@@ -161,7 +151,6 @@ export function LaunchCoordinatorProvider({
       setupDraft,
       deviceClaimed,
       activeWorkplaceId,
-      pendingWorkplaceId,
       workplaceIds: discovery.workplaces.map(workplace => workplace.id),
     });
     if (next.kind === 'picker') {
@@ -175,7 +164,6 @@ export function LaunchCoordinatorProvider({
   }, [
     activeWorkplaceId,
     deviceClaimed,
-    pendingWorkplaceId,
     setupDraft,
     discovery.error,
     discovery.loading,
@@ -201,9 +189,6 @@ export function LaunchCoordinatorProvider({
         .then(() => {
           if (cancelled) return;
           workplaceService.publishActiveWorkplace(resolution.workplaceId);
-          if (preferences.device.pendingWorkplaceId === resolution.workplaceId) {
-            preferences.device.setPendingWorkplaceId(undefined);
-          }
         })
         .catch(error => {
           if (cancelled) return;
