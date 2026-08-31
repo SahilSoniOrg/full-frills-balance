@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
+import { AccountType } from '@/src/types/enums';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -247,6 +248,54 @@ export class BalanceHierarchyAggregator {
 
       // 7. Commit staged results to the main balances map in a synchronous pass
       // This pattern ensures that any parallel readers never see half-aggregated states.
+      // Category accounts are always displayed in the Workplace currency. Their
+      // direct balance may be stored in a foreign account currency, and parent
+      // aggregation may have selected a single subtree currency, so normalize
+      // the staged values before publishing them to account-detail readers.
+      const categoryAccounts = accounts.filter(
+        account =>
+          account.accountType === AccountType.INCOME || account.accountType === AccountType.EXPENSE,
+      );
+      await Promise.all(
+        categoryAccounts.map(async account => {
+          const staging = stagedResults.get(account.id);
+          if (!staging || staging.currencyCode === targetDefaultCurrency) return;
+
+          const [balance, monthlyIncome, monthlyExpenses] = await Promise.all([
+            convertAmount({
+              amount: staging.balance,
+              fromCurrency: staging.currencyCode,
+              toCurrency: targetDefaultCurrency!,
+              mode: 'spot',
+            }),
+            convertAmount({
+              amount: staging.monthlyIncome,
+              fromCurrency: staging.currencyCode,
+              toCurrency: targetDefaultCurrency!,
+              mode: 'spot',
+            }),
+            convertAmount({
+              amount: staging.monthlyExpenses,
+              fromCurrency: staging.currencyCode,
+              toCurrency: targetDefaultCurrency!,
+              mode: 'spot',
+            }),
+          ]);
+
+          if (!balance.ok || !monthlyIncome.ok || !monthlyExpenses.ok) {
+            logger.warn(
+              `[BalanceHierarchyAggregator] Skipping category normalization for ${account.id}: FX unavailable (${staging.currencyCode} -> ${targetDefaultCurrency})`,
+            );
+            return;
+          }
+
+          staging.balance = balance.amount;
+          staging.monthlyIncome = monthlyIncome.amount;
+          staging.monthlyExpenses = monthlyExpenses.amount;
+          staging.currencyCode = targetDefaultCurrency!;
+        }),
+      );
+
       for (const [id, staging] of stagedResults) {
         const balance = balancesMap.get(id);
         if (balance) {
