@@ -118,12 +118,12 @@ export function getAllowedAccountTypes(tab: TabType, side: TransactionType): Acc
   if (tab === 'expense') {
     return side === TransactionType.DEBIT
       ? [AccountType.EXPENSE]
-      : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY];
+      : [AccountType.ASSET, AccountType.LIABILITY];
   }
   if (tab === 'income') {
     return side === TransactionType.CREDIT
       ? [AccountType.INCOME]
-      : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY];
+      : [AccountType.ASSET, AccountType.LIABILITY];
   }
   // Transfer: Include ALL types as requested
   return [

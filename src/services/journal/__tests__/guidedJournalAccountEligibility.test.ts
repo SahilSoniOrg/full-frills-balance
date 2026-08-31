@@ -25,6 +25,11 @@ describe('guidedJournalAccountEligibility', () => {
     name: 'Salary',
     accountType: AccountType.INCOME,
   });
+  const equity = acct({
+    id: 'equity' as AccountId,
+    name: 'Equity',
+    accountType: AccountType.EQUITY,
+  });
   const parent = acct({
     id: 'parent' as AccountId,
     name: 'Group',
@@ -42,9 +47,15 @@ describe('guidedJournalAccountEligibility', () => {
   });
 
   it('filterGuidedLegAccounts matches expense source and destination', () => {
-    const leaves = [cash, food, salary];
+    const leaves = [cash, food, salary, equity];
     expect(filterGuidedLegAccounts(leaves, 'expense', TransactionType.CREDIT)).toEqual([cash]);
     expect(filterGuidedLegAccounts(leaves, 'expense', TransactionType.DEBIT)).toEqual([food]);
+  });
+
+  it('excludes equity from income source accounts', () => {
+    expect(
+      filterGuidedLegAccounts([cash, salary, equity], 'income', TransactionType.DEBIT),
+    ).toEqual([cash]);
   });
 
   it('filterGuidedLegAccounts allows any leaf type on transfer legs', () => {
