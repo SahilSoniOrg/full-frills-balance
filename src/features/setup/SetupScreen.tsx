@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { createSetupCoordinator } from './SetupCoordinator';
+import { loadSetupDraft } from './SetupDraftStore';
 import { finishSetup } from './setupFinishers';
 import type { SetupSliceId, StarterAccountInput, StarterCategoryInput } from './setupTypes';
 
@@ -31,11 +32,16 @@ function SetupScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const journeyId = mode === 'full' ? 'create_workplace' : 'first_run';
   const operationId = useMemo(() => generator() as any, []);
+  const existingDraft = useMemo(() => {
+    const draft = loadSetupDraft();
+    return draft?.journeyId === journeyId ? draft : undefined;
+  }, [journeyId]);
   const coordinator = useMemo(
     () =>
       createSetupCoordinator({
         journeyId,
         operationId,
+        draft: existingDraft,
         finishers: {
           firstRun: async draft => {
             const workplaceId = await finishSetup(draft);
@@ -47,16 +53,29 @@ function SetupScreen() {
           },
         },
       }),
-    [journeyId, operationId],
+    [existingDraft, journeyId, operationId],
   );
 
-  const [slice, setSlice] = useState<SetupSliceId>(
-    journeyId === 'first_run' ? 'device' : 'workplace',
+  const [slice, setSlice] = useState<SetupSliceId>(() => {
+    const action = coordinator.next();
+    return action.kind === 'present'
+      ? action.sliceId
+      : journeyId === 'first_run'
+        ? 'device'
+        : 'workplace';
+  });
+  const [name, setName] = useState(
+    existingDraft && 'device' in existingDraft
+      ? (existingDraft.device?.displayName.value ?? '')
+      : '',
   );
-  const [name, setName] = useState('');
-  const [workplaceName, setWorkplaceName] = useState('');
-  const [workplaceIcon, setWorkplaceIcon] = useState<any>('briefcase');
-  const [currency, setCurrency] = useState<string>(AppConfig.defaultCurrency);
+  const [workplaceName, setWorkplaceName] = useState(existingDraft?.workplace?.name.value ?? '');
+  const [workplaceIcon, setWorkplaceIcon] = useState<any>(
+    existingDraft?.workplace?.icon.value ?? 'briefcase',
+  );
+  const [currency, setCurrency] = useState<string>(
+    existingDraft?.workplace?.baseCurrency.value ?? AppConfig.defaultCurrency,
+  );
   const [accounts, setAccounts] = useState<string[]>(['Cash', 'Bank']);
   const [categories, setCategories] = useState<string[]>([
     'Salary',
@@ -64,8 +83,16 @@ function SetupScreen() {
     'Groceries',
     'Bills',
   ]);
-  const [themeId, setThemeId] = useState<any>(ThemeIds.DEEP_SPACE);
-  const [fontId, setFontId] = useState<any>(FontIds.DEEP_SPACE);
+  const [themeId, setThemeId] = useState<any>(
+    existingDraft && 'appearance' in existingDraft
+      ? (existingDraft.appearance?.themeId.value ?? ThemeIds.DEEP_SPACE)
+      : ThemeIds.DEEP_SPACE,
+  );
+  const [fontId, setFontId] = useState<any>(
+    existingDraft && 'appearance' in existingDraft
+      ? (existingDraft.appearance?.fontId.value ?? FontIds.DEEP_SPACE)
+      : FontIds.DEEP_SPACE,
+  );
   const [busy, setBusy] = useState(false);
   const [workplaceStep, setWorkplaceStep] = useState<
     'identity' | 'currency' | 'accounts' | 'categories'
@@ -87,6 +114,7 @@ function SetupScreen() {
   const finish = async () => {
     setBusy(true);
     try {
+      await coordinator.accept('summary', { confirmed: true });
       const outcome = await coordinator.finish();
       if (outcome.kind === 'workplace_created') AppNavigation.toDashboard();
     } finally {
