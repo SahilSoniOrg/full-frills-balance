@@ -1,19 +1,19 @@
 import { Observable } from 'rxjs';
-import type { PreferencesStore } from '../PreferencesStore';
+import type { DevicePreferencesStore } from '../DevicePreferencesStore';
 
-/** SMS import preferences Interface. */
+/** Device SMS listen — one switch for this install. */
 export class SmsPreferences {
-  constructor(private readonly store: PreferencesStore) {}
+  constructor(private readonly device: DevicePreferencesStore) {}
 
   get isSmsImportEnabled(): boolean {
-    return this.store.getSnapshot().isSmsImportEnabled ?? false;
+    return this.device.isSmsImportEnabled;
   }
 
   setIsSmsImportEnabled(enabled: boolean): void {
-    this.store.update({ isSmsImportEnabled: enabled });
+    this.device.setSmsImportEnabled(enabled);
   }
 
   observeSmsImportEnabled(): Observable<boolean> {
-    return this.store.observe('isSmsImportEnabled');
+    return this.device.observe('isSmsImportEnabled');
   }
 }

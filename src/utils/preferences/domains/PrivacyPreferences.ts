@@ -1,43 +1,47 @@
 import { Observable } from 'rxjs';
+import type { DevicePreferencesStore } from '../DevicePreferencesStore';
 import type { PreferencesStore } from '../PreferencesStore';
 
-/** Privacy / lock preferences Interface. */
+/** Privacy mask is User; app lock is Device. */
 export class PrivacyPreferences {
-  constructor(private readonly store: PreferencesStore) {}
+  constructor(
+    private readonly user: PreferencesStore,
+    private readonly device: DevicePreferencesStore,
+  ) {}
 
   get isPrivacyMode(): boolean {
-    return this.store.getSnapshot().isPrivacyMode;
+    return this.user.getSnapshot().isPrivacyMode;
   }
 
   setIsPrivacyMode(isPrivacyMode: boolean): void {
-    this.store.update({ isPrivacyMode });
+    this.user.update({ isPrivacyMode });
   }
 
   get isWidgetPrivacyEnabled(): boolean {
-    return this.store.getSnapshot().isWidgetPrivacyEnabled;
+    return this.user.getSnapshot().isWidgetPrivacyEnabled;
   }
 
   setIsWidgetPrivacyEnabled(isEnabled: boolean): void {
-    this.store.update({ isWidgetPrivacyEnabled: isEnabled });
+    this.user.update({ isWidgetPrivacyEnabled: isEnabled });
   }
 
   get isAppLockEnabled(): boolean {
-    return this.store.getSnapshot().isAppLockEnabled;
+    return this.device.isAppLockEnabled;
   }
 
   setAppLockEnabled(isAppLockEnabled: boolean): void {
-    this.store.update({ isAppLockEnabled });
+    this.device.setAppLockEnabled(isAppLockEnabled);
   }
 
   observePrivacyMode(): Observable<boolean> {
-    return this.store.observe('isPrivacyMode');
+    return this.user.observe('isPrivacyMode');
   }
 
   observeWidgetPrivacyEnabled(): Observable<boolean> {
-    return this.store.observe('isWidgetPrivacyEnabled');
+    return this.user.observe('isWidgetPrivacyEnabled');
   }
 
   observeAppLockEnabled(): Observable<boolean> {
-    return this.store.observe('isAppLockEnabled');
+    return this.device.observe('isAppLockEnabled');
   }
 }

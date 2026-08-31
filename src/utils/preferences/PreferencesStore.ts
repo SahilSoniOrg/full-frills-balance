@@ -1,24 +1,22 @@
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { AppConfig } from '@/src/constants/app-config';
 import { isHourCyclePreference } from '@/src/utils/hourCycle';
 import { migrateFromAsyncStorage, storage } from '../storage';
+import { splitPreferenceBags } from './splitPreferenceBags';
 import {
   DEFAULT_UI_PREFERENCES,
   LEGACY_PREFERENCE_KEYS,
   PREFERENCES_KEY,
   REMOVED_PREFERENCE_KEYS,
   UIPreferences,
+  USER_PREFERENCES_KEY,
 } from './types';
 
 /**
- * Single MMKV-backed preferences Implementation.
- * Domain Modules (theme / AI / SMS / STS / privacy / notifications / insights / journalNav)
- * write through update() / getSnapshot(); keys without domains keep flat accessors here.
+ * User-bag MMKV store. Device and Workplace bags live in their own stores.
  */
 export class PreferencesStore {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
@@ -30,22 +28,8 @@ export class PreferencesStore {
     this.reloadFromStorage();
   }
 
-  /**
-   * Returns the current preferences snapshot.
-   * Treat as immutable — mutations must go through update() / setters.
-   * Stable reference until the next preferences write (required by useSyncExternalStore).
-   */
-  getPreferences(): UIPreferences {
-    return this.preferences;
-  }
-
-  /** Alias for domain Modules that prefer store vocabulary. */
   getSnapshot(): UIPreferences {
     return this.preferences;
-  }
-
-  observeAll(): Observable<UIPreferences> {
-    return this.preferencesSubject.asObservable().pipe(distinctUntilChanged());
   }
 
   observe<K extends keyof UIPreferences>(key: K): Observable<UIPreferences[K]> {
@@ -55,16 +39,15 @@ export class PreferencesStore {
     );
   }
 
-  /** Sole write path for preferences mutations (including domain Modules). */
   update(updates: Partial<UIPreferences>): void {
     this.preferences = { ...this.preferences, ...this.sanitizePreferences(updates) };
     this.preferencesSubject.next(this.preferences);
     this.savePreferences();
   }
 
-  private reloadFromStorage(): void {
+  protected reloadFromStorage(): void {
     try {
-      const stored = storage.getString(PREFERENCES_KEY);
+      const stored = storage.getString(USER_PREFERENCES_KEY) ?? storage.getString(PREFERENCES_KEY);
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
@@ -76,8 +59,9 @@ export class PreferencesStore {
               }
             });
 
+            const { user } = splitPreferenceBags(parsed);
             const hadRemovedKeys = REMOVED_PREFERENCE_KEYS.some(key => key in parsed);
-            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
+            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(user) };
             this.preferencesSubject.next(this.preferences);
             if (hadRemovedKeys) {
               this.savePreferences();
@@ -113,12 +97,6 @@ export class PreferencesStore {
     }
     if (sanitized.fontId && !Object.values(FontIds).includes(sanitized.fontId)) {
       delete sanitized.fontId;
-    }
-    if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
-      sanitized.dismissedPatternIds = [];
-    }
-    if (sanitized.safeToSpendDays && ![30, 60, 90].includes(sanitized.safeToSpendDays)) {
-      sanitized.safeToSpendDays = AppConfig.defaults.safeToSpendDays;
     }
     if (
       sanitized.notificationCadence &&
@@ -160,11 +138,6 @@ export class PreferencesStore {
     return sanitized;
   }
 
-  /**
-   * Initializes preferences. Performs one-time migration if needed.
-   * Promise is cached so concurrent callers share the same in-flight migration
-   * check and the storage layer is never hit twice during boot.
-   */
   async loadPreferences(): Promise<UIPreferences> {
     if (this._loadPromise) return this._loadPromise;
 
@@ -176,6 +149,7 @@ export class PreferencesStore {
         }
       } catch (error) {
         logger.error('Failed to initialize preferences migration', { error });
+        throw error;
       }
       return this.preferences;
     })();
@@ -184,28 +158,16 @@ export class PreferencesStore {
   }
 
   restorePreferences(data?: unknown): void {
-    const currentActiveId = this.preferences.activeWorkplaceId;
-    const record =
-      data && typeof data === 'object' && !Array.isArray(data)
-        ? (data as Record<string, unknown>)
-        : undefined;
+    const { user, legacyCurrency } = splitPreferenceBags(data);
 
-    if (record) {
-      LEGACY_PREFERENCE_KEYS.forEach(key => {
-        if (key in record) {
-          this.legacyData[key] = record[key];
-        }
-      });
+    for (const [key, value] of Object.entries(legacyCurrency)) {
+      this.legacyData[key] = value;
     }
 
     this.preferences = {
       ...DEFAULT_UI_PREFERENCES,
-      ...(record ? this.sanitizePreferences(record as Partial<UIPreferences>) : {}),
+      ...this.sanitizePreferences(user),
     };
-
-    if (!this.preferences.activeWorkplaceId && currentActiveId) {
-      this.preferences.activeWorkplaceId = currentActiveId;
-    }
 
     this.savePreferences();
     this.preferencesSubject.next(this.preferences);
@@ -217,18 +179,10 @@ export class PreferencesStore {
         ...this.preferences,
         ...this.legacyData,
       };
-      storage.set(PREFERENCES_KEY, JSON.stringify(toStore));
+      storage.set(USER_PREFERENCES_KEY, JSON.stringify(toStore));
     } catch (error) {
       logger.error('Failed to save preferences to MMKV', { error });
     }
-  }
-
-  get onboardingCompleted(): boolean {
-    return this.preferences.onboardingCompleted;
-  }
-
-  setOnboardingCompleted(completed: boolean): void {
-    this.update({ onboardingCompleted: completed });
   }
 
   get userName(): string | undefined {
@@ -252,22 +206,6 @@ export class PreferencesStore {
     delete this.legacyData.defaultCurrencyCode;
     delete this.legacyData.defaultCurrency;
     this.savePreferences();
-  }
-
-  get lastSelectedAccountId(): string | undefined {
-    return this.preferences.lastSelectedAccountId;
-  }
-
-  setLastSelectedAccountId(accountId: AccountId | undefined): void {
-    this.update({ lastSelectedAccountId: accountId });
-  }
-
-  get lastDateRange(): { startDate: number; endDate: number } | undefined {
-    return this.preferences.lastDateRange;
-  }
-
-  setLastDateRange(range: { startDate: number; endDate: number } | undefined): void {
-    this.update({ lastDateRange: range });
   }
 
   get showAccountMonthlyStats(): boolean {
@@ -302,27 +240,12 @@ export class PreferencesStore {
     this.update({ defaultShareFormat: format });
   }
 
-  get activeWorkplaceId(): WorkplaceId | undefined {
-    return this.preferences.activeWorkplaceId;
-  }
-
-  setActiveWorkplaceId(workplaceId?: WorkplaceId): void {
-    this.update({ activeWorkplaceId: workplaceId });
-  }
-
-  get anonymizedId(): string | undefined {
-    return this.preferences.anonymizedId;
-  }
-
-  setAnonymizedId(id: string): void {
-    this.update({ anonymizedId: id });
-  }
-
   clearPreferences(): void {
     this.preferences = { ...DEFAULT_UI_PREFERENCES };
     this.legacyData = {};
     this.preferencesSubject.next(this.preferences);
     try {
+      storage.remove(USER_PREFERENCES_KEY);
       storage.remove(PREFERENCES_KEY);
     } catch (error) {
       logger.warn('Failed to clear preferences from MMKV', { error });

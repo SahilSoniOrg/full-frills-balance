@@ -1,28 +1,25 @@
-import type { PreferencesStore } from '../PreferencesStore';
+import { WorkplaceId } from '@/src/types/ids';
+import type { WorkplacePreferencesStore } from '../WorkplacePreferencesStore';
 
-/** Insight dismissal preferences Interface. */
+/** Insight dismissal — workplace bag. */
 export class InsightPreferences {
-  constructor(private readonly store: PreferencesStore) {}
+  constructor(private readonly workplace: WorkplacePreferencesStore) {}
 
-  get dismissedPatternIds(): string[] {
-    return this.store.getSnapshot().dismissedPatternIds;
+  dismissedPatternIds(workplaceId: WorkplaceId): string[] {
+    return this.workplace.getSnapshot(workplaceId).dismissedPatternIds;
   }
 
-  dismissPattern(id: string): void {
-    const current = this.store.getSnapshot().dismissedPatternIds;
-    if (!current.includes(id)) {
-      this.store.update({
-        dismissedPatternIds: [...current, id],
-      });
-    }
+  dismissPattern(workplaceId: WorkplaceId, id: string): void {
+    const current = this.dismissedPatternIds(workplaceId);
+    if (current.includes(id)) return;
+    this.workplace.update(workplaceId, { dismissedPatternIds: [...current, id] });
   }
 
-  undismissPattern(id: string): void {
-    const current = this.store.getSnapshot().dismissedPatternIds;
-    if (current.includes(id)) {
-      this.store.update({
-        dismissedPatternIds: current.filter(pId => pId !== id),
-      });
-    }
+  undismissPattern(workplaceId: WorkplaceId, id: string): void {
+    const current = this.dismissedPatternIds(workplaceId);
+    if (!current.includes(id)) return;
+    this.workplace.update(workplaceId, {
+      dismissedPatternIds: current.filter(patternId => patternId !== id),
+    });
   }
 }

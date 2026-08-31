@@ -4,12 +4,12 @@ export type {
   DashboardPrefs,
   NotificationPrefs,
   PrivacyPrefs,
-  SmsPrefs,
-  StsPrefs,
   ThemeAppearance,
   ThemePrefs,
   UIPreferences,
 } from './types';
+export type { DevicePreferences } from './deviceTypes';
+export type { WorkplacePreferences } from './workplaceTypes';
 
 export { PreferencesStore } from './PreferencesStore';
 export { createPreferencesFacade } from './PreferencesFacade';

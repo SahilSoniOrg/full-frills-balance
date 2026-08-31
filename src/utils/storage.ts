@@ -10,7 +10,7 @@ const MIGRATION_COMPLETE_KEY = 'mmkv_migration_complete_v1';
 /**
  * Migration Bridge:
  * One-time migration from AsyncStorage to MMKV.
- * 
+ *
  * Robustness features:
  * 1. Idempotent: If it crashes midway, it resumes on next start.
  * 2. Non-destructive: Does not overwrite existing MMKV data if already present.
@@ -28,14 +28,16 @@ export async function migrateFromAsyncStorage(): Promise<boolean> {
     // 2. Define targeted keys to migrate to minimize memory impact and noise
     const TARGET_KEYS = [
       'full_frills_balance_ui_preferences',
+      'full_frills_balance_user_preferences',
+      'full_frills_balance_device_preferences',
       'full_frills_balance_processed_sms_ids',
-      '@integrity_schema_version'
+      '@integrity_schema_version',
     ];
 
     // 3. Get all keys or just targeted ones
     // We try to get all keys just in case, but prioritize our known ones.
     const allExistingKeys = await AsyncStorage.getAllKeys();
-    
+
     if (allExistingKeys.length === 0) {
       logger.info('[Storage] No keys found in AsyncStorage. Marking migration as complete.');
       storage.set(MIGRATION_COMPLETE_KEY, true);
@@ -43,8 +45,8 @@ export async function migrateFromAsyncStorage(): Promise<boolean> {
     }
 
     // Combine targeted keys with any other found keys (limited to app namespace)
-    const keysToMigrate = allExistingKeys.filter(key => 
-      TARGET_KEYS.includes(key) || key.startsWith('full_frills_balance_')
+    const keysToMigrate = allExistingKeys.filter(
+      key => TARGET_KEYS.includes(key) || key.startsWith('full_frills_balance_'),
     );
 
     if (keysToMigrate.length === 0) {
@@ -66,9 +68,9 @@ export async function migrateFromAsyncStorage(): Promise<boolean> {
 
     // 6. Finalize migration
     storage.set(MIGRATION_COMPLETE_KEY, true);
-    
+
     logger.info(`[Storage] Migration successful. Migrated ${pairs.length} keys.`);
-    
+
     return true;
   } catch (error) {
     logger.error('[Storage] Migration from AsyncStorage failed', { error });
