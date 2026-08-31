@@ -3,6 +3,10 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 
+jest.mock('../OnboardingDraftStore', () => ({
+  clearOnboardingDraft: jest.fn(),
+}));
+
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     createWorkplace: jest.fn().mockResolvedValue({
@@ -65,6 +69,22 @@ describe('OnboardingService', () => {
       }),
     );
     expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith('mock-workplace-id');
+  });
+
+  it('clears the resumable draft after publishing the workplace', async () => {
+    await onboardingService.completeOnboarding({
+      name: 'Test User',
+      selectedCurrency: 'USD',
+      selectedAccounts: [],
+      customAccounts: [],
+      selectedCategories: [],
+      customCategories: [],
+    });
+
+    expect(
+      (jest.requireMock('../OnboardingDraftStore') as { clearOnboardingDraft: jest.Mock })
+        .clearOnboardingDraft,
+    ).toHaveBeenCalled();
   });
 
   it('creates a later workplace atomically instead of publishing a shell first', async () => {

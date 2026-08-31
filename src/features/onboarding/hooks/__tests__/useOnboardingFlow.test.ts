@@ -108,7 +108,6 @@ describe('useOnboardingFlow', () => {
   });
 
   it('writes appearance changes to global preferences instead of the onboarding draft', () => {
-    mockMode = 'full';
     const { result } = renderHook(() => useOnboardingFlow());
     const { preferences } = jest.requireMock('@/src/utils/preferences') as {
       preferences: {
@@ -131,15 +130,13 @@ describe('useOnboardingFlow', () => {
     expect(latestDraft.fontId).toBeUndefined();
   });
 
-  it('moves through appearance and review before committing the Workplace', async () => {
+  it('moves through review before committing the Workplace', async () => {
     mockMode = 'full';
     const { result } = renderHook(() => useOnboardingFlow());
 
     for (let index = 0; index < 4; index += 1) {
       await act(async () => result.current.onContinue());
     }
-    expect(result.current.stage).toBe('appearance');
-    await act(async () => result.current.onContinue());
     expect(result.current.stage).toBe('review');
 
     await act(async () => result.current.onFinish());
@@ -171,13 +168,12 @@ describe('useOnboardingFlow', () => {
     await act(async () => result.current.onContinue());
     await act(async () => result.current.onContinue());
     await act(async () => result.current.onContinue());
-    await act(async () => result.current.onContinue());
 
-    expect(result.current.stage).toBe('appearance');
+    expect(result.current.stage).toBe('workplace_setup');
     expect(onboardingService.completeOnboarding).not.toHaveBeenCalled();
     expect(storage.set).toHaveBeenCalledWith(
       ONBOARDING_DRAFT_KEY,
-      expect.stringContaining('"stage":"appearance"'),
+      expect.stringContaining('"stage":"workplace_setup"'),
     );
 
     await act(async () => result.current.onFinish());
@@ -185,7 +181,6 @@ describe('useOnboardingFlow', () => {
 
     await act(async () => result.current.onContinue());
     expect(result.current.stage).toBe('review');
-    expect(onboardingService.completeOnboarding).not.toHaveBeenCalled();
 
     await act(async () => result.current.onFinish());
     expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1);
@@ -207,11 +202,6 @@ describe('useOnboardingFlow', () => {
     expect(result.current.step).toBe(4);
     await act(async () => result.current.onContinue());
     expect(result.current.stage).toBe('review');
-
-    act(() => result.current.onEdit('appearance'));
-    expect(result.current.stage).toBe('appearance');
-    await act(async () => result.current.onContinue());
-    expect(result.current.stage).toBe('review');
   });
 
   it('hydrates all fields and resumes at the persisted named stage', () => {
@@ -222,6 +212,7 @@ describe('useOnboardingFlow', () => {
       key === ONBOARDING_DRAFT_KEY
         ? JSON.stringify({
             version: 1,
+            flow: 'full',
             stage: 'review',
             workplaceStep: 'categories',
             operationId: 'saved-operation',
@@ -247,6 +238,36 @@ describe('useOnboardingFlow', () => {
     expect(result.current.selectedCurrency).toBe('EUR');
     expect(result.current.themeId).toBe('deep-space');
     expect(result.current.fontId).toBe('deep-space');
+  });
+
+  it('does not hydrate a stale device-onboarding draft for workplace creation', () => {
+    mockMode = 'full';
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { getString: jest.Mock };
+    };
+    storage.getString.mockReturnValue(
+      JSON.stringify({
+        version: 1,
+        stage: 'review',
+        workplaceStep: 'categories',
+        operationId: 'old-operation',
+        name: 'Old user',
+        workplaceName: 'Old workplace',
+        workplaceIcon: 'home',
+        selectedCurrency: 'EUR',
+        selectedAccounts: ['Old account'],
+        customAccounts: [],
+        selectedCategories: ['Old category'],
+        customCategories: [],
+      }),
+    );
+
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    expect(result.current.stage).toBe('workplace_setup');
+    expect(result.current.workplaceName).toBe('');
+    expect(result.current.selectedCurrency).toBe('USD');
+    expect(result.current.selectedAccounts).toEqual(['Cash', 'Bank']);
   });
 
   it('normalizes post-import entry to appearance and preserves import completion', async () => {

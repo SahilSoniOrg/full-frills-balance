@@ -16,21 +16,35 @@ function state(
 }
 
 describe('onboardingFlowNavigation', () => {
-  it('advances the first-run path through workplace setup, appearance, and review', () => {
+  it('advances first-run onboarding through workplace setup, appearance, and review', () => {
+    const firstRun = { isFullSetup: false, isPostImport: false };
     let current = state('user_profile');
-    let transition = transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup);
+    let transition = transitionOnboardingNavigation(current, { type: 'continue' }, firstRun);
 
     expect(transition.command).toBe('claim-device');
     current = transition.state;
     expect(current).toEqual(state('workplace_setup', 'currency'));
 
+    current = transitionOnboardingNavigation(current, { type: 'continue' }, firstRun).state;
+    current = transitionOnboardingNavigation(current, { type: 'continue' }, firstRun).state;
+    current = transitionOnboardingNavigation(current, { type: 'continue' }, firstRun).state;
+
+    expect(current).toEqual(state('appearance', 'categories'));
+    expect(transitionOnboardingNavigation(current, { type: 'continue' }, firstRun).state).toEqual(
+      state('review', 'categories'),
+    );
+  });
+
+  it('skips appearance during standalone workplace creation', () => {
+    let current = state('workplace_setup', 'identity');
+    current = transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup).state;
     current = transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup).state;
     current = transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup).state;
     current = transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup).state;
 
-    expect(current).toEqual(state('appearance', 'categories'));
-    expect(transitionOnboardingNavigation(current, { type: 'continue' }, fullSetup).state).toEqual(
-      state('review', 'categories'),
+    expect(current).toEqual(state('review', 'categories'));
+    expect(transitionOnboardingNavigation(current, { type: 'back' }, fullSetup).state).toEqual(
+      state('workplace_setup', 'categories'),
     );
   });
 
@@ -41,7 +55,6 @@ describe('onboardingFlowNavigation', () => {
       ['currency', state('workplace_setup', 'currency', true)],
       ['accounts', state('workplace_setup', 'accounts', true)],
       ['categories', state('workplace_setup', 'categories', true)],
-      ['appearance', state('appearance', 'categories', true)],
     ] as const;
 
     for (const [target, editedState] of targets) {

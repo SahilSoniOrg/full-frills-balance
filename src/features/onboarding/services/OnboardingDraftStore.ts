@@ -8,6 +8,7 @@ export type { OnboardingStage, OnboardingWorkplaceStep } from '../domain/onboard
 
 export const ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
 export const ONBOARDING_DRAFT_VERSION = 1 as const;
+export type OnboardingDraftFlow = 'device' | 'full' | 'post_import';
 
 export interface OnboardingCustomCategory {
   name: string;
@@ -23,6 +24,8 @@ export interface OnboardingCustomAccount {
 
 export interface OnboardingDraft {
   version: typeof ONBOARDING_DRAFT_VERSION;
+  /** Prevent a device-onboarding draft from hydrating a separate workplace-creation flow. */
+  flow?: OnboardingDraftFlow;
   stage: OnboardingStage;
   workplaceStep: OnboardingWorkplaceStep;
   operationId: WorkplaceId;
@@ -56,6 +59,7 @@ const WORKPLACE_STEPS: readonly OnboardingWorkplaceStep[] = [
   'accounts',
   'categories',
 ];
+const DRAFT_FLOWS: readonly OnboardingDraftFlow[] = ['device', 'full', 'post_import'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -113,6 +117,9 @@ export function loadOnboardingDraft(): OnboardingDraft | undefined {
     if (
       typeof value.stage !== 'string' ||
       !STAGES.includes(value.stage as OnboardingStage) ||
+      (value.flow !== undefined &&
+        (typeof value.flow !== 'string' ||
+          !DRAFT_FLOWS.includes(value.flow as OnboardingDraftFlow))) ||
       typeof value.workplaceStep !== 'string' ||
       !WORKPLACE_STEPS.includes(value.workplaceStep as OnboardingWorkplaceStep) ||
       typeof value.operationId !== 'string' ||
@@ -139,6 +146,7 @@ export function loadOnboardingDraft(): OnboardingDraft | undefined {
 
     return {
       version: ONBOARDING_DRAFT_VERSION,
+      ...(typeof value.flow === 'string' ? { flow: value.flow as OnboardingDraftFlow } : {}),
       stage: value.stage as OnboardingStage,
       workplaceStep: value.workplaceStep as OnboardingWorkplaceStep,
       operationId: value.operationId as WorkplaceId,

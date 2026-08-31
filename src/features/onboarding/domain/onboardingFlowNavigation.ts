@@ -69,7 +69,12 @@ function transitionContinue(
     const nextStep = nextWorkplaceStep(state.workplaceStep);
     return nextStep
       ? { state: { ...state, workplaceStep: nextStep } }
-      : { state: { ...state, stage: 'appearance' } };
+      : {
+          state: {
+            ...state,
+            stage: context.isFullSetup ? 'review' : 'appearance',
+          },
+        };
   }
 
   if (state.stage === 'appearance') {
@@ -105,7 +110,13 @@ function transitionBack(
       : { state: { ...state, stage: 'workplace_setup', workplaceStep: 'categories' } };
   }
   if (state.stage === 'review') {
-    return { state: { ...state, stage: 'appearance' } };
+    return {
+      state: {
+        ...state,
+        stage: context.isFullSetup ? 'workplace_setup' : 'appearance',
+        workplaceStep: context.isFullSetup ? 'categories' : state.workplaceStep,
+      },
+    };
   }
   return { state };
 }

@@ -23,6 +23,7 @@ interface OnboardingReviewStepProps {
   onBack: () => void;
   isCompleting: boolean;
   isImportedWorkplace?: boolean;
+  showAppearance?: boolean;
 }
 
 const THEME_LABELS: Record<ThemeId, string> = {
@@ -142,6 +143,7 @@ export function OnboardingReviewStep({
   onBack,
   isCompleting,
   isImportedWorkplace = false,
+  showAppearance = true,
 }: OnboardingReviewStepProps) {
   const strings = AppConfig.strings.onboarding.review;
   const { theme } = useTheme();
@@ -206,12 +208,14 @@ export function OnboardingReviewStep({
               />
             </Inline>
           </Box>
-          <ReviewRow
-            label={strings.appearance}
-            value={`${THEME_LABELS[themeId]} · ${FONT_LABELS[fontId]}`}
-            onChange={onChangeAppearance}
-            icon="palette"
-          />
+          {showAppearance && (
+            <ReviewRow
+              label={strings.appearance}
+              value={`${THEME_LABELS[themeId]} · ${FONT_LABELS[fontId]}`}
+              onChange={onChangeAppearance}
+              icon="palette"
+            />
+          )}
         </AppCard>
       </ScrollView>
 

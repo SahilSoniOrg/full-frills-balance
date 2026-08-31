@@ -12,6 +12,7 @@ import { View } from 'react-native';
 export function OnboardingView(vm: OnboardingFlowViewModel) {
   const {
     stage,
+    isFullSetup,
     step,
     name,
     setName,
@@ -153,6 +154,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             onBack={onBack}
             isCompleting={isCompleting}
             isImportedWorkplace={isImportedWorkplace}
+            showAppearance={!isFullSetup}
           />
         );
       default:

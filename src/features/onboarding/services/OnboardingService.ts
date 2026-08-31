@@ -12,6 +12,7 @@ import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadM
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { logger } from '@/src/utils/logger';
 import { generator } from '@/src/data/database/idGenerator';
+import { clearOnboardingDraft } from './OnboardingDraftStore';
 
 export interface OnboardingData {
   /** Stable identity retained by the draft so Finish can be retried safely. */
@@ -60,6 +61,7 @@ export class OnboardingService {
     preferences.device.setOnboardingStage('complete');
     preferences.device.setDeviceRegistered(true);
     preferences.device.setOnboardingCompleted(true);
+    clearOnboardingDraft();
   }
 
   /**
@@ -146,6 +148,7 @@ export class OnboardingService {
     safeToSpendReadModel.clearCache();
     insightService.clearCache(workplace.id);
     snapshotService.clearSnapshotsForWorkplace(workplace.id);
+    clearOnboardingDraft();
     analytics.trackOnboardingStep('user_setup', true);
     analytics.logOnboardingComplete(data.selectedCurrency);
     return workplace.id;

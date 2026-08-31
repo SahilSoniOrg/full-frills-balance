@@ -20,6 +20,7 @@ import {
   type OnboardingCustomAccount,
   type OnboardingCustomCategory,
   type OnboardingDraft,
+  type OnboardingDraftFlow,
   type OnboardingStage,
   type OnboardingWorkplaceStep,
 } from '../services/OnboardingDraftStore';
@@ -34,6 +35,7 @@ import {
 } from '../domain/readImportedWorkplaceSummary';
 
 export interface OnboardingFlowViewModel {
+  isFullSetup: boolean;
   /** Named flow state. `post_import` is normalized to `appearance` on hydration. */
   stage: OnboardingStage;
   /** Legacy numeric projection retained for the existing progress layout. */
@@ -86,7 +88,12 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
   const { mode, stage: routeStage } = useLocalSearchParams<{ mode?: string; stage?: string }>();
   const isFullSetup = mode === 'full';
   const deviceOnboardingRequired = !preferences.device.deviceRegistered;
-  const [initialDraft] = useState<OnboardingDraft | undefined>(() => loadOnboardingDraft());
+  const [initialDraft] = useState<OnboardingDraft | undefined>(() => {
+    const draft = loadOnboardingDraft();
+    // Workplace creation is a separate flow. Legacy drafts have no flow marker
+    // and must not leak device-onboarding choices into a new workplace.
+    return isFullSetup && draft?.flow !== 'full' ? undefined : draft;
+  });
   const [isPostImport] = useState(() => {
     return (
       routeStage === 'post_import' ||
@@ -99,13 +106,15 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
   );
   const initialStage: OnboardingStage = isPostImport
     ? 'appearance'
-    : initialDraft?.stage && initialDraft.stage !== 'post_import'
-      ? initialDraft.stage
-      : isFullSetup
-        ? 'workplace_setup'
-        : deviceOnboardingRequired
-          ? 'user_profile'
-          : 'workplace_setup';
+    : isFullSetup && initialDraft?.stage === 'appearance'
+      ? 'review'
+      : initialDraft?.stage && initialDraft.stage !== 'post_import'
+        ? initialDraft.stage
+        : isFullSetup
+          ? 'workplace_setup'
+          : deviceOnboardingRequired
+            ? 'user_profile'
+            : 'workplace_setup';
   const initialWorkplaceStep: OnboardingWorkplaceStep =
     initialDraft?.workplaceStep || (isFullSetup ? 'identity' : 'currency');
 
@@ -189,6 +198,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
     const draft: OnboardingDraft = {
       version: ONBOARDING_DRAFT_VERSION,
+      flow: (isPostImport ? 'post_import' : isFullSetup ? 'full' : 'device') as OnboardingDraftFlow,
       stage,
       workplaceStep,
       operationId,
@@ -427,6 +437,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
   );
 
   return {
+    isFullSetup,
     stage,
     step: legacyStep(stage, workplaceStep),
     name,
