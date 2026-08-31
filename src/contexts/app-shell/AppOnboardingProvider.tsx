@@ -25,13 +25,11 @@ export function useOnboardingSession(): AppOnboardingValue {
 export function AppOnboardingProvider({ children }: { children: React.ReactNode }) {
   const hasCompletedOnboarding = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.device
-        .observe('onboardingCompleted')
-        .subscribe(() => onStoreChange());
+      const sub = preferences.device.observe('deviceRegistered').subscribe(() => onStoreChange());
       return () => sub.unsubscribe();
     },
-    () => preferences.device.onboardingCompleted,
-    () => preferences.device.onboardingCompleted,
+    () => preferences.device.deviceRegistered,
+    () => preferences.device.deviceRegistered,
   );
 
   const completeDeviceOnboarding = useCallback(async (name: string) => {
