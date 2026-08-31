@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { ImportPlugin } from '@/src/services/import/types';
 import type { ImportStats } from '@/src/contexts/app-shell/AppRestartProvider';
@@ -76,20 +76,25 @@ export function ImportSelectionView({
   isOnboardingImport,
   isNewWorkplace,
 }: ImportSelectionViewProps) {
+  const { theme } = useTheme();
+
   return (
     <SettingsLayout title={AppConfig.strings.settings.importTitle}>
       <View style={styles.container}>
         {importStats ? (
           <AppCard elevation="sm" paddingSize="lg" style={styles.completeCard}>
-            <AppText variant="title" align="center">
+            <View style={styles.successMark}>
+              <AppIcon name="check" size={Size.iconMd} color={theme.success} />
+            </View>
+            <AppText variant="heading" align="center" style={styles.completeTitle}>
               Import complete
             </AppText>
             <AppText variant="body" color="secondary" align="center" style={styles.completeText}>
               {isOnboardingImport
-                ? 'Your data is ready. Let’s continue to the app.'
-                : 'Your workplace data is ready to use.'}
+                ? 'Your workplace is ready. A few setup steps remain.'
+                : 'A new Workplace was created. Your current one is unchanged.'}
             </AppText>
-            <View style={styles.statsList}>
+            <View style={[styles.statsGrid, { borderColor: theme.border }]}>
               <ImportStatRow label="Accounts" value={importStats.accounts} />
               <ImportStatRow label="Journals" value={importStats.journals} />
               <ImportStatRow label="Entries" value={importStats.transactions} />
@@ -118,14 +123,14 @@ export function ImportSelectionView({
                 Continue onboarding
               </AppButton>
             ) : (
-              <>
+              <View style={styles.actions}>
                 <AppButton variant="primary" onPress={onOpenImportedWorkplace}>
                   Open imported Workplace
                 </AppButton>
                 <AppButton variant="outline" onPress={onStayOnCurrentWorkplace}>
                   Stay here
                 </AppButton>
-              </>
+              </View>
             )}
           </AppCard>
         ) : null}
@@ -181,11 +186,11 @@ function ImportStatRow({
   warning?: boolean;
 }) {
   return (
-    <View style={styles.statRow}>
-      <AppText variant="body" color={warning ? 'warning' : 'secondary'}>
+    <View style={styles.statTile}>
+      <AppText variant="caption" color={warning ? 'warning' : 'secondary'}>
         {label}
       </AppText>
-      <AppText variant="body" weight="bold" color={warning ? 'warning' : 'success'}>
+      <AppText variant="subheading" weight="bold" color={warning ? 'warning' : 'success'}>
         {value}
       </AppText>
     </View>
@@ -230,19 +235,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   completeCard: {
-    marginTop: Spacing.xl,
+    marginTop: Spacing.lg,
+  },
+  successMark: {
+    alignSelf: 'center',
+    width: Size.xl,
+    height: Size.xl,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    backgroundColor: '#E5F7EF',
+  },
+  completeTitle: {
+    marginBottom: Spacing.xs,
   },
   completeText: {
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
-  statsList: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  statRow: {
+  statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginBottom: Spacing.lg,
+  },
+  actions: {
+    gap: Spacing.sm,
+  },
+  statTile: {
+    width: '47%',
+    minHeight: Size.xl,
+    justifyContent: 'center',
+    paddingVertical: Spacing.xs,
   },
 });
