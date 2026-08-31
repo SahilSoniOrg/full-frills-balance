@@ -1,7 +1,7 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { ModalSurface } from './ModalSurface';
 
 type ConfirmDialogAction = {
@@ -88,6 +88,7 @@ export function ConfirmDialog({
             onPress={handleConfirm}
             style={styles.actionButton}
             disabled={!isConfirmed || primaryAction.disabled}
+            testID="confirmation-primary-action"
           >
             {primaryAction.label}
           </AppButton>
@@ -117,6 +118,11 @@ export function ConfirmDialog({
               autoFocus
               autoCapitalize="none"
               autoCorrect={false}
+              spellCheck={false}
+              keyboardType="ascii-capable"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              testID="confirmation-value-input"
             />
           </View>
         )}

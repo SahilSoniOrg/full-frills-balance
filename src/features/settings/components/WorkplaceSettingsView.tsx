@@ -1,5 +1,5 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
-import { AppIcon } from '@/src/components/core';
+import { AppIcon, IconButton } from '@/src/components/core';
 import { isValidIconName } from '@/src/types/domainIcons';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
@@ -8,7 +8,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CreateWorkplaceDialog } from './CreateWorkplaceDialog';
 import { Opacity } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/constants';
 import type { ReactNode } from 'react';
@@ -60,6 +59,17 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                     rightContent={
                       isActive ? <AppIcon name="check" color="#10B981" size={20} /> : null
                     }
+                    rightAction={
+                      <IconButton
+                        name="trash"
+                        variant="clear"
+                        iconColor={theme.error}
+                        accessibilityLabel={`Delete ${workplace.name}`}
+                        testID={`workplace-delete-${workplace.id}`}
+                        disabled={vm.deletingWorkplaceId !== null}
+                        onPress={() => vm.deleteWorkplace(workplace)}
+                      />
+                    }
                     hasArrow={false}
                     style={
                       isActive
@@ -84,12 +94,6 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
           )}
         </Stack>
       </SettingsLayout>
-      <CreateWorkplaceDialog
-        visible={vm.isCreating}
-        onClose={vm.cancelCreateWorkplace}
-        onCreate={vm.createWorkplace}
-        isCreating={vm.isCreatingWorkplace}
-      />
     </>
   );
 }

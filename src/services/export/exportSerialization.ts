@@ -1,10 +1,12 @@
 import type { UIPreferences } from '@/src/utils/preferences/types';
+import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
 
 export interface ExportMetadata {
   exportDate: string;
   version: string;
   schemaVersion: number;
   preferences: UIPreferences;
+  workplacePreferences?: WorkplacePreferences;
   workplace?: {
     id: string;
     name: string;
@@ -81,14 +83,8 @@ function exportReplacer(field: string, value: unknown): unknown {
   return value;
 }
 
-function sanitizeExportMetadata(metadata: ExportMetadata): Omit<ExportMetadata, 'preferences'> & {
-  preferences: Omit<UIPreferences, 'isAppLockEnabled'>;
-} {
-  const { isAppLockEnabled: _isAppLockEnabled, ...exportPreferences } = metadata.preferences;
-  return {
-    ...metadata,
-    preferences: exportPreferences,
-  };
+function sanitizeExportMetadata(metadata: ExportMetadata): ExportMetadata {
+  return metadata;
 }
 
 function yieldToEventLoop(delayMs = 0): Promise<void> {

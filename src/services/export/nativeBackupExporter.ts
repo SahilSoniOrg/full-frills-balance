@@ -106,6 +106,7 @@ export async function exportToJSON(
         version: '1.4.0',
         schemaVersion: schema.version,
         preferences: userPreferences,
+        workplacePreferences: preferences.workplace.getSnapshot(workplaceId),
         workplace: workplace
           ? {
               id: workplace.id,

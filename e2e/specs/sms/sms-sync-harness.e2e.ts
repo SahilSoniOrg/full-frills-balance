@@ -13,7 +13,7 @@ import {
 
 jest.setTimeout(300000);
 
-describe('SMS sync harness', () => {
+describe(':android: SMS sync harness', () => {
   beforeAll(async () => {
     await launchOnboardedApp({ seedProfile: 'sms-sync' });
   });

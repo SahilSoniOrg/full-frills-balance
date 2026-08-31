@@ -50,11 +50,12 @@ jest.mock('@/src/utils/preferences', () => {
     preferences: {
       defaultCurrencyCode: 'USD',
       sts: {
+        observeForWorkplace: jest.fn(() => of(60)),
         observeSafeToSpendDays: jest.fn(() => of(60)),
         safeToSpendDays: 60,
       },
       insights: {
-        dismissedPatternIds: [],
+        dismissedPatternIds: jest.fn(() => []),
         dismissPattern: jest.fn(),
         undismissPattern: jest.fn(),
       },
@@ -422,9 +423,7 @@ describe('SafeToSpendReadModel', () => {
 
       const days$ = new BehaviorSubject(60);
       const preferencesModule = jest.requireMock('@/src/utils/preferences');
-      preferencesModule.preferences.sts.observeSafeToSpendDays = jest.fn(() =>
-        days$.asObservable(),
-      );
+      preferencesModule.preferences.sts.observeForWorkplace = jest.fn(() => days$.asObservable());
 
       let simulateCalls = 0;
       (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(

@@ -53,18 +53,26 @@ describe('serializeExportPayload', () => {
     expect(JSON.parse(json).transactions).toEqual([{ id: 't1' }]);
   });
 
-  it('omits device-local app-lock configuration from exported preferences', async () => {
+  it('includes workplace preferences in the native export payload', async () => {
     const json = await serializeExportPayload(
       {
         exportDate: '2026-01-01T00:00:00.000Z',
         version: '1.4.0',
         schemaVersion: 1,
-        preferences: { ...DEFAULT_UI_PREFERENCES, isAppLockEnabled: true },
+        preferences: DEFAULT_UI_PREFERENCES,
+        workplacePreferences: {
+          dismissedPatternIds: [],
+          safeToSpendDays: 60,
+        },
       },
       [],
     );
 
-    expect(JSON.parse(json).preferences).not.toHaveProperty('isAppLockEnabled');
+    const parsed = JSON.parse(json);
+    expect(parsed.preferences).not.toHaveProperty('isAppLockEnabled');
+    expect(parsed.preferences).not.toHaveProperty('activeWorkplaceId');
+    expect(parsed.workplacePreferences.safeToSpendDays).toBe(60);
+    expect(parsed.workplacePreferences).not.toHaveProperty('isSmsImportEnabled');
   });
 
   it('reports normalized 0..1 progress through serialization', async () => {

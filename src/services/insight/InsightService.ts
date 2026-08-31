@@ -118,7 +118,7 @@ export class InsightService {
         });
 
         trace.end();
-        const dismissedIds = preferences.insights.dismissedPatternIds;
+        const dismissedIds = preferences.insights.dismissedPatternIds(workplaceId);
         if (onlyDismissed) {
           return finalPatterns.filter((p: Insight) => dismissedIds.includes(p.id));
         }
@@ -131,13 +131,13 @@ export class InsightService {
     return replay.observable;
   }
 
-  async dismissPattern(id: string): Promise<void> {
-    await preferences.insights.dismissPattern(id);
+  async dismissPattern(workplaceId: WorkplaceId, id: string): Promise<void> {
+    preferences.insights.dismissPattern(workplaceId, id);
     this.refreshTrigger.next(undefined);
   }
 
-  async undismissPattern(id: string): Promise<void> {
-    await preferences.insights.undismissPattern(id);
+  async undismissPattern(workplaceId: WorkplaceId, id: string): Promise<void> {
+    preferences.insights.undismissPattern(workplaceId, id);
     this.refreshTrigger.next(undefined);
   }
 }

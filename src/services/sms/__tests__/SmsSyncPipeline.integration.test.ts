@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
+import { storage } from '@/src/utils/storage';
 import {
   fetchInboxByDeviceId,
   fingerprintForMessage,
@@ -17,24 +18,26 @@ import {
   smsSyncPipeline,
 } from '@/src/testing/smsTestHarness';
 
-const mockStorageState = { store: new Map<string, string>() };
-
-jest.mock('@/src/utils/storage', () => ({
-  storage: {
-    getString: (key: string) => mockStorageState.store.get(key),
-    set: (key: string, value: string) => {
-      mockStorageState.store.set(key, value);
+jest.mock('@/src/utils/storage', () => {
+  const store = new Map<string, string>();
+  return {
+    storage: {
+      getString: (key: string) => store.get(key),
+      set: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      remove: (key: string) => {
+        store.delete(key);
+      },
+      getBoolean: jest.fn(),
+      getNumber: jest.fn(),
+      contains: jest.fn((key: string) => store.has(key)),
+      getAllKeys: jest.fn(() => Array.from(store.keys())),
+      clearAll: jest.fn(() => store.clear()),
     },
-    remove: (key: string) => {
-      mockStorageState.store.delete(key);
-    },
-    getBoolean: jest.fn(),
-    getNumber: jest.fn(),
-    contains: jest.fn((key: string) => mockStorageState.store.has(key)),
-    clearAll: jest.fn(() => mockStorageState.store.clear()),
-  },
-  migrateFromAsyncStorage: jest.fn().mockResolvedValue(false),
-}));
+    migrateFromAsyncStorage: jest.fn().mockResolvedValue(false),
+  };
+});
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
@@ -79,7 +82,7 @@ describe('SmsSyncPipeline integration', () => {
   let expenseId: string;
 
   beforeEach(async () => {
-    mockStorageState.store.clear();
+    storage.clearAll();
     await resetSmsTestDb();
     ({ cashId, expenseId } = await seedSmsTestAccounts());
     mockAndroidSmsInbox([]);

@@ -20,6 +20,7 @@ type SettingsMenuItemProps = {
   prominent?: boolean;
   style?: ViewProps['style'];
   testID?: string;
+  rightAction?: React.ReactNode;
 };
 
 /**
@@ -39,6 +40,7 @@ export function SettingsMenuItem({
   prominent = false,
   style,
   testID,
+  rightAction,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
 
@@ -119,44 +121,51 @@ export function SettingsMenuItem({
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || !onPress}
-      activeOpacity={Opacity.heavy}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || !onPress }}
-      accessibilityLabel={title}
-      accessibilityHint={description}
-      testID={testID}
-      style={style}
-    >
-      <Inline
-        align="center"
-        justify="space-between"
-        paddingHorizontal={prominent ? 'sm' : 'md'}
-        paddingVertical={prominent ? 'sm' : 'sm'}
-        space="md"
+    <Inline align="center" style={style}>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || !onPress}
+        activeOpacity={Opacity.heavy}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || !onPress }}
+        accessibilityLabel={title}
+        accessibilityHint={description}
+        testID={testID}
+        style={{ flex: 1 }}
       >
-        <Inline align="center" space="md" flex={1}>
-          {renderLeftIcon()}
-          <Stack space={0} flex={1}>
-            <AppText
-              variant="body"
-              weight={prominent ? 'semibold' : 'medium'}
-              color={danger ? 'error' : 'text'}
-            >
-              {title}
-            </AppText>
-            {description && (
-              <AppText variant="caption" color="secondary" style={{ marginTop: prominent ? 3 : 2 }}>
-                {description}
+        <Inline
+          align="center"
+          justify="space-between"
+          paddingHorizontal={prominent ? 'sm' : 'md'}
+          paddingVertical={prominent ? 'sm' : 'sm'}
+          space="md"
+        >
+          <Inline align="center" space="md" flex={1}>
+            {renderLeftIcon()}
+            <Stack space={0} flex={1}>
+              <AppText
+                variant="body"
+                weight={prominent ? 'semibold' : 'medium'}
+                color={danger ? 'error' : 'text'}
+              >
+                {title}
               </AppText>
-            )}
-          </Stack>
-        </Inline>
+              {description && (
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  style={{ marginTop: prominent ? 3 : 2 }}
+                >
+                  {description}
+                </AppText>
+              )}
+            </Stack>
+          </Inline>
 
-        {renderRightContent()}
-      </Inline>
-    </TouchableOpacity>
+          {renderRightContent()}
+        </Inline>
+      </TouchableOpacity>
+      {rightAction}
+    </Inline>
   );
 }

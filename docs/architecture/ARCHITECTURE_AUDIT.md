@@ -102,20 +102,20 @@ Target shape: import batch coordinator plus table-family writers under the same 
 
 ## Change ledger
 
-| Commit | Scope | Verification | Status |
-|---|---|---|---|
-| `2575e89` | Audit and refactor plan | Repository inventory and baseline checks recorded | complete |
-| `6991e01c` | Break Journal/Accounts feature cycle with a narrow account-selection capability module | Feature-boundary check and typecheck pass | complete |
-| `e83265fe` | Move icon definitions out of `AppIcon` and remove constants → UI coupling | Focused icon tests, lint, Prettier, architecture/typecheck pass | complete |
-| `9d38da8c` | Centralize reactive cache ownership and lifecycle invalidation | Focused reactive tests, typecheck, lint, Prettier pass | complete |
-| `37fe441c` | Partition the universal domain type hub into account, journal, and read-model modules | Architecture checks, typecheck, lint, Prettier pass | complete |
-| `0e605431` | Isolate ImportRepository value-conversion policies | ImportRepository tests 3/3, typecheck, lint, Prettier pass | complete |
-| `a4aafff4` | Extract incremental sync change application | Architecture checks, typecheck, lint, focused import tests pass | complete |
-| `ba972001` | Extract core account, journal, and transaction writers | Architecture checks, typecheck, lint, focused import tests pass | complete |
-| `0e2b84c7` | Make ImportRepository a thin batch/sync coordinator with auxiliary table-family writers | Full architecture checks, typecheck, lint, focused import tests, and full Jest pass | complete |
-| `ff0f7a5d` | Remove production imports from the domain compatibility barrel | Zero production barrel imports; full Jest, typecheck, lint, and architecture checks pass | complete |
-| `d08d244d` | Add dependency-cycle guard with a ratcheted baseline | `check:architecture` and full `verify` pass; 4 existing cycles baselined | complete |
-| `2f49477e` | Remove the obsolete domain compatibility barrel and migrate all remaining consumers | No repository references to `src/types/domain`; full Jest, typecheck, lint, and architecture checks pass | complete |
+| Commit     | Scope                                                                                   | Verification                                                                                             | Status   |
+| ---------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------- |
+| `2575e89`  | Audit and refactor plan                                                                 | Repository inventory and baseline checks recorded                                                        | complete |
+| `6991e01c` | Break Journal/Accounts feature cycle with a narrow account-selection capability module  | Feature-boundary check and typecheck pass                                                                | complete |
+| `e83265fe` | Move icon definitions out of `AppIcon` and remove constants → UI coupling               | Focused icon tests, lint, Prettier, architecture/typecheck pass                                          | complete |
+| `9d38da8c` | Centralize reactive cache ownership and lifecycle invalidation                          | Focused reactive tests, typecheck, lint, Prettier pass                                                   | complete |
+| `37fe441c` | Partition the universal domain type hub into account, journal, and read-model modules   | Architecture checks, typecheck, lint, Prettier pass                                                      | complete |
+| `0e605431` | Isolate ImportRepository value-conversion policies                                      | ImportRepository tests 3/3, typecheck, lint, Prettier pass                                               | complete |
+| `a4aafff4` | Extract incremental sync change application                                             | Architecture checks, typecheck, lint, focused import tests pass                                          | complete |
+| `ba972001` | Extract core account, journal, and transaction writers                                  | Architecture checks, typecheck, lint, focused import tests pass                                          | complete |
+| `0e2b84c7` | Make ImportRepository a thin batch/sync coordinator with auxiliary table-family writers | Full architecture checks, typecheck, lint, focused import tests, and full Jest pass                      | complete |
+| `ff0f7a5d` | Remove production imports from the domain compatibility barrel                          | Zero production barrel imports; full Jest, typecheck, lint, and architecture checks pass                 | complete |
+| `d08d244d` | Add dependency-cycle guard with a ratcheted baseline                                    | `check:architecture` and full `verify` pass; 4 existing cycles baselined                                 | complete |
+| `2f49477e` | Remove the obsolete domain compatibility barrel and migrate all remaining consumers     | No repository references to `src/types/domain`; full Jest, typecheck, lint, and architecture checks pass | complete |
 
 ## Current enforcement
 
@@ -129,3 +129,27 @@ Target shape: import batch coordinator plus table-family writers under the same 
 - Keep commits small and single-purpose.
 - Do not combine independent actions in one finding or commit.
 - Run targeted tests after each refactor and the full architecture/typecheck/lint/test suite before handoff.
+
+## Unpushed tenancy simplification record
+
+Scope: `origin/main..HEAD`.
+
+- Keep the canonical tenancy spec and durable launch/import/transition ADRs; delete duplicate plans and history journals.
+- Keep User/Device/Workplace persistence boundaries and atomic publication/recovery behavior.
+- Keep the launch resolver; remove duplicate navigation and avoid expanding the coordinator without a failing test.
+- Use explicit preference composition; preserve legacy dual-write compatibility until its removal window is proven safe.
+- Do not push. Verify focused tests after each change and the full project checks before handoff.
+
+## Active follow-up
+
+The transition follow-up is tracked in [`docs/plans/workplace-transition-simplification-plan.md`](../plans/workplace-transition-simplification-plan.md).
+
+Completed locally so far:
+
+- deletion cleanup distinguishes database commit from post-commit warnings;
+- Settings no longer chooses the post-delete route;
+- launch pointer-repair failure no longer blocks a validated Workplace forever;
+- deleted Workplace reactive caches are evicted after commit;
+- the superseded remediation plan was removed.
+
+Remaining verification is focused on proving the committed unmount-before-delete ordering and reviewing the coordinator’s final ownership shape.

@@ -14,13 +14,12 @@ export async function completeOnboardingUi(userName: string): Promise<void> {
   await nameInput.replaceText(userName);
   await nameInput.tapReturnKey();
 
-  await tapById(onboardingIds.continueButton, ONBOARDING_TIMEOUT_MS);
-
+  // Return submits Device setup. Personal Workplace setup starts at currency;
+  // there is no second Device-step Continue button to tap here.
   for (let i = 0; i < 3; i += 1) {
     await tapById(onboardingIds.gridContinue, ONBOARDING_TIMEOUT_MS);
   }
 
-  await tapById(onboardingIds.themeContinue, ONBOARDING_TIMEOUT_MS);
   await tapById(onboardingIds.finishButton, ONBOARDING_TIMEOUT_MS);
 
   await waitForDashboard(ONBOARDING_TIMEOUT_MS);

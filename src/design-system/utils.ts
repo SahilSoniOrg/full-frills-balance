@@ -9,19 +9,17 @@ import {
 } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/utils/color-math';
 
-import { Platform, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * processTextChildren
  *
- * Centralized utility to handle platform-specific text processing.
- * On Android, we append a space to prevent custom fonts from clipping
- * the last character (common on OnePlus/Samsung).
+ * Centralized utility for text children.
+ *
+ * Text content must remain semantically exact across platforms. Android
+ * typography safeguards belong in the Text style, not in the string value.
  */
 export function processTextChildren(children: React.ReactNode): React.ReactNode {
-  if (Platform.OS === 'android' && typeof children === 'string') {
-    return `${children} `;
-  }
   return children;
 }
 

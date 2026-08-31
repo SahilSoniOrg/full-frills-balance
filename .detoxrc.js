@@ -1,4 +1,7 @@
 /** @type {import('detox').DetoxConfig} */
+const iosDeviceUdid = process.env.DETOX_IOS_DEVICE_UDID;
+const androidDeviceId = process.env.DETOX_ANDROID_DEVICE_ID;
+
 module.exports = {
   testRunner: {
     args: {
@@ -21,6 +24,12 @@ module.exports = {
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/FullFrillsBalance.app',
       build:
         "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=NO",
+    },
+    'ios.device.release': {
+      type: 'ios.app',
+      binaryPath: 'ios/build/Build/Products/Release-iphoneos/FullFrillsBalance.app',
+      build:
+        "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM CODE_SIGNING_ALLOWED=YES",
     },
     'android.debug': {
       type: 'android.apk',
@@ -48,9 +57,25 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: process.env.DETOX_AVD_NAME || 'Pixel_10_Pro',
+        avdName: process.env.DETOX_AVD_NAME || 'Pixel_2_API_36_Fast',
       },
     },
+    ...(iosDeviceUdid
+      ? {
+          iosDevice: {
+            type: 'ios.device',
+            device: { id: iosDeviceUdid },
+          },
+        }
+      : {}),
+    ...(androidDeviceId
+      ? {
+          androidDevice: {
+            type: 'android.attached',
+            device: { adbName: androidDeviceId },
+          },
+        }
+      : {}),
   },
   configurations: {
     'ios.sim.debug': {
@@ -61,6 +86,14 @@ module.exports = {
       device: 'simulator',
       app: 'ios.release',
     },
+    ...(iosDeviceUdid
+      ? {
+          'ios.device.release': {
+            device: 'iosDevice',
+            app: 'ios.device.release',
+          },
+        }
+      : {}),
     'android.emu.debug': {
       device: 'emulator',
       app: 'android.debug',
@@ -69,6 +102,14 @@ module.exports = {
       device: 'emulator',
       app: 'android.release',
     },
+    ...(androidDeviceId
+      ? {
+          'android.device.release': {
+            device: 'androidDevice',
+            app: 'android.release',
+          },
+        }
+      : {}),
   },
   artifacts: {
     rootDir: './artifacts/detox',

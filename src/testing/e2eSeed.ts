@@ -32,14 +32,21 @@ const DEFAULT_SEED = {
   name: 'E2E User',
   selectedCurrency: 'USD',
   selectedAccounts: ['Cash', 'Bank'],
-  customAccounts: [] as { name: string; icon: IconName }[],
+  customAccounts: [] as { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[],
   selectedCategories: ['Salary', 'Food & Drink', 'Groceries', 'Bills'],
   customCategories: [] as { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[],
 };
 
+const ONBOARDING_RESUME_STATE_KEY = 'onboarding_resume_state_v1';
+const LEGACY_ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
+
 async function clearAppStorage(): Promise<void> {
   try {
     storage.clearAll();
+    // The draft is a resumable flow artifact. Explicitly remove it so a
+    // clean-install E2E launch cannot inherit a prior interrupted setup.
+    storage.remove(ONBOARDING_RESUME_STATE_KEY);
+    storage.remove(LEGACY_ONBOARDING_DRAFT_KEY);
   } catch (error) {
     logger.warn('[E2E] MMKV clearAll failed', { error });
   }
@@ -47,9 +54,9 @@ async function clearAppStorage(): Promise<void> {
 
 async function applyOnboardingPreferences(userName: string): Promise<void> {
   await preferences.setUserName(userName);
-  await preferences.setOnboardingCompleted(true);
+  preferences.device.setOnboardingCompleted(true);
+  preferences.device.setAppLockEnabled(false);
   preferences.update({
-    isAppLockEnabled: false,
     isPrivacyMode: false,
   });
 }
@@ -62,6 +69,15 @@ async function seedOnboarded(_profile: E2eSeedProfile): Promise<WorkplaceId> {
 
   await applyOnboardingPreferences(DEFAULT_SEED.name);
   return workplaceId;
+}
+
+async function seedPickerReady(): Promise<void> {
+  await onboardingService.completeOnboarding({
+    ...DEFAULT_SEED,
+    name: 'Second E2E User',
+  });
+  // Picker state requires multiple workplaces with no active pointer.
+  preferences.device.setActiveWorkplaceId(undefined);
 }
 
 async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
@@ -211,6 +227,11 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
 export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<WorkplaceId> {
   logger.info(`[E2E] Seeding profile: ${profile}`);
   const workplaceId = await seedOnboarded(profile);
+
+  if (profile === 'picker-ready') {
+    await seedPickerReady();
+    return workplaceId;
+  }
 
   if (profile === 'planned-payments') {
     await seedExtraAccounts(workplaceId);

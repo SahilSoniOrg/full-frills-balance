@@ -65,3 +65,15 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
   });
   await waitForDashboard();
 }
+
+export async function launchPickerApp(): Promise<void> {
+  await device.launchApp({
+    newInstance: true,
+    delete: true,
+    permissions: { notifications: 'YES' },
+    launchArgs: e2eLaunchArgs('picker-ready'),
+  });
+  await waitFor(element(by.id('workplace-picker-screen')))
+    .toBeVisible()
+    .withTimeout(120000);
+}

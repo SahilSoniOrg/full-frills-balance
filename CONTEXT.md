@@ -4,6 +4,102 @@ Personal double-entry finance app. Ledger-first; balances derive from the journa
 
 ## Language
 
+### Tenancy
+
+**User**:
+The person. Owns identity and chrome that follow them across Devices and Workplaces: display name, appearance, privacy mask, notifications, and other settings that never change what the books mean or write. There is no cloud login yet; User is local. A Device is registered to exactly one User.
+_Avoid_: Account (that is a ledger bucket); profile (as a synonym); owner
+
+**Workplace**:
+The tenancy for the books. Journals, ledger accounts, budgets, planned payments, and settings that change meaning or writes (default currency, Safe to Spend horizon, last-used ledger accounts, dismissed insights) belong here. SMS auto-post rules and this Workplace’s consumed-SMS copies belong here; the shared SMS feed does not.
+_Avoid_: User data; workspace; company; books (as the tenancy name)
+
+**Workplace membership**:
+The relationship granting one User access to one Workplace. A User may hold memberships in multiple Workplaces; access is determined by the membership’s role and status, not by the Device that is currently open. Membership is distinct from User preferences and Device registration.
+_Avoid_: Workplace ownership as a User property; active workplace; device access
+
+**Owner role**:
+The highest-trust role on a Workplace. The owner can transfer ownership and perform irreversible Workplace administration. A User is initially assigned this role when creating a Workplace; ownership is a membership role, not a property of the User or Device.
+_Avoid_: User owns every Workplace; admin (as a synonym); device owner
+
+**Identity provider**:
+The service that authenticates Users and, in a future multi-device or collaborative product, may synchronize Workplace memberships and roles. The domain model remains provider-neutral; WorkOS is a possible future provider, not the domain term.
+_Avoid_: WorkOS User as the canonical domain User; authentication provider as the membership itself
+
+**Device**:
+The phone (this install). Registered to one User. Owns state that must not follow the person or the books: app lock, which workplace is open, whether this Device is registered, anonymized telemetry id, Device inbox, and Device SMS listen.
+_Avoid_: User; session; phone (as the domain name)
+
+**Current tenancy boundary**:
+The current product has exactly three domain entities: User, Device, and Workplace. User and Device are local identity and installation concepts; Workplace is the financial-data tenancy. Workplace membership and role-based access are future concepts for online accounts, synchronization, or collaboration and are not part of the current model.
+_Avoid_: introducing membership or RBAC state before online identity exists
+
+**Device onboarding**:
+Registering this Device to a User. Completes when identity exists on this install — display name today; login/signup later, after which registration is automatic (one User, many Devices). Does not create ledger accounts. Display name cannot be skipped in the UI; first-run Import preserves an already-entered name and uses **Default display name** only when neither the backup nor Device has one. The only identity ritual; appearance and SMS listen are not first-run setup.
+_Avoid_: App onboarding (as a single blob); workplace setup; User onboarding; stacking extra first-run wizards
+
+**Default display name**:
+`User` — the display name written when Device onboarding must complete and no name is present (import with an empty name).
+_Avoid_: skip; anonymous; guest
+
+**Default workplace**:
+The first Workplace established on this Device by Default setup or Import restore. Under Default setup its initial identity is `{trimmed User display name}'s Personal workplace` with the `briefcase` icon; an imported Workplace keeps its imported identity.
+_Avoid_: ghost workplace; Personal (as the domain term); ensure-default-on-launch; create-on-Device-onboarding
+
+**Workplace creation**:
+The single ritual that produces a Workplace only when it **finishes**. Configured as **Default setup** or **Full setup**; Import is restore, not this ritual.
+_Avoid_: Separate first-run onboarding vs Create Workplace as two products; Device onboarding
+
+**Default setup**:
+Workplace creation configured for the first Workplace: name/icon derived from the User; currency and starter accounts/categories are still asked in the same flow. Not a second wizard and not a silent stamp of defaults.
+_Avoid_: Ghost Personal; skip Workplace creation; a third setup process
+
+**Full setup**:
+Workplace creation configured for every later Workplace: name, icon, currency, starter accounts, and categories are asked.
+_Avoid_: Default setup
+
+**Workplace onboarding**:
+Workplace creation when this Device has no Workplace yet (Default setup). Same flow as Create Workplace, different config.
+_Avoid_: Device onboarding; user setup
+
+**Active workplace**:
+The Workplace this Device currently has open. Stored on the Device. May be unset or point at a Workplace that no longer exists.
+_Avoid_: Default workplace; session workplace (as a fake id)
+
+**Workplace picker**:
+Shown when Device onboarding is done, Active workplace is missing or invalid, and **two or more** Workplaces exist. If exactly one Workplace exists, it is opened and written as Active workplace — no picker. If none exist, Workplace creation (Default setup) runs instead.
+_Avoid_: Device onboarding; ensure-default-on-launch
+
+**Device recovery**:
+When the Device bag is missing: write Device defaults (listen off, lock off, Active workplace unset, Device onboarding not completed). If Workplaces already exist, Device onboarding is treated as done and Active workplace is recovered (one → open, many → picker). If none exist, Device onboarding still runs. Does not create a Workplace.
+_Avoid_: ensureDefaultWorkplace; synthesizing onboarding-complete with zero books
+
+**Device session**:
+The current visit on a Device: unlocked-or-locked, app active. Ephemeral. Not persisted preferences.
+_Avoid_: Device (the install); User
+
+### Inbox
+
+**Device inbox**:
+The Device-scoped feed of incoming SMS. One list on this install; the same messages regardless of which Workplace is open. Does not hold journals. Not included in native Workplace export.
+_Avoid_: Workplace inbox (as the feed); SMS import (as the feed’s name)
+
+**Workplace inbox**:
+This Workplace’s copies of SMS it has consumed (posted to a journal, or dismissed in this Workplace). Not a second feed of pending messages. Travels with native Workplace export. Dies with the Workplace; Device inbox tags follow remaining copies.
+_Avoid_: Device inbox; cloning the phone’s SMS per Workplace as the pending list
+
+**Elsewhere-consumed**:
+A Device inbox message already consumed by another Workplace. Still shown in the Device inbox with a tag naming that Workplace. Manual consume in this Workplace is always allowed.
+_Avoid_: Hidden; processed (as “gone from this Workplace”)
+
+**Cross-workplace auto-post**:
+Workplace preference: auto-post Elsewhere-consumed messages into this Workplace. Off means auto-post skips them; the User can still post by hand. Two Workplaces may both consume the same SMS.
+_Avoid_: Resurface; show consumed as pending (the feed already shows them)
+
+**Device SMS listen**:
+Device preference: this install may scan the OS SMS inbox and run auto-post. Default **off** on a fresh Device; the User turns it on. Off is Device-wide — no Workplace can listen independently. OS SMS permission is also Device.
+_Avoid_: Per-Workplace SMS import enabled; workplace participates; scan during Device onboarding
+
 ### Interaction
 
 **Selection mode**:

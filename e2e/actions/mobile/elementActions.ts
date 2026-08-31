@@ -19,6 +19,17 @@ export async function typeById(
   await target.typeText(text);
 }
 
+export async function replaceById(
+  testId: string,
+  text: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<void> {
+  const target = element(by.id(testId));
+  await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+  await target.tap();
+  await target.replaceText(text);
+}
+
 export async function tapByLabel(
   label: string | RegExp,
   timeoutMs = DEFAULT_TIMEOUT_MS,

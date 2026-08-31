@@ -31,6 +31,12 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     loadPreferences: jest.fn(),
+    workplace: {
+      getSnapshot: jest.fn(() => ({
+        dismissedPatternIds: [],
+        safeToSpendDays: 30,
+      })),
+    },
   },
 }));
 

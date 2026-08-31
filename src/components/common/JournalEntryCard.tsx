@@ -1,53 +1,16 @@
 import { MoneyText } from '@/src/components/common/MoneyText';
-import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
+import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
-import { ComponentVariant } from '@/src/utils/style-helpers';
+import type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
 import { MotiView } from 'moti';
-import { memo, useMemo, type ReactNode } from 'react';
-import {
-  Keyboard,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { memo, useMemo } from 'react';
+import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-export interface JournalEntryBadge {
-  id?: string;
-  text: string;
-  icon?: IconName | string | null;
-  fallbackIcon?: IconName;
-  colorKey?: string;
-  variant?: ComponentVariant;
-}
-
-export interface JournalEntryCardProps {
-  title: string;
-  amount: number;
-  currencyCode: string;
-  transactionDate: number | Date;
-  presentation: {
-    label: string;
-    typeIcon: IconName;
-    typeColor: string;
-    amountPrefix?: string;
-  };
-  badges: JournalEntryBadge[];
-  notes?: string;
-  onPress?: () => void;
-  onLongPress?: () => void;
-  /** Optional chrome rendered inside the card (e.g. selection indicator). */
-  overlay?: ReactNode;
-  /** Extra styles applied to the card surface. */
-  cardStyle?: StyleProp<ViewStyle>;
-  /** Scale applied to card content (e.g. selection press-in). */
-  contentScale?: number;
-}
+export type { JournalEntryBadge, JournalEntryCardProps } from '@/src/types/journalEntryCard';
 
 const JournalEntryCardComponent = ({
   title,

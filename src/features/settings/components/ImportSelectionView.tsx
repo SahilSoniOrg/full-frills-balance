@@ -37,6 +37,7 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
       </View>
       <AppButton
         variant={index === 0 ? 'primary' : 'outline'}
+        testID={`import-plugin-${plugin.id}`}
         onPress={handleSelect}
         loading={isImporting}
         style={styles.button}
@@ -53,6 +54,7 @@ interface ImportSelectionViewProps {
   progress: number;
   progressMessage?: string;
   onSelect: (id: string) => void;
+  isNewWorkplace: boolean;
 }
 
 export function ImportSelectionView({
@@ -61,12 +63,15 @@ export function ImportSelectionView({
   progress,
   progressMessage,
   onSelect,
+  isNewWorkplace,
 }: ImportSelectionViewProps) {
   return (
     <SettingsLayout title={AppConfig.strings.settings.importTitle}>
       <View style={styles.container}>
         <AppText variant="body" style={styles.intro}>
-          {AppConfig.strings.settings.importIntro}
+          {isNewWorkplace
+            ? AppConfig.strings.settings.newWorkplaceImportIntro
+            : AppConfig.strings.settings.importIntro}
         </AppText>
 
         {plugins.map((plugin, index) => (
@@ -81,7 +86,9 @@ export function ImportSelectionView({
 
         <View style={styles.note}>
           <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-            {AppConfig.strings.settings.importNote}
+            {isNewWorkplace
+              ? AppConfig.strings.settings.newWorkplaceImportNote
+              : AppConfig.strings.settings.importNote}
           </AppText>
         </View>
       </View>

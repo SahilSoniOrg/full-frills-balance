@@ -14,7 +14,7 @@ import {
 
 jest.setTimeout(300000);
 
-describe('SMS inbox duplicates', () => {
+describe(':android: SMS inbox duplicates', () => {
   beforeAll(async () => {
     await launchOnboardedApp({ seedProfile: 'sms-ready' });
   });

@@ -27,9 +27,8 @@ jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
-    defaultCurrencyCode: 'USD',
     insights: {
-      dismissedPatternIds: [],
+      dismissedPatternIds: jest.fn(() => []),
       dismissPattern: jest.fn(),
       undismissPattern: jest.fn(),
     },

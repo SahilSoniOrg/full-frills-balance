@@ -1,0 +1,3 @@
+# Publish an imported Workplace only after validation
+
+An empty-install Import stages and validates the backup without first creating a target Workplace, then publishes the restored Workplace in one database transaction and makes it Active only on successful finish. Database publication is the commit point; preference pointers are repaired on a later launch if their writes fail. A failed or cancelled Import leaves no new Workplace, account, or journal rows. First-run restore may adopt exported User preferences, while Settings Import preserves the current User bag. This costs a dedicated promotion path but prevents Import from reintroducing ghost or partially restored books or overwriting the wrong person.

@@ -100,7 +100,7 @@ export function observeSafeToSpendInputSnapshot(
   workplaceId: WorkplaceId,
   defaultCurrencyCode: string,
 ): Observable<SafeToSpendInputOutcome> {
-  return combineLatest([preferences.sts.observeSafeToSpendDays()]).pipe(
+  return combineLatest([preferences.sts.observeForWorkplace(workplaceId)]).pipe(
     switchMap(([safeToSpendDays]) => {
       return combineLatest([
         observeWorkplaceAccounts(workplaceId),

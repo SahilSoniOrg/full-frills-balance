@@ -39,15 +39,21 @@ export function useHubViewModel(): HubViewModel {
   const { data: dismissedInsights } = useDismissedInsightPatterns(workplaceId);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
-  const dismissInsight = useCallback(async (id: string) => {
-    analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
-    await insightService.dismissPattern(id);
-  }, []);
+  const dismissInsight = useCallback(
+    async (id: string) => {
+      analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
+      await insightService.dismissPattern(workplaceId, id);
+    },
+    [workplaceId],
+  );
 
-  const restoreInsight = useCallback(async (id: string) => {
-    analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
-    await insightService.undismissPattern(id);
-  }, []);
+  const restoreInsight = useCallback(
+    async (id: string) => {
+      analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
+      await insightService.undismissPattern(workplaceId, id);
+    },
+    [workplaceId],
+  );
 
   const onOpenInbox = useCallback(() => {
     AppNavigation.toTransactionInbox();

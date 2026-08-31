@@ -1,6 +1,6 @@
 # Detox (native iOS & Android)
 
-End-to-end tests on the **iOS Simulator** or **Android emulator**. Playwright tests in `e2e/*.test.ts` cover the web export.
+End-to-end tests run on iOS/Android simulators and emulators by default, with opt-in attached-device configurations for release validation. Playwright tests in `e2e/*.test.ts` cover the web export.
 
 **Maestro** and **Detox** run locally. See [`.maestro/README.md`](../.maestro/README.md). iOS Detox also runs in GitHub Actions (`.github/workflows/detox.yml`).
 
@@ -9,6 +9,19 @@ End-to-end tests on the **iOS Simulator** or **Android emulator**. Playwright te
 Detox uses a **Release** simulator build with `export:embed` — **no Expo dev client, no Metro**. Debug builds set `SKIP_BUNDLING=1` and require the dev launcher; we avoid that for E2E.
 
 Configuration: `ios.sim.release` in `.detoxrc.js`.
+
+### Physical iOS device
+
+Connect and trust a signed device, then set its UDID and Apple development team:
+
+```bash
+export DETOX_IOS_DEVICE_UDID="<device-udid>"
+export DETOX_IOS_DEVELOPMENT_TEAM="<apple-team-id>"
+bunx detox build --configuration ios.device.release
+bun run e2e:test:ios:device
+```
+
+The physical-device lane uses the same critical specs as the simulator lane. It is intentionally opt-in because signing and device availability are host-specific.
 
 ## Prerequisites
 
@@ -51,7 +64,7 @@ bun run e2e:clean:ios
 
 ## Android (local Detox)
 
-Prerequisites: Android SDK, a running or bootable AVD (default name `Pixel_10_Pro`).
+Prerequisites: Android SDK, a running or bootable Android 16 ARM64 AVD (default name `Pixel_2_API_36_Fast`).
 
 Uses **release + embedded bundle** (`android.emu.release`) — no Metro, no dev launcher.
 
@@ -68,6 +81,18 @@ Use an existing AVD:
 DETOX_AVD_NAME="Your_Avd_Name" bun run e2e:test:android
 ```
 
+### Physical Android device
+
+With a USB-debugging-enabled device visible to `adb`:
+
+```bash
+export DETOX_ANDROID_DEVICE_ID="<adb-serial>"
+bun run e2e:build:android
+bun run e2e:test:android:device
+```
+
+The attached-device lane reuses the release APK and the same critical specs as the emulator lane.
+
 ## Layout (one-mobile style)
 
 ```text
@@ -81,7 +106,7 @@ e2e/
 
 ## E2E seed profiles
 
-Most specs use **programmatic onboarding** via Detox `launchArgs` (see [e2e-decisions.md](../docs/testing/e2e-decisions.md)). The dedicated `onboarding.e2e.ts` exercises the UI flow.
+Most specs use **programmatic onboarding** via Detox `launchArgs` (see [the E2E architecture notes](../docs/architecture/MOBILE_E2E.md)). The dedicated `onboarding.e2e.ts` exercises the UI flow.
 
 ## Artifacts
 

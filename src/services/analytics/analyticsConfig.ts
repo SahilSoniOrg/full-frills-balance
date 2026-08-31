@@ -43,7 +43,7 @@ export function getGlobalProperties(): AnalyticsProperties {
       $is_dev: __DEV__ || !Device.isDevice,
       $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
       $build_type: BUILD_TYPE || 'unknown',
-      $active_workplace_id: preferences.activeWorkplaceId || 'none',
+      $active_workplace_id: preferences.device.activeWorkplaceId || 'none',
       $db_schema_version: schema.version,
       is_test_build: BUILD_TYPE !== 'production',
     };

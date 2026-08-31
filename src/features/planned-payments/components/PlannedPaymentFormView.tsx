@@ -9,7 +9,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { PlannedPaymentInterval } from '@/src/types/enums';
-import { FadeIn, Stack } from '@/src/design-system';
+import { Box, FadeIn, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
@@ -54,16 +54,18 @@ export function PlannedPaymentFormView({
           disabled: !isValid || isSubmitting,
         }}
       >
-        <FormHeroSection
-          nameLabel="Rule Name"
-          nameValue={form.name}
-          onNameChange={(val: string) => setField('name', val)}
-          namePlaceholder={AppConfig.strings.plannedPayments.namePlaceholder}
-          amountLabel="Amount"
-          amountValue={form.amount}
-          onAmountChange={(val: string) => setField('amount', val)}
-          currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
-        />
+        <Box paddingTop="md">
+          <FormHeroSection
+            nameLabel="Rule Name"
+            nameValue={form.name}
+            onNameChange={(val: string) => setField('name', val)}
+            namePlaceholder={AppConfig.strings.plannedPayments.namePlaceholder}
+            amountLabel="Amount"
+            amountValue={form.amount}
+            onAmountChange={(val: string) => setField('amount', val)}
+            currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
+          />
+        </Box>
 
         <Stack space="xl" style={styles.formSection}>
           <FormSectionGroup title="Accounts">

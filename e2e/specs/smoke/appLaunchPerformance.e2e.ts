@@ -12,13 +12,14 @@ import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
 
 jest.setTimeout(180000);
 
+const benchmarkTest =
+  process.env.FFB_IOS_BACKUP_PATH && process.env.FFB_IOS_SIMULATOR_UDID ? it : it.skip;
+
 describe('iOS cold start performance', () => {
-  it('records cold, resume, and tab-navigation timings in one run', async () => {
+  benchmarkTest('records cold, resume, and tab-navigation timings in one run', async () => {
     const hostBackupPath = process.env.FFB_IOS_BACKUP_PATH;
     const simulatorUdid = process.env.FFB_IOS_SIMULATOR_UDID;
-    if (!hostBackupPath || !simulatorUdid) {
-      throw new Error('Set FFB_IOS_BACKUP_PATH and FFB_IOS_SIMULATOR_UDID');
-    }
+    if (!hostBackupPath || !simulatorUdid) return;
     const appDataPath = execFileSync(
       'xcrun',
       ['simctl', 'get_app_container', simulatorUdid, 'in.sahilsoni.fullfrillsbalance', 'data'],
