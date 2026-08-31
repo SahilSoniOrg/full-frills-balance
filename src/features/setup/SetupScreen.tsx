@@ -19,19 +19,25 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { createSetupCoordinator } from './SetupCoordinator';
 import { loadSetupDraft } from './SetupDraftStore';
 import { finishDeviceSetup, finishSetup } from './setupFinishers';
-import type { SetupSliceId, StarterAccountInput, StarterCategoryInput } from './setupTypes';
+import type {
+  SetupSliceId,
+  SetupSliceOutput,
+  StarterAccountInput,
+  StarterCategoryInput,
+} from './setupTypes';
+import type { IconName } from '@/src/types/domainIcons';
+import type { WorkplaceId } from '@/src/types/ids';
 
-function defaultsFor(
-  names: string[],
-  suggestions: readonly { name: string; type: any; icon: any }[],
-) {
-  return names.map(name => suggestions.find(item => item.name === name)).filter(Boolean) as any[];
+function defaultsFor<T extends { name: string }>(names: string[], suggestions: readonly T[]): T[] {
+  return names
+    .map(name => suggestions.find(item => item.name === name))
+    .filter((item): item is T => item !== undefined);
 }
 
 function SetupScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const journeyId = mode === 'full' ? 'create_workplace' : 'first_run';
-  const operationId = useMemo(() => generator() as any, []);
+  const operationId = useMemo(() => generator() as WorkplaceId, []);
   const existingDraft = useMemo(() => {
     const draft = loadSetupDraft();
     return draft?.journeyId === journeyId ? draft : undefined;
@@ -45,11 +51,13 @@ function SetupScreen() {
         finishers: {
           firstRun: async draft => {
             const workplaceId = await finishSetup(draft);
-            return { kind: 'workplace_created', workplaceId: workplaceId as any };
+            if (!workplaceId) throw new Error('Workplace publication failed');
+            return { kind: 'workplace_created', workplaceId };
           },
           workplaceCreation: async draft => {
             const workplaceId = await finishSetup(draft);
-            return { kind: 'workplace_created', workplaceId: workplaceId as any };
+            if (!workplaceId) throw new Error('Workplace publication failed');
+            return { kind: 'workplace_created', workplaceId };
           },
         },
       }),
@@ -70,7 +78,7 @@ function SetupScreen() {
       : '',
   );
   const [workplaceName, setWorkplaceName] = useState(existingDraft?.workplace?.name.value ?? '');
-  const [workplaceIcon, setWorkplaceIcon] = useState<any>(
+  const [workplaceIcon, setWorkplaceIcon] = useState<IconName>(
     existingDraft?.workplace?.icon.value ?? 'briefcase',
   );
   const [currency, setCurrency] = useState<string>(
@@ -83,12 +91,12 @@ function SetupScreen() {
     'Groceries',
     'Bills',
   ]);
-  const [themeId, setThemeId] = useState<any>(
+  const [themeId, setThemeId] = useState<(typeof ThemeIds)[keyof typeof ThemeIds]>(
     existingDraft && 'appearance' in existingDraft
       ? (existingDraft.appearance?.themeId.value ?? ThemeIds.DEEP_SPACE)
       : ThemeIds.DEEP_SPACE,
   );
-  const [fontId, setFontId] = useState<any>(
+  const [fontId, setFontId] = useState<(typeof FontIds)[keyof typeof FontIds]>(
     existingDraft && 'appearance' in existingDraft
       ? (existingDraft.appearance?.fontId.value ?? FontIds.DEEP_SPACE)
       : FontIds.DEEP_SPACE,
@@ -98,14 +106,14 @@ function SetupScreen() {
     'identity' | 'currency' | 'accounts' | 'categories'
   >('identity');
 
-  const advance = async (
-    nextSlice: SetupSliceId,
-    output: Parameters<typeof coordinator.accept>[1],
-  ) => {
+  const advance = async (nextSlice: SetupSliceId, output: SetupSliceOutput) => {
     setBusy(true);
     try {
-      if (slice === 'device') finishDeviceSetup(output as any);
-      await coordinator.accept(slice as any, output as any);
+      if (slice === 'device')
+        finishDeviceSetup(output as Extract<SetupSliceOutput, { displayName: unknown }>);
+      await (
+        coordinator.accept as (sliceId: SetupSliceId, output: SetupSliceOutput) => Promise<void>
+      )(slice, output);
       setSlice(nextSlice);
     } finally {
       setBusy(false);

@@ -61,7 +61,7 @@ export async function finishWorkplaceSetup(
     initialAccounts: starterAccounts(output),
     initialCategories: starterCategories(output),
   });
-  return workplace.id as WorkplaceId;
+  return workplace.id;
 }
 
 export interface FinishSetupOptions {
