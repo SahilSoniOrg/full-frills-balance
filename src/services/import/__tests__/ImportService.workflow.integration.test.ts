@@ -68,4 +68,40 @@ describe('ImportService real writer workflow', () => {
     expect(workplaces).toHaveLength(1);
     expect(workplaces[0]!.id).toBe(TARGET_WORKPLACE);
   }, 30000);
+
+  it('leaves no Workplace behind when a first-run import fails', async () => {
+    await workplaceRepository.destroyPermanently(TARGET_WORKPLACE);
+
+    const plugin: ImportPlugin = {
+      id: 'first-run-failure-test',
+      name: 'First-run failure test',
+      description: 'Test first-run cleanup',
+      icon: 'T',
+      detect: () => true,
+      parse: async () => ({
+        canonical: canonicalImportFromBatchImportData({
+          accounts: [
+            {
+              id: 'duplicate-import-account',
+              name: 'First partial row',
+              accountType: AccountType.ASSET,
+              currencyCode: 'USD',
+            },
+            {
+              id: 'duplicate-import-account',
+              name: 'Second conflicting row',
+              accountType: AccountType.ASSET,
+              currencyCode: 'USD',
+            },
+          ],
+          journals: [],
+          transactions: [],
+        }),
+        stats: { accounts: 2, journals: 0, transactions: 0, skippedTransactions: 0 },
+      }),
+    };
+
+    await expect(importService.executeImport(plugin, context)).rejects.toThrow();
+    expect(await workplaceRepository.findAll()).toHaveLength(0);
+  }, 30000);
 });

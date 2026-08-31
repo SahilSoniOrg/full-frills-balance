@@ -4,20 +4,27 @@ import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProv
 import { analytics } from '@/src/services/analytics';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { onboardingService } from '../services/OnboardingService';
+import { generator } from '@/src/data/database/idGenerator';
+import { WorkplaceId } from '@/src/types/ids';
+import { preferences } from '@/src/utils/preferences';
+import { useLocalSearchParams } from 'expo-router';
 
 export interface OnboardingFlowViewModel {
   step: number;
   name: string;
   setName: (value: string) => void;
+  workplaceName: string;
+  setWorkplaceName: (value: string) => void;
+  workplaceIcon: IconName;
+  setWorkplaceIcon: (value: IconName) => void;
   selectedCurrency: string;
   setSelectedCurrency: (value: string) => void;
   selectedAccounts: string[];
-  customAccounts: { name: string; icon: IconName }[];
+  customAccounts: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
   onToggleAccount: (name: string) => void;
   onAddCustomAccount: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
   selectedCategories: string[];
@@ -26,20 +33,27 @@ export interface OnboardingFlowViewModel {
   onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
   isCompleting: boolean;
   onContinue: () => void;
-  onImport: () => void;
+  onRestore: () => void;
   onBack: () => void;
   onFinish: () => void;
 }
 
-const ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
-
 export function useOnboardingFlow(): OnboardingFlowViewModel {
-  const { completeOnboarding } = useOnboardingSession();
-  const [step, setStep] = useState(1);
-  const [name, setName] = useState('');
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isFullSetup = mode === 'full';
+  const deviceOnboardingRequired = !preferences.device.onboardingCompleted;
+  const { completeDeviceOnboarding, persistDisplayName } = useOnboardingSession();
+  const [step, setStep] = useState(isFullSetup ? 2 : deviceOnboardingRequired ? 1 : 3);
+  const [name, setName] = useState(preferences.userName ?? '');
+  const [workplaceName, setWorkplaceName] = useState(
+    isFullSetup ? '' : `${preferences.userName?.trim() || 'User'}'s Personal workplace`,
+  );
+  const [workplaceIcon, setWorkplaceIcon] = useState<IconName>('briefcase');
   const [selectedCurrency, setSelectedCurrency] = useState<string>(AppConfig.defaultCurrency);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>(['Cash', 'Bank']);
-  const [customAccounts, setCustomAccounts] = useState<{ name: string; icon: IconName }[]>([]);
+  const [customAccounts, setCustomAccounts] = useState<
+    { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[]
+  >([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     'Salary',
     'Food & Drink',
@@ -50,74 +64,41 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[]
   >([]);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [operationId] = useState<WorkplaceId>(() => generator() as WorkplaceId);
 
-  // 1. Rehydrate on mount
-  useEffect(() => {
-    try {
-      const draft = storage.getString(ONBOARDING_DRAFT_KEY);
-      if (draft) {
-        const data = JSON.parse(draft);
-        setTimeout(() => {
-          if (data.step) setStep(data.step);
-          if (data.name) setName(data.name);
-          if (data.selectedCurrency) setSelectedCurrency(data.selectedCurrency);
-          if (data.selectedAccounts) {
-            setSelectedAccounts(Array.from(new Set<string>(data.selectedAccounts)));
-          }
-          if (data.selectedCategories) {
-            setSelectedCategories(Array.from<string>(new Set(data.selectedCategories)));
-          }
-          if (data.customCategories) {
-            setCustomCategories(data.customCategories);
-          }
-        }, 0);
-      }
-    } catch (error) {
-      logger.error('[Onboarding] Failed to rehydrate draft', error);
-    }
-  }, []);
-
-  // 2. Sync on change
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        const data = {
-          step,
-          name,
-          selectedCurrency,
-          selectedAccounts,
-          customAccounts,
-          selectedCategories,
-          customCategories,
-        };
-        storage.set(ONBOARDING_DRAFT_KEY, JSON.stringify(data));
-      } catch (error) {
-        logger.error('[Onboarding] Failed to sync draft to disk', error);
-      }
-    }, 500); // Small debounce
-
-    return () => clearTimeout(timer);
-  }, [
-    step,
-    name,
-    selectedCurrency,
-    selectedAccounts,
-    customAccounts,
-    selectedCategories,
-    customCategories,
-  ]);
-
-  const onContinue = useCallback(() => {
+  const onContinue = useCallback(async () => {
     void triggerHaptic('medium');
     analytics.trackOnboardingStep(String(step), true);
     analytics.trackFeatureUsage('onboarding', 'step_continue', { current_step: step });
+    if (step === 1) {
+      persistDisplayName(name);
+      try {
+        await completeDeviceOnboarding(name);
+      } catch (error) {
+        logger.error('[Onboarding] Failed to claim Device', error);
+        void triggerHaptic('error');
+        return;
+      }
+      setWorkplaceName(`${name.trim() || 'User'}'s Personal workplace`);
+      setWorkplaceIcon('briefcase');
+      setStep(3);
+      return;
+    }
     setStep((prev: number) => prev + 1);
-  }, [step]);
+  }, [completeDeviceOnboarding, name, persistDisplayName, step]);
 
   const onBack = useCallback(() => {
     void triggerHaptic('light');
+    if (isFullSetup && step === 2) {
+      AppNavigation.back();
+      return;
+    }
+    if (!isFullSetup && step === 3) {
+      setStep(1);
+      return;
+    }
     setStep((prev: number) => prev - 1);
-  }, []);
+  }, [isFullSetup, step]);
 
   const onToggleAccount = useCallback((accountName: string) => {
     setSelectedAccounts(prev => {
@@ -128,7 +109,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
   }, []);
 
   const onAddCustomAccount = useCallback(
-    (accountName: string, _type: 'INCOME' | 'EXPENSE', icon: IconName) => {
+    (accountName: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => {
       setSelectedAccounts(prev => {
         if (prev.includes(accountName)) return prev;
         return [...prev, accountName];
@@ -143,7 +124,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
           )
         )
           return prev;
-        return [...prev, { name: accountName, icon }];
+        return [...prev, { name: accountName, type, icon }];
       });
       void triggerHaptic('medium');
     },
@@ -187,7 +168,10 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     try {
       // Perform DB operations
       await onboardingService.completeOnboarding({
+        operationId,
         name,
+        workplaceName,
+        workplaceIcon,
         selectedCurrency,
         selectedAccounts,
         customAccounts,
@@ -196,16 +180,13 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
 
       // Then update UI state & preferences via Context
-      await completeOnboarding(name);
+      if (!isFullSetup) await completeDeviceOnboarding(name);
 
       analytics.trackFeatureUsage('onboarding', 'completed', {
         accounts_count: selectedAccounts.length + customAccounts.length,
         categories_count: selectedCategories.length + customCategories.length,
         currency: selectedCurrency,
       });
-
-      // Clear draft
-      storage.remove(ONBOARDING_DRAFT_KEY);
 
       logger.info('Onboarding complete; app state will route to dashboard');
       void triggerHaptic('success');
@@ -223,16 +204,24 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     customCategories,
     isCompleting,
     name,
+    workplaceName,
+    workplaceIcon,
     selectedAccounts,
     selectedCategories,
     selectedCurrency,
-    completeOnboarding,
+    operationId,
+    completeDeviceOnboarding,
+    isFullSetup,
   ]);
 
   return {
     step,
     name,
     setName,
+    workplaceName,
+    setWorkplaceName,
+    workplaceIcon,
+    setWorkplaceIcon,
     selectedCurrency,
     setSelectedCurrency,
     selectedAccounts,
@@ -245,7 +234,10 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     onAddCustomCategory,
     isCompleting,
     onContinue,
-    onImport: AppNavigation.toImportSelection,
+    onRestore: () => {
+      persistDisplayName(name);
+      AppNavigation.toImportSelection(isFullSetup);
+    },
     onBack,
     onFinish,
   };

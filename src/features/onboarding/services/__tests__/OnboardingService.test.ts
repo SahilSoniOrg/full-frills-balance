@@ -1,24 +1,16 @@
-import { createAccount } from '@/src/services/accounts/accountCommands';
-import {
-  findOrCreateBalanceCorrectionAccount,
-  getOpeningBalancesAccountId,
-} from '@/src/services/accounts/accountSystemAccounts';
-import { accountQueryRepository } from '@/src/data/repositories/account';
 import { onboardingService } from '../OnboardingService';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import { preferences } from '@/src/utils/preferences';
+import { WorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/services/accounts/accountSystemAccounts', () => ({
-  getOpeningBalancesAccountId: jest.fn().mockResolvedValue('opening-id'),
-  findOrCreateBalanceCorrectionAccount: jest.fn().mockResolvedValue('correction-id'),
-}));
-jest.mock('@/src/services/accounts/accountCommands', () => ({
-  createAccount: jest.fn().mockResolvedValue({ id: 'new-account' }),
-}));
-jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
-    createWorkplace: jest
-      .fn()
-      .mockResolvedValue({ id: 'mock-workplace-id', name: 'Personal', icon: 'briefcase' }),
+    createWorkplace: jest.fn().mockResolvedValue({
+      id: 'mock-workplace-id',
+      name: "Test User's Personal workplace",
+      icon: 'briefcase',
+    }),
+    updateWorkplace: jest.fn(),
     getAllWorkplaces: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -31,8 +23,11 @@ jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     setUserName: jest.fn(),
     setDefaultCurrencyCode: jest.fn(),
-    setOnboardingCompleted: jest.fn(),
-    setActiveWorkplaceId: jest.fn(),
+    device: {
+      setOnboardingCompleted: jest.fn(),
+      setActiveWorkplaceId: jest.fn(),
+      setPendingWorkplaceId: jest.fn(),
+    },
   },
   preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
@@ -40,7 +35,6 @@ jest.mock('@/src/utils/preferences', () => ({
 describe('OnboardingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
   it('should complete onboarding by performing all steps transactionally', async () => {
@@ -57,26 +51,108 @@ describe('OnboardingService', () => {
 
     // Verify preferences were set
 
-    // Verify system accounts were ensured
-    expect(getOpeningBalancesAccountId).toHaveBeenCalledWith('USD', 'mock-workplace-id');
-    expect(findOrCreateBalanceCorrectionAccount).toHaveBeenCalledWith('USD', 'mock-workplace-id');
-
-    // Verify account creation
-    expect(createAccount).toHaveBeenCalledWith(
-      'mock-workplace-id',
+    expect(workplaceService.createWorkplace).toHaveBeenCalledWith(
+      "Test User's Personal workplace",
+      'briefcase',
       expect.objectContaining({
-        name: 'Cash',
+        id: expect.any(String),
         currencyCode: 'USD',
+        initialAccounts: [expect.objectContaining({ name: 'Cash' })],
+        initialCategories: [expect.objectContaining({ name: 'Food & Drink' })],
       }),
     );
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith('mock-workplace-id');
+  });
 
-    // Verify category creation
-    expect(createAccount).toHaveBeenCalledWith(
-      'mock-workplace-id',
+  it('creates a later workplace atomically instead of publishing a shell first', async () => {
+    (workplaceService.getAllWorkplaces as jest.Mock).mockResolvedValueOnce([
+      { id: 'existing-one', name: 'Travel' },
+      { id: 'existing-two', name: 'Home' },
+    ]);
+
+    const data = {
+      operationId: 'retryable-workplace-operation' as WorkplaceId,
+      name: 'Second User',
+      selectedCurrency: 'EUR',
+      selectedAccounts: ['Cash'],
+      customAccounts: [],
+      selectedCategories: ['Food & Drink'],
+      customCategories: [],
+    };
+
+    await onboardingService.completeOnboarding(data);
+
+    expect(workplaceService.createWorkplace).toHaveBeenCalledWith(
+      "Second User's Personal workplace",
+      'briefcase',
       expect.objectContaining({
-        name: 'Food & Drink',
-        currencyCode: 'USD',
+        id: data.operationId,
+        currencyCode: 'EUR',
+        initialAccounts: [expect.objectContaining({ name: 'Cash' })],
+        initialCategories: [expect.objectContaining({ name: 'Food & Drink' })],
       }),
     );
+  });
+
+  it('creates a new workplace even when legacy Personal data already exists', async () => {
+    (workplaceService.getAllWorkplaces as jest.Mock).mockResolvedValueOnce([
+      { id: 'legacy-personal', name: 'Personal' },
+    ]);
+
+    await onboardingService.completeOnboarding({
+      name: 'New User',
+      selectedCurrency: 'GBP',
+      selectedAccounts: ['Cash'],
+      customAccounts: [],
+      selectedCategories: ['Food & Drink'],
+      customCategories: [],
+    });
+
+    expect(workplaceService.createWorkplace).toHaveBeenCalledWith(
+      "New User's Personal workplace",
+      'briefcase',
+      expect.objectContaining({
+        currencyCode: 'GBP',
+      }),
+    );
+    expect(workplaceService.updateWorkplace).not.toHaveBeenCalled();
+  });
+
+  it('preserves the selected type for custom accounts', async () => {
+    await onboardingService.completeOnboarding({
+      name: 'Test User',
+      selectedCurrency: 'USD',
+      selectedAccounts: ['Freelance income'],
+      customAccounts: [{ name: 'Freelance income', type: 'INCOME', icon: 'wallet' }],
+      selectedCategories: [],
+      customCategories: [],
+    });
+
+    expect(workplaceService.createWorkplace).toHaveBeenCalledWith(
+      "Test User's Personal workplace",
+      'briefcase',
+      expect.objectContaining({
+        initialAccounts: [
+          expect.objectContaining({ name: 'Freelance income', type: 'INCOME', icon: 'wallet' }),
+        ],
+      }),
+    );
+  });
+
+  it('keeps a committed workplace successful when the active pointer cannot be saved', async () => {
+    (preferences.device.setActiveWorkplaceId as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Storage unavailable');
+    });
+
+    await expect(
+      onboardingService.completeOnboarding({
+        name: 'Test User',
+        selectedCurrency: 'USD',
+        selectedAccounts: [],
+        customAccounts: [],
+        selectedCategories: [],
+        customCategories: [],
+      }),
+    ).resolves.toBe('mock-workplace-id');
   });
 });

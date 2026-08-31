@@ -2,9 +2,9 @@ import { WorkplaceAccountSelectionStep } from '@/src/components/common/workplace
 import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplace-setup/WorkplaceCategorySelectionStep';
 import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
 import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
-import { OnboardingThemeStep } from '@/src/features/onboarding/components/OnboardingThemeStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
+import { OnboardingWorkplaceStep } from '@/src/features/onboarding/components/OnboardingWorkplaceStep';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import { View } from 'react-native';
 
@@ -13,6 +13,10 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     step,
     name,
     setName,
+    workplaceName,
+    setWorkplaceName,
+    workplaceIcon,
+    setWorkplaceIcon,
     selectedCurrency,
     setSelectedCurrency,
     selectedAccounts,
@@ -25,7 +29,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     onAddCustomCategory,
     isCompleting,
     onContinue,
-    onImport,
+    onRestore,
     onBack,
     onFinish,
   } = vm;
@@ -39,11 +43,25 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             name={name}
             setName={setName}
             onContinue={onContinue}
-            onImport={onImport}
+            onRestore={onRestore}
             isCompleting={isCompleting}
           />
         );
       case 2:
+        return (
+          <OnboardingWorkplaceStep
+            key={step}
+            name={workplaceName}
+            icon={workplaceIcon}
+            onNameChange={setWorkplaceName}
+            onIconChange={setWorkplaceIcon}
+            onContinue={onContinue}
+            onBack={onBack}
+            onRestore={onRestore}
+            isCompleting={isCompleting}
+          />
+        );
+      case 3:
         return (
           <WorkplaceCurrencyStep
             key={step}
@@ -54,7 +72,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             isCompleting={isCompleting}
           />
         );
-      case 3:
+      case 4:
         return (
           <WorkplaceAccountSelectionStep
             key={step}
@@ -67,7 +85,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             isCompleting={isCompleting}
           />
         );
-      case 4:
+      case 5:
         return (
           <WorkplaceCategorySelectionStep
             key={step}
@@ -75,16 +93,6 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             customCategories={customCategories}
             onToggleCategory={onToggleCategory}
             onAddCustomCategory={onAddCustomCategory}
-            onContinue={onContinue}
-            onBack={onBack}
-            isCompleting={false}
-          />
-        );
-      case 5:
-        return (
-          <OnboardingThemeStep
-            key={step}
-            currencyCode={selectedCurrency}
             onContinue={onContinue}
             onBack={onBack}
             isCompleting={false}
@@ -99,7 +107,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
 
   return (
     <View testID="onboarding-screen" style={{ flex: 1 }}>
-      <WorkplaceSetupLayout currentStep={step} totalSteps={6}>
+      <WorkplaceSetupLayout currentStep={step === 1 ? 1 : step - 1} totalSteps={5}>
         {renderStep()}
       </WorkplaceSetupLayout>
     </View>

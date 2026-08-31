@@ -1,5 +1,6 @@
 import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { UIPreferences } from '@/src/utils/preferences';
+import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
 
 /**
  * Import Plugin Types
@@ -28,6 +29,7 @@ export interface ParsedImportResult {
   canonical?: CanonicalImport;
   stats: ImportStats;
   preferences?: Partial<UIPreferences>;
+  workplacePreferences?: Partial<WorkplacePreferences>;
   workplace?: { name?: string; defaultCurrencyCode?: string; icon?: string };
 }
 

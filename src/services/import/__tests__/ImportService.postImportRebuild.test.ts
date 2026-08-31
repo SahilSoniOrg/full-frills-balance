@@ -9,6 +9,7 @@ jest.mock('@/src/services/import/preImportBackupService', () => ({
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
   importRepository: {
     batchInsert: jest.fn().mockResolvedValue(true),
+    replaceWorkplace: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -20,9 +21,12 @@ jest.mock('@/src/services/integrity', () => ({
 
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
-    restorePreferences: jest.fn().mockResolvedValue(true),
-    setActiveWorkplaceId: jest.fn(),
-    setOnboardingCompleted: jest.fn(),
+    restoreImportedPreferences: jest.fn(),
+    device: {
+      setActiveWorkplaceId: jest.fn(),
+      setOnboardingCompleted: jest.fn(),
+      setPendingWorkplaceId: jest.fn(),
+    },
   },
 }));
 
@@ -65,12 +69,6 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     updateWorkplace: jest.fn().mockResolvedValue(true),
   },
-}));
-
-jest.mock('@/src/services/import/importStaging', () => ({
-  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
-  commitStagedImport: jest.fn().mockResolvedValue(undefined),
-  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({

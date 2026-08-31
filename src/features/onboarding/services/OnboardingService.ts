@@ -2,210 +2,128 @@ import type { IconName } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
-import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { createAccount } from '@/src/services/accounts/accountCommands';
-import {
-  findOrCreateBalanceCorrectionAccount,
-  getOpeningBalancesAccountId,
-} from '@/src/services/accounts/accountSystemAccounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics';
-import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
+import { preferences } from '@/src/utils/preferences';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { insightService } from '@/src/services/insight/InsightService';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { logger } from '@/src/utils/logger';
+import { generator } from '@/src/data/database/idGenerator';
 
 export interface OnboardingData {
+  /** Stable identity retained by the draft so Finish can be retried safely. */
+  operationId?: WorkplaceId;
   name: string;
+  workplaceName?: string;
+  workplaceIcon?: IconName;
   selectedCurrency: string;
   selectedAccounts: string[];
-  customAccounts: { name: string; icon: IconName }[];
+  customAccounts: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
   selectedCategories: string[];
   customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
 }
 
 export class OnboardingService {
+  claimDevice(name: string): void {
+    const trimmedName = name.trim();
+    if (!trimmedName) throw new Error('Display name is required');
+    preferences.setUserName(trimmedName);
+    preferences.device.setOnboardingCompleted(true);
+  }
+
+  persistDisplayName(name: string): void {
+    const trimmedName = name.trim();
+    if (trimmedName) preferences.setUserName(trimmedName);
+  }
+
   /**
    * Completes the onboarding process by persisting user preferences,
    * creating system accounts, selected default accounts, and categories.
    */
   async completeOnboarding(data: OnboardingData): Promise<string> {
-    const {
-      name,
-      selectedCurrency,
-      selectedAccounts,
-      customAccounts,
-      selectedCategories,
-      customCategories,
-    } = data;
+    const trimmedName = data.name.trim();
+    const defaultName = trimmedName
+      ? `${trimmedName}'s Personal workplace`
+      : "User's Personal workplace";
+    const workplaceName = data.workplaceName?.trim() || defaultName;
+    const workplaceIcon = data.workplaceIcon || 'briefcase';
 
-    // 1. Determine if we should reuse the existing "Personal" workplace (created on boot)
-    // or create a new one. Reuse avoids "ghost" workplaces on fresh installs.
-    const workplaces = await workplaceService.getAllWorkplaces();
-    let targetWorkplace;
+    // Every completion publishes a new Workplace atomically. Existing rows are
+    // legacy data, not a signal to rename or reuse a row based on its name.
+    return this.completeAtomicWorkplace(data, workplaceName, workplaceIcon);
+  }
 
-    const defaultName = name ? `${name}'s Personal workplace` : 'Personal workplace';
-
-    if (
-      workplaces.length === 1 &&
-      (workplaces[0].name === 'Personal' || workplaces[0].name === 'Personal workplace')
-    ) {
-      targetWorkplace = workplaces[0];
-      await workplaceService.updateWorkplace(targetWorkplace.id, {
-        name: defaultName,
-        defaultCurrencyCode: selectedCurrency,
-      });
-      logger.info(
-        `[Onboarding] Reusing and updating existing default workplace: ${targetWorkplace.id}`,
-      );
-    } else {
-      targetWorkplace = await workplaceService.createWorkplace(defaultName, 'briefcase', {
-        currencyCode: selectedCurrency,
-      });
-      logger.info(`[Onboarding] Created new target workplace: ${targetWorkplace.id}`);
-    }
-
-    const targetWorkplaceId = targetWorkplace.id;
-
-    // IMPORTANT: Set the newly created/updated workplace as the active one so the rest of the app points to it.
-    preferences.setActiveWorkplaceId(targetWorkplaceId);
-
-    logger.info(`[Onboarding] Active workplace set to: ${targetWorkplaceId}`);
-
-    // 1. Truly deduplicate input lists case-insensitively
+  private async completeAtomicWorkplace(
+    data: OnboardingData,
+    workplaceName: string,
+    workplaceIcon: IconName,
+  ): Promise<string> {
     const deduplicate = (list: string[]) => {
       const seen = new Set<string>();
       return list.filter(item => {
-        const lower = item.toLowerCase();
-        if (seen.has(lower)) return false;
-        seen.add(lower);
+        const key = item.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
         return true;
       });
     };
-
-    const uniqueAccounts = deduplicate(selectedAccounts);
-    const uniqueCategories = deduplicate(selectedCategories);
-
-    // Track names we've already created or seen in this session to avoid DB collisions
-    const seenNames = new Set<string>();
-    const allAccounts = await accountQueries.findAll(targetWorkplaceId);
-    allAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
-
-    // 2. Ensure system accounts exist for the selected currency
-    await getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId);
-    await findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId);
-
-    // Refresh seen names after system accounts are created
-    const updatedAccounts = await accountQueries.findAll(targetWorkplaceId);
-    updatedAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
-
-    // 3. Create selected default and custom accounts
-    const accountCreationInputs: {
-      name: string;
-      accountType: AccountType;
-      currencyCode: string;
-      initialBalance: number;
-      icon: IconName;
-      workplaceId: WorkplaceId;
-    }[] = [];
-
-    for (const accountName of uniqueAccounts) {
-      if (seenNames.has(accountName.toLowerCase())) continue;
-
-      let type = AccountType.ASSET;
-      let icon: IconName = 'wallet';
-
+    const selectedAccounts = deduplicate(data.selectedAccounts);
+    const selectedCategories = deduplicate(data.selectedCategories);
+    const accountSuggestions = selectedAccounts.map(name => {
       const def = DEFAULT_ACCOUNTS.find(
-        a =>
-          a.name.toLowerCase() === accountName.toLowerCase() ||
-          a.id.toLowerCase() === accountName.toLowerCase(),
+        candidate => candidate.name.toLowerCase() === name.toLowerCase() || candidate.id === name,
       );
-      const custom = customAccounts.find(a => a.name.toLowerCase() === accountName.toLowerCase());
-
-      if (def) {
-        type = def.type;
-        icon = def.icon;
-      } else if (custom) {
-        icon = custom.icon;
-      }
-
-      accountCreationInputs.push({
-        name: def?.name || accountName,
-        accountType: type,
-        currencyCode: selectedCurrency,
-        initialBalance: 0,
-        icon,
-        workplaceId: targetWorkplaceId,
-      });
-      seenNames.add((def?.name || accountName).toLowerCase());
-    }
-
-    // 4. Create selected default and custom categories
-    for (const categoryName of uniqueCategories) {
-      if (seenNames.has(categoryName.toLowerCase())) continue;
-
-      let type = AccountType.EXPENSE;
-      let icon: IconName = 'tag';
-
-      const def = DEFAULT_CATEGORIES.find(
-        c =>
-          c.name.toLowerCase() === categoryName.toLowerCase() ||
-          c.id.toLowerCase() === categoryName.toLowerCase(),
+      const custom = data.customAccounts.find(
+        candidate => candidate.name.toLowerCase() === name.toLowerCase(),
       );
-      const custom = customCategories.find(
-        c => c.name.toLowerCase() === categoryName.toLowerCase(),
-      );
-
-      if (def) {
-        type = def.type as AccountType;
-        icon = def.icon;
-      } else if (custom) {
-        type = custom.type as AccountType;
-        icon = custom.icon;
-      }
-
-      accountCreationInputs.push({
-        name: def?.name || categoryName,
-        accountType: type,
-        currencyCode: selectedCurrency,
-        initialBalance: 0,
-        icon,
-        workplaceId: targetWorkplaceId,
-      });
-      seenNames.add((def?.name || categoryName).toLowerCase());
-    }
-
-    await Promise.all(accountCreationInputs.map(input => createAccount(targetWorkplaceId, input)));
-
-    // Onboarding can reuse the bootstrapped workplace. Drop any pre-onboarding
-    // USD caches before the dashboard mounts with the newly selected currency.
-    reactiveDataService.clearCache(targetWorkplaceId);
-    safeToSpendReadModel.clearCache();
-    insightService.clearCache(targetWorkplaceId);
-    snapshotService.clearSnapshotsForWorkplace(targetWorkplaceId);
-
-    // 5. Complete basic onboarding (sets name and default currency)
-    // This is moved to the end to ensure it only persists if DB operations succeed
-    analytics.trackOnboardingStep('user_setup', true);
-    analytics.logOnboardingComplete(selectedCurrency);
-
-    // Update user properties for better segmentation
-    analytics.updateUserProperties({
-      completed_onboarding: true,
-      onboarding_currency: selectedCurrency,
-      accounts_created: selectedAccounts.length + customAccounts.length,
-      categories_created: selectedCategories.length + customCategories.length,
-      onboarding_date: new Date().toISOString(),
+      return {
+        name: def?.name || name.trim(),
+        type: (def?.type || custom?.type || AccountType.ASSET) as AccountType,
+        icon: def?.icon || custom?.icon || ('wallet' as IconName),
+      };
     });
-
-    logger.info(
-      `[Onboarding] Successfully created ${uniqueAccounts.length} accounts and ${uniqueCategories.length} categories`,
-    );
-    logger.info('Onboarding completion logic finished successfully');
-    return targetWorkplaceId!;
+    const categorySuggestions = selectedCategories.map(name => {
+      const def = DEFAULT_CATEGORIES.find(
+        candidate => candidate.name.toLowerCase() === name.toLowerCase() || candidate.id === name,
+      );
+      const custom = data.customCategories.find(
+        candidate => candidate.name.toLowerCase() === name.toLowerCase(),
+      );
+      return {
+        name: def?.name || name.trim(),
+        type: (def?.type || custom?.type || 'EXPENSE') as AccountType,
+        icon: def?.icon || custom?.icon || ('tag' as IconName),
+      };
+    });
+    const operationId = data.operationId || (generator() as WorkplaceId);
+    preferences.device.setPendingWorkplaceId(operationId);
+    const workplace = await workplaceService.createWorkplace(workplaceName, workplaceIcon, {
+      id: operationId,
+      currencyCode: data.selectedCurrency,
+      initialAccounts: accountSuggestions,
+      initialCategories: categorySuggestions,
+    });
+    try {
+      preferences.device.setActiveWorkplaceId(workplace.id);
+      preferences.device.setPendingWorkplaceId(undefined);
+    } catch (error) {
+      // The database publication is the commit point. The launch coordinator
+      // can repair this pointer on the next boot, so do not report creation as
+      // failed after the Workplace has already been committed.
+      logger.warn('[Onboarding] Workplace created but active pointer could not be saved', {
+        error,
+      });
+    }
+    reactiveDataService.clearCache(workplace.id);
+    safeToSpendReadModel.clearCache();
+    insightService.clearCache(workplace.id);
+    snapshotService.clearSnapshotsForWorkplace(workplace.id);
+    analytics.trackOnboardingStep('user_setup', true);
+    analytics.logOnboardingComplete(data.selectedCurrency);
+    return workplace.id;
   }
 }
 

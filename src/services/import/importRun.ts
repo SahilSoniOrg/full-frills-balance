@@ -4,16 +4,7 @@
  */
 
 export type ImportPhase =
-  | 'parse'
-  | 'backup'
-  | 'stage'
-  | 'init'
-  | 'insert'
-  | 'staging_check'
-  | 'swap'
-  | 'rates'
-  | 'integrity'
-  | 'complete';
+  'parse' | 'backup' | 'init' | 'insert' | 'rates' | 'integrity' | 'complete';
 
 export interface ImportPhaseSegment {
   readonly start: number;
@@ -24,13 +15,10 @@ export interface ImportPhaseSegment {
 export const IMPORT_PHASE_SEGMENTS: Record<Exclude<ImportPhase, 'complete'>, ImportPhaseSegment> = {
   parse: { start: 0, end: 0.15 },
   backup: { start: 0.15, end: 0.22 },
-  stage: { start: 0.22, end: 0.28 },
-  init: { start: 0.28, end: 0.32 },
-  insert: { start: 0.32, end: 0.72 },
-  staging_check: { start: 0.72, end: 0.8 },
-  swap: { start: 0.8, end: 0.86 },
-  rates: { start: 0.86, end: 0.93 },
-  integrity: { start: 0.93, end: 1.0 },
+  init: { start: 0.22, end: 0.28 },
+  insert: { start: 0.28, end: 0.72 },
+  rates: { start: 0.72, end: 0.86 },
+  integrity: { start: 0.86, end: 1.0 },
 };
 
 export interface ImportRunProgress {

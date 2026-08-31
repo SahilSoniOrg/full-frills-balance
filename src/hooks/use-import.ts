@@ -9,12 +9,16 @@ import {
 } from '@/src/services/import';
 import { importService } from '@/src/services/import/ImportService';
 import { ImportFileContext } from '@/src/services/import/types';
-import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
 import { confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import * as DocumentPicker from 'expo-document-picker';
 import { useCallback, useState } from 'react';
+import { generator } from '@/src/data/database/idGenerator';
+
+function createOperationId(): WorkplaceId {
+  return generator() as WorkplaceId;
+}
 
 export type ImportFormat = string;
 
@@ -36,16 +40,7 @@ export function useImport() {
         didSetImporting = true;
 
         try {
-          // Resolve target workplace
-          let resolvedWorkplaceId = targetWorkplaceId;
-          if (!resolvedWorkplaceId) {
-            logger.info(
-              '[useImport] No active workplace found, ensuring default workplace before import...',
-            );
-            const defaultWorkplace = await workplaceService.ensureDefaultWorkplace();
-            resolvedWorkplaceId = defaultWorkplace.id;
-          }
-
+          const operationId = targetWorkplaceId ? undefined : createOperationId();
           let rawBytes = await readFileAsBytes(file.uri);
           rawBytes = await extractIfZip(rawBytes);
 
@@ -113,11 +108,12 @@ export function useImport() {
           const stats = await importService.executeImport(
             plugin,
             context,
-            resolvedWorkplaceId,
+            targetWorkplaceId,
             (msg: string, prog?: number) => {
               setProgressMessage(msg);
               if (prog !== undefined) setProgress(prog);
             },
+            operationId ? { operationId } : undefined,
           );
 
           const finalStats = {
@@ -164,9 +160,11 @@ export function useImport() {
         });
 
         confirm.show({
-          title: 'Import Data',
-          message: `This will REPLACE all your current data with content from ${file.name}. This cannot be undone. Are you sure?`,
-          confirmText: 'Overwrite Everything',
+          title: targetWorkplaceId ? 'Replace Workplace' : 'Restore Workplace',
+          message: targetWorkplaceId
+            ? `This will replace the books in this Workplace with content from ${file.name}. Other Workplaces will not be changed.`
+            : `This will create a new Workplace from ${file.name}. Existing Workplaces will not be changed.`,
+          confirmText: targetWorkplaceId ? 'Replace Workplace' : 'Create Workplace',
           destructive: true,
           onConfirm: () => processFile(file),
         });

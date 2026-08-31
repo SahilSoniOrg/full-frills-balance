@@ -1,6 +1,5 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
-import { useImport } from '@/src/hooks/use-import';
 import React from 'react';
 import { Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
@@ -9,7 +8,7 @@ interface StepSplashProps {
   name: string;
   setName: (name: string) => void;
   onContinue: () => void;
-  onImport: () => void;
+  onRestore: () => void;
   isCompleting: boolean;
 }
 
@@ -17,11 +16,9 @@ export const StepSplash: React.FC<StepSplashProps> = ({
   name,
   setName,
   onContinue,
-  onImport,
+  onRestore,
   isCompleting,
 }) => {
-  const { isImporting } = useImport();
-
   return (
     <Box flex={1}>
       <ScrollView
@@ -73,23 +70,23 @@ export const StepSplash: React.FC<StepSplashProps> = ({
               >
                 {AppConfig.strings.onboarding.splash.btnGetStarted}
               </AppButton>
-            </Stack>
-          </Stack>
 
-          <Stack gap="xs" align="center">
-            <AppText variant="caption" color="secondary">
-              {AppConfig.strings.onboarding.splash.restorePrompt}
-            </AppText>
-            <AppButton
-              variant="ghost"
-              size="md"
-              onPress={onImport}
-              loading={isImporting}
-              disabled={isImporting || isCompleting}
-              accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}
-            >
-              {AppConfig.strings.onboarding.splash.btnRestore}
-            </AppButton>
+              <Stack gap="xs" align="center">
+                <AppText variant="caption" color="secondary">
+                  {AppConfig.strings.onboarding.splash.restorePrompt}
+                </AppText>
+                <AppButton
+                  variant="ghost"
+                  size="md"
+                  onPress={onRestore}
+                  disabled={isCompleting}
+                  accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}
+                  testID="onboarding-restore-button"
+                >
+                  {AppConfig.strings.onboarding.splash.btnRestore}
+                </AppButton>
+              </Stack>
+            </Stack>
           </Stack>
         </Stack>
       </ScrollView>

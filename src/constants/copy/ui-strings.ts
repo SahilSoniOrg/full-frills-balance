@@ -250,6 +250,26 @@ export const UI_STRINGS = {
   },
   settings: {
     title: 'Settings',
+    workplacePicker: {
+      title: 'Choose a workplace',
+      subtitle: 'Select which books to open.',
+      open: (name: string) => `Open ${name}`,
+      create: 'Create workplace',
+      import: 'Import workplace',
+      opening: 'Opening workplace…',
+      switching: 'Switching workplace…',
+      loadError: 'Could not load your workplaces',
+      loadErrorSubtitle: 'Try again.',
+      retry: 'Retry',
+    },
+    workplaceManagement: {
+      deleteTitle: 'Delete workplace?',
+      deleteMessage: (name: string, isLast: boolean) =>
+        isLast
+          ? `This permanently deletes “${name}” and all of its books. You will return to workplace setup.`
+          : `This permanently deletes “${name}” and all of its books. Other Workplaces will not be changed.`,
+      deleteConfirm: 'Delete workplace',
+    },
     sections: {
       personalization: 'Profile & Money Defaults',
       profile: 'Profile',
@@ -415,6 +435,9 @@ export const UI_STRINGS = {
     importTitle: 'Import',
     importIntro: 'Choose a backup format to replace the data on this device.',
     importNote: 'Import replaces all data for the active workplace.',
+    newWorkplaceImportIntro:
+      'Create a new Workplace from this backup. Existing Workplaces will not be changed.',
+    newWorkplaceImportNote: 'The restored books will become a new Workplace.',
     selectFile: (name: string) => `Select ${name} File`,
     currency: {
       title: 'Default Currency',

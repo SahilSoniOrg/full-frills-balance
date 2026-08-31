@@ -11,11 +11,6 @@ import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
-import {
-  commitStagedImport,
-  createImportStagingWorkplace,
-  discardImportStagingWorkplace,
-} from '@/src/services/import/importStaging';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
 import { beginImportRun } from '@/src/services/import/importRun';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
@@ -28,6 +23,7 @@ import { preferences } from '@/src/utils/preferences';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { Q } from '@nozbe/watermelondb';
+import { generator } from '@/src/data/database/idGenerator';
 
 export class ImportService {
   private getUsedCurrencyCodes(data: BatchImportData, defaultCurrency: string): string[] {
@@ -53,8 +49,9 @@ export class ImportService {
   async executeImport(
     plugin: ImportPlugin,
     context: ImportFileContext,
-    workplaceId: WorkplaceId,
+    workplaceId?: WorkplaceId,
     onProgress?: (message: string, progress?: number) => void,
+    options?: { operationId?: WorkplaceId },
   ): Promise<ImportStats> {
     logger.info(`[ImportService] Executing import for plugin: ${plugin.id}`);
 
@@ -64,7 +61,9 @@ export class ImportService {
 
     let defaultCurrency = AppConfig.defaultCurrency as string;
     try {
-      const workplace = await database.collections.get<Workplace>('workplaces').find(workplaceId);
+      const workplace = workplaceId
+        ? await database.collections.get<Workplace>('workplaces').find(workplaceId)
+        : undefined;
       if (workplace?.defaultCurrencyCode) {
         defaultCurrency = workplace.defaultCurrencyCode;
       }
@@ -82,9 +81,11 @@ export class ImportService {
     validateImportedData(importBatchData);
 
     const backupProgress = run.phaseReporter('backup');
-    const backupResult = await preImportBackupService.createBackup(workplaceId, (message, p) =>
-      backupProgress(message, p),
-    );
+    const backupResult = workplaceId
+      ? await preImportBackupService.createBackup(workplaceId, (message, p) =>
+          backupProgress(message, p),
+        )
+      : { skipped: true, reason: 'empty_workplace' as const };
     let preImportBackupPath: string | undefined;
     if ('path' in backupResult) {
       preImportBackupPath = backupResult.path;
@@ -92,10 +93,14 @@ export class ImportService {
       backupProgress('No existing ledger data to back up', 1);
     }
 
-    const stageProgress = run.phaseReporter('stage');
-    stageProgress('Preparing staged import...', 0);
-    const stagingWorkplaceId = await createImportStagingWorkplace(workplaceId, defaultCurrency);
-    stageProgress('Preparing staged import...', 1);
+    const existingTargetlessOperation =
+      !workplaceId && options?.operationId
+        ? await workplaceService.getWorkplace(options.operationId)
+        : undefined;
+    const publishedWorkplaceId =
+      workplaceId ?? options?.operationId ?? (generator() as WorkplaceId);
+    const targetlessOperationAlreadyExists = Boolean(existingTargetlessOperation);
+    preferences.device.setPendingWorkplaceId(publishedWorkplaceId);
 
     const initProgress = run.phaseReporter('init');
     initProgress('Initializing native currencies...', 0);
@@ -110,47 +115,37 @@ export class ImportService {
       delete dataToInsert.currencies;
     }
 
-    try {
-      await importRepository.batchInsert(stagingWorkplaceId, dataToInsert, (msg, p) =>
-        insertProgress(msg, p ?? 0),
+    if (workplaceId && !targetlessOperationAlreadyExists) {
+      await importRepository.replaceWorkplace(
+        workplaceId,
+        dataToInsert,
+        (msg, p) => insertProgress(msg, p ?? 0),
+        parsedResult.workplace,
       );
-
-      const stagingCheckProgress = run.phaseReporter('staging_check');
-      stagingCheckProgress('Verifying staged import...', 0);
-      await integrityService.forceRunCheck(stagingWorkplaceId, (msg, p) =>
-        stagingCheckProgress(msg, p),
-      );
-      stagingCheckProgress('Verifying staged import...', 1);
-
-      const swapProgress = run.phaseReporter('swap');
-      swapProgress('Applying import to workplace...', 0);
-      await commitStagedImport(workplaceId, stagingWorkplaceId);
-      swapProgress('Applying import to workplace...', 1);
-
-      // The workplace replacement bypasses normal WatermelonDB mutations. Drop
-      // replayed reactive data and boot snapshots before the new ledger is read.
-      reactiveDataService.clearCache(workplaceId);
-      snapshotService.clearSnapshotsForWorkplace(workplaceId);
-    } catch (error) {
-      await discardImportStagingWorkplace(stagingWorkplaceId).catch(cleanupError => {
-        logger.error('[ImportService] Staging cleanup after failed import:', cleanupError);
-      });
-      throw error;
     }
 
-    if (
-      parsedResult.workplace?.name ||
-      parsedResult.workplace?.defaultCurrencyCode ||
-      parsedResult.workplace?.icon
-    ) {
-      await workplaceService.updateWorkplace(workplaceId, {
-        name: parsedResult.workplace.name,
-        icon: parsedResult.workplace.icon,
-        defaultCurrencyCode: parsedResult.workplace.defaultCurrencyCode,
-      });
-      if (parsedResult.workplace.defaultCurrencyCode) {
-        defaultCurrency = parsedResult.workplace.defaultCurrencyCode;
-      }
+    // Targetless imports are structurally validated in memory above. Publish
+    // the validated graph and its Workplace shell in one transaction only now.
+    if (!workplaceId && !targetlessOperationAlreadyExists) {
+      await importRepository.batchInsertNewWorkplace(
+        {
+          id: publishedWorkplaceId,
+          name: parsedResult.workplace?.name || 'Imported workplace',
+          icon: parsedResult.workplace?.icon || 'briefcase',
+          defaultCurrencyCode: parsedResult.workplace?.defaultCurrencyCode || defaultCurrency,
+        },
+        dataToInsert,
+        (msg, p) => insertProgress(msg, p ?? 0),
+      );
+    } else if (targetlessOperationAlreadyExists) {
+      insertProgress('Restore already published; resuming verification...', 1);
+    }
+
+    reactiveDataService.clearCache(publishedWorkplaceId);
+    snapshotService.clearSnapshotsForWorkplace(publishedWorkplaceId);
+
+    if (parsedResult.workplace?.defaultCurrencyCode) {
+      defaultCurrency = parsedResult.workplace.defaultCurrencyCode;
     }
 
     const ratesProgress = run.phaseReporter('rates');
@@ -181,12 +176,19 @@ export class ImportService {
 
     const integrityProgress = run.phaseReporter('integrity');
     integrityProgress('Verifying database integrity...', 0);
-    await integrityService.forceRunCheck(workplaceId, (msg, p) => integrityProgress(msg, p * 0.5));
+    try {
+      await integrityService.forceRunCheck(publishedWorkplaceId, (msg, p) =>
+        integrityProgress(msg, p * 0.5),
+      );
+    } catch (error) {
+      logger.warn('[ImportService] Post-import integrity check failed:', { error });
+      run.recordWarning('Post-import integrity check failed');
+    }
 
     try {
       const accounts = await database.collections
         .get<Account>('accounts')
-        .query(Q.where('workplace_id', workplaceId))
+        .query(Q.where('workplace_id', publishedWorkplaceId))
         .fetch();
 
       if (accounts.length > 0) {
@@ -195,7 +197,7 @@ export class ImportService {
         );
         const rebuildConcurrency = AppConfig.performance.import.postImportAccountRebuildConcurrency;
         await rebuildAllAccountBalancesAfterImport(
-          workplaceId,
+          publishedWorkplaceId,
           accounts,
           rebuildConcurrency,
           (account, completed, total) => {
@@ -211,24 +213,39 @@ export class ImportService {
       run.recordWarning('Post-import balance rebuild failed');
     }
 
-    if (parsedResult.preferences) {
-      const sanitizedPrefs = { ...parsedResult.preferences };
-      if ('defaultCurrencyCode' in sanitizedPrefs) {
-        delete (sanitizedPrefs as { defaultCurrencyCode?: string }).defaultCurrencyCode;
+    try {
+      if (parsedResult.preferences || parsedResult.workplacePreferences) {
+        const sanitizedPrefs = { ...(parsedResult.preferences ?? {}) };
+        if ('defaultCurrencyCode' in sanitizedPrefs) {
+          delete (sanitizedPrefs as { defaultCurrencyCode?: string }).defaultCurrencyCode;
+        }
+        preferences.restoreImportedPreferences(
+          { ...sanitizedPrefs, ...parsedResult.workplacePreferences },
+          publishedWorkplaceId,
+          workplaceId ? 'workplace' : 'all',
+        );
       }
-      // Import target workplace is authoritative; never adopt a backup's workplace id.
-      if ('activeWorkplaceId' in sanitizedPrefs) {
-        delete (sanitizedPrefs as { activeWorkplaceId?: string }).activeWorkplaceId;
-      }
-      // App-lock state is device-local security configuration, never backup data.
-      if ('isAppLockEnabled' in sanitizedPrefs) {
-        delete (sanitizedPrefs as { isAppLockEnabled?: boolean }).isAppLockEnabled;
-      }
-      await preferences.restorePreferences(sanitizedPrefs);
+    } catch (error) {
+      // Database publication is already durable. Preference restoration is a
+      // recoverable follow-up and must not turn a successful import into a
+      // misleading failure.
+      logger.warn('[ImportService] Imported preferences could not be restored', { error });
+      run.recordWarning('Imported preferences could not be restored');
     }
 
-    preferences.setActiveWorkplaceId(workplaceId);
-    preferences.setOnboardingCompleted(true);
+    try {
+      preferences.device.setActiveWorkplaceId(publishedWorkplaceId);
+    } catch (error) {
+      logger.warn('[ImportService] Active Workplace pointer could not be saved', { error });
+      run.recordWarning('Active Workplace pointer could not be saved');
+    }
+
+    try {
+      preferences.device.setOnboardingCompleted(true);
+    } catch (error) {
+      logger.warn('[ImportService] Device completion state could not be saved', { error });
+      run.recordWarning('Device completion state could not be saved');
+    }
 
     logger.info('[ImportService] Import completed successfully.');
     run.complete('Import completed successfully.');

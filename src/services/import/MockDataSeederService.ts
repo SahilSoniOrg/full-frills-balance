@@ -722,8 +722,8 @@ export class MockDataSeederService {
 
     // 11. Complete onboarding / Preferences setup
     onProgressSafe('Finalizing preferences...', 0.96);
-    preferences.setActiveWorkplaceId(targetWorkplaceId);
-    preferences.setOnboardingCompleted(true);
+    preferences.device.setActiveWorkplaceId(targetWorkplaceId);
+    preferences.device.setOnboardingCompleted(true);
 
     logger.info('[MockDataSeederService] Seeding completed successfully.');
     onProgressSafe('Seeding completed successfully.', 1.0);

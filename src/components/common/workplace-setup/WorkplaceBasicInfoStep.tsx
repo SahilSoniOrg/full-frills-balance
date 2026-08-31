@@ -2,6 +2,7 @@ import { AppButton, AppIcon, AppInput, AppText, IconName } from '@/src/component
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import type { ReactNode } from 'react';
 
 interface WorkplaceBasicInfoStepProps {
   title: string;
@@ -15,6 +16,7 @@ interface WorkplaceBasicInfoStepProps {
   continueLabel?: string;
   cancelLabel?: string;
   isCreating?: boolean;
+  belowContent?: ReactNode;
 }
 
 export function WorkplaceBasicInfoStep({
@@ -29,6 +31,7 @@ export function WorkplaceBasicInfoStep({
   continueLabel = 'Continue',
   cancelLabel = 'Cancel',
   isCreating = false,
+  belowContent,
 }: WorkplaceBasicInfoStepProps) {
   const { theme } = useTheme();
 
@@ -79,6 +82,7 @@ export function WorkplaceBasicInfoStep({
               placeholder="e.g. My Workplace"
               value={name}
               onChangeText={onNameChange}
+              testID="workplace-name-input"
               autoFocus
               onSubmitEditing={() => {
                 Keyboard.dismiss();
@@ -111,6 +115,7 @@ export function WorkplaceBasicInfoStep({
                 {cancelLabel}
               </AppButton>
             )}
+            {belowContent}
           </Box>
         </Stack>
       </ScrollView>

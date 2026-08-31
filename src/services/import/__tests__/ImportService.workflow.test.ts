@@ -8,6 +8,8 @@ jest.mock('@/src/services/import/preImportBackupService', () => ({
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
   importRepository: {
     batchInsert: jest.fn().mockResolvedValue(true),
+    replaceWorkplace: jest.fn().mockResolvedValue(true),
+    batchInsertNewWorkplace: jest.fn().mockResolvedValue({ id: 'staging-wp' }),
   },
 }));
 
@@ -19,9 +21,12 @@ jest.mock('@/src/services/integrity', () => ({
 
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
-    restorePreferences: jest.fn().mockResolvedValue(true),
-    setActiveWorkplaceId: jest.fn(),
-    setOnboardingCompleted: jest.fn(),
+    restoreImportedPreferences: jest.fn(),
+    device: {
+      setActiveWorkplaceId: jest.fn(),
+      setOnboardingCompleted: jest.fn(),
+      setPendingWorkplaceId: jest.fn(),
+    },
   },
 }));
 
@@ -48,13 +53,8 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     updateWorkplace: jest.fn().mockResolvedValue(true),
+    getWorkplace: jest.fn().mockResolvedValue(undefined),
   },
-}));
-
-jest.mock('@/src/services/import/importStaging', () => ({
-  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
-  commitStagedImport: jest.fn().mockResolvedValue(undefined),
-  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
@@ -65,11 +65,6 @@ import { canonicalImportFromBatchImportData } from '@/src/services/import/canoni
 import { importService } from '@/src/services/import/ImportService';
 import { database } from '@/src/data/database/Database';
 import { preImportBackupService } from '@/src/services/import/preImportBackupService';
-import {
-  commitStagedImport,
-  createImportStagingWorkplace,
-  discardImportStagingWorkplace,
-} from '@/src/services/import/importStaging';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
@@ -78,6 +73,7 @@ import { integrityService } from '@/src/services/integrity';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { preferences } from '@/src/utils/preferences';
 import { WorkplaceId } from '@/src/types/ids';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 function createMockPlugin(overrides?: Partial<ImportPlugin>): ImportPlugin {
   return {
@@ -124,7 +120,7 @@ describe('ImportService import workflow (public executeImport contract)', () => 
     (integrityService.forceRunCheck as jest.Mock).mockResolvedValue({});
   });
 
-  it('runs phases in safety order: parse → backup → stage → init → insert → staging integrity → swap → rates → post-swap integrity/rebuild', async () => {
+  it('runs phases in safety order: parse → backup → init → rates → post-import integrity/rebuild', async () => {
     const phaseOrder: string[] = [];
     const plugin = createMockPlugin({
       parse: jest.fn().mockImplementation(async () => {
@@ -146,22 +142,15 @@ describe('ImportService import workflow (public executeImport contract)', () => 
       phaseOrder.push('backup');
       return { skipped: true };
     });
-    (createImportStagingWorkplace as jest.Mock).mockImplementation(async () => {
-      phaseOrder.push('stage');
-      return 'staging-wp';
-    });
     (currencyInitService.initialize as jest.Mock).mockImplementation(async () => {
       phaseOrder.push('init');
     });
-    (importRepository.batchInsert as jest.Mock).mockImplementation(async () => {
+    (importRepository.replaceWorkplace as jest.Mock).mockImplementation(async () => {
       phaseOrder.push('insert');
     });
-    (integrityService.forceRunCheck as jest.Mock).mockImplementation(async (wpId: string) => {
-      phaseOrder.push(wpId === 'staging-wp' ? 'staging_integrity' : 'post_integrity');
+    (integrityService.forceRunCheck as jest.Mock).mockImplementation(async () => {
+      phaseOrder.push('post_integrity');
       return {};
-    });
-    (commitStagedImport as jest.Mock).mockImplementation(async () => {
-      phaseOrder.push('swap');
     });
     (exchangeRateService.syncTodayRates as jest.Mock).mockImplementation(async () => {
       if (!phaseOrder.includes('rates')) {
@@ -171,17 +160,7 @@ describe('ImportService import workflow (public executeImport contract)', () => 
 
     await importService.executeImport(plugin, context, workplaceId);
 
-    expect(phaseOrder).toEqual([
-      'parse',
-      'backup',
-      'stage',
-      'init',
-      'insert',
-      'staging_integrity',
-      'swap',
-      'rates',
-      'post_integrity',
-    ]);
+    expect(phaseOrder).toEqual(['parse', 'backup', 'init', 'insert', 'rates', 'post_integrity']);
   });
 
   it('reports monotonically non-decreasing progress values', async () => {
@@ -201,18 +180,16 @@ describe('ImportService import workflow (public executeImport contract)', () => 
     expect(progressValues[progressValues.length - 1]).toBe(1);
   });
 
-  it('creates backup before staging or batch insert', async () => {
+  it('creates backup before the atomic replacement', async () => {
     const plugin = createMockPlugin();
     let backupFinished = false;
     (preImportBackupService.createBackup as jest.Mock).mockImplementation(async () => {
-      expect(createImportStagingWorkplace).not.toHaveBeenCalled();
-      expect(importRepository.batchInsert).not.toHaveBeenCalled();
+      expect(importRepository.replaceWorkplace).not.toHaveBeenCalled();
       backupFinished = true;
       return { path: 'file:///backup.zip' };
     });
-    (createImportStagingWorkplace as jest.Mock).mockImplementation(async () => {
+    (importRepository.replaceWorkplace as jest.Mock).mockImplementation(async () => {
       expect(backupFinished).toBe(true);
-      return 'staging-wp';
     });
 
     await importService.executeImport(plugin, context, workplaceId);
@@ -220,54 +197,19 @@ describe('ImportService import workflow (public executeImport contract)', () => 
     expect(preImportBackupService.createBackup).toHaveBeenCalled();
   });
 
-  it('runs staging integrity check before workplace swap', async () => {
-    const plugin = createMockPlugin();
-    let swapStarted = false;
-
-    (integrityService.forceRunCheck as jest.Mock).mockImplementation(async (wpId: string) => {
-      if (wpId === 'staging-wp') {
-        expect(swapStarted).toBe(false);
-      }
-      return {};
-    });
-    (commitStagedImport as jest.Mock).mockImplementation(async () => {
-      swapStarted = true;
-    });
-
-    await importService.executeImport(plugin, context, workplaceId);
-
-    const integrityMock = integrityService.forceRunCheck as jest.Mock;
-    const stagingCheckIndex = integrityMock.mock.calls.findIndex(([wpId]) => wpId === 'staging-wp');
-    const swapIndex = (commitStagedImport as jest.Mock).mock.invocationCallOrder[0];
-    const stagingCheckOrder = integrityMock.mock.invocationCallOrder[stagingCheckIndex];
-    expect(stagingCheckOrder).toBeLessThan(swapIndex!);
-  });
-
-  it('discards staging and does not swap when staging integrity fails', async () => {
-    const plugin = createMockPlugin();
-    (integrityService.forceRunCheck as jest.Mock).mockImplementation(async (wpId: string) => {
-      if (wpId === 'staging-wp') {
-        throw new Error('Staging integrity failed');
-      }
-      return {};
-    });
-
-    await expect(importService.executeImport(plugin, context, workplaceId)).rejects.toThrow(
-      'Staging integrity failed',
-    );
-
-    expect(discardImportStagingWorkplace).toHaveBeenCalledWith('staging-wp');
-    expect(commitStagedImport).not.toHaveBeenCalled();
-  });
-
-  it('rebuilds account balances after swap when accounts exist', async () => {
+  it('rebuilds account balances after atomic replacement when accounts exist', async () => {
     const plugin = createMockPlugin();
     const account = { name: 'Checking', id: 'acc-1' };
     mockAccountFetch.mockResolvedValue([account]);
 
     await importService.executeImport(plugin, context, workplaceId);
 
-    expect(commitStagedImport).toHaveBeenCalledWith(workplaceId, 'staging-wp');
+    expect(importRepository.replaceWorkplace).toHaveBeenCalledWith(
+      workplaceId,
+      expect.anything(),
+      expect.any(Function),
+      undefined,
+    );
     expect(rebuildAllAccountBalancesAfterImport).toHaveBeenCalledWith(
       workplaceId,
       [account],
@@ -296,9 +238,88 @@ describe('ImportService import workflow (public executeImport contract)', () => 
 
     await importService.executeImport(plugin, context, workplaceId);
 
-    expect(preferences.restorePreferences).toHaveBeenCalledWith({ theme: 'dark' });
-    expect(preferences.setActiveWorkplaceId).toHaveBeenCalledWith(workplaceId);
-    expect(preferences.setOnboardingCompleted).toHaveBeenCalledWith(true);
+    expect(preferences.restoreImportedPreferences).toHaveBeenCalledWith(
+      {
+        theme: 'dark',
+        isAppLockEnabled: true,
+        activeWorkplaceId: 'backup-workplace',
+      },
+      workplaceId,
+      'workplace',
+    );
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(workplaceId);
+    expect(preferences.device.setOnboardingCompleted).toHaveBeenCalledWith(true);
+  });
+
+  it('publishes a target-less import as one atomic Workplace transaction', async () => {
+    const order: string[] = [];
+    const plugin = createMockPlugin({
+      parse: jest.fn().mockResolvedValue({
+        canonical: canonicalImportFromBatchImportData({
+          accounts: [],
+          journals: [],
+          transactions: [],
+        }),
+        stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+        workplace: { name: 'Restored ledger', icon: 'wallet', defaultCurrencyCode: 'EUR' },
+      }),
+    });
+    (importRepository.batchInsertNewWorkplace as jest.Mock).mockImplementationOnce(async () => {
+      order.push('publish');
+      return { id: 'staging-wp' };
+    });
+    (integrityService.forceRunCheck as jest.Mock).mockImplementation(async () => {
+      order.push('post-publish-check');
+      return {};
+    });
+
+    await importService.executeImport(plugin, context);
+
+    expect(preImportBackupService.createBackup).not.toHaveBeenCalled();
+    expect(importRepository.batchInsertNewWorkplace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Restored ledger',
+        icon: 'wallet',
+        defaultCurrencyCode: 'EUR',
+      }),
+      expect.anything(),
+      expect.any(Function),
+    );
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(expect.any(String));
+    expect(order).toEqual(['publish', 'post-publish-check']);
+  });
+
+  it('does not duplicate a target-less restore when its published operation is retried', async () => {
+    const operationId = 'restore-operation' as WorkplaceId;
+    (workplaceService.getWorkplace as jest.Mock).mockResolvedValueOnce({
+      id: operationId,
+      defaultCurrencyCode: 'USD',
+    });
+
+    await importService.executeImport(createMockPlugin(), context, undefined, undefined, {
+      operationId,
+    });
+
+    expect(importRepository.batchInsert).not.toHaveBeenCalled();
+    expect(importRepository.batchInsertNewWorkplace).not.toHaveBeenCalled();
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(operationId);
+  });
+
+  it('preserves a target-less publication when the commit reports an uncertain failure', async () => {
+    let publicationCommitted = false;
+    (workplaceService.getWorkplace as jest.Mock).mockImplementation(async () =>
+      publicationCommitted ? { id: 'staging-wp' } : undefined,
+    );
+    (importRepository.batchInsertNewWorkplace as jest.Mock).mockImplementationOnce(async () => {
+      publicationCommitted = true;
+      throw new Error('Import commit response timed out');
+    });
+
+    await expect(
+      importService.executeImport(createMockPlugin(), context, undefined, undefined, {
+        operationId: 'staging-wp' as WorkplaceId,
+      }),
+    ).rejects.toThrow('Import commit response timed out');
   });
 
   it('completes when exchange rate sync fails for a currency', async () => {
@@ -320,5 +341,28 @@ describe('ImportService import workflow (public executeImport contract)', () => 
     await expect(importService.executeImport(plugin, context, workplaceId)).resolves.toMatchObject({
       accounts: 1,
     });
+  });
+
+  it('keeps a committed import successful when preference restoration fails', async () => {
+    const plugin = createMockPlugin({
+      parse: jest.fn().mockResolvedValue({
+        canonical: canonicalImportFromBatchImportData({
+          accounts: [],
+          journals: [],
+          transactions: [],
+        }),
+        stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+        preferences: { theme: 'dark' },
+      }),
+    });
+    (preferences.restoreImportedPreferences as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Preference storage unavailable');
+    });
+
+    await expect(importService.executeImport(plugin, context, workplaceId)).resolves.toMatchObject({
+      accounts: 0,
+    });
+    expect(importRepository.replaceWorkplace).toHaveBeenCalled();
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(workplaceId);
   });
 });

@@ -34,6 +34,7 @@ import {
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
 import { logger } from '@/src/utils/logger';
 import { UIPreferences } from '@/src/utils/preferences';
+import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
 
 interface NativeImportData {
   version: string;
@@ -41,6 +42,7 @@ interface NativeImportData {
     /** Legacy native backups stored the workplace currency in preferences. */
     defaultCurrencyCode?: string;
   };
+  workplacePreferences?: Partial<WorkplacePreferences>;
   accounts: ImportedAccount[];
   journals: ImportedJournal[];
   transactions: ImportedTransaction[];
@@ -459,6 +461,7 @@ export const nativePlugin: ImportPlugin = {
       return {
         canonical,
         preferences: data.preferences,
+        workplacePreferences: data.workplacePreferences,
         workplace: {
           name: data.workplace?.name,
           icon: data.workplace?.icon,

@@ -1,7 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importService } from '@/src/services/import/ImportService';
-import { commitStagedImport } from '@/src/services/import/importStaging';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity';
 import { preferences } from '@/src/utils/preferences';
@@ -16,7 +15,7 @@ jest.mock('@/src/services/import/preImportBackupService', () => ({
 
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
   importRepository: {
-    batchInsert: jest.fn().mockResolvedValue(true),
+    replaceWorkplace: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -29,9 +28,12 @@ jest.mock('@/src/services/integrity', () => ({
 
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
-    restorePreferences: jest.fn().mockResolvedValue(true),
-    setActiveWorkplaceId: jest.fn(),
-    setOnboardingCompleted: jest.fn(),
+    restoreImportedPreferences: jest.fn(),
+    device: {
+      setActiveWorkplaceId: jest.fn(),
+      setOnboardingCompleted: jest.fn(),
+      setPendingWorkplaceId: jest.fn(),
+    },
   },
 }));
 
@@ -40,12 +42,6 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
     updateWorkplace: jest.fn().mockResolvedValue(true),
   },
-}));
-
-jest.mock('@/src/services/import/importStaging', () => ({
-  createImportStagingWorkplace: jest.fn().mockResolvedValue('staging-wp'),
-  commitStagedImport: jest.fn().mockResolvedValue(undefined),
-  discardImportStagingWorkplace: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/data/database/Database', () => ({
@@ -220,12 +216,19 @@ describe('NativeImportPlugin', () => {
       const context = { json: validNativeData } as ImportFileContext;
       const stats = await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      expect(commitStagedImport).toHaveBeenCalledWith('w1', 'staging-wp');
-      expect(preferences.restorePreferences).toHaveBeenCalledWith(
-        expect.objectContaining({ userName: 'Test User' }),
+      expect(importRepository.replaceWorkplace).toHaveBeenCalledWith(
+        'w1',
+        expect.any(Object),
+        expect.anything(),
+        expect.anything(),
       );
-      expect(importRepository.batchInsert).toHaveBeenCalledWith(
-        'staging-wp',
+      expect(preferences.restoreImportedPreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ userName: 'Test User' }),
+        'w1',
+        'workplace',
+      );
+      expect(importRepository.replaceWorkplace).toHaveBeenCalledWith(
+        'w1',
         expect.objectContaining({
           budgets: expect.any(Array),
           budgetScopes: expect.any(Array),
@@ -233,14 +236,15 @@ describe('NativeImportPlugin', () => {
           balanceSnapshots: expect.any(Array),
         }),
         expect.anything(),
+        expect.anything(),
       );
 
       expect(integrityService.forceRunCheck).toHaveBeenCalled();
 
       expect(stats.accounts).toBe(1);
-      expect((importRepository.batchInsert as jest.Mock).mock.calls[0][1].accounts[0].color).toBe(
-        '#3B82F6',
-      );
+      expect(
+        (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1].accounts[0].color,
+      ).toBe('#3B82F6');
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2);
       expect(stats.budgets).toBe(1);
@@ -273,7 +277,7 @@ describe('NativeImportPlugin', () => {
         importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId),
       ).resolves.toMatchObject({ accounts: 1 });
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       expect(data.journals[0].deletedAt).toBeUndefined();
       expect(data.transactions[0].deletedAt).toBeUndefined();
       expect(integrityService.resetWorkplace).not.toHaveBeenCalled();
@@ -283,8 +287,8 @@ describe('NativeImportPlugin', () => {
       const context = { json: validNativeData } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const batchInsertCall = (importRepository.batchInsert as jest.Mock).mock.calls[0];
-      const data = batchInsertCall[1];
+      const replaceWorkplaceCall = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0];
+      const data = replaceWorkplaceCall[1];
 
       // Check account ID remapping
       const oldAccountId = validNativeData.accounts[0].id; // 'a1'
@@ -350,7 +354,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: withActionsJson } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       const newAccountId = data.accounts[0].id;
       const actions = JSON.parse(data.transactionAutoPostRules[0].actionsJson);
       expect(actions.sourceAccountId).toBe(newAccountId);
@@ -381,7 +385,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: withStaleRule } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       expect(data.accounts).toHaveLength(1);
       expect(data.accounts[0].name).toBe('Acc 1');
       const newAccountId = data.accounts[0].id;
@@ -417,7 +421,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: withBrokenRule } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       const newAccountId = data.accounts[0].id;
       const rule = data.transactionAutoPostRules[0];
       expect(rule.sourceAccountId).toBe('');
@@ -455,7 +459,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: withOrphan } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       expect(data.accounts.length).toBe(2);
       const placeholder = data.accounts.find((a: { name: string }) =>
         a.name.startsWith('Recovered account'),
@@ -508,7 +512,7 @@ describe('NativeImportPlugin', () => {
       const context = { json: withDeletedLegs } as ImportFileContext;
       await importService.executeImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      const data = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const data = (importRepository.replaceWorkplace as jest.Mock).mock.calls[0][1];
       expect(data.journals).toHaveLength(1);
       expect(data.transactions).toHaveLength(2);
       expect(data.accounts.every((a: { name: string }) => !a.name.startsWith('Recovered'))).toBe(
