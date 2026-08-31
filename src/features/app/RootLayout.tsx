@@ -5,7 +5,6 @@ import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider } from '@/src/contexts/UIContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
-import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
@@ -29,8 +28,10 @@ import { AppContent } from './components/AppNavigation';
 import {
   LaunchCoordinatorContent,
   LaunchCoordinatorProvider,
+  type LaunchSetupDraft,
   useLaunchCoordinator,
 } from './LaunchCoordinator';
+import { readBlockingSetupProjection } from '@/src/services/setup/launchProjection';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
@@ -50,6 +51,9 @@ function RootLayout() {
   const navigationRef = useNavigationContainerRef();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+  const setupDraft = React.useMemo<LaunchSetupDraft | undefined>(() => {
+    return readBlockingSetupProjection();
+  }, []);
 
   useEffect(() => {
     if (navigationRef && AppConfig.features.enableSentry) {
@@ -69,7 +73,7 @@ function RootLayout() {
               <DatabaseProvider database={database}>
                 <UIProvider>
                   <EarlyBootstrap />
-                  <LaunchCoordinatorProvider>
+                  <LaunchCoordinatorProvider setupDraft={setupDraft}>
                     <MaybeAnalyticsProvider client={analytics.posthog}>
                       <ThemeProvider value={theme}>
                         <LaunchCoordinatorContent gateChildren={<AppContent />}>
@@ -119,7 +123,6 @@ function WorkplaceBootstrap() {
  */
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated } = useAppReady();
-  const { hasCompletedOnboarding } = useOnboardingSession();
   const launch = useLaunchCoordinator();
   const insets = useSafeAreaInsets();
   const hasTrackedColdStartRef = React.useRef(false);
@@ -127,7 +130,6 @@ function SplashOrchestrator() {
   const canHideSplash = shouldHideNativeSplash({
     isAppReady,
     isDataHydrated,
-    hasCompletedOnboarding,
     launchState:
       launch.kind === 'open'
         ? 'open'
@@ -139,9 +141,9 @@ function SplashOrchestrator() {
 
   useEffect(() => {
     logger.debug(
-      `[Splash] Status update: isAppReady=${isAppReady}, isDataHydrated=${isDataHydrated}, hasCompletedOnboarding=${hasCompletedOnboarding}, canHideSplash=${canHideSplash}`,
+      `[Splash] Status update: isAppReady=${isAppReady}, isDataHydrated=${isDataHydrated}, canHideSplash=${canHideSplash}`,
     );
-  }, [isAppReady, isDataHydrated, hasCompletedOnboarding, canHideSplash]);
+  }, [isAppReady, isDataHydrated, canHideSplash]);
 
   useEffect(() => {
     if (!canHideSplash) {
@@ -171,7 +173,6 @@ function SplashOrchestrator() {
               analytics.track('app_cold_start', {
                 time_to_interactive_ms: totalTtiMs,
                 time_to_interactive_sec: Math.round(totalTtiMs / 1000),
-                is_onboarding_completed: hasCompletedOnboarding,
                 is_data_hydrated: isDataHydrated,
               });
             }
@@ -186,7 +187,7 @@ function SplashOrchestrator() {
       cancelled = true;
       cancelAnimationFrame(hideAfterLayout);
     };
-  }, [canHideSplash, isAppReady, isDataHydrated, hasCompletedOnboarding]);
+  }, [canHideSplash, isAppReady, isDataHydrated]);
 
   return null;
 }

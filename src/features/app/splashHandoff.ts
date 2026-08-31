@@ -42,20 +42,21 @@ export function resolveSafeAreaInitialMetrics(metrics: Metrics | null | undefine
 export function shouldHideNativeSplash({
   isAppReady,
   isDataHydrated,
-  hasCompletedOnboarding,
+  hasCompletedOnboarding: _hasCompletedOnboarding,
   launchState,
   hasSafeAreaInsets,
 }: {
   isAppReady: boolean;
   isDataHydrated: boolean;
-  hasCompletedOnboarding: boolean;
+  /** @deprecated Launch state is authoritative; retained for old callers. */
+  hasCompletedOnboarding?: boolean;
   /** Launch gates do not require books hydration; an open Workplace does. */
   launchState?: 'loading' | 'open' | 'gate';
   hasSafeAreaInsets: boolean;
 }): boolean {
   if (launchState === 'loading') return false;
   const requiresDataHydration =
-    launchState === 'open' || (launchState === undefined && hasCompletedOnboarding);
+    launchState === 'open' || (launchState === undefined && _hasCompletedOnboarding === true);
   const isFullyReady = isAppReady && (!requiresDataHydration || isDataHydrated);
   return isFullyReady && hasSafeAreaInsets;
 }
