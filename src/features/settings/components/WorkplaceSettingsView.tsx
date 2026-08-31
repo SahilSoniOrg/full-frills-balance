@@ -60,15 +60,17 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                       isActive ? <AppIcon name="check" color="#10B981" size={20} /> : null
                     }
                     rightAction={
-                      <IconButton
-                        name="trash"
-                        variant="clear"
-                        iconColor={theme.error}
-                        accessibilityLabel={`Delete ${workplace.name}`}
-                        testID={`workplace-delete-${workplace.id}`}
-                        disabled={vm.deletingWorkplaceId !== null}
-                        onPress={() => vm.deleteWorkplace(workplace)}
-                      />
+                      isActive && vm.workplaces.length === 1 ? null : (
+                        <IconButton
+                          name="delete"
+                          variant="clear"
+                          iconColor={theme.error}
+                          accessibilityLabel={`Delete ${workplace.name}`}
+                          testID={`workplace-delete-${workplace.id}`}
+                          disabled={vm.deletingWorkplaceId !== null}
+                          onPress={() => vm.deleteWorkplace(workplace)}
+                        />
+                      )
                     }
                     hasArrow={false}
                     style={

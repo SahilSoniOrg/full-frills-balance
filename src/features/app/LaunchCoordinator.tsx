@@ -400,7 +400,6 @@ export function LaunchCoordinatorContent({
       return promise;
     }
 
-    setIsTransitioning(true);
     try {
       const result = await workplaceService.deleteWorkplace(targetId);
       evictWorkplaceReactiveCaches({ from: targetId, to: targetId });
@@ -408,8 +407,6 @@ export function LaunchCoordinatorContent({
     } catch (error) {
       setTransitionError(error instanceof Error ? error.message : 'Could not delete workplace.');
       throw error;
-    } finally {
-      setIsTransitioning(false);
     }
   };
   const switchWorkplace = async (targetId: WorkplaceId) => {

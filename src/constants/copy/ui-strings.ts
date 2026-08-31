@@ -264,10 +264,15 @@ export const UI_STRINGS = {
     },
     workplaceManagement: {
       deleteTitle: 'Delete workplace?',
-      deleteMessage: (name: string, isLast: boolean) =>
-        isLast
-          ? `This permanently deletes “${name}” and all of its books. You will return to workplace setup.`
-          : `This permanently deletes “${name}” and all of its books. Other Workplaces will not be changed.`,
+      deleteMessage: (name: string, isLast: boolean, isActive: boolean) => {
+        const details = `This permanently deletes “${name}”, including its accounts, journals, entries, budgets, planned payments, and other Workplace data. This cannot be undone.`;
+        if (isLast)
+          return `${details} It is your only Workplace, so you will return to Workplace setup.`;
+        if (isActive) {
+          return `${details} Because it is currently active, you will choose another Workplace after deletion.`;
+        }
+        return `${details} Your current Workplace and all other Workplaces will remain unchanged.`;
+      },
       deleteConfirm: 'Delete workplace',
     },
     sections: {

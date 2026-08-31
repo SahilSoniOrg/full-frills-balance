@@ -43,8 +43,15 @@ jest.mock('@/src/utils/preferences', () => ({
   preferencesMigration: { legacyCurrencyCode: undefined },
 }));
 
+jest.mock('@/src/utils/SnapshotService', () => ({
+  snapshotService: { clearSnapshotsForWorkplace: jest.fn() },
+}));
+
 const mockWorkplaces = workplaceRepository as jest.Mocked<typeof workplaceRepository>;
 const mockDatabaseRepository = databaseRepository as jest.Mocked<typeof databaseRepository>;
+const { snapshotService } = jest.requireMock('@/src/utils/SnapshotService') as {
+  snapshotService: { clearSnapshotsForWorkplace: jest.Mock };
+};
 
 describe('WorkplaceService transitions', () => {
   beforeEach(() => {
@@ -65,6 +72,7 @@ describe('WorkplaceService transitions', () => {
     );
     expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(undefined);
     expect(preferences.workplace.clear).toHaveBeenCalledWith('active-wp');
+    expect(snapshotService.clearSnapshotsForWorkplace).toHaveBeenCalledWith('active-wp');
   });
 
   it('does not retarget the active pointer when deleting another workplace', async () => {

@@ -11,6 +11,7 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { logger } from '@/src/utils/logger';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
 
 export class WorkplaceService {
@@ -120,6 +121,7 @@ export class WorkplaceService {
       // Remove scoped data and the shell together. The resolver will expose the
       // creation gate when this was the last Workplace.
       await databaseRepository.destroyWorkplace(id, WORKPLACE_SCOPED_TABLE_NAMES);
+      snapshotService.clearSnapshotsForWorkplace(id);
       const warnings: string[] = [];
 
       // Repair the pointer only after the database publication succeeds. Never

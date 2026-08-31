@@ -70,6 +70,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
         message: AppConfig.strings.settings.workplaceManagement.deleteMessage(
           workplace.name,
           isLast,
+          workplace.id === activeWorkplaceId,
         ),
         confirmText: AppConfig.strings.settings.workplaceManagement.deleteConfirm,
         destructive: true,
@@ -80,6 +81,8 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
             const result = await deleteActiveWorkplace(workplace.id);
             if (result.status === 'committed_with_warnings') {
               toast.warning('Workplace deleted, but some cleanup will be retried.');
+            } else {
+              toast.success('Workplace deleted.');
             }
           } catch {
             toast.error('Failed to delete workplace. Your books were not changed.');
@@ -89,7 +92,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
         },
       });
     },
-    [deleteActiveWorkplace, workplaces.length],
+    [activeWorkplaceId, deleteActiveWorkplace, workplaces.length],
   );
 
   return {
