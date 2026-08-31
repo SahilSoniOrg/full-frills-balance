@@ -137,7 +137,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         currencySymbol={CURRENCY_SYMBOLS[selectedCurrency] || selectedCurrency}
         showAmount={vm.showInitialBalance}
         footer={
-          !isCategory ? (
+          vm.showCurrency ? (
             <Inline align="center" space="xs">
               {isEditMode && (
                 <Stack space="xs" align="flex-start">
@@ -173,7 +173,6 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
                   selectedCurrency={selectedCurrency}
                   currencies={currencies}
                   onSelect={setSelectedCurrency}
-                  disabled={isEditMode}
                 />
               )}
             </Inline>

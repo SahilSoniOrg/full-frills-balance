@@ -257,7 +257,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     [accounts, accountId],
   );
 
-  const showCurrency = !core.isCategory;
+  // Categories are currency-scoped too, so currency is selectable during
+  // creation for both accounts and categories. Existing entities remain locked.
+  const showCurrency = true;
   const showBalance = !core.isCategory && !isParent;
   const formError = validation.formError || draft.localFormError;
 
