@@ -4,6 +4,9 @@ export const onboarding = {
   gridContinue: 'selectable-grid-continue-button',
   themeContinue: 'onboarding-theme-continue-button',
   finishButton: 'onboarding-finish-button',
+  workplaceIdentityContinue: 'workplace-basic-info-continue-button',
+  workplaceNameInput: 'workplace-name-input',
+  summary: 'onboarding-summary-step',
 } as const;
 
 export const dashboard = {

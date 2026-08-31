@@ -236,27 +236,29 @@ function SetupScreen() {
         );
       case 'summary':
         return (
-          <OnboardingReviewStep
-            name={name}
-            workplaceName={workplaceOutput.name.value}
-            workplaceIcon={workplaceIcon}
-            selectedCurrency={currency}
-            accountCount={accounts.length}
-            categoryCount={categories.length}
-            themeId={themeId}
-            fontId={fontId}
-            onChangeWorkplace={() => goTo('workplace')}
-            onChangeProfile={() => goTo('device')}
-            onChangeCurrency={() => goTo('workplace')}
-            onChangeAccounts={() => goTo('workplace')}
-            onChangeCategories={() => goTo('workplace')}
-            onChangeAppearance={() => goTo('appearance')}
-            onConfirm={finish}
-            onBack={() => goTo('appearance')}
-            isCompleting={busy}
-            isImportedWorkplace={false}
-            showAppearance
-          />
+          <View testID="onboarding-summary-step" style={{ flex: 1 }}>
+            <OnboardingReviewStep
+              name={name}
+              workplaceName={workplaceOutput.name.value}
+              workplaceIcon={workplaceIcon}
+              selectedCurrency={currency}
+              accountCount={accounts.length}
+              categoryCount={categories.length}
+              themeId={themeId}
+              fontId={fontId}
+              onChangeWorkplace={() => goTo('workplace')}
+              onChangeProfile={() => goTo('device')}
+              onChangeCurrency={() => goTo('workplace')}
+              onChangeAccounts={() => goTo('workplace')}
+              onChangeCategories={() => goTo('workplace')}
+              onChangeAppearance={() => goTo('appearance')}
+              onConfirm={finish}
+              onBack={() => goTo('appearance')}
+              isCompleting={busy}
+              isImportedWorkplace={false}
+              showAppearance
+            />
+          </View>
         );
       default:
         return null;

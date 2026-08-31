@@ -7,6 +7,7 @@ export type LaunchOnboardedOptions = {
   newInstance?: boolean;
   backupPath?: string;
   preserveData?: boolean;
+  disableSynchronization?: boolean;
 };
 
 function e2eLaunchArgs(seedProfile?: E2eSeedProfile, backupPath?: string): Record<string, string> {
@@ -21,7 +22,9 @@ function e2eLaunchArgs(seedProfile?: E2eSeedProfile, backupPath?: string): Recor
   return args;
 }
 
-export async function launchFreshApp(): Promise<void> {
+export async function launchFreshApp(
+  options: { disableSynchronization?: boolean } = {},
+): Promise<void> {
   try {
     await device.terminateApp();
   } catch {
@@ -36,9 +39,14 @@ export async function launchFreshApp(): Promise<void> {
       e2eReset: '1',
     },
   });
-  await waitFor(element(by.id('onboarding-name-input')))
-    .toBeVisible()
-    .withTimeout(120000);
+  if (options.disableSynchronization) {
+    await device.disableSynchronization();
+  }
+  if (!options.disableSynchronization) {
+    await waitFor(element(by.id('onboarding-name-input')))
+      .toBeVisible()
+      .withTimeout(120000);
+  }
 }
 
 export async function waitForDashboard(timeoutMs = 120000): Promise<void> {
@@ -63,7 +71,12 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile, options.backupPath),
   });
-  await waitForDashboard();
+  if (options.disableSynchronization) {
+    await device.disableSynchronization();
+  }
+  if (!options.disableSynchronization) {
+    await waitForDashboard();
+  }
 }
 
 export async function launchPickerApp(): Promise<void> {
@@ -74,6 +87,23 @@ export async function launchPickerApp(): Promise<void> {
     launchArgs: e2eLaunchArgs('picker-ready'),
   });
   await waitFor(element(by.id('workplace-picker-screen')))
+    .toBeVisible()
+    .withTimeout(120000);
+}
+
+export async function relaunchPreservingData(): Promise<void> {
+  await device.terminateApp();
+  await device.launchApp({
+    newInstance: true,
+    delete: false,
+    permissions: { notifications: 'YES' },
+    launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
+  });
+}
+
+export async function openWorkplaceCreation(): Promise<void> {
+  await device.openURL({ url: 'fullfrillsbalance://onboarding?mode=full' });
+  await waitFor(element(by.id('workplace-name-input')))
     .toBeVisible()
     .withTimeout(120000);
 }

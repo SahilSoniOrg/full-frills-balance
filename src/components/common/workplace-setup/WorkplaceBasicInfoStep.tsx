@@ -101,6 +101,7 @@ export function WorkplaceBasicInfoStep({
               }}
               disabled={!name.trim() || isCreating}
               loading={isCreating}
+              testID="workplace-basic-info-continue-button"
             >
               {continueLabel}
             </AppButton>
