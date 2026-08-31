@@ -131,6 +131,12 @@ function SetupScreen() {
     }
   };
 
+  const goTo = (target: SetupSliceId) => {
+    if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
+    if (target === 'workplace') setWorkplaceStep('identity');
+    setSlice(target);
+  };
+
   const workplaceOutput = {
     name: {
       value: workplaceName.trim() || `${name.trim() || 'User'}'s Personal workplace`,
@@ -167,7 +173,7 @@ function SetupScreen() {
                 onNameChange={setWorkplaceName}
                 onIconChange={setWorkplaceIcon}
                 onContinue={() => setWorkplaceStep('currency')}
-                onBack={() => setSlice('device')}
+                onBack={() => goTo('device')}
                 isCompleting={busy}
               />
             )}
@@ -224,7 +230,7 @@ function SetupScreen() {
                 fontId: { value: fontId, source: 'user_entered' },
               })
             }
-            onBack={() => setSlice('workplace')}
+            onBack={() => goTo('workplace')}
             isCompleting={busy}
           />
         );
@@ -239,14 +245,14 @@ function SetupScreen() {
             categoryCount={categories.length}
             themeId={themeId}
             fontId={fontId}
-            onChangeWorkplace={() => setSlice('workplace')}
-            onChangeProfile={() => setSlice('device')}
-            onChangeCurrency={() => setSlice('workplace')}
-            onChangeAccounts={() => setSlice('workplace')}
-            onChangeCategories={() => setSlice('workplace')}
-            onChangeAppearance={() => setSlice('appearance')}
+            onChangeWorkplace={() => goTo('workplace')}
+            onChangeProfile={() => goTo('device')}
+            onChangeCurrency={() => goTo('workplace')}
+            onChangeAccounts={() => goTo('workplace')}
+            onChangeCategories={() => goTo('workplace')}
+            onChangeAppearance={() => goTo('appearance')}
             onConfirm={finish}
-            onBack={() => setSlice('appearance')}
+            onBack={() => goTo('appearance')}
             isCompleting={busy}
             isImportedWorkplace={false}
             showAppearance
