@@ -42,6 +42,18 @@ describe('PreferencesFacade import restore', () => {
     expect(preferences.userName).toBe('Sahil');
   });
 
+  it('restores the user name from a backup during onboarding import', () => {
+    const preferences = createPreferencesFacade();
+
+    preferences.restoreImportedPreferences(
+      { userName: 'Imported User', theme: 'dark' },
+      'workplace-1' as WorkplaceId,
+      'all',
+    );
+
+    expect(preferences.userName).toBe('Imported User');
+  });
+
   it('uses store methods without replacing them on the instance', () => {
     const preferences = createPreferencesFacade();
 

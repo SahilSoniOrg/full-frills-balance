@@ -2,6 +2,7 @@ export const onboarding = {
   screen: 'onboarding-screen',
   nameInput: 'onboarding-name-input',
   gridContinue: 'selectable-grid-continue-button',
+  themeContinue: 'onboarding-theme-continue-button',
   finishButton: 'onboarding-finish-button',
 } as const;
 

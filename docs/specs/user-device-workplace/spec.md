@@ -13,7 +13,7 @@ This spec is behavior and ownership. File paths will rot; do not treat them as t
 
 | Area                  | Current                                                                                                                        | Target                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| First-run             | One wizard: name + currency + accounts + categories + theme; then name + Device claimed + Workplace writes                     | Device onboarding (name) then Workplace creation; theme not a setup ritual   |
+| First-run             | One wizard: name + currency + accounts + categories + theme; then name + Device claimed + Workplace writes                     | Device onboarding (name) then Workplace creation, followed by User theme selection before entering the app |
 | Workplace at launch   | Launch coordinator resolves Device state and discovered Workplaces; historical v23 Personal migration remains upgrade backfill | No Workplace until creation or Import **finishes** on fresh installs         |
 | `onboardingCompleted` | Set after books exist                                                                                                          | Set when Device is claimed (name)                                            |
 | SMS enable            | Combined blob / briefly Workplace                                                                                              | Device SMS listen, default off (Slice 1)                                     |

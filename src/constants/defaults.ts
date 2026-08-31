@@ -23,6 +23,8 @@ export const DEFAULT_ACCOUNTS: AccountSuggestion[] = (
     { id: 'bank', name: 'Bank', icon: 'bank', type: AccountType.ASSET },
     { id: 'savings', name: 'Savings', icon: 'safe', type: AccountType.ASSET },
     { id: 'revolut', name: 'Revolut', icon: 'creditCard', type: AccountType.ASSET },
+    { id: 'credit_card', name: 'Credit Card', icon: 'creditCard', type: AccountType.LIABILITY },
+    { id: 'loan', name: 'Loan', icon: 'receipt', type: AccountType.LIABILITY },
   ] as const
 ).map(acc => ({
   ...acc,

@@ -54,6 +54,24 @@ describe('decideDeviceRecovery', () => {
     });
   });
 
+  it.each(['workplace_setup', 'appearance', 'review'] as const)(
+    'does not claim a Device during the %s onboarding draft stage',
+    onboardingStage => {
+      expect(
+        decideDeviceRecovery({
+          deviceBagPresent: true,
+          deviceClaimed: false,
+          workplaceCount: 1,
+          onboardingStage,
+        }),
+      ).toEqual({
+        kind: 'not_needed',
+        shouldClaimDevice: false,
+        shouldPersistDeviceDefaults: false,
+      });
+    },
+  );
+
   it('repairs a missing or whitespace-only User name for a claimed recovery', () => {
     expect(
       decideDeviceRecovery({

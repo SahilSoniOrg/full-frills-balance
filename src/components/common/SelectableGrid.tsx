@@ -3,7 +3,7 @@ import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
-import { FlatList, Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
@@ -26,6 +26,8 @@ export interface SelectableGridProps {
   onContinue: () => void;
   onBack: () => void;
   isCompleting: boolean;
+  continueDisabled?: boolean;
+  continueDisabledReason?: string;
   maxSelection?: number;
   renderIcon?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
   renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
@@ -35,6 +37,8 @@ export interface SelectableGridProps {
   listFooterContent?: React.ReactNode;
   emptyMessage?: string;
   disableAnimation?: boolean;
+  validationMessage?: string;
+  sections?: { title: string; data: SelectableItem[] }[];
 }
 
 interface SelectableGridItemProps {
@@ -199,6 +203,8 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   onContinue,
   onBack,
   isCompleting,
+  continueDisabled = false,
+  continueDisabledReason,
   maxSelection,
   renderIcon,
   renderSubtitle,
@@ -208,6 +214,8 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   listFooterContent,
   emptyMessage,
   disableAnimation = false,
+  validationMessage,
+  sections,
 }) => {
   const { theme } = useTheme();
   const effectiveAccentColor = accentColor || theme.primary;
@@ -264,62 +272,118 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     ],
   );
 
+  const listHeader = (
+    <Stack paddingTop="xl" paddingBottom="xxl" space="lg">
+      <Stack align="center" space="xs">
+        <AppText variant="title" style={styles.headerTitle}>
+          {title}
+        </AppText>
+        <AppText variant="body" color="secondary" style={styles.headerSubtitle}>
+          {subtitle}
+        </AppText>
+      </Stack>
+      {headerContent}
+    </Stack>
+  );
+
+  const listFooter = listFooterContent ? (
+    <Box paddingTop="lg" paddingBottom="xxl">
+      {listFooterContent}
+    </Box>
+  ) : null;
+
+  const listEmpty = emptyMessage ? (
+    <Box paddingVertical="xxxxl" alignItems="center">
+      <AppText variant="body" color="secondary" style={styles.emptyMessage}>
+        {emptyMessage}
+      </AppText>
+    </Box>
+  ) : null;
+
+  const selectableList = sections ? (
+    <SectionList
+      sections={sections.map(section => ({
+        ...section,
+        data: Array.from({ length: Math.ceil(section.data.length / 2) }, (_, index) =>
+          section.data.slice(index * 2, index * 2 + 2),
+        ),
+      }))}
+      renderItem={({ item: row, index }) => (
+        <View style={styles.grid}>
+          {row.map((item, itemIndex) =>
+            renderItem({ item, index: index * 2 + itemIndex } as {
+              item: SelectableItem;
+              index: number;
+            }),
+          )}
+        </View>
+      )}
+      keyExtractor={(row: SelectableItem[]) => row.map(item => item.id).join('-')}
+      renderSectionHeader={({ section }) => (
+        <Box paddingTop="md" paddingBottom="xs" background="background">
+          <AppText variant="subheading" weight="semibold">
+            {section.title}
+          </AppText>
+        </Box>
+      )}
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="always"
+      keyboardDismissMode="interactive"
+      ListHeaderComponent={listHeader}
+      ListFooterComponent={listFooter}
+      ListEmptyComponent={listEmpty}
+    />
+  ) : (
+    <FlatList
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={(item: SelectableItem) => item.id}
+      numColumns={2}
+      columnWrapperStyle={styles.grid}
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="always"
+      keyboardDismissMode="interactive"
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={listEmpty}
+      ListFooterComponent={listFooter}
+    />
+  );
+
   return (
     <Box flex={1}>
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={(item: SelectableItem) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.grid}
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-        keyboardDismissMode="interactive"
-        ListHeaderComponent={
-          <Stack paddingTop="xl" paddingBottom="xxl" space="lg">
-            <Stack align="center" space="xs">
-              <AppText variant="title" style={styles.headerTitle}>
-                {title}
-              </AppText>
-              <AppText variant="body" color="secondary" style={styles.headerSubtitle}>
-                {subtitle}
-              </AppText>
-            </Stack>
-            {headerContent}
-          </Stack>
-        }
-        ListEmptyComponent={
-          emptyMessage ? (
-            <Box paddingVertical="xxxxl" alignItems="center">
-              <AppText variant="body" color="secondary" style={styles.emptyMessage}>
-                {emptyMessage}
-              </AppText>
-            </Box>
-          ) : null
-        }
-        ListFooterComponent={
-          listFooterContent ? (
-            <Box paddingTop="lg" paddingBottom="xxl">
-              {listFooterContent}
-            </Box>
-          ) : null
-        }
-      />
+      {selectableList}
 
       <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
         <Stack space="xs">
+          {validationMessage && (
+            <AppText
+              variant="caption"
+              color="error"
+              accessibilityRole="alert"
+              style={styles.validationMessage}
+            >
+              {validationMessage}
+            </AppText>
+          )}
           <AppButton
             variant="primary"
             size="lg"
             onPress={onContinue}
-            disabled={isCompleting}
+            disabled={isCompleting || continueDisabled}
             style={{ width: '100%' }}
             testID="selectable-grid-continue-button"
           >
             {footerActionLabel}
           </AppButton>
+          {continueDisabledReason ? (
+            <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+              {continueDisabledReason}
+            </AppText>
+          ) : null}
           <AppButton
             variant="ghost"
             size="md"
@@ -352,6 +416,10 @@ const styles = StyleSheet.create({
   },
   emptyMessage: {
     textAlign: 'center',
+  },
+  validationMessage: {
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
   },
   grid: {
     flexDirection: 'row',

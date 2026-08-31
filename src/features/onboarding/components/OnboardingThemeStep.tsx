@@ -30,23 +30,47 @@ type OnboardingThemeStepProps = {
   onContinue: () => void;
   onBack: () => void;
   isCompleting: boolean;
+  backLabel?: string;
+  themeId?: ThemeId;
+  fontId?: FontId;
+  onThemeChange?: (themeId: ThemeId) => void;
+  onFontChange?: (fontId: FontId) => void;
 };
 
 let globalThemeId: ThemeId | null = null;
 
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
+  return <OnboardingThemeStepContent {...props} />;
+}
+
+function OnboardingThemeStepContent(props: OnboardingThemeStepProps) {
   const { currencyCode } = props;
   const { theme } = useTheme();
-  const { themeId, fontId, setThemeId, setFontId } = useThemePrefs();
+  const {
+    themeId: persistedThemeId,
+    fontId: persistedFontId,
+    setThemeId: persistThemeId,
+    setFontId: persistFontId,
+  } = useThemePrefs();
+  const themeId = props.themeId ?? persistedThemeId;
+  const fontId = props.fontId ?? persistedFontId;
 
   const handleSelectTheme = (nextThemeId: ThemeId) => {
     void triggerHaptic('light');
-    setThemeId(nextThemeId);
+    if (props.onThemeChange) {
+      props.onThemeChange(nextThemeId);
+    } else {
+      persistThemeId(nextThemeId);
+    }
   };
 
   const handleSelectFont = (nextFontId: FontId) => {
     void triggerHaptic('light');
-    setFontId(nextFontId);
+    if (props.onFontChange) {
+      props.onFontChange(nextFontId);
+    } else {
+      persistFontId(nextFontId);
+    }
   };
 
   const strings = AppConfig.strings.onboarding.appearance;
@@ -122,7 +146,11 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const renderFontOption = (id: FontId, label: string) => {
     const isSelected = fontId === id;
     return (
-      <Pressable style={{ flex: 1 }} onPress={() => handleSelectFont(id)}>
+      <Pressable
+        style={{ flex: 1 }}
+        onPress={() => handleSelectFont(id)}
+        testID={`onboarding-font-${id}-option`}
+      >
         <AppCard
           elevation={isSelected ? 'sm' : 'none'}
           style={[
@@ -190,6 +218,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           <Pressable
             onPress={() => cycleTheme(-1)}
             hitSlop={20}
+            testID="onboarding-theme-previous-button"
             style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 4 }}
           >
             <AppIcon name="chevronLeft" size={20} color={theme.textSecondary} />
@@ -221,6 +250,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           <Pressable
             onPress={() => cycleTheme(1)}
             hitSlop={20}
+            testID="onboarding-theme-next-button"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -263,10 +293,10 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
             style={{ width: '100%' }}
             testID="onboarding-theme-continue-button"
           >
-            Continue
+            Review setup
           </AppButton>
           <AppButton variant="ghost" size="md" onPress={props.onBack} disabled={props.isCompleting}>
-            Back
+            {props.backLabel ?? 'Back'}
           </AppButton>
         </Stack>
       </Box>

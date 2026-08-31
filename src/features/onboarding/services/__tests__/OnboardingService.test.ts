@@ -27,6 +27,9 @@ jest.mock('@/src/utils/preferences', () => ({
       setOnboardingCompleted: jest.fn(),
       setActiveWorkplaceId: jest.fn(),
       setPendingWorkplaceId: jest.fn(),
+      setOnboardingWorkplaceId: jest.fn(),
+      setOnboardingStage: jest.fn(),
+      setDeviceRegistered: jest.fn(),
     },
   },
   preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
@@ -94,6 +97,38 @@ describe('OnboardingService', () => {
     );
   });
 
+  it('persists the user-selected workplace name', async () => {
+    await onboardingService.completeOnboarding({
+      name: 'Test User',
+      workplaceName: 'My Ledger',
+      selectedCurrency: 'USD',
+      selectedAccounts: ['Cash'],
+      customAccounts: [],
+      selectedCategories: ['Food & Drink'],
+      customCategories: [],
+    });
+
+    expect(workplaceService.createWorkplace).toHaveBeenCalledWith(
+      'My Ledger',
+      'briefcase',
+      expect.anything(),
+    );
+  });
+
+  it('applies an edited imported workplace name before publishing it', async () => {
+    await onboardingService.completeImportedWorkplace(
+      'imported-workplace' as WorkplaceId,
+      'Imported household',
+      'home',
+    );
+
+    expect(workplaceService.updateWorkplace).toHaveBeenCalledWith('imported-workplace', {
+      name: 'Imported household',
+      icon: 'home',
+    });
+    expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith('imported-workplace');
+  });
+
   it('creates a new workplace even when legacy Personal data already exists', async () => {
     (workplaceService.getAllWorkplaces as jest.Mock).mockResolvedValueOnce([
       { id: 'legacy-personal', name: 'Personal' },
@@ -123,7 +158,7 @@ describe('OnboardingService', () => {
       name: 'Test User',
       selectedCurrency: 'USD',
       selectedAccounts: ['Freelance income'],
-      customAccounts: [{ name: 'Freelance income', type: 'INCOME', icon: 'wallet' }],
+      customAccounts: [{ name: 'Freelance income', type: 'ASSET', icon: 'wallet' }],
       selectedCategories: [],
       customCategories: [],
     });
@@ -133,7 +168,7 @@ describe('OnboardingService', () => {
       'briefcase',
       expect.objectContaining({
         initialAccounts: [
-          expect.objectContaining({ name: 'Freelance income', type: 'INCOME', icon: 'wallet' }),
+          expect.objectContaining({ name: 'Freelance income', type: 'ASSET', icon: 'wallet' }),
         ],
       }),
     );

@@ -6,7 +6,8 @@ export interface DeviceRecoveryInput {
   readonly deviceClaimed: boolean;
   readonly workplaceCount: number;
   readonly userName?: string;
-  readonly onboardingStage?: 'user_profile' | 'workplace_setup' | 'post_import' | 'complete';
+  readonly onboardingStage?:
+    'user_profile' | 'workplace_setup' | 'appearance' | 'review' | 'post_import' | 'complete';
 }
 
 export interface DeviceRecoveryResult {
@@ -31,7 +32,11 @@ export function decideDeviceRecovery(input: DeviceRecoveryInput): DeviceRecovery
   const existingBooksProveCompletion = input.workplaceCount > 0;
   const needsMissingBagRecovery = !input.deviceBagPresent;
   const needsClaimRepair =
-    existingBooksProveCompletion && !input.deviceClaimed && input.onboardingStage !== 'post_import';
+    existingBooksProveCompletion &&
+    !input.deviceClaimed &&
+    !['workplace_setup', 'appearance', 'review', 'post_import'].includes(
+      input.onboardingStage ?? '',
+    );
   if (!needsMissingBagRecovery && !needsClaimRepair) {
     return { kind: 'not_needed', shouldClaimDevice: false, shouldPersistDeviceDefaults: false };
   }

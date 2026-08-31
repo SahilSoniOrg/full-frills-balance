@@ -20,6 +20,7 @@ export async function completeOnboardingUi(userName: string): Promise<void> {
     await tapById(onboardingIds.gridContinue, ONBOARDING_TIMEOUT_MS);
   }
 
+  await tapById(onboardingIds.themeContinue, ONBOARDING_TIMEOUT_MS);
   await tapById(onboardingIds.finishButton, ONBOARDING_TIMEOUT_MS);
 
   await waitForDashboard(ONBOARDING_TIMEOUT_MS);

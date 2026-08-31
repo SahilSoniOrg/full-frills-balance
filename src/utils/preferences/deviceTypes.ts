@@ -3,7 +3,8 @@ import { WorkplaceId } from '@/src/types/ids';
 /** State that belongs to this install and must not follow User or Workplace. */
 export interface DevicePreferences {
   deviceRegistered: boolean;
-  onboardingStage: 'user_profile' | 'workplace_setup' | 'post_import' | 'complete';
+  onboardingStage:
+    'user_profile' | 'workplace_setup' | 'appearance' | 'review' | 'post_import' | 'complete';
   onboardingCompleted: boolean;
   isAppLockEnabled: boolean;
   anonymizedId?: string;

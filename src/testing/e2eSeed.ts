@@ -32,7 +32,7 @@ const DEFAULT_SEED = {
   name: 'E2E User',
   selectedCurrency: 'USD',
   selectedAccounts: ['Cash', 'Bank'],
-  customAccounts: [] as { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[],
+  customAccounts: [] as { name: string; type: 'ASSET' | 'LIABILITY'; icon: IconName }[],
   selectedCategories: ['Salary', 'Food & Drink', 'Groceries', 'Bills'],
   customCategories: [] as { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[],
 };

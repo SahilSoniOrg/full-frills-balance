@@ -1,4 +1,5 @@
 import { EmptyStateView } from '@/src/components/common/EmptyStateView';
+import { WorkplaceEditorModal } from '@/src/components/common/workplace-setup/WorkplaceEditorModal';
 import { AppIcon, IconButton } from '@/src/components/core';
 import { isValidIconName } from '@/src/types/domainIcons';
 import { PlainWorkplace } from '@/src/types/plainDtos';
@@ -10,6 +11,7 @@ import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWor
 import { useTheme } from '@/src/hooks/use-theme';
 import { Opacity } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/constants';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 interface WorkplaceSettingsViewProps {
@@ -19,6 +21,7 @@ interface WorkplaceSettingsViewProps {
 
 export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsViewProps) {
   const { theme } = useTheme();
+  const [editingWorkplace, setEditingWorkplace] = useState<PlainWorkplace | null>(null);
 
   return (
     <>
@@ -60,17 +63,26 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                       isActive ? <AppIcon name="check" color="#10B981" size={20} /> : null
                     }
                     rightAction={
-                      isActive && vm.workplaces.length === 1 ? null : (
+                      <Box flexDirection="row" alignItems="center">
                         <IconButton
-                          name="delete"
+                          name="edit"
                           variant="clear"
-                          iconColor={theme.error}
-                          accessibilityLabel={`Delete ${workplace.name}`}
-                          testID={`workplace-delete-${workplace.id}`}
-                          disabled={vm.deletingWorkplaceId !== null}
-                          onPress={() => vm.deleteWorkplace(workplace)}
+                          accessibilityLabel={`Edit ${workplace.name}`}
+                          testID={`workplace-edit-${workplace.id}`}
+                          onPress={() => setEditingWorkplace(workplace)}
                         />
-                      )
+                        {isActive && vm.workplaces.length === 1 ? null : (
+                          <IconButton
+                            name="delete"
+                            variant="clear"
+                            iconColor={theme.error}
+                            accessibilityLabel={`Delete ${workplace.name}`}
+                            testID={`workplace-delete-${workplace.id}`}
+                            disabled={vm.deletingWorkplaceId !== null}
+                            onPress={() => vm.deleteWorkplace(workplace)}
+                          />
+                        )}
+                      </Box>
                     }
                     hasArrow={false}
                     style={
@@ -96,6 +108,19 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
           )}
         </Stack>
       </SettingsLayout>
+      {editingWorkplace && (
+        <WorkplaceEditorModal
+          key={`${editingWorkplace.id}:${editingWorkplace.name}:${editingWorkplace.icon}`}
+          visible
+          name={editingWorkplace.name}
+          icon={isValidIconName(editingWorkplace.icon) ? editingWorkplace.icon : 'briefcase'}
+          onClose={() => setEditingWorkplace(null)}
+          onSave={async (name, icon) => {
+            await vm.updateWorkplaceDetails(editingWorkplace, name, icon);
+            setEditingWorkplace(null);
+          }}
+        />
+      )}
     </>
   );
 }

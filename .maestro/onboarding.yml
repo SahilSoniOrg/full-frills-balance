@@ -28,8 +28,6 @@ appId: in.sahilsoni.fullfrillsbalance
     visible:
       id: selectable-grid-continue-button
     timeout: 30000
-- tapOn:
-    id: selectable-grid-continue-button
 - extendedWaitUntil:
     visible:
       id: onboarding-theme-continue-button

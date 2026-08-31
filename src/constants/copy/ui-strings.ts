@@ -751,8 +751,9 @@ export const UI_STRINGS = {
     },
     accounts: {
       title: 'Add your accounts',
-      subtitle: 'Start with the accounts that hold or owe money.',
+      subtitle: 'Start with the accounts that hold or owe money. Only assets are preselected.',
       placeholder: 'Add account…',
+      typeLabels: { asset: 'Asset', liability: 'Liability' },
     },
     categories: {
       title: 'Add your categories',
@@ -767,6 +768,21 @@ export const UI_STRINGS = {
       fontTitle: 'Typography',
       previewLabel: 'Preview',
       previewDesc: 'Safe to Spend example',
+      reviewButton: 'Review setup',
+      nextStep: 'Your choices are saved for this setup. Review them before entering the app.',
+    },
+    review: {
+      title: 'Review your setup',
+      subtitle: 'Check the details below. You can change anything before entering the app.',
+      profile: 'Profile',
+      workplace: 'Workplace',
+      currency: 'Currency',
+      accounts: 'Accounts',
+      categories: 'Categories',
+      appearance: 'Appearance',
+      change: 'Change',
+      confirm: 'Confirm and enter app',
+      confirming: 'Setting up your app…',
     },
     finalize: {
       title: 'Setup complete',

@@ -54,6 +54,38 @@ _Avoid_: Separate first-run onboarding vs Create Workplace as two products; Devi
 Workplace creation configured for the first Workplace: name/icon derived from the User; currency and starter accounts/categories are still asked in the same flow. Not a second wizard and not a silent stamp of defaults.
 _Avoid_: Ghost Personal; skip Workplace creation; a third setup process
 
+**Onboarding checkpoint**:
+A resumable boundary in the onboarding flow where the current setup decision is accepted and must survive interruption. Name submission, Workplace confirmation, and appearance selection are checkpoints; final confirmation completes onboarding.
+_Avoid_: screen; page; draft step
+
+**Setup summary**:
+The final review of the User name, Workplace currency, starter-account count, starter-category count, and selected appearance before onboarding is committed. It is a confirmation surface, not another configuration step.
+_Avoid_: completion splash; success screen; dashboard preview
+
+**Workplace setup confirmation**:
+The checkpoint that accepts the temporary Workplace configuration and advances to User appearance. It persists the draft for recovery but does not create a Workplace or write ledger data.
+_Avoid_: database commit; final confirmation; onboarding complete
+
+**Onboarding completion confirmation**:
+The final user action that writes the accepted Workplace, starter accounts/categories, and appearance, marks onboarding complete, and grants entry to the app. It is the only database commit point for first-run setup.
+_Avoid_: Workplace setup checkpoint; finish; submit
+
+**Onboarding draft**:
+The temporary, resumable setup state held before Onboarding completion confirmation. It includes the User name, Workplace identity and currency, starter-account/category choices, and appearance choices; it is not ledger data.
+_Avoid_: partial Workplace; temporary Workplace; database draft
+
+**Imported onboarding**:
+The same appearance and Setup summary sequence applied after an imported Workplace has been validated. Workplace setup choices are skipped because the imported identity, currency, accounts, and categories already exist; final confirmation still completes onboarding.
+_Avoid_: import completion; direct-to-dashboard import
+
+**Starter account**:
+An Account selected or added during Workplace setup as part of the initial ledger configuration. Onboarding supports asset and liability starter accounts; income and expense choices belong to starter categories.
+_Avoid_: wallet; category account
+
+**Starter category**:
+An income or expense category selected or added during Workplace setup as part of the initial ledger configuration.
+_Avoid_: account; tag
+
 **Full setup**:
 Workplace creation configured for every later Workplace: name, icon, currency, starter accounts, and categories are asked.
 _Avoid_: Default setup

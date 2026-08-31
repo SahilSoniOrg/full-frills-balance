@@ -156,7 +156,14 @@ export class DevicePreferencesStore {
           ? { deviceRegistered: value.onboardingCompleted }
           : {}),
       ...(typeof value.onboardingStage === 'string' &&
-      ['user_profile', 'workplace_setup', 'post_import', 'complete'].includes(value.onboardingStage)
+      [
+        'user_profile',
+        'workplace_setup',
+        'appearance',
+        'review',
+        'post_import',
+        'complete',
+      ].includes(value.onboardingStage)
         ? { onboardingStage: value.onboardingStage as DevicePreferences['onboardingStage'] }
         : {}),
       ...(typeof value.onboardingCompleted === 'boolean'

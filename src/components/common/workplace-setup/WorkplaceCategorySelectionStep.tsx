@@ -4,7 +4,7 @@ import { AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface WorkplaceCategorySelectionStepProps {
   selectedCategories: string[];
@@ -26,10 +26,11 @@ export function WorkplaceCategorySelectionStep({
   isCompleting,
 }: WorkplaceCategorySelectionStepProps) {
   const { theme } = useTheme();
+  const [showValidation, setShowValidation] = useState(false);
   const incomeLabel = AppConfig.strings.onboarding.categories.typeLabels.income;
   const expenseLabel = AppConfig.strings.onboarding.categories.typeLabels.expense;
 
-  const categoryItems: SelectableItem[] = useMemo(
+  const categoryItems = useMemo(
     () => [
       ...DEFAULT_CATEGORIES.map(category => ({
         ...category,
@@ -44,6 +45,20 @@ export function WorkplaceCategorySelectionStep({
       })),
     ],
     [customCategories, incomeLabel, expenseLabel],
+  );
+
+  const categorySections = useMemo(
+    () => [
+      {
+        title: incomeLabel,
+        data: categoryItems.filter(item => item.subtitle === incomeLabel),
+      },
+      {
+        title: expenseLabel,
+        data: categoryItems.filter(item => item.subtitle === expenseLabel),
+      },
+    ],
+    [categoryItems, expenseLabel, incomeLabel],
   );
 
   const renderCategoryIcon = (item: SelectableItem, isSelected: boolean) => {
@@ -75,7 +90,19 @@ export function WorkplaceCategorySelectionStep({
     const item = categoryItems.find(candidate => candidate.id === id);
     if (item) {
       onToggleCategory(item.name);
+      setShowValidation(false);
     }
+  };
+
+  const handleContinue = () => {
+    const selectedTypes = new Set(
+      categoryItems.filter(item => selectedCategories.includes(item.id)).map(item => item.subtitle),
+    );
+    if (!selectedTypes.has(incomeLabel) || !selectedTypes.has(expenseLabel)) {
+      setShowValidation(true);
+      return;
+    }
+    onContinue();
   };
 
   return (
@@ -83,16 +110,27 @@ export function WorkplaceCategorySelectionStep({
       title={AppConfig.strings.onboarding.categories.title}
       subtitle={AppConfig.strings.onboarding.categories.subtitle}
       items={categoryItems}
+      sections={categorySections}
       selectedIds={selectedCategories}
       onToggle={handleToggle}
-      onContinue={onContinue}
+      onContinue={handleContinue}
       onBack={onBack}
       isCompleting={isCompleting}
       disableAnimation={true}
+      validationMessage={
+        showValidation
+          ? `Choose at least one ${incomeLabel.toLowerCase()} and one ${expenseLabel.toLowerCase()} category.`
+          : undefined
+      }
       listFooterContent={
         <CategoryCreationBar
           placeholder={AppConfig.strings.onboarding.categories.placeholder}
-          onAdd={onAddCustomCategory}
+          onAdd={(name, type, icon) => {
+            if (type === 'INCOME' || type === 'EXPENSE') {
+              onAddCustomCategory(name, type, icon);
+              setShowValidation(false);
+            }
+          }}
           defaultIcon="tag"
           showTypeToggle={true}
           typeLabels={AppConfig.strings.onboarding.categories.typeLabels}

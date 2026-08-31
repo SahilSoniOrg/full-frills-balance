@@ -6,13 +6,16 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
+export type CreationItemType = 'INCOME' | 'EXPENSE' | 'ASSET' | 'LIABILITY';
 
 export interface CategoryCreationBarProps {
   placeholder: string;
-  onAdd: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
+  onAdd: (name: string, type: CreationItemType, icon: IconName) => void;
   defaultIcon?: IconName;
   showTypeToggle?: boolean;
-  typeLabels?: { income: string; expense: string };
+  defaultType?: CreationItemType;
+  typeLabels?: Partial<Record<'income' | 'expense' | 'asset' | 'liability', string>>;
+  typeOptions?: { type: CreationItemType; label: string; color: string }[];
 }
 
 export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
@@ -21,28 +24,30 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
   defaultIcon = 'tag',
   showTypeToggle = false,
   typeLabels,
+  defaultType,
+  typeOptions,
 }) => {
   const { theme } = useTheme();
   const [customName, setCustomName] = useState('');
-  const [customType, setCustomType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
+  const [customType, setCustomType] = useState<CreationItemType>(
+    defaultType ?? (showTypeToggle ? 'EXPENSE' : 'EXPENSE'),
+  );
   const [selectedIcon, setSelectedIcon] = useState<IconName>(defaultIcon);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
 
   const handleAddCustom = useCallback(() => {
     if (!customName.trim()) return;
-    const type = showTypeToggle ? customType : 'EXPENSE';
+    const type = showTypeToggle ? customType : (defaultType ?? 'EXPENSE');
     onAdd(customName.trim(), type, selectedIcon);
     setCustomName('');
     setSelectedIcon(defaultIcon);
-  }, [customName, showTypeToggle, customType, onAdd, selectedIcon, defaultIcon]);
+  }, [customName, showTypeToggle, customType, onAdd, selectedIcon, defaultIcon, defaultType]);
 
   const handleTypeChange = useCallback(
-    (type: 'INCOME' | 'EXPENSE') => {
+    (type: CreationItemType) => {
       setCustomType(type);
       if (showTypeToggle) {
-        setSelectedIcon(
-          type === 'EXPENSE' ? defaultIcon : defaultIcon === 'tag' ? 'trendingUp' : defaultIcon,
-        );
+        setSelectedIcon(type === 'INCOME' ? 'trendingUp' : defaultIcon);
       }
     },
     [showTypeToggle, defaultIcon],
@@ -99,48 +104,51 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
 
       {showTypeToggle && (
         <Inline space="sm" style={{ paddingLeft: Size.inputMd + 8 }}>
-          <TouchableOpacity onPress={() => handleTypeChange('EXPENSE')}>
-            <Box
-              paddingVertical={4}
-              paddingHorizontal="md"
-              borderRadius="r3"
-              style={{
-                borderWidth: 1,
-                backgroundColor:
-                  customType === 'EXPENSE' ? withOpacity(theme.error, Opacity.soft) : 'transparent',
-                borderColor: customType === 'EXPENSE' ? theme.error : 'transparent',
-              }}
+          {(
+            typeOptions ?? [
+              {
+                type: 'EXPENSE' as const,
+                label: typeLabels?.expense || 'Expense',
+                color: theme.error,
+              },
+              {
+                type: 'INCOME' as const,
+                label: typeLabels?.income || 'Income',
+                color: theme.success,
+              },
+            ]
+          ).map(option => (
+            <TouchableOpacity
+              key={option.type}
+              onPress={() => handleTypeChange(option.type)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: customType === option.type }}
+              accessibilityLabel={option.label}
             >
-              <AppText
-                variant="caption"
-                style={{ color: customType === 'EXPENSE' ? theme.error : theme.textSecondary }}
+              <Box
+                paddingVertical={4}
+                paddingHorizontal="md"
+                borderRadius="r3"
+                style={{
+                  borderWidth: 1,
+                  backgroundColor:
+                    customType === option.type
+                      ? withOpacity(option.color, Opacity.soft)
+                      : 'transparent',
+                  borderColor: customType === option.type ? option.color : 'transparent',
+                }}
               >
-                {typeLabels?.expense || 'Expense'}
-              </AppText>
-            </Box>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTypeChange('INCOME')}>
-            <Box
-              paddingVertical={4}
-              paddingHorizontal="md"
-              borderRadius="r3"
-              style={{
-                borderWidth: 1,
-                backgroundColor:
-                  customType === 'INCOME'
-                    ? withOpacity(theme.success, Opacity.soft)
-                    : 'transparent',
-                borderColor: customType === 'INCOME' ? theme.success : 'transparent',
-              }}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: customType === 'INCOME' ? theme.success : theme.textSecondary }}
-              >
-                {typeLabels?.income || 'Income'}
-              </AppText>
-            </Box>
-          </TouchableOpacity>
+                <AppText
+                  variant="caption"
+                  style={{
+                    color: customType === option.type ? option.color : theme.textSecondary,
+                  }}
+                >
+                  {option.label}
+                </AppText>
+              </Box>
+            </TouchableOpacity>
+          ))}
         </Inline>
       )}
 

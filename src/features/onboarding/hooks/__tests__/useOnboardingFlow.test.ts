@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
+import { ONBOARDING_DRAFT_KEY } from '../../services/OnboardingDraftStore';
 import { useOnboardingFlow } from '../useOnboardingFlow';
 
 let mockMode: string | undefined;
@@ -15,8 +16,15 @@ jest.mock('@/src/utils/preferences', () => ({
       onboardingCompleted: false,
       onboardingStage: 'user_profile',
       onboardingWorkplaceId: undefined,
+      setOnboardingStage: jest.fn(),
     },
     userName: 'Sahil',
+    themePrefs: {
+      themeId: 'deep-space',
+      fontId: 'deep-space',
+      setThemeId: jest.fn(),
+      setFontId: jest.fn(),
+    },
   },
 }));
 
@@ -34,18 +42,19 @@ jest.mock('@/src/utils/storage', () => ({
 jest.mock('@/src/services/analytics', () => ({
   analytics: { trackOnboardingStep: jest.fn(), trackFeatureUsage: jest.fn() },
 }));
-
 jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
     back: jest.fn(),
     toImportSelection: jest.fn(),
     toDashboard: jest.fn(),
-    toOnboarding: jest.fn(),
   },
 }));
 jest.mock('@/src/features/onboarding/services/OnboardingService', () => ({
-  onboardingService: { completeImportedWorkplace: jest.fn() },
+  onboardingService: {
+    completeOnboarding: jest.fn().mockResolvedValue('created-workplace'),
+    completeImportedWorkplace: jest.fn(),
+  },
 }));
 jest.mock('@/src/data/database/idGenerator', () => ({ generator: () => 'operation-id' }));
 
@@ -54,6 +63,11 @@ describe('useOnboardingFlow', () => {
     mockMode = undefined;
     mockStage = undefined;
     jest.clearAllMocks();
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { getString: jest.Mock };
+    };
+    storage.getString.mockReset();
+    storage.getString.mockReturnValue(undefined);
     const { preferences } = jest.requireMock('@/src/utils/preferences') as {
       preferences: {
         device: {
@@ -61,6 +75,7 @@ describe('useOnboardingFlow', () => {
           onboardingCompleted: boolean;
           onboardingStage: string;
           onboardingWorkplaceId?: string;
+          setOnboardingStage: jest.Mock;
         };
       };
     };
@@ -68,73 +83,173 @@ describe('useOnboardingFlow', () => {
     preferences.device.deviceRegistered = false;
     preferences.device.onboardingStage = 'user_profile';
     preferences.device.onboardingWorkplaceId = undefined;
+    preferences.device.setOnboardingStage = jest.fn();
   });
 
   it('claims the Device then skips editable Workplace identity', async () => {
     const { result } = renderHook(() => useOnboardingFlow());
 
+    expect(result.current.stage).toBe('user_profile');
     expect(result.current.step).toBe(1);
     await act(async () => result.current.onContinue());
 
+    expect(result.current.stage).toBe('workplace_setup');
     expect(result.current.step).toBe(3);
     expect(result.current.workplaceName).toBe("Sahil's Personal workplace");
-    expect(result.current.workplaceIcon).toBe('briefcase');
   });
 
-  it('starts later Workplace creation at the editable identity step', () => {
+  it('starts full Workplace creation at the editable identity step', () => {
     mockMode = 'full';
 
     const { result } = renderHook(() => useOnboardingFlow());
 
+    expect(result.current.stage).toBe('workplace_setup');
     expect(result.current.step).toBe(2);
   });
 
-  it('does not restart Device onboarding when a claimed Device has a step-one draft', async () => {
+  it('writes appearance changes to global preferences instead of the onboarding draft', () => {
+    mockMode = 'full';
+    const { result } = renderHook(() => useOnboardingFlow());
+    const { preferences } = jest.requireMock('@/src/utils/preferences') as {
+      preferences: {
+        themePrefs: { setThemeId: jest.Mock; setFontId: jest.Mock };
+      };
+    };
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { set: jest.Mock };
+    };
+
+    act(() => {
+      result.current.setThemeId('ivy');
+      result.current.setFontId('editorial');
+    });
+
+    expect(preferences.themePrefs.setThemeId).toHaveBeenCalledWith('ivy');
+    expect(preferences.themePrefs.setFontId).toHaveBeenCalledWith('editorial');
+    const latestDraft = JSON.parse(storage.set.mock.calls.at(-1)[1]);
+    expect(latestDraft.themeId).toBeUndefined();
+    expect(latestDraft.fontId).toBeUndefined();
+  });
+
+  it('moves through appearance and review before committing the Workplace', async () => {
+    mockMode = 'full';
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    for (let index = 0; index < 4; index += 1) {
+      await act(async () => result.current.onContinue());
+    }
+    expect(result.current.stage).toBe('appearance');
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+
+    await act(async () => result.current.onFinish());
+
+    expect(
+      (
+        jest.requireMock('@/src/features/onboarding/services/OnboardingService') as {
+          onboardingService: { completeOnboarding: jest.Mock };
+        }
+      ).onboardingService.completeOnboarding,
+    ).toHaveBeenCalledWith(expect.objectContaining({ operationId: 'operation-id' }));
+    expect(
+      (jest.requireMock('@/src/utils/navigation') as { AppNavigation: { toDashboard: jest.Mock } })
+        .AppNavigation.toDashboard,
+    ).toHaveBeenCalled();
+    expect(result.current.stage).toBe('complete');
+  });
+
+  it('keeps checkpoint data in MMKV and never commits before final confirmation', async () => {
+    mockMode = 'full';
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { set: jest.Mock };
+    };
+    const { onboardingService } = jest.requireMock(
+      '@/src/features/onboarding/services/OnboardingService',
+    ) as { onboardingService: { completeOnboarding: jest.Mock } };
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+
+    expect(result.current.stage).toBe('appearance');
+    expect(onboardingService.completeOnboarding).not.toHaveBeenCalled();
+    expect(storage.set).toHaveBeenCalledWith(
+      ONBOARDING_DRAFT_KEY,
+      expect.stringContaining('"stage":"appearance"'),
+    );
+
+    await act(async () => result.current.onFinish());
+    expect(onboardingService.completeOnboarding).not.toHaveBeenCalled();
+
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+    expect(onboardingService.completeOnboarding).not.toHaveBeenCalled();
+
+    await act(async () => result.current.onFinish());
+    expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes review edits back to the requested draft checkpoint', async () => {
+    mockMode = 'full';
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+
+    act(() => result.current.onEdit('accounts'));
+    expect(result.current.stage).toBe('workplace_setup');
+    expect(result.current.step).toBe(4);
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+
+    act(() => result.current.onEdit('appearance'));
+    expect(result.current.stage).toBe('appearance');
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+  });
+
+  it('hydrates all fields and resumes at the persisted named stage', () => {
     const { storage } = jest.requireMock('@/src/utils/storage') as {
       storage: { getString: jest.Mock };
     };
-    const { preferences } = jest.requireMock('@/src/utils/preferences') as {
-      preferences: {
-        device: { deviceRegistered: boolean; onboardingCompleted: boolean };
-        userName: string;
-      };
-    };
-    preferences.device.onboardingCompleted = true;
-    preferences.device.deviceRegistered = true;
-    storage.getString.mockReturnValue(
-      JSON.stringify({ operationId: 'operation-id', step: 1, name: 'Sahil' }),
+    storage.getString.mockImplementation((key: string) =>
+      key === ONBOARDING_DRAFT_KEY
+        ? JSON.stringify({
+            version: 1,
+            stage: 'review',
+            workplaceStep: 'categories',
+            operationId: 'saved-operation',
+            name: 'Saved name',
+            workplaceName: 'Saved workplace',
+            workplaceIcon: 'home',
+            selectedCurrency: 'EUR',
+            selectedAccounts: ['Cash'],
+            customAccounts: [],
+            selectedCategories: ['Salary'],
+            customCategories: [],
+            themeId: 'ivy',
+            fontId: 'editorial',
+          })
+        : undefined,
     );
 
     const { result } = renderHook(() => useOnboardingFlow());
-    await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
 
-    expect(result.current.step).toBe(3);
+    expect(result.current.stage).toBe('review');
+    expect(result.current.name).toBe('Saved name');
+    expect(result.current.workplaceName).toBe('Saved workplace');
+    expect(result.current.selectedCurrency).toBe('EUR');
+    expect(result.current.themeId).toBe('deep-space');
+    expect(result.current.fontId).toBe('deep-space');
   });
 
-  it('resumes an unclaimed Device at the splash step', async () => {
-    const { storage } = jest.requireMock('@/src/utils/storage') as {
-      storage: { getString: jest.Mock };
-    };
-    storage.getString.mockReturnValue(JSON.stringify({ step: 1, name: 'Sahil' }));
-
-    const { result } = renderHook(() => useOnboardingFlow());
-    await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
-
-    expect(result.current.step).toBe(1);
-  });
-
-  it('allows first-run users to restore instead of creating a Workplace', () => {
-    const { AppNavigation } = jest.requireMock('@/src/utils/navigation') as {
-      AppNavigation: { toImportSelection: jest.Mock };
-    };
-    const { result } = renderHook(() => useOnboardingFlow());
-
-    act(() => result.current.onRestore());
-
-    expect(AppNavigation.toImportSelection).toHaveBeenCalledWith(false, 'onboarding');
-  });
-
-  it('resumes after import and completes the overall onboarding separately', async () => {
+  it('normalizes post-import entry to appearance and preserves import completion', async () => {
     mockStage = 'post_import';
     const { preferences } = jest.requireMock('@/src/utils/preferences') as {
       preferences: { device: { onboardingStage: string; onboardingWorkplaceId?: string } };
@@ -143,19 +258,111 @@ describe('useOnboardingFlow', () => {
     preferences.device.onboardingWorkplaceId = 'imported-workplace';
 
     const { result } = renderHook(() => useOnboardingFlow());
-    expect(result.current.step).toBe(7);
+    expect(result.current.stage).toBe('appearance');
 
+    act(() => result.current.onBack());
+    expect(result.current.stage).toBe('user_profile');
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('appearance');
+    expect(
+      (
+        jest.requireMock('@/src/contexts/app-shell/AppOnboardingProvider') as {
+          useOnboardingSession: () => { completeDeviceOnboarding: jest.Mock };
+        }
+      ).useOnboardingSession().completeDeviceOnboarding,
+    ).not.toHaveBeenCalled();
+
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
     await act(async () => result.current.onFinish());
 
-    const { onboardingService } = jest.requireMock(
-      '@/src/features/onboarding/services/OnboardingService',
-    ) as {
-      onboardingService: { completeImportedWorkplace: jest.Mock };
+    expect(
+      (
+        jest.requireMock('@/src/features/onboarding/services/OnboardingService') as {
+          onboardingService: { completeImportedWorkplace: jest.Mock };
+        }
+      ).onboardingService.completeImportedWorkplace,
+    ).toHaveBeenCalledWith('imported-workplace', "Sahil's Personal workplace", 'briefcase');
+    expect(
+      (jest.requireMock('@/src/utils/navigation') as { AppNavigation: { toDashboard: jest.Mock } })
+        .AppNavigation.toDashboard,
+    ).toHaveBeenCalled();
+  });
+
+  it('uses the imported user name when an older empty draft is still present', () => {
+    mockStage = 'post_import';
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { getString: jest.Mock };
     };
-    const { AppNavigation } = jest.requireMock('@/src/utils/navigation') as {
-      AppNavigation: { toDashboard: jest.Mock };
+    storage.getString.mockReturnValue(
+      JSON.stringify({
+        version: 1,
+        stage: 'appearance',
+        workplaceStep: 'categories',
+        operationId: 'operation-id',
+        name: '',
+        workplaceName: "User's Personal workplace",
+        workplaceIcon: 'briefcase',
+        selectedCurrency: 'USD',
+        selectedAccounts: ['Cash'],
+        customAccounts: [],
+        selectedCategories: ['Salary'],
+        customCategories: [],
+        themeId: 'deep-space',
+        fontId: 'deep-space',
+        importedWorkplaceId: 'imported-workplace',
+      }),
+    );
+
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    expect(result.current.name).toBe('Sahil');
+  });
+
+  it('keeps the MMKV workplace name when opening an imported workplace edit', () => {
+    mockStage = 'post_import';
+    const { storage } = jest.requireMock('@/src/utils/storage') as {
+      storage: { getString: jest.Mock };
     };
-    expect(onboardingService.completeImportedWorkplace).toHaveBeenCalledWith('imported-workplace');
-    expect(AppNavigation.toDashboard).toHaveBeenCalled();
+    storage.getString.mockReturnValue(
+      JSON.stringify({
+        version: 1,
+        stage: 'appearance',
+        workplaceStep: 'categories',
+        operationId: 'operation-id',
+        name: 'Sahil',
+        workplaceName: 'MMKV workplace name',
+        workplaceIcon: 'briefcase',
+        selectedCurrency: 'USD',
+        selectedAccounts: ['Cash'],
+        customAccounts: [],
+        selectedCategories: ['Salary'],
+        customCategories: [],
+        importedWorkplaceId: 'imported-workplace',
+      }),
+    );
+
+    const { result } = renderHook(() => useOnboardingFlow());
+    act(() => result.current.onEdit('workplace'));
+
+    expect(result.current.workplaceName).toBe('MMKV workplace name');
+  });
+
+  it('opens the profile step for a profile edit and returns to review after confirmation', async () => {
+    mockMode = 'full';
+    const { result } = renderHook(() => useOnboardingFlow());
+
+    for (let index = 0; index < 5; index += 1) {
+      await act(async () => result.current.onContinue());
+    }
+    expect(result.current.stage).toBe('review');
+
+    act(() => result.current.setWorkplaceName('My Ledger'));
+    act(() => result.current.onEdit('profile'));
+    expect(result.current.stage).toBe('user_profile');
+
+    await act(async () => result.current.onContinue());
+    expect(result.current.stage).toBe('review');
+    expect(result.current.workplaceName).toBe('My Ledger');
   });
 });

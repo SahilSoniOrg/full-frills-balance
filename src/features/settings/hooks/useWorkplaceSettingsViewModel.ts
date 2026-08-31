@@ -14,7 +14,11 @@ export interface WorkplaceSettingsViewModel {
   workplaces: PlainWorkplace[];
   activeWorkplace: PlainWorkplace | undefined;
   setActiveWorkplace: (workplace: PlainWorkplace) => Promise<void>;
-  updateWorkplaceIcon: (workplace: PlainWorkplace, icon: IconName) => Promise<void>;
+  updateWorkplaceDetails: (
+    workplace: PlainWorkplace,
+    name: string,
+    icon: IconName,
+  ) => Promise<void>;
   deleteWorkplace: (workplace: PlainWorkplace) => void;
   deletingWorkplaceId: string | null;
   startCreateWorkplace: () => void;
@@ -53,14 +57,17 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     AppNavigation.toWorkplaceCreation();
   }, []);
 
-  const updateWorkplaceIcon = useCallback(async (workplace: PlainWorkplace, icon: IconName) => {
-    try {
-      await workplaceService.updateWorkplace(workplace.id, { icon });
-      analytics.trackFeatureUsage('settings', 'update_workplace_icon', { icon });
-    } catch {
-      toast.error('Failed to update workplace icon.');
-    }
-  }, []);
+  const updateWorkplaceDetails = useCallback(
+    async (workplace: PlainWorkplace, name: string, icon: IconName) => {
+      try {
+        await workplaceService.updateWorkplace(workplace.id, { name, icon });
+        analytics.trackFeatureUsage('settings', 'update_workplace_icon', { icon });
+      } catch {
+        toast.error('Failed to update workplace.');
+      }
+    },
+    [],
+  );
 
   const deleteWorkplace = useCallback(
     (workplace: PlainWorkplace) => {
@@ -99,7 +106,7 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     workplaces: [...workplaces].sort((a, b) => a.name.localeCompare(b.name)),
     activeWorkplace: activeWorkplace ?? undefined,
     setActiveWorkplace,
-    updateWorkplaceIcon,
+    updateWorkplaceDetails,
     deleteWorkplace,
     deletingWorkplaceId,
     startCreateWorkplace,

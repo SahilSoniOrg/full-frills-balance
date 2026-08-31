@@ -21,7 +21,11 @@ export interface OnboardingData {
   workplaceIcon?: IconName;
   selectedCurrency: string;
   selectedAccounts: string[];
-  customAccounts: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
+  customAccounts: {
+    name: string;
+    type: 'ASSET' | 'LIABILITY' | 'INCOME' | 'EXPENSE';
+    icon: IconName;
+  }[];
   selectedCategories: string[];
   customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
 }
@@ -40,7 +44,17 @@ export class OnboardingService {
     if (trimmedName) preferences.setUserName(trimmedName);
   }
 
-  completeImportedWorkplace(workplaceId: WorkplaceId): void {
+  async completeImportedWorkplace(
+    workplaceId: WorkplaceId,
+    workplaceName?: string,
+    workplaceIcon?: IconName,
+  ): Promise<void> {
+    const updates: Partial<{ name: string; icon: string }> = {};
+    if (workplaceName?.trim()) updates.name = workplaceName.trim();
+    if (workplaceIcon) updates.icon = workplaceIcon;
+    if (Object.keys(updates).length > 0) {
+      await workplaceService.updateWorkplace(workplaceId, updates);
+    }
     preferences.device.setActiveWorkplaceId(workplaceId);
     preferences.device.setOnboardingWorkplaceId(undefined);
     preferences.device.setOnboardingStage('complete');
