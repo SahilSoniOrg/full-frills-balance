@@ -76,6 +76,7 @@ describe('PreferencesFacade import restore', () => {
     await preferences.loadPreferences();
 
     expect(preferences.rawDeviceBagPresentAtStartup).toBe(false);
+    expect(preferences.device.deviceRegistered).toBe(true);
     expect(preferences.device.onboardingCompleted).toBe(true);
     expect(preferences.device.isAppLockEnabled).toBe(true);
     expect(preferences.device.isSmsImportEnabled).toBe(true);

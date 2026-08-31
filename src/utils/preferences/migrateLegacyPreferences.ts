@@ -29,13 +29,26 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
     const parsed = raw ? (JSON.parse(raw) as unknown) : {};
     const { user, device, workplace, legacyCurrency } = splitPreferenceBags(parsed);
 
+    // Before the preference split, onboardingCompleted was the install-level
+    // claim flag. Seed the new launch gate from it when migrating the legacy
+    // combined blob; an explicit new-format deviceRegistered value wins.
+    const legacyDeviceRegistered =
+      typeof device.deviceRegistered === 'boolean'
+        ? device.deviceRegistered
+        : typeof device.onboardingCompleted === 'boolean'
+          ? device.onboardingCompleted
+          : undefined;
+
     const userBlob: UIPreferences = { ...DEFAULT_UI_PREFERENCES, ...user };
     if (raw && storage.getString(USER_PREFERENCES_KEY) === undefined) {
       storage.set(USER_PREFERENCES_KEY, JSON.stringify({ ...userBlob, ...legacyCurrency }));
     }
 
     const deviceKeyExists = storage.getString(DEVICE_PREFERENCES_KEY) !== undefined;
-    const deviceBlob: DevicePreferences = mergeDevicePreferences(device);
+    const deviceBlob: DevicePreferences = mergeDevicePreferences({
+      ...device,
+      ...(legacyDeviceRegistered !== undefined ? { deviceRegistered: legacyDeviceRegistered } : {}),
+    });
     if (hasDevicePreferenceValues(device) || !deviceKeyExists) {
       storage.set(DEVICE_PREFERENCES_KEY, JSON.stringify(deviceBlob));
     }
