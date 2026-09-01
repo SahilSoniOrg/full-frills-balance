@@ -9,7 +9,7 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
-import { Trace, traceService } from '@/src/utils/TraceService';
+import { Trace, startTrace } from '@/src/utils/TraceService';
 import { balanceHierarchyAggregator } from './balanceHierarchyAggregator';
 
 export class BalanceReadService {
@@ -96,7 +96,7 @@ export class BalanceReadService {
     requestedAccountIds?: AccountId[],
   ): Promise<AccountBalance[]> {
     const start = performance.now();
-    const trace = parentTrace || traceService.startTrace('BalanceReadService.getAccountBalances');
+    const trace = parentTrace || startTrace('BalanceReadService.getAccountBalances');
     try {
       const wantedIds =
         requestedAccountIds && requestedAccountIds.length > 0 ? new Set(requestedAccountIds) : null;

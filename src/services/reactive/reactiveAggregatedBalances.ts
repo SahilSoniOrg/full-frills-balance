@@ -20,7 +20,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import { traceService } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/utils/TraceService';
 import { combineLatest, distinctUntilChanged, finalize, map, Observable, switchMap } from 'rxjs';
 
 type RawSQLRow = Record<string, unknown>;
@@ -91,7 +91,7 @@ export function observeAggregatedAccountBalances(
         }),
         switchMap(async ([accountsSnapshot]) => {
           const accounts = accountsSnapshot.accounts;
-          const trace = traceService.startTrace('AllBalances.Calculate');
+          const trace = startTrace('AllBalances.Calculate');
           try {
             const now = new Date();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();

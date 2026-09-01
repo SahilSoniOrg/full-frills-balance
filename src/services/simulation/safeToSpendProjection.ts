@@ -9,7 +9,7 @@ import {
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import type { SafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
 import { Money } from '@/src/utils/money';
-import { traceService } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/utils/TraceService';
 
 /**
  * Runs simulation and assembles the dashboard from a fully resolved input snapshot.
@@ -18,7 +18,7 @@ import { traceService } from '@/src/utils/TraceService';
 export async function projectSafeToSpendDashboardFromSnapshot(
   snapshot: SafeToSpendInputSnapshot,
 ): Promise<SafeToSpendDashboard> {
-  const trace = traceService.startTrace('SafeToSpendReadModel.observeSafeToSpend');
+  const trace = startTrace('SafeToSpendReadModel.observeSafeToSpend');
   const {
     workplaceId,
     defaultCurrencyCode,

@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { traceService } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
@@ -87,7 +87,7 @@ export class InsightService {
         ]);
       }),
       switchMap(async ([_, accounts, activePlannedPayments, __, ninetyDaysAgo]) => {
-        const trace = traceService.startTrace('InsightService.observePatterns');
+        const trace = startTrace('InsightService.observePatterns');
         const minCount = insightsConfig.minRecurringCount;
 
         // 1. Concurrent Fetch: Recurring candidates and Expense history

@@ -12,7 +12,7 @@ import { PlainAccount } from '@/src/types/plainDtos';
 import { logger } from '@/src/utils/logger';
 import { firstValueFrom, combineLatest, Observable, switchMap, map, tap } from 'rxjs';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import { traceService } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/utils/TraceService';
 import {
   reactiveCacheCoordinator,
   REACTIVE_CACHE_NAMESPACES,
@@ -103,7 +103,7 @@ class ReactiveDataService {
    * like the dashboard and optimized account list before the user navigates to those screens.
    */
   async preWarm(targetCurrency: string, workplaceId: WorkplaceId): Promise<void> {
-    const trace = traceService.startTrace('ReactiveDataService.preWarm');
+    const trace = startTrace('ReactiveDataService.preWarm');
     try {
       // Warm up both dashboard and optimized account list
       // This ensures that when the user lands on the Home or Accounts screen,

@@ -69,13 +69,4 @@ export class Trace {
   }
 }
 
-class TraceService {
-  /**
-   * Start a new independent trace.
-   */
-  startTrace(actionName: string): Trace {
-    return new Trace(actionName);
-  }
-}
-
-export const traceService = new TraceService();
+export const startTrace = (actionName: string): Trace => new Trace(actionName);

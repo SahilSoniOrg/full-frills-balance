@@ -7,7 +7,7 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
-import { Trace, traceService } from '@/src/utils/TraceService';
+import { Trace, startTrace } from '@/src/utils/TraceService';
 import { CachedHierarchy } from './types';
 
 export class BalanceHierarchyAggregator {
@@ -21,8 +21,7 @@ export class BalanceHierarchyAggregator {
     parentTrace?: Trace,
   ): Promise<void> {
     const start = performance.now();
-    const trace =
-      parentTrace || traceService.startTrace('BalanceHierarchyAggregator.aggregateBalances');
+    const trace = parentTrace || startTrace('BalanceHierarchyAggregator.aggregateBalances');
     try {
       if (accounts.length === 0) return;
 

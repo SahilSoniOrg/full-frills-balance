@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
-import { Trace, traceService } from '@/src/utils/TraceService';
+import { Trace, startTrace } from '@/src/utils/TraceService';
 import { Flow, SimulationEngineResult } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
 
@@ -19,7 +19,7 @@ export class Simulator {
     startDayTimestamp: number = Date.now(),
     parentTrace?: Trace,
   ): SimulationEngineResult {
-    const trace = parentTrace || traceService.startTrace('Simulator.simulate');
+    const trace = parentTrace || startTrace('Simulator.simulate');
     try {
       const currentBalances = new Map(startingBalances);
       const flowByDay = new Map<number, Flow[]>();
