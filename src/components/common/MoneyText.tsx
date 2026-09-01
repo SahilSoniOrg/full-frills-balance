@@ -1,6 +1,6 @@
 import { AppText, type AppTextProps } from '@/src/components/core/AppText';
 import { useMoneyFormat } from '@/src/components/common/moneyFormat';
-import type { MoneyFormatStyle } from '@/src/utils/moneyFormat';
+import type { MoneyFormatStyle } from '@/src/utils/currencyFormatter';
 
 type MoneyTextProps = Omit<AppTextProps, 'children'> & {
   amount: number;

@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 
 /**
  * Rounds a number to a specific precision (decimal places).
@@ -45,19 +44,6 @@ export const safeSubtract = (a: number, b: number, precision: number): number =>
  */
 export const safeMultiply = (a: number, factor: number, precision: number): number => {
   return roundToPrecision(a * factor, precision);
-};
-
-/**
- * Formats a number as a currency string.
- * @param amount The value to format
- * @param currencyCode The ISO currency code
- */
-export const formatCurrency = (
-  amount: number,
-  currencyCode: string = AppConfig.defaultCurrency,
-): string => {
-  // Redirect to centralized CurrencyFormatter to ensure symbol fallback logic is applied
-  return CurrencyFormatter.format(amount, currencyCode);
 };
 
 /**
@@ -118,13 +104,6 @@ export class Money {
       safeMultiply(this.amount, factor, AppConfig.defaultCurrencyPrecision),
       this.currencyCode,
     );
-  }
-
-  /**
-   * Formats the amount as a currency string.
-   */
-  public format(): string {
-    return formatCurrency(this.amount, this.currencyCode);
   }
 
   /**

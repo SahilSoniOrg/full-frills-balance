@@ -1,4 +1,4 @@
-import { formatMoneyAmount } from '@/src/utils/moneyFormat';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { AppConfig } from '@/src/constants/app-config';
 import { confirm } from '@/src/utils/alerts';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';

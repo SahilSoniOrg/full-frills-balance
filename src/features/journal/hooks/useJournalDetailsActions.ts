@@ -1,4 +1,4 @@
-import { formatMoneyAmount } from '@/src/utils/moneyFormat';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';

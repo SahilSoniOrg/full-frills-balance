@@ -1,4 +1,4 @@
-import { formatMoneyAmount } from '@/src/utils/moneyFormat';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import {

@@ -1,5 +1,5 @@
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
-import { formatMoneyAmount, type FormatMoneyOptions } from '@/src/utils/moneyFormat';
+import { formatMoneyAmount, type FormatMoneyOptions } from '@/src/utils/currencyFormatter';
 import { useCallback } from 'react';
 
 export type MoneyFormatFn = (
