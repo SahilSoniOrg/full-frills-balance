@@ -12,6 +12,8 @@ import { logger } from '@/src/utils/logger';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { preferences } from '@/src/services/preferences';
 import { storage } from '@/src/utils/storage';
+import { claimedRestoreFingerprint } from '@/src/services/import/restoreOwnership';
+import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 
 const RESETTABLE_DRAFT_KEYS = [
   'onboarding_resume_state_v1',
@@ -65,5 +67,52 @@ export async function cleanupDatabase(): Promise<{ deletedCount: number }> {
   } catch (error) {
     logger.error('[IntegrityMaintenance] Cleanup failed:', error);
     throw error;
+  }
+}
+
+/**
+ * Sweeps unaccepted ghost restore workplaces created during incomplete or abandoned
+ * restore operations, ensuring orphaned records never linger in SQLite.
+ */
+export async function cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }> {
+  try {
+    const allWorkplaces = await workplaceRepository.findAll();
+    if (allWorkplaces.length === 0) return { cleanedCount: 0 };
+
+    const activeWorkplaceId = preferences.device.activeWorkplaceId;
+    const draftRaw = storage.getString('setup_draft_v1');
+    let draftOperationId: string | undefined;
+    if (draftRaw) {
+      try {
+        const parsed = JSON.parse(draftRaw);
+        if (parsed && typeof parsed.operationId === 'string') {
+          draftOperationId = parsed.operationId;
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    let cleanedCount = 0;
+
+    for (const workplace of allWorkplaces) {
+      if (workplace.id === activeWorkplaceId) continue;
+      if (workplace.id === draftOperationId) continue;
+
+      const hasRestoreClaim = Boolean(claimedRestoreFingerprint(workplace.id));
+      if (hasRestoreClaim) {
+        logger.warn(
+          `[IntegrityMaintenance] Cleaning up unaccepted ghost restore workplace: ${workplace.id}`,
+        );
+        await resetWorkplace(workplace.id);
+        restorePublicationClaims.release(workplace.id);
+        cleanedCount++;
+      }
+    }
+
+    return { cleanedCount };
+  } catch (error) {
+    logger.error('[IntegrityMaintenance] Ghost workplace cleanup failed:', error);
+    return { cleanedCount: 0 };
   }
 }

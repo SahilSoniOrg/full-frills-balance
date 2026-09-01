@@ -12,6 +12,7 @@ import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardPublishedRestore, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import {
   isSetupJourneyId,
   type SetupDraft,
@@ -68,6 +69,10 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
             defaultCurrencyCode: workplace.baseCurrency.value,
           },
         });
+      },
+      discardRestorePublication: async restoreDraft => {
+        await discardPublishedRestore(restoreDraft);
+        restorePublicationClaims.release(restoreDraft.operationId);
       },
     },
     finish: async finished => finishJourney(finished, recipeContainsSlice(recipe, 'appearance')),

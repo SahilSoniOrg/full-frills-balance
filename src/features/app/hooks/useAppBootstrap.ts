@@ -92,6 +92,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
             integrityService.runStartupCheck(workplaceId, lease.signal),
+            integrityService.cleanupGhostWorkplaces(),
             processDuePlannedPayments(workplaceId, lease.signal),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),

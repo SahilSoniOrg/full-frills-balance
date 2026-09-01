@@ -1,4 +1,9 @@
-import { cleanupDatabase, resetDatabase, resetWorkplace } from './integrityMaintenance';
+import {
+  cleanupDatabase,
+  cleanupGhostWorkplaces,
+  resetDatabase,
+  resetWorkplace,
+} from './integrityMaintenance';
 import { forceRunCheck, runStartupCheck } from './integrityOrchestrator';
 import { repairAccountBalance } from './integrityRepair';
 import {
@@ -83,6 +88,10 @@ export class IntegrityService {
 
   cleanupDatabase(): Promise<{ deletedCount: number }> {
     return cleanupDatabase();
+  }
+
+  cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }> {
+    return cleanupGhostWorkplaces();
   }
 }
 

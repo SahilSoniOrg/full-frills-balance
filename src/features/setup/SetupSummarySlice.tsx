@@ -22,7 +22,10 @@ export function SetupSummarySlice({
 }: {
   readonly draft: SetupDraft;
   readonly isCompleting: boolean;
-  readonly onEdit: (sliceId: SetupSliceId) => void;
+  readonly onEdit: (
+    sliceId: SetupSliceId,
+    targetStep?: 'identity' | 'currency' | 'accounts' | 'categories',
+  ) => void;
   readonly onConfirm: () => void;
   readonly onBack: () => void;
 }) {
@@ -109,17 +112,17 @@ export function SetupSummarySlice({
         categoryCount={categories}
         themeId={appearance?.themeId.value ?? ThemeIds.DEEP_SPACE}
         fontId={appearance?.fontId.value ?? FontIds.DEEP_SPACE}
-        onChangeWorkplace={() => onEdit('workplace')}
+        onChangeWorkplace={() => onEdit('workplace', 'identity')}
         onChangeProfile={() => onEdit('device')}
-        onChangeCurrency={() => onEdit('workplace')}
-        onChangeAccounts={() => onEdit('workplace')}
-        onChangeCategories={() => onEdit('workplace')}
+        onChangeCurrency={() => onEdit('workplace', 'currency')}
+        onChangeAccounts={() => onEdit('workplace', 'accounts')}
+        onChangeCategories={() => onEdit('workplace', 'categories')}
         onChangeAppearance={() => onEdit('appearance')}
         onConfirm={onConfirm}
         onBack={onBack}
         isCompleting={isCompleting}
         isImportedWorkplace={imported}
-        workplaceEditable
+        workplaceEditable={!imported}
         showAppearance={'appearance' in draft}
         showProfile={recipeContainsSlice(getSetupRecipe(draft.journeyId), 'device')}
       />

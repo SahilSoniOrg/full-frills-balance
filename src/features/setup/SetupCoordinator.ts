@@ -47,6 +47,7 @@ export interface SetupCoordinatorOptions {
   ) => void | Promise<void>;
   readonly effects?: {
     readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<RestoreHandoff>;
+    readonly discardRestorePublication?: (draft: RestoreSetupDraft) => Promise<void>;
     readonly commitDevice?: (output: DeviceSetupOutput) => void;
   };
   readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
@@ -138,10 +139,6 @@ function applyRestoreSource(
   output: RestoreSourceOutput,
 ): RestoreSetupDraft {
   const previousFingerprint = draft.restore.source?.source.fingerprint;
-  const publishedFingerprint = draft.restore.handoff?.fingerprint;
-  if (publishedFingerprint !== undefined && publishedFingerprint !== output.source.fingerprint) {
-    throw new Error('Published restore cannot switch to a different backup');
-  }
   if (previousFingerprint === output.source.fingerprint) {
     return {
       ...draft,
@@ -228,6 +225,18 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       );
     }
     await options.validate?.(sliceId, output, draft);
+    if (
+      sliceId === 'restore_source' &&
+      draft.kind === 'restore' &&
+      draft.restore.source?.source.fingerprint !==
+        (output as RestoreSourceOutput).source.fingerprint &&
+      draft.restore.handoff
+    ) {
+      if (!options.effects?.discardRestorePublication) {
+        throw new Error('Restore publication cleanup is not configured');
+      }
+      await options.effects.discardRestorePublication(draft);
+    }
     const acceptance = { sliceId, output } as SliceAcceptance;
     if (sliceId === 'device') commitDevice(options.effects, output as DeviceSetupOutput);
     const terminal = recipeTerminalSlice(recipe);

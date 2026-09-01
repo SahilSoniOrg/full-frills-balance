@@ -452,16 +452,29 @@ describe('SetupCoordinator', () => {
     });
   });
 
-  it('rejects a different backup after restore publication', async () => {
+  it('resets downstream state when switching to a different backup source', async () => {
     const store = memoryStore();
-    const draft: RestoreSetupDraft = {
+    const discardRestorePublication = jest.fn().mockResolvedValue(undefined);
+    const source = {
+      source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+      facts: { workplace: { name: 'Initial' } },
+    };
+    const workplace: WorkplaceSetupOutput = {
+      name: { value: 'Workplace', source: 'imported' },
+      icon: { value: 'briefcase', source: 'imported' },
+      baseCurrency: { value: 'USD', source: 'imported' },
+      selectedAccounts: [],
+      selectedCategories: [],
+      acceptedCheckpoints: ['identity', 'currency'],
+    };
+    const draft: SetupDraft = {
       schemaVersion: 1,
       kind: 'restore',
       journeyId: 'empty_device_restore',
-      entryPolicy: 'blocking',
       operationId,
-      presentedHistory: ['restore_source', 'restore_summary'],
-      acceptedSlices: ['restore_source', 'workplace'],
+      entryPolicy: 'blocking',
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
         source,
         handoff: {
@@ -481,17 +494,31 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
-      effects: { commitDevice: mockCommitDevice },
+      effects: { commitDevice: mockCommitDevice, discardRestorePublication },
     });
     coordinator.edit('restore_source');
-    await expect(
-      coordinator.accept('restore_source', {
-        source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
-        facts: { workplace: { name: 'Other' } },
-      }),
-    ).rejects.toThrow('Published restore cannot switch to a different backup');
-    expect(coordinator.getDraft()).toMatchObject({
-      restore: { handoff: { workplaceId: 'published' } },
+    await coordinator.accept('restore_source', {
+      source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+      facts: { workplace: { name: 'Other' } },
     });
+    expect(coordinator.getDraft()).toMatchObject({
+      acceptedSlices: ['restore_source'],
+      restore: {
+        source: {
+          source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+        },
+      },
+    });
+    const updatedDraft = coordinator.getDraft();
+    expect(
+      updatedDraft.kind === 'restore' ? updatedDraft.restore.handoff : undefined,
+    ).toBeUndefined();
+    expect(updatedDraft.workplace).toBeUndefined();
+    expect(discardRestorePublication).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operationId,
+        restore: expect.objectContaining({ handoff: draft.restore.handoff }),
+      }),
+    );
   });
 });

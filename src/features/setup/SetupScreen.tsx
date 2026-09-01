@@ -156,11 +156,27 @@ function SetupJourneyScreen({
     }
   };
 
-  const goTo = (target: SetupSliceId) => {
+  const [workplaceTargetStep, setWorkplaceTargetStep] = useState<
+    'identity' | 'currency' | 'accounts' | 'categories' | undefined
+  >();
+
+  const goTo = (
+    target: SetupSliceId,
+    targetStep?: 'identity' | 'currency' | 'accounts' | 'categories',
+  ) => {
+    setWorkplaceTargetStep(targetStep);
     if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
   };
 
   const goBack = () => {
+    if (
+      draft.kind === 'restore' &&
+      restoreLeaveNeedsConfirm(draft) &&
+      slice === 'restore_summary'
+    ) {
+      confirmAbandonRestore();
+      return;
+    }
     const result = coordinator.back();
     if (result.kind !== 'at_start') return;
     if (draft.kind === 'restore') {
@@ -198,23 +214,44 @@ function SetupJourneyScreen({
             onContinue={output => void advance('restore_source', output)}
           />
         );
-      case 'workplace':
+      case 'workplace': {
+        const isEditingFromSummary =
+          draft.activeSlice === 'workplace' && draft.acceptedSlices.includes('summary');
         return (
           <WorkplaceSetupSlice
             displayName={displayName}
             initial={workplaceInitial}
+            initialStep={workplaceTargetStep}
             books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}
             identityMode={recipe.workplaceIdentity}
             isCompleting={busy}
-            onContinue={output => void advance('workplace', output)}
-            onBack={goBack}
+            onContinue={output => {
+              setWorkplaceTargetStep(undefined);
+              void advance('workplace', output);
+            }}
+            onBack={() => {
+              setWorkplaceTargetStep(undefined);
+              if (isEditingFromSummary) {
+                goTo('summary');
+              } else {
+                goBack();
+              }
+            }}
             onRestore={
               journeyId === 'empty_device_workplace'
                 ? () => onSwitchJourney('empty_device_restore')
-                : undefined
+                : journeyId === 'first_run'
+                  ? () => {
+                      startFirstRunRestoreFromDeviceName(displayName);
+                      onSwitchJourney('first_run_restore');
+                    }
+                  : journeyId === 'create_workplace'
+                    ? () => onSwitchJourney('picker_restore')
+                    : undefined
             }
           />
         );
+      }
       case 'restore_summary':
         return draft.kind === 'restore' && recipe.restoreSummary ? (
           <RestoreSummarySlice
@@ -224,7 +261,13 @@ function SetupJourneyScreen({
             onIntent={intent => void acceptRestoreIntent(intent)}
           />
         ) : null;
-      case 'appearance':
+      case 'appearance': {
+        const appearanceBackTarget: SetupSliceId =
+          draft.kind === 'restore'
+            ? recipeContainsSlice(recipe, 'device')
+              ? 'device'
+              : 'restore_summary'
+            : 'workplace';
         return (
           <AppearanceSetupSlice
             currencyCode={draft.workplace?.baseCurrency.value ?? ''}
@@ -234,9 +277,10 @@ function SetupJourneyScreen({
             }
             isCompleting={busy}
             onContinue={output => void advance('appearance', output)}
-            onBack={() => goTo('workplace')}
+            onBack={() => goTo(appearanceBackTarget)}
           />
         );
+      }
       case 'summary':
         return (
           <SetupSummarySlice
