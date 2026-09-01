@@ -12,8 +12,6 @@ export interface LaunchSetupDraft {
 }
 
 export type LaunchResolution =
-  | { readonly kind: 'device_onboarding' }
-  | { readonly kind: 'workplace_creation' }
   | { readonly kind: 'setup'; readonly journeyId: string }
   | { readonly kind: 'picker' }
   | {
@@ -42,8 +40,8 @@ export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution 
     return { kind: 'setup', journeyId: input.setupDraft.journeyId };
   }
 
-  if (!deviceClaimed) return { kind: 'device_onboarding' };
-  if (workplaceIds.length === 0) return { kind: 'workplace_creation' };
+  if (!deviceClaimed) return { kind: 'setup', journeyId: 'first_run' };
+  if (workplaceIds.length === 0) return { kind: 'setup', journeyId: 'empty_device_workplace' };
 
   if (pendingWorkplaceId && workplaceIds.includes(pendingWorkplaceId)) {
     return { kind: 'open', workplaceId: pendingWorkplaceId, persistAsActive: true };

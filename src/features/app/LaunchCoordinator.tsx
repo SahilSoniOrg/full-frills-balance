@@ -35,9 +35,6 @@ export type LaunchCoordinatorState =
   | { kind: 'loading'; retry: () => void }
   | { kind: 'error'; error: Error; retry: () => void }
   | Extract<LaunchResolution, { kind: 'setup' }>
-  | (LaunchResolution & {
-      kind: 'device_onboarding' | 'workplace_creation';
-    })
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
   | Extract<LaunchResolution, { kind: 'open' }>;
 
@@ -54,13 +51,7 @@ export function shouldRenderGateChildren(
   pathname: string,
 ): boolean {
   const isGateRoute = pathname === '/onboarding' || pathname === '/import-selection';
-  return (
-    isGateRoute &&
-    (kind === 'setup' ||
-      kind === 'device_onboarding' ||
-      kind === 'workplace_creation' ||
-      kind === 'picker')
-  );
+  return isGateRoute && (kind === 'setup' || kind === 'picker');
 }
 
 function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
@@ -236,11 +227,7 @@ export function LaunchCoordinatorContent({
     reject: (error: unknown) => void;
   } | null>(null);
   useEffect(() => {
-    if (
-      state.kind === 'setup' ||
-      state.kind === 'device_onboarding' ||
-      state.kind === 'workplace_creation'
-    ) {
+    if (state.kind === 'setup') {
       if (pathname !== '/onboarding' && pathname !== '/import-selection') {
         // Prevent a direct books deep link from mounting without a Workplace.
         router.replace('/onboarding');
@@ -449,9 +436,7 @@ export function LaunchCoordinatorContent({
   }
   if (
     gateChildren &&
-    (state.kind === 'setup' ||
-      state.kind === 'device_onboarding' ||
-      state.kind === 'workplace_creation') &&
+    state.kind === 'setup' &&
     pathname !== '/onboarding' &&
     pathname !== '/import-selection'
   ) {
@@ -474,13 +459,7 @@ export function LaunchCoordinatorContent({
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>
-        {state.kind === 'setup'
-          ? 'Setup'
-          : state.kind === 'device_onboarding'
-            ? 'Device setup'
-            : 'Create a workplace'}
-      </Text>
+      <Text>Setup</Text>
     </View>
   );
 }

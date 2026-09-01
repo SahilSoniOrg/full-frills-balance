@@ -6,8 +6,8 @@ const wp2 = asWorkplaceId('wp-2');
 
 describe('resolveLaunch', () => {
   it.each([
-    [false, [], undefined, { kind: 'device_onboarding' }, undefined],
-    [true, [], undefined, { kind: 'workplace_creation' }, undefined],
+    [false, [], undefined, { kind: 'setup', journeyId: 'first_run' }, undefined],
+    [true, [], undefined, { kind: 'setup', journeyId: 'empty_device_workplace' }, undefined],
     [true, [wp1], undefined, { kind: 'open', workplaceId: wp1, persistAsActive: true }, undefined],
     [true, [wp1, wp2], undefined, { kind: 'picker' }, undefined],
     [true, [wp1], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }, undefined],
@@ -56,6 +56,6 @@ describe('resolveLaunch', () => {
         deviceClaimed: false,
         workplaceIds: [],
       }),
-    ).toEqual({ kind: 'device_onboarding' });
+    ).toEqual({ kind: 'setup', journeyId: 'first_run' });
   });
 });

@@ -17,7 +17,9 @@ import type { SetupSliceId } from './setupTypes';
 import type { WorkplaceId } from '@/src/types/ids';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 
-function SetupJourneyScreen({ journeyId }: { journeyId: 'first_run' | 'create_workplace' }) {
+type RenderedSetupJourney = 'first_run' | 'create_workplace' | 'empty_device_workplace';
+
+function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) {
   const operationId = useMemo(() => generator() as WorkplaceId, []);
   const existingDraft = useMemo(() => {
     const draft = loadSetupDraft();
@@ -167,7 +169,16 @@ function SetupScreen() {
       preferences.device.onboardingWorkplaceId !== undefined,
   });
   if (route === 'legacy_post_import') return <OnboardingScreen />;
-  return <SetupJourneyScreen journeyId={route} />;
+  if (route === 'create_workplace') return <SetupJourneyScreen journeyId="create_workplace" />;
+  const draft = loadSetupDraft();
+  if (draft?.journeyId === 'first_run' || draft?.journeyId === 'empty_device_workplace') {
+    return <SetupJourneyScreen journeyId={draft.journeyId} />;
+  }
+  return (
+    <SetupJourneyScreen
+      journeyId={preferences.device.deviceRegistered ? 'empty_device_workplace' : 'first_run'}
+    />
+  );
 }
 
 export default withPrivacyScope(SetupScreen);
