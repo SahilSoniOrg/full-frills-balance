@@ -1,6 +1,9 @@
 import { JournalStatus } from '@/src/types/enums';
-import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
-import { isActiveJournalStatus, isJournalStatus } from '@/src/utils/journalStatus';
+import {
+  isActiveJournalStatus,
+  isJournalStatus,
+  isRebuildEligibleJournalStatus,
+} from '@/src/utils/journalStatus';
 
 describe('isRebuildEligibleJournalStatus', () => {
   it('treats undefined status as rebuild-eligible (posted default)', () => {

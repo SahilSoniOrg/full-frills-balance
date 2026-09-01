@@ -10,7 +10,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction, TransactionType } from '@/src/types/enums';
-import { isRebuildEligibleJournalStatus } from '@/src/utils/journalActiveStatus';
+import { isRebuildEligibleJournalStatus } from '@/src/utils/journalStatus';
 import { Model } from '@nozbe/watermelondb';
 import { PreparedJournalData, prepareJournalData } from './prepareJournalData';
 
