@@ -1,21 +1,18 @@
 import { AccountType } from '@/src/types/enums';
 import type { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { isValidIconName, type IconName } from '@/src/types/domainIcons';
-import { asAccountId, asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
-import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
+import { asWorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
+import { parseRestoreFacts, parseRestoreHandoff } from '@/src/services/import/parseRestorePayload';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
   FirstRunSetupDraft,
   RestoreDraftState,
-  RestoreFacts,
-  RestoreHandoff,
   RestoreSetupDraft,
   RestoreSourceOutput,
   RestoreSourceRef,
-  RestoreStats,
   RestoreSummaryOutput,
   SetupDraft,
   SetupDraftBase,
@@ -54,10 +51,6 @@ function hasOnlyKeys(value: RecordValue, keys: readonly string[]): boolean {
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-function optionalNonEmptyString(value: unknown): string | undefined {
-  return value === undefined ? undefined : nonEmptyString(value) ? value : undefined;
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
@@ -182,9 +175,8 @@ function parseWorkplace(value: unknown): WorkplaceSetupOutput | undefined {
 }
 
 function parseSourceRef(value: unknown): RestoreSourceRef | undefined {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['uri', 'name', 'size', 'fingerprint']))
-    return undefined;
   if (
+    !isRecord(value) ||
     !nonEmptyString(value.uri) ||
     !nonEmptyString(value.name) ||
     !nonEmptyString(value.fingerprint)
@@ -200,239 +192,10 @@ function parseSourceRef(value: unknown): RestoreSourceRef | undefined {
   };
 }
 
-function parseFacts(value: unknown): RestoreFacts | undefined {
-  if (
-    !isRecord(value) ||
-    !hasOnlyKeys(value, ['user', 'workplace', 'appearance', 'workplacePreferences']) ||
-    !isRecord(value.workplace) ||
-    !hasOnlyKeys(value.workplace, ['name', 'icon', 'defaultCurrencyCode'])
-  ) {
-    return undefined;
-  }
-  const workplaceName = optionalNonEmptyString(value.workplace.name);
-  const workplaceIcon = optionalNonEmptyString(value.workplace.icon);
-  const baseCurrency = optionalNonEmptyString(value.workplace.defaultCurrencyCode);
-  if (
-    (value.workplace.name !== undefined && !workplaceName) ||
-    (value.workplace.icon !== undefined && !workplaceIcon) ||
-    (value.workplace.defaultCurrencyCode !== undefined && !baseCurrency)
-  ) {
-    return undefined;
-  }
-
-  let user: RestoreFacts['user'];
-  if (value.user !== undefined) {
-    if (!isRecord(value.user) || !hasOnlyKeys(value.user, ['name'])) return undefined;
-    const name = optionalNonEmptyString(value.user.name);
-    if (value.user.name !== undefined && !name) return undefined;
-    user = name === undefined ? {} : { name };
-  }
-
-  let appearance: RestoreFacts['appearance'];
-  if (value.appearance !== undefined) {
-    if (
-      !isRecord(value.appearance) ||
-      !hasOnlyKeys(value.appearance, ['theme', 'themeId', 'fontId'])
-    )
-      return undefined;
-    const theme =
-      value.appearance.theme === undefined
-        ? undefined
-        : parseThemeAppearance(value.appearance.theme);
-    const themeId =
-      value.appearance.themeId === undefined ? undefined : parseTheme(value.appearance.themeId);
-    const fontId =
-      value.appearance.fontId === undefined ? undefined : parseFont(value.appearance.fontId);
-    if (
-      (value.appearance.theme !== undefined && !theme) ||
-      (value.appearance.themeId !== undefined && !themeId) ||
-      (value.appearance.fontId !== undefined && !fontId)
-    )
-      return undefined;
-    appearance = {
-      ...(theme === undefined ? {} : { theme }),
-      ...(themeId === undefined ? {} : { themeId }),
-      ...(fontId === undefined ? {} : { fontId }),
-    };
-  }
-
-  const workplacePreferences =
-    value.workplacePreferences === undefined
-      ? undefined
-      : parseWorkplacePreferences(value.workplacePreferences);
-  if (value.workplacePreferences !== undefined && !workplacePreferences) return undefined;
-
-  return {
-    ...(user === undefined ? {} : { user }),
-    workplace: {
-      ...(workplaceName === undefined ? {} : { name: workplaceName }),
-      ...(workplaceIcon === undefined ? {} : { icon: workplaceIcon }),
-      ...(baseCurrency === undefined ? {} : { defaultCurrencyCode: baseCurrency }),
-    },
-    ...(appearance === undefined ? {} : { appearance }),
-    ...(workplacePreferences === undefined ? {} : { workplacePreferences }),
-  };
-}
-
-function parseThemeAppearance(value: unknown): 'light' | 'dark' | 'system' | undefined {
-  return value === 'light' || value === 'dark' || value === 'system' ? value : undefined;
-}
-
-function parseWorkplacePreferences(value: unknown): Partial<WorkplacePreferences> | undefined {
-  if (
-    !isRecord(value) ||
-    !hasOnlyKeys(value, [
-      'lastSelectedAccountId',
-      'lastDateRange',
-      'lastUsedSourceAccountId',
-      'lastUsedDestinationAccountId',
-      'dismissedPatternIds',
-      'safeToSpendDays',
-    ])
-  )
-    return undefined;
-  if (value.lastDateRange !== undefined) {
-    if (
-      !isRecord(value.lastDateRange) ||
-      !hasOnlyKeys(value.lastDateRange, ['startDate', 'endDate']) ||
-      typeof value.lastDateRange.startDate !== 'number' ||
-      typeof value.lastDateRange.endDate !== 'number'
-    )
-      return undefined;
-  }
-  for (const key of [
-    'lastSelectedAccountId',
-    'lastUsedSourceAccountId',
-    'lastUsedDestinationAccountId',
-  ] as const) {
-    if (value[key] !== undefined && !nonEmptyString(value[key])) return undefined;
-  }
-  if (
-    value.dismissedPatternIds !== undefined &&
-    (!Array.isArray(value.dismissedPatternIds) ||
-      !value.dismissedPatternIds.every(item => typeof item === 'string'))
-  )
-    return undefined;
-  if (value.safeToSpendDays !== undefined && !isNonNegativeInteger(value.safeToSpendDays))
-    return undefined;
-  return {
-    ...(value.lastSelectedAccountId === undefined
-      ? {}
-      : { lastSelectedAccountId: asAccountId(value.lastSelectedAccountId as string) }),
-    ...(value.lastDateRange === undefined
-      ? {}
-      : { lastDateRange: value.lastDateRange as { startDate: number; endDate: number } }),
-    ...(value.lastUsedSourceAccountId === undefined
-      ? {}
-      : { lastUsedSourceAccountId: asAccountId(value.lastUsedSourceAccountId as string) }),
-    ...(value.lastUsedDestinationAccountId === undefined
-      ? {}
-      : {
-          lastUsedDestinationAccountId: asAccountId(value.lastUsedDestinationAccountId as string),
-        }),
-    ...(value.dismissedPatternIds === undefined
-      ? {}
-      : { dismissedPatternIds: value.dismissedPatternIds as string[] }),
-    ...(value.safeToSpendDays === undefined ? {} : { safeToSpendDays: value.safeToSpendDays }),
-  };
-}
-
-function parseStats(value: unknown): RestoreStats | undefined {
-  if (
-    !isRecord(value) ||
-    !hasOnlyKeys(value, [
-      'workplaceId',
-      'accounts',
-      'journals',
-      'transactions',
-      'budgets',
-      'auditLogs',
-      'plannedPayments',
-      'skippedTransactions',
-      'skippedItems',
-      'preImportBackupPath',
-    ]) ||
-    !isNonNegativeInteger(value.accounts) ||
-    !isNonNegativeInteger(value.journals) ||
-    !isNonNegativeInteger(value.transactions) ||
-    !isNonNegativeInteger(value.skippedTransactions)
-  ) {
-    return undefined;
-  }
-  if (value.workplaceId !== undefined && !nonEmptyString(value.workplaceId)) return undefined;
-  if (value.budgets !== undefined && !isNonNegativeInteger(value.budgets)) return undefined;
-  if (value.auditLogs !== undefined && !isNonNegativeInteger(value.auditLogs)) return undefined;
-  if (value.plannedPayments !== undefined && !isNonNegativeInteger(value.plannedPayments))
-    return undefined;
-  if (value.preImportBackupPath !== undefined && !nonEmptyString(value.preImportBackupPath))
-    return undefined;
-  if (
-    value.skippedItems !== undefined &&
-    (!Array.isArray(value.skippedItems) ||
-      !value.skippedItems.every(
-        item =>
-          isRecord(item) &&
-          hasOnlyKeys(item, ['id', 'reason', 'description']) &&
-          nonEmptyString(item.id) &&
-          nonEmptyString(item.reason) &&
-          (item.description === undefined || typeof item.description === 'string'),
-      ))
-  )
-    return undefined;
-  return {
-    ...(value.workplaceId === undefined ? {} : { workplaceId: value.workplaceId }),
-    accounts: value.accounts,
-    journals: value.journals,
-    transactions: value.transactions,
-    skippedTransactions: value.skippedTransactions,
-    ...(value.budgets === undefined ? {} : { budgets: value.budgets }),
-    ...(value.auditLogs === undefined ? {} : { auditLogs: value.auditLogs }),
-    ...(value.plannedPayments === undefined ? {} : { plannedPayments: value.plannedPayments }),
-    ...(value.skippedItems === undefined ? {} : { skippedItems: value.skippedItems }),
-    ...(value.preImportBackupPath === undefined
-      ? {}
-      : { preImportBackupPath: value.preImportBackupPath }),
-  };
-}
-
-function parseHandoff(value: unknown, operationId: WorkplaceId): RestoreHandoff | undefined {
-  if (
-    !isRecord(value) ||
-    !hasOnlyKeys(value, ['operationId', 'workplaceId', 'fingerprint', 'facts', 'stats', 'warnings'])
-  ) {
-    return undefined;
-  }
-  if (
-    !isWorkplaceId(value.operationId) ||
-    !isWorkplaceId(value.workplaceId) ||
-    !nonEmptyString(value.fingerprint)
-  )
-    return undefined;
-  if (value.operationId !== operationId) return undefined;
-  const facts = parseFacts(value.facts);
-  const stats = parseStats(value.stats);
-  if (
-    !facts ||
-    !stats ||
-    !Array.isArray(value.warnings) ||
-    !value.warnings.every(item => typeof item === 'string')
-  ) {
-    return undefined;
-  }
-  return {
-    operationId: asWorkplaceId(value.operationId),
-    workplaceId: asWorkplaceId(value.workplaceId),
-    fingerprint: value.fingerprint,
-    facts,
-    stats,
-    warnings: value.warnings,
-  };
-}
-
 function parseRestoreSource(value: unknown): RestoreSourceOutput | undefined {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['source', 'facts'])) return undefined;
+  if (!isRecord(value)) return undefined;
   const source = parseSourceRef(value.source);
-  const facts = parseFacts(value.facts);
+  const facts = parseRestoreFacts(value.facts);
   return source && facts ? { source, facts } : undefined;
 }
 
@@ -579,7 +342,7 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   const handoff =
     value.restore.handoff === undefined
       ? undefined
-      : parseHandoff(value.restore.handoff, base.operationId);
+      : parseRestoreHandoff(value.restore.handoff, base.operationId);
   const restoreSummary =
     value.restore.summary === undefined ? undefined : parseRestoreSummary(value.restore.summary);
   const device = value.device === undefined ? undefined : parseDevice(value.device);
