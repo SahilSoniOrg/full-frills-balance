@@ -163,6 +163,27 @@ describe('SetupCoordinator', () => {
     expect(coordinator.getDraft().activeSlice).toBe('summary');
   });
 
+  it('derives Back from the recipe instead of entering a slice the journey does not own', async () => {
+    const firstRun = createSetupCoordinator({
+      journeyId: 'first_run',
+      operationId,
+      draftStore: memoryStore(),
+      finishers: {},
+    });
+    await firstRun.accept('device', {
+      displayName: { value: 'Sahil', source: 'user_entered' },
+    });
+    expect(firstRun.back()).toEqual({ kind: 'present', sliceId: 'device' });
+
+    const creation = createSetupCoordinator({
+      journeyId: 'create_workplace',
+      operationId,
+      draftStore: memoryStore(),
+      finishers: {},
+    });
+    expect(creation.back()).toEqual({ kind: 'at_start' });
+  });
+
   it('keeps the draft when a finisher fails and clears only after success', async () => {
     const store = memoryStore();
     const draft: FirstRunSetupDraft = {

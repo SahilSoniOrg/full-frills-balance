@@ -16,6 +16,7 @@ import { snapshotService } from '@/src/utils/SnapshotService';
 import { preferences } from '@/src/utils/preferences';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { logger } from '@/src/utils/logger';
+import { restorePublicationClaims } from './restorePublicationClaims';
 import type { WorkplaceId } from '@/src/types/ids';
 import type {
   PreparedRestore,
@@ -151,6 +152,9 @@ export async function publishRestore(
     icon: corrections.icon.trim(),
     defaultCurrencyCode: corrections.defaultCurrencyCode.trim().toUpperCase(),
   };
+  // Claim before publication so interruption cannot create books whose source
+  // identity was never recorded.
+  restorePublicationClaims.claim(operationId, prepared.fingerprint);
   const warnings = [...prepared.warnings];
   const existing = await workplaceRepository.find(operationId);
   let published = existing;

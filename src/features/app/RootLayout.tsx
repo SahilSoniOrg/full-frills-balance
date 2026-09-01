@@ -15,7 +15,7 @@ import * as Sentry from '@sentry/react-native';
 import { useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import PostHog, { PostHogProvider } from 'posthog-react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import { View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -31,7 +31,11 @@ import {
   type LaunchSetupDraft,
   useLaunchCoordinator,
 } from './LaunchCoordinator';
-import { readBlockingSetupProjection } from '@/src/services/setup/launchProjection';
+import {
+  readBlockingSetupProjection,
+  readSetupDraftSnapshot,
+  subscribeToSetupDraft,
+} from '@/src/services/setup/launchProjection';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
@@ -51,9 +55,15 @@ function RootLayout() {
   const navigationRef = useNavigationContainerRef();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
-  const setupDraft = React.useMemo<LaunchSetupDraft | undefined>(() => {
-    return readBlockingSetupProjection();
-  }, []);
+  const setupDraftSnapshot = useSyncExternalStore(
+    subscribeToSetupDraft,
+    readSetupDraftSnapshot,
+    readSetupDraftSnapshot,
+  );
+  const setupDraft = React.useMemo<LaunchSetupDraft | undefined>(
+    () => readBlockingSetupProjection(setupDraftSnapshot),
+    [setupDraftSnapshot],
+  );
 
   useEffect(() => {
     if (navigationRef && AppConfig.features.enableSentry) {

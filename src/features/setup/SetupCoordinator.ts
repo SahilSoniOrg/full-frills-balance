@@ -228,13 +228,15 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
 
   const back = (): BackResult => {
     const history = [...draft.presentedHistory];
-    const current = draft.activeSlice ?? history.pop();
+    const action = next();
+    const current =
+      draft.activeSlice ?? (action.kind === 'present' ? action.sliceId : history.at(-1));
     if (current === undefined) return { kind: 'at_start' };
-    const previous = history.pop();
+    const currentIndex = history.lastIndexOf(current);
+    const previous = currentIndex > 0 ? history[currentIndex - 1] : history.at(-1);
     if (previous === undefined) {
       persist({
         ...draft,
-        presentedHistory: history,
         activeSlice: undefined,
         editingSlice: undefined,
       });
@@ -242,7 +244,6 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     }
     persist({
       ...draft,
-      presentedHistory: [...history, previous],
       activeSlice: previous,
       editingSlice: undefined,
     });

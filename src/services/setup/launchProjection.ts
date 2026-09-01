@@ -12,10 +12,27 @@ const JOURNEYS = new Set([
   'create_workplace',
 ]);
 
+const subscribers = new Set<() => void>();
+
+export function subscribeToSetupDraft(onChange: () => void): () => void {
+  subscribers.add(onChange);
+  return () => subscribers.delete(onChange);
+}
+
+/** SetupDraftStore is the sole writer and publishes changes to launch synchronously. */
+export function notifySetupDraftChanged(): void {
+  for (const subscriber of subscribers) subscriber();
+}
+
+export function readSetupDraftSnapshot(): string | undefined {
+  return storage.getString(SETUP_DRAFT_KEY);
+}
+
 /** Launch reads only the blocking gate projection; Setup owns the full draft parser. */
-export function readBlockingSetupProjection(): LaunchSetupDraft | undefined {
+export function readBlockingSetupProjection(
+  raw: string | undefined = readSetupDraftSnapshot(),
+): LaunchSetupDraft | undefined {
   try {
-    const raw = storage.getString(SETUP_DRAFT_KEY);
     if (!raw) return undefined;
     const value = JSON.parse(raw) as Record<string, unknown>;
     if (

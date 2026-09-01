@@ -6,18 +6,21 @@ import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/W
 import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
 import {
   StepSplash,
+  OnboardingScreen,
   OnboardingWorkplaceStepComponent,
   OnboardingThemeStep,
   OnboardingReviewStep,
 } from '@/src/features/onboarding';
 import { AppNavigation } from '@/src/utils/navigation';
+import { preferences } from '@/src/utils/preferences';
 import { generator } from '@/src/data/database/idGenerator';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { createSetupCoordinator } from './SetupCoordinator';
-import { loadSetupDraft } from './SetupDraftStore';
+import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import { resolveSetupRoute } from './resolveSetupRoute';
 import { finishDeviceSetup, finishSetup } from './setupFinishers';
 import type {
   SetupSliceId,
@@ -34,9 +37,7 @@ function defaultsFor<T extends { name: string }>(names: string[], suggestions: r
     .filter((item): item is T => item !== undefined);
 }
 
-function SetupScreen() {
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const journeyId = mode === 'full' ? 'create_workplace' : 'first_run';
+function SetupJourneyScreen({ journeyId }: { journeyId: 'first_run' | 'create_workplace' }) {
   const operationId = useMemo(() => generator() as WorkplaceId, []);
   const existingDraft = useMemo(() => {
     const draft = loadSetupDraft();
@@ -68,9 +69,11 @@ function SetupScreen() {
     const action = coordinator.next();
     return action.kind === 'present'
       ? action.sliceId
-      : journeyId === 'first_run'
-        ? 'device'
-        : 'workplace';
+      : action.kind === 'finish'
+        ? 'summary'
+        : journeyId === 'first_run'
+          ? 'device'
+          : 'workplace';
   });
   const [name, setName] = useState(
     existingDraft && 'device' in existingDraft
@@ -84,13 +87,17 @@ function SetupScreen() {
   const [currency, setCurrency] = useState<string>(
     existingDraft?.workplace?.baseCurrency.value ?? AppConfig.defaultCurrency,
   );
-  const [accounts, setAccounts] = useState<string[]>(['Cash', 'Bank']);
-  const [categories, setCategories] = useState<string[]>([
-    'Salary',
-    'Food & Drink',
-    'Groceries',
-    'Bills',
-  ]);
+  const [accounts, setAccounts] = useState<string[]>(
+    existingDraft?.workplace?.selectedAccounts.map(item => item.name) ?? ['Cash', 'Bank'],
+  );
+  const [categories, setCategories] = useState<string[]>(
+    existingDraft?.workplace?.selectedCategories.map(item => item.name) ?? [
+      'Salary',
+      'Food & Drink',
+      'Groceries',
+      'Bills',
+    ],
+  );
   const [themeId, setThemeId] = useState<(typeof ThemeIds)[keyof typeof ThemeIds]>(
     existingDraft && 'appearance' in existingDraft
       ? (existingDraft.appearance?.themeId.value ?? ThemeIds.DEEP_SPACE)
@@ -106,7 +113,7 @@ function SetupScreen() {
     'identity' | 'currency' | 'accounts' | 'categories'
   >('identity');
 
-  const advance = async (nextSlice: SetupSliceId, output: SetupSliceOutput) => {
+  const advance = async (output: SetupSliceOutput) => {
     setBusy(true);
     try {
       if (slice === 'device')
@@ -114,7 +121,11 @@ function SetupScreen() {
       await (
         coordinator.accept as (sliceId: SetupSliceId, output: SetupSliceOutput) => Promise<void>
       )(slice, output);
-      setSlice(nextSlice);
+      const action = await coordinator.advanceAutoAccepted();
+      if (action.kind !== 'present') {
+        throw new Error(`Setup cannot present the next slice while action is ${action.kind}`);
+      }
+      setSlice(action.sliceId);
     } finally {
       setBusy(false);
     }
@@ -123,7 +134,9 @@ function SetupScreen() {
   const finish = async () => {
     setBusy(true);
     try {
-      await coordinator.accept('summary', { confirmed: true });
+      if (coordinator.next().kind !== 'finish') {
+        await coordinator.accept('summary', { confirmed: true });
+      }
       const outcome = await coordinator.finish();
       if (outcome.kind === 'workplace_created') AppNavigation.toDashboard();
     } finally {
@@ -135,6 +148,23 @@ function SetupScreen() {
     if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
     if (target === 'workplace') setWorkplaceStep('identity');
     setSlice(target);
+  };
+
+  const goBack = () => {
+    const result = coordinator.back();
+    if (result.kind === 'at_start') {
+      if (journeyId === 'create_workplace') AppNavigation.back();
+      return;
+    }
+    if (result.sliceId === 'workplace') setWorkplaceStep('identity');
+    setSlice(result.sliceId);
+  };
+
+  const startLegacyRestore = () => {
+    // Restore still uses the proven post-import acknowledgement screen until its
+    // dedicated Setup slices are wired. Do not leave a competing first-run draft.
+    clearSetupDraft();
+    AppNavigation.toImportSelection(false, 'onboarding');
   };
 
   const workplaceOutput = {
@@ -156,10 +186,8 @@ function SetupScreen() {
           <StepSplash
             name={name}
             setName={setName}
-            onContinue={() =>
-              advance('workplace', { displayName: { value: name, source: 'user_entered' } })
-            }
-            onRestore={() => AppNavigation.toImportSelection(false, 'onboarding')}
+            onContinue={() => advance({ displayName: { value: name, source: 'user_entered' } })}
+            onRestore={startLegacyRestore}
             isCompleting={busy}
           />
         );
@@ -173,7 +201,7 @@ function SetupScreen() {
                 onNameChange={setWorkplaceName}
                 onIconChange={setWorkplaceIcon}
                 onContinue={() => setWorkplaceStep('currency')}
-                onBack={() => goTo('device')}
+                onBack={goBack}
                 isCompleting={busy}
               />
             )}
@@ -207,9 +235,7 @@ function SetupScreen() {
                   setCategories(v => (v.includes(n) ? v.filter(x => x !== n) : [...v, n]))
                 }
                 onAddCustomCategory={() => undefined}
-                onContinue={() =>
-                  advance(journeyId === 'first_run' ? 'appearance' : 'summary', workplaceOutput)
-                }
+                onContinue={() => advance(workplaceOutput)}
                 onBack={() => setWorkplaceStep('accounts')}
                 isCompleting={busy}
               />
@@ -225,7 +251,7 @@ function SetupScreen() {
             onThemeChange={setThemeId}
             onFontChange={setFontId}
             onContinue={() =>
-              advance('summary', {
+              advance({
                 themeId: { value: themeId, source: 'user_entered' },
                 fontId: { value: fontId, source: 'user_entered' },
               })
@@ -270,6 +296,19 @@ function SetupScreen() {
       {render()}
     </View>
   );
+}
+
+function SetupScreen() {
+  const { mode, stage } = useLocalSearchParams<{ mode?: string; stage?: string }>();
+  const route = resolveSetupRoute({
+    mode,
+    stage,
+    hasPendingImportedWorkplace:
+      preferences.device.onboardingStage === 'post_import' &&
+      preferences.device.onboardingWorkplaceId !== undefined,
+  });
+  if (route === 'legacy_post_import') return <OnboardingScreen />;
+  return <SetupJourneyScreen journeyId={route} />;
 }
 
 export default withPrivacyScope(SetupScreen);

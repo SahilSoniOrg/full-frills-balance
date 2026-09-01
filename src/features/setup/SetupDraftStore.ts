@@ -4,6 +4,7 @@ import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
 import { storage } from '@/src/utils/storage';
+import { notifySetupDraftChanged } from '@/src/services/setup/launchProjection';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -717,10 +718,12 @@ export class SetupDraftStore {
   save(draft: SetupDraft): void {
     if (!isValidSetupDraft(draft)) throw new Error('Cannot persist an invalid Setup draft');
     storage.set(SETUP_DRAFT_KEY, JSON.stringify(draft));
+    notifySetupDraftChanged();
   }
 
   clear(): void {
     storage.remove(SETUP_DRAFT_KEY);
+    notifySetupDraftChanged();
   }
 }
 

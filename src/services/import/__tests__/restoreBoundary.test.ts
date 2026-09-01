@@ -17,6 +17,9 @@ jest.mock('@/src/services/integrity', () => ({
 jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
   rebuildAllAccountBalancesAfterImport: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('@/src/services/import/restorePublicationClaims', () => ({
+  restorePublicationClaims: { claim: jest.fn() },
+}));
 jest.mock('@/src/services/ReactiveDataService', () => ({
   reactiveDataService: { clearCache: jest.fn() },
 }));
@@ -46,6 +49,7 @@ jest.mock('@/src/data/database/Database', () => ({
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import { prepareRestore, fingerprintRestoreSource } from '@/src/services/import/prepareRestore';
 import { publishRestore } from '@/src/services/import/publishRestore';
+import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
@@ -203,6 +207,27 @@ describe('restore service boundary', () => {
     });
 
     expect(importRepository.batchInsertNewWorkplace).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an operation ID when the prepared source fingerprint changed', async () => {
+    (restorePublicationClaims.claim as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Restore operation ID is already owned by a different backup source');
+    });
+    (workplaceRepository.find as jest.Mock).mockResolvedValue({
+      id: operationId,
+      name: 'Imported Books',
+      icon: 'briefcase',
+      defaultCurrencyCode: 'USD',
+    });
+
+    await expect(
+      publishRestore(prepared({ fingerprint: 'restore-v1:different' }), {
+        operationId,
+        corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      }),
+    ).rejects.toThrow('different backup source');
+    expect(workplaceRepository.find).not.toHaveBeenCalled();
+    expect(importRepository.batchInsertNewWorkplace).not.toHaveBeenCalled();
   });
 
   it('rejects missing publication facts instead of inventing them', async () => {
