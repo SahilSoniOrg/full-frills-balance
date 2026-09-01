@@ -175,7 +175,8 @@ describe('IvyImportPlugin', () => {
       // 1. Wallet (USD)
       // 2. Food (USD) (from transaction)
       // 3. Food (INR) (from budget with base currency INR)
-      expect(stats.accounts).toBe(3);
+      expect(stats.accounts).toBe(1);
+      expect(stats.categories).toBe(2);
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2); // 1 Expense = 2 legs
       expect(stats.skippedTransactions).toBe(0);

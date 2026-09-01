@@ -12,6 +12,7 @@ import { preferences } from '@/src/utils/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
@@ -105,15 +106,7 @@ export class WorkplaceService {
   }> {
     const accounts = await accountQueryRepository.findAll(workplaceId);
     return {
-      accounts: accounts.filter(
-        account =>
-          account.accountType === AccountType.ASSET ||
-          account.accountType === AccountType.LIABILITY,
-      ).length,
-      categories: accounts.filter(
-        account =>
-          account.accountType === AccountType.INCOME || account.accountType === AccountType.EXPENSE,
-      ).length,
+      ...countAccountsVsCategories(accounts),
       journals: await journalListQueryRepository.countNonDeleted(workplaceId),
     };
   }

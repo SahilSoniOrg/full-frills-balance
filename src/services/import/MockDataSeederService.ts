@@ -28,6 +28,7 @@ import type {
 import { integrityService } from '@/src/services/integrity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { preferences } from '@/src/utils/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
@@ -729,7 +730,7 @@ export class MockDataSeederService {
     onProgressSafe('Seeding completed successfully.', 1.0);
 
     return {
-      accounts: accounts.length,
+      ...countAccountsVsCategories(accounts),
       journals: journals.length,
       transactions: transactions.length,
       budgets: budgets.length,

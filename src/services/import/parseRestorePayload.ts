@@ -139,6 +139,7 @@ function parseRestoreStats(value: unknown): ImportStats | undefined {
   const skippedItems = parseSkippedItems(value.skippedItems);
   return {
     accounts: value.accounts,
+    ...(isNonNegativeInteger(value.categories) ? { categories: value.categories } : {}),
     journals: value.journals,
     transactions: value.transactions,
     skippedTransactions: value.skippedTransactions,

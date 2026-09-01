@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 export interface ImportStats {
   workplaceId?: string;
   accounts: number;
+  categories?: number;
   journals: number;
   transactions: number;
   budgets?: number;

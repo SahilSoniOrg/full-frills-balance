@@ -14,6 +14,8 @@ import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceType
 export interface ImportStats {
   workplaceId?: string;
   accounts: number;
+  /** Income/expense rows. Omitted on older persisted restore handoffs. */
+  categories?: number;
   journals: number;
   transactions: number;
   budgets?: number;

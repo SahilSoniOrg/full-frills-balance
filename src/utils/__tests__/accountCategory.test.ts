@@ -1,5 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 import {
+  countAccountsVsCategories,
   isValidHexColor,
   resolveAccountAccentColor,
   resolveAccountAppearance,
@@ -60,6 +61,20 @@ describe('accountCategory color utilities', () => {
         accentColor: '#3B82F6',
         categoryColor: '#10B981',
       });
+    });
+  });
+
+  describe('countAccountsVsCategories', () => {
+    it('splits income and expense rows out of the account count', () => {
+      expect(
+        countAccountsVsCategories([
+          { accountType: AccountType.ASSET },
+          { accountType: AccountType.LIABILITY },
+          { accountType: AccountType.EQUITY },
+          { accountType: AccountType.INCOME },
+          { accountType: 'EXPENSE' },
+        ]),
+      ).toEqual({ accounts: 3, categories: 2 });
     });
   });
 });

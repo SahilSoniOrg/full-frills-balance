@@ -103,6 +103,18 @@ export function isCategoryAccountType(accountType: AccountType): boolean {
   return accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
 }
 
+/** Same split as the Accounts vs Categories tabs: income/expense vs everything else. */
+export function countAccountsVsCategories(
+  accounts: readonly { readonly accountType: string | AccountType }[],
+): { readonly accounts: number; readonly categories: number } {
+  let categories = 0;
+  for (const account of accounts) {
+    const type = toAccountType(account.accountType);
+    if (type === AccountType.INCOME || type === AccountType.EXPENSE) categories += 1;
+  }
+  return { accounts: accounts.length - categories, categories };
+}
+
 export function getInferredAccountType(tab: TabType, side: TransactionType): AccountType {
   if (tab === 'expense') {
     return side === TransactionType.DEBIT ? AccountType.EXPENSE : AccountType.ASSET;

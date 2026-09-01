@@ -32,6 +32,7 @@ import {
   remapFundingAccountIdsCsv,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { UIPreferences } from '@/src/utils/preferences';
 import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
@@ -468,7 +469,7 @@ export const nativePlugin: ImportPlugin = {
           defaultCurrencyCode: currencyCode,
         },
         stats: {
-          accounts: accounts.length,
+          ...countAccountsVsCategories(accounts),
           journals: data.journals.length,
           transactions: data.transactions.length,
           budgets: data.budgets?.length || 0,

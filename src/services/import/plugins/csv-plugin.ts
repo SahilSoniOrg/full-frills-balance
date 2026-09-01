@@ -10,6 +10,7 @@ import {
 } from '@/src/services/import/plugins/csv/csvParser';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { AccountType } from '@/src/types/enums';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 
 // Re-export parser utilities for backwards compatibility & tests
@@ -215,7 +216,7 @@ export const csvPlugin: ImportPlugin = {
       canonical,
       workplace: { defaultCurrencyCode: defaultCurrency },
       stats: {
-        accounts: canonical.accounts.length,
+        ...countAccountsVsCategories(canonical.accounts),
         journals: canonical.journals.length,
         transactions: canonical.transactions.length,
         budgets: canonical.budgets?.length || 0,

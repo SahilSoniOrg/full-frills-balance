@@ -9,6 +9,7 @@ import {
   parseTimestampMs,
 } from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 
 // Ivy Wallet Interfaces
@@ -354,7 +355,7 @@ export const ivyPlugin: ImportPlugin = {
         defaultCurrencyCode: ivyBaseCurrency,
       },
       stats: {
-        accounts: canonical.accounts.length,
+        ...countAccountsVsCategories(canonical.accounts),
         journals: canonical.journals.length,
         transactions: canonical.transactions.length,
         budgets: canonical.budgets?.length || 0,

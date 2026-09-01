@@ -1,8 +1,17 @@
 import { FontIds, ThemeIds } from '@/src/constants';
 import { SetupReviewStep } from './SetupReviewStep';
 import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { loadRestoreSummary } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import type { SetupDraft, SetupSliceId } from './setupTypes';
+
+function restoreHandoffCounts(draft: SetupDraft) {
+  if (draft.kind !== 'restore') return undefined;
+  const stats = draft.restore.handoff?.stats;
+  if (stats?.categories === undefined) return undefined;
+  return { accounts: stats.accounts, categories: stats.categories };
+}
 
 export function SetupSummarySlice({
   draft,
@@ -21,12 +30,33 @@ export function SetupSummarySlice({
   const workplace = draft.workplace;
   const name = 'device' in draft ? (draft.device?.displayName.value ?? '') : '';
   const appearance = 'appearance' in draft ? draft.appearance : undefined;
+  const fromHandoff = restoreHandoffCounts(draft);
+  const [publishedCounts, setPublishedCounts] = useState<{
+    readonly accounts: number;
+    readonly categories: number;
+  }>();
+
+  useEffect(() => {
+    if (restoreHandoffCounts(draft) || draft.kind !== 'restore') return;
+    let cancelled = false;
+    void loadRestoreSummary(draft)
+      .then(view => {
+        if (cancelled || !view) return;
+        setPublishedCounts({ accounts: view.accounts, categories: view.categories });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [draft]);
+
+  const restoreCounts = fromHandoff ?? publishedCounts;
   const accounts = imported
-    ? draft.kind === 'restore'
-      ? (draft.restore.handoff?.stats.accounts ?? 0)
-      : 0
+    ? (restoreCounts?.accounts ?? 0)
     : (workplace?.selectedAccounts.length ?? 0);
-  const categories = imported ? 0 : (workplace?.selectedCategories.length ?? 0);
+  const categories = imported
+    ? (restoreCounts?.categories ?? 0)
+    : (workplace?.selectedCategories.length ?? 0);
 
   return (
     <View testID="onboarding-summary-step" style={{ flex: 1 }}>

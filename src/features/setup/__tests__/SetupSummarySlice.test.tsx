@@ -1,10 +1,18 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
 import { ThemeIds, FontIds } from '@/src/constants';
+import type { ImportStats } from '@/src/services/import/types';
 import { SetupSummarySlice } from '../SetupSummarySlice';
+import { loadRestoreSummary } from '../setupFinishers';
 import type { RestoreSetupDraft } from '../setupTypes';
 
-const restoreDraft: RestoreSetupDraft = {
+jest.mock('../setupFinishers', () => ({
+  loadRestoreSummary: jest.fn(),
+}));
+
+const load = loadRestoreSummary as jest.MockedFunction<typeof loadRestoreSummary>;
+
+const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
   schemaVersion: 1,
   kind: 'restore',
   journeyId: 'first_run_restore',
@@ -22,7 +30,7 @@ const restoreDraft: RestoreSetupDraft = {
       workplaceId: asWorkplaceId('operation'),
       fingerprint: 'abc',
       facts: { workplace: { name: 'Books' } },
-      stats: { accounts: 4, journals: 2, transactions: 2, skippedTransactions: 0 },
+      stats,
       warnings: [],
     },
   },
@@ -39,14 +47,24 @@ const restoreDraft: RestoreSetupDraft = {
     themeId: { value: ThemeIds.DEEP_SPACE, source: 'user_entered' },
     fontId: { value: FontIds.DEEP_SPACE, source: 'user_entered' },
   },
-};
+});
 
 describe('SetupSummarySlice', () => {
-  it('uses restore handoff stats instead of a second publication read', () => {
+  beforeEach(() => {
+    load.mockReset();
+  });
+
+  it('uses split restore handoff counts instead of the combined account total', () => {
     const onConfirm = jest.fn();
     render(
       <SetupSummarySlice
-        draft={restoreDraft}
+        draft={restoreDraft({
+          accounts: 4,
+          categories: 6,
+          journals: 2,
+          transactions: 2,
+          skippedTransactions: 0,
+        })}
         isCompleting={false}
         onEdit={jest.fn()}
         onConfirm={onConfirm}
@@ -55,7 +73,38 @@ describe('SetupSummarySlice', () => {
     );
 
     expect(screen.getByText('4')).toBeTruthy();
+    expect(screen.getByText('6')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-finish-button'));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('reads published book stats when the handoff still lumped categories into accounts', async () => {
+    load.mockResolvedValue({
+      name: 'Books',
+      icon: 'briefcase',
+      currency: 'USD',
+      accounts: 4,
+      categories: 6,
+      journals: 2,
+    });
+
+    render(
+      <SetupSummarySlice
+        draft={restoreDraft({
+          accounts: 10,
+          journals: 2,
+          transactions: 2,
+          skippedTransactions: 0,
+        })}
+        isCompleting={false}
+        onEdit={jest.fn()}
+        onConfirm={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText('4')).toBeTruthy());
+    expect(screen.getByText('6')).toBeTruthy();
   });
 });

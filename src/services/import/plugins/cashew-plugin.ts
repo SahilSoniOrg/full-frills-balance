@@ -14,6 +14,7 @@ import {
 } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 import { files } from '@/src/utils/files';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import * as SQLite from 'expo-sqlite';
 
@@ -439,7 +440,7 @@ export const cashewPlugin: ImportPlugin = {
         canonical,
         workplace,
         stats: {
-          accounts: canonical.accounts.length,
+          ...countAccountsVsCategories(canonical.accounts),
           transactions: canonical.transactions.length,
           journals: canonical.journals.length,
           budgets: canonical.budgets?.length || 0,
