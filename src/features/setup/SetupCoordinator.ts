@@ -21,6 +21,7 @@ import type {
 } from './setupTypes';
 import { getSetupRecipe } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
+import { finishDeviceSetup } from './setupFinishers';
 
 export interface SetupSliceOutputById {
   readonly device: DeviceSetupOutput;
@@ -178,6 +179,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       );
     }
     await options.validate?.(sliceId, output, draft);
+    if (sliceId === 'device') finishDeviceSetup(output as SetupSliceOutputById['device']);
     const terminal = terminalSlice(recipe);
     const returnToTerminal = sliceId !== terminal && draft.acceptedSlices.includes(terminal);
     persist({

@@ -1,5 +1,6 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { createSetupCoordinator } from '../SetupCoordinator';
+import { finishDeviceSetup } from '../setupFinishers';
 import type {
   FirstRunSetupDraft,
   RestoreSetupDraft,
@@ -7,6 +8,10 @@ import type {
   SetupOutcome,
   WorkplaceSetupOutput,
 } from '../setupTypes';
+
+jest.mock('../setupFinishers', () => ({
+  finishDeviceSetup: jest.fn(),
+}));
 
 const operationId = asWorkplaceId('operation');
 
@@ -46,6 +51,12 @@ function memoryStore() {
 }
 
 describe('SetupCoordinator', () => {
+  const mockFinishDeviceSetup = finishDeviceSetup as jest.Mock;
+
+  beforeEach(() => {
+    mockFinishDeviceSetup.mockReset();
+  });
+
   it('creates a draft, accepts a slice, and persists the checkpoint', async () => {
     const store = memoryStore();
     const coordinator = createSetupCoordinator({
@@ -65,6 +76,28 @@ describe('SetupCoordinator', () => {
       device: { displayName: { value: 'Sahil' } },
     });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
+    expect(mockFinishDeviceSetup).toHaveBeenCalledWith({
+      displayName: { value: 'Sahil', source: 'user_entered' },
+    });
+  });
+
+  it('does not persist Device output when the checkpoint write fails', async () => {
+    mockFinishDeviceSetup.mockImplementation(() => {
+      throw new Error('prefs');
+    });
+    const store = memoryStore();
+    const coordinator = createSetupCoordinator({
+      journeyId: 'first_run',
+      operationId,
+      draftStore: store,
+      finish: unusedFinish,
+    });
+    await expect(
+      coordinator.accept('device', {
+        displayName: { value: 'Sahil', source: 'user_entered' },
+      }),
+    ).rejects.toThrow('prefs');
+    expect(coordinator.getDraft().acceptedSlices).toEqual([]);
   });
 
   it('runs authoritative auto-acceptance one checkpoint at a time', async () => {

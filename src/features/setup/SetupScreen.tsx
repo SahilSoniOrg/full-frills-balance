@@ -21,7 +21,7 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { createSetupCoordinator } from './SetupCoordinator';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import { resolveSetupRoute } from './resolveSetupRoute';
-import { finishDeviceSetup, finishSetup } from './setupFinishers';
+import { finishSetup } from './setupFinishers';
 import type {
   SetupSliceId,
   SetupSliceOutput,
@@ -109,8 +109,6 @@ function SetupJourneyScreen({ journeyId }: { journeyId: 'first_run' | 'create_wo
   const advance = async (output: SetupSliceOutput) => {
     setBusy(true);
     try {
-      if (slice === 'device')
-        finishDeviceSetup(output as Extract<SetupSliceOutput, { displayName: unknown }>);
       await (
         coordinator.accept as (sliceId: SetupSliceId, output: SetupSliceOutput) => Promise<void>
       )(slice, output);
