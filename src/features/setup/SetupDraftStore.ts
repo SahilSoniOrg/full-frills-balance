@@ -5,6 +5,10 @@ import { asWorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
 import { parseRestoreFacts, parseRestoreHandoff } from '@/src/services/import/parseRestorePayload';
+import {
+  claimedRestoreFingerprint,
+  isRestoreOwnershipTuple,
+} from '@/src/services/import/restoreOwnership';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -333,7 +337,7 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     !isRestoreJourneyId(value.journeyId) ||
     (value.entryPolicy !== 'blocking' && value.entryPolicy !== 'optional') ||
     !isRecord(value.restore) ||
-    !hasOnlyKeys(value.restore, ['source', 'handoff', 'summary'])
+    !hasOnlyKeys(value.restore, ['source', 'handoff', 'summary', 'deviceCandidate'])
   ) {
     return undefined;
   }
@@ -345,6 +349,10 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
       : parseRestoreHandoff(value.restore.handoff, base.operationId);
   const restoreSummary =
     value.restore.summary === undefined ? undefined : parseRestoreSummary(value.restore.summary);
+  const deviceCandidate =
+    value.restore.deviceCandidate === undefined
+      ? undefined
+      : parseNonEmptySourcedString(value.restore.deviceCandidate);
   const device = value.device === undefined ? undefined : parseDevice(value.device);
   const workplace = value.workplace === undefined ? undefined : parseWorkplace(value.workplace);
   const appearance = value.appearance === undefined ? undefined : parseAppearance(value.appearance);
@@ -353,6 +361,7 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     (value.restore.source !== undefined && !source) ||
     (value.restore.handoff !== undefined && !handoff) ||
     (value.restore.summary !== undefined && !restoreSummary) ||
+    (value.restore.deviceCandidate !== undefined && !deviceCandidate) ||
     (value.device !== undefined && !device) ||
     (value.workplace !== undefined && !workplace) ||
     (value.appearance !== undefined && !appearance) ||
@@ -360,10 +369,21 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   ) {
     return undefined;
   }
+  if (
+    !isRestoreOwnershipTuple({
+      operationId: base.operationId,
+      sourceFingerprint: source?.source.fingerprint,
+      handoff,
+      claimedFingerprint: claimedRestoreFingerprint(base.operationId),
+    })
+  ) {
+    return undefined;
+  }
   const restore: RestoreDraftState = {
     ...(source ? { source } : {}),
     ...(handoff ? { handoff } : {}),
     ...(restoreSummary ? { summary: restoreSummary } : {}),
+    ...(deviceCandidate ? { deviceCandidate } : {}),
   };
   const draft: RestoreSetupDraft = {
     ...base,

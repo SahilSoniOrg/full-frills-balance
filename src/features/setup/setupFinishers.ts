@@ -3,6 +3,10 @@ import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/utils/preferences';
+import {
+  claimedRestoreFingerprint,
+  isRestoreOwnershipTuple,
+} from '@/src/services/import/restoreOwnership';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -73,10 +77,52 @@ async function publishedRestoreWorkplace(draft: SetupDraft) {
   if (draft.kind !== 'restore') return undefined;
   const handoff = draft.restore.handoff;
   if (!handoff) return undefined;
-  if (handoff.operationId !== draft.operationId) return undefined;
-  const workplace = await workplaceService.getWorkplace(handoff.workplaceId);
-  if (!workplace || workplace.id !== handoff.workplaceId) return undefined;
-  return { handoff, workplace };
+  if (
+    !isRestoreOwnershipTuple({
+      operationId: draft.operationId,
+      sourceFingerprint: draft.restore.source?.source.fingerprint,
+      handoff,
+      claimedFingerprint: claimedRestoreFingerprint(draft.operationId),
+    })
+  ) {
+    return undefined;
+  }
+  try {
+    const workplace = await workplaceService.getWorkplace(handoff.workplaceId);
+    if (!workplace || workplace.id !== draft.operationId) return undefined;
+    return { handoff, workplace };
+  } catch {
+    return undefined;
+  }
+}
+
+export type RestoreSummaryView = {
+  readonly name: string;
+  readonly icon: string;
+  readonly currency: string;
+  readonly accounts: number;
+  readonly categories: number;
+  readonly journals: number;
+};
+
+export async function loadRestoreSummary(
+  draft: SetupDraft,
+): Promise<RestoreSummaryView | undefined> {
+  try {
+    const published = await publishedRestoreWorkplace(draft);
+    if (!published) return undefined;
+    const stats = await workplaceService.getPublishedBookStats(published.workplace.id);
+    return {
+      name: published.workplace.name,
+      icon: published.workplace.icon,
+      currency: published.workplace.defaultCurrencyCode,
+      accounts: stats.accounts,
+      categories: stats.categories,
+      journals: stats.journals,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 /** Delete only this operation's inactive published Workplace, after the caller confirmed. */

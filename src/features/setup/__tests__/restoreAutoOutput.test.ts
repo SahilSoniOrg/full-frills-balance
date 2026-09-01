@@ -55,17 +55,23 @@ describe('getRestoreAutoOutput', () => {
     expect(getRestoreAutoOutput('workplace', draft)).toBeUndefined();
   });
 
-  it('uses a typed candidate name when the backup has no User name', () => {
-    expect(
-      getRestoreAutoOutput(
-        'device',
-        restore({
+  it('uses a typed candidate name persisted on the restore draft', () => {
+    const draft: RestoreSetupDraft = {
+      ...restore({
+        ...completeSource,
+        facts: { workplace: completeSource.facts.workplace },
+      }),
+      restore: {
+        source: {
           ...completeSource,
           facts: { workplace: completeSource.facts.workplace },
-        }),
-        { candidateName: 'Typed', userName: 'Existing' },
-      ),
-    ).toEqual({ displayName: { value: 'Typed', source: 'user_entered' } });
+        },
+        deviceCandidate: { value: 'Typed', source: 'user_entered' },
+      },
+    };
+    expect(getRestoreAutoOutput('device', draft, { userName: 'Existing' })).toEqual({
+      displayName: { value: 'Typed', source: 'user_entered' },
+    });
   });
 
   it('prefers imported Device name over an existing Device name', () => {

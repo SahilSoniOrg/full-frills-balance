@@ -25,6 +25,7 @@ interface OnboardingReviewStepProps {
   isImportedWorkplace?: boolean;
   showAppearance?: boolean;
   showProfile?: boolean;
+  workplaceEditable?: boolean;
 }
 
 const THEME_LABELS: Record<ThemeId, string> = {
@@ -146,9 +147,11 @@ export function OnboardingReviewStep({
   isImportedWorkplace = false,
   showAppearance = true,
   showProfile = true,
+  workplaceEditable,
 }: OnboardingReviewStepProps) {
   const strings = AppConfig.strings.onboarding.review;
   const { theme } = useTheme();
+  const canEditWorkplace = workplaceEditable ?? !isImportedWorkplace;
 
   return (
     <Box flex={1}>
@@ -190,7 +193,7 @@ export function OnboardingReviewStep({
             value={workplaceName}
             onChange={onChangeWorkplace}
             icon={workplaceIcon}
-            editable={!isImportedWorkplace}
+            editable={canEditWorkplace}
           />
           <Box padding="md" style={[styles.financialSection, { borderBottomColor: theme.border }]}>
             <AppText variant="caption" color="secondary">

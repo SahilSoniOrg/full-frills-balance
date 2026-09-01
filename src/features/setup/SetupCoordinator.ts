@@ -149,7 +149,10 @@ function applyRestoreSource(
       withoutSlices(draft.acceptedSlices, SOURCE_DOWNSTREAM),
       'restore_source',
     ),
-    restore: { source: output },
+    restore: {
+      source: output,
+      ...(draft.restore.deviceCandidate ? { deviceCandidate: draft.restore.deviceCandidate } : {}),
+    },
     workplace: undefined,
     device: undefined,
     appearance: undefined,

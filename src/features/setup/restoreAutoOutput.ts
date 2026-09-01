@@ -11,14 +11,18 @@ import type {
 export function getRestoreAutoOutput(
   sliceId: SetupSliceId,
   draft: SetupDraft,
-  existing: { readonly userName?: string; readonly candidateName?: string } = {},
+  existing: { readonly userName?: string } = {},
 ): SetupSliceOutput | undefined {
   if (draft.kind !== 'restore') return undefined;
   const facts = draft.restore.source?.facts;
   if (!facts) return undefined;
   if (sliceId === 'workplace') return workplaceFromFacts(facts.workplace);
   if (sliceId === 'device') {
-    return deviceFromFacts(facts.user?.name, existing.candidateName, existing.userName);
+    return deviceFromFacts(
+      facts.user?.name,
+      draft.restore.deviceCandidate?.value,
+      existing.userName,
+    );
   }
   return undefined;
 }

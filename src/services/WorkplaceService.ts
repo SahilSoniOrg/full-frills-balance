@@ -5,6 +5,8 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import Workplace, { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
+import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { analytics } from '@/src/services/analytics';
 import { preferences } from '@/src/utils/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
@@ -93,6 +95,27 @@ export class WorkplaceService {
 
   async getWorkplace(id: WorkplaceId): Promise<Workplace | undefined> {
     return await workplaceRepository.find(id);
+  }
+
+  /** Published-book counts. Asset/liability vs income/expense. */
+  async getPublishedBookStats(workplaceId: WorkplaceId): Promise<{
+    readonly accounts: number;
+    readonly categories: number;
+    readonly journals: number;
+  }> {
+    const accounts = await accountQueryRepository.findAll(workplaceId);
+    return {
+      accounts: accounts.filter(
+        account =>
+          account.accountType === AccountType.ASSET ||
+          account.accountType === AccountType.LIABILITY,
+      ).length,
+      categories: accounts.filter(
+        account =>
+          account.accountType === AccountType.INCOME || account.accountType === AccountType.EXPENSE,
+      ).length,
+      journals: await journalListQueryRepository.countNonDeleted(workplaceId),
+    };
   }
 
   async getAllWorkplaces(): Promise<Workplace[]> {

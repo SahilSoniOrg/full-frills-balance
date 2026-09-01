@@ -1,32 +1,25 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
-import { workplaceService } from '@/src/services/WorkplaceService';
 import { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
-import type { RestoreHandoff, RestoreSummaryIntent, SetupJourneyId } from './setupTypes';
-import type { WorkplaceId } from '@/src/types/ids';
+import { loadRestoreSummary, type RestoreSummaryView } from './setupFinishers';
+import type { RestoreSummaryActions } from './setupRecipes';
+import type { RestoreSetupDraft, RestoreSummaryIntent } from './setupTypes';
 
 type Verification =
   | { readonly status: 'loading' }
   | { readonly status: 'missing' }
-  | {
-      readonly status: 'ready';
-      readonly name: string;
-      readonly currency: string;
-      readonly icon: string;
-    };
+  | { readonly status: 'ready'; readonly view: RestoreSummaryView };
 
 export function RestoreSummarySlice({
-  journeyId,
-  operationId,
-  handoff,
+  draft,
+  actions,
   isCompleting,
   onIntent,
   onBack,
 }: {
-  readonly journeyId: SetupJourneyId;
-  readonly operationId: WorkplaceId;
-  readonly handoff: RestoreHandoff | undefined;
+  readonly draft: RestoreSetupDraft;
+  readonly actions: RestoreSummaryActions;
   readonly isCompleting: boolean;
   readonly onIntent: (intent: RestoreSummaryIntent) => void;
   readonly onBack: () => void;
@@ -37,34 +30,20 @@ export function RestoreSummarySlice({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (!handoff || handoff.operationId !== operationId) {
-        if (!cancelled) setVerification({ status: 'missing' });
-        return;
-      }
-      const workplace = await workplaceService.getWorkplace(handoff.workplaceId);
+      const view = await loadRestoreSummary(draft);
       if (cancelled) return;
-      if (!workplace || workplace.id !== handoff.workplaceId) {
-        setVerification({ status: 'missing' });
-        return;
-      }
-      setVerification({
-        status: 'ready',
-        name: workplace.name,
-        currency: workplace.defaultCurrencyCode,
-        icon: workplace.icon,
-      });
+      setVerification(view ? { status: 'ready', view } : { status: 'missing' });
     })();
     return () => {
       cancelled = true;
     };
-  }, [handoff, operationId, retryKey]);
+  }, [draft, retryKey]);
 
-  const stats = handoff?.stats;
+  const stats = draft.restore.handoff?.stats;
   const skippedItems = stats?.skippedItems ?? [];
-  const warnings = handoff?.warnings ?? [];
+  const warnings = draft.restore.handoff?.warnings ?? [];
   const verified = verification.status === 'ready';
-  const continues = journeyId === 'first_run_restore';
-  const activates = journeyId === 'empty_device_restore';
+  const view = verification.status === 'ready' ? verification.view : undefined;
 
   return (
     <Box flex={1} padding="lg">
@@ -75,30 +54,26 @@ export function RestoreSummarySlice({
             <AppText variant="body" color="secondary">
               Verifying the published workplace...
             </AppText>
-          ) : verified ? (
+          ) : verified && view ? (
             <AppText variant="body" color="secondary">
-              {verification.name} was published and is not active yet.
+              {view.name} was published and is not active yet.
             </AppText>
           ) : (
             <AppText variant="body" color="secondary">
               Restore publication could not be verified. Retry or discard this restore.
             </AppText>
           )}
-          {verified ? (
+          {view ? (
             <AppCard elevation="sm" paddingSize="md">
               <Stack gap="xs">
-                <AppText variant="caption">Workplace {verification.name}</AppText>
-                <AppText variant="caption">Icon {verification.icon}</AppText>
-                <AppText variant="caption">Currency {verification.currency}</AppText>
-                {stats ? (
-                  <>
-                    <AppText variant="caption">Accounts {stats.accounts}</AppText>
-                    <AppText variant="caption">Journals {stats.journals}</AppText>
-                    <AppText variant="caption">Entries {stats.transactions}</AppText>
-                    {stats.skippedTransactions > 0 ? (
-                      <AppText variant="caption">Skipped {stats.skippedTransactions}</AppText>
-                    ) : null}
-                  </>
+                <AppText variant="caption">Workplace {view.name}</AppText>
+                <AppText variant="caption">Icon {view.icon}</AppText>
+                <AppText variant="caption">Currency {view.currency}</AppText>
+                <AppText variant="caption">Accounts {view.accounts}</AppText>
+                <AppText variant="caption">Categories {view.categories}</AppText>
+                <AppText variant="caption">Journals {view.journals}</AppText>
+                {stats && stats.skippedTransactions > 0 ? (
+                  <AppText variant="caption">Skipped {stats.skippedTransactions}</AppText>
                 ) : null}
               </Stack>
             </AppCard>
@@ -128,39 +103,29 @@ export function RestoreSummarySlice({
               </Stack>
             </AppCard>
           ) : null}
-          {continues ? (
-            <AppButton
-              variant="primary"
-              testID="restore-summary-continue"
-              onPress={() => onIntent('continue')}
-              loading={isCompleting}
-              disabled={!verified}
-            >
-              Continue setup
-            </AppButton>
-          ) : (
-            <AppButton
-              variant="primary"
-              testID="restore-summary-open"
-              onPress={() => onIntent('open')}
-              loading={isCompleting}
-              disabled={!verified}
-            >
-              {activates ? 'Activate' : 'Open workplace'}
-            </AppButton>
-          )}
-          {journeyId === 'picker_restore' ? (
+          <AppButton
+            variant="primary"
+            testID={
+              actions.primary.intent === 'continue'
+                ? 'restore-summary-continue'
+                : 'restore-summary-open'
+            }
+            onPress={() => onIntent(actions.primary.intent)}
+            loading={isCompleting}
+            disabled={!verified}
+          >
+            {actions.primary.label}
+          </AppButton>
+          {actions.secondary ? (
             <AppButton
               variant="outline"
-              onPress={() => onIntent('return_to_picker')}
+              onPress={() => {
+                const secondary = actions.secondary;
+                if (secondary) onIntent(secondary.intent);
+              }}
               disabled={isCompleting}
             >
-              Return to picker
-            </AppButton>
-          ) : null}
-          {journeyId === 'settings_restore' ? (
-            <AppButton variant="outline" onPress={() => onIntent('stay')} disabled={isCompleting}>
-              Stay here
+              {actions.secondary.label}
             </AppButton>
           ) : null}
           {verification.status === 'missing' ? (

@@ -45,5 +45,11 @@ describe('Setup recipes', () => {
       discardTo: 'first_run',
     });
     expect(getSetupRecipe('empty_device_workplace').draftKind).toBe('workplace_creation');
+    expect(getSetupRecipe('first_run_restore').restoreSummary).toEqual({
+      primary: { intent: 'continue', label: 'Continue setup' },
+    });
+    expect(getSetupRecipe('picker_restore').restoreSummary?.secondary?.intent).toBe(
+      'return_to_picker',
+    );
   });
 });

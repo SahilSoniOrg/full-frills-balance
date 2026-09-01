@@ -111,6 +111,7 @@ export interface RestoreDraftState {
   readonly source?: RestoreSourceOutput;
   readonly handoff?: RestoreHandoff;
   readonly summary?: RestoreSummaryOutput;
+  readonly deviceCandidate?: Sourced<string>;
 }
 
 export interface RestoreSetupDraft extends SetupDraftBase {

@@ -103,6 +103,45 @@ describe('SetupDraftStore', () => {
     ).toBeUndefined();
   });
 
+  it('rejects a restore handoff that is not one ownership tuple', () => {
+    const withHandoff = {
+      ...restoreDraft,
+      restore: {
+        ...restoreDraft.restore,
+        handoff: {
+          operationId,
+          workplaceId: asWorkplaceId('other-workplace'),
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+    };
+    mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
+    expect(parseSetupDraft(withHandoff)).toBeUndefined();
+
+    const matching = {
+      ...restoreDraft,
+      restore: {
+        ...restoreDraft.restore,
+        handoff: {
+          operationId,
+          workplaceId: operationId,
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+    };
+    mockGetString.mockReturnValue(undefined);
+    expect(parseSetupDraft(matching)).toBeUndefined();
+    mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
+    const parsed = parseSetupDraft(matching);
+    expect(parsed?.kind === 'restore' && parsed.restore.handoff?.workplaceId).toBe(operationId);
+  });
+
   it('clears only the setup draft key', () => {
     new SetupDraftStore().clear();
     expect(mockRemove).toHaveBeenCalledWith(SETUP_DRAFT_KEY);

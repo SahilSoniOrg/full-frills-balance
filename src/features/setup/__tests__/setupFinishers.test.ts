@@ -1,7 +1,7 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/utils/preferences';
-import { discardPublishedRestore, finishSetup } from '../setupFinishers';
+import { discardPublishedRestore, finishSetup, loadRestoreSummary } from '../setupFinishers';
 import type { RestoreSetupDraft, WorkplaceSetupOutput } from '../setupTypes';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -10,6 +10,13 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     updateWorkplace: jest.fn(),
     deleteWorkplace: jest.fn(),
     createWorkplace: jest.fn(),
+    getPublishedBookStats: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/services/import/restorePublicationClaims', () => ({
+  restorePublicationClaims: {
+    fingerprintFor: jest.fn(() => 'abc'),
   },
 }));
 
@@ -70,6 +77,7 @@ describe('restore finishers', () => {
   const getWorkplace = workplaceService.getWorkplace as jest.Mock;
   const updateWorkplace = workplaceService.updateWorkplace as jest.Mock;
   const deleteWorkplace = workplaceService.deleteWorkplace as jest.Mock;
+  const getPublishedBookStats = workplaceService.getPublishedBookStats as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -92,6 +100,25 @@ describe('restore finishers', () => {
     await expect(finishSetup(restoreDraft())).resolves.toBe(operationId);
     expect(updateWorkplace).toHaveBeenCalledWith(operationId, { name: 'Edited', icon: 'home' });
     expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(operationId);
+  });
+
+  it('turns a rejected Workplace read into a retryable summary failure', async () => {
+    getWorkplace.mockRejectedValue(new Error('db'));
+    await expect(loadRestoreSummary(restoreDraft())).resolves.toBeUndefined();
+    getWorkplace.mockResolvedValue({
+      id: operationId,
+      name: 'Books',
+      icon: 'briefcase',
+      defaultCurrencyCode: 'USD',
+    });
+    getPublishedBookStats.mockResolvedValue({ accounts: 4, categories: 6, journals: 2 });
+    await expect(loadRestoreSummary(restoreDraft())).resolves.toMatchObject({
+      name: 'Books',
+      currency: 'USD',
+      accounts: 4,
+      categories: 6,
+      journals: 2,
+    });
   });
 
   it('deletes only an operation-owned inactive Workplace', async () => {

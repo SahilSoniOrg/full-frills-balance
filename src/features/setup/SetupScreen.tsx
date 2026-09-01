@@ -16,8 +16,12 @@ import { AppearanceSetupSlice } from './AppearanceSetupSlice';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
 import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
-import { createSetupCoordinator, type SetupSliceOutputById } from './SetupCoordinator';
-import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import {
+  createSetupCoordinator,
+  createSetupDraft,
+  type SetupSliceOutputById,
+} from './SetupCoordinator';
+import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
 import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from './restoreAutoOutput';
 import { loadPreparedRestore } from './pickRestoreSource';
 import type { NextSetupAction } from './resolveNextSetupAction';
@@ -78,7 +82,6 @@ function SetupJourneyScreen({
           getAutoOutput: (sliceId, draft) =>
             getRestoreAutoOutput(sliceId, draft, {
               userName: preferences.userName,
-              candidateName,
             }),
         },
         effects: {
@@ -101,7 +104,7 @@ function SetupJourneyScreen({
             const intent = draft.restore.summary?.intent ?? 'continue';
             const workplaceId = await finishSetup(draft, {
               activate: intent === 'open' || intent === 'continue',
-              applyAppearance: draft.journeyId === 'first_run_restore',
+              applyAppearance: recipeContainsSlice(recipe, 'appearance'),
             });
             if (!workplaceId) throw new Error('Restore publication is incomplete');
             return {
@@ -115,7 +118,7 @@ function SetupJourneyScreen({
           return { kind: 'workplace_created', workplaceId };
         },
       }),
-    [candidateName, existingDraft, journeyId, operationId],
+    [existingDraft, journeyId, operationId],
   );
 
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
@@ -248,15 +251,21 @@ function SetupJourneyScreen({
       else if (recipe.atStart === 'dashboard') {
         clearSetupDraft();
         AppNavigation.toDashboard();
-      } else if (recipe.atStart === 'first_run') onSwitchJourney('first_run');
-      else if (recipe.atStart === 'empty_device_workplace') {
+      } else if (recipe.atStart === 'first_run') {
+        onSwitchJourney(
+          'first_run',
+          draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined,
+        );
+      } else if (recipe.atStart === 'empty_device_workplace') {
         onSwitchJourney('empty_device_workplace');
       }
     }
   };
 
   const displayName =
-    ('device' in draft ? draft.device?.displayName.value : undefined) || candidateName;
+    ('device' in draft ? draft.device?.displayName.value : undefined) ||
+    (draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined) ||
+    candidateName;
   const workplaceInitial = draft.workplace ?? getRestoreWorkplacePrefill(draft);
   const render = () => {
     switch (slice) {
@@ -266,7 +275,21 @@ function SetupJourneyScreen({
             initialName={displayName}
             isCompleting={busy}
             onContinue={output => void advance('device', output)}
-            onRestore={name => onSwitchJourney('first_run_restore', name)}
+            onRestore={name => {
+              const seeded = createSetupDraft('first_run_restore', generator() as WorkplaceId);
+              const trimmed = name.trim();
+              saveSetupDraft(
+                trimmed && seeded.kind === 'restore'
+                  ? {
+                      ...seeded,
+                      restore: {
+                        deviceCandidate: { value: trimmed, source: 'user_entered' },
+                      },
+                    }
+                  : seeded,
+              );
+              onSwitchJourney('first_run_restore');
+            }}
           />
         );
       case 'restore_source':
@@ -295,16 +318,15 @@ function SetupJourneyScreen({
           />
         );
       case 'restore_summary':
-        return (
+        return draft.kind === 'restore' && recipe.restoreSummary ? (
           <RestoreSummarySlice
-            journeyId={journeyId}
-            operationId={draft.operationId}
-            handoff={draft.kind === 'restore' ? draft.restore.handoff : undefined}
+            draft={draft}
+            actions={recipe.restoreSummary}
             isCompleting={busy}
             onIntent={intent => void acceptRestoreIntent(intent)}
             onBack={goBack}
           />
-        );
+        ) : null;
       case 'appearance':
         return (
           <AppearanceSetupSlice

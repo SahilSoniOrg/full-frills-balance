@@ -44,6 +44,10 @@ export class RestorePublicationClaims {
       JSON.stringify({ ...claims, [operationId]: fingerprint }),
     );
   }
+
+  fingerprintFor(operationId: WorkplaceId): string | undefined {
+    return readClaims(this.store)[operationId];
+  }
 }
 
 export const restorePublicationClaims = new RestorePublicationClaims();

@@ -1,6 +1,7 @@
 import {
   isRestoreJourneyId,
   type RestoreJourneyId,
+  type RestoreSummaryIntent,
   type SetupDraft,
   type SetupEffectId,
   type SetupEntryPolicy,
@@ -23,12 +24,21 @@ export type SetupRecipeEntry =
 export type SetupAtStart = 'stay' | 'back' | 'dashboard' | 'first_run' | 'empty_device_workplace';
 export type SetupDiscardTo = 'first_run' | 'picker' | 'empty_device_workplace' | 'settings';
 
+export interface RestoreSummaryActions {
+  readonly primary: { readonly intent: 'continue' | 'open'; readonly label: string };
+  readonly secondary?: {
+    readonly intent: Extract<RestoreSummaryIntent, 'return_to_picker' | 'stay'>;
+    readonly label: string;
+  };
+}
+
 export interface SetupRecipe {
   readonly journeyId: SetupJourneyId;
   readonly draftKind: SetupDraft['kind'];
   readonly entryPolicy: SetupEntryPolicy;
   readonly atStart: SetupAtStart;
   readonly discardTo?: SetupDiscardTo;
+  readonly restoreSummary?: RestoreSummaryActions;
   readonly entries: readonly SetupRecipeEntry[];
 }
 
@@ -69,6 +79,7 @@ const firstRunRestore: SetupRecipe = {
   entryPolicy: 'blocking',
   atStart: 'first_run',
   discardTo: 'first_run',
+  restoreSummary: { primary: { intent: 'continue', label: 'Continue setup' } },
   entries: [
     ...restoreCore,
     slice('device', 'when_missing'),
@@ -91,6 +102,7 @@ const emptyDeviceRestore: SetupRecipe = {
   entryPolicy: 'blocking',
   atStart: 'empty_device_workplace',
   discardTo: 'empty_device_workplace',
+  restoreSummary: { primary: { intent: 'open', label: 'Activate' } },
   entries: restoreCore,
 };
 
@@ -100,6 +112,10 @@ const pickerRestore: SetupRecipe = {
   entryPolicy: 'blocking',
   atStart: 'dashboard',
   discardTo: 'picker',
+  restoreSummary: {
+    primary: { intent: 'open', label: 'Open workplace' },
+    secondary: { intent: 'return_to_picker', label: 'Return to picker' },
+  },
   entries: restoreCore,
 };
 
@@ -109,6 +125,10 @@ const settingsRestore: SetupRecipe = {
   entryPolicy: 'optional',
   atStart: 'back',
   discardTo: 'settings',
+  restoreSummary: {
+    primary: { intent: 'open', label: 'Open workplace' },
+    secondary: { intent: 'stay', label: 'Stay here' },
+  },
   entries: restoreCore,
 };
 
