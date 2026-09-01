@@ -1,25 +1,72 @@
-import { OnboardingScreen } from '@/src/features/onboarding';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import { generator } from '@/src/data/database/idGenerator';
+import { toast } from '@/src/utils/alerts';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import { publishRestore } from '@/src/services/import/publishRestore';
+import { LoadingView } from '@/src/components/core';
+import {
+  readSetupDraftSnapshot,
+  subscribeToSetupDraft,
+} from '@/src/services/setup/launchProjection';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppearanceSetupSlice } from './AppearanceSetupSlice';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
+import { RestoreSourceSlice } from './RestoreSourceSlice';
+import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { createSetupCoordinator, type SetupSliceOutputById } from './SetupCoordinator';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
-import { resolveSetupRoute } from './resolveSetupRoute';
+import { getRestoreAutoOutput } from './restoreAutoOutput';
+import { loadPreparedRestore } from './pickRestoreSource';
+import type { NextSetupAction } from './resolveNextSetupAction';
 import { finishSetup } from './setupFinishers';
 import { SetupSummarySlice } from './SetupSummarySlice';
-import type { SetupSliceId } from './setupTypes';
+import {
+  isRestoreJourneyId,
+  isSetupJourneyId,
+  type RestoreSummaryIntent,
+  type SetupJourneyId,
+  type SetupOutcome,
+  type SetupSliceId,
+} from './setupTypes';
 import type { WorkplaceId } from '@/src/types/ids';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 
-type RenderedSetupJourney = 'first_run' | 'create_workplace' | 'empty_device_workplace';
+function visibleSlice(action: NextSetupAction, journeyId: SetupJourneyId): SetupSliceId {
+  if (action.kind === 'present') return action.sliceId;
+  if (action.kind === 'finish') {
+    return journeyId === 'first_run_restore' ||
+      journeyId === 'first_run' ||
+      journeyId === 'empty_device_workplace' ||
+      journeyId === 'create_workplace'
+      ? 'summary'
+      : 'restore_summary';
+  }
+  return 'restore_source';
+}
 
-function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) {
+function resolveJourney(
+  params: { mode?: string; journey?: string },
+  override?: SetupJourneyId,
+): SetupJourneyId {
+  if (override) return override;
+  if (params.journey && isSetupJourneyId(params.journey)) return params.journey;
+  if (params.mode === 'full') return 'create_workplace';
+  const draft = loadSetupDraft();
+  if (draft && isSetupJourneyId(draft.journeyId)) return draft.journeyId;
+  return preferences.device.deviceRegistered ? 'empty_device_workplace' : 'first_run';
+}
+
+function SetupJourneyScreen({
+  journeyId,
+  onSwitchJourney,
+}: {
+  journeyId: SetupJourneyId;
+  onSwitchJourney: (journeyId: SetupJourneyId) => void;
+}) {
   const operationId = useMemo(() => generator() as WorkplaceId, []);
   const existingDraft = useMemo(() => {
     const draft = loadSetupDraft();
@@ -31,7 +78,39 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
         journeyId,
         operationId,
         draft: existingDraft,
+        resolution: {
+          getAutoOutput: (sliceId, draft) =>
+            getRestoreAutoOutput(sliceId, draft, { userName: preferences.userName }),
+        },
+        effects: {
+          publishRestore: async draft => {
+            const prepared = await loadPreparedRestore(draft);
+            const workplace = draft.workplace;
+            if (!workplace) throw new Error('Workplace corrections are missing');
+            return publishRestore(prepared, {
+              operationId: draft.operationId,
+              corrections: {
+                name: workplace.name.value,
+                icon: workplace.icon.value,
+                defaultCurrencyCode: workplace.baseCurrency.value,
+              },
+            });
+          },
+        },
         finish: async draft => {
+          if (draft.kind === 'restore') {
+            const intent = draft.restore.summary?.intent ?? 'continue';
+            const workplaceId = await finishSetup(draft, {
+              activate: intent === 'open' || intent === 'continue',
+              applyAppearance: draft.journeyId === 'first_run_restore',
+            });
+            if (!workplaceId) throw new Error('Restore publication is incomplete');
+            return {
+              kind: 'restore_accepted',
+              workplaceId,
+              next: intent === 'stay' ? 'stay' : intent === 'return_to_picker' ? 'picker' : 'open',
+            };
+          }
           const workplaceId = await finishSetup(draft);
           if (!workplaceId) throw new Error('Workplace publication failed');
           return { kind: 'workplace_created', workplaceId };
@@ -40,18 +119,49 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
     [existingDraft, journeyId, operationId],
   );
 
-  const [slice, setSlice] = useState<SetupSliceId>(() => {
-    const action = coordinator.next();
-    return action.kind === 'present'
-      ? action.sliceId
-      : action.kind === 'finish'
-        ? 'summary'
-        : journeyId === 'first_run'
-          ? 'device'
-          : 'workplace';
-  });
+  useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
   const [busy, setBusy] = useState(false);
   const draft = coordinator.getDraft();
+  const action = coordinator.next();
+  const slice = visibleSlice(action, journeyId);
+  const resolving = action.kind === 'auto_accept' || action.kind === 'run_effect';
+
+  const applyOutcome = (outcome: SetupOutcome) => {
+    if (outcome.kind === 'workplace_created') {
+      AppNavigation.toDashboard();
+      return;
+    }
+    if (outcome.kind === 'restore_accepted') {
+      if (outcome.next === 'stay') AppNavigation.toSettings();
+      else AppNavigation.toDashboard();
+      return;
+    }
+    if (outcome.kind === 'journey_discarded') {
+      if (outcome.returnTo === 'first_run') onSwitchJourney('first_run');
+      else if (outcome.returnTo === 'picker') AppNavigation.toDashboard();
+      else if (journeyId === 'empty_device_restore') onSwitchJourney('empty_device_workplace');
+      else AppNavigation.toSettings();
+    }
+  };
+
+  const settle = async () => {
+    const nextAction = await coordinator.runPendingEffect();
+    if (nextAction.kind === 'present') {
+      coordinator.present(nextAction.sliceId);
+      return;
+    }
+    if (nextAction.kind === 'finish') {
+      applyOutcome(await coordinator.finish());
+    }
+  };
+
+  useEffect(() => {
+    void settle().catch(error => {
+      toast.error(error instanceof Error ? error.message : 'Could not resume Setup.');
+    });
+    // Resume publication or auto-accept once when this journey mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coordinator]);
 
   const advance = async <K extends SetupSliceId>(
     sliceId: K,
@@ -60,11 +170,9 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
     setBusy(true);
     try {
       await coordinator.accept(sliceId, output);
-      const action = await coordinator.advanceAutoAccepted();
-      if (action.kind !== 'present') {
-        throw new Error(`Setup cannot present the next slice while action is ${action.kind}`);
-      }
-      setSlice(action.sliceId);
+      await settle();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not continue Setup.');
     } finally {
       setBusy(false);
     }
@@ -76,8 +184,40 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
       if (coordinator.next().kind !== 'finish') {
         await coordinator.accept('summary', { confirmed: true });
       }
-      const outcome = await coordinator.finish();
-      if (outcome.kind === 'workplace_created') AppNavigation.toDashboard();
+      applyOutcome(await coordinator.finish());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not finish Setup.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const discardRestore = async () => {
+    const published = draft.kind === 'restore' ? draft.restore.handoff?.workplaceId : undefined;
+    if (published) await workplaceService.deleteWorkplace(published);
+    clearSetupDraft();
+    applyOutcome({
+      kind: 'journey_discarded',
+      returnTo:
+        journeyId === 'first_run_restore'
+          ? 'first_run'
+          : journeyId === 'picker_restore'
+            ? 'picker'
+            : 'current_workplace',
+    });
+  };
+
+  const acceptRestoreIntent = async (intent: RestoreSummaryIntent) => {
+    setBusy(true);
+    try {
+      if (intent === 'discard') {
+        await discardRestore();
+        return;
+      }
+      await coordinator.accept('restore_summary', { intent });
+      await settle();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not continue restore.');
     } finally {
       setBusy(false);
     }
@@ -85,23 +225,22 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
 
   const goTo = (target: SetupSliceId) => {
     if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
-    setSlice(target);
   };
 
   const goBack = () => {
     const result = coordinator.back();
     if (result.kind === 'at_start') {
-      if (journeyId === 'create_workplace') AppNavigation.back();
-      return;
+      if (journeyId === 'create_workplace' || journeyId === 'settings_restore')
+        AppNavigation.back();
+      else if (journeyId === 'picker_restore') {
+        clearSetupDraft();
+        AppNavigation.toDashboard();
+      } else if (journeyId === 'first_run_restore') {
+        onSwitchJourney('first_run');
+      } else if (journeyId === 'empty_device_restore') {
+        onSwitchJourney('empty_device_workplace');
+      }
     }
-    setSlice(result.sliceId);
-  };
-
-  const startLegacyRestore = () => {
-    // Restore still uses the proven post-import acknowledgement screen until its
-    // dedicated Setup slices are wired. Do not leave a competing first-run draft.
-    clearSetupDraft();
-    AppNavigation.toImportSelection(false, 'onboarding');
   };
 
   const displayName = 'device' in draft ? (draft.device?.displayName.value ?? '') : '';
@@ -113,7 +252,15 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
             initialName={displayName}
             isCompleting={busy}
             onContinue={output => void advance('device', output)}
-            onRestore={startLegacyRestore}
+            onRestore={() => onSwitchJourney('first_run_restore')}
+          />
+        );
+      case 'restore_source':
+        return (
+          <RestoreSourceSlice
+            isCompleting={busy}
+            onContinue={output => void advance('restore_source', output)}
+            onBack={goBack}
           />
         );
       case 'workplace':
@@ -121,9 +268,25 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
           <WorkplaceSetupSlice
             displayName={displayName}
             initial={draft.workplace}
-            totalSteps={journeyId === 'first_run' ? 6 : 5}
+            totalSteps={journeyId === 'first_run' || journeyId === 'first_run_restore' ? 6 : 5}
+            books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}
             isCompleting={busy}
             onContinue={output => void advance('workplace', output)}
+            onBack={goBack}
+            onRestore={
+              journeyId === 'empty_device_workplace'
+                ? () => onSwitchJourney('empty_device_restore')
+                : undefined
+            }
+          />
+        );
+      case 'restore_summary':
+        return (
+          <RestoreSummarySlice
+            journeyId={journeyId}
+            handoff={draft.kind === 'restore' ? draft.restore.handoff : undefined}
+            isCompleting={busy}
+            onIntent={intent => void acceptRestoreIntent(intent)}
             onBack={goBack}
           />
         );
@@ -144,7 +307,13 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
             isCompleting={busy}
             onEdit={goTo}
             onConfirm={() => void finish()}
-            onBack={() => goTo(journeyId === 'first_run' ? 'appearance' : 'workplace')}
+            onBack={() =>
+              goTo(
+                journeyId === 'first_run' || journeyId === 'first_run_restore'
+                  ? 'appearance'
+                  : 'workplace',
+              )
+            }
           />
         );
       default:
@@ -154,29 +323,23 @@ function SetupJourneyScreen({ journeyId }: { journeyId: RenderedSetupJourney }) 
 
   return (
     <View testID="setup-screen" style={{ flex: 1 }}>
-      {render()}
+      {resolving ? <LoadingView loading /> : render()}
     </View>
   );
 }
 
 function SetupScreen() {
-  const { mode, stage } = useLocalSearchParams<{ mode?: string; stage?: string }>();
-  const route = resolveSetupRoute({
-    mode,
-    stage,
-    hasPendingImportedWorkplace:
-      preferences.device.onboardingStage === 'post_import' &&
-      preferences.device.onboardingWorkplaceId !== undefined,
-  });
-  if (route === 'legacy_post_import') return <OnboardingScreen />;
-  if (route === 'create_workplace') return <SetupJourneyScreen journeyId="create_workplace" />;
-  const draft = loadSetupDraft();
-  if (draft?.journeyId === 'first_run' || draft?.journeyId === 'empty_device_workplace') {
-    return <SetupJourneyScreen journeyId={draft.journeyId} />;
-  }
+  const { mode, journey } = useLocalSearchParams<{
+    mode?: string;
+    journey?: string;
+  }>();
+  const [journeyOverride, setJourneyOverride] = useState<SetupJourneyId>();
+  const journeyId = resolveJourney({ mode, journey }, journeyOverride);
   return (
     <SetupJourneyScreen
-      journeyId={preferences.device.deviceRegistered ? 'empty_device_workplace' : 'first_run'}
+      key={journeyId}
+      journeyId={journeyId}
+      onSwitchJourney={setJourneyOverride}
     />
   );
 }

@@ -169,6 +169,45 @@ describe('SetupCoordinator', () => {
     });
   });
 
+  it('resumes restore publication from the stored handoff after a crash', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'empty_device_restore',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace'],
+      restore: {
+        source,
+        handoff: {
+          operationId,
+          workplaceId: asWorkplaceId('published'),
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+      workplace,
+    };
+    const publishRestore = jest.fn();
+    const coordinator = createSetupCoordinator({
+      journeyId: 'empty_device_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+      effects: { publishRestore },
+    });
+    expect(await coordinator.runPendingEffect()).toMatchObject({
+      kind: 'present',
+      sliceId: 'restore_summary',
+    });
+    expect(publishRestore).not.toHaveBeenCalled();
+  });
+
   it('returns to summary after editing an accepted slice', async () => {
     const store = memoryStore();
     const draft: FirstRunSetupDraft = {

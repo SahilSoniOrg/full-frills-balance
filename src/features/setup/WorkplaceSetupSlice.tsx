@@ -5,6 +5,7 @@ import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplac
 import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
 import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
 import { OnboardingWorkplaceStepComponent } from '@/src/features/onboarding';
+import { AppButton } from '@/src/components/core';
 import { useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
 import type { StarterAccountInput, StarterCategoryInput, WorkplaceSetupOutput } from './setupTypes';
@@ -19,16 +20,20 @@ export function WorkplaceSetupSlice({
   displayName,
   initial,
   totalSteps,
+  books = 'starters',
   isCompleting,
   onContinue,
   onBack,
+  onRestore,
 }: {
   readonly displayName: string;
   readonly initial?: WorkplaceSetupOutput;
   readonly totalSteps: number;
+  readonly books?: 'starters' | 'imported';
   readonly isCompleting: boolean;
   readonly onContinue: (output: WorkplaceSetupOutput) => void;
   readonly onBack: () => void;
+  readonly onRestore?: () => void;
 }) {
   const [step, setStep] = useState<'identity' | 'currency' | 'accounts' | 'categories'>('identity');
   const [workplaceName, setWorkplaceName] = useState(initial?.name.value ?? '');
@@ -49,38 +54,55 @@ export function WorkplaceSetupSlice({
   );
 
   const derivedName = workplaceName || `${displayName.trim() || 'User'}'s Personal workplace`;
+  const imported = books === 'imported';
   const output: WorkplaceSetupOutput = {
-    name: { value: workplaceName.trim() || derivedName, source: 'user_entered' },
+    name: {
+      value: workplaceName.trim() || derivedName,
+      source: imported && initial?.name.source === 'imported' ? 'imported' : 'user_entered',
+    },
     icon: { value: workplaceIcon, source: 'user_entered' },
     baseCurrency: { value: currency, source: 'user_entered' },
-    selectedAccounts: defaultsFor(accounts, DEFAULT_ACCOUNTS) as StarterAccountInput[],
-    selectedCategories: defaultsFor(categories, DEFAULT_CATEGORIES) as StarterCategoryInput[],
-    acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+    selectedAccounts: imported
+      ? []
+      : (defaultsFor(accounts, DEFAULT_ACCOUNTS) as StarterAccountInput[]),
+    selectedCategories: imported
+      ? []
+      : (defaultsFor(categories, DEFAULT_CATEGORIES) as StarterCategoryInput[]),
+    acceptedCheckpoints: imported
+      ? ['identity', 'currency']
+      : ['identity', 'currency', 'accounts', 'categories'],
   };
 
   return (
     <WorkplaceSetupLayout currentStep={2} totalSteps={totalSteps}>
       {step === 'identity' && (
-        <OnboardingWorkplaceStepComponent
-          name={derivedName}
-          icon={workplaceIcon}
-          onNameChange={setWorkplaceName}
-          onIconChange={setWorkplaceIcon}
-          onContinue={() => setStep('currency')}
-          onBack={onBack}
-          isCompleting={isCompleting}
-        />
+        <>
+          <OnboardingWorkplaceStepComponent
+            name={derivedName}
+            icon={workplaceIcon}
+            onNameChange={setWorkplaceName}
+            onIconChange={setWorkplaceIcon}
+            onContinue={() => setStep('currency')}
+            onBack={onBack}
+            isCompleting={isCompleting}
+          />
+          {onRestore ? (
+            <AppButton variant="ghost" onPress={onRestore} disabled={isCompleting}>
+              Restore a backup instead
+            </AppButton>
+          ) : null}
+        </>
       )}
       {step === 'currency' && (
         <WorkplaceCurrencyStep
           selectedCurrency={currency}
           onSelectCurrency={setCurrency}
-          onContinue={() => setStep('accounts')}
+          onContinue={() => (imported ? onContinue(output) : setStep('accounts'))}
           onBack={() => setStep('identity')}
           isCompleting={isCompleting}
         />
       )}
-      {step === 'accounts' && (
+      {!imported && step === 'accounts' && (
         <WorkplaceAccountSelectionStep
           selectedAccounts={accounts}
           customAccounts={[]}
@@ -93,7 +115,7 @@ export function WorkplaceSetupSlice({
           isCompleting={isCompleting}
         />
       )}
-      {step === 'categories' && (
+      {!imported && step === 'categories' && (
         <WorkplaceCategorySelectionStep
           selectedCategories={categories}
           customCategories={[]}

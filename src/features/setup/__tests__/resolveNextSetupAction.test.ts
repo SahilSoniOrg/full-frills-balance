@@ -1,4 +1,5 @@
 import { asWorkplaceId } from '@/src/types/ids';
+import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
 import { resolveNextSetupAction } from '../resolveNextSetupAction';
 import type { FirstRunSetupDraft, RestoreSetupDraft, SetupSliceOutput } from '../setupTypes';
@@ -53,6 +54,24 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
+  it('presents Workplace when restore facts omit currency', () => {
+    const draft = restore({
+      acceptedSlices: ['restore_source'],
+      presentedHistory: ['restore_source'],
+      restore: {
+        source: {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: { workplace: { name: 'Books', icon: 'briefcase' } },
+        },
+      },
+    });
+    expect(
+      resolveNextSetupAction(getSetupRecipe('first_run_restore'), draft, {
+        getAutoOutput: getRestoreAutoOutput,
+      }),
+    ).toMatchObject({ kind: 'present', sliceId: 'workplace' });
+  });
+
   it('auto-accepts when_missing only when an authoritative output exists', () => {
     const draft = restore({
       acceptedSlices: ['restore_source'],
@@ -75,6 +94,33 @@ describe('resolveNextSetupAction', () => {
     expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), draft)).toMatchObject({
       kind: 'present',
       sliceId: 'workplace',
+    });
+  });
+
+  it('auto-completes Workplace from imported restore facts', () => {
+    const draft = restore({
+      acceptedSlices: ['restore_source'],
+      presentedHistory: ['restore_source'],
+      restore: {
+        source: {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: {
+            workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+          },
+        },
+      },
+    });
+    expect(
+      resolveNextSetupAction(getSetupRecipe('first_run_restore'), draft, {
+        getAutoOutput: getRestoreAutoOutput,
+      }),
+    ).toMatchObject({
+      kind: 'auto_accept',
+      sliceId: 'workplace',
+      output: {
+        name: { value: 'Books', source: 'imported' },
+        baseCurrency: { value: 'USD', source: 'imported' },
+      },
     });
   });
 
