@@ -46,28 +46,12 @@ export class DevicePreferencesStore {
     this.subject.next(next);
   }
 
-  get onboardingCompleted(): boolean {
-    return this.preferences.onboardingCompleted;
-  }
-
-  setOnboardingCompleted(completed: boolean): void {
-    this.update({ onboardingCompleted: completed });
-  }
-
   get deviceRegistered(): boolean {
     return this.preferences.deviceRegistered;
   }
 
   setDeviceRegistered(registered: boolean): void {
     this.update({ deviceRegistered: registered });
-  }
-
-  get onboardingStage(): DevicePreferences['onboardingStage'] {
-    return this.preferences.onboardingStage;
-  }
-
-  setOnboardingStage(stage: DevicePreferences['onboardingStage']): void {
-    this.update({ onboardingStage: stage });
   }
 
   get isAppLockEnabled(): boolean {
@@ -84,22 +68,6 @@ export class DevicePreferencesStore {
 
   setActiveWorkplaceId(workplaceId?: WorkplaceId): void {
     this.update({ activeWorkplaceId: workplaceId });
-  }
-
-  get pendingWorkplaceId(): WorkplaceId | undefined {
-    return this.preferences.pendingWorkplaceId;
-  }
-
-  setPendingWorkplaceId(workplaceId?: WorkplaceId): void {
-    this.update({ pendingWorkplaceId: workplaceId });
-  }
-
-  get onboardingWorkplaceId(): WorkplaceId | undefined {
-    return this.preferences.onboardingWorkplaceId;
-  }
-
-  setOnboardingWorkplaceId(workplaceId?: WorkplaceId): void {
-    this.update({ onboardingWorkplaceId: workplaceId });
   }
 
   get anonymizedId(): string | undefined {
@@ -155,32 +123,12 @@ export class DevicePreferencesStore {
         : typeof value.onboardingCompleted === 'boolean'
           ? { deviceRegistered: value.onboardingCompleted }
           : {}),
-      ...(typeof value.onboardingStage === 'string' &&
-      [
-        'user_profile',
-        'workplace_setup',
-        'appearance',
-        'review',
-        'post_import',
-        'complete',
-      ].includes(value.onboardingStage)
-        ? { onboardingStage: value.onboardingStage as DevicePreferences['onboardingStage'] }
-        : {}),
-      ...(typeof value.onboardingCompleted === 'boolean'
-        ? { onboardingCompleted: value.onboardingCompleted }
-        : {}),
       ...(typeof value.isAppLockEnabled === 'boolean'
         ? { isAppLockEnabled: value.isAppLockEnabled }
         : {}),
       ...(typeof value.anonymizedId === 'string' ? { anonymizedId: value.anonymizedId } : {}),
       ...(typeof value.activeWorkplaceId === 'string' && value.activeWorkplaceId
         ? { activeWorkplaceId: value.activeWorkplaceId as WorkplaceId }
-        : {}),
-      ...(typeof value.pendingWorkplaceId === 'string' && value.pendingWorkplaceId
-        ? { pendingWorkplaceId: value.pendingWorkplaceId as WorkplaceId }
-        : {}),
-      ...(typeof value.onboardingWorkplaceId === 'string' && value.onboardingWorkplaceId
-        ? { onboardingWorkplaceId: value.onboardingWorkplaceId as WorkplaceId }
         : {}),
       ...(typeof value.isSmsImportEnabled === 'boolean'
         ? { isSmsImportEnabled: value.isSmsImportEnabled }

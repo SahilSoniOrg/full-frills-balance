@@ -53,10 +53,6 @@ export const AppNavigation = {
     router.push({ pathname: '/onboarding', params: { mode: 'full' } });
   },
 
-  toOnboarding: (stage?: 'post_import') => {
-    router.replace(buildRoute('/onboarding', { stage }));
-  },
-
   toSetupJourney: (journey: string) => {
     router.replace({ pathname: '/onboarding', params: { journey } });
   },

@@ -31,9 +31,7 @@ jest.mock('@/src/utils/preferences', () => ({
     setUserName: jest.fn().mockResolvedValue(true),
     restoreImportedPreferences: jest.fn(),
     device: {
-      setOnboardingCompleted: jest.fn(),
       setActiveWorkplaceId: jest.fn(),
-      setPendingWorkplaceId: jest.fn(),
     },
   },
 }));
@@ -196,7 +194,6 @@ describe('IvyImportPlugin', () => {
         'w1',
         'workplace',
       );
-      expect(preferences.device.setOnboardingCompleted).not.toHaveBeenCalled();
     });
 
     it('handles multi-currency transfers correctly', async () => {

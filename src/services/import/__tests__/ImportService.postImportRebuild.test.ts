@@ -24,8 +24,6 @@ jest.mock('@/src/utils/preferences', () => ({
     restoreImportedPreferences: jest.fn(),
     device: {
       setActiveWorkplaceId: jest.fn(),
-      setOnboardingCompleted: jest.fn(),
-      setPendingWorkplaceId: jest.fn(),
     },
   },
 }));

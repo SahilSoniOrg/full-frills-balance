@@ -18,11 +18,11 @@ describe('splitPreferenceBags', () => {
     expect(device).toEqual(
       expect.objectContaining({
         isAppLockEnabled: true,
-        onboardingCompleted: true,
         activeWorkplaceId: 'wp-1',
         isSmsImportEnabled: true,
       }),
     );
+    expect(device).not.toHaveProperty('onboardingCompleted');
     expect(workplace).toEqual(
       expect.objectContaining({
         safeToSpendDays: 60,

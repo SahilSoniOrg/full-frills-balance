@@ -28,6 +28,10 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
     const raw = storage.getString(PREFERENCES_KEY);
     const parsed = raw ? (JSON.parse(raw) as unknown) : {};
     const { user, device, workplace, legacyCurrency } = splitPreferenceBags(parsed);
+    const legacyRecord =
+      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
 
     // Before the preference split, onboardingCompleted was the install-level
     // claim flag. Seed the new launch gate from it when migrating the legacy
@@ -35,8 +39,8 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
     const legacyDeviceRegistered =
       typeof device.deviceRegistered === 'boolean'
         ? device.deviceRegistered
-        : typeof device.onboardingCompleted === 'boolean'
-          ? device.onboardingCompleted
+        : typeof legacyRecord.onboardingCompleted === 'boolean'
+          ? legacyRecord.onboardingCompleted
           : undefined;
 
     const userBlob: UIPreferences = { ...DEFAULT_UI_PREFERENCES, ...user };

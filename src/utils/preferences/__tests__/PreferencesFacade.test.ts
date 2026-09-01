@@ -77,7 +77,6 @@ describe('PreferencesFacade import restore', () => {
 
     expect(preferences.rawDeviceBagPresentAtStartup).toBe(false);
     expect(preferences.device.deviceRegistered).toBe(true);
-    expect(preferences.device.onboardingCompleted).toBe(true);
     expect(preferences.device.isAppLockEnabled).toBe(true);
     expect(preferences.device.isSmsImportEnabled).toBe(true);
     expect(preferences.device.anonymizedId).toBe('device-id');

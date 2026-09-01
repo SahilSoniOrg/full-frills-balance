@@ -6,20 +6,20 @@ const wp2 = asWorkplaceId('wp-2');
 
 describe('resolveLaunch', () => {
   it.each([
-    [false, [], undefined, { kind: 'setup', journeyId: 'first_run' }, undefined],
-    [true, [], undefined, { kind: 'setup', journeyId: 'empty_device_workplace' }, undefined],
-    [true, [wp1], undefined, { kind: 'open', workplaceId: wp1, persistAsActive: true }, undefined],
-    [true, [wp1, wp2], undefined, { kind: 'picker' }, undefined],
-    [true, [wp1], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }, undefined],
-    [true, [wp1, wp2], wp2, { kind: 'open', workplaceId: wp2, persistAsActive: false }, undefined],
-    [true, [wp1, wp2], wp1, { kind: 'open', workplaceId: wp2, persistAsActive: true }, wp2],
-    [true, [wp1, wp2], asWorkplaceId('deleted'), { kind: 'picker' }, undefined],
+    [false, [], undefined, { kind: 'setup', journeyId: 'first_run' }],
+    [true, [], undefined, { kind: 'setup', journeyId: 'empty_device_workplace' }],
+    [true, [wp1], undefined, { kind: 'open', workplaceId: wp1, persistAsActive: true }],
+    [true, [wp1, wp2], undefined, { kind: 'picker' }],
+    [true, [wp1], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }],
+    [true, [wp1, wp2], wp2, { kind: 'open', workplaceId: wp2, persistAsActive: false }],
+    [true, [wp1, wp2], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }],
+    [true, [wp1, wp2], asWorkplaceId('deleted'), { kind: 'picker' }],
   ])(
     'resolves claimed=%s workplaces=%j active=%s',
-    (deviceClaimed, workplaceIds, activeWorkplaceId, expected, pendingWorkplaceId) => {
-      expect(
-        resolveLaunchGate({ deviceClaimed, workplaceIds, activeWorkplaceId, pendingWorkplaceId }),
-      ).toEqual(expected);
+    (deviceClaimed, workplaceIds, activeWorkplaceId, expected) => {
+      expect(resolveLaunchGate({ deviceClaimed, workplaceIds, activeWorkplaceId })).toEqual(
+        expected,
+      );
     },
   );
 

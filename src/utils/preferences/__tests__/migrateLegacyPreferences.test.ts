@@ -61,9 +61,9 @@ describe('legacy preference migration', () => {
 
     expect(device).toMatchObject({
       deviceRegistered: true,
-      onboardingCompleted: true,
       activeWorkplaceId: 'wp-1',
     });
+    expect(device).not.toHaveProperty('onboardingCompleted');
     expect(user.userName).toBe('Sahil');
     expect(workplace.safeToSpendDays).toBe(60);
     expect(isPreferenceSplitMigrationComplete()).toBe(true);

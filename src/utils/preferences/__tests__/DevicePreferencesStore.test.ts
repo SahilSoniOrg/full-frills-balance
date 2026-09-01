@@ -36,7 +36,7 @@ describe('DevicePreferencesStore', () => {
 
     const store = new DevicePreferencesStore();
 
-    expect(store.onboardingCompleted).toBe(false);
+    expect(store.deviceRegistered).toBe(false);
     expect(store.activeWorkplaceId).toBeUndefined();
   });
 
@@ -50,19 +50,18 @@ describe('DevicePreferencesStore', () => {
     mockMemory.clear();
     store.reload();
 
-    expect(store.onboardingCompleted).toBe(false);
+    expect(store.deviceRegistered).toBe(false);
     expect(store.activeWorkplaceId).toBeUndefined();
   });
 
-  it('persists the resumable onboarding stage and Workplace', () => {
+  it('maps a legacy onboardingCompleted bag onto deviceRegistered', () => {
+    mockMemory.set(
+      'full_frills_balance_device_preferences',
+      JSON.stringify({ onboardingCompleted: true }),
+    );
+
     const store = new DevicePreferencesStore();
-
-    store.setOnboardingStage('post_import');
-    store.setOnboardingWorkplaceId('imported-workplace' as never);
-
-    const reloaded = new DevicePreferencesStore();
-    expect(reloaded.onboardingStage).toBe('post_import');
-    expect(reloaded.onboardingWorkplaceId).toBe('imported-workplace');
+    expect(store.deviceRegistered).toBe(true);
   });
 
   it('persists synthesized defaults for recovered installs', () => {
@@ -73,8 +72,6 @@ describe('DevicePreferencesStore', () => {
     expect(mockMemory.has('full_frills_balance_device_preferences')).toBe(true);
     expect(JSON.parse(mockMemory.get('full_frills_balance_device_preferences')!)).toEqual({
       deviceRegistered: false,
-      onboardingStage: 'user_profile',
-      onboardingCompleted: false,
       isAppLockEnabled: false,
       isSmsImportEnabled: false,
     });

@@ -25,9 +25,6 @@ jest.mock('@/src/utils/preferences', () => ({
     device: {
       setActiveWorkplaceId: jest.fn(),
       setDeviceRegistered: jest.fn(),
-      setOnboardingStage: jest.fn(),
-      setOnboardingCompleted: jest.fn(),
-      setPendingWorkplaceId: jest.fn(),
     },
   },
 }));
@@ -250,7 +247,6 @@ describe('ImportService import workflow (public executeImport contract)', () => 
       'workplace',
     );
     expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(workplaceId);
-    expect(preferences.device.setOnboardingCompleted).not.toHaveBeenCalled();
   });
 
   it('publishes a target-less import as one atomic Workplace transaction', async () => {
@@ -299,7 +295,6 @@ describe('ImportService import workflow (public executeImport contract)', () => 
 
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
     expect(preferences.device.setDeviceRegistered).not.toHaveBeenCalled();
-    expect(preferences.device.setOnboardingCompleted).not.toHaveBeenCalled();
   });
 
   it('does not duplicate a target-less restore when its published operation is retried', async () => {

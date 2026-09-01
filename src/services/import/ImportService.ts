@@ -102,12 +102,6 @@ export class ImportService {
     const targetlessOperationAlreadyExists = Boolean(existingTargetlessOperation);
     const replacingActiveWorkplace =
       Boolean(workplaceId) && preferences.device.activeWorkplaceId === workplaceId;
-    // Replacing the active Workplace does not change the launch target.
-    // Updating its pointers needlessly wakes the launch coordinator and
-    // remounts the app shell during an in-place import.
-    if (!replacingActiveWorkplace && !options?.deferActivation) {
-      preferences.device.setPendingWorkplaceId(publishedWorkplaceId);
-    }
 
     const initProgress = run.phaseReporter('init');
     initProgress('Initializing native currencies...', 0);

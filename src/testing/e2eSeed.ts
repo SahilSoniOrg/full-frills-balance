@@ -1,4 +1,3 @@
-import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -13,7 +12,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
-import { onboardingService } from '@/src/features/onboarding/services/OnboardingService';
+import { generator } from '@/src/data/database/idGenerator';
+import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -28,16 +28,15 @@ import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/imp
 import { importService } from '@/src/services/import/ImportService';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 
+import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
+
 const DEFAULT_SEED = {
   name: 'E2E User',
   selectedCurrency: 'USD',
   selectedAccounts: ['Cash', 'Bank'],
-  customAccounts: [] as { name: string; type: 'ASSET' | 'LIABILITY'; icon: IconName }[],
   selectedCategories: ['Salary', 'Food & Drink', 'Groceries', 'Bills'],
-  customCategories: [] as { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[],
 };
 
-const ONBOARDING_RESUME_STATE_KEY = 'onboarding_resume_state_v1';
 const LEGACY_ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
 
 async function clearAppStorage(): Promise<void> {
@@ -45,7 +44,7 @@ async function clearAppStorage(): Promise<void> {
     storage.clearAll();
     // The draft is a resumable flow artifact. Explicitly remove it so a
     // clean-install E2E launch cannot inherit a prior interrupted setup.
-    storage.remove(ONBOARDING_RESUME_STATE_KEY);
+    storage.remove(SETUP_DRAFT_KEY);
     storage.remove(LEGACY_ONBOARDING_DRAFT_KEY);
   } catch (error) {
     logger.warn('[E2E] MMKV clearAll failed', { error });
@@ -54,28 +53,42 @@ async function clearAppStorage(): Promise<void> {
 
 async function applyOnboardingPreferences(userName: string): Promise<void> {
   await preferences.setUserName(userName);
-  preferences.device.setOnboardingCompleted(true);
   preferences.device.setAppLockEnabled(false);
   preferences.update({
     isPrivacyMode: false,
   });
 }
 
-async function seedOnboarded(_profile: E2eSeedProfile): Promise<WorkplaceId> {
-  const workplaceId = (await onboardingService.completeOnboarding({
-    ...DEFAULT_SEED,
-    name: DEFAULT_SEED.name,
-  })) as WorkplaceId;
+async function seedWorkplace(name: string): Promise<WorkplaceId> {
+  finishDeviceSetup({ displayName: { value: name, source: 'user_entered' } });
+  const workplaceId = await finishWorkplaceSetup(generator() as WorkplaceId, {
+    name: { value: `${name}'s Personal workplace`, source: 'user_entered' },
+    icon: { value: 'briefcase', source: 'defaulted' },
+    baseCurrency: { value: DEFAULT_SEED.selectedCurrency, source: 'user_entered' },
+    selectedAccounts: DEFAULT_SEED.selectedAccounts.map(accountName => ({
+      name: accountName,
+      type: AccountType.ASSET,
+      icon: 'wallet',
+    })),
+    selectedCategories: DEFAULT_SEED.selectedCategories.map(categoryName => ({
+      name: categoryName,
+      type: AccountType.EXPENSE,
+      icon: 'tag',
+    })),
+    acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+  });
+  preferences.device.setActiveWorkplaceId(workplaceId);
+  return workplaceId;
+}
 
+async function seedOnboarded(_profile: E2eSeedProfile): Promise<WorkplaceId> {
+  const workplaceId = await seedWorkplace(DEFAULT_SEED.name);
   await applyOnboardingPreferences(DEFAULT_SEED.name);
   return workplaceId;
 }
 
 async function seedPickerReady(): Promise<void> {
-  await onboardingService.completeOnboarding({
-    ...DEFAULT_SEED,
-    name: 'Second E2E User',
-  });
+  await seedWorkplace('Second E2E User');
   // Picker state requires multiple workplaces with no active pointer.
   preferences.device.setActiveWorkplaceId(undefined);
 }

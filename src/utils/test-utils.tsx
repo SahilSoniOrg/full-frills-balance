@@ -21,8 +21,6 @@ const mockUIContext: AppShellValue = {
   isLockAuthenticating: false,
   isAppCurrentlyLocked: false,
   isAppReady: true,
-  completeDeviceOnboarding: async () => Promise.resolve(),
-  persistDisplayName: () => {},
   setFontsReady: () => {},
   setDataHydrated: () => {},
   authenticateSession: () => {},

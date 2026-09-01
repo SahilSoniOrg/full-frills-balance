@@ -25,7 +25,6 @@ export interface LaunchResolverInput {
   readonly setupDraft?: LaunchSetupDraft;
   readonly deviceClaimed: boolean;
   readonly activeWorkplaceId?: WorkplaceId;
-  readonly pendingWorkplaceId?: WorkplaceId;
   readonly workplaceIds: readonly WorkplaceId[];
 }
 
@@ -34,7 +33,7 @@ export interface LaunchResolverInput {
  * Workplaces. This function is deliberately pure: callers own all writes.
  */
 export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution {
-  const { deviceClaimed, activeWorkplaceId, pendingWorkplaceId, workplaceIds } = input;
+  const { deviceClaimed, activeWorkplaceId, workplaceIds } = input;
 
   if (input.setupDraft?.entryPolicy === 'blocking' && input.setupDraft.journeyId.trim()) {
     return { kind: 'setup', journeyId: input.setupDraft.journeyId };
@@ -42,10 +41,6 @@ export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution 
 
   if (!deviceClaimed) return { kind: 'setup', journeyId: 'first_run' };
   if (workplaceIds.length === 0) return { kind: 'setup', journeyId: 'empty_device_workplace' };
-
-  if (pendingWorkplaceId && workplaceIds.includes(pendingWorkplaceId)) {
-    return { kind: 'open', workplaceId: pendingWorkplaceId, persistAsActive: true };
-  }
 
   if (activeWorkplaceId && workplaceIds.includes(activeWorkplaceId)) {
     return { kind: 'open', workplaceId: activeWorkplaceId, persistAsActive: false };

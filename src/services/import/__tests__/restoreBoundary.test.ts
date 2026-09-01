@@ -34,7 +34,6 @@ jest.mock('@/src/utils/preferences', () => ({
     device: {
       setDeviceRegistered: jest.fn(),
       setActiveWorkplaceId: jest.fn(),
-      setPendingWorkplaceId: jest.fn(),
     },
   },
 }));
@@ -162,7 +161,6 @@ describe('restore service boundary', () => {
     expect(preferences.restoreImportedPreferences).not.toHaveBeenCalled();
     expect(preferences.device.setDeviceRegistered).not.toHaveBeenCalled();
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
-    expect(preferences.device.setPendingWorkplaceId).not.toHaveBeenCalled();
   });
 
   it('does not publish twice when the operation ID already owns a Workplace', async () => {
