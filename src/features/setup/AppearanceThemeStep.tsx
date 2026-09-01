@@ -13,8 +13,10 @@ import { Box, Stack } from '@/src/design-system';
 import { SetupStsPreview } from './SetupStsPreview';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { logger } from '@/src/utils/logger';
 import { MotiView } from 'moti';
 import { useState, useEffect } from 'react';
+import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
 import {
   GestureResponderEvent,
   PanResponder,
@@ -54,6 +56,12 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
   } = useThemePrefs();
   const themeId = props.themeId ?? persistedThemeId;
   const fontId = props.fontId ?? persistedFontId;
+
+  useEffect(() => {
+    void ensureFontSetLoaded(fontId).catch(error => {
+      logger.error(`[Fonts] Setup preview failed to load: ${fontId}`, error);
+    });
+  }, [fontId]);
 
   const handleSelectTheme = (nextThemeId: ThemeId) => {
     void triggerHaptic('light');
