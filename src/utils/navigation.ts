@@ -474,13 +474,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to import selection screen.
-   */
-  toImportSelection: (newWorkplace = false, source?: 'onboarding' | 'settings') => {
-    router.push(buildRoute('/import-selection', { newWorkplace, source }));
-  },
-
-  /**
    * Navigate to SMS rules list.
    */
   toSmsRules: () => {
