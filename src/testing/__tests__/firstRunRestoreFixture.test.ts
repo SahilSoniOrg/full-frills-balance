@@ -10,7 +10,8 @@ describe('first-run restore fixture', () => {
       defaultCurrencyCode: 'USD',
     });
     expect(prepared.stats).toMatchObject({
-      accounts: 2,
+      accounts: 1,
+      categories: 1,
       journals: 1,
       transactions: 2,
       skippedTransactions: 0,
