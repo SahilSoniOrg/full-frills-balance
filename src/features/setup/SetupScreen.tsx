@@ -16,7 +16,7 @@ import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
-import { discardUnreadableSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
 import { getRestoreAppearancePrefill, getRestoreWorkplacePrefill } from './restoreAutoOutput';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
@@ -71,6 +71,10 @@ function SetupJourneyScreen({
   };
 
   useEffect(() => {
+    const persisted = loadSetupDraft();
+    if (!persisted || persisted.journeyId !== journeyId) {
+      saveSetupDraft(coordinator.getDraft());
+    }
     void settle().catch(error => {
       const message = error instanceof Error ? error.message : 'Could not resume Setup.';
       setResolutionError(message);

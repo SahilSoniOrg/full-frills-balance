@@ -1,11 +1,12 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { discardPublishedRestore } from '../setupFinishers';
-import { clearSetupDraft } from '../SetupDraftStore';
+import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from '../SetupDraftStore';
 import { getSetupRecipe } from '../setupRecipes';
 import {
   abandonRestoreJourney,
   applySetupOutcome,
+  createJourneyCoordinator,
   restoreLeaveNeedsConfirm,
 } from '../setupRuntime';
 import type { RestoreSetupDraft } from '../setupTypes';
@@ -98,5 +99,16 @@ describe('abandon restore', () => {
       'Sahil',
     );
     expect(onSwitchJourney).toHaveBeenCalledWith('first_run', 'Sahil');
+  });
+});
+
+describe('journey coordinator construction', () => {
+  it('does not persist a seeded draft during construction', () => {
+    (loadSetupDraft as jest.Mock).mockReturnValue(undefined);
+    (saveSetupDraft as jest.Mock).mockReset();
+
+    createJourneyCoordinator('create_workplace');
+
+    expect(saveSetupDraft).not.toHaveBeenCalled();
   });
 });

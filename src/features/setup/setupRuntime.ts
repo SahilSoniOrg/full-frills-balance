@@ -11,7 +11,7 @@ import { loadPreparedRestore } from './pickRestoreSource';
 import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardPublishedRestore, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
-import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
+import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import {
   isSetupJourneyId,
   type SetupDraft,
@@ -49,7 +49,6 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
   const recipe = getSetupRecipe(journeyId);
   const existing = loadSetupDraft();
   const draft = existing?.journeyId === journeyId ? existing : createSeededDraft(journeyId);
-  if (existing?.journeyId !== journeyId) saveSetupDraft(draft);
   return createSetupCoordinator({
     journeyId,
     operationId: draft.operationId,
