@@ -37,7 +37,9 @@ export class SetupPage {
     await waitFor(element(by.id(setupIds.restoreSummary)))
       .toExist()
       .withTimeout(ONBOARDING_TIMEOUT_MS);
-    await waitFor(element(by.text('Imported Books was published and is not active yet.')))
+    await waitFor(
+      element(by.text('Imported Books was published and is ready for the final setup step.')),
+    )
       .toExist()
       .withTimeout(ONBOARDING_TIMEOUT_MS);
   }
@@ -47,7 +49,7 @@ export class SetupPage {
   }
 
   async continueWorkplaceSetup(): Promise<void> {
-    await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
+    // First-run workplace identity is automatic; currency, accounts, and categories remain visible.
     for (let i = 0; i < 3; i += 1) {
       await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
     }

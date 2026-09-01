@@ -27,8 +27,14 @@ export function AppearanceSetupSlice({
       onFontChange={setFontId}
       onContinue={() =>
         onContinue({
-          themeId: { value: themeId, source: 'user_entered' },
-          fontId: { value: fontId, source: 'user_entered' },
+          themeId: {
+            value: themeId,
+            source: initial?.themeId.value === themeId ? initial.themeId.source : 'user_entered',
+          },
+          fontId: {
+            value: fontId,
+            source: initial?.fontId.value === fontId ? initial.fontId.source : 'user_entered',
+          },
         })
       }
       onBack={onBack}

@@ -35,6 +35,8 @@ export interface RestoreSummaryActions {
 export interface SetupRecipe {
   readonly journeyId: SetupJourneyId;
   readonly draftKind: SetupDraft['kind'];
+  /** Whether the workplace identity step is seeded and hidden for this journey. */
+  readonly workplaceIdentity: 'automatic' | 'editable';
   readonly entryPolicy: SetupEntryPolicy;
   readonly atStart: SetupAtStart;
   readonly discardTo?: SetupDiscardTo;
@@ -63,6 +65,7 @@ const restoreCore: readonly SetupRecipeEntry[] = [
 const firstRun: SetupRecipe = {
   journeyId: 'first_run',
   draftKind: 'first_run',
+  workplaceIdentity: 'automatic',
   entryPolicy: 'blocking',
   atStart: 'stay',
   entries: [
@@ -76,6 +79,7 @@ const firstRun: SetupRecipe = {
 const firstRunRestore: SetupRecipe = {
   journeyId: 'first_run_restore',
   draftKind: 'restore',
+  workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'first_run',
   discardTo: 'first_run',
@@ -91,6 +95,7 @@ const firstRunRestore: SetupRecipe = {
 const emptyDeviceWorkplace: SetupRecipe = {
   journeyId: 'empty_device_workplace',
   draftKind: 'workplace_creation',
+  workplaceIdentity: 'automatic',
   entryPolicy: 'blocking',
   atStart: 'stay',
   entries: [slice('workplace', 'required'), slice('summary', 'required')],
@@ -99,6 +104,7 @@ const emptyDeviceWorkplace: SetupRecipe = {
 const emptyDeviceRestore: SetupRecipe = {
   journeyId: 'empty_device_restore',
   draftKind: 'restore',
+  workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'empty_device_workplace',
   discardTo: 'empty_device_workplace',
@@ -109,6 +115,7 @@ const emptyDeviceRestore: SetupRecipe = {
 const pickerRestore: SetupRecipe = {
   journeyId: 'picker_restore',
   draftKind: 'restore',
+  workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'dashboard',
   discardTo: 'picker',
@@ -122,6 +129,7 @@ const pickerRestore: SetupRecipe = {
 const settingsRestore: SetupRecipe = {
   journeyId: 'settings_restore',
   draftKind: 'restore',
+  workplaceIdentity: 'editable',
   entryPolicy: 'optional',
   atStart: 'back',
   discardTo: 'settings',
@@ -135,6 +143,7 @@ const settingsRestore: SetupRecipe = {
 const createWorkplace: SetupRecipe = {
   journeyId: 'create_workplace',
   draftKind: 'workplace_creation',
+  workplaceIdentity: 'editable',
   entryPolicy: 'optional',
   atStart: 'back',
   entries: [slice('workplace', 'required'), slice('summary', 'required')],

@@ -5,38 +5,26 @@ import {
   type SetupResolutionDefinitions,
 } from './resolveNextSetupAction';
 import type {
-  AppearanceSetupOutput,
-  DeviceSetupOutput,
   RestoreHandoff,
   RestoreJourneyId,
   RestoreSetupDraft,
   RestoreSourceOutput,
-  RestoreSummaryOutput,
+  SetupSliceAcceptance,
+  SetupSliceOutputById,
   SetupDraft,
   SetupJourneyId,
   SetupOutcome,
   SetupSliceId,
   SetupSliceOutput,
-  SetupSummaryOutput,
   WorkplaceCreationSetupDraft,
-  WorkplaceSetupOutput,
 } from './setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
 import { finishDeviceSetup } from './setupFinishers';
+import { generator } from '@/src/data/database/idGenerator';
+import type { WorkplaceId } from '@/src/types/ids';
 
-export interface SetupSliceOutputById {
-  readonly device: DeviceSetupOutput;
-  readonly restore_source: RestoreSourceOutput;
-  readonly workplace: WorkplaceSetupOutput;
-  readonly restore_summary: RestoreSummaryOutput;
-  readonly appearance: AppearanceSetupOutput;
-  readonly summary: SetupSummaryOutput;
-}
-
-type SliceAcceptance = {
-  [K in SetupSliceId]: { readonly sliceId: K; readonly output: SetupSliceOutputById[K] };
-}[SetupSliceId];
+type SliceAcceptance = SetupSliceAcceptance;
 
 const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
   'workplace',
@@ -63,6 +51,8 @@ export interface SetupCoordinatorOptions {
   };
   readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
 }
+
+export type { SetupSliceOutputById } from './setupTypes';
 
 export type BackResult =
   { readonly kind: 'at_start' } | { readonly kind: 'present'; readonly sliceId: SetupSliceId };
@@ -114,6 +104,25 @@ export function createSetupDraft(
     journeyId: journeyId as RestoreJourneyId,
     restore: {},
   };
+}
+
+/** Seed and persist the restore journey entered from the first-run name step. */
+export function startFirstRunRestoreFromDeviceName(
+  name: string,
+  store: Pick<SetupDraftStore, 'save'> = setupDraftStore,
+): void {
+  const seeded = createSetupDraft('first_run_restore', generator() as WorkplaceId);
+  const trimmed = name.trim();
+  store.save(
+    trimmed && seeded.kind === 'restore'
+      ? {
+          ...seeded,
+          restore: {
+            deviceCandidate: { value: trimmed, source: 'user_entered' },
+          },
+        }
+      : seeded,
+  );
 }
 
 function appendUnique(items: readonly SetupSliceId[], item: SetupSliceId): readonly SetupSliceId[] {
@@ -195,7 +204,6 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   const recipe = options.recipe ?? getSetupRecipe(options.journeyId);
   const store = options.draftStore ?? setupDraftStore;
   let draft = options.draft ?? createSetupDraft(options.journeyId, options.operationId);
-  store.save(draft);
 
   const persist = (next: SetupDraft): void => {
     store.save(next);
@@ -216,6 +224,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     }
     await options.validate?.(sliceId, output, draft);
     const acceptance = { sliceId, output } as SliceAcceptance;
+    // Device preferences are committed at this checkpoint, before its draft is persisted.
     if (acceptance.sliceId === 'device') finishDeviceSetup(acceptance.output);
     const terminal = recipeTerminalSlice(recipe);
     const nextDraft = applyOutput(draft, acceptance);
@@ -236,10 +245,9 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   const advanceAutoAccepted = async (): Promise<NextSetupAction> => {
     let action = next();
     while (action.kind === 'auto_accept') {
-      const updated = applyOutput(draft, {
-        sliceId: action.sliceId,
-        output: action.output,
-      } as SliceAcceptance);
+      // Auto-completed device output follows the same checkpoint boundary as manual input.
+      if (action.sliceId === 'device') finishDeviceSetup(action.output);
+      const updated = applyOutput(draft, action);
       persist({
         ...updated,
         presentedHistory: updated.presentedHistory,
@@ -257,7 +265,12 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       draft.activeSlice ?? (action.kind === 'present' ? action.sliceId : history.at(-1));
     if (current === undefined) return { kind: 'at_start' };
     const currentIndex = history.lastIndexOf(current);
-    const previous = currentIndex > 0 ? history[currentIndex - 1] : history.at(-1);
+    const previous =
+      currentIndex === -1
+        ? history.at(-1)
+        : currentIndex > 0
+          ? history[currentIndex - 1]
+          : undefined;
     if (previous === undefined) {
       persist({ ...draft, activeSlice: undefined });
       return { kind: 'at_start' };

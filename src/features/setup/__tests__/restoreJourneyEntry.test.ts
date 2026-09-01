@@ -10,8 +10,9 @@ describe('restore journey entry', () => {
     const screen = source('../SetupScreen.tsx');
     expect(screen).not.toContain('toImportSelection');
     expect(screen).not.toContain('OnboardingScreen');
-    expect(screen).toContain("createSetupDraft('first_run_restore'");
-    expect(screen).toContain('deviceCandidate');
+    expect(screen).toContain('startFirstRunRestoreFromDeviceName');
+    expect(source('../SetupCoordinator.ts')).toContain("createSetupDraft('first_run_restore'");
+    expect(source('../SetupCoordinator.ts')).toContain('deviceCandidate');
   });
 
   it('routes picker and Settings import into restore journeys', () => {

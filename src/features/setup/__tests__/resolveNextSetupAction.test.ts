@@ -54,6 +54,18 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
+  it('does not count conditional restore screens before they are known to be needed', () => {
+    expect(
+      resolveNextSetupAction(getSetupRecipe('first_run_restore'), restore(), {
+        getAutoOutput: getRestoreAutoOutput,
+      }),
+    ).toMatchObject({
+      kind: 'present',
+      sliceId: 'restore_source',
+      progress: { current: 1, total: 4 },
+    });
+  });
+
   it('presents Workplace when restore facts omit currency', () => {
     const draft = restore({
       acceptedSlices: ['restore_source'],

@@ -91,8 +91,8 @@ async function publishedRestoreWorkplace(draft: SetupDraft) {
     const workplace = await workplaceService.getWorkplace(handoff.workplaceId);
     if (!workplace || workplace.id !== draft.operationId) return undefined;
     return { handoff, workplace };
-  } catch {
-    return undefined;
+  } catch (error) {
+    throw new Error('Could not verify the published restore workplace', { cause: error });
   }
 }
 
@@ -108,21 +108,17 @@ export type RestoreSummaryView = {
 export async function loadRestoreSummary(
   draft: SetupDraft,
 ): Promise<RestoreSummaryView | undefined> {
-  try {
-    const published = await publishedRestoreWorkplace(draft);
-    if (!published) return undefined;
-    const stats = await workplaceService.getPublishedBookStats(published.workplace.id);
-    return {
-      name: published.workplace.name,
-      icon: published.workplace.icon,
-      currency: published.workplace.defaultCurrencyCode,
-      accounts: stats.accounts,
-      categories: stats.categories,
-      journals: stats.journals,
-    };
-  } catch {
-    return undefined;
-  }
+  const published = await publishedRestoreWorkplace(draft);
+  if (!published) return undefined;
+  const stats = await workplaceService.getPublishedBookStats(published.workplace.id);
+  return {
+    name: published.workplace.name,
+    icon: published.workplace.icon,
+    currency: published.workplace.defaultCurrencyCode,
+    accounts: stats.accounts,
+    categories: stats.categories,
+    journals: stats.journals,
+  };
 }
 
 /** Delete only this operation's inactive published Workplace, after the caller confirmed. */
@@ -153,7 +149,6 @@ export async function finishSetup(
         });
       }
     }
-    if (draft.device) finishDeviceSetup(draft.device);
     if (options.applyAppearance && draft.appearance) finishAppearanceSetup(draft.appearance);
     if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplace.id);
     return workplace.id;
@@ -161,7 +156,6 @@ export async function finishSetup(
 
   if (!draft.workplace) throw new Error('Workplace setup is incomplete');
   const workplaceId = await finishWorkplaceSetup(draft.operationId, draft.workplace);
-  if (draft.kind === 'first_run' && draft.device) finishDeviceSetup(draft.device);
   if (draft.kind === 'first_run' && options.applyAppearance !== false && draft.appearance) {
     finishAppearanceSetup(draft.appearance);
   }

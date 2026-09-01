@@ -1,3 +1,4 @@
+import { AppButton } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Inset, Page } from '@/src/design-system';
 import { StepIndicator } from '@/src/components/common/StepIndicator';
@@ -10,6 +11,8 @@ interface WorkplaceSetupLayoutProps {
   children: React.ReactNode;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   keyboardAvoiding?: boolean;
+  backAction?: () => void;
+  backDisabled?: boolean;
 }
 
 export function WorkplaceSetupLayout({
@@ -18,6 +21,8 @@ export function WorkplaceSetupLayout({
   children,
   edges = ['top', 'bottom'],
   keyboardAvoiding = true,
+  backAction,
+  backDisabled = false,
 }: WorkplaceSetupLayoutProps) {
   return (
     <Page
@@ -34,7 +39,12 @@ export function WorkplaceSetupLayout({
             flex={1}
           >
             <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
-            {children}
+            <Box flex={1}>{children}</Box>
+            {backAction ? (
+              <AppButton variant="ghost" onPress={backAction} disabled={backDisabled}>
+                Back
+              </AppButton>
+            ) : null}
           </Box>
         </Inset>
       </Box>

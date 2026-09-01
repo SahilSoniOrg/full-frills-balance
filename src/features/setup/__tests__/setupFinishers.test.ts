@@ -104,7 +104,9 @@ describe('restore finishers', () => {
 
   it('turns a rejected Workplace read into a retryable summary failure', async () => {
     getWorkplace.mockRejectedValue(new Error('db'));
-    await expect(loadRestoreSummary(restoreDraft())).resolves.toBeUndefined();
+    await expect(loadRestoreSummary(restoreDraft())).rejects.toThrow(
+      'Could not verify the published restore workplace',
+    );
     getWorkplace.mockResolvedValue({
       id: operationId,
       name: 'Books',
@@ -134,6 +136,15 @@ describe('restore finishers', () => {
     deleteWorkplace.mockClear();
     (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = operationId;
     await discardPublishedRestore(restoreDraft());
+    expect(deleteWorkplace).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when discard cannot verify the Workplace', async () => {
+    getWorkplace.mockRejectedValue(new Error('db'));
+
+    await expect(discardPublishedRestore(restoreDraft())).rejects.toThrow(
+      'Could not verify the published restore workplace',
+    );
     expect(deleteWorkplace).not.toHaveBeenCalled();
   });
 });

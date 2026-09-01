@@ -310,12 +310,14 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
       }))}
       renderItem={({ item: row, index }) => (
         <View style={styles.grid}>
-          {row.map((item, itemIndex) =>
-            renderItem({ item, index: index * 2 + itemIndex } as {
-              item: SelectableItem;
-              index: number;
-            }),
-          )}
+          {row.map((item, itemIndex) => (
+            <React.Fragment key={item.id}>
+              {renderItem({ item, index: index * 2 + itemIndex } as {
+                item: SelectableItem;
+                index: number;
+              })}
+            </React.Fragment>
+          ))}
         </View>
       )}
       keyExtractor={(row: SelectableItem[]) => row.map(item => item.id).join('-')}

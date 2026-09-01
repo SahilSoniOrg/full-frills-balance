@@ -1,5 +1,9 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { createSetupCoordinator, createSetupDraft } from '../SetupCoordinator';
+import {
+  createSetupCoordinator,
+  createSetupDraft,
+  startFirstRunRestoreFromDeviceName,
+} from '../SetupCoordinator';
 import { finishDeviceSetup } from '../setupFinishers';
 import type {
   FirstRunSetupDraft,
@@ -55,6 +59,18 @@ describe('SetupCoordinator', () => {
 
   beforeEach(() => {
     mockFinishDeviceSetup.mockReset();
+  });
+
+  it('seeds first-run restore from the entered device name', () => {
+    const store = memoryStore();
+
+    startFirstRunRestoreFromDeviceName('  Sahil  ', store);
+
+    expect(store.current()).toMatchObject({
+      journeyId: 'first_run_restore',
+      kind: 'restore',
+      restore: { deviceCandidate: { value: 'Sahil', source: 'user_entered' } },
+    });
   });
 
   it('creates a draft, accepts a slice, and persists the checkpoint', async () => {
@@ -126,6 +142,45 @@ describe('SetupCoordinator', () => {
       effectId: 'publish_restore',
     });
     expect(coordinator.getDraft().acceptedSlices).toContain('workplace');
+  });
+
+  it('runs the device finisher for an auto-accepted device slice', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'first_run_restore',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: {
+        source,
+        summary: { intent: 'continue' },
+        handoff: {
+          operationId,
+          workplaceId: operationId,
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+      workplace,
+    };
+    const device = { displayName: { value: 'Imported', source: 'imported' as const } };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'first_run_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      resolution: { getAutoOutput: sliceId => (sliceId === 'device' ? device : undefined) },
+      finish: unusedFinish,
+    });
+
+    await coordinator.advanceAutoAccepted();
+
+    expect(mockFinishDeviceSetup).toHaveBeenCalledWith(device);
   });
 
   it('persists the restore handoff only after the injected publication effect succeeds', async () => {
@@ -247,6 +302,7 @@ describe('SetupCoordinator', () => {
       draftStore: memoryStore(),
       finish: unusedFinish,
     });
+    firstRun.present('device');
     await firstRun.accept('device', {
       displayName: { value: 'Sahil', source: 'user_entered' },
     });
@@ -259,6 +315,18 @@ describe('SetupCoordinator', () => {
       finish: unusedFinish,
     });
     expect(creation.back()).toEqual({ kind: 'at_start' });
+  });
+
+  it('returns at_start when backing from the first presented slice', () => {
+    const coordinator = createSetupCoordinator({
+      journeyId: 'create_workplace',
+      operationId,
+      draftStore: memoryStore(),
+      finish: unusedFinish,
+    });
+    coordinator.present('workplace');
+
+    expect(coordinator.back()).toEqual({ kind: 'at_start' });
   });
 
   it('keeps the draft when a finisher fails and clears only after success', async () => {

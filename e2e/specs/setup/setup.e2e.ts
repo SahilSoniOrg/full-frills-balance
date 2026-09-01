@@ -36,12 +36,12 @@ describe('Setup journeys', () => {
     await launchFreshApp({ disableSynchronization: true });
     await setupPage.waitForDeviceSlice();
     await setupPage.enterDisplayName('E2E Resume User');
-    await waitFor(element(by.id(onboarding.workplaceIdentityContinue)))
+    await waitFor(element(by.id(onboarding.gridContinue)))
       .toBeVisible()
       .withTimeout(120000);
 
     await relaunchPreservingData();
-    await waitFor(element(by.id(onboarding.workplaceNameInput)))
+    await waitFor(element(by.id(onboarding.gridContinue)))
       .toBeVisible()
       .withTimeout(120000);
     await setupPage.completeFromWorkplace();

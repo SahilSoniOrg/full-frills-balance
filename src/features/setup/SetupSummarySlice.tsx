@@ -35,9 +35,13 @@ export function SetupSummarySlice({
     if (!imported) return;
     let cancelled = false;
     void (async () => {
-      const view = await loadRestoreSummary(draft);
-      if (cancelled) return;
-      setImportedBooks(view ? { status: 'ready', view } : { status: 'failed' });
+      try {
+        const view = await loadRestoreSummary(draft);
+        if (cancelled) return;
+        setImportedBooks(view ? { status: 'ready', view } : { status: 'failed' });
+      } catch {
+        if (!cancelled) setImportedBooks({ status: 'failed' });
+      }
     })();
     return () => {
       cancelled = true;

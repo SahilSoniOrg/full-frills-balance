@@ -33,6 +33,13 @@ describe('Setup recipes', () => {
     expect(getSetupRecipe('settings_restore').entryPolicy).toBe('optional');
   });
 
+  it('keeps workplace identity policy in the journey recipe', () => {
+    expect(getSetupRecipe('first_run').workplaceIdentity).toBe('automatic');
+    expect(getSetupRecipe('empty_device_workplace').workplaceIdentity).toBe('automatic');
+    expect(getSetupRecipe('create_workplace').workplaceIdentity).toBe('editable');
+    expect(getSetupRecipe('first_run_restore').workplaceIdentity).toBe('editable');
+  });
+
   it('owns draft kind, leave, and discard metadata', () => {
     expect(getSetupRecipe('create_workplace')).toMatchObject({
       draftKind: 'workplace_creation',

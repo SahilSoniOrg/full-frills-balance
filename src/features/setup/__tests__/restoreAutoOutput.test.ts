@@ -1,5 +1,9 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from '../restoreAutoOutput';
+import {
+  getRestoreAppearancePrefill,
+  getRestoreAutoOutput,
+  getRestoreWorkplacePrefill,
+} from '../restoreAutoOutput';
 import type { RestoreSetupDraft, RestoreSourceOutput } from '../setupTypes';
 
 const operationId = asWorkplaceId('operation');
@@ -87,5 +91,20 @@ describe('getRestoreAutoOutput', () => {
         }),
       ),
     ).toBeUndefined();
+  });
+
+  it('prefills imported appearance facts', () => {
+    const draft = restore({
+      ...completeSource,
+      facts: {
+        ...completeSource.facts,
+        appearance: { themeId: 'ivy', fontId: 'ivy' },
+      },
+    });
+
+    expect(getRestoreAppearancePrefill(draft)).toEqual({
+      themeId: { value: 'ivy', source: 'imported' },
+      fontId: { value: 'ivy', source: 'imported' },
+    });
   });
 });

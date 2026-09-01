@@ -2,6 +2,7 @@ import { asWorkplaceId } from '@/src/types/ids';
 import { parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
 import { storage } from '@/src/utils/storage';
 import type { FirstRunSetupDraft, RestoreSetupDraft } from '../setupTypes';
+import { AccountType } from '@/src/types/enums';
 
 jest.mock('@/src/utils/storage', () => ({
   storage: { getString: jest.fn(), set: jest.fn(), remove: jest.fn() },
@@ -61,6 +62,24 @@ describe('SetupDraftStore', () => {
     mockGetString.mockReturnValue(JSON.stringify(restoreDraft));
     expect(store.load()).toEqual(restoreDraft);
     expect(JSON.stringify(restoreDraft)).not.toContain('canonicalData');
+  });
+
+  it('accepts starter selections in the persisted schema shape', () => {
+    const withWorkplace: FirstRunSetupDraft = {
+      ...draft,
+      presentedHistory: ['device', 'workplace'],
+      acceptedSlices: ['device', 'workplace'],
+      workplace: {
+        name: { value: "Sahil's Personal workplace", source: 'defaulted' },
+        icon: { value: 'briefcase', source: 'defaulted' },
+        baseCurrency: { value: 'USD', source: 'defaulted' },
+        selectedAccounts: [{ name: 'Cash', type: AccountType.ASSET, icon: 'wallet' }],
+        selectedCategories: [{ name: 'Salary', type: AccountType.INCOME, icon: 'trendingUp' }],
+        acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+      },
+    };
+
+    expect(parseSetupDraft(withWorkplace)).toEqual(withWorkplace);
   });
 
   it.each([

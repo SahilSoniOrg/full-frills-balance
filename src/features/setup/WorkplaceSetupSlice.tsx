@@ -3,7 +3,6 @@ import { AppConfig } from '@/src/constants';
 import { WorkplaceAccountSelectionStep } from '@/src/components/common/workplace-setup/WorkplaceAccountSelectionStep';
 import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplace-setup/WorkplaceCategorySelectionStep';
 import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
-import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
 import { OnboardingWorkplaceStepComponent } from '@/src/features/onboarding';
 import { AppButton } from '@/src/components/core';
 import { useState } from 'react';
@@ -31,10 +30,20 @@ function defaultsFor<T extends { name: string }>(names: string[], suggestions: r
     .filter((item): item is T => item !== undefined);
 }
 
+function starterOutput<T extends { name: string; type: string; icon: IconName }>(
+  items: readonly T[],
+): StarterAccountInput[] {
+  return items.map(({ name, type, icon }) => ({
+    name,
+    type: type as StarterAccountInput['type'],
+    icon,
+  }));
+}
+
 export function WorkplaceSetupSlice({
   displayName,
   initial,
-  totalSteps,
+  identityMode = 'editable',
   books = 'starters',
   isCompleting,
   onContinue,
@@ -43,17 +52,20 @@ export function WorkplaceSetupSlice({
 }: {
   readonly displayName: string;
   readonly initial?: WorkplaceSetupOutput | WorkplaceSetupPrefill;
-  readonly totalSteps: number;
+  /** The journey recipe decides whether identity is seeded or editable. */
+  readonly identityMode?: 'automatic' | 'editable';
   readonly books?: 'starters' | 'imported';
   readonly isCompleting: boolean;
   readonly onContinue: (output: WorkplaceSetupOutput) => void;
   readonly onBack: () => void;
   readonly onRestore?: () => void;
 }) {
-  const [step, setStep] = useState<'identity' | 'currency' | 'accounts' | 'categories'>(() =>
-    books === 'imported' ? importedStartStep(initial) : 'identity',
-  );
+  const [step, setStep] = useState<'identity' | 'currency' | 'accounts' | 'categories'>(() => {
+    if (identityMode === 'automatic') return 'currency';
+    return books === 'imported' ? importedStartStep(initial) : 'identity';
+  });
   const [workplaceName, setWorkplaceName] = useState(initial?.name?.value ?? '');
+  const [hasEditedWorkplaceName, setHasEditedWorkplaceName] = useState(false);
   const [workplaceIcon, setWorkplaceIcon] = useState<IconName>(initial?.icon?.value ?? 'briefcase');
   const [currency, setCurrency] = useState(
     initial?.baseCurrency?.value ?? AppConfig.defaultCurrency,
@@ -68,36 +80,55 @@ export function WorkplaceSetupSlice({
       ? initial.selectedCategories.map(item => item.name)
       : ['Salary', 'Food & Drink', 'Groceries', 'Bills'],
   );
+  const [customAccounts, setCustomAccounts] = useState<StarterAccountInput[]>([]);
+  const [customCategories, setCustomCategories] = useState<StarterCategoryInput[]>([]);
+  const visibleStep = identityMode === 'automatic' && step === 'identity' ? 'currency' : step;
 
   const derivedName = workplaceName || `${displayName.trim() || 'User'}'s Personal workplace`;
+  const inputName = hasEditedWorkplaceName ? workplaceName : derivedName;
   const imported = books === 'imported';
   const resolvedName = workplaceName.trim() || derivedName;
   const output: WorkplaceSetupOutput = {
     name: {
       value: resolvedName,
-      source: keepImported(initial?.name, resolvedName),
+      source: workplaceName.trim() ? keepImported(initial?.name, resolvedName) : 'defaulted',
     },
-    icon: { value: workplaceIcon, source: keepImported(initial?.icon, workplaceIcon) },
+    icon: {
+      value: workplaceIcon,
+      source: initial?.icon ? keepImported(initial.icon, workplaceIcon) : 'defaulted',
+    },
     baseCurrency: { value: currency, source: keepImported(initial?.baseCurrency, currency) },
     selectedAccounts: imported
       ? []
-      : (defaultsFor(accounts, DEFAULT_ACCOUNTS) as StarterAccountInput[]),
+      : [
+          ...starterOutput(defaultsFor(accounts, DEFAULT_ACCOUNTS)),
+          ...customAccounts.filter(item => accounts.includes(item.name)),
+        ],
     selectedCategories: imported
       ? []
-      : (defaultsFor(categories, DEFAULT_CATEGORIES) as StarterCategoryInput[]),
+      : [
+          ...starterOutput(defaultsFor(categories, DEFAULT_CATEGORIES)).map(item => ({
+            ...item,
+            type: item.type as StarterCategoryInput['type'],
+          })),
+          ...customCategories.filter(item => categories.includes(item.name)),
+        ],
     acceptedCheckpoints: imported
       ? ['identity', 'currency']
       : ['identity', 'currency', 'accounts', 'categories'],
   };
 
   return (
-    <WorkplaceSetupLayout currentStep={2} totalSteps={totalSteps}>
-      {step === 'identity' && (
+    <>
+      {visibleStep === 'identity' && (
         <>
           <OnboardingWorkplaceStepComponent
-            name={derivedName}
+            name={inputName}
             icon={workplaceIcon}
-            onNameChange={setWorkplaceName}
+            onNameChange={name => {
+              setHasEditedWorkplaceName(true);
+              setWorkplaceName(name);
+            }}
             onIconChange={setWorkplaceIcon}
             onContinue={() => setStep('currency')}
             onBack={onBack}
@@ -110,41 +141,53 @@ export function WorkplaceSetupSlice({
           ) : null}
         </>
       )}
-      {step === 'currency' && (
+      {visibleStep === 'currency' && (
         <WorkplaceCurrencyStep
           selectedCurrency={currency}
           onSelectCurrency={setCurrency}
           onContinue={() => (imported ? onContinue(output) : setStep('accounts'))}
-          onBack={() => setStep('identity')}
+          onBack={() => (identityMode === 'automatic' ? onBack() : setStep('identity'))}
           isCompleting={isCompleting}
         />
       )}
-      {!imported && step === 'accounts' && (
+      {!imported && visibleStep === 'accounts' && (
         <WorkplaceAccountSelectionStep
           selectedAccounts={accounts}
-          customAccounts={[]}
+          customAccounts={customAccounts.map(item => ({
+            ...item,
+            type: item.type as 'ASSET' | 'LIABILITY',
+          }))}
           onToggleAccount={n =>
             setAccounts(v => (v.includes(n) ? v.filter(x => x !== n) : [...v, n]))
           }
-          onAddCustomAccount={() => undefined}
+          onAddCustomAccount={(name, type, icon) => {
+            setCustomAccounts(items => [...items, { name, type, icon } as StarterAccountInput]);
+            setAccounts(items => (items.includes(name) ? items : [...items, name]));
+          }}
           onContinue={() => setStep('categories')}
           onBack={() => setStep('currency')}
           isCompleting={isCompleting}
         />
       )}
-      {!imported && step === 'categories' && (
+      {!imported && visibleStep === 'categories' && (
         <WorkplaceCategorySelectionStep
           selectedCategories={categories}
-          customCategories={[]}
+          customCategories={customCategories.map(item => ({
+            ...item,
+            type: item.type as 'INCOME' | 'EXPENSE',
+          }))}
           onToggleCategory={n =>
             setCategories(v => (v.includes(n) ? v.filter(x => x !== n) : [...v, n]))
           }
-          onAddCustomCategory={() => undefined}
+          onAddCustomCategory={(name, type, icon) => {
+            setCustomCategories(items => [...items, { name, type, icon } as StarterCategoryInput]);
+            setCategories(items => (items.includes(name) ? items : [...items, name]));
+          }}
           onContinue={() => onContinue(output)}
           onBack={() => setStep('accounts')}
           isCompleting={isCompleting}
         />
       )}
-    </WorkplaceSetupLayout>
+    </>
   );
 }

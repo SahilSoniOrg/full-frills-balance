@@ -144,6 +144,27 @@ export type SetupSliceOutput =
   | RestoreSummaryOutput
   | SetupSummaryOutput;
 
+export interface SetupSliceOutputById {
+  readonly device: DeviceSetupOutput;
+  readonly restore_source: RestoreSourceOutput;
+  readonly workplace: WorkplaceSetupOutput;
+  readonly restore_summary: RestoreSummaryOutput;
+  readonly appearance: AppearanceSetupOutput;
+  readonly summary: SetupSummaryOutput;
+}
+
+export type SetupSliceAcceptance = {
+  [K in SetupSliceId]: { readonly sliceId: K; readonly output: SetupSliceOutputById[K] };
+}[SetupSliceId];
+
+export type SetupAutoAcceptAction = {
+  [K in SetupSliceId]: {
+    readonly kind: 'auto_accept';
+    readonly sliceId: K;
+    readonly output: SetupSliceOutputById[K];
+  };
+}[SetupSliceId];
+
 export interface SetupProgress {
   readonly current: number;
   readonly total: number;

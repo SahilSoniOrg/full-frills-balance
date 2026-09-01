@@ -36,7 +36,7 @@ const draft: RestoreSetupDraft = {
 
 describe('RestoreSummarySlice', () => {
   it('blocks Stay and Open after a failed read and still allows Discard', async () => {
-    load.mockResolvedValue(undefined);
+    load.mockRejectedValue(new Error('db'));
     const onIntent = jest.fn();
     render(
       <RestoreSummarySlice
@@ -47,7 +47,6 @@ describe('RestoreSummarySlice', () => {
         }}
         isCompleting={false}
         onIntent={onIntent}
-        onBack={jest.fn()}
       />,
     );
 

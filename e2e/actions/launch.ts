@@ -39,9 +39,7 @@ export async function launchFreshApp(
       e2eReset: '1',
     },
   });
-  if (options.disableSynchronization) {
-    await device.disableSynchronization();
-  }
+  if (options.disableSynchronization) await device.disableSynchronization();
   if (!options.disableSynchronization) {
     await waitFor(element(by.id('onboarding-name-input')))
       .toBeVisible()
@@ -71,9 +69,7 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile, options.backupPath),
   });
-  if (options.disableSynchronization) {
-    await device.disableSynchronization();
-  }
+  if (options.disableSynchronization) await device.disableSynchronization();
   if (!options.disableSynchronization) {
     await waitForDashboard();
   }
@@ -105,9 +101,7 @@ export async function launchRestoreResumeApp(
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs('first-run-restore'),
   });
-  if (options.disableSynchronization) {
-    await device.disableSynchronization();
-  }
+  if (options.disableSynchronization) await device.disableSynchronization();
 }
 
 export async function relaunchPreservingData(): Promise<void> {
@@ -118,6 +112,8 @@ export async function relaunchPreservingData(): Promise<void> {
     permissions: { notifications: 'YES' },
     launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
   });
+  // Startup can legitimately keep native work pending; callers explicitly wait for their slice.
+  await device.disableSynchronization();
 }
 
 export async function openWorkplaceCreation(): Promise<void> {

@@ -1,53 +1,12 @@
 import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { ImportPluginCard } from '@/src/components/common/ImportPluginCard';
 import type { ImportPlugin } from '@/src/services/import/types';
 import type { ImportStats } from '@/src/contexts/app-shell/AppRestartProvider';
-import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { useTheme } from '@/src/hooks/use-theme';
-
-interface ImportPluginCardProps {
-  plugin: ImportPlugin;
-  index: number;
-  isImporting: boolean;
-  onSelect: (id: string) => void;
-}
-
-const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPluginCardProps) => {
-  const { theme } = useTheme();
-  const handleSelect = useCallback(() => {
-    onSelect(plugin.id);
-  }, [onSelect, plugin.id]);
-
-  return (
-    <AppCard key={plugin.id} elevation="sm" paddingSize="md" style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={[styles.iconPlaceholder, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppText variant="heading" style={{ fontSize: Typography.sizes.xxl }}>
-            {plugin.icon}
-          </AppText>
-        </View>
-        <View style={styles.textCol}>
-          <AppText variant="subheading">{plugin.name}</AppText>
-          <AppText variant="caption" color="secondary" style={styles.desc}>
-            {plugin.description}
-          </AppText>
-        </View>
-      </View>
-      <AppButton
-        variant={index === 0 ? 'primary' : 'outline'}
-        testID={`import-plugin-${plugin.id}`}
-        onPress={handleSelect}
-        loading={isImporting}
-        style={styles.button}
-      >
-        {AppConfig.strings.settings.selectFile(plugin.name.split(' ')[0])}
-      </AppButton>
-    </AppCard>
-  );
-};
 
 interface ImportSelectionViewProps {
   plugins: ImportPlugin[];
@@ -149,7 +108,8 @@ export function ImportSelectionView({
                 plugin={plugin}
                 index={index}
                 onSelect={onSelect}
-                isImporting={isImporting}
+                isBusy={isImporting}
+                testIDPrefix="import-plugin"
               />
             ))}
 
@@ -203,32 +163,6 @@ const styles = StyleSheet.create({
   },
   intro: {
     marginBottom: Spacing.sm,
-  },
-  card: {
-    marginBottom: Spacing.sm,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
-    alignItems: 'center',
-  },
-  iconPlaceholder: {
-    width: Size.xxl,
-    height: Size.xxl,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  textCol: {
-    flex: 1,
-  },
-  desc: {
-    marginTop: Spacing.xs,
-    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
-  },
-  button: {
-    width: '100%',
   },
   note: {
     marginTop: Spacing.xl,

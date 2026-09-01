@@ -4,16 +4,14 @@ import type {
   SetupProgress,
   SetupSliceId,
   SetupSliceOutput,
+  SetupAutoAcceptAction,
+  SetupSliceOutputById,
 } from './setupTypes';
 import type { SetupRecipe, SetupRecipeEntry } from './setupRecipes';
 
 export type NextSetupAction =
   | { readonly kind: 'present'; readonly sliceId: SetupSliceId; readonly progress: SetupProgress }
-  | {
-      readonly kind: 'auto_accept';
-      readonly sliceId: SetupSliceId;
-      readonly output: SetupSliceOutput;
-    }
+  | SetupAutoAcceptAction
   | { readonly kind: 'run_effect'; readonly effectId: SetupEffectId }
   | { readonly kind: 'finish' };
 
@@ -67,7 +65,9 @@ function progressFor(
     if (entry.kind !== 'slice') continue;
     const accepted = isAccepted(draft, entry.sliceId);
     const autoAccepted = !accepted && hasAutoOutput(entry, draft, definitions);
-    if (!autoAccepted && (presented.has(entry.sliceId) || !accepted)) {
+    const isConditional = entry.policy === 'when_missing';
+    const isVisibleBeforePresentation = presented.has(entry.sliceId) || !isConditional;
+    if (!autoAccepted && (isVisibleBeforePresentation || entry.sliceId === currentSlice)) {
       visibleSlices.push(entry.sliceId);
     }
   }
@@ -92,6 +92,13 @@ function presentAction(
     sliceId,
     progress: progressFor(recipe, draft, definitions, sliceId),
   };
+}
+
+function autoAcceptAction<K extends SetupSliceId>(
+  sliceId: K,
+  output: SetupSliceOutputById[K],
+): SetupAutoAcceptAction {
+  return { kind: 'auto_accept', sliceId, output } as SetupAutoAcceptAction;
 }
 
 /** Resolve one observable action. It performs no persistence, navigation, or other effects. */
@@ -122,7 +129,7 @@ export function resolveNextSetupAction(
     if (entry.policy === 'when_missing') {
       const output = definitions.getAutoOutput?.(entry.sliceId, draft);
       if (output !== undefined) {
-        return { kind: 'auto_accept', sliceId: entry.sliceId, output };
+        return autoAcceptAction(entry.sliceId, output);
       }
     }
 

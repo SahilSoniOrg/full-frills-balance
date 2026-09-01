@@ -20,7 +20,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
   isCompleting,
 }) => {
   return (
-    <Box flex={1}>
+    <Box flex={1} testID="onboarding-screen">
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
