@@ -4,7 +4,7 @@ import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
 import { storage } from '@/src/utils/storage';
-import { notifySetupDraftChanged } from '@/src/services/setup/launchProjection';
+import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -38,7 +38,7 @@ import {
   isWorkplaceId,
 } from './setupTypes';
 
-export const SETUP_DRAFT_KEY = 'setup_draft_v1';
+export { SETUP_DRAFT_KEY };
 export const SETUP_DRAFT_SCHEMA_VERSION = 1 as const;
 
 type RecordValue = Record<string, unknown>;
@@ -476,14 +476,12 @@ function parseBase(value: RecordValue): SetupDraftBase | undefined {
     return undefined;
   }
   if (value.activeSlice !== undefined && !isSetupSliceId(value.activeSlice)) return undefined;
-  if (value.editingSlice !== undefined && !isSetupSliceId(value.editingSlice)) return undefined;
   return {
     schemaVersion: SETUP_DRAFT_SCHEMA_VERSION,
     operationId: asWorkplaceId(value.operationId),
     presentedHistory,
     acceptedSlices,
     ...(value.activeSlice === undefined ? {} : { activeSlice: value.activeSlice }),
-    ...(value.editingSlice === undefined ? {} : { editingSlice: value.editingSlice }),
   };
 }
 
@@ -512,7 +510,6 @@ function parseFirstRun(value: RecordValue, base: SetupDraftBase): FirstRunSetupD
     'presentedHistory',
     'acceptedSlices',
     'activeSlice',
-    'editingSlice',
     'device',
     'workplace',
     'appearance',
@@ -561,7 +558,6 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     'presentedHistory',
     'acceptedSlices',
     'activeSlice',
-    'editingSlice',
     'restore',
     'device',
     'workplace',
@@ -640,7 +636,6 @@ function parseWorkplaceCreation(
     'presentedHistory',
     'acceptedSlices',
     'activeSlice',
-    'editingSlice',
     'workplace',
     'summary',
   ];
@@ -684,7 +679,6 @@ export function parseSetupDraft(value: unknown): SetupDraft | undefined {
       'presentedHistory',
       'acceptedSlices',
       'activeSlice',
-      'editingSlice',
       'device',
       'workplace',
       'appearance',

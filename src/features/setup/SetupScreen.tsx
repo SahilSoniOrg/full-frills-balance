@@ -49,17 +49,10 @@ function SetupJourneyScreen({ journeyId }: { journeyId: 'first_run' | 'create_wo
         journeyId,
         operationId,
         draft: existingDraft,
-        finishers: {
-          firstRun: async draft => {
-            const workplaceId = await finishSetup(draft);
-            if (!workplaceId) throw new Error('Workplace publication failed');
-            return { kind: 'workplace_created', workplaceId };
-          },
-          workplaceCreation: async draft => {
-            const workplaceId = await finishSetup(draft);
-            if (!workplaceId) throw new Error('Workplace publication failed');
-            return { kind: 'workplace_created', workplaceId };
-          },
+        finish: async draft => {
+          const workplaceId = await finishSetup(draft);
+          if (!workplaceId) throw new Error('Workplace publication failed');
+          return { kind: 'workplace_created', workplaceId };
         },
       }),
     [existingDraft, journeyId, operationId],

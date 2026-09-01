@@ -46,17 +46,7 @@ export interface SetupCoordinatorOptions {
   readonly effects?: {
     readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<RestoreHandoff>;
   };
-  readonly finishers: {
-    readonly firstRun?: (
-      draft: Extract<SetupDraft, { readonly kind: 'first_run' }>,
-    ) => Promise<SetupOutcome>;
-    readonly restore?: (
-      draft: Extract<SetupDraft, { readonly kind: 'restore' }>,
-    ) => Promise<SetupOutcome>;
-    readonly workplaceCreation?: (
-      draft: Extract<SetupDraft, { readonly kind: 'workplace_creation' }>,
-    ) => Promise<SetupOutcome>;
-  };
+  readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
 }
 
 export type BackResult =
@@ -121,47 +111,41 @@ function recipeContains(recipe: SetupRecipe, sliceId: SetupSliceId): boolean {
   return recipe.entries.some(entry => entry.kind === 'slice' && entry.sliceId === sliceId);
 }
 
-function applyOutput(
+function applyOutput<K extends SetupSliceId>(
   draft: SetupDraft,
-  sliceId: SetupSliceId,
-  output: SetupSliceOutput,
+  sliceId: K,
+  output: SetupSliceOutputById[K],
 ): SetupDraft {
   const acceptedSlices = appendUnique(draft.acceptedSlices, sliceId);
   switch (sliceId) {
     case 'device':
-      if (draft.kind === 'first_run')
-        return { ...draft, acceptedSlices, device: output as DeviceSetupOutput };
-      if (draft.kind === 'restore')
-        return { ...draft, acceptedSlices, device: output as DeviceSetupOutput };
-      throw new Error('Device slice is not in this Setup journey');
+      if (draft.kind === 'workplace_creation') {
+        throw new Error('Device slice is not in this Setup journey');
+      }
+      return { ...draft, acceptedSlices, device: output as SetupSliceOutputById['device'] };
     case 'workplace':
-      return { ...draft, acceptedSlices, workplace: output as WorkplaceSetupOutput };
+      return { ...draft, acceptedSlices, workplace: output as SetupSliceOutputById['workplace'] };
     case 'appearance':
-      if (draft.kind === 'first_run')
-        return { ...draft, acceptedSlices, appearance: output as AppearanceSetupOutput };
-      if (draft.kind === 'restore')
-        return { ...draft, acceptedSlices, appearance: output as AppearanceSetupOutput };
-      throw new Error('Appearance slice is not in this Setup journey');
+      if (draft.kind === 'workplace_creation') {
+        throw new Error('Appearance slice is not in this Setup journey');
+      }
+      return { ...draft, acceptedSlices, appearance: output as SetupSliceOutputById['appearance'] };
     case 'restore_source':
-      if (draft.kind === 'restore') {
-        return {
-          ...draft,
-          acceptedSlices,
-          restore: { ...draft.restore, source: output as RestoreSourceOutput },
-        };
-      }
-      throw new Error('Restore source is not in this Setup journey');
+      if (draft.kind !== 'restore') throw new Error('Restore source is not in this Setup journey');
+      return {
+        ...draft,
+        acceptedSlices,
+        restore: { ...draft.restore, source: output as SetupSliceOutputById['restore_source'] },
+      };
     case 'restore_summary':
-      if (draft.kind === 'restore') {
-        return {
-          ...draft,
-          acceptedSlices,
-          restore: { ...draft.restore, summary: output as RestoreSummaryOutput },
-        };
-      }
-      throw new Error('Restore summary is not in this Setup journey');
+      if (draft.kind !== 'restore') throw new Error('Restore summary is not in this Setup journey');
+      return {
+        ...draft,
+        acceptedSlices,
+        restore: { ...draft.restore, summary: output as SetupSliceOutputById['restore_summary'] },
+      };
     case 'summary':
-      return { ...draft, acceptedSlices, summary: output as SetupSummaryOutput };
+      return { ...draft, acceptedSlices, summary: output as SetupSliceOutputById['summary'] };
   }
 }
 
@@ -194,15 +178,13 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       );
     }
     await options.validate?.(sliceId, output, draft);
-    let updated = applyOutput(draft, sliceId, output);
-    const editing = draft.editingSlice === sliceId;
-    updated = {
-      ...updated,
-      activeSlice: editing ? terminalSlice(recipe) : undefined,
-      editingSlice: undefined,
-      presentedHistory: appendUnique(updated.presentedHistory, sliceId),
-    };
-    persist(updated);
+    const terminal = terminalSlice(recipe);
+    const returnToTerminal = sliceId !== terminal && draft.acceptedSlices.includes(terminal);
+    persist({
+      ...applyOutput(draft, sliceId, output),
+      activeSlice: returnToTerminal ? terminal : undefined,
+      presentedHistory: appendUnique(draft.presentedHistory, sliceId),
+    });
   };
 
   const present = (sliceId: SetupSliceId): void => {
@@ -219,7 +201,6 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
         ...updated,
         presentedHistory: updated.presentedHistory,
         activeSlice: undefined,
-        editingSlice: undefined,
       });
       action = next();
     }
@@ -235,25 +216,17 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     const currentIndex = history.lastIndexOf(current);
     const previous = currentIndex > 0 ? history[currentIndex - 1] : history.at(-1);
     if (previous === undefined) {
-      persist({
-        ...draft,
-        activeSlice: undefined,
-        editingSlice: undefined,
-      });
+      persist({ ...draft, activeSlice: undefined });
       return { kind: 'at_start' };
     }
-    persist({
-      ...draft,
-      activeSlice: previous,
-      editingSlice: undefined,
-    });
+    persist({ ...draft, activeSlice: previous });
     return { kind: 'present', sliceId: previous };
   };
 
   const edit = (sliceId: SetupSliceId): void => {
     if (!recipeContains(recipe, sliceId))
       throw new Error(`Slice ${sliceId} is not in this Setup recipe`);
-    persist({ ...draft, activeSlice: sliceId, editingSlice: sliceId });
+    persist({ ...draft, activeSlice: sliceId });
   };
 
   const runPendingEffect = async (): Promise<NextSetupAction> => {
@@ -271,18 +244,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     const action = next();
     if (action.kind !== 'finish')
       throw new Error(`Cannot finish while Setup action is ${action.kind}`);
-    let outcome: SetupOutcome;
-    if (draft.kind === 'first_run') {
-      if (!options.finishers.firstRun) throw new Error('First-run finisher is not configured');
-      outcome = await options.finishers.firstRun(draft);
-    } else if (draft.kind === 'restore') {
-      if (!options.finishers.restore) throw new Error('Restore finisher is not configured');
-      outcome = await options.finishers.restore(draft);
-    } else {
-      if (!options.finishers.workplaceCreation)
-        throw new Error('Workplace-creation finisher is not configured');
-      outcome = await options.finishers.workplaceCreation(draft);
-    }
+    const outcome = await options.finish(draft);
     store.clear();
     return outcome;
   };
@@ -298,14 +260,4 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     runPendingEffect,
     finish,
   };
-}
-
-export type SetupLaunchProjection = { readonly kind: 'setup'; readonly journeyId: SetupJourneyId };
-
-export function projectBlockingSetupLaunch(
-  draft: SetupDraft | undefined,
-): SetupLaunchProjection | undefined {
-  return draft?.entryPolicy === 'blocking'
-    ? { kind: 'setup', journeyId: draft.journeyId }
-    : undefined;
 }

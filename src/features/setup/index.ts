@@ -4,11 +4,7 @@ export {
   saveSetupDraft,
   SetupDraftStore,
 } from './SetupDraftStore';
-export {
-  createSetupCoordinator,
-  createSetupDraft,
-  projectBlockingSetupLaunch,
-} from './SetupCoordinator';
+export { createSetupCoordinator, createSetupDraft } from './SetupCoordinator';
 export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';
 export {

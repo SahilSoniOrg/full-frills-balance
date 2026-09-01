@@ -35,4 +35,25 @@ describe('Setup launch projection', () => {
     expect(onChange).toHaveBeenCalledTimes(2);
     unsubscribe();
   });
+
+  it('ignores optional and unknown drafts', () => {
+    expect(
+      readBlockingSetupProjection(
+        JSON.stringify({
+          journeyId: 'settings_restore',
+          entryPolicy: 'optional',
+          operationId: 'operation',
+        }),
+      ),
+    ).toBeUndefined();
+    expect(
+      readBlockingSetupProjection(
+        JSON.stringify({
+          journeyId: 'not_a_journey',
+          entryPolicy: 'blocking',
+          operationId: 'operation',
+        }),
+      ),
+    ).toBeUndefined();
+  });
 });

@@ -1,10 +1,11 @@
-import type {
-  RestoreJourneyId,
-  SetupEffectId,
-  SetupEntryPolicy,
-  SetupJourneyId,
-  SetupSliceId,
-  SetupSlicePolicy,
+import {
+  isRestoreJourneyId,
+  type RestoreJourneyId,
+  type SetupEffectId,
+  type SetupEntryPolicy,
+  type SetupJourneyId,
+  type SetupSliceId,
+  type SetupSlicePolicy,
 } from './setupTypes';
 
 export type SetupRecipeEntry =
@@ -35,6 +36,13 @@ const effect = (effectId: SetupEffectId): SetupRecipeEntry => ({
   effectId,
 });
 
+const restoreCore: readonly SetupRecipeEntry[] = [
+  slice('restore_source', 'required'),
+  slice('workplace', 'when_missing'),
+  effect('publish_restore'),
+  slice('restore_summary', 'required'),
+];
+
 const firstRun: SetupRecipe = {
   journeyId: 'first_run',
   entryPolicy: 'blocking',
@@ -50,10 +58,7 @@ const firstRunRestore: SetupRecipe = {
   journeyId: 'first_run_restore',
   entryPolicy: 'blocking',
   entries: [
-    slice('restore_source', 'required'),
-    slice('workplace', 'when_missing'),
-    effect('publish_restore'),
-    slice('restore_summary', 'required'),
+    ...restoreCore,
     slice('device', 'when_missing'),
     slice('appearance', 'always_show'),
     slice('summary', 'required'),
@@ -69,12 +74,7 @@ const emptyDeviceWorkplace: SetupRecipe = {
 const emptyDeviceRestore: SetupRecipe = {
   journeyId: 'empty_device_restore',
   entryPolicy: 'blocking',
-  entries: [
-    slice('restore_source', 'required'),
-    slice('workplace', 'when_missing'),
-    effect('publish_restore'),
-    slice('restore_summary', 'required'),
-  ],
+  entries: restoreCore,
 };
 
 const pickerRestore: SetupRecipe = {
@@ -82,23 +82,13 @@ const pickerRestore: SetupRecipe = {
   // Blocking while the restore is selected; callers may keep the draft optional
   // when it was launched from the picker and an existing Workplace is usable.
   entryPolicy: 'blocking',
-  entries: [
-    slice('restore_source', 'required'),
-    slice('workplace', 'when_missing'),
-    effect('publish_restore'),
-    slice('restore_summary', 'required'),
-  ],
+  entries: restoreCore,
 };
 
 const settingsRestore: SetupRecipe = {
   journeyId: 'settings_restore',
   entryPolicy: 'optional',
-  entries: [
-    slice('restore_source', 'required'),
-    slice('workplace', 'when_missing'),
-    effect('publish_restore'),
-    slice('restore_summary', 'required'),
-  ],
+  entries: restoreCore,
 };
 
 const createWorkplace: SetupRecipe = {
@@ -124,10 +114,5 @@ export function getSetupRecipe(journeyId: SetupJourneyId): SetupRecipe {
 export function isRestoreRecipe(recipe: SetupRecipe): recipe is SetupRecipe & {
   readonly journeyId: RestoreJourneyId;
 } {
-  return (
-    recipe.journeyId === 'first_run_restore' ||
-    recipe.journeyId === 'empty_device_restore' ||
-    recipe.journeyId === 'picker_restore' ||
-    recipe.journeyId === 'settings_restore'
-  );
+  return isRestoreJourneyId(recipe.journeyId);
 }

@@ -1,9 +1,10 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { createSetupCoordinator, projectBlockingSetupLaunch } from '../SetupCoordinator';
+import { createSetupCoordinator } from '../SetupCoordinator';
 import type {
   FirstRunSetupDraft,
   RestoreSetupDraft,
   SetupDraft,
+  SetupOutcome,
   WorkplaceSetupOutput,
 } from '../setupTypes';
 
@@ -22,6 +23,10 @@ const source = {
   source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
   facts: { workplace: { name: 'Imported', defaultCurrencyCode: 'USD' } },
 };
+
+function unusedFinish(): Promise<SetupOutcome> {
+  return Promise.reject(new Error('finish should not run'));
+}
 
 function memoryStore() {
   let stored: SetupDraft | undefined;
@@ -47,7 +52,7 @@ describe('SetupCoordinator', () => {
       journeyId: 'first_run',
       operationId,
       draftStore: store,
-      finishers: {},
+      finish: unusedFinish,
     });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
     coordinator.present('device');
@@ -81,7 +86,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       resolution: { getAutoOutput: sliceId => (sliceId === 'workplace' ? workplace : undefined) },
-      finishers: {},
+      finish: unusedFinish,
     });
     expect(await coordinator.advanceAutoAccepted()).toEqual({
       kind: 'run_effect',
@@ -115,7 +120,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draft,
       draftStore: store,
-      finishers: {},
+      finish: unusedFinish,
       resolution: {
         getAutoOutput: sliceId => (sliceId === 'workplace' ? workplace : undefined),
       },
@@ -154,7 +159,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draft,
       draftStore: store,
-      finishers: {},
+      finish: unusedFinish,
     });
     coordinator.edit('device');
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
@@ -168,7 +173,7 @@ describe('SetupCoordinator', () => {
       journeyId: 'first_run',
       operationId,
       draftStore: memoryStore(),
-      finishers: {},
+      finish: unusedFinish,
     });
     await firstRun.accept('device', {
       displayName: { value: 'Sahil', source: 'user_entered' },
@@ -179,7 +184,7 @@ describe('SetupCoordinator', () => {
       journeyId: 'create_workplace',
       operationId,
       draftStore: memoryStore(),
-      finishers: {},
+      finish: unusedFinish,
     });
     expect(creation.back()).toEqual({ kind: 'at_start' });
   });
@@ -211,39 +216,12 @@ describe('SetupCoordinator', () => {
       operationId,
       draft,
       draftStore: store,
-      finishers: { firstRun: finisher },
+      finish: finisher,
     });
     await expect(coordinator.finish()).rejects.toThrow('retry');
     expect(store.clears).toBe(0);
     await expect(coordinator.finish()).resolves.toEqual({ kind: 'device_registered' });
     expect(store.clears).toBe(1);
     expect(finisher).toHaveBeenCalledTimes(2);
-  });
-
-  it('projects only blocking drafts to launch', () => {
-    expect(projectBlockingSetupLaunch(undefined)).toBeUndefined();
-    expect(
-      projectBlockingSetupLaunch({
-        schemaVersion: 1,
-        kind: 'restore',
-        journeyId: 'settings_restore',
-        entryPolicy: 'optional',
-        operationId,
-        presentedHistory: [],
-        acceptedSlices: [],
-        restore: {},
-      }),
-    ).toBeUndefined();
-    expect(
-      projectBlockingSetupLaunch({
-        schemaVersion: 1,
-        kind: 'first_run',
-        journeyId: 'first_run',
-        entryPolicy: 'blocking',
-        operationId,
-        presentedHistory: [],
-        acceptedSlices: [],
-      }),
-    ).toEqual({ kind: 'setup', journeyId: 'first_run' });
   });
 });

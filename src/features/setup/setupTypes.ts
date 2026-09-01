@@ -8,15 +8,7 @@ import type {
 } from '@/src/services/import/restoreTypes';
 import type { ImportStats } from '@/src/services/import/types';
 
-/** The first-run and restore journeys supported by Setup. */
-export type SetupJourneyId =
-  | 'first_run'
-  | 'first_run_restore'
-  | 'empty_device_workplace'
-  | 'empty_device_restore'
-  | 'picker_restore'
-  | 'settings_restore'
-  | 'create_workplace';
+export { isSetupJourneyId, type SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 
 export type RestoreJourneyId =
   'first_run_restore' | 'empty_device_restore' | 'picker_restore' | 'settings_restore';
@@ -96,7 +88,6 @@ export interface SetupDraftBase {
   readonly acceptedSlices: readonly SetupSliceId[];
   /** Set only for Back or Summary > Change; never a numeric progress cursor. */
   readonly activeSlice?: SetupSliceId;
-  readonly editingSlice?: SetupSliceId;
 }
 
 export interface FirstRunSetupDraft extends SetupDraftBase {
@@ -170,15 +161,6 @@ export function isRestoreJourneyId(value: unknown): value is RestoreJourneyId {
     value === 'empty_device_restore' ||
     value === 'picker_restore' ||
     value === 'settings_restore'
-  );
-}
-
-export function isSetupJourneyId(value: unknown): value is SetupJourneyId {
-  return (
-    value === 'first_run' ||
-    value === 'empty_device_workplace' ||
-    value === 'create_workplace' ||
-    isRestoreJourneyId(value)
   );
 }
 

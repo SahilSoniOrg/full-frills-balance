@@ -1,16 +1,9 @@
 import { storage } from '@/src/utils/storage';
 import type { LaunchSetupDraft } from '@/src/services/launch/launchResolver';
+import { SETUP_DRAFT_KEY, isSetupJourneyId } from './setupDraftIdentity';
 
-const SETUP_DRAFT_KEY = 'setup_draft_v1';
-const JOURNEYS = new Set([
-  'first_run',
-  'first_run_restore',
-  'empty_device_workplace',
-  'empty_device_restore',
-  'picker_restore',
-  'settings_restore',
-  'create_workplace',
-]);
+export { SETUP_DRAFT_KEY, SETUP_JOURNEY_IDS, isSetupJourneyId } from './setupDraftIdentity';
+export type { SetupJourneyId } from './setupDraftIdentity';
 
 const subscribers = new Set<() => void>();
 
@@ -38,15 +31,14 @@ export function readBlockingSetupProjection(
     if (
       typeof value !== 'object' ||
       value === null ||
-      typeof value.journeyId !== 'string' ||
-      !JOURNEYS.has(value.journeyId) ||
+      !isSetupJourneyId(value.journeyId) ||
       value.entryPolicy !== 'blocking' ||
       typeof value.operationId !== 'string' ||
       value.operationId.trim() === ''
     ) {
       return undefined;
     }
-    return { journeyId: value.journeyId, entryPolicy: 'blocking' } as LaunchSetupDraft;
+    return { journeyId: value.journeyId, entryPolicy: 'blocking' };
   } catch {
     return undefined;
   }
