@@ -24,6 +24,7 @@ interface OnboardingReviewStepProps {
   isCompleting: boolean;
   isImportedWorkplace?: boolean;
   showAppearance?: boolean;
+  showProfile?: boolean;
 }
 
 const THEME_LABELS: Record<ThemeId, string> = {
@@ -144,6 +145,7 @@ export function OnboardingReviewStep({
   isCompleting,
   isImportedWorkplace = false,
   showAppearance = true,
+  showProfile = true,
 }: OnboardingReviewStepProps) {
   const strings = AppConfig.strings.onboarding.review;
   const { theme } = useTheme();
@@ -175,7 +177,14 @@ export function OnboardingReviewStep({
         </Box>
 
         <AppCard variant="outline" paddingSize="none">
-          <ReviewRow label={strings.profile} value={name} onChange={onChangeProfile} icon="user" />
+          {showProfile ? (
+            <ReviewRow
+              label={strings.profile}
+              value={name}
+              onChange={onChangeProfile}
+              icon="user"
+            />
+          ) : null}
           <ReviewRow
             label={strings.workplace}
             value={workplaceName}

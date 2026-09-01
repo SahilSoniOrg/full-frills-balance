@@ -69,18 +69,48 @@ export interface FinishSetupOptions {
   readonly applyAppearance?: boolean;
 }
 
+async function publishedRestoreWorkplace(draft: SetupDraft) {
+  if (draft.kind !== 'restore') return undefined;
+  const handoff = draft.restore.handoff;
+  if (!handoff) return undefined;
+  if (handoff.operationId !== draft.operationId) return undefined;
+  const workplace = await workplaceService.getWorkplace(handoff.workplaceId);
+  if (!workplace || workplace.id !== handoff.workplaceId) return undefined;
+  return { handoff, workplace };
+}
+
+/** Delete only this operation's inactive published Workplace, after the caller confirmed. */
+export async function discardPublishedRestore(draft: SetupDraft): Promise<void> {
+  const published = await publishedRestoreWorkplace(draft);
+  if (!published) return;
+  if (published.workplace.id !== draft.operationId) return;
+  if (preferences.device.activeWorkplaceId === published.workplace.id) return;
+  await workplaceService.deleteWorkplace(published.workplace.id);
+}
+
 /** Terminal finisher used by the coordinator after Summary acceptance. */
 export async function finishSetup(
   draft: SetupDraft,
   options: FinishSetupOptions = {},
 ): Promise<WorkplaceId | undefined> {
   if (draft.kind === 'restore') {
-    const workplaceId = draft.restore.handoff?.workplaceId;
-    if (!workplaceId) throw new Error('Restore publication is incomplete');
+    const published = await publishedRestoreWorkplace(draft);
+    if (!published) throw new Error('Restore publication is incomplete');
+    const { workplace } = published;
+    if (draft.workplace) {
+      const name = draft.workplace.name.value.trim();
+      const icon = draft.workplace.icon.value;
+      if (name !== workplace.name || icon !== workplace.icon) {
+        await workplaceService.updateWorkplace(workplace.id, {
+          ...(name !== workplace.name ? { name } : {}),
+          ...(icon !== workplace.icon ? { icon } : {}),
+        });
+      }
+    }
     if (draft.device) finishDeviceSetup(draft.device);
     if (options.applyAppearance && draft.appearance) finishAppearanceSetup(draft.appearance);
-    if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplaceId);
-    return workplaceId;
+    if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplace.id);
+    return workplace.id;
   }
 
   if (!draft.workplace) throw new Error('Workplace setup is incomplete');

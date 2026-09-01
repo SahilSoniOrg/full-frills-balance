@@ -10,11 +10,12 @@ describe('restore journey entry', () => {
     const screen = source('../SetupScreen.tsx');
     expect(screen).not.toContain('toImportSelection');
     expect(screen).not.toContain('OnboardingScreen');
-    expect(screen).toContain("onSwitchJourney('first_run_restore')");
+    expect(screen).toContain("onSwitchJourney('first_run_restore', name)");
   });
 
   it('routes picker and Settings import into restore journeys', () => {
     expect(source('../../app/LaunchCoordinator.tsx')).toContain("journey: 'picker_restore'");
+    expect(source('../../app/LaunchCoordinator.tsx')).toContain("journey: 'create_workplace'");
     expect(source('../../settings/hooks/useDataManagementViewModel.ts')).toContain(
       "toSetupJourney('settings_restore')",
     );

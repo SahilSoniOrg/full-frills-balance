@@ -40,7 +40,7 @@ export function RestoreSourceSlice({
   };
 
   return (
-    <Box flex={1} padding="lg">
+    <Box flex={1} padding="lg" testID="restore-source-slice">
       <ScrollView>
         <Stack gap="md">
           <AppText variant="title">Restore a backup</AppText>

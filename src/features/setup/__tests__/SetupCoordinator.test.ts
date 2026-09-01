@@ -1,5 +1,5 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { createSetupCoordinator } from '../SetupCoordinator';
+import { createSetupCoordinator, createSetupDraft } from '../SetupCoordinator';
 import { finishDeviceSetup } from '../setupFinishers';
 import type {
   FirstRunSetupDraft,
@@ -295,5 +295,128 @@ describe('SetupCoordinator', () => {
     await expect(coordinator.finish()).resolves.toEqual({ kind: 'device_registered' });
     expect(store.clears).toBe(1);
     expect(finisher).toHaveBeenCalledTimes(2);
+  });
+
+  it('takes entry policy from the recipe', () => {
+    expect(createSetupDraft('settings_restore', operationId).entryPolicy).toBe('optional');
+    expect(createSetupDraft('create_workplace', operationId).entryPolicy).toBe('optional');
+    expect(createSetupDraft('empty_device_workplace', operationId).entryPolicy).toBe('blocking');
+  });
+
+  it('drops restore publication when a different source is accepted', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'settings_restore',
+      entryPolicy: 'optional',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace'],
+      restore: { source },
+      workplace,
+    };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'settings_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+    });
+    coordinator.edit('restore_source');
+    await coordinator.accept('restore_source', {
+      source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+      facts: { workplace: { name: 'Other' } },
+    });
+    const next = coordinator.getDraft();
+    expect(next.acceptedSlices).toEqual(['restore_source']);
+    expect(next.kind === 'restore' && next.restore.handoff).toBeUndefined();
+    expect(next.workplace).toBeUndefined();
+    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
+  });
+
+  it('keeps a published handoff when the same backup is reselected', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'empty_device_restore',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: ['restore_source', 'restore_summary'],
+      acceptedSlices: ['restore_source', 'workplace'],
+      restore: {
+        source,
+        handoff: {
+          operationId,
+          workplaceId: asWorkplaceId('published'),
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+      workplace,
+    };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'empty_device_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+    });
+    coordinator.edit('restore_source');
+    await coordinator.accept('restore_source', {
+      ...source,
+      source: { ...source.source, uri: 'file:///reselected.json' },
+    });
+    expect(coordinator.getDraft()).toMatchObject({
+      restore: {
+        source: { source: { uri: 'file:///reselected.json', fingerprint: 'abc' } },
+        handoff: { workplaceId: 'published' },
+      },
+    });
+  });
+
+  it('rejects a different backup after restore publication', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'empty_device_restore',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: ['restore_source', 'restore_summary'],
+      acceptedSlices: ['restore_source', 'workplace'],
+      restore: {
+        source,
+        handoff: {
+          operationId,
+          workplaceId: asWorkplaceId('published'),
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+      workplace,
+    };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'empty_device_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+    });
+    coordinator.edit('restore_source');
+    await expect(
+      coordinator.accept('restore_source', {
+        source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+        facts: { workplace: { name: 'Other' } },
+      }),
+    ).rejects.toThrow('Published restore cannot switch to a different backup');
+    expect(coordinator.getDraft()).toMatchObject({
+      restore: { handoff: { workplaceId: 'published' } },
+    });
   });
 });

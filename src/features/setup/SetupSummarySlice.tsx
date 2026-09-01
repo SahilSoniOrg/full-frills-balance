@@ -1,6 +1,7 @@
 import { FontIds, ThemeIds } from '@/src/constants';
 import { OnboardingReviewStep } from '@/src/features/onboarding';
 import { View } from 'react-native';
+import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import type { SetupDraft, SetupSliceId } from './setupTypes';
 
 export function SetupSummarySlice({
@@ -41,6 +42,7 @@ export function SetupSummarySlice({
         isCompleting={isCompleting}
         isImportedWorkplace={false}
         showAppearance={'appearance' in draft}
+        showProfile={recipeContainsSlice(getSetupRecipe(draft.journeyId), 'device')}
       />
     </View>
   );

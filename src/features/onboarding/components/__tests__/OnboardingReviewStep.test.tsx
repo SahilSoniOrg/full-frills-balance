@@ -96,4 +96,33 @@ describe('OnboardingReviewStep', () => {
     expect(screen.queryByLabelText('Change Categories')).toBeNull();
     expect(screen.getByLabelText('Change Appearance')).toBeTruthy();
   });
+
+  it('hides the profile row when the recipe has no Device slice', () => {
+    render(
+      <OnboardingReviewStep
+        name=""
+        workplaceName="New workplace"
+        workplaceIcon="briefcase"
+        selectedCurrency="USD"
+        accountCount={2}
+        categoryCount={4}
+        themeId="ivy"
+        fontId="editorial"
+        onChangeProfile={jest.fn()}
+        onChangeWorkplace={jest.fn()}
+        onChangeCurrency={jest.fn()}
+        onChangeAccounts={jest.fn()}
+        onChangeCategories={jest.fn()}
+        onChangeAppearance={jest.fn()}
+        onConfirm={jest.fn()}
+        onBack={jest.fn()}
+        isCompleting={false}
+        showAppearance={false}
+        showProfile={false}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Change Profile')).toBeNull();
+    expect(screen.queryByLabelText('Change Appearance')).toBeNull();
+  });
 });

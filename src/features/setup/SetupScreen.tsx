@@ -1,8 +1,7 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import { generator } from '@/src/data/database/idGenerator';
-import { toast } from '@/src/utils/alerts';
-import { workplaceService } from '@/src/services/WorkplaceService';
+import { confirm, toast } from '@/src/utils/alerts';
 import { publishRestore } from '@/src/services/import/publishRestore';
 import { LoadingView } from '@/src/components/core';
 import {
@@ -19,10 +18,11 @@ import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { createSetupCoordinator, type SetupSliceOutputById } from './SetupCoordinator';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
-import { getRestoreAutoOutput } from './restoreAutoOutput';
+import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from './restoreAutoOutput';
 import { loadPreparedRestore } from './pickRestoreSource';
 import type { NextSetupAction } from './resolveNextSetupAction';
-import { finishSetup } from './setupFinishers';
+import { discardPublishedRestore, finishSetup } from './setupFinishers';
+import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
 import {
   isRestoreJourneyId,
@@ -37,14 +37,7 @@ import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 
 function visibleSlice(action: NextSetupAction, journeyId: SetupJourneyId): SetupSliceId {
   if (action.kind === 'present') return action.sliceId;
-  if (action.kind === 'finish') {
-    return journeyId === 'first_run_restore' ||
-      journeyId === 'first_run' ||
-      journeyId === 'empty_device_workplace' ||
-      journeyId === 'create_workplace'
-      ? 'summary'
-      : 'restore_summary';
-  }
+  if (action.kind === 'finish') return recipeTerminalSlice(getSetupRecipe(journeyId));
   return 'restore_source';
 }
 
@@ -62,11 +55,14 @@ function resolveJourney(
 
 function SetupJourneyScreen({
   journeyId,
+  candidateName,
   onSwitchJourney,
 }: {
   journeyId: SetupJourneyId;
-  onSwitchJourney: (journeyId: SetupJourneyId) => void;
+  readonly candidateName: string;
+  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void;
 }) {
+  const recipe = getSetupRecipe(journeyId);
   const operationId = useMemo(() => generator() as WorkplaceId, []);
   const existingDraft = useMemo(() => {
     const draft = loadSetupDraft();
@@ -80,7 +76,10 @@ function SetupJourneyScreen({
         draft: existingDraft,
         resolution: {
           getAutoOutput: (sliceId, draft) =>
-            getRestoreAutoOutput(sliceId, draft, { userName: preferences.userName }),
+            getRestoreAutoOutput(sliceId, draft, {
+              userName: preferences.userName,
+              candidateName,
+            }),
         },
         effects: {
           publishRestore: async draft => {
@@ -116,7 +115,7 @@ function SetupJourneyScreen({
           return { kind: 'workplace_created', workplaceId };
         },
       }),
-    [existingDraft, journeyId, operationId],
+    [candidateName, existingDraft, journeyId, operationId],
   );
 
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
@@ -137,10 +136,11 @@ function SetupJourneyScreen({
       return;
     }
     if (outcome.kind === 'journey_discarded') {
-      if (outcome.returnTo === 'first_run') onSwitchJourney('first_run');
-      else if (outcome.returnTo === 'picker') AppNavigation.toDashboard();
-      else if (journeyId === 'empty_device_restore') onSwitchJourney('empty_device_workplace');
-      else AppNavigation.toSettings();
+      if (recipe.discardTo === 'first_run') onSwitchJourney('first_run');
+      else if (recipe.discardTo === 'picker') AppNavigation.toDashboard();
+      else if (recipe.discardTo === 'empty_device_workplace') {
+        onSwitchJourney('empty_device_workplace');
+      } else AppNavigation.toSettings();
     }
   };
 
@@ -193,27 +193,41 @@ function SetupJourneyScreen({
   };
 
   const discardRestore = async () => {
-    const published = draft.kind === 'restore' ? draft.restore.handoff?.workplaceId : undefined;
-    if (published) await workplaceService.deleteWorkplace(published);
-    clearSetupDraft();
-    applyOutcome({
-      kind: 'journey_discarded',
-      returnTo:
-        journeyId === 'first_run_restore'
-          ? 'first_run'
-          : journeyId === 'picker_restore'
-            ? 'picker'
-            : 'current_workplace',
-    });
+    setBusy(true);
+    try {
+      await discardPublishedRestore(coordinator.getDraft());
+      clearSetupDraft();
+      applyOutcome({
+        kind: 'journey_discarded',
+        returnTo:
+          recipe.discardTo === 'first_run'
+            ? 'first_run'
+            : recipe.discardTo === 'picker'
+              ? 'picker'
+              : 'current_workplace',
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not discard restore.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const acceptRestoreIntent = async (intent: RestoreSummaryIntent) => {
+    if (intent === 'discard') {
+      confirm.show({
+        title: 'Discard restore?',
+        message: 'This deletes the imported workplace from this restore and cannot be undone.',
+        confirmText: 'Discard',
+        destructive: true,
+        onConfirm: () => {
+          void discardRestore();
+        },
+      });
+      return;
+    }
     setBusy(true);
     try {
-      if (intent === 'discard') {
-        await discardRestore();
-        return;
-      }
       await coordinator.accept('restore_summary', { intent });
       await settle();
     } catch (error) {
@@ -230,20 +244,20 @@ function SetupJourneyScreen({
   const goBack = () => {
     const result = coordinator.back();
     if (result.kind === 'at_start') {
-      if (journeyId === 'create_workplace' || journeyId === 'settings_restore')
-        AppNavigation.back();
-      else if (journeyId === 'picker_restore') {
+      if (recipe.atStart === 'back') AppNavigation.back();
+      else if (recipe.atStart === 'dashboard') {
         clearSetupDraft();
         AppNavigation.toDashboard();
-      } else if (journeyId === 'first_run_restore') {
-        onSwitchJourney('first_run');
-      } else if (journeyId === 'empty_device_restore') {
+      } else if (recipe.atStart === 'first_run') onSwitchJourney('first_run');
+      else if (recipe.atStart === 'empty_device_workplace') {
         onSwitchJourney('empty_device_workplace');
       }
     }
   };
 
-  const displayName = 'device' in draft ? (draft.device?.displayName.value ?? '') : '';
+  const displayName =
+    ('device' in draft ? draft.device?.displayName.value : undefined) || candidateName;
+  const workplaceInitial = draft.workplace ?? getRestoreWorkplacePrefill(draft);
   const render = () => {
     switch (slice) {
       case 'device':
@@ -252,7 +266,7 @@ function SetupJourneyScreen({
             initialName={displayName}
             isCompleting={busy}
             onContinue={output => void advance('device', output)}
-            onRestore={() => onSwitchJourney('first_run_restore')}
+            onRestore={name => onSwitchJourney('first_run_restore', name)}
           />
         );
       case 'restore_source':
@@ -267,8 +281,8 @@ function SetupJourneyScreen({
         return (
           <WorkplaceSetupSlice
             displayName={displayName}
-            initial={draft.workplace}
-            totalSteps={journeyId === 'first_run' || journeyId === 'first_run_restore' ? 6 : 5}
+            initial={workplaceInitial}
+            totalSteps={recipeContainsSlice(recipe, 'device') ? 6 : 5}
             books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}
             isCompleting={busy}
             onContinue={output => void advance('workplace', output)}
@@ -284,6 +298,7 @@ function SetupJourneyScreen({
         return (
           <RestoreSummarySlice
             journeyId={journeyId}
+            operationId={draft.operationId}
             handoff={draft.kind === 'restore' ? draft.restore.handoff : undefined}
             isCompleting={busy}
             onIntent={intent => void acceptRestoreIntent(intent)}
@@ -308,11 +323,7 @@ function SetupJourneyScreen({
             onEdit={goTo}
             onConfirm={() => void finish()}
             onBack={() =>
-              goTo(
-                journeyId === 'first_run' || journeyId === 'first_run_restore'
-                  ? 'appearance'
-                  : 'workplace',
-              )
+              goTo(recipeContainsSlice(recipe, 'appearance') ? 'appearance' : 'workplace')
             }
           />
         );
@@ -334,12 +345,17 @@ function SetupScreen() {
     journey?: string;
   }>();
   const [journeyOverride, setJourneyOverride] = useState<SetupJourneyId>();
+  const [candidateName, setCandidateName] = useState('');
   const journeyId = resolveJourney({ mode, journey }, journeyOverride);
   return (
     <SetupJourneyScreen
       key={journeyId}
       journeyId={journeyId}
-      onSwitchJourney={setJourneyOverride}
+      candidateName={candidateName}
+      onSwitchJourney={(nextJourney, name) => {
+        if (name !== undefined) setCandidateName(name);
+        setJourneyOverride(nextJourney);
+      }}
     />
   );
 }

@@ -53,4 +53,11 @@ describe('Setup journeys', () => {
     await setupPage.completeFromWorkplace(false);
     await waitForDashboard();
   });
+
+  it('enters first-run Restore as a Setup journey from Device setup', async () => {
+    await launchFreshApp({ disableSynchronization: true });
+    await setupPage.waitForDeviceSlice();
+    await setupPage.typeDisplayName('E2E Restore User');
+    await setupPage.openRestoreFromDevice();
+  });
 });

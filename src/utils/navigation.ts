@@ -1,6 +1,7 @@
 import { Href, router } from 'expo-router';
 import type { TransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
 import { toLegacyJournalEntryQueryParams } from '@/src/features/journal/entry/journalEntryRouteAdapter';
+import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
 
@@ -50,10 +51,10 @@ export const AppNavigation = {
   },
 
   toWorkplaceCreation: () => {
-    router.push({ pathname: '/onboarding', params: { mode: 'full' } });
+    router.push({ pathname: '/onboarding', params: { journey: 'create_workplace' } });
   },
 
-  toSetupJourney: (journey: string) => {
+  toSetupJourney: (journey: SetupJourneyId) => {
     router.replace({ pathname: '/onboarding', params: { journey } });
   },
 

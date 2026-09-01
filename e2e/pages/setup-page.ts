@@ -20,6 +20,19 @@ export class SetupPage {
     await input.tapReturnKey();
   }
 
+  async typeDisplayName(name: string): Promise<void> {
+    const input = element(by.id(setupIds.nameInput));
+    await input.tap();
+    await input.replaceText(name);
+  }
+
+  async openRestoreFromDevice(): Promise<void> {
+    await tapById(setupIds.restoreButton, ONBOARDING_TIMEOUT_MS);
+    await waitFor(element(by.id(setupIds.restoreSource)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+  }
+
   async continueWorkplaceSetup(): Promise<void> {
     await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
     for (let i = 0; i < 3; i += 1) {

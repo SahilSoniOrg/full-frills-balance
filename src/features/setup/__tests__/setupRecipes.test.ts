@@ -32,4 +32,18 @@ describe('Setup recipes', () => {
     expect(getSetupRecipe('picker_restore').entryPolicy).toBe('blocking');
     expect(getSetupRecipe('settings_restore').entryPolicy).toBe('optional');
   });
+
+  it('owns draft kind, leave, and discard metadata', () => {
+    expect(getSetupRecipe('create_workplace')).toMatchObject({
+      draftKind: 'workplace_creation',
+      entryPolicy: 'optional',
+      atStart: 'back',
+    });
+    expect(getSetupRecipe('first_run_restore')).toMatchObject({
+      draftKind: 'restore',
+      atStart: 'first_run',
+      discardTo: 'first_run',
+    });
+    expect(getSetupRecipe('empty_device_workplace').draftKind).toBe('workplace_creation');
+  });
 });

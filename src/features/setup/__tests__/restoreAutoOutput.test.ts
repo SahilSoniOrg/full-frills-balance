@@ -1,5 +1,5 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { getRestoreAutoOutput } from '../restoreAutoOutput';
+import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from '../restoreAutoOutput';
 import type { RestoreSetupDraft, RestoreSourceOutput } from '../setupTypes';
 
 const operationId = asWorkplaceId('operation');
@@ -41,6 +41,31 @@ describe('getRestoreAutoOutput', () => {
         }),
       ),
     ).toBeUndefined();
+  });
+
+  it('prefills present Workplace facts when currency is missing', () => {
+    const draft = restore({
+      ...completeSource,
+      facts: { workplace: { name: 'Books', icon: 'briefcase' } },
+    });
+    expect(getRestoreWorkplacePrefill(draft)).toEqual({
+      name: { value: 'Books', source: 'imported' },
+      icon: { value: 'briefcase', source: 'imported' },
+    });
+    expect(getRestoreAutoOutput('workplace', draft)).toBeUndefined();
+  });
+
+  it('uses a typed candidate name when the backup has no User name', () => {
+    expect(
+      getRestoreAutoOutput(
+        'device',
+        restore({
+          ...completeSource,
+          facts: { workplace: completeSource.facts.workplace },
+        }),
+        { candidateName: 'Typed', userName: 'Existing' },
+      ),
+    ).toEqual({ displayName: { value: 'Typed', source: 'user_entered' } });
   });
 
   it('prefers imported Device name over an existing Device name', () => {

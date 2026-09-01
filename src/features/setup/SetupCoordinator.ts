@@ -8,6 +8,7 @@ import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
   RestoreHandoff,
+  RestoreJourneyId,
   RestoreSetupDraft,
   RestoreSourceOutput,
   RestoreSummaryOutput,
@@ -17,9 +18,10 @@ import type {
   SetupSliceId,
   SetupSliceOutput,
   SetupSummaryOutput,
+  WorkplaceCreationSetupDraft,
   WorkplaceSetupOutput,
 } from './setupTypes';
-import { getSetupRecipe } from './setupRecipes';
+import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
 import { finishDeviceSetup } from './setupFinishers';
 
@@ -31,6 +33,18 @@ export interface SetupSliceOutputById {
   readonly appearance: AppearanceSetupOutput;
   readonly summary: SetupSummaryOutput;
 }
+
+type SliceAcceptance = {
+  [K in SetupSliceId]: { readonly sliceId: K; readonly output: SetupSliceOutputById[K] };
+}[SetupSliceId];
+
+const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
+  'workplace',
+  'restore_summary',
+  'device',
+  'appearance',
+  'summary',
+];
 
 export interface SetupCoordinatorOptions {
   readonly journeyId: SetupJourneyId;
@@ -76,30 +90,28 @@ export function createSetupDraft(
   operationId: SetupDraft['operationId'],
   entryPolicyOverride?: SetupDraft['entryPolicy'],
 ): SetupDraft {
+  const recipe = getSetupRecipe(journeyId);
   const base = {
     schemaVersion: 1 as const,
     operationId,
-    presentedHistory: [],
-    acceptedSlices: [],
+    presentedHistory: [] as const,
+    acceptedSlices: [] as const,
+    entryPolicy: entryPolicyOverride ?? recipe.entryPolicy,
   };
-  if (journeyId === 'first_run') {
-    return { ...base, kind: 'first_run', journeyId, entryPolicy: 'blocking' };
+  if (recipe.draftKind === 'first_run') {
+    return { ...base, kind: 'first_run', journeyId: 'first_run', entryPolicy: 'blocking' };
   }
-  if (journeyId === 'empty_device_workplace' || journeyId === 'create_workplace') {
+  if (recipe.draftKind === 'workplace_creation') {
     return {
       ...base,
       kind: 'workplace_creation',
-      journeyId,
-      entryPolicy:
-        entryPolicyOverride ?? (journeyId === 'create_workplace' ? 'optional' : 'blocking'),
+      journeyId: journeyId as WorkplaceCreationSetupDraft['journeyId'],
     };
   }
   return {
     ...base,
     kind: 'restore',
-    journeyId,
-    entryPolicy:
-      entryPolicyOverride ?? (journeyId === 'settings_restore' ? 'optional' : 'blocking'),
+    journeyId: journeyId as RestoreJourneyId,
     restore: {},
   };
 }
@@ -108,50 +120,71 @@ function appendUnique(items: readonly SetupSliceId[], item: SetupSliceId): reado
   return items.includes(item) ? items : [...items, item];
 }
 
-function recipeContains(recipe: SetupRecipe, sliceId: SetupSliceId): boolean {
-  return recipe.entries.some(entry => entry.kind === 'slice' && entry.sliceId === sliceId);
+function withoutSlices(
+  items: readonly SetupSliceId[],
+  removed: readonly SetupSliceId[],
+): readonly SetupSliceId[] {
+  return items.filter(id => !removed.includes(id));
 }
 
-function applyOutput<K extends SetupSliceId>(
-  draft: SetupDraft,
-  sliceId: K,
-  output: SetupSliceOutputById[K],
-): SetupDraft {
-  const acceptedSlices = appendUnique(draft.acceptedSlices, sliceId);
-  switch (sliceId) {
+function applyRestoreSource(
+  draft: RestoreSetupDraft,
+  output: RestoreSourceOutput,
+): RestoreSetupDraft {
+  const previousFingerprint = draft.restore.source?.source.fingerprint;
+  const publishedFingerprint = draft.restore.handoff?.fingerprint;
+  if (publishedFingerprint !== undefined && publishedFingerprint !== output.source.fingerprint) {
+    throw new Error('Published restore cannot switch to a different backup');
+  }
+  if (previousFingerprint === output.source.fingerprint) {
+    return {
+      ...draft,
+      acceptedSlices: appendUnique(draft.acceptedSlices, 'restore_source'),
+      restore: { ...draft.restore, source: output },
+    };
+  }
+  return {
+    ...draft,
+    acceptedSlices: appendUnique(
+      withoutSlices(draft.acceptedSlices, SOURCE_DOWNSTREAM),
+      'restore_source',
+    ),
+    restore: { source: output },
+    workplace: undefined,
+    device: undefined,
+    appearance: undefined,
+    summary: undefined,
+  };
+}
+
+function applyOutput(draft: SetupDraft, acceptance: SliceAcceptance): SetupDraft {
+  const acceptedSlices = appendUnique(draft.acceptedSlices, acceptance.sliceId);
+  switch (acceptance.sliceId) {
     case 'device':
       if (draft.kind === 'workplace_creation') {
         throw new Error('Device slice is not in this Setup journey');
       }
-      return { ...draft, acceptedSlices, device: output as SetupSliceOutputById['device'] };
+      return { ...draft, acceptedSlices, device: acceptance.output };
     case 'workplace':
-      return { ...draft, acceptedSlices, workplace: output as SetupSliceOutputById['workplace'] };
+      return { ...draft, acceptedSlices, workplace: acceptance.output };
     case 'appearance':
       if (draft.kind === 'workplace_creation') {
         throw new Error('Appearance slice is not in this Setup journey');
       }
-      return { ...draft, acceptedSlices, appearance: output as SetupSliceOutputById['appearance'] };
+      return { ...draft, acceptedSlices, appearance: acceptance.output };
     case 'restore_source':
       if (draft.kind !== 'restore') throw new Error('Restore source is not in this Setup journey');
-      return {
-        ...draft,
-        acceptedSlices,
-        restore: { ...draft.restore, source: output as SetupSliceOutputById['restore_source'] },
-      };
+      return applyRestoreSource(draft, acceptance.output);
     case 'restore_summary':
       if (draft.kind !== 'restore') throw new Error('Restore summary is not in this Setup journey');
       return {
         ...draft,
         acceptedSlices,
-        restore: { ...draft.restore, summary: output as SetupSliceOutputById['restore_summary'] },
+        restore: { ...draft.restore, summary: acceptance.output },
       };
     case 'summary':
-      return { ...draft, acceptedSlices, summary: output as SetupSliceOutputById['summary'] };
+      return { ...draft, acceptedSlices, summary: acceptance.output };
   }
-}
-
-function terminalSlice(recipe: SetupRecipe): SetupSliceId {
-  return recipeContains(recipe, 'summary') ? 'summary' : 'restore_summary';
 }
 
 /** Create the small linear coordinator used by Setup screens and tests. */
@@ -179,18 +212,20 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       );
     }
     await options.validate?.(sliceId, output, draft);
-    if (sliceId === 'device') finishDeviceSetup(output as SetupSliceOutputById['device']);
-    const terminal = terminalSlice(recipe);
-    const returnToTerminal = sliceId !== terminal && draft.acceptedSlices.includes(terminal);
+    const acceptance = { sliceId, output } as SliceAcceptance;
+    if (acceptance.sliceId === 'device') finishDeviceSetup(acceptance.output);
+    const terminal = recipeTerminalSlice(recipe);
+    const nextDraft = applyOutput(draft, acceptance);
+    const returnToTerminal = sliceId !== terminal && nextDraft.acceptedSlices.includes(terminal);
     persist({
-      ...applyOutput(draft, sliceId, output),
+      ...nextDraft,
       activeSlice: returnToTerminal ? terminal : undefined,
       presentedHistory: appendUnique(draft.presentedHistory, sliceId),
     });
   };
 
   const present = (sliceId: SetupSliceId): void => {
-    if (!recipeContains(recipe, sliceId))
+    if (!recipeContainsSlice(recipe, sliceId))
       throw new Error(`Slice ${sliceId} is not in this Setup recipe`);
     persist({ ...draft, presentedHistory: appendUnique(draft.presentedHistory, sliceId) });
   };
@@ -198,7 +233,10 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   const advanceAutoAccepted = async (): Promise<NextSetupAction> => {
     let action = next();
     while (action.kind === 'auto_accept') {
-      const updated = applyOutput(draft, action.sliceId, action.output);
+      const updated = applyOutput(draft, {
+        sliceId: action.sliceId,
+        output: action.output,
+      } as SliceAcceptance);
       persist({
         ...updated,
         presentedHistory: updated.presentedHistory,
@@ -226,7 +264,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   };
 
   const edit = (sliceId: SetupSliceId): void => {
-    if (!recipeContains(recipe, sliceId))
+    if (!recipeContainsSlice(recipe, sliceId))
       throw new Error(`Slice ${sliceId} is not in this Setup recipe`);
     persist({ ...draft, activeSlice: sliceId });
   };

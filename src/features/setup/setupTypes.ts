@@ -49,6 +49,13 @@ export interface WorkplaceSetupOutput {
   readonly acceptedCheckpoints: readonly WorkplaceCheckpoint[];
 }
 
+/** Imported facts that can prefill Workplace setup without auto-completing it. */
+export type WorkplaceSetupPrefill = {
+  readonly name?: Sourced<string>;
+  readonly icon?: Sourced<IconName>;
+  readonly baseCurrency?: Sourced<string>;
+};
+
 export interface AppearanceSetupOutput {
   readonly themeId: Sourced<ThemeId>;
   readonly fontId: Sourced<FontId>;

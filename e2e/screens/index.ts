@@ -7,6 +7,8 @@ export const onboarding = {
   workplaceIdentityContinue: 'workplace-basic-info-continue-button',
   workplaceNameInput: 'workplace-name-input',
   summary: 'onboarding-summary-step',
+  restoreButton: 'onboarding-restore-button',
+  restoreSource: 'restore-source-slice',
 } as const;
 
 export const dashboard = {

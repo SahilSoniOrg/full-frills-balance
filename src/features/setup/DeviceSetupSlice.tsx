@@ -11,7 +11,7 @@ export function DeviceSetupSlice({
   readonly initialName: string;
   readonly isCompleting: boolean;
   readonly onContinue: (output: DeviceSetupOutput) => void;
-  readonly onRestore: () => void;
+  readonly onRestore: (name: string) => void;
 }) {
   const [name, setName] = useState(initialName);
   return (
@@ -19,7 +19,7 @@ export function DeviceSetupSlice({
       name={name}
       setName={setName}
       onContinue={() => onContinue({ displayName: { value: name, source: 'user_entered' } })}
-      onRestore={onRestore}
+      onRestore={() => onRestore(name)}
       isCompleting={isCompleting}
     />
   );

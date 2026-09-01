@@ -28,4 +28,30 @@ describe('parseRestorePayload', () => {
       ),
     ).toBeUndefined();
   });
+
+  it('keeps only skipped items with id and reason', () => {
+    expect(
+      parseRestoreHandoff(
+        {
+          operationId: 'operation',
+          workplaceId: 'published',
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: {
+            accounts: 1,
+            journals: 1,
+            transactions: 1,
+            skippedTransactions: 1,
+            skippedItems: [
+              { id: 'tx-1', reason: 'Deleted', description: 'old' },
+              { id: 12, reason: 'bad' },
+              { reason: 'missing-id' },
+            ],
+          },
+          warnings: ['partial'],
+        },
+        asWorkplaceId('operation'),
+      )?.stats.skippedItems,
+    ).toEqual([{ id: 'tx-1', reason: 'Deleted', description: 'old' }]);
+  });
 });

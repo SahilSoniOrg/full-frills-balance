@@ -104,6 +104,28 @@ export function parseRestoreFacts(value: unknown): RestoreFacts | undefined {
   };
 }
 
+function parseSkippedItem(
+  value: unknown,
+): NonNullable<ImportStats['skippedItems']>[number] | undefined {
+  if (!isRecord(value) || !nonEmptyString(value.id) || !nonEmptyString(value.reason)) {
+    return undefined;
+  }
+  if (value.description !== undefined && typeof value.description !== 'string') return undefined;
+  return {
+    id: value.id,
+    reason: value.reason,
+    ...(value.description ? { description: value.description } : {}),
+  };
+}
+
+function parseSkippedItems(value: unknown): ImportStats['skippedItems'] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const skippedItems = value
+    .map(parseSkippedItem)
+    .filter((item): item is NonNullable<typeof item> => item !== undefined);
+  return skippedItems.length > 0 ? skippedItems : undefined;
+}
+
 function parseRestoreStats(value: unknown): ImportStats | undefined {
   if (
     !isRecord(value) ||
@@ -114,6 +136,7 @@ function parseRestoreStats(value: unknown): ImportStats | undefined {
   ) {
     return undefined;
   }
+  const skippedItems = parseSkippedItems(value.skippedItems);
   return {
     accounts: value.accounts,
     journals: value.journals,
@@ -125,9 +148,7 @@ function parseRestoreStats(value: unknown): ImportStats | undefined {
     ...(isNonNegativeInteger(value.plannedPayments)
       ? { plannedPayments: value.plannedPayments }
       : {}),
-    ...(Array.isArray(value.skippedItems)
-      ? { skippedItems: value.skippedItems as ImportStats['skippedItems'] }
-      : {}),
+    ...(skippedItems === undefined ? {} : { skippedItems }),
     ...(nonEmptyString(value.preImportBackupPath)
       ? { preImportBackupPath: value.preImportBackupPath }
       : {}),

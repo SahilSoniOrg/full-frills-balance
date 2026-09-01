@@ -1,6 +1,7 @@
 import {
   isRestoreJourneyId,
   type RestoreJourneyId,
+  type SetupDraft,
   type SetupEffectId,
   type SetupEntryPolicy,
   type SetupJourneyId,
@@ -19,9 +20,15 @@ export type SetupRecipeEntry =
       readonly effectId: SetupEffectId;
     };
 
+export type SetupAtStart = 'stay' | 'back' | 'dashboard' | 'first_run' | 'empty_device_workplace';
+export type SetupDiscardTo = 'first_run' | 'picker' | 'empty_device_workplace' | 'settings';
+
 export interface SetupRecipe {
   readonly journeyId: SetupJourneyId;
+  readonly draftKind: SetupDraft['kind'];
   readonly entryPolicy: SetupEntryPolicy;
+  readonly atStart: SetupAtStart;
+  readonly discardTo?: SetupDiscardTo;
   readonly entries: readonly SetupRecipeEntry[];
 }
 
@@ -45,7 +52,9 @@ const restoreCore: readonly SetupRecipeEntry[] = [
 
 const firstRun: SetupRecipe = {
   journeyId: 'first_run',
+  draftKind: 'first_run',
   entryPolicy: 'blocking',
+  atStart: 'stay',
   entries: [
     slice('device', 'required'),
     slice('workplace', 'required'),
@@ -56,7 +65,10 @@ const firstRun: SetupRecipe = {
 
 const firstRunRestore: SetupRecipe = {
   journeyId: 'first_run_restore',
+  draftKind: 'restore',
   entryPolicy: 'blocking',
+  atStart: 'first_run',
+  discardTo: 'first_run',
   entries: [
     ...restoreCore,
     slice('device', 'when_missing'),
@@ -67,33 +79,44 @@ const firstRunRestore: SetupRecipe = {
 
 const emptyDeviceWorkplace: SetupRecipe = {
   journeyId: 'empty_device_workplace',
+  draftKind: 'workplace_creation',
   entryPolicy: 'blocking',
+  atStart: 'stay',
   entries: [slice('workplace', 'required'), slice('summary', 'required')],
 };
 
 const emptyDeviceRestore: SetupRecipe = {
   journeyId: 'empty_device_restore',
+  draftKind: 'restore',
   entryPolicy: 'blocking',
+  atStart: 'empty_device_workplace',
+  discardTo: 'empty_device_workplace',
   entries: restoreCore,
 };
 
 const pickerRestore: SetupRecipe = {
   journeyId: 'picker_restore',
-  // Blocking while the restore is selected; callers may keep the draft optional
-  // when it was launched from the picker and an existing Workplace is usable.
+  draftKind: 'restore',
   entryPolicy: 'blocking',
+  atStart: 'dashboard',
+  discardTo: 'picker',
   entries: restoreCore,
 };
 
 const settingsRestore: SetupRecipe = {
   journeyId: 'settings_restore',
+  draftKind: 'restore',
   entryPolicy: 'optional',
+  atStart: 'back',
+  discardTo: 'settings',
   entries: restoreCore,
 };
 
 const createWorkplace: SetupRecipe = {
   journeyId: 'create_workplace',
+  draftKind: 'workplace_creation',
   entryPolicy: 'optional',
+  atStart: 'back',
   entries: [slice('workplace', 'required'), slice('summary', 'required')],
 };
 
@@ -115,4 +138,16 @@ export function isRestoreRecipe(recipe: SetupRecipe): recipe is SetupRecipe & {
   readonly journeyId: RestoreJourneyId;
 } {
   return isRestoreJourneyId(recipe.journeyId);
+}
+
+export function recipeContainsSlice(recipe: SetupRecipe, sliceId: SetupSliceId): boolean {
+  return recipe.entries.some(entry => entry.kind === 'slice' && entry.sliceId === sliceId);
+}
+
+export function recipeTerminalSlice(recipe: SetupRecipe): SetupSliceId {
+  for (let index = recipe.entries.length - 1; index >= 0; index -= 1) {
+    const entry = recipe.entries[index];
+    if (entry?.kind === 'slice') return entry.sliceId;
+  }
+  throw new Error(`Setup recipe ${recipe.journeyId} has no slices`);
 }
