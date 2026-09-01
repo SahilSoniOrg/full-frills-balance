@@ -57,6 +57,10 @@ export const AppNavigation = {
     router.replace(buildRoute('/onboarding', { stage }));
   },
 
+  toSetupJourney: (journey: string) => {
+    router.replace({ pathname: '/onboarding', params: { journey } });
+  },
+
   /**
    * Navigate to the Accounts List tab.
    */

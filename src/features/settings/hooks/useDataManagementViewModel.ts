@@ -118,7 +118,7 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     onConfirmExport,
     exportProgress,
     exportProgressMessage,
-    onImport: () => AppNavigation.toImportSelection(false, 'settings'),
+    onImport: () => AppNavigation.toSetupJourney('settings_restore'),
     onAuditLog: AppNavigation.toAuditLog,
     defaultShareFormat,
     setDefaultShareFormat,

@@ -453,7 +453,9 @@ export function LaunchCoordinatorContent({
         isTransitioning={isTransitioning}
         onSelect={id => void transitionToWorkplace(id)}
         onCreate={() => router.replace({ pathname: '/onboarding', params: { mode: 'full' } })}
-        onImport={() => router.replace('/import-selection')}
+        onImport={() =>
+          router.replace({ pathname: '/onboarding', params: { journey: 'picker_restore' } })
+        }
       />
     );
   }
