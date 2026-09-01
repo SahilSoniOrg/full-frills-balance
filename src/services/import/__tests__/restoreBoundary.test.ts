@@ -26,7 +26,7 @@ jest.mock('@/src/services/ReactiveDataService', () => ({
 jest.mock('@/src/utils/SnapshotService', () => ({
   snapshotService: { clearSnapshotsForWorkplace: jest.fn() },
 }));
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     workplace: { replace: jest.fn() },
     restorePreferences: jest.fn(),
@@ -53,7 +53,7 @@ import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { database } from '@/src/data/database/Database';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import type { ImportPlugin } from '@/src/services/import/types';
 import type { PreparedRestore } from '@/src/services/import/restoreTypes';
 import type { WorkplaceId } from '@/src/types/ids';

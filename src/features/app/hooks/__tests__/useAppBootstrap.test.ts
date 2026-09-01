@@ -57,7 +57,7 @@ jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
 jest.mock('@/src/utils/logger', () => ({
   logger: { error: jest.fn(), info: jest.fn() },
 }));
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     device: {
       anonymizedId: 'anonymous-test-id',

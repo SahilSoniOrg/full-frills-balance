@@ -25,7 +25,7 @@ jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/utils/logger');
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     insights: {
       dismissedPatternIds: jest.fn(() => []),

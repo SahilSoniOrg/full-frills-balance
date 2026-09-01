@@ -6,7 +6,7 @@ import { exportService } from '@/src/services/export';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { compression } from '@/src/utils/compression';
 
 jest.mock('@/src/data/database/Database', () => ({
@@ -28,7 +28,7 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     loadPreferences: jest.fn(),
     workplace: {

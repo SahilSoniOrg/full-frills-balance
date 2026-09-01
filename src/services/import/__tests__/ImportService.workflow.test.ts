@@ -19,7 +19,7 @@ jest.mock('@/src/services/integrity', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     restoreImportedPreferences: jest.fn(),
     device: {
@@ -70,7 +70,7 @@ import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { integrityService } from '@/src/services/integrity';
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 

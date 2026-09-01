@@ -32,7 +32,7 @@ jest.mock('@/src/services/analytics', () => ({
   },
 }));
 
-jest.mock('../../utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
     hourCycle: { resolved: '12-hour' },

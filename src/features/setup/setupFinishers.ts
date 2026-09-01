@@ -2,7 +2,7 @@ import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import {
   claimedRestoreFingerprint,
   isRestoreOwnershipTuple,

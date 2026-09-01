@@ -8,7 +8,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { analytics } from '@/src/services/analytics';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';

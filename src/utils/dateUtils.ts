@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 // TODO: Split hour-cycle lookup out of dateUtils. Formatters should take a
 // ResolvedHourCycle (or a tiny resolver module), not import the preferences façade.
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import dayjs from 'dayjs';
 import calendar from 'dayjs/plugin/calendar';
 import * as Localization from 'expo-localization';

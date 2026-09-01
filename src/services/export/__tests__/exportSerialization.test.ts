@@ -2,7 +2,7 @@ import {
   serializeExportPayload,
   serializeExportPayloadFromSources,
 } from '@/src/services/export/exportSerialization';
-import { DEFAULT_UI_PREFERENCES } from '@/src/utils/preferences/types';
+import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
 
 describe('serializeExportPayload', () => {
   it('stitches metadata and tables into one JSON object', async () => {

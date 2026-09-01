@@ -1,4 +1,4 @@
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { act, renderHook } from '@testing-library/react-native';
 import React from 'react';
 import {

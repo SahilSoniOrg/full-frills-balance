@@ -43,7 +43,7 @@ jest.mock('@/src/utils/SnapshotService', () => ({
     saveCustomSnapshot: jest.fn(),
   },
 }));
-jest.mock('@/src/utils/preferences', () => {
+jest.mock('@/src/services/preferences', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { of } = require('rxjs');
   return {
@@ -422,7 +422,7 @@ describe('SafeToSpendReadModel', () => {
       ]);
 
       const days$ = new BehaviorSubject(60);
-      const preferencesModule = jest.requireMock('@/src/utils/preferences');
+      const preferencesModule = jest.requireMock('@/src/services/preferences');
       preferencesModule.preferences.sts.observeForWorkplace = jest.fn(() => days$.asObservable());
 
       let simulateCalls = 0;

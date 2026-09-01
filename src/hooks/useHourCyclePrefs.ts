@@ -4,7 +4,7 @@ import {
   type HourCyclePreference,
   type ResolvedHourCycle,
 } from '@/src/utils/hourCycle';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { useCalendars } from 'expo-localization';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';

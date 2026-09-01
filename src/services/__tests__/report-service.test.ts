@@ -23,7 +23,7 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getCurrency: jest.fn().mockResolvedValue('USD'),
   },
 }));
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
 }));
 

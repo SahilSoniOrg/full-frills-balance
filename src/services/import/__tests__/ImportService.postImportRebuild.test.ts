@@ -19,7 +19,7 @@ jest.mock('@/src/services/integrity', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     restoreImportedPreferences: jest.fn(),
     device: {

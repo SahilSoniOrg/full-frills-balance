@@ -8,8 +8,8 @@ import type {
 import type { FontId, ThemeId } from '@/src/constants/design-tokens';
 import type { IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
-import type { UIPreferences } from '@/src/utils/preferences';
-import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
+import type { UIPreferences } from '@/src/services/preferences';
+import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 
 /** Facts from a backup that Setup may use to prefill its own slices. */
 export interface RestoreFacts {

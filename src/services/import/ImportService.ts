@@ -19,7 +19,7 @@ import { integrityService } from '@/src/services/integrity';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { Q } from '@nozbe/watermelondb';

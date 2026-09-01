@@ -1,6 +1,6 @@
 import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
-import { preferences } from '@/src/utils/preferences';
-import type { ThemeAppearance } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
+import type { ThemeAppearance } from '@/src/services/preferences';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useColorScheme } from 'react-native';
 

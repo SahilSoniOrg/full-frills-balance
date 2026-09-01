@@ -2,7 +2,7 @@ import { FontId, FontIds } from '@/src/constants/design-tokens';
 import { AppReadyContext, type AppReadyValue } from '@/src/contexts/app-shell/appReady';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 export {

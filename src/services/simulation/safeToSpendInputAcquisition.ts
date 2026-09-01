@@ -20,7 +20,7 @@ import {
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';

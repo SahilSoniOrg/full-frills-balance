@@ -4,7 +4,7 @@ import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { isHourCyclePreference } from '@/src/utils/hourCycle';
-import { migrateFromAsyncStorage, storage } from '../storage';
+import { migrateFromAsyncStorage, storage } from '@/src/utils/storage';
 import { splitPreferenceBags } from './splitPreferenceBags';
 import {
   DEFAULT_UI_PREFERENCES,

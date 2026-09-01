@@ -13,7 +13,7 @@ import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImp
 import { integrityService } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { logger } from '@/src/utils/logger';
 import { restorePublicationClaims } from './restorePublicationClaims';

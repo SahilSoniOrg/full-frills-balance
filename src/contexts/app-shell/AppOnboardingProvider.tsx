@@ -1,5 +1,5 @@
 import { requireShellContext } from '@/src/contexts/app-shell/requireShellContext';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import React, { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 
 export interface AppOnboardingValue {

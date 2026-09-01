@@ -34,8 +34,8 @@ import {
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
-import { UIPreferences } from '@/src/utils/preferences';
-import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
+import { UIPreferences } from '@/src/services/preferences';
+import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 
 interface NativeImportData {
   version: string;

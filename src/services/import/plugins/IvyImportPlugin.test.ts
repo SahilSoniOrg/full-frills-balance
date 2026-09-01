@@ -3,7 +3,7 @@ import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { importService } from '@/src/services/import/ImportService';
 import { ImportFileContext } from '@/src/services/import/types';
 import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/services/import/canonicalImport';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 
 // Mock dependencies
@@ -26,7 +26,7 @@ jest.mock('@/src/services/integrity', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     setUserName: jest.fn().mockResolvedValue(true),
     restoreImportedPreferences: jest.fn(),

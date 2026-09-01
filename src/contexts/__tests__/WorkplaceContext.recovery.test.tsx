@@ -2,12 +2,12 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { WorkplaceContext, WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { WorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     device: {
       activeWorkplaceId: 'active-wp',

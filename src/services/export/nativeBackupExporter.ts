@@ -7,7 +7,7 @@ import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTab
 import { WorkplaceId } from '@/src/types/ids';
 import { compression } from '@/src/utils/compression';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { Model } from '@nozbe/watermelondb';
 import Collection from '@nozbe/watermelondb/Collection';
 import { fetchAndTransformTable } from './exportTableTransformer';

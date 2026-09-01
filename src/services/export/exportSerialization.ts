@@ -1,5 +1,5 @@
-import type { UIPreferences } from '@/src/utils/preferences/types';
-import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
+import type { UIPreferences } from '@/src/services/preferences/types';
+import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 
 export interface ExportMetadata {
   exportDate: string;

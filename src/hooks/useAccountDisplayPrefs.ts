@@ -1,4 +1,4 @@
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { useCallback, useSyncExternalStore } from 'react';
 
 export type AccountDisplayPrefsState = {

@@ -1,6 +1,6 @@
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 // Mock preferences to avoid AsyncStorage issues
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
   },

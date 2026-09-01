@@ -3,7 +3,7 @@ import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importService } from '@/src/services/import/ImportService';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 
 // Mock dependencies
@@ -26,7 +26,7 @@ jest.mock('@/src/services/integrity', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     restoreImportedPreferences: jest.fn(),
     device: {

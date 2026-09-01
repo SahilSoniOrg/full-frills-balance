@@ -1,7 +1,7 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { publishRestore } from '@/src/services/import/publishRestore';
 import { generator } from '@/src/data/database/idGenerator';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import {
   createSetupCoordinator,
   createSetupDraft,

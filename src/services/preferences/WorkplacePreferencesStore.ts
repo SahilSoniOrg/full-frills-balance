@@ -3,7 +3,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { storage } from '../storage';
+import { storage } from '@/src/utils/storage';
 import {
   DEFAULT_WORKPLACE_PREFERENCES,
   WORKPLACE_PREFERENCES_KEY_PREFIX,

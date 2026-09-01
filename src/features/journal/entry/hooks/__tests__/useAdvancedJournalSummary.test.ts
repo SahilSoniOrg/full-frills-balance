@@ -8,7 +8,7 @@ jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({ theme: {} }),
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
   },

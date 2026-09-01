@@ -11,7 +11,7 @@ import {
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 
 import { IconName } from '@/src/types/domainIcons';
-import { UIPreferences } from '@/src/utils/preferences';
+import { UIPreferences } from '@/src/services/preferences';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
 export const CANONICAL_IMPORT_VERSION_V1 = 'canonical-import.v1' as const;

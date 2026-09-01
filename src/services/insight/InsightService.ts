@@ -4,7 +4,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { startTrace } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
 import { switchMap, take } from 'rxjs/operators';
 import { AccountType } from '@/src/types/enums';

@@ -19,7 +19,7 @@ jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
   })),
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',
     journalNav: {

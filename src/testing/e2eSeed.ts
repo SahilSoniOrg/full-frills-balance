@@ -20,7 +20,7 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { storage } from '@/src/utils/storage';
 import { setE2eSmsInboxMessages } from './e2eSmsInject';
 import { E2eSeedProfile } from './e2eConstants';

@@ -1,6 +1,6 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { discardPublishedRestore, finishSetup, loadRestoreSummary } from '../setupFinishers';
 import type { RestoreSetupDraft, WorkplaceSetupOutput } from '../setupTypes';
 
@@ -20,7 +20,7 @@ jest.mock('@/src/services/import/restorePublicationClaims', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     setUserName: jest.fn(),
     device: {

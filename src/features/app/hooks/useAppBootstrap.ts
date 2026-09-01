@@ -3,7 +3,7 @@ import { analytics } from '@/src/services/analytics';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';

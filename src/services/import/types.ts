@@ -1,6 +1,6 @@
 import { CanonicalImport } from '@/src/services/import/canonicalImport';
-import { UIPreferences } from '@/src/utils/preferences';
-import type { WorkplacePreferences } from '@/src/utils/preferences/workplaceTypes';
+import { UIPreferences } from '@/src/services/preferences';
+import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 
 /**
  * Import Plugin Types

@@ -16,7 +16,7 @@ import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { generator } from '@/src/data/database/idGenerator';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';

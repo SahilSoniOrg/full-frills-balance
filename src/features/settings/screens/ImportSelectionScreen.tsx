@@ -1,6 +1,6 @@
 import { LoadingView } from '@/src/components/core';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 

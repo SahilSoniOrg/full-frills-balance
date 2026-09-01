@@ -4,7 +4,7 @@ import { AccountId } from '@/src/types/ids';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { useEffect } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { schema } from '@/src/data/database/schema';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';

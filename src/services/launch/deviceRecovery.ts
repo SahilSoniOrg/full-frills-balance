@@ -1,4 +1,4 @@
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 
 export interface DeviceRecoveryInput {
   /** Raw presence captured before preference migration synthesizes defaults. */

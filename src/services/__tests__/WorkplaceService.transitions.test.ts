@@ -1,7 +1,7 @@
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
-import { preferences } from '@/src/utils/preferences';
+import { preferences } from '@/src/services/preferences';
 import { analytics } from '@/src/services/analytics';
 
 jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
@@ -32,7 +32,7 @@ jest.mock('@/src/services/analytics', () => ({
   },
 }));
 
-jest.mock('@/src/utils/preferences', () => ({
+jest.mock('@/src/services/preferences', () => ({
   preferences: {
     device: {
       activeWorkplaceId: undefined,
