@@ -97,7 +97,7 @@ export class WorkplaceService {
     return await workplaceRepository.find(id);
   }
 
-  /** Published-book counts. Asset/liability vs income/expense. */
+  /** Asset/liability vs income/expense counts. Restore UI reads this only through loadRestoreSummary. */
   async getPublishedBookStats(workplaceId: WorkplaceId): Promise<{
     readonly accounts: number;
     readonly categories: number;

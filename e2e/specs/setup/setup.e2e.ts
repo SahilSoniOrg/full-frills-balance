@@ -8,6 +8,7 @@ import { setupPage } from '../../pages/setup-page';
 import {
   launchFreshApp,
   launchOnboardedApp,
+  launchRestoreResumeApp,
   openWorkplaceCreation,
   relaunchPreservingData,
   waitForDashboard,
@@ -59,5 +60,16 @@ describe('Setup journeys', () => {
     await setupPage.waitForDeviceSlice();
     await setupPage.typeDisplayName('E2E Restore User');
     await setupPage.openRestoreFromDevice();
+  });
+
+  it('publishes first-run Restore through Setup, resumes, and keeps the typed name', async () => {
+    await launchRestoreResumeApp({ disableSynchronization: true });
+    await setupPage.waitForRestoreSummary();
+
+    await relaunchPreservingData();
+    await setupPage.waitForRestoreSummary();
+    await setupPage.continueRestoreSummary();
+    await setupPage.finishAppearanceAndSummary('E2E Restore User');
+    await waitForDashboard();
   });
 });

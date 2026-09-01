@@ -79,10 +79,7 @@ function SetupJourneyScreen({
         operationId,
         draft: existingDraft,
         resolution: {
-          getAutoOutput: (sliceId, draft) =>
-            getRestoreAutoOutput(sliceId, draft, {
-              userName: preferences.userName,
-            }),
+          getAutoOutput: getRestoreAutoOutput,
         },
         effects: {
           publishRestore: async draft => {

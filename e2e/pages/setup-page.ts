@@ -33,6 +33,19 @@ export class SetupPage {
       .withTimeout(ONBOARDING_TIMEOUT_MS);
   }
 
+  async waitForRestoreSummary(): Promise<void> {
+    await waitFor(element(by.id(setupIds.restoreSummary)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+    await waitFor(element(by.text('Imported Books was published and is not active yet.')))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+  }
+
+  async continueRestoreSummary(): Promise<void> {
+    await tapById(setupIds.restoreSummaryContinue, ONBOARDING_TIMEOUT_MS);
+  }
+
   async continueWorkplaceSetup(): Promise<void> {
     await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
     for (let i = 0; i < 3; i += 1) {
@@ -40,14 +53,24 @@ export class SetupPage {
     }
   }
 
-  async finishAppearanceAndSummary(): Promise<void> {
+  async finishAppearanceAndSummary(profileName?: string): Promise<void> {
     await tapById(setupIds.themeContinue, ONBOARDING_TIMEOUT_MS);
     await this.expectSummary();
+    if (profileName) await this.expectProfileName(profileName);
     await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
   }
 
   async expectSummary(): Promise<void> {
-    await expect(element(by.id(setupIds.summary))).toBeVisible();
+    await waitFor(element(by.id(setupIds.summary)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+    await waitFor(element(by.id(setupIds.finishButton)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+  }
+
+  async expectProfileName(name: string): Promise<void> {
+    await expect(element(by.text(name))).toExist();
   }
 
   async completeFirstRun(name: string): Promise<void> {

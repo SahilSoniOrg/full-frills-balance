@@ -91,6 +91,25 @@ export async function launchPickerApp(): Promise<void> {
     .withTimeout(120000);
 }
 
+export async function launchRestoreResumeApp(
+  options: { disableSynchronization?: boolean } = {},
+): Promise<void> {
+  try {
+    await device.terminateApp();
+  } catch {
+    // app may not be running
+  }
+  await device.launchApp({
+    newInstance: true,
+    delete: true,
+    permissions: { notifications: 'YES' },
+    launchArgs: e2eLaunchArgs('first-run-restore'),
+  });
+  if (options.disableSynchronization) {
+    await device.disableSynchronization();
+  }
+}
+
 export async function relaunchPreservingData(): Promise<void> {
   await device.terminateApp();
   await device.launchApp({

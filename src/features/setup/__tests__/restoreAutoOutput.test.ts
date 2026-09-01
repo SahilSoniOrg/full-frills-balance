@@ -69,15 +69,15 @@ describe('getRestoreAutoOutput', () => {
         deviceCandidate: { value: 'Typed', source: 'user_entered' },
       },
     };
-    expect(getRestoreAutoOutput('device', draft, { userName: 'Existing' })).toEqual({
+    expect(getRestoreAutoOutput('device', draft)).toEqual({
       displayName: { value: 'Typed', source: 'user_entered' },
     });
   });
 
-  it('prefers imported Device name over an existing Device name', () => {
-    expect(
-      getRestoreAutoOutput('device', restore(completeSource), { userName: 'Existing' }),
-    ).toEqual({ displayName: { value: 'Imported', source: 'imported' } });
+  it('leaves Device required when imported and candidate names are absent', () => {
+    expect(getRestoreAutoOutput('device', restore(completeSource))).toEqual({
+      displayName: { value: 'Imported', source: 'imported' },
+    });
     expect(
       getRestoreAutoOutput(
         'device',
@@ -85,8 +85,7 @@ describe('getRestoreAutoOutput', () => {
           ...completeSource,
           facts: { workplace: completeSource.facts.workplace },
         }),
-        { userName: 'Existing' },
       ),
-    ).toEqual({ displayName: { value: 'Existing', source: 'existing' } });
+    ).toBeUndefined();
   });
 });

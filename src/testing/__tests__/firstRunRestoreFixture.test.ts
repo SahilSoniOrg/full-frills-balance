@@ -1,0 +1,19 @@
+import { prepareFirstRunRestoreFixture } from '../fixtures/firstRunRestoreBackup';
+
+describe('first-run restore fixture', () => {
+  it('prepares native backup facts for publication', async () => {
+    const prepared = await prepareFirstRunRestoreFixture();
+    expect(prepared.fingerprint).toMatch(/^restore-v1:/);
+    expect(prepared.facts.workplace).toEqual({
+      name: 'Imported Books',
+      icon: 'briefcase',
+      defaultCurrencyCode: 'USD',
+    });
+    expect(prepared.stats).toMatchObject({
+      accounts: 2,
+      journals: 1,
+      transactions: 2,
+      skippedTransactions: 0,
+    });
+  });
+});

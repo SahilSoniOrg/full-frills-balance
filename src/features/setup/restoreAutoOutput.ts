@@ -11,18 +11,13 @@ import type {
 export function getRestoreAutoOutput(
   sliceId: SetupSliceId,
   draft: SetupDraft,
-  existing: { readonly userName?: string } = {},
 ): SetupSliceOutput | undefined {
   if (draft.kind !== 'restore') return undefined;
   const facts = draft.restore.source?.facts;
   if (!facts) return undefined;
   if (sliceId === 'workplace') return workplaceFromFacts(facts.workplace);
   if (sliceId === 'device') {
-    return deviceFromFacts(
-      facts.user?.name,
-      draft.restore.deviceCandidate?.value,
-      existing.userName,
-    );
+    return deviceFromFacts(facts.user?.name, draft.restore.deviceCandidate?.value);
   }
   return undefined;
 }
@@ -74,13 +69,10 @@ function workplaceFromFacts(workplace: {
 function deviceFromFacts(
   importedName: string | undefined,
   candidateName: string | undefined,
-  existingName: string | undefined,
 ): DeviceSetupOutput | undefined {
   const imported = importedName?.trim();
   if (imported) return { displayName: { value: imported, source: 'imported' } };
   const candidate = candidateName?.trim();
   if (candidate) return { displayName: { value: candidate, source: 'user_entered' } };
-  const existing = existingName?.trim();
-  if (existing) return { displayName: { value: existing, source: 'existing' } };
   return undefined;
 }

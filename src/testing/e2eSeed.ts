@@ -13,7 +13,9 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
+import { saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
+import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -27,8 +29,12 @@ import { files } from '@/src/utils/files';
 import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/import/orchestrator';
 import { importService } from '@/src/services/import/ImportService';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
-
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
+import {
+  FIRST_RUN_RESTORE_SOURCE_NAME,
+  FIRST_RUN_RESTORE_SOURCE_URI,
+  prepareFirstRunRestoreFixture,
+} from './fixtures/firstRunRestoreBackup';
 
 const DEFAULT_SEED = {
   name: 'E2E User',
@@ -91,6 +97,48 @@ async function seedPickerReady(): Promise<void> {
   await seedWorkplace('Second E2E User');
   // Picker state requires multiple workplaces with no active pointer.
   preferences.device.setActiveWorkplaceId(undefined);
+}
+
+const FIRST_RUN_RESTORE_CANDIDATE = 'E2E Restore User';
+
+/** Prepare the fixture and persist a pre-publication draft. Setup owns publishRestore. */
+async function seedFirstRunRestore(): Promise<WorkplaceId> {
+  const prepared = await prepareFirstRunRestoreFixture();
+  const workplaceFacts = prepared.facts.workplace;
+  if (!workplaceFacts.name || !workplaceFacts.icon || !workplaceFacts.defaultCurrencyCode) {
+    throw new Error('[E2E] Restore fixture is missing Workplace identity');
+  }
+  rememberPreparedRestore(prepared);
+  const operationId = generator() as WorkplaceId;
+  saveSetupDraft({
+    schemaVersion: 1,
+    kind: 'restore',
+    journeyId: 'first_run_restore',
+    entryPolicy: 'blocking',
+    operationId,
+    presentedHistory: ['restore_source'],
+    acceptedSlices: ['restore_source', 'workplace'],
+    workplace: {
+      name: { value: workplaceFacts.name, source: 'imported' },
+      icon: { value: 'briefcase', source: 'imported' },
+      baseCurrency: { value: workplaceFacts.defaultCurrencyCode, source: 'imported' },
+      selectedAccounts: [],
+      selectedCategories: [],
+      acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+    },
+    restore: {
+      source: {
+        source: {
+          uri: FIRST_RUN_RESTORE_SOURCE_URI,
+          name: FIRST_RUN_RESTORE_SOURCE_NAME,
+          fingerprint: prepared.fingerprint,
+        },
+        facts: prepared.facts,
+      },
+      deviceCandidate: { value: FIRST_RUN_RESTORE_CANDIDATE, source: 'user_entered' },
+    },
+  });
+  return operationId;
 }
 
 async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
@@ -239,6 +287,10 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
 
 export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<WorkplaceId> {
   logger.info(`[E2E] Seeding profile: ${profile}`);
+  if (profile === 'first-run-restore') {
+    return seedFirstRunRestore();
+  }
+
   const workplaceId = await seedOnboarded(profile);
 
   if (profile === 'picker-ready') {

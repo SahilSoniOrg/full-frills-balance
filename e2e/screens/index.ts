@@ -9,6 +9,8 @@ export const onboarding = {
   summary: 'onboarding-summary-step',
   restoreButton: 'onboarding-restore-button',
   restoreSource: 'restore-source-slice',
+  restoreSummary: 'restore-summary-slice',
+  restoreSummaryContinue: 'restore-summary-continue',
 } as const;
 
 export const dashboard = {

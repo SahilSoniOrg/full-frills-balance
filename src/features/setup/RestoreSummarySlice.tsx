@@ -46,7 +46,7 @@ export function RestoreSummarySlice({
   const view = verification.status === 'ready' ? verification.view : undefined;
 
   return (
-    <Box flex={1} padding="lg">
+    <Box flex={1} padding="lg" testID="restore-summary-slice">
       <ScrollView>
         <Stack gap="md">
           <AppText variant="title">Restore is ready</AppText>
@@ -119,11 +119,12 @@ export function RestoreSummarySlice({
           {actions.secondary ? (
             <AppButton
               variant="outline"
+              testID="restore-summary-secondary"
               onPress={() => {
                 const secondary = actions.secondary;
                 if (secondary) onIntent(secondary.intent);
               }}
-              disabled={isCompleting}
+              disabled={!verified || isCompleting}
             >
               {actions.secondary.label}
             </AppButton>
