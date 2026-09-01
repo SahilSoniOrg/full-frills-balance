@@ -9,6 +9,8 @@ import {
   claimedRestoreFingerprint,
   isRestoreOwnershipTuple,
 } from '@/src/services/import/restoreOwnership';
+import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
+import { forgetAllPreparedRestores, forgetPreparedRestore } from './pickRestoreSource';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -499,9 +501,22 @@ export class SetupDraftStore {
   }
 
   clear(): void {
+    const draft = this.load();
+    if (draft?.kind === 'restore') {
+      restorePublicationClaims.release(draft.operationId);
+      forgetPreparedRestore(draft.restore.source?.source.fingerprint);
+    }
     storage.remove(SETUP_DRAFT_KEY);
     notifySetupDraftChanged();
   }
+}
+
+/** Corrupt storage has no typed operation to release; drop claims and cached payloads. */
+export function discardUnreadableSetupDraft(): void {
+  restorePublicationClaims.clearAll();
+  forgetAllPreparedRestores();
+  storage.remove(SETUP_DRAFT_KEY);
+  notifySetupDraftChanged();
 }
 
 export const setupDraftStore = new SetupDraftStore();

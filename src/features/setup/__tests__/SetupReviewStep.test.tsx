@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { OnboardingReviewStep } from '../OnboardingReviewStep';
+import { SetupReviewStep } from '../SetupReviewStep';
 
 jest.mock('@/src/hooks/useThemePrefs', () => ({
   useThemePrefs: () => ({
@@ -9,7 +9,7 @@ jest.mock('@/src/hooks/useThemePrefs', () => ({
   }),
 }));
 
-describe('OnboardingReviewStep', () => {
+describe('SetupReviewStep', () => {
   it('shows the setup summary and routes each Change action to its draft step', () => {
     const changes = {
       identity: jest.fn(),
@@ -22,7 +22,7 @@ describe('OnboardingReviewStep', () => {
     };
 
     render(
-      <OnboardingReviewStep
+      <SetupReviewStep
         name="Sahil"
         workplaceName="Sahil's Personal workplace"
         workplaceIcon="briefcase"
@@ -67,7 +67,7 @@ describe('OnboardingReviewStep', () => {
 
   it('hides workplace data changes for an imported Workplace', () => {
     render(
-      <OnboardingReviewStep
+      <SetupReviewStep
         name="Sahil"
         workplaceName="Imported workplace"
         workplaceIcon="briefcase"
@@ -99,7 +99,7 @@ describe('OnboardingReviewStep', () => {
 
   it('hides the profile row when the recipe has no Device slice', () => {
     render(
-      <OnboardingReviewStep
+      <SetupReviewStep
         name=""
         workplaceName="New workplace"
         workplaceIcon="briefcase"

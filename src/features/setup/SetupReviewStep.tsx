@@ -4,7 +4,7 @@ import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
-interface OnboardingReviewStepProps {
+interface SetupReviewStepProps {
   name: string;
   workplaceName: string;
   workplaceIcon: IconName;
@@ -126,7 +126,7 @@ function ReviewMetric({
   );
 }
 
-export function OnboardingReviewStep({
+export function SetupReviewStep({
   name,
   workplaceName,
   workplaceIcon,
@@ -148,7 +148,7 @@ export function OnboardingReviewStep({
   showAppearance = true,
   showProfile = true,
   workplaceEditable,
-}: OnboardingReviewStepProps) {
+}: SetupReviewStepProps) {
   const strings = AppConfig.strings.onboarding.review;
   const { theme } = useTheme();
   const canEditWorkplace = workplaceEditable ?? !isImportedWorkplace;

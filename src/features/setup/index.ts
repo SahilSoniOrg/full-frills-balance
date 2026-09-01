@@ -3,7 +3,9 @@ export {
   clearSetupDraft,
   saveSetupDraft,
   SetupDraftStore,
+  discardUnreadableSetupDraft,
 } from './SetupDraftStore';
+export { readBlockingSetupProjection } from './readBlockingSetupProjection';
 export { createSetupCoordinator, createSetupDraft } from './SetupCoordinator';
 export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';

@@ -10,7 +10,7 @@ import {
 } from '@/src/constants';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { Box, Stack } from '@/src/design-system';
-import { OnboardingStsPreview } from '@/src/features/onboarding/components/OnboardingStsPreview';
+import { SetupStsPreview } from './SetupStsPreview';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
@@ -25,7 +25,7 @@ import {
   View,
 } from 'react-native';
 
-type OnboardingThemeStepProps = {
+type AppearanceThemeStepProps = {
   currencyCode: string;
   onContinue: () => void;
   onBack: () => void;
@@ -39,11 +39,11 @@ type OnboardingThemeStepProps = {
 
 let globalThemeId: ThemeId | null = null;
 
-export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
-  return <OnboardingThemeStepContent {...props} />;
+export function AppearanceThemeStep(props: AppearanceThemeStepProps) {
+  return <AppearanceThemeStepContent {...props} />;
 }
 
-function OnboardingThemeStepContent(props: OnboardingThemeStepProps) {
+function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
   const { currencyCode } = props;
   const { theme } = useTheme();
   const {
@@ -201,7 +201,7 @@ function OnboardingThemeStepContent(props: OnboardingThemeStepProps) {
         </AppText>
         <View {...panResponder.panHandlers}>
           <View pointerEvents="none">
-            <OnboardingStsPreview currencyCode={currencyCode} />
+            <SetupStsPreview currencyCode={currencyCode} />
           </View>
         </View>
 

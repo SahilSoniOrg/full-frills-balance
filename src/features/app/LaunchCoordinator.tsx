@@ -11,6 +11,9 @@ import {
   LaunchSetupDraft,
 } from '@/src/services/launch/launchResolver';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
+import { createSetupDraft, loadSetupDraft, saveSetupDraft } from '@/src/features/setup';
+import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
+import { generator } from '@/src/data/database/idGenerator';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/utils/preferences';
@@ -26,7 +29,6 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Text, View } from 'react-native';
 import { Observable } from 'rxjs';
 import { Redirect, usePathname, useRouter } from 'expo-router';
 export type { LaunchSetupDraft } from '@/src/services/launch/launchResolver';
@@ -190,6 +192,13 @@ export function LaunchCoordinatorProvider({
         cancelled = true;
       };
     }
+  }, [resolution]);
+
+  useEffect(() => {
+    if (resolution.kind !== 'setup' || resolution.unreadable) return;
+    if (!isSetupJourneyId(resolution.journeyId)) return;
+    if (loadSetupDraft()) return;
+    saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
   }, [resolution]);
 
   return (
@@ -461,9 +470,5 @@ export function LaunchCoordinatorContent({
       />
     );
   }
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Setup</Text>
-    </View>
-  );
+  return <Redirect href="/onboarding" />;
 }

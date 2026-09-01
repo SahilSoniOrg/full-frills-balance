@@ -32,10 +32,10 @@ import {
   useLaunchCoordinator,
 } from './LaunchCoordinator';
 import {
-  readBlockingSetupProjection,
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
+import { readBlockingSetupProjection } from '@/src/features/setup';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';

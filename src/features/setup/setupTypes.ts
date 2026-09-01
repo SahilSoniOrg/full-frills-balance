@@ -179,10 +179,7 @@ export type SetupOutcome =
       readonly workplaceId: WorkplaceId;
       readonly next: 'open' | 'stay' | 'picker';
     }
-  | {
-      readonly kind: 'journey_discarded';
-      readonly returnTo: 'first_run' | 'picker' | 'current_workplace';
-    };
+  | { readonly kind: 'journey_discarded' };
 
 export function isRestoreJourneyId(value: unknown): value is RestoreJourneyId {
   return (

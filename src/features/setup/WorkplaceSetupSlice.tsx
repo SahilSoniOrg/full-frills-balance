@@ -3,10 +3,11 @@ import { AppConfig } from '@/src/constants';
 import { WorkplaceAccountSelectionStep } from '@/src/components/common/workplace-setup/WorkplaceAccountSelectionStep';
 import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplace-setup/WorkplaceCategorySelectionStep';
 import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
-import { OnboardingWorkplaceStepComponent } from '@/src/features/onboarding';
+import { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 import { AppButton } from '@/src/components/core';
 import { useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
+import { AccountType } from '@/src/types/enums';
 import type {
   StarterAccountInput,
   StarterCategoryInput,
@@ -30,12 +31,14 @@ function defaultsFor<T extends { name: string }>(names: string[], suggestions: r
     .filter((item): item is T => item !== undefined);
 }
 
-function starterOutput<T extends { name: string; type: string; icon: IconName }>(
-  items: readonly T[],
-): StarterAccountInput[] {
-  return items.map(({ name, type, icon }) => ({
+function starterAccountsFromDefaults(names: string[]): StarterAccountInput[] {
+  return defaultsFor(names, DEFAULT_ACCOUNTS).map(({ name, type, icon }) => ({ name, type, icon }));
+}
+
+function starterCategoriesFromDefaults(names: string[]): StarterCategoryInput[] {
+  return defaultsFor(names, DEFAULT_CATEGORIES).map(({ name, type, icon }) => ({
     name,
-    type: type as StarterAccountInput['type'],
+    type: type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE,
     icon,
   }));
 }
@@ -101,16 +104,13 @@ export function WorkplaceSetupSlice({
     selectedAccounts: imported
       ? []
       : [
-          ...starterOutput(defaultsFor(accounts, DEFAULT_ACCOUNTS)),
+          ...starterAccountsFromDefaults(accounts),
           ...customAccounts.filter(item => accounts.includes(item.name)),
         ],
     selectedCategories: imported
       ? []
       : [
-          ...starterOutput(defaultsFor(categories, DEFAULT_CATEGORIES)).map(item => ({
-            ...item,
-            type: item.type as StarterCategoryInput['type'],
-          })),
+          ...starterCategoriesFromDefaults(categories),
           ...customCategories.filter(item => categories.includes(item.name)),
         ],
     acceptedCheckpoints: imported
@@ -122,7 +122,7 @@ export function WorkplaceSetupSlice({
     <>
       {visibleStep === 'identity' && (
         <>
-          <OnboardingWorkplaceStepComponent
+          <WorkplaceIdentityStep
             name={inputName}
             icon={workplaceIcon}
             onNameChange={name => {
@@ -154,14 +154,22 @@ export function WorkplaceSetupSlice({
         <WorkplaceAccountSelectionStep
           selectedAccounts={accounts}
           customAccounts={customAccounts.map(item => ({
-            ...item,
-            type: item.type as 'ASSET' | 'LIABILITY',
+            name: item.name,
+            icon: item.icon,
+            type: item.type === AccountType.LIABILITY ? 'LIABILITY' : 'ASSET',
           }))}
           onToggleAccount={n =>
             setAccounts(v => (v.includes(n) ? v.filter(x => x !== n) : [...v, n]))
           }
           onAddCustomAccount={(name, type, icon) => {
-            setCustomAccounts(items => [...items, { name, type, icon } as StarterAccountInput]);
+            setCustomAccounts(items => [
+              ...items,
+              {
+                name,
+                icon,
+                type: type === 'LIABILITY' ? AccountType.LIABILITY : AccountType.ASSET,
+              },
+            ]);
             setAccounts(items => (items.includes(name) ? items : [...items, name]));
           }}
           onContinue={() => setStep('categories')}
@@ -173,14 +181,22 @@ export function WorkplaceSetupSlice({
         <WorkplaceCategorySelectionStep
           selectedCategories={categories}
           customCategories={customCategories.map(item => ({
-            ...item,
-            type: item.type as 'INCOME' | 'EXPENSE',
+            name: item.name,
+            icon: item.icon,
+            type: item.type === AccountType.INCOME ? 'INCOME' : 'EXPENSE',
           }))}
           onToggleCategory={n =>
             setCategories(v => (v.includes(n) ? v.filter(x => x !== n) : [...v, n]))
           }
           onAddCustomCategory={(name, type, icon) => {
-            setCustomCategories(items => [...items, { name, type, icon } as StarterCategoryInput]);
+            setCustomCategories(items => [
+              ...items,
+              {
+                name,
+                icon,
+                type: type === 'INCOME' ? AccountType.INCOME : AccountType.EXPENSE,
+              },
+            ]);
             setCategories(items => (items.includes(name) ? items : [...items, name]));
           }}
           onContinue={() => onContinue(output)}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { OnboardingThemeStep } from '../OnboardingThemeStep';
+import { AppearanceThemeStep } from '../AppearanceThemeStep';
 import type { ReactNode } from 'react';
 
 jest.mock('@/src/components/core', () => {
@@ -31,17 +31,17 @@ jest.mock('@/src/hooks/useThemePrefs', () => ({
     setFontId: jest.fn(),
   }),
 }));
-jest.mock('@/src/features/onboarding/components/OnboardingStsPreview', () => ({
-  OnboardingStsPreview: () => null,
+jest.mock('../SetupStsPreview', () => ({
+  SetupStsPreview: () => null,
 }));
 
-describe('OnboardingThemeStep', () => {
+describe('AppearanceThemeStep', () => {
   it('reports theme and font selections to the onboarding draft', () => {
     const onThemeChange = jest.fn();
     const onFontChange = jest.fn();
 
     render(
-      <OnboardingThemeStep
+      <AppearanceThemeStep
         currencyCode="USD"
         themeId="deep-space"
         fontId="deep-space"

@@ -26,4 +26,12 @@ describe('RestorePublicationClaims', () => {
     claims.claim(operationId, 'fingerprint-a');
     expect(() => claims.claim(operationId, 'fingerprint-b')).toThrow('different backup source');
   });
+
+  it('releases a finished operation so a later restore can reuse nothing leaked', () => {
+    const storage = memoryStorage();
+    const claims = new RestorePublicationClaims(storage);
+    claims.claim(operationId, 'fingerprint-a');
+    claims.release(operationId);
+    expect(storage.getString('restore_publication_claims_v1')).toBe('{}');
+  });
 });

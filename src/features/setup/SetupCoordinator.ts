@@ -5,8 +5,8 @@ import {
   type SetupResolutionDefinitions,
 } from './resolveNextSetupAction';
 import type {
+  DeviceSetupOutput,
   RestoreHandoff,
-  RestoreJourneyId,
   RestoreSetupDraft,
   RestoreSourceOutput,
   SetupSliceAcceptance,
@@ -16,11 +16,10 @@ import type {
   SetupOutcome,
   SetupSliceId,
   SetupSliceOutput,
-  WorkplaceCreationSetupDraft,
 } from './setupTypes';
+import { isRestoreJourneyId } from './setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
-import { finishDeviceSetup } from './setupFinishers';
 import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
 
@@ -48,6 +47,7 @@ export interface SetupCoordinatorOptions {
   ) => void | Promise<void>;
   readonly effects?: {
     readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<RestoreHandoff>;
+    readonly commitDevice?: (output: DeviceSetupOutput) => void;
   };
   readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
 }
@@ -92,18 +92,15 @@ export function createSetupDraft(
     return { ...base, kind: 'first_run', journeyId: 'first_run', entryPolicy: 'blocking' };
   }
   if (recipe.draftKind === 'workplace_creation') {
-    return {
-      ...base,
-      kind: 'workplace_creation',
-      journeyId: journeyId as WorkplaceCreationSetupDraft['journeyId'],
-    };
+    if (journeyId !== 'empty_device_workplace' && journeyId !== 'create_workplace') {
+      throw new Error(`Workplace creation cannot use journey ${journeyId}`);
+    }
+    return { ...base, kind: 'workplace_creation', journeyId };
   }
-  return {
-    ...base,
-    kind: 'restore',
-    journeyId: journeyId as RestoreJourneyId,
-    restore: {},
-  };
+  if (!isRestoreJourneyId(journeyId)) {
+    throw new Error(`Restore cannot use journey ${journeyId}`);
+  }
+  return { ...base, kind: 'restore', journeyId, restore: {} };
 }
 
 /** Seed and persist the restore journey entered from the first-run name step. */
@@ -199,6 +196,14 @@ function applyOutput(draft: SetupDraft, acceptance: SliceAcceptance): SetupDraft
   }
 }
 
+function commitDevice(
+  effects: SetupCoordinatorOptions['effects'],
+  output: DeviceSetupOutput,
+): void {
+  if (!effects?.commitDevice) throw new Error('Device checkpoint is not configured');
+  effects.commitDevice(output);
+}
+
 /** Create the small linear coordinator used by Setup screens and tests. */
 export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupCoordinator {
   const recipe = options.recipe ?? getSetupRecipe(options.journeyId);
@@ -224,8 +229,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     }
     await options.validate?.(sliceId, output, draft);
     const acceptance = { sliceId, output } as SliceAcceptance;
-    // Device preferences are committed at this checkpoint, before its draft is persisted.
-    if (acceptance.sliceId === 'device') finishDeviceSetup(acceptance.output);
+    if (sliceId === 'device') commitDevice(options.effects, output as DeviceSetupOutput);
     const terminal = recipeTerminalSlice(recipe);
     const nextDraft = applyOutput(draft, acceptance);
     const returnToTerminal = sliceId !== terminal && nextDraft.acceptedSlices.includes(terminal);
@@ -245,8 +249,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   const advanceAutoAccepted = async (): Promise<NextSetupAction> => {
     let action = next();
     while (action.kind === 'auto_accept') {
-      // Auto-completed device output follows the same checkpoint boundary as manual input.
-      if (action.sliceId === 'device') finishDeviceSetup(action.output);
+      if (action.sliceId === 'device') commitDevice(options.effects, action.output);
       const updated = applyOutput(draft, action);
       persist({
         ...updated,

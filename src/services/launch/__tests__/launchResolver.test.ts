@@ -58,4 +58,14 @@ describe('resolveLaunch', () => {
       }),
     ).toEqual({ kind: 'setup', journeyId: 'first_run' });
   });
+
+  it('keeps launch on Setup when the stored draft is unreadable', () => {
+    expect(
+      resolveLaunchGate({
+        setupDraft: { unreadable: true },
+        deviceClaimed: true,
+        workplaceIds: [wp1],
+      }),
+    ).toEqual({ kind: 'setup', journeyId: 'first_run', unreadable: true });
+  });
 });

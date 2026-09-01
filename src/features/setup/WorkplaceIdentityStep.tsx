@@ -3,7 +3,7 @@ import { WorkplaceBasicInfoStep } from '@/src/components/common/workplace-setup/
 import { IconName } from '@/src/components/core';
 import { useState } from 'react';
 
-interface OnboardingWorkplaceStepProps {
+interface WorkplaceIdentityStepProps {
   name: string;
   icon: IconName;
   onNameChange: (name: string) => void;
@@ -13,7 +13,7 @@ interface OnboardingWorkplaceStepProps {
   isCompleting: boolean;
 }
 
-export function OnboardingWorkplaceStep({
+export function WorkplaceIdentityStep({
   name,
   icon,
   onNameChange,
@@ -21,7 +21,7 @@ export function OnboardingWorkplaceStep({
   onContinue,
   onBack,
   isCompleting,
-}: OnboardingWorkplaceStepProps) {
+}: WorkplaceIdentityStepProps) {
   const [iconPickerVisible, setIconPickerVisible] = useState(false);
   return (
     <>

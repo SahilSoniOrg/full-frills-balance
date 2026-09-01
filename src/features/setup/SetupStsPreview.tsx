@@ -4,16 +4,13 @@ import { AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core'
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
-import {
-  SAFE_TO_SPEND_PREVIEW,
-  SafeToSpendPreviewFixture,
-} from '@/src/features/onboarding/fixtures/safeToSpendPreview';
+import { SAFE_TO_SPEND_PREVIEW, SafeToSpendPreviewFixture } from './fixtures/safeToSpendPreview';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View } from 'react-native';
 
-type OnboardingStsPreviewProps = {
+type SetupStsPreviewProps = {
   currencyCode: string;
   fixture?: SafeToSpendPreviewFixture;
 };
@@ -22,10 +19,10 @@ type OnboardingStsPreviewProps = {
  * Self-contained Safe-to-Spend visual for onboarding theme selection.
  * Does not import dashboard SafeToSpendCard or simulation pipelines.
  */
-export function OnboardingStsPreview({
+export function SetupStsPreview({
   currencyCode,
   fixture = SAFE_TO_SPEND_PREVIEW,
-}: OnboardingStsPreviewProps) {
+}: SetupStsPreviewProps) {
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
   const labels = strings.safeToSpendUi;

@@ -1,5 +1,5 @@
 import { FontIds, ThemeIds } from '@/src/constants';
-import { OnboardingThemeStep } from '@/src/features/onboarding';
+import { AppearanceThemeStep } from './AppearanceThemeStep';
 import { useState } from 'react';
 import type { AppearanceSetupOutput } from './setupTypes';
 
@@ -19,7 +19,7 @@ export function AppearanceSetupSlice({
   const [themeId, setThemeId] = useState(initial?.themeId.value ?? ThemeIds.DEEP_SPACE);
   const [fontId, setFontId] = useState(initial?.fontId.value ?? FontIds.DEEP_SPACE);
   return (
-    <OnboardingThemeStep
+    <AppearanceThemeStep
       currencyCode={currencyCode}
       themeId={themeId}
       fontId={fontId}

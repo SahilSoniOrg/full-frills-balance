@@ -3,7 +3,8 @@
     "journal"
   ],
   "app": [
-    "dev"
+    "dev",
+    "setup"
   ],
   "budget": [
     "accounts",
@@ -30,8 +31,5 @@
   ],
   "settings": [
     "accounts"
-  ],
-  "setup": [
-    "onboarding"
   ]
 }

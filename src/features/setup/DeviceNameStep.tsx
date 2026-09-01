@@ -1,10 +1,9 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
-import React from 'react';
 import { Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
 
-interface StepSplashProps {
+interface DeviceNameStepProps {
   name: string;
   setName: (name: string) => void;
   onContinue: () => void;
@@ -12,13 +11,13 @@ interface StepSplashProps {
   isCompleting: boolean;
 }
 
-export const StepSplash: React.FC<StepSplashProps> = ({
+export function DeviceNameStep({
   name,
   setName,
   onContinue,
   onRestore,
   isCompleting,
-}) => {
+}: DeviceNameStepProps) {
   return (
     <Box flex={1} testID="onboarding-screen">
       <ScrollView
@@ -92,7 +91,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
       </ScrollView>
     </Box>
   );
-};
+}
 
 const styles = StyleSheet.create({
   scrollContent: {

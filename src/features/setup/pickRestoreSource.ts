@@ -17,6 +17,27 @@ export function rememberPreparedRestore(prepared: PreparedRestore): void {
   preparedByFingerprint.set(prepared.fingerprint, prepared);
 }
 
+export function forgetPreparedRestore(fingerprint: string | undefined): void {
+  if (fingerprint) preparedByFingerprint.delete(fingerprint);
+}
+
+export function forgetAllPreparedRestores(): void {
+  preparedByFingerprint.clear();
+}
+
+/** Detected format must match the plugin the user selected. */
+export function resolveRestorePlugin(
+  context: ImportFileContext,
+  expectedPluginId: string,
+): ImportPlugin {
+  const detected = importRegistry.detect(context);
+  if (!detected) throw new Error('Could not determine restore file format');
+  if (detected.id !== expectedPluginId) {
+    throw new Error('Selected restore format does not match this backup');
+  }
+  return detected;
+}
+
 export async function pickAndPrepareRestore(
   expectedPluginId: string,
   onProgress?: (message: string, progress?: number) => void,
@@ -34,7 +55,7 @@ export async function pickAndPrepareRestore(
   if (result.canceled) return 'cancelled';
   const file = result.assets[0];
   const context = await fileContext(file.uri, file.name);
-  const plugin = pluginFor(context, expectedPluginId);
+  const plugin = resolveRestorePlugin(context, expectedPluginId);
   const prepared = await prepareRestore(plugin, context, { onProgress });
   rememberPreparedRestore(prepared);
   return {
@@ -80,12 +101,4 @@ async function fileContext(uri: string, name: string): Promise<ImportFileContext
     // Raw bytes are enough for plugins that do not need decoded text.
   }
   return context;
-}
-
-function pluginFor(context: ImportFileContext, expectedPluginId: string): ImportPlugin {
-  const expected = importRegistry.get(expectedPluginId);
-  const detected = importRegistry.detect(context);
-  if (expected) return expected;
-  if (detected) return detected;
-  throw new Error('Could not determine restore file format');
 }

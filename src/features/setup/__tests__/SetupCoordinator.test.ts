@@ -4,7 +4,6 @@ import {
   createSetupDraft,
   startFirstRunRestoreFromDeviceName,
 } from '../SetupCoordinator';
-import { finishDeviceSetup } from '../setupFinishers';
 import type {
   FirstRunSetupDraft,
   RestoreSetupDraft,
@@ -13,9 +12,7 @@ import type {
   WorkplaceSetupOutput,
 } from '../setupTypes';
 
-jest.mock('../setupFinishers', () => ({
-  finishDeviceSetup: jest.fn(),
-}));
+const mockCommitDevice = jest.fn();
 
 const operationId = asWorkplaceId('operation');
 
@@ -55,10 +52,8 @@ function memoryStore() {
 }
 
 describe('SetupCoordinator', () => {
-  const mockFinishDeviceSetup = finishDeviceSetup as jest.Mock;
-
   beforeEach(() => {
-    mockFinishDeviceSetup.mockReset();
+    mockCommitDevice.mockReset();
   });
 
   it('seeds first-run restore from the entered device name', () => {
@@ -80,6 +75,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
     coordinator.present('device');
@@ -92,13 +88,13 @@ describe('SetupCoordinator', () => {
       device: { displayName: { value: 'Sahil' } },
     });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
-    expect(mockFinishDeviceSetup).toHaveBeenCalledWith({
+    expect(mockCommitDevice).toHaveBeenCalledWith({
       displayName: { value: 'Sahil', source: 'user_entered' },
     });
   });
 
   it('does not persist Device output when the checkpoint write fails', async () => {
-    mockFinishDeviceSetup.mockImplementation(() => {
+    mockCommitDevice.mockImplementation(() => {
       throw new Error('prefs');
     });
     const store = memoryStore();
@@ -107,6 +103,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     await expect(
       coordinator.accept('device', {
@@ -136,6 +133,7 @@ describe('SetupCoordinator', () => {
       draftStore: store,
       resolution: { getAutoOutput: sliceId => (sliceId === 'workplace' ? workplace : undefined) },
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     expect(await coordinator.advanceAutoAccepted()).toEqual({
       kind: 'run_effect',
@@ -176,11 +174,12 @@ describe('SetupCoordinator', () => {
       draftStore: store,
       resolution: { getAutoOutput: sliceId => (sliceId === 'device' ? device : undefined) },
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
 
     await coordinator.advanceAutoAccepted();
 
-    expect(mockFinishDeviceSetup).toHaveBeenCalledWith(device);
+    expect(mockCommitDevice).toHaveBeenCalledWith(device);
   });
 
   it('persists the restore handoff only after the injected publication effect succeeds', async () => {
@@ -212,7 +211,7 @@ describe('SetupCoordinator', () => {
       resolution: {
         getAutoOutput: sliceId => (sliceId === 'workplace' ? workplace : undefined),
       },
-      effects: { publishRestore },
+      effects: { publishRestore, commitDevice: mockCommitDevice },
     });
     expect(await coordinator.runPendingEffect()).toMatchObject({
       kind: 'present',
@@ -254,7 +253,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
-      effects: { publishRestore },
+      effects: { publishRestore, commitDevice: mockCommitDevice },
     });
     expect(await coordinator.runPendingEffect()).toMatchObject({
       kind: 'present',
@@ -287,6 +286,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('device');
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
@@ -301,6 +301,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draftStore: memoryStore(),
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     firstRun.present('device');
     await firstRun.accept('device', {
@@ -313,6 +314,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draftStore: memoryStore(),
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     expect(creation.back()).toEqual({ kind: 'at_start' });
   });
@@ -323,6 +325,7 @@ describe('SetupCoordinator', () => {
       operationId,
       draftStore: memoryStore(),
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     coordinator.present('workplace');
 
@@ -357,6 +360,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: finisher,
+      effects: { commitDevice: mockCommitDevice },
     });
     await expect(coordinator.finish()).rejects.toThrow('retry');
     expect(store.clears).toBe(0);
@@ -390,6 +394,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('restore_source');
     await coordinator.accept('restore_source', {
@@ -432,6 +437,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('restore_source');
     await coordinator.accept('restore_source', {
@@ -475,6 +481,7 @@ describe('SetupCoordinator', () => {
       draft,
       draftStore: store,
       finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('restore_source');
     await expect(

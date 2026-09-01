@@ -1,9 +1,7 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { clearSetupDraft, saveSetupDraft } from '../SetupDraftStore';
-import {
-  readBlockingSetupProjection,
-  subscribeToSetupDraft,
-} from '@/src/services/setup/launchProjection';
+import { readBlockingSetupProjection } from '../readBlockingSetupProjection';
+import { subscribeToSetupDraft } from '@/src/services/setup/launchProjection';
 
 describe('Setup launch projection', () => {
   it('notifies launch when a blocking draft is cleared', () => {
@@ -22,9 +20,13 @@ describe('Setup launch projection', () => {
     expect(
       readBlockingSetupProjection(
         JSON.stringify({
+          schemaVersion: 1,
+          kind: 'first_run',
           journeyId: 'first_run',
           entryPolicy: 'blocking',
           operationId: 'operation',
+          presentedHistory: [],
+          acceptedSlices: [],
         }),
       ),
     ).toEqual({
@@ -36,13 +38,18 @@ describe('Setup launch projection', () => {
     unsubscribe();
   });
 
-  it('ignores optional and unknown drafts', () => {
+  it('ignores optional drafts and unknown journeys', () => {
     expect(
       readBlockingSetupProjection(
         JSON.stringify({
+          schemaVersion: 1,
+          kind: 'restore',
           journeyId: 'settings_restore',
           entryPolicy: 'optional',
           operationId: 'operation',
+          presentedHistory: [],
+          acceptedSlices: [],
+          restore: {},
         }),
       ),
     ).toBeUndefined();
@@ -54,6 +61,19 @@ describe('Setup launch projection', () => {
           operationId: 'operation',
         }),
       ),
-    ).toBeUndefined();
+    ).toEqual({ unreadable: true });
+  });
+
+  it('fails closed when stored JSON is not a valid Setup draft', () => {
+    expect(readBlockingSetupProjection('{')).toEqual({ unreadable: true });
+    expect(
+      readBlockingSetupProjection(
+        JSON.stringify({
+          journeyId: 'first_run',
+          entryPolicy: 'blocking',
+          operationId: 'operation',
+        }),
+      ),
+    ).toEqual({ unreadable: true });
   });
 });

@@ -21,7 +21,7 @@ function starterAccounts(output: WorkplaceSetupOutput) {
     );
     return {
       name: item.name,
-      type: (preset?.type ?? item.type) as AccountType,
+      type: preset?.type ?? item.type,
       icon: preset?.icon ?? item.icon,
     };
   });
@@ -34,7 +34,12 @@ function starterCategories(output: WorkplaceSetupOutput) {
     );
     return {
       name: item.name,
-      type: (preset?.type ?? item.type) as AccountType,
+      type:
+        preset === undefined
+          ? item.type
+          : preset.type === 'INCOME'
+            ? AccountType.INCOME
+            : AccountType.EXPENSE,
       icon: preset?.icon ?? item.icon,
     };
   });

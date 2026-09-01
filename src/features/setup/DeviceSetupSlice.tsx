@@ -1,4 +1,4 @@
-import { StepSplash } from '@/src/features/onboarding';
+import { DeviceNameStep } from './DeviceNameStep';
 import { useState } from 'react';
 import type { DeviceSetupOutput } from './setupTypes';
 
@@ -15,7 +15,7 @@ export function DeviceSetupSlice({
 }) {
   const [name, setName] = useState(initialName);
   return (
-    <StepSplash
+    <DeviceNameStep
       name={name}
       setName={setName}
       onContinue={() => onContinue({ displayName: { value: name, source: 'user_entered' } })}

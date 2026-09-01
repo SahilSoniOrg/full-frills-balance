@@ -48,6 +48,18 @@ export class RestorePublicationClaims {
   fingerprintFor(operationId: WorkplaceId): string | undefined {
     return readClaims(this.store)[operationId];
   }
+
+  release(operationId: WorkplaceId): void {
+    const claims = readClaims(this.store);
+    if (claims[operationId] === undefined) return;
+    const next = { ...claims };
+    delete next[operationId];
+    this.store.set(RESTORE_PUBLICATION_CLAIMS_KEY, JSON.stringify(next));
+  }
+
+  clearAll(): void {
+    this.store.set(RESTORE_PUBLICATION_CLAIMS_KEY, JSON.stringify({}));
+  }
 }
 
 export const restorePublicationClaims = new RestorePublicationClaims();

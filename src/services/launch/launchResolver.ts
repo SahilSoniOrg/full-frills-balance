@@ -6,13 +6,16 @@ import { WorkplaceId } from '@/src/types/ids';
  * launch. Keeping the projection small prevents launch from learning about
  * individual setup slices.
  */
-export interface LaunchSetupDraft {
-  readonly journeyId: string;
-  readonly entryPolicy: 'blocking' | 'optional';
-}
+export type LaunchSetupDraft =
+  | { readonly unreadable: true }
+  | {
+      readonly unreadable?: false;
+      readonly journeyId: string;
+      readonly entryPolicy: 'blocking' | 'optional';
+    };
 
 export type LaunchResolution =
-  | { readonly kind: 'setup'; readonly journeyId: string }
+  | { readonly kind: 'setup'; readonly journeyId: string; readonly unreadable?: true }
   | { readonly kind: 'picker' }
   | {
       readonly kind: 'open';
@@ -35,7 +38,15 @@ export interface LaunchResolverInput {
 export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution {
   const { deviceClaimed, activeWorkplaceId, workplaceIds } = input;
 
-  if (input.setupDraft?.entryPolicy === 'blocking' && input.setupDraft.journeyId.trim()) {
+  if (input.setupDraft && 'unreadable' in input.setupDraft && input.setupDraft.unreadable) {
+    return { kind: 'setup', journeyId: 'first_run', unreadable: true };
+  }
+
+  if (
+    input.setupDraft &&
+    input.setupDraft.entryPolicy === 'blocking' &&
+    input.setupDraft.journeyId.trim()
+  ) {
     return { kind: 'setup', journeyId: input.setupDraft.journeyId };
   }
 
