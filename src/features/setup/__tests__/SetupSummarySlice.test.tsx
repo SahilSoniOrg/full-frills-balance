@@ -54,7 +54,15 @@ describe('SetupSummarySlice', () => {
     load.mockReset();
   });
 
-  it('uses split restore handoff counts instead of the combined account total', () => {
+  it('uses verified published counts for the restore summary', async () => {
+    load.mockResolvedValue({
+      name: 'Books',
+      icon: 'briefcase',
+      currency: 'USD',
+      accounts: 4,
+      categories: 6,
+      journals: 2,
+    });
     const onConfirm = jest.fn();
     render(
       <SetupSummarySlice
@@ -72,11 +80,12 @@ describe('SetupSummarySlice', () => {
       />,
     );
 
+    await waitFor(() => expect(screen.getByText('4')).toBeTruthy());
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getByText('6')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-finish-button'));
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(load).not.toHaveBeenCalled();
+    expect(load).toHaveBeenCalledTimes(1);
   });
 
   it('reads published book stats when the handoff still lumped categories into accounts', async () => {
@@ -106,5 +115,28 @@ describe('SetupSummarySlice', () => {
 
     await waitFor(() => expect(screen.getByText('4')).toBeTruthy());
     expect(screen.getByText('6')).toBeTruthy();
+  });
+
+  it('blocks confirmation and offers retry when published counts cannot be verified', async () => {
+    load.mockRejectedValue(new Error('database unavailable'));
+    const onConfirm = jest.fn();
+    render(
+      <SetupSummarySlice
+        draft={restoreDraft({
+          accounts: 10,
+          journals: 2,
+          transactions: 2,
+          skippedTransactions: 0,
+        })}
+        isCompleting={false}
+        onEdit={jest.fn()}
+        onConfirm={onConfirm}
+        onBack={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('onboarding-summary-retry')).toBeTruthy());
+    expect(screen.queryByTestId('onboarding-finish-button')).toBeNull();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });

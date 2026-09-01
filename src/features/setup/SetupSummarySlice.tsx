@@ -1,17 +1,17 @@
 import { FontIds, ThemeIds } from '@/src/constants';
+import { AppButton, AppText } from '@/src/components/core';
+import { Box, Stack } from '@/src/design-system';
 import { SetupReviewStep } from './SetupReviewStep';
 import { View } from 'react-native';
 import { useEffect, useState } from 'react';
-import { loadRestoreSummary } from './setupFinishers';
+import { loadRestoreSummary, type RestoreSummaryView } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import type { SetupDraft, SetupSliceId } from './setupTypes';
 
-function restoreHandoffCounts(draft: SetupDraft) {
-  if (draft.kind !== 'restore') return undefined;
-  const stats = draft.restore.handoff?.stats;
-  if (stats?.categories === undefined) return undefined;
-  return { accounts: stats.accounts, categories: stats.categories };
-}
+type ImportedBooks =
+  | { readonly status: 'loading' }
+  | { readonly status: 'failed' }
+  | { readonly status: 'ready'; readonly view: RestoreSummaryView };
 
 export function SetupSummarySlice({
   draft,
@@ -28,35 +28,75 @@ export function SetupSummarySlice({
 }) {
   const imported = draft.kind === 'restore';
   const workplace = draft.workplace;
+  const [retryKey, setRetryKey] = useState(0);
+  const [importedBooks, setImportedBooks] = useState<ImportedBooks>({ status: 'loading' });
   const name = 'device' in draft ? (draft.device?.displayName.value ?? '') : '';
   const appearance = 'appearance' in draft ? draft.appearance : undefined;
-  const fromHandoff = restoreHandoffCounts(draft);
-  const [publishedCounts, setPublishedCounts] = useState<{
-    readonly accounts: number;
-    readonly categories: number;
-  }>();
 
   useEffect(() => {
-    if (restoreHandoffCounts(draft) || draft.kind !== 'restore') return;
+    if (!imported) return;
     let cancelled = false;
-    void loadRestoreSummary(draft)
-      .then(view => {
-        if (cancelled || !view) return;
-        setPublishedCounts({ accounts: view.accounts, categories: view.categories });
-      })
-      .catch(() => undefined);
+    void loadRestoreSummary(draft).then(
+      view => {
+        if (cancelled) return;
+        setImportedBooks(view ? { status: 'ready', view } : { status: 'failed' });
+      },
+      () => {
+        if (!cancelled) setImportedBooks({ status: 'failed' });
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [draft]);
+  }, [draft, imported, retryKey]);
 
-  const restoreCounts = fromHandoff ?? publishedCounts;
+  if (imported && importedBooks.status !== 'ready') {
+    return (
+      <View testID="onboarding-summary-step" style={{ flex: 1 }}>
+        <Box flex={1} padding="lg">
+          <Stack gap="md">
+            {importedBooks.status === 'loading' ? (
+              <AppText variant="body" color="secondary">
+                Verifying imported books...
+              </AppText>
+            ) : (
+              <>
+                <AppText variant="body" color="secondary">
+                  Imported books could not be verified. Retry before confirming.
+                </AppText>
+                <AppButton
+                  variant="outline"
+                  testID="onboarding-summary-retry"
+                  onPress={() => setRetryKey(key => key + 1)}
+                  disabled={isCompleting}
+                >
+                  Retry
+                </AppButton>
+              </>
+            )}
+            <AppButton variant="ghost" onPress={onBack} disabled={isCompleting}>
+              Back
+            </AppButton>
+          </Stack>
+        </Box>
+      </View>
+    );
+  }
+
   const accounts = imported
-    ? (restoreCounts?.accounts ?? 0)
+    ? importedBooks.status === 'ready'
+      ? importedBooks.view.accounts
+      : 0
     : (workplace?.selectedAccounts.length ?? 0);
   const categories = imported
-    ? (restoreCounts?.categories ?? 0)
+    ? importedBooks.status === 'ready'
+      ? importedBooks.view.categories
+      : 0
     : (workplace?.selectedCategories.length ?? 0);
+  const selectedCurrency =
+    imported && importedBooks.status === 'ready'
+      ? importedBooks.view.currency
+      : (workplace?.baseCurrency.value ?? '');
 
   return (
     <View testID="onboarding-summary-step" style={{ flex: 1 }}>
@@ -64,7 +104,7 @@ export function SetupSummarySlice({
         name={name}
         workplaceName={workplace?.name.value ?? ''}
         workplaceIcon={workplace?.icon.value ?? 'briefcase'}
-        selectedCurrency={workplace?.baseCurrency.value ?? ''}
+        selectedCurrency={selectedCurrency}
         accountCount={accounts}
         categoryCount={categories}
         themeId={appearance?.themeId.value ?? ThemeIds.DEEP_SPACE}
