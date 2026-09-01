@@ -26,7 +26,6 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/ids';
-import { getPerfNow } from '@/src/utils/dateHelpers';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
@@ -48,7 +47,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
-    mountTimeRef.current = getPerfNow();
+    mountTimeRef.current = performance.now();
     logger.info('[AccountsList] Screen Mounted');
   }, []);
 
@@ -94,7 +93,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   useEffect(() => {
     if (hasData) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       logger.info(`[AccountsList] Data Loaded in ${duration}ms`);
       logger.metric('AccountsList.DataLoaded', duration);
     }

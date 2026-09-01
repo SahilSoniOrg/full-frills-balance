@@ -1,4 +1,3 @@
-import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
@@ -54,13 +53,13 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
-    mountTimeRef.current = getPerfNow();
+    mountTimeRef.current = performance.now();
   }, []);
 
   // Log UI Initialization (Prefs Loaded)
   useEffect(() => {
     if (isInitialized) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] UI Initialized (Prefs Loaded) in ${duration}ms`);
     }
   }, [isInitialized]);
@@ -84,7 +83,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log Safe To Spend Data arrival
   useEffect(() => {
     if (hasSafeToSpendData) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] SafeToSpend Data Loaded in ${duration}ms`);
     }
   }, [hasSafeToSpendData]);
@@ -146,7 +145,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log Journal List arrival
   useEffect(() => {
     if (hasJournalItems) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] Journal List Items Loaded in ${duration}ms`);
     }
   }, [hasJournalItems]);
@@ -154,7 +153,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log "Fully Ready" state
   useEffect(() => {
     if (isInitialized && hasSafeToSpendData && hasJournalItems) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] Fully Ready in ${duration}ms`);
       appLogger.metric('Dashboard.FullyReady', duration);
     }

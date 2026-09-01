@@ -5,7 +5,7 @@ import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
-import { getPerfNow } from '@/src/utils/dateHelpers';
+import { getPerfNow } from '@/src/utils/dateUtils';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useEffect, useRef } from 'react';
@@ -34,7 +34,7 @@ export function useDashboardHeaderChrome(): DashboardHeaderChrome {
 
   useEffect(() => {
     if (notificationCount > 0) {
-      const duration = Math.round(getPerfNow() - mountTimeRef.current);
+      const duration = Math.round(performance.now() - mountTimeRef.current);
       appLogger.info(`[Dashboard] Insights Loaded in ${duration}ms`);
     }
   }, [notificationCount]);

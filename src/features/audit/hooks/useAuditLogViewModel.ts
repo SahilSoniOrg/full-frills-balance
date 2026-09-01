@@ -1,4 +1,3 @@
-import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
@@ -35,7 +34,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
-    mountTimeRef.current = getPerfNow();
+    mountTimeRef.current = performance.now();
   }, []);
 
   // Log UI Mount
@@ -53,7 +52,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
   // Log Data Arrival
   useEffect(() => {
     if (hasData) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
       logger.info(`[AuditLog] Data Loaded in ${duration}ms`);
       logger.metric('AuditLog.DataLoaded', duration);
     }

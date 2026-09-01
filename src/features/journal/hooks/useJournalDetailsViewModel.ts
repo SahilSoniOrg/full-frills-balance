@@ -1,4 +1,3 @@
-import { getNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -24,7 +23,7 @@ import {
 import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
 import { JournalId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate, getNow } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';

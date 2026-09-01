@@ -9,8 +9,7 @@ import { AppConfig } from '@/src/constants';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
-import { getPerfNow } from '@/src/utils/dateHelpers';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, getPerfNow, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEntryList } from '../list/hooks/useJournalEntryList';
@@ -82,7 +81,7 @@ export function useJournalList(
 
   useEffect(() => {
     if (!core.isLoading && core.journals.length > 0) {
-      const duration = Math.round(getPerfNow() - (mountTimeRef.current ?? 0));
+      const duration = Math.round(performance.now() - (mountTimeRef.current ?? 0));
       logger.info(`[JournalList] Data Loaded (Count: ${core.journals.length}) in ${duration}ms`);
       logger.metric('JournalList.LoadTime', duration);
     }

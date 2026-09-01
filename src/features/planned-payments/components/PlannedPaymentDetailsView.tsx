@@ -10,7 +10,7 @@ import { getPlannedPaymentHistoryPresentation } from '@/src/features/planned-pay
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
-import { getNow } from '@/src/utils/dateHelpers';
+import { getNow } from '@/src/utils/dateUtils';
 
 export function PlannedPaymentDetailsView({
   chrome,
