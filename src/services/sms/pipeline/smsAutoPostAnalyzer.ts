@@ -51,7 +51,7 @@ export async function analyzeAutoPost(
             : isExpense
               ? `Expense via ${message.address}`
               : `Income via ${message.address}`,
-          notes: `Auto-posted from SMS rule: ${rule.senderMatch || 'Rule'}`,
+          notes: '',
           currencyCode: parsed.currencyCode || AppConfig.defaultCurrency,
           status: JournalStatus.POSTED,
           metadata: {

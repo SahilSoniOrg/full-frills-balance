@@ -109,10 +109,8 @@ function buildDescription(
 }
 
 function buildNotes(item: TransactionInboxItem): string {
+  if (item.channel === 'sms') return '';
   if (item.channel === 'voice') return `Spoken transcript: ${item.rawBody}`;
-  if (item.channel === 'sms') {
-    return `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}`;
-  }
   return `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`;
 }
 

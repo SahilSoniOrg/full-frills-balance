@@ -40,7 +40,7 @@ describe('buildTransactionInboxImportNavigation', () => {
       type: 'transfer',
       amount: '250',
       description: 'Coffee Shop 250 REF-1 HDFCBK',
-      notes: expect.stringContaining('Imported from SMS'),
+      notes: '',
       sourceAccountId: 'bank-1',
       destinationAccountId: 'merchant-1',
     });
@@ -58,15 +58,14 @@ describe('buildTransactionInboxImportNavigation', () => {
     expect(navigation.params.type).toBe('income');
     expect(navigation.params.description).toBe('Acme');
     expect(navigation.params.destinationAccountId).toBe('salary');
-    expect(navigation.params.notes).toContain('Imported from SMS');
+    expect(navigation.params.notes).toBe('');
   });
 
-  it('keeps the merchant description separate from SMS context notes', () => {
+  it('leaves notes empty on SMS import', () => {
     const navigation = buildTransactionInboxImportNavigation(item, [], null);
 
     expect(navigation.params.description).toBe('Coffee Shop');
-    expect(navigation.params.notes).toContain('Imported from SMS: Coffee Shop');
-    expect(navigation.params.notes).not.toContain(item.rawBody);
+    expect(navigation.params.notes).toBe('');
   });
 
   it('passes mode option when provided', () => {
