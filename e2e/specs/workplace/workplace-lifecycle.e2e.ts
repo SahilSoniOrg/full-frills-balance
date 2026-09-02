@@ -3,7 +3,7 @@
  * @dataSource e2e
  * @platform mobile
  */
-import { assertVisibleById } from '../../actions/assertions';
+import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
 import { launchOnboardedApp } from '../../actions/launch';
 import { replaceById, tapById, tapByLabel } from '../../actions/mobile/elementActions';
 import { tabs } from '../../screens';
@@ -17,12 +17,14 @@ describe('Workplace lifecycle', () => {
 
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
-    await tapByLabel('Workplace');
+    await tapByLabel('Current Workplace');
+    await tapByLabel(workplaceName);
     await tapByLabel(`Delete ${workplaceName}`);
     await replaceById('confirmation-value-input', workplaceName);
     await element(by.id('confirmation-value-input')).tapReturnKey();
     await tapById('confirmation-primary-action');
 
-    await assertVisibleById('onboarding-screen', 120000);
+    await assertVisibleById('setup-screen', 120000);
+    await assertTextVisible('Choose your currency', 30000);
   });
 });

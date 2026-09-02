@@ -32,9 +32,7 @@ describe('Smoke', () => {
 
     await launchPickerApp();
     await element(by.id('workplace-picker-import')).tap();
-    await assertTextVisible(
-      'Create a new Workplace from this backup. Existing Workplaces will not be changed.',
-      30000,
-    );
+    await assertVisibleById('restore-source-slice', 30000);
+    await assertTextVisible('Choose a backup format to replace the data on this device.', 30000);
   });
 });

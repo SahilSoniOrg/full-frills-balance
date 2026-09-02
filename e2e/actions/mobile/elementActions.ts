@@ -75,6 +75,14 @@ export async function tapByText(
 
 export async function scrollToId(testId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {
   const target = element(by.id(testId));
-  await waitFor(target).toBeVisible().whileElement(by.type('RCTScrollView')).scroll(200, 'down');
+  for (const scrollMatcher of SCROLL_VIEW_MATCHERS) {
+    try {
+      await waitFor(target).toBeVisible().whileElement(scrollMatcher).scroll(200, 'down');
+      await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+      return;
+    } catch {
+      // Try the next native scroll view class used by the current RN architecture.
+    }
+  }
   await waitFor(target).toBeVisible().withTimeout(timeoutMs);
 }
