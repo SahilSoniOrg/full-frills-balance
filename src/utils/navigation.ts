@@ -361,10 +361,6 @@ export const AppNavigation = {
     router.push('/personalization-settings' as Href);
   },
 
-  toPreferencesSettings: () => {
-    router.push('/preferences-settings' as Href);
-  },
-
   /**
    * Navigate to data management settings.
    */

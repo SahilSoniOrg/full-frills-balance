@@ -16,7 +16,6 @@ const notificationsTitle =
 
 const settingsDestinations = [
   ['settings-profile', 'Profile'],
-  ['settings-preferences', 'Preferences'],
   ['settings-current-workplace', 'Current Workplace'],
   ['settings-appearance', 'Appearance'],
   ['settings-automation', notificationsTitle],
@@ -26,19 +25,12 @@ const settingsDestinations = [
   ['settings-about-support', 'About & Support'],
 ] as const;
 
-const preferencesDestinations = new Set([
-  'settings-appearance',
-  'settings-automation',
-  'settings-privacy-security',
-]);
-
 describe('Settings navigation', () => {
   it('renders the reorganized Settings root', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
     await assertTextVisible('Settings', 30000);
     await expect(element(by.id('header-workplace-switcher'))).toBeVisible();
-    await tapById('settings-preferences');
     await assertTextVisible('Preferences', 30000);
   });
 
@@ -56,7 +48,6 @@ describe('Settings navigation', () => {
   it.each(settingsDestinations)('opens %s', async (testID, title) => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
-    if (preferencesDestinations.has(testID)) await tapById('settings-preferences');
     try {
       await tapById(testID);
     } catch {
@@ -95,7 +86,6 @@ describe('Settings navigation', () => {
   it('keeps App Lock under Privacy & Security', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
-    await tapById('settings-preferences');
     await tapById('settings-privacy-security');
     await assertVisibleById('settings-app-lock-toggle', 30000);
   });
@@ -103,7 +93,6 @@ describe('Settings navigation', () => {
   it('moves the Safe-to-Spend chart toggle to Appearance', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
-    await tapById('settings-preferences');
     await tapById('settings-appearance');
     await assertVisibleById('settings-sts-chart-toggle', 30000);
   });

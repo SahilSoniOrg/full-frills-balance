@@ -1,5 +1,4 @@
 export { default as AppearanceSettingsScreen } from './screens/AppearanceSettingsScreen';
-export { default as PreferencesSettingsScreen } from './screens/PreferencesSettingsScreen';
 export { default as CurrentWorkplaceSettingsScreen } from './screens/CurrentWorkplaceSettingsScreen';
 export { default as DeviceSettingsScreen } from './screens/DeviceSettingsScreen';
 export { default as AboutSupportSettingsScreen } from './screens/AboutSupportSettingsScreen';

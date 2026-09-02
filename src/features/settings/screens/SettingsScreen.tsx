@@ -4,8 +4,10 @@ import { AppNavigation } from '@/src/utils/navigation';
 export default function SettingsScreen() {
   return (
     <SettingsView
-      onPreferences={AppNavigation.toPreferencesSettings}
       onProfile={AppNavigation.toPersonalizationSettings}
+      onAppearance={AppNavigation.toAppearanceSettings}
+      onAutomation={AppNavigation.toAutomationSettings}
+      onPrivacy={AppNavigation.toPrivacySecuritySettings}
       onCurrentWorkplace={AppNavigation.toCurrentWorkplaceSettings}
       onDataManagement={AppNavigation.toDataManagementSettings}
       onMaintenance={AppNavigation.toMaintenanceSettings}

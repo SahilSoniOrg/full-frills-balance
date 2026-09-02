@@ -63,7 +63,6 @@ export function NavigationStack() {
       <Stack.Screen name="import-selection" options={{ headerShown: false }} />
       <Stack.Screen name="audit-log" options={{ headerShown: false }} />
       <Stack.Screen name="privacy-security-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="preferences-settings" options={{ headerShown: false }} />
       <Stack.Screen name="current-workplace-settings" options={{ headerShown: false }} />
       <Stack.Screen name="automation-settings" options={{ headerShown: false }} />
       <Stack.Screen name="maintenance-settings" options={{ headerShown: false }} />

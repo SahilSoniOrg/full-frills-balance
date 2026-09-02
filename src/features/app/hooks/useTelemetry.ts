@@ -102,11 +102,6 @@ const ROUTE_METADATA_MAP: Record<
 
   // Settings & Configuration
   'appearance-settings': { screenType: 'settings', flowContext: 'personalization', isModal: true },
-  'preferences-settings': {
-    screenType: 'settings',
-    flowContext: 'preferences',
-    isModal: false,
-  },
   'automation-settings': { screenType: 'settings', flowContext: 'automation', isModal: false },
   'personalization-settings': {
     screenType: 'settings',

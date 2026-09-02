@@ -9,8 +9,10 @@ import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { Platform } from 'react-native';
 
 export interface SettingsViewProps {
-  onPreferences: () => void;
   onProfile: () => void;
+  onAppearance: () => void;
+  onAutomation: () => void;
+  onPrivacy: () => void;
   onCurrentWorkplace: () => void;
   onDataManagement: () => void;
   onMaintenance: () => void;
@@ -18,8 +20,10 @@ export interface SettingsViewProps {
 }
 
 export function SettingsView({
-  onPreferences,
   onProfile,
+  onAppearance,
+  onAutomation,
+  onPrivacy,
   onCurrentWorkplace,
   onDataManagement,
   onMaintenance,
@@ -27,10 +31,14 @@ export function SettingsView({
 }: SettingsViewProps) {
   const workplace = useOptionalWorkplace();
   const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
-  const preferencesDescription =
+  const notificationTitle =
     Platform.OS === 'android'
-      ? 'Notifications, appearance, and privacy'
-      : 'Reminders, appearance, and privacy';
+      ? AppConfig.strings.settings.sections.remindersAndAutomation
+      : AppConfig.strings.settings.notifications.title;
+  const notificationDescription =
+    Platform.OS === 'android'
+      ? 'Reminders, SMS inbox, and auto-post rules'
+      : 'Scheduled reminders to review recent activity';
 
   return (
     <SettingsLayout title="Settings" showBack={false} headerActions={<WorkplaceSwitcher />}>
@@ -43,13 +51,6 @@ export function SettingsView({
             onPress={onProfile}
             testID="settings-profile"
           />
-          <SettingsMenuItem
-            leftIcon="sliders"
-            title="Preferences"
-            description={preferencesDescription}
-            onPress={onPreferences}
-            testID="settings-preferences"
-          />
         </SettingsMenu>
 
         <SettingsMenu header="Workplaces">
@@ -59,6 +60,30 @@ export function SettingsView({
             description="Current workplace · Currency, Safe-to-Spend, and books"
             onPress={onCurrentWorkplace}
             testID="settings-current-workplace"
+          />
+        </SettingsMenu>
+
+        <SettingsMenu header="Preferences">
+          <SettingsMenuItem
+            leftIcon="notifications"
+            title={notificationTitle}
+            description={notificationDescription}
+            onPress={onAutomation}
+            testID="settings-automation"
+          />
+          <SettingsMenuItem
+            leftIcon="palette"
+            title={AppConfig.strings.settings.sections.appearance}
+            description="Theme, typography, time, and display options"
+            onPress={onAppearance}
+            testID="settings-appearance"
+          />
+          <SettingsMenuItem
+            leftIcon="shieldCheck"
+            title={AppConfig.strings.settings.sections.privacyAndSecurity}
+            description="Hide balances, protect widgets, and lock the app"
+            onPress={onPrivacy}
+            testID="settings-privacy-security"
           />
         </SettingsMenu>
 
