@@ -67,10 +67,7 @@ export function NavigationStack() {
       <Stack.Screen name="automation-settings" options={{ headerShown: false }} />
       <Stack.Screen name="maintenance-settings" options={{ headerShown: false }} />
       <Stack.Screen name="about-support-settings" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="appearance-settings"
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
+      <Stack.Screen name="appearance-settings" options={{ headerShown: false }} />
     </Stack>
   );
 }

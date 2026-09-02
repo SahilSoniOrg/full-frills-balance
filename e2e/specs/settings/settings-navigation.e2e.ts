@@ -12,7 +12,7 @@ import { tabs } from '../../screens';
 jest.setTimeout(180000);
 
 const notificationsTitle =
-  device.getPlatform() === 'android' ? 'Notifications & Automation' : 'Reminders';
+  device.getPlatform() === 'android' ? 'Notifications & Automation' : 'Notifications';
 
 const settingsDestinations = [
   ['settings-profile', 'Profile'],

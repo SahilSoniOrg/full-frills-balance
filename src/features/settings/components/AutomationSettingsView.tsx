@@ -14,7 +14,7 @@ interface AutomationSettingsViewProps {
 export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
   const title =
     Platform.OS === 'android'
-      ? AppConfig.strings.settings.sections.remindersAndAutomation
+      ? AppConfig.strings.settings.notifications.automationTitle
       : AppConfig.strings.settings.notifications.title;
 
   return (

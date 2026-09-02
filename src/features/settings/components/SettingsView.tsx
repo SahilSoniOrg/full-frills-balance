@@ -33,12 +33,12 @@ export function SettingsView({
   const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
   const notificationTitle =
     Platform.OS === 'android'
-      ? AppConfig.strings.settings.sections.remindersAndAutomation
+      ? AppConfig.strings.settings.notifications.automationTitle
       : AppConfig.strings.settings.notifications.title;
   const notificationDescription =
     Platform.OS === 'android'
-      ? 'Reminders, SMS inbox, and auto-post rules'
-      : 'Scheduled reminders to review recent activity';
+      ? AppConfig.strings.settings.notifications.automationDescription
+      : AppConfig.strings.settings.notifications.description;
 
   return (
     <SettingsLayout title="Settings" showBack={false} headerActions={<WorkplaceSwitcher />}>
