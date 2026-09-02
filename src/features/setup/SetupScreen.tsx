@@ -219,7 +219,6 @@ function SetupJourneyScreen({
           draft.activeSlice === 'workplace' && draft.acceptedSlices.includes('summary');
         return (
           <WorkplaceSetupSlice
-            displayName={displayName}
             initial={workplaceInitial}
             initialStep={workplaceTargetStep}
             books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}

@@ -7,6 +7,7 @@ interface WorkplaceIdentityStepProps {
   name: string;
   icon: IconName;
   onNameChange: (name: string) => void;
+  onGenerateName?: () => void;
   onIconChange: (icon: IconName) => void;
   onContinue: () => void;
   onBack: () => void;
@@ -17,6 +18,7 @@ export function WorkplaceIdentityStep({
   name,
   icon,
   onNameChange,
+  onGenerateName,
   onIconChange,
   onContinue,
   onBack,
@@ -30,6 +32,7 @@ export function WorkplaceIdentityStep({
         subtitle="Choose a name and icon for your personal workplace."
         name={name}
         onNameChange={onNameChange}
+        onGenerateName={onGenerateName}
         icon={icon}
         onIconPress={() => setIconPickerVisible(true)}
         onContinue={onContinue}

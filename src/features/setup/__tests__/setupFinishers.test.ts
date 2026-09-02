@@ -1,7 +1,12 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
-import { discardPublishedRestore, finishSetup, loadRestoreSummary } from '../setupFinishers';
+import {
+  discardPublishedRestore,
+  finishSetup,
+  finishWorkplaceSetup,
+  loadRestoreSummary,
+} from '../setupFinishers';
 import type { RestoreSetupDraft, WorkplaceSetupOutput } from '../setupTypes';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -10,6 +15,7 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     updateWorkplace: jest.fn(),
     deleteWorkplace: jest.fn(),
     createWorkplace: jest.fn(),
+    getAllWorkplaces: jest.fn(),
     getPublishedBookStats: jest.fn(),
   },
 }));
@@ -88,6 +94,24 @@ describe('restore finishers', () => {
     getWorkplace.mockResolvedValue(undefined);
     await expect(finishSetup(restoreDraft())).rejects.toThrow('Restore publication is incomplete');
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
+  });
+
+  it('keeps default workplace names distinct', async () => {
+    const createWorkplace = workplaceService.createWorkplace as jest.Mock;
+    (workplaceService.getAllWorkplaces as jest.Mock).mockResolvedValue([
+      { name: 'Personal workplace' },
+      { name: 'Personal workplace 2' },
+    ]);
+    createWorkplace.mockResolvedValue({ id: operationId });
+
+    await finishWorkplaceSetup(operationId, {
+      ...workplace,
+      name: { value: 'Personal workplace', source: 'defaulted' },
+    });
+
+    const createdName = createWorkplace.mock.calls[0][0] as string;
+    expect(createdName).not.toBe('Personal workplace');
+    expect(createdName).not.toBe('Personal workplace 2');
   });
 
   it('applies identity edits and activates the verified Workplace', async () => {

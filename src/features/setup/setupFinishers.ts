@@ -3,6 +3,7 @@ import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
+import { generateWorkplaceName } from '@/src/utils/workplaceName';
 import {
   claimedRestoreFingerprint,
   isRestoreOwnershipTuple,
@@ -45,6 +46,25 @@ function starterCategories(output: WorkplaceSetupOutput) {
   });
 }
 
+async function uniqueDefaultWorkplaceName(output: WorkplaceSetupOutput): Promise<string> {
+  const name = output.name.value.trim();
+  if (output.name.source !== 'defaulted') return name;
+
+  const existingNames = new Set(
+    (await workplaceService.getAllWorkplaces()).map(workplace => workplace.name.toLowerCase()),
+  );
+  if (!existingNames.has(name.toLowerCase())) return name;
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = generateWorkplaceName();
+    if (!existingNames.has(candidate.toLowerCase())) return candidate;
+  }
+
+  let suffix = 2;
+  while (existingNames.has(`${name} ${suffix}`.toLowerCase())) suffix += 1;
+  return `${name} ${suffix}`;
+}
+
 /** Device writes happen once, at the Device slice checkpoint. */
 export function finishDeviceSetup(output: DeviceSetupOutput): void {
   const name = output.displayName.value.trim();
@@ -64,7 +84,8 @@ export async function finishWorkplaceSetup(
   operationId: WorkplaceId,
   output: WorkplaceSetupOutput,
 ): Promise<WorkplaceId> {
-  const workplace = await workplaceService.createWorkplace(output.name.value, output.icon.value, {
+  const name = await uniqueDefaultWorkplaceName(output);
+  const workplace = await workplaceService.createWorkplace(name, output.icon.value, {
     id: operationId,
     currencyCode: output.baseCurrency.value,
     initialAccounts: starterAccounts(output),

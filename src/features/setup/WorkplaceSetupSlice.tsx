@@ -8,6 +8,7 @@ import { AppButton } from '@/src/components/core';
 import { useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
+import { generateWorkplaceName } from '@/src/utils/workplaceName';
 import type {
   StarterAccountInput,
   StarterCategoryInput,
@@ -44,7 +45,6 @@ function starterCategoriesFromDefaults(names: string[]): StarterCategoryInput[] 
 }
 
 export function WorkplaceSetupSlice({
-  displayName,
   initial,
   identityMode = 'editable',
   books = 'starters',
@@ -54,7 +54,6 @@ export function WorkplaceSetupSlice({
   onBack,
   onRestore,
 }: {
-  readonly displayName: string;
   readonly initial?: WorkplaceSetupOutput | WorkplaceSetupPrefill;
   /** The journey recipe decides whether identity is seeded or editable. */
   readonly identityMode?: 'automatic' | 'editable';
@@ -70,6 +69,7 @@ export function WorkplaceSetupSlice({
     if (identityMode === 'automatic') return 'currency';
     return books === 'imported' ? importedStartStep(initial) : 'identity';
   });
+  const [defaultWorkplaceName, setDefaultWorkplaceName] = useState(() => generateWorkplaceName());
   const [workplaceName, setWorkplaceName] = useState(initial?.name?.value ?? '');
   const [hasEditedWorkplaceName, setHasEditedWorkplaceName] = useState(false);
   const [workplaceIcon, setWorkplaceIcon] = useState<IconName>(initial?.icon?.value ?? 'briefcase');
@@ -100,7 +100,8 @@ export function WorkplaceSetupSlice({
   });
   const visibleStep = identityMode === 'automatic' && step === 'identity' ? 'currency' : step;
 
-  const derivedName = workplaceName || `${displayName.trim() || 'User'}'s Personal workplace`;
+  const derivedName = workplaceName || defaultWorkplaceName;
+  const canGenerateName = !hasEditedWorkplaceName && !initial?.name?.value.trim();
   const inputName = hasEditedWorkplaceName ? workplaceName : derivedName;
   const imported = books === 'imported';
   const resolvedName = workplaceName.trim() || derivedName;
@@ -142,6 +143,14 @@ export function WorkplaceSetupSlice({
               setHasEditedWorkplaceName(true);
               setWorkplaceName(name);
             }}
+            onGenerateName={
+              canGenerateName
+                ? () => {
+                    setWorkplaceName('');
+                    setDefaultWorkplaceName(generateWorkplaceName());
+                  }
+                : undefined
+            }
             onIconChange={setWorkplaceIcon}
             onContinue={() => setStep('currency')}
             onBack={onBack}

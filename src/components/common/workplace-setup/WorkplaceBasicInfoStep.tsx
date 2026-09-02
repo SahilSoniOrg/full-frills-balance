@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppInput, AppText, IconName } from '@/src/components/core';
+import { AppButton, AppIcon, AppInput, AppText, IconButton, IconName } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
@@ -9,6 +9,7 @@ interface WorkplaceBasicInfoStepProps {
   subtitle: string;
   name: string;
   onNameChange: (name: string) => void;
+  onGenerateName?: () => void;
   icon?: IconName;
   onIconPress?: () => void;
   onContinue: () => void;
@@ -24,6 +25,7 @@ export function WorkplaceBasicInfoStep({
   subtitle,
   name,
   onNameChange,
+  onGenerateName,
   icon,
   onIconPress,
   onContinue,
@@ -77,18 +79,33 @@ export function WorkplaceBasicInfoStep({
               </Stack>
             )}
 
-            <AppInput
-              label="Name"
-              placeholder="e.g. My Workplace"
-              value={name}
-              onChangeText={onNameChange}
-              testID="workplace-name-input"
-              autoFocus
-              onSubmitEditing={() => {
-                Keyboard.dismiss();
-                onContinue();
-              }}
-            />
+            <Box flexDirection="row" alignItems="flex-end" gap="sm">
+              <Box flex={1}>
+                <AppInput
+                  label="Name"
+                  placeholder="e.g. My Workplace"
+                  value={name}
+                  onChangeText={onNameChange}
+                  testID="workplace-name-input"
+                  autoFocus
+                  onSubmitEditing={() => {
+                    Keyboard.dismiss();
+                    onContinue();
+                  }}
+                />
+              </Box>
+              {onGenerateName && (
+                <IconButton
+                  name="refresh"
+                  variant="surface"
+                  iconColor="primary"
+                  onPress={onGenerateName}
+                  accessibilityLabel="Generate another workplace name"
+                  testID="workplace-name-refresh"
+                  style={styles.refreshButton}
+                />
+              )}
+            </Box>
           </Stack>
 
           <Box paddingBottom="lg" paddingHorizontal="md">
@@ -125,6 +142,9 @@ export function WorkplaceBasicInfoStep({
 }
 
 const styles = StyleSheet.create({
+  refreshButton: {
+    marginBottom: 1,
+  },
   iconContainer: {
     width: 100,
     height: 100,
