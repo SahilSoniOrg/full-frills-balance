@@ -77,6 +77,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  SlidersHorizontal,
   Sparkles,
   Square,
   SquareCheck,
@@ -110,6 +111,7 @@ export const IconMap = {
   pieChart: PieChart,
   reports: BarChart3,
   settings: Settings,
+  sliders: SlidersHorizontal,
   eye: Eye,
   eyeOff: EyeOff,
   reorder: ArrowUpDown,
@@ -213,6 +215,7 @@ export type IconName =
   | 'pieChart'
   | 'reports'
   | 'settings'
+  | 'sliders'
   | 'eye'
   | 'eyeOff'
   | 'reorder'

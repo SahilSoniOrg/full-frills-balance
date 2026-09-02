@@ -4,6 +4,7 @@ import { ACCOUNT_ICON_PALETTE } from '@/src/constants/account-constants';
 describe('domain icon definitions', () => {
   it('recognizes registered icon names', () => {
     expect(isValidIconName('wallet')).toBe(true);
+    expect(isValidIconName('sliders')).toBe(true);
     expect(isValidIconName('terminal')).toBe(true);
   });
 

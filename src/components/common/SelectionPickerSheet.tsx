@@ -1,6 +1,7 @@
 import { AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { FlatList, Keyboard, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -19,6 +20,9 @@ interface SelectionPickerSheetProps<T extends string | number> {
   searchPlaceholder?: string;
   onClose: () => void;
   onSelect: (value: T) => void;
+  actionLabel?: string;
+  onAction?: () => void;
+  actionTestID?: string;
 }
 
 export function SelectionPickerSheet<T extends string | number>({
@@ -29,8 +33,12 @@ export function SelectionPickerSheet<T extends string | number>({
   searchPlaceholder = AppConfig.strings.common.searchPlaceholder,
   onClose,
   onSelect,
+  actionLabel,
+  onAction,
+  actionTestID,
 }: SelectionPickerSheetProps<T>) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredOptions = useMemo(() => {
@@ -55,7 +63,12 @@ export function SelectionPickerSheet<T extends string | number>({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={closeAndReset}>
       <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+        <View
+          style={[
+            styles.modalContent,
+            { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.md },
+          ]}
+        >
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <AppText variant="subheading" weight="bold">
               {title}
@@ -75,6 +88,22 @@ export function SelectionPickerSheet<T extends string | number>({
               />
             </View>
           )}
+
+          {actionLabel && onAction ? (
+            <TouchableOpacity
+              onPress={() => {
+                onAction();
+                closeAndReset();
+              }}
+              style={[styles.action, { borderBottomColor: theme.border }]}
+              testID={actionTestID}
+            >
+              <AppIcon name="plus" size={20} color={theme.primary} />
+              <AppText variant="body" weight="semibold" style={{ color: theme.primary }}>
+                {actionLabel}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
 
           <FlatList
             keyboardShouldPersistTaps="always"
@@ -151,6 +180,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
