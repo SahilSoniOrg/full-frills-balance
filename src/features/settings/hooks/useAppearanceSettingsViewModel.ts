@@ -1,5 +1,6 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics';
@@ -20,6 +21,8 @@ export interface AppearanceSettingsViewModel {
   onToggleAccountMonthlyStats: () => void;
   useCompactAccountPicker: boolean;
   onToggleCompactAccountPicker: () => void;
+  showSafeToSpendChart: boolean;
+  onToggleSafeToSpendChart: () => void;
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
@@ -32,6 +35,7 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     useCompactAccountPicker,
     setUseCompactAccountPicker,
   } = useAccountDisplayPrefs();
+  const { showSafeToSpendChart, setShowSafeToSpendChart } = useDashboardPreferences();
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
@@ -80,6 +84,13 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     });
   }, [setUseCompactAccountPicker, useCompactAccountPicker]);
 
+  const onToggleSafeToSpendChart = useCallback(() => {
+    setShowSafeToSpendChart(!showSafeToSpendChart);
+    analytics.trackFeatureUsage('settings', 'toggle_safe_to_spend_chart', {
+      new_state: !showSafeToSpendChart,
+    });
+  }, [setShowSafeToSpendChart, showSafeToSpendChart]);
+
   const handleSetHourCyclePreference = useCallback(
     (value: HourCyclePreference) => {
       setHourCyclePreference(value);
@@ -104,5 +115,7 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     onToggleAccountMonthlyStats,
     useCompactAccountPicker,
     onToggleCompactAccountPicker,
+    showSafeToSpendChart,
+    onToggleSafeToSpendChart,
   };
 }

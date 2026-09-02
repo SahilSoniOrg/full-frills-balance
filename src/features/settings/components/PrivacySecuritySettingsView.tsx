@@ -37,6 +37,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
           rightContent={
             <AppToggle value={vm.isAppLockEnabled} onValueChange={vm.onToggleAppLock} />
           }
+          testID="settings-app-lock-toggle"
         />
       </SettingsMenu>
     </SettingsLayout>

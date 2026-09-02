@@ -5,14 +5,20 @@ import { Box, Stack } from '@/src/design-system';
 interface SafeToSpendPreferenceViewProps {
   days: number;
   onChange: (days: number) => void;
+  workplaceName?: string;
 }
 
-export const SafeToSpendPreferenceView = ({ days, onChange }: SafeToSpendPreferenceViewProps) => {
+export const SafeToSpendPreferenceView = ({
+  days,
+  onChange,
+  workplaceName,
+}: SafeToSpendPreferenceViewProps) => {
   const strings = AppConfig.strings.settings.personalization;
 
   const options = [
     { id: 30, label: '30 Days' },
     { id: 60, label: '60 Days' },
+    { id: 90, label: '90 Days' },
   ];
 
   return (
@@ -24,10 +30,16 @@ export const SafeToSpendPreferenceView = ({ days, onChange }: SafeToSpendPrefere
         <AppText variant="caption" color="secondary">
           {strings.forecastDesc}
         </AppText>
+        {workplaceName ? (
+          <AppText variant="caption" color="secondary">
+            Saved for {workplaceName} only.
+          </AppText>
+        ) : null}
       </Stack>
 
       <Box>
         <AppSegmentedControl
+          testID="safe-to-spend-horizon"
           options={options}
           value={days}
           onChange={val => onChange(Number(val))}

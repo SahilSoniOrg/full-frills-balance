@@ -51,6 +51,21 @@ export function Screen({
     <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
   );
 
+  const navigationBar =
+    title || headerActions ? (
+      <NavigationBar
+        title={title || ''}
+        subtitle={subtitle}
+        backIcon={backIcon}
+        rightActions={headerActions}
+        isSearchActive={isSearchActive}
+        style={headerStyle}
+        {...(showBack && onBack
+          ? { showBack: true as const, onBack }
+          : { showBack: false as const })}
+      />
+    ) : undefined;
+
   return (
     <Page
       background="background"
@@ -59,22 +74,10 @@ export function Screen({
       statusBar={themeMode === 'dark' ? 'light' : 'dark'}
       keyboardAvoiding={keyboardAvoiding}
       footer={footer}
+      header={navigationBar}
       scrollViewProps={scrollViewProps}
       {...rest}
     >
-      {(title || headerActions) && (
-        <NavigationBar
-          title={title || ''}
-          subtitle={subtitle}
-          backIcon={backIcon}
-          rightActions={headerActions}
-          isSearchActive={isSearchActive}
-          style={headerStyle}
-          {...(showBack && onBack
-            ? { showBack: true as const, onBack }
-            : { showBack: false as const })}
-        />
-      )}
       {content}
     </Page>
   );

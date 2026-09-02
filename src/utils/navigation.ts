@@ -361,6 +361,10 @@ export const AppNavigation = {
     router.push('/personalization-settings' as Href);
   },
 
+  toPreferencesSettings: () => {
+    router.push('/preferences-settings' as Href);
+  },
+
   /**
    * Navigate to data management settings.
    */
@@ -401,6 +405,14 @@ export const AppNavigation = {
    */
   toWorkplaceSettings: () => {
     router.push('/workplace-settings' as Href);
+  },
+
+  /** Navigate to settings for the active Workplace's books. */
+  toCurrentWorkplaceSettings: () => {
+    router.push('/current-workplace-settings' as Href);
+  },
+  toDeviceSettings: () => {
+    router.push('/device-settings' as Href);
   },
 
   /**

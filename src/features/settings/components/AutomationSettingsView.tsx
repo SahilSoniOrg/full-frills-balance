@@ -1,4 +1,3 @@
-import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { NotificationPreferenceView } from '@/src/features/settings/components/NotificationPreferenceView';
@@ -13,8 +12,13 @@ interface AutomationSettingsViewProps {
 }
 
 export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
+  const title =
+    Platform.OS === 'android'
+      ? AppConfig.strings.settings.sections.remindersAndAutomation
+      : AppConfig.strings.settings.notifications.title;
+
   return (
-    <SettingsLayout title={AppConfig.strings.settings.sections.remindersAndAutomation}>
+    <SettingsLayout title={title}>
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.notifications.title} hideSeparator>
           <SettingsMenuItem
@@ -36,15 +40,6 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
 
         {Platform.OS === 'android' && (
           <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
-            <SettingsMenuItem
-              leftIcon="zap"
-              title={AppConfig.strings.settings.personalization.smsImportTitle}
-              description="Automatically scan for transaction messages"
-              hasArrow={false}
-              rightContent={
-                <AppToggle value={vm.isSmsImportEnabled} onValueChange={vm.setIsSmsImportEnabled} />
-              }
-            />
             <SettingsMenuItem
               leftIcon="messageSquare"
               title={AppConfig.strings.settings.personalization.smsInboxTitle}

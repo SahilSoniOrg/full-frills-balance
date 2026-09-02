@@ -58,6 +58,19 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
               />
             }
           />
+          <SettingsMenuItem
+            leftIcon="trendingUp"
+            title={AppConfig.strings.settings.stsChart.title}
+            description={AppConfig.strings.settings.stsChart.description}
+            hasArrow={false}
+            rightContent={
+              <AppToggle
+                value={vm.showSafeToSpendChart}
+                onValueChange={vm.onToggleSafeToSpendChart}
+              />
+            }
+            testID="settings-sts-chart-toggle"
+          />
         </SettingsMenu>
       </Stack>
     </SettingsLayout>

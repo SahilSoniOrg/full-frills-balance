@@ -1,102 +1,87 @@
 import { AppConfig } from '@/src/constants';
+import { WorkplaceSwitcher } from '@/src/components/common/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
+import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 
 export interface SettingsViewProps {
-  onPersonalization: () => void;
-  onWorkplace: () => void;
-  onAppearance: () => void;
-  onAutomation: () => void;
-  onPrivacy: () => void;
+  onPreferences: () => void;
+  onProfile: () => void;
+  onCurrentWorkplace: () => void;
   onDataManagement: () => void;
   onMaintenance: () => void;
   onAbout: () => void;
 }
 
 export function SettingsView({
-  onPersonalization,
-  onWorkplace,
-  onAppearance,
-  onAutomation,
-  onPrivacy,
+  onPreferences,
+  onProfile,
+  onCurrentWorkplace,
   onDataManagement,
   onMaintenance,
   onAbout,
 }: SettingsViewProps) {
+  const workplace = useOptionalWorkplace();
+  const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
+
   return (
-    <SettingsLayout title="Settings" showBack={false}>
-      <Stack space="xl">
-        <SettingsMenu header={AppConfig.strings.settings.sections.moneySetup}>
+    <SettingsLayout title="Settings" showBack={false} headerActions={<WorkplaceSwitcher />}>
+      <Stack space="lg">
+        <SettingsMenu header="Your Account">
           <SettingsMenuItem
             leftIcon="user"
-            title={AppConfig.strings.settings.sections.personalization}
-            description="Name, default currency, and Safe-to-Spend forecast"
-            onPress={onPersonalization}
-            prominent
+            title={AppConfig.strings.settings.sections.profile}
+            description="Your name, device settings, and journal preferences"
+            onPress={onProfile}
+            testID="settings-profile"
           />
+          <SettingsMenuItem
+            leftIcon="sliders"
+            title="Preferences"
+            description="Notifications, appearance, and privacy"
+            onPress={onPreferences}
+            testID="settings-preferences"
+          />
+        </SettingsMenu>
+
+        <SettingsMenu header="Workplaces">
           <SettingsMenuItem
             leftIcon="briefcase"
-            title="Workplace"
-            description="Create and switch between workplaces"
-            onPress={onWorkplace}
-            prominent
+            title={currentWorkplace?.name ?? AppConfig.strings.settings.sections.currentWorkplace}
+            description="Current workplace · Currency, Safe-to-Spend, and books"
+            onPress={onCurrentWorkplace}
+            testID="settings-current-workplace"
           />
         </SettingsMenu>
 
-        <SettingsMenu header={AppConfig.strings.settings.sections.experience}>
-          <SettingsMenuItem
-            leftIcon="palette"
-            title={AppConfig.strings.settings.sections.appearance}
-            description="Theme, typography, mode, and account card details"
-            onPress={onAppearance}
-            prominent
-          />
-          <SettingsMenuItem
-            leftIcon="notifications"
-            title={AppConfig.strings.settings.sections.remindersAndAutomation}
-            description="Review reminders, SMS inbox, and auto-post rules"
-            onPress={onAutomation}
-            prominent
-            testID="settings-automation"
-          />
-        </SettingsMenu>
-
-        <SettingsMenu header={AppConfig.strings.settings.sections.protection}>
-          <SettingsMenuItem
-            leftIcon="shieldCheck"
-            title={AppConfig.strings.settings.sections.privacyAndSecurity}
-            description="Hide balances, protect widgets, and lock the app"
-            onPress={onPrivacy}
-            prominent
-          />
-        </SettingsMenu>
-
-        <SettingsMenu header={AppConfig.strings.settings.sections.ledgerData}>
+        <SettingsMenu header="Data">
           <SettingsMenuItem
             leftIcon="database"
             title={AppConfig.strings.settings.sections.dataManagement}
-            description="Back up, restore, share, and review your ledger"
+            description="Back up, restore, share, and review workplace data"
             onPress={onDataManagement}
-            prominent
+            testID="settings-data-management"
           />
           <SettingsMenuItem
             leftIcon="wrench"
             title={AppConfig.strings.settings.sections.maintenanceAndReset}
             description="Verify books, purge deleted records, or reset the app"
             onPress={onMaintenance}
-            prominent
+            testID="settings-maintenance"
           />
         </SettingsMenu>
 
-        <SettingsMenu header={AppConfig.strings.settings.sections.app}>
+        <SettingsMenu header="Support">
           <SettingsMenuItem
             leftIcon="info"
             title={AppConfig.strings.settings.sections.aboutAndSupport}
             description="Community, ratings, source code, and version"
             onPress={onAbout}
             prominent
+            testID="settings-about-support"
           />
         </SettingsMenu>
       </Stack>
