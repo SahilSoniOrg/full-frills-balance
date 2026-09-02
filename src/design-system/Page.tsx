@@ -21,6 +21,7 @@ export type PageProps = ViewProps & {
   header?: React.ReactNode;
   footer?: React.ReactNode;
   scrollViewProps?: ScrollViewProps;
+  scrollViewRef?: React.Ref<ScrollView>;
   statusBar?: 'light' | 'dark' | 'auto';
   keyboardVerticalOffset?: number;
 };
@@ -56,6 +57,7 @@ export const Page = ({
   header,
   footer,
   scrollViewProps,
+  scrollViewRef,
   statusBar = 'auto',
   keyboardVerticalOffset,
   style,
@@ -85,6 +87,7 @@ export const Page = ({
 
   const wrappedContent = scrollable ? (
     <ScrollView
+      ref={scrollViewRef}
       keyboardShouldPersistTaps="handled"
       {...scrollViewProps}
       style={[styles.scrollView, scrollViewProps?.style]}

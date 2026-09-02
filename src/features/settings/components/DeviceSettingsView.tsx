@@ -20,6 +20,7 @@ export function DeviceSettingsView({
       <Stack space="xl">
         <SettingsMenu header="This Device">
           <SettingsMenuItem
+            searchId="local-device"
             leftIcon="settings"
             title="Local device"
             description="Preferences here apply only to this installation."
@@ -31,6 +32,7 @@ export function DeviceSettingsView({
         {Platform.OS === 'android' && (
           <SettingsMenu header="Device Preferences">
             <SettingsMenuItem
+              searchId="sms-import"
               leftIcon="zap"
               title={AppConfig.strings.settings.personalization.smsImportTitle}
               description="Automatically scan for transaction messages on this device."
@@ -45,6 +47,7 @@ export function DeviceSettingsView({
 
         <SettingsMenu header="Future Sessions">
           <SettingsMenuItem
+            searchId="other-devices"
             leftIcon="briefcase"
             title="Other devices"
             description="Remote sessions and sync will appear here when multi-device support is available."

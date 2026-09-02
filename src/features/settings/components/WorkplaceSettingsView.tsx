@@ -29,6 +29,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
         <Stack space="xl">
           <SettingsMenu header="Workplace Actions">
             <SettingsMenuItem
+              searchId="create-workplace"
               leftIcon="plus"
               title="Create Workplace"
               description="Start a new set of books and preferences"
@@ -43,6 +44,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                 const isActive = vm.activeWorkplace?.id === workplace.id;
                 return (
                   <SettingsMenuItem
+                    searchId={`workplace-${workplace.id}`}
                     key={workplace.id}
                     title={workplace.name}
                     description={isActive ? 'Current active Workplace' : undefined}

@@ -12,6 +12,7 @@ export default function SettingsScreen() {
       onDataManagement={AppNavigation.toDataManagementSettings}
       onMaintenance={AppNavigation.toMaintenanceSettings}
       onAbout={AppNavigation.toAboutSupportSettings}
+      onDeviceSettings={AppNavigation.toDeviceSettings}
     />
   );
 }

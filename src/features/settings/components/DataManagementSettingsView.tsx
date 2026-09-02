@@ -3,6 +3,7 @@ import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
 import { ShareFormatPreferenceView } from '@/src/features/settings/components/ShareFormatPreferenceView';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
@@ -36,24 +37,31 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
     <SettingsLayout title={AppConfig.strings.settings.sections.dataManagement}>
       <SettingsMenu header={AppConfig.strings.settings.data.backupRestoreHeader}>
         <SettingsMenuItem
+          searchId="data-export"
           leftIcon="document"
           title={AppConfig.strings.settings.data.exportBtn}
           description={AppConfig.strings.settings.data.exportDesc}
           onPress={onExport}
           loading={isExporting}
         />
-        <ShareFormatPreferenceView value={defaultShareFormat} onChange={setDefaultShareFormat} />
-        <SettingsMenuItem
-          leftIcon="refresh"
-          title={AppConfig.strings.settings.data.importBtn}
-          description={AppConfig.strings.settings.data.importDesc}
-          onPress={onImport}
-          loading={isImporting}
-        />
+        <SettingsFocusTarget targetId="share-format">
+          <ShareFormatPreferenceView value={defaultShareFormat} onChange={setDefaultShareFormat} />
+        </SettingsFocusTarget>
+        <SettingsFocusTarget targetId="data-import">
+          <SettingsMenuItem
+            searchId="data-import"
+            leftIcon="refresh"
+            title={AppConfig.strings.settings.data.importBtn}
+            description={AppConfig.strings.settings.data.importDesc}
+            onPress={onImport}
+            loading={isImporting}
+          />
+        </SettingsFocusTarget>
       </SettingsMenu>
 
       <SettingsMenu header={AppConfig.strings.settings.data.sharingReviewHeader}>
         <SettingsMenuItem
+          searchId="audit-log"
           leftIcon="history"
           title={AppConfig.strings.settings.data.auditBtn}
           description={AppConfig.strings.settings.data.auditDesc}

@@ -147,3 +147,15 @@ describe('journal-entry navigation', () => {
     expect(router.push).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('settings navigation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('serializes a settings focus target into the destination route', () => {
+    AppNavigation.toAppearanceSettings('typography');
+
+    expect(router.push).toHaveBeenCalledWith('/appearance-settings?focus=typography');
+  });
+});

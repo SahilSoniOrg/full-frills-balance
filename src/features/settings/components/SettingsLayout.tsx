@@ -6,8 +6,12 @@ import type {
 } from '@/src/components/layout/screenChrome';
 import { Inset, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
+import { SettingsFocusProvider } from '@/src/features/settings/components/SettingsFocusTarget';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useRef } from 'react';
+import type { ScrollViewProps } from 'react-native';
+import type { ScrollView } from 'react-native-gesture-handler';
 import type { Edge } from 'react-native-safe-area-context';
 
 interface SettingsLayoutProps {
@@ -21,6 +25,7 @@ interface SettingsLayoutProps {
   children: React.ReactNode;
   edges?: Edge[];
   hideFooter?: boolean;
+  scrollViewProps?: ScrollViewProps;
 }
 
 /**
@@ -36,7 +41,11 @@ export function SettingsLayout({
   children,
   edges,
   hideFooter = false,
+  scrollViewProps,
 }: SettingsLayoutProps) {
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollOffsetRef = useRef(0);
   const chrome: ScreenChrome = showBack
     ? {
         screenTitle: title,
@@ -49,13 +58,32 @@ export function SettingsLayout({
     : { screenTitle: title, showBack: false, headerActions, fab };
 
   return (
-    <ScreenWithChrome chrome={chrome} scrollable={scrollable} edges={edges}>
-      <Inset space="md" vertical="md" flex={scrollable ? undefined : 1}>
-        <Stack space="xl" flex={scrollable ? undefined : 1}>
-          {children}
-          {!hideFooter && <SettingsFooter />}
-        </Stack>
-      </Inset>
-    </ScreenWithChrome>
+    <SettingsFocusProvider
+      targetId={focus}
+      scrollViewRef={scrollViewRef}
+      scrollOffsetRef={scrollOffsetRef}
+    >
+      <ScreenWithChrome
+        chrome={chrome}
+        scrollable={scrollable}
+        edges={edges}
+        scrollViewProps={{
+          ...scrollViewProps,
+          onScroll: event => {
+            scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+            scrollViewProps?.onScroll?.(event);
+          },
+          scrollEventThrottle: scrollViewProps?.scrollEventThrottle ?? 16,
+        }}
+        scrollViewRef={scrollViewRef}
+      >
+        <Inset space="md" vertical="md" flex={scrollable ? undefined : 1}>
+          <Stack space="xl" flex={scrollable ? undefined : 1}>
+            {children}
+            {!hideFooter && <SettingsFooter />}
+          </Stack>
+        </Inset>
+      </ScreenWithChrome>
+    </SettingsFocusProvider>
   );
 }

@@ -7,6 +7,7 @@ import { SafeToSpendPreferenceView } from '@/src/features/settings/components/Sa
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
 import type { CurrentWorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useCurrentWorkplaceSettingsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidIconName } from '@/src/types/domainIcons';
@@ -25,6 +26,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
         <Stack space="xl">
           <SettingsMenu header="Current Workplace">
             <SettingsMenuItem
+              searchId="workplace"
               leftIcon={
                 <Box
                   background="surfaceSecondary"
@@ -54,6 +56,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
 
           <SettingsMenu header="Workplace">
             <SettingsMenuItem
+              searchId="manage-workplaces"
               leftIcon="briefcase"
               title="Manage workplaces"
               description="Switch, create, or delete workplaces"
@@ -71,13 +74,15 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
             />
           </SettingsMenu>
 
-          <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
-            <SafeToSpendPreferenceView
-              days={vm.safeToSpendDays}
-              workplaceName={vm.workplaceName}
-              onChange={vm.setSafeToSpendDays}
-            />
-          </SettingsMenu>
+          <SettingsFocusTarget targetId="safe-to-spend-forecast">
+            <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
+              <SafeToSpendPreferenceView
+                days={vm.safeToSpendDays}
+                workplaceName={vm.workplaceName}
+                onChange={vm.setSafeToSpendDays}
+              />
+            </SettingsMenu>
+          </SettingsFocusTarget>
         </Stack>
       </SettingsLayout>
       {vm.activeWorkplace && (

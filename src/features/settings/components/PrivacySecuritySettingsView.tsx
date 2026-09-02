@@ -14,6 +14,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
     <SettingsLayout title={AppConfig.strings.settings.sections.privacyAndSecurity}>
       <SettingsMenu header={AppConfig.strings.settings.sections.protectFinancialDetails}>
         <SettingsMenuItem
+          searchId="privacy-security"
           leftIcon="shield"
           title={AppConfig.strings.settings.privacy.title}
           description={AppConfig.strings.settings.privacy.description}
@@ -21,6 +22,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
           rightContent={<AppToggle value={vm.isPrivacyMode} onValueChange={vm.onTogglePrivacy} />}
         />
         <SettingsMenuItem
+          searchId="widget-privacy"
           leftIcon="eyeOff"
           title={AppConfig.strings.settings.privacy.widgetPrivacyTitle}
           description={AppConfig.strings.settings.privacy.widgetPrivacyDesc}
@@ -30,6 +32,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
           }
         />
         <SettingsMenuItem
+          searchId="app-lock"
           leftIcon="lock"
           title={AppConfig.strings.settings.privacy.appLockTitle}
           description={AppConfig.strings.settings.privacy.appLockDesc}

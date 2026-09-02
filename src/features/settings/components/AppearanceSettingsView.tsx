@@ -7,6 +7,7 @@ import { ModeSelectorView } from '@/src/features/settings/components/ModeSelecto
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
 
@@ -18,23 +19,32 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.appearance}>
       <Stack space="xl">
-        <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
+        <SettingsFocusTarget targetId="appearance">
+          <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
+        </SettingsFocusTarget>
 
-        <ModeSelectorView
-          themePreference={vm.themePreference}
-          setThemePreference={vm.setThemePreference}
-        />
+        <SettingsFocusTarget targetId="mode">
+          <ModeSelectorView
+            themePreference={vm.themePreference}
+            setThemePreference={vm.setThemePreference}
+          />
+        </SettingsFocusTarget>
 
-        <HourCycleSelectorView
-          hourCyclePreference={vm.hourCyclePreference}
-          resolvedHourCycle={vm.resolvedHourCycle}
-          setHourCyclePreference={vm.setHourCyclePreference}
-        />
+        <SettingsFocusTarget targetId="time-format">
+          <HourCycleSelectorView
+            hourCyclePreference={vm.hourCyclePreference}
+            resolvedHourCycle={vm.resolvedHourCycle}
+            setHourCyclePreference={vm.setHourCyclePreference}
+          />
+        </SettingsFocusTarget>
 
-        <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />
+        <SettingsFocusTarget targetId="typography">
+          <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />
+        </SettingsFocusTarget>
 
         <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
           <SettingsMenuItem
+            searchId="compact-account-picker"
             leftIcon="wallet"
             title={AppConfig.strings.settings.accountPicker.title}
             description={AppConfig.strings.settings.accountPicker.description}
@@ -47,6 +57,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
             }
           />
           <SettingsMenuItem
+            searchId="account-statistics"
             leftIcon="barChart"
             title={AppConfig.strings.settings.stats.title}
             description={AppConfig.strings.settings.stats.description}
@@ -59,6 +70,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
             }
           />
           <SettingsMenuItem
+            searchId="safe-to-spend-chart"
             leftIcon="trendingUp"
             title={AppConfig.strings.settings.stsChart.title}
             description={AppConfig.strings.settings.stsChart.description}

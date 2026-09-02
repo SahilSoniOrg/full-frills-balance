@@ -14,6 +14,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
     <SettingsLayout title={AppConfig.strings.settings.sections.maintenanceAndReset}>
       <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
         <SettingsMenuItem
+          searchId="integrity"
           leftIcon="search"
           title={AppConfig.strings.settings.maintenance.integrityBtn}
           description={AppConfig.strings.settings.maintenance.integrityDesc}
@@ -22,6 +23,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
         />
         {__DEV__ && (
           <SettingsMenuItem
+            searchId="seed-mock-data"
             leftIcon="database"
             title={AppConfig.strings.settings.maintenance.seedMockBtn}
             description={AppConfig.strings.settings.maintenance.seedMockDesc}
@@ -30,6 +32,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           />
         )}
         <SettingsMenuItem
+          searchId="cleanup"
           leftIcon="delete"
           title={AppConfig.strings.settings.danger.cleanupBtn}
           description={AppConfig.strings.settings.danger.cleanupDesc}
@@ -40,6 +43,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
 
       <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
         <SettingsMenuItem
+          searchId="reset"
           leftIcon="alert"
           title={AppConfig.strings.settings.danger.resetBtn}
           description={AppConfig.strings.settings.danger.resetDesc}

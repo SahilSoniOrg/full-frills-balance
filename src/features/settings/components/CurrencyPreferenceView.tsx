@@ -21,6 +21,7 @@ export const CurrencyPreferenceView = ({
 
   return (
     <SettingsMenuItem
+      searchId="currency"
       title={AppConfig.strings.settings.currency.title}
       description={`${AppConfig.strings.settings.currency.description} for ${workplaceName || 'current workplace'}`}
       hasArrow={false}

@@ -17,6 +17,7 @@ export const ShareFormatPreferenceView = ({ value, onChange }: ShareFormatPrefer
 
   return (
     <SettingsMenuItem
+      searchId="share-format"
       title={AppConfig.strings.settings.data.shareFormatTitle}
       description={AppConfig.strings.settings.data.shareFormatDesc}
       hasArrow={false}

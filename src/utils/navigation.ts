@@ -350,50 +350,50 @@ export const AppNavigation = {
   /**
    * Navigate to appearance settings.
    */
-  toAppearanceSettings: () => {
-    router.push('/appearance-settings' as Href);
+  toAppearanceSettings: (focus?: string) => {
+    router.push(buildRoute('/appearance-settings', { focus }));
   },
 
   /**
    * Navigate to personalization settings.
    */
-  toPersonalizationSettings: () => {
-    router.push('/personalization-settings' as Href);
+  toPersonalizationSettings: (focus?: string) => {
+    router.push(buildRoute('/personalization-settings', { focus }));
   },
 
   /**
    * Navigate to data management settings.
    */
-  toDataManagementSettings: () => {
-    router.push('/data-management-settings' as Href);
+  toDataManagementSettings: (focus?: string) => {
+    router.push(buildRoute('/data-management-settings', { focus }));
   },
 
   /**
    * Navigate to privacy and security settings.
    */
-  toPrivacySecuritySettings: () => {
-    router.push('/privacy-security-settings' as Href);
+  toPrivacySecuritySettings: (focus?: string) => {
+    router.push(buildRoute('/privacy-security-settings', { focus }));
   },
 
   /**
    * Navigate to reminders and automation settings.
    */
-  toAutomationSettings: () => {
-    router.push('/automation-settings' as Href);
+  toAutomationSettings: (focus?: string) => {
+    router.push(buildRoute('/automation-settings', { focus }));
   },
 
   /**
    * Navigate to maintenance and reset settings.
    */
-  toMaintenanceSettings: () => {
-    router.push('/maintenance-settings' as Href);
+  toMaintenanceSettings: (focus?: string) => {
+    router.push(buildRoute('/maintenance-settings', { focus }));
   },
 
   /**
    * Navigate to about and support settings.
    */
-  toAboutSupportSettings: () => {
-    router.push('/about-support-settings' as Href);
+  toAboutSupportSettings: (focus?: string) => {
+    router.push(buildRoute('/about-support-settings', { focus }));
   },
 
   /**
@@ -404,11 +404,11 @@ export const AppNavigation = {
   },
 
   /** Navigate to settings for the active Workplace's books. */
-  toCurrentWorkplaceSettings: () => {
-    router.push('/current-workplace-settings' as Href);
+  toCurrentWorkplaceSettings: (focus?: string) => {
+    router.push(buildRoute('/current-workplace-settings', { focus }));
   },
-  toDeviceSettings: () => {
-    router.push('/device-settings' as Href);
+  toDeviceSettings: (focus?: string) => {
+    router.push(buildRoute('/device-settings', { focus }));
   },
 
   /**

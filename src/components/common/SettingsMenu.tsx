@@ -3,14 +3,21 @@ import { AppSurface } from '@/src/components/core/AppSurface';
 import { Box, Separator, Stack } from '@/src/design-system';
 import React, { Children, Fragment } from 'react';
 
-type SettingsMenuProps = {
+export type SettingsMenuProps = {
   children: React.ReactNode;
   header?: string;
   footer?: string;
   hideSeparator?: boolean;
+  allowOverflow?: boolean;
 };
 
-export function SettingsMenu({ children, header, footer, hideSeparator }: SettingsMenuProps) {
+export function SettingsMenu({
+  children,
+  header,
+  footer,
+  hideSeparator,
+  allowOverflow = false,
+}: SettingsMenuProps) {
   const childrenArray = Children.toArray(children).filter(Boolean);
 
   return (
@@ -27,7 +34,11 @@ export function SettingsMenu({ children, header, footer, hideSeparator }: Settin
           </AppText>
         </Box>
       )}
-      <AppSurface radius="r2" elevation="none" style={{ overflow: 'hidden' }}>
+      <AppSurface
+        radius="r2"
+        elevation="none"
+        style={{ overflow: allowOverflow ? 'visible' : 'hidden' }}
+      >
         <Stack space={0}>
           {childrenArray.map((child, index) => (
             <Fragment key={index}>

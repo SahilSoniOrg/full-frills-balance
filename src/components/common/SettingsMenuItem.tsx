@@ -21,6 +21,7 @@ export type SettingsMenuItemProps = {
   style?: ViewProps['style'];
   testID?: string;
   rightAction?: React.ReactNode;
+  iconBackground?: boolean;
 };
 
 export function SettingsMenuItem({
@@ -38,6 +39,7 @@ export function SettingsMenuItem({
   style,
   testID,
   rightAction,
+  iconBackground = true,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
 
@@ -47,11 +49,19 @@ export function SettingsMenuItem({
       const isActualIcon = isValidIconName(leftIcon);
       return (
         <Box
-          background={danger ? 'errorLight' : prominent ? 'transparent' : 'surfaceSecondary'}
-          backgroundOpacity={prominent && !danger ? 'selection' : undefined}
-          borderRadius={prominent ? 'full' : 'r2'}
+          background={
+            iconBackground
+              ? danger
+                ? 'errorLight'
+                : prominent
+                  ? 'transparent'
+                  : 'surfaceSecondary'
+              : undefined
+          }
+          backgroundOpacity={iconBackground && prominent && !danger ? 'selection' : undefined}
+          borderRadius={iconBackground ? (prominent ? 'full' : 'r2') : undefined}
           borderWidth={0}
-          padding="xs"
+          padding={iconBackground ? 'xs' : undefined}
           alignItems="center"
           justifyContent="center"
           style={{ width: prominent ? 34 : 32, height: prominent ? 34 : 32 }}

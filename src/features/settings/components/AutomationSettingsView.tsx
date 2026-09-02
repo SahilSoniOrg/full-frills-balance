@@ -22,6 +22,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.notifications.title} hideSeparator>
           <SettingsMenuItem
+            searchId="notifications-summary"
             leftIcon="notifications"
             title={AppConfig.strings.settings.notifications.title}
             description={AppConfig.strings.settings.notifications.description}
@@ -41,6 +42,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
         {Platform.OS === 'android' && (
           <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
             <SettingsMenuItem
+              searchId="sms-inbox"
               leftIcon="messageSquare"
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
@@ -50,6 +52,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
             {vm.isSmsImportEnabled && (
               <>
                 <SettingsMenuItem
+                  searchId="sms-rules"
                   leftIcon="terminal"
                   title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
                   description={AppConfig.strings.settings.personalization.smsAutoPostDesc}

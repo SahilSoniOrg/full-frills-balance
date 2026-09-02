@@ -27,6 +27,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
       <Stack space="xl">
         <SettingsMenu header={AppConfig.strings.settings.sections.profile}>
           <SettingsMenuItem
+            searchId="profile-name"
             title={AppConfig.strings.settings.personalization.yourName}
             description={AppConfig.strings.settings.personalization.yourNameDesc}
             hasArrow={false}
@@ -48,6 +49,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
 
         <SettingsMenu header={AppConfig.strings.settings.sections.devicesAndSessions}>
           <SettingsMenuItem
+            searchId="devices"
             leftIcon="settings"
             title={AppConfig.strings.settings.sections.devicesAndSessions}
             description="This device, local preferences, and future sessions"
