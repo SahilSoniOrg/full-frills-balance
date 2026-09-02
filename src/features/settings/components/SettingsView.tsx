@@ -6,6 +6,7 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
+import { Platform } from 'react-native';
 
 export interface SettingsViewProps {
   onPreferences: () => void;
@@ -26,6 +27,10 @@ export function SettingsView({
 }: SettingsViewProps) {
   const workplace = useOptionalWorkplace();
   const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
+  const preferencesDescription =
+    Platform.OS === 'android'
+      ? 'Notifications, appearance, and privacy'
+      : 'Reminders, appearance, and privacy';
 
   return (
     <SettingsLayout title="Settings" showBack={false} headerActions={<WorkplaceSwitcher />}>
@@ -34,14 +39,14 @@ export function SettingsView({
           <SettingsMenuItem
             leftIcon="user"
             title={AppConfig.strings.settings.sections.profile}
-            description="Your name, device settings, and journal preferences"
+            description="Your name and device settings"
             onPress={onProfile}
             testID="settings-profile"
           />
           <SettingsMenuItem
             leftIcon="sliders"
             title="Preferences"
-            description="Notifications, appearance, and privacy"
+            description={preferencesDescription}
             onPress={onPreferences}
             testID="settings-preferences"
           />
