@@ -86,3 +86,8 @@ export function useWorkplace(): WorkplaceContextType {
   }
   return context;
 }
+
+/** Optional variant for shared chrome that also renders during setup gates. */
+export function useOptionalWorkplace(): WorkplaceContextType | undefined {
+  return useContext(WorkplaceContext);
+}

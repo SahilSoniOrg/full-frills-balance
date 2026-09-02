@@ -102,10 +102,25 @@ const ROUTE_METADATA_MAP: Record<
 
   // Settings & Configuration
   'appearance-settings': { screenType: 'settings', flowContext: 'personalization', isModal: true },
+  'preferences-settings': {
+    screenType: 'settings',
+    flowContext: 'preferences',
+    isModal: false,
+  },
   'automation-settings': { screenType: 'settings', flowContext: 'automation', isModal: false },
   'personalization-settings': {
     screenType: 'settings',
     flowContext: 'personalization',
+    isModal: false,
+  },
+  'current-workplace-settings': {
+    screenType: 'settings',
+    flowContext: 'current_workplace',
+    isModal: false,
+  },
+  'device-settings': {
+    screenType: 'settings',
+    flowContext: 'device_settings',
     isModal: false,
   },
   'privacy-security-settings': {

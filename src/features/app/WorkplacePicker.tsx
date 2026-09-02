@@ -1,10 +1,13 @@
-import { AppButton, AppText, LoadingView } from '@/src/components/core';
+import { AppIcon, AppText, LoadingView } from '@/src/components/core';
+import { SettingsMenu } from '@/src/components/common/SettingsMenu';
+import { SettingsMenuItem } from '@/src/components/common/SettingsMenuItem';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants/design-tokens';
+import { Page } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export function WorkplacePicker({
   workplaces,
@@ -25,64 +28,89 @@ export function WorkplacePicker({
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content} testID="workplace-picker-screen">
+    <Page
+      background="background"
+      scrollable
+      edges={['top', 'bottom']}
+      scrollViewProps={{ contentContainerStyle: styles.content, testID: 'workplace-picker-screen' }}
+    >
+      <View style={styles.intro}>
+        <View style={[styles.icon, { backgroundColor: theme.surfaceSecondary }]}>
+          <AppIcon name="briefcase" size={28} color={theme.primary} />
+        </View>
         <AppText variant="heading">{copy.title}</AppText>
         <AppText variant="body" color="secondary">
           {copy.subtitle}
         </AppText>
-        {transitionError && (
-          <AppText variant="body" color="error" accessibilityRole="alert">
+      </View>
+      {transitionError && (
+        <View style={[styles.error, { backgroundColor: theme.errorLight }]}>
+          <AppIcon name="alert" size={20} color={theme.error} />
+          <AppText variant="caption" color="error" accessibilityRole="alert">
             {transitionError}
           </AppText>
-        )}
-        {isTransitioning && <LoadingView loading text={copy.opening} size="small" />}
-        <View style={styles.options}>
+        </View>
+      )}
+      {isTransitioning && <LoadingView loading text={copy.opening} size="small" />}
+      {workplaces.length > 0 && (
+        <SettingsMenu header="Available Workplaces">
           {workplaces.map(workplace => (
-            <AppButton
+            <SettingsMenuItem
               key={workplace.id}
-              testID={`workplace-picker-option-${workplace.id}`}
+              leftIcon="briefcase"
+              title={workplace.name}
+              description="Open this workplace"
               onPress={() => onSelect(workplace.id)}
-              variant="secondary"
               disabled={isTransitioning}
-              accessibilityLabel={copy.open(workplace.name)}
-            >
-              {workplace.name}
-            </AppButton>
+              testID={`workplace-picker-option-${workplace.id}`}
+            />
           ))}
-        </View>
-        <View style={styles.actions}>
-          <AppButton
-            testID="workplace-picker-create"
-            onPress={onCreate}
-            disabled={isTransitioning}
-            accessibilityLabel={copy.create}
-          >
-            {copy.create}
-          </AppButton>
-          <AppButton
-            testID="workplace-picker-import"
-            onPress={onImport}
-            variant="outline"
-            disabled={isTransitioning}
-            accessibilityLabel={copy.import}
-          >
-            {copy.import}
-          </AppButton>
-        </View>
-      </ScrollView>
-    </View>
+        </SettingsMenu>
+      )}
+      <SettingsMenu header="Start another">
+        <SettingsMenuItem
+          leftIcon="plus"
+          title={copy.create}
+          description="Set up a new set of books"
+          onPress={onCreate}
+          disabled={isTransitioning}
+          testID="workplace-picker-create"
+        />
+        <SettingsMenuItem
+          leftIcon="folderOpen"
+          title={copy.import}
+          description="Restore books from a backup"
+          onPress={onImport}
+          disabled={isTransitioning}
+          testID="workplace-picker-import"
+        />
+      </SettingsMenu>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: {
     flexGrow: 1,
-    justifyContent: 'center',
-    gap: Spacing.md,
-    padding: Spacing.xxl,
+    gap: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xxl,
   },
-  options: { gap: Spacing.md, marginTop: Spacing.md },
-  actions: { gap: Spacing.sm, marginTop: Spacing.xxl },
+  intro: { gap: Spacing.sm },
+  icon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  error: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: 12,
+  },
 });

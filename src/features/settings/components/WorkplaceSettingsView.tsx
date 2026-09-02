@@ -27,6 +27,16 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
     <>
       <SettingsLayout title="Workplaces" headerActions={headerActions}>
         <Stack space="xl">
+          <SettingsMenu header="Workplace Actions">
+            <SettingsMenuItem
+              leftIcon="plus"
+              title="Create Workplace"
+              description="Start a new set of books and preferences"
+              onPress={vm.startCreateWorkplace}
+              prominent
+              testID="create-workplace"
+            />
+          </SettingsMenu>
           {vm.workplaces.length > 0 ? (
             <SettingsMenu header="Available Workplaces">
               {vm.workplaces.map((workplace: PlainWorkplace) => {
@@ -71,17 +81,15 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                           testID={`workplace-edit-${workplace.id}`}
                           onPress={() => setEditingWorkplace(workplace)}
                         />
-                        {isActive && vm.workplaces.length === 1 ? null : (
-                          <IconButton
-                            name="delete"
-                            variant="clear"
-                            iconColor={theme.error}
-                            accessibilityLabel={`Delete ${workplace.name}`}
-                            testID={`workplace-delete-${workplace.id}`}
-                            disabled={vm.deletingWorkplaceId !== null}
-                            onPress={() => vm.deleteWorkplace(workplace)}
-                          />
-                        )}
+                        <IconButton
+                          name="delete"
+                          variant="clear"
+                          iconColor={theme.error}
+                          accessibilityLabel={`Delete ${workplace.name}`}
+                          testID={`workplace-delete-${workplace.id}`}
+                          disabled={vm.deletingWorkplaceId !== null}
+                          onPress={() => vm.deleteWorkplace(workplace)}
+                        />
                       </Box>
                     }
                     hasArrow={false}
