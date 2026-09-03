@@ -1,14 +1,14 @@
 PODS:
-  - EASClient (57.0.2):
+  - EASClient (57.0.3):
     - ExpoModulesCore
   - EXApplication (57.0.2):
     - ExpoModulesCore
-  - EXConstants (57.0.16):
+  - EXConstants (57.0.17):
     - ExpoModulesCore
   - EXJSONUtils (57.0.1)
   - EXManifests (57.0.1):
     - ExpoModulesCore
-  - Expo (57.0.18):
+  - Expo (57.0.19):
     - ExpoModulesCore
     - ExpoModulesJSI
     - hermes-engine
@@ -34,15 +34,15 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-client (57.0.16):
+  - expo-dev-client (57.0.18):
     - EXManifests
     - expo-dev-launcher
     - expo-dev-menu
     - expo-dev-menu-interface
     - EXUpdatesInterface
-  - expo-dev-launcher (57.0.16):
+  - expo-dev-launcher (57.0.19):
     - EXManifests
-    - expo-dev-launcher/Main (= 57.0.16)
+    - expo-dev-launcher/Main (= 57.0.19)
     - expo-dev-menu
     - expo-dev-menu-interface
     - ExpoModulesCore
@@ -71,7 +71,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-launcher/Main (57.0.16):
+  - expo-dev-launcher/Main (57.0.19):
     - EXManifests
     - expo-dev-launcher/Unsafe
     - expo-dev-menu
@@ -102,7 +102,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-launcher/Unsafe (57.0.16):
+  - expo-dev-launcher/Unsafe (57.0.19):
     - EXManifests
     - expo-dev-menu
     - expo-dev-menu-interface
@@ -132,8 +132,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-menu (57.0.16):
-    - expo-dev-menu/Main (= 57.0.16)
+  - expo-dev-menu (57.0.18):
+    - expo-dev-menu/Main (= 57.0.18)
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -156,7 +156,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - expo-dev-menu-interface (57.0.0)
-  - expo-dev-menu/Main (57.0.16):
+  - expo-dev-menu/Main (57.0.18):
     - EXManifests
     - expo-dev-menu-interface
     - ExpoModulesCore
@@ -182,7 +182,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoAsset (57.0.15):
+  - ExpoAsset (57.0.16):
     - ExpoModulesCore
   - ExpoDevice (57.0.1):
     - ExpoModulesCore
@@ -192,17 +192,17 @@ PODS:
     - ExpoModulesCore
   - ExpoFileSystem (57.0.6):
     - ExpoModulesCore
-  - ExpoFont (57.0.2):
+  - ExpoFont (57.0.3):
     - ExpoModulesCore
   - ExpoGlassEffect (57.0.1):
     - ExpoModulesCore
   - ExpoHaptics (57.0.2):
     - ExpoModulesCore
-  - ExpoImage (57.0.3):
+  - ExpoImage (57.0.4):
     - ExpoModulesCore
   - ExpoKeepAwake (57.0.1):
     - ExpoModulesCore
-  - ExpoLinking (57.0.8):
+  - ExpoLinking (57.0.9):
     - ExpoModulesCore
   - ExpoLocalAuthentication (57.0.2):
     - ExpoModulesCore
@@ -210,7 +210,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLogBox (57.0.4):
     - React-Core
-  - ExpoModulesCore (57.0.14):
+  - ExpoModulesCore (57.0.15):
     - ExpoModulesJSI
     - hermes-engine
     - RCTRequired
@@ -234,27 +234,27 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoModulesJSI (57.0.6):
+  - ExpoModulesJSI (57.0.7):
     - React-Core
     - ReactCommon
-  - ExpoModulesWorklets (57.0.14):
+  - ExpoModulesWorklets (57.0.15):
     - ExpoModulesCore
     - ExpoModulesJSI
-  - ExpoModulesWorkletsAdapter (57.0.14):
+  - ExpoModulesWorkletsAdapter (57.0.15):
     - ExpoModulesCore
     - ExpoModulesJSI
     - ExpoModulesWorklets
     - RNWorklets
-  - ExpoNotifications (57.0.15):
+  - ExpoNotifications (57.0.16):
     - ExpoModulesCore
-  - ExpoRouter (57.0.17):
+  - ExpoRouter (57.0.18):
     - ExpoModulesCore
     - RNScreens
   - ExpoScreenCapture (57.0.2):
     - ExpoModulesCore
-  - ExpoSharing (57.0.16):
+  - ExpoSharing (57.0.17):
     - ExpoModulesCore
-  - ExpoSpeechRecognition (56.0.1):
+  - ExpoSpeechRecognition (56.0.4):
     - ExpoModulesCore
   - ExpoSplashScreen (57.0.8):
     - ExpoModulesCore
@@ -264,7 +264,7 @@ PODS:
     - ExpoModulesCore
   - ExpoSystemUI (57.0.3):
     - ExpoModulesCore
-  - ExpoUI (57.0.14):
+  - ExpoUI (57.0.15):
     - ExpoModulesCore
     - ExpoModulesWorklets
     - React-RCTFabric
@@ -273,7 +273,7 @@ PODS:
   - ExpoWidgets (1.0.0):
     - ExpoModulesCore
   - EXStructuredHeaders (57.0.0)
-  - EXUpdates (57.0.19):
+  - EXUpdates (57.0.21):
     - EASClient
     - EXManifests
     - ExpoModulesCore
@@ -356,11 +356,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - OpenSSL-Universal (3.6.2000)
-  - QuickCrypto (1.1.6):
+  - QuickCrypto (1.1.7):
     - hermes-engine
     - NitroModules
-    - OpenSSL-Universal (~> 3.6.2000)
     - RCTRequired
     - RCTTypeSafety
     - React-callinvoker
@@ -2650,11 +2648,11 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNZipArchive (7.1.1):
+  - RNZipArchive (7.1.2):
     - React-Core
-    - RNZipArchive/Core (= 7.1.1)
+    - RNZipArchive/Core (= 7.1.2)
     - SSZipArchive (~> 2.5.5)
-  - RNZipArchive/Core (7.1.1):
+  - RNZipArchive/Core (7.1.2):
     - React-Core
     - SSZipArchive (~> 2.5.5)
   - Sentry/HybridSDK (8.58.0)
@@ -2807,7 +2805,6 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - MMKVCore
-    - OpenSSL-Universal
     - ReachabilitySwift
     - Sentry
     - SSZipArchive
@@ -3088,56 +3085,55 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  EASClient: 19dbd341708f694a526bdfe9e541fa54a7b8650b
+  EASClient: 756e3ad8cf4f8352aa4520d1596e8fc7d071b7ef
   EXApplication: bbd517d50878ca1d121fb3843392beb210181e28
-  EXConstants: 736b7f1ed7235956785cb81e0ce37ab6a4f33fb4
+  EXConstants: 799577d2516460afb4b57874d6823a62327ce5c7
   EXJSONUtils: 7a1683cfa2cbe6d11fca97097d51a496755b0287
   EXManifests: f9888c0bf5aaa6ddb7e3d4b224d6d54ac4ca84a4
-  Expo: b3509245f68fe53664ff17b31bb1eda11c24e684
-  expo-dev-client: ae71f92c5da549bc7c6225a996d3376ca006dbac
-  expo-dev-launcher: d4f23607b4232f6f214c741cde5356607c95edac
-  expo-dev-menu: d2f0a5c130f290466028fd1579a5b1f3bf441313
+  Expo: e174d0ecd763a050d7c8a25a0a8b5dadc43158e8
+  expo-dev-client: 053b4d48d32e7ed130d3498491461fdba04aee28
+  expo-dev-launcher: c8fe1fb0f46dc02948c63ab23340179f670dc000
+  expo-dev-menu: 272e23ced973a0e401c2b9a679595ea6c7c05d78
   expo-dev-menu-interface: 7a59e803916fbfd1b96c75ff91ea8dddac7e722f
-  ExpoAsset: ff225ee16cea2409800b20fe4945a7c720a24cee
+  ExpoAsset: bea9115098b9f4ddfb0456961c8a7d2779ccc8f5
   ExpoDevice: 93a72d7c2bd656a4f0c0d580523e390e9ee7fba5
   ExpoDocumentPicker: 6fb67a6f39ba9beb53a4b4a3f2949e0b5e9bc3bf
   ExpoDomWebView: beaec034e51bd028428b98bb1f2633ab79c6d095
   ExpoFileSystem: cc500f33804065aacc7b3366007267b84deca8c8
-  ExpoFont: 02ab7433c23831e76b98aa1e2de67b404eeebc4a
+  ExpoFont: d5b77d74f8d5d1a248de70955bfad847079e9074
   ExpoGlassEffect: 4b62afb489e6b84357701737ce002137c9d5fdbc
   ExpoHaptics: bc5461002fc97e53c213a1af6c88c8f95965b734
-  ExpoImage: b37accc4b12647e5cf939b2335eea2bdb874ad7f
+  ExpoImage: 83e66008c6440975f7f279b78bb80f1f9c0c24ca
   ExpoKeepAwake: c26f14275017370cc8a4b7b43a0e23361f2053a5
-  ExpoLinking: b616f5d0c2e11db3a5cccd8ae6bff45294929fd2
+  ExpoLinking: 0e104e1f3402abec3fd8243fd9586ca38df8e3ef
   ExpoLocalAuthentication: 96989637e567a10cdeabe61e5c6026d30c0dc53f
   ExpoLocalization: 659243b03b3a3e9589793cee2f728a899e181329
   ExpoLogBox: 80957303325cd4439137765c90a87d7f22aaf2ff
-  ExpoModulesCore: 18f77152562a32e923f9341b06458e2a750acafe
-  ExpoModulesJSI: 1529d4289b9a3647d8901a27b41f1af173598b45
-  ExpoModulesWorklets: 57a11e6ae984c2680e7967b785ded96199caed8c
-  ExpoModulesWorkletsAdapter: be52ecb2cbbed64febbb739971bd77d9c8e84569
-  ExpoNotifications: dd1288ca85d320ea163105e5efdf0a1cc05760f8
-  ExpoRouter: 9bf293bba85908c1834190e6913b22da1e573689
+  ExpoModulesCore: fb9144dacd1ed5143037af6c36a7f254ed83fad7
+  ExpoModulesJSI: 52f43ddb01b1db76ccfcff4c4df4fed39e31ba7d
+  ExpoModulesWorklets: 5e70b46d570c5b1b702c18bc8ac8d1af0171450e
+  ExpoModulesWorkletsAdapter: e6b5fe31d23bed76c5cb22e9fbf19e740ce03253
+  ExpoNotifications: 7a46918d4bdf727a96a6142e8daaa16a33cf4115
+  ExpoRouter: 00ce3fd59a48778a90c313bf1be5598835aad24e
   ExpoScreenCapture: 6b82aba55db3ecc6f124ebd45163d6db9b916b2d
-  ExpoSharing: b1797248b8dbb7bf32a670a8df582189a65aa5d4
-  ExpoSpeechRecognition: 119acf84448579e53f841d040aad76982f945e2d
+  ExpoSharing: 61c8a64893ce83eeed66a1d0f38ad0317ed7ea37
+  ExpoSpeechRecognition: b167eed8044f79fad6189ee7ae9d668887d0c696
   ExpoSplashScreen: 6f422fd595600d78520c6b7dcf8a908fb8a7fec0
   ExpoSQLite: 57b23ab9fbb72215fa33763246d00ce6e6e531b4
   ExpoSymbols: 0efd93edf0f825bf3c762582b0769dd3b296235c
   ExpoSystemUI: e5f9a81b45481222f6b8b45b86fa37b18d0a86c9
-  ExpoUI: 6867422a567a251dcc25444c706b53f479e457ae
+  ExpoUI: 3a63ce87d7d2d2a565fd1eabba08ed5ecdae7991
   ExpoWebBrowser: 9b98d939d5f1c5dd8f523f0a0683056fb1204434
   ExpoWidgets: a8bb2516b590674c21705db120332032f12741e4
   EXStructuredHeaders: 1423c3602a30eb078e03b63b251ef912267dd4c0
-  EXUpdates: 77a4fe8b7dcfd2476cd5dea9fd8bc8f58569026f
+  EXUpdates: 048a96e9da88a3318efab99568a5dd3e8e0c4066
   EXUpdatesInterface: 92d2aa5194b6fb93ca8ab749db75665cb28b2e60
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: 85a251e15c39d7c95fe58cf40786fa126b8d143c
   NitroModules: 994eaa7fc39d1fb4b76bb61054312c9796c4a649
-  OpenSSL-Universal: ecee7b138fa75a74ecf00d7ffd248fb584739b9e
-  QuickCrypto: 45cde9545e593271dc32418ecbe91b7ec920702f
+  QuickCrypto: 76c1e1d0e4cca038898f18b0e22c6ad57532ba35
   RCTDeprecation: 96f68ebf33f8762466b01d57d6e873c4f30efb07
   RCTRequired: 166eed8ad6d8440e73e56d09a9090366609823d2
   RCTSwiftUI: e818198d11928a78c2b2afe281d072171dab617f
@@ -3223,13 +3219,13 @@ SPEC CHECKSUMS:
   RNSentry: c2b739c5dbdd77f439fbd197d1d45724b22a0437
   RNSVG: 3fe8590403ac9f107b4d14591bc6e54da4894e5c
   RNWorklets: 43af89f696342f91118a2f1f3a879056e2f47331
-  RNZipArchive: 0f7498c241e20d276d9cfa50ab35df4c572497d0
+  RNZipArchive: b390452af35c081c3be04a85c66ad31ff9ffd955
   Sentry: d587a8fe91ca13503ecd69a1905f3e8a0fcf61be
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
   SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4
   WatermelonDB: 4c846c8cb94eef3cba90fa034d15310163226703
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 
-PODFILE CHECKSUM: 9fe564436fc3b4ff3c362aa082dcd50ab55fb8fb
+PODFILE CHECKSUM: 1288cd9fd982aca5bbe4a1250ff4ba6e0d0a8b0b
 
 COCOAPODS: 1.17.0

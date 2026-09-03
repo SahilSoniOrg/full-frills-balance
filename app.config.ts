@@ -69,9 +69,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-font',
-    'expo-image',
-    'expo-sharing',
-    'expo-web-browser',
     'expo-sqlite',
     '@lovesworking/watermelondb-expo-plugin-sdk-52-plus',
     'expo-router',
@@ -131,7 +128,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         organization: 'full-frills-balance',
       },
     ],
-    '@sentry/react-native',
     [
       'expo-speech-recognition',
       {
