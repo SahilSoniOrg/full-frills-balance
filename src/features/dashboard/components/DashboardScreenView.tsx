@@ -1,5 +1,6 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
+import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
@@ -11,7 +12,7 @@ import type {
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import type { AccountFields } from '@/src/types/plainDtos';
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
 import { JournalListModals } from '@/src/features/journal';
@@ -58,7 +59,10 @@ export function DashboardScreenView({
   legendModalState,
   showSafeToSpendChart,
   chrome,
-}: DashboardViewModel & { listRef?: React.RefObject<FlatList | null>; chrome: TabScreenChrome }) {
+}: DashboardViewModel & {
+  listRef?: React.RefObject<JournalEntryListRef | null>;
+  chrome: TabScreenChrome;
+}) {
   const fullSafeToSpendData =
     safeToSpendDetailsReady && safeToSpendData && !('snapshotKind' in safeToSpendData)
       ? safeToSpendData

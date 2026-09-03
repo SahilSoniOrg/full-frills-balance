@@ -59,7 +59,7 @@ export interface JournalListViewProps {
   modals?: JournalListModalsProps;
 }
 
-export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
+export function JournalListView(props: JournalListViewProps) {
   const { list, chrome, datePicker, periodBar, selection, modals } = props;
 
   return (
@@ -79,7 +79,6 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
         ) : null}
 
         <JournalEntryListView
-          ref={ref}
           items={list.items}
           isLoading={list.isLoading}
           isLoadingMore={list.isLoadingMore}
@@ -109,9 +108,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
       </View>
     </ScreenWithChrome>
   );
-});
-
-JournalListView.displayName = 'JournalListView';
+}
 
 const styles = StyleSheet.create({
   container: {

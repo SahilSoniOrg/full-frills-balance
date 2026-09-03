@@ -1,4 +1,5 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
+import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { DashboardHeaderActions } from '@/src/features/dashboard/components/DashboardHeaderActions';
@@ -16,7 +17,7 @@ import { useEffect, useMemo, useRef } from 'react';
 function DashboardScreen() {
   const vm = useDashboardViewModel();
   const header = useDashboardHeaderChrome();
-  const listRef = useRef(null);
+  const listRef = useRef<JournalEntryListRef>(null);
 
   useEffect(() => {
     logger.info('[Dashboard] Screen Mounted');

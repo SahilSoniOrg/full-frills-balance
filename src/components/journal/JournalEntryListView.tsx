@@ -4,7 +4,7 @@ import { Spacing } from '@/src/constants';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
 import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { JournalDayHeader } from './JournalDayHeader';
@@ -16,6 +16,7 @@ import {
 } from '@/src/components/shared/SelectionActionBar';
 
 interface JournalEntryListViewProps {
+  ref?: React.Ref<JournalEntryListRef>;
   items: JournalListItem[];
   isLoading?: boolean;
   isLoadingMore?: boolean;
@@ -33,6 +34,10 @@ interface JournalEntryListViewProps {
   /** Selection-mode secondary chrome (action bar + dismiss). Owned by this list. */
   selectionChrome?: ListSelectionChrome;
   style?: StyleProp<ViewStyle>;
+}
+
+export interface JournalEntryListRef {
+  scrollToOffset: (options: { offset: number; animated?: boolean }) => void;
 }
 
 function renderListItem({
@@ -77,109 +82,117 @@ function renderListItem({
   );
 }
 
-export const JournalEntryListView = React.forwardRef<any, JournalEntryListViewProps>(
-  (props, ref) => {
-    const {
-      items,
-      isLoading,
-      isLoadingMore,
-      loadingMoreText,
-      emptyTitle = AppConfig.strings.common.noTransactions,
-      emptySubtitle = AppConfig.strings.common.tryChangingFilters,
-      ListHeaderComponent,
-      onEndReached,
-      contentContainerStyle,
-      selectedIds,
-      onLongPressItem,
-      isSelectionModeActive,
-      selectionChrome,
-      style,
-    } = props;
+export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProps) {
+  const listRef = React.useRef<FlashListRef<JournalListItem>>(null);
 
-    const selectionActive = !!isSelectionModeActive && !!selectionChrome;
-    const journalEntryCount = items.filter(i => i.type === 'journal').length;
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      scrollToOffset: options => {
+        listRef.current?.scrollToOffset(options);
+      },
+    }),
+    [],
+  );
 
-    const listEmpty =
-      isLoading && items.length === 0 ? (
-        <Stack gap="md">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Stack key={i} gap="sm">
-              <Skeleton width={120} height={16} />
-              <Skeleton width="100%" height={80} radius="lg" />
-            </Stack>
-          ))}
-        </Stack>
-      ) : (
-        <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
-      );
+  const {
+    items,
+    isLoading,
+    isLoadingMore,
+    loadingMoreText,
+    emptyTitle = AppConfig.strings.common.noTransactions,
+    emptySubtitle = AppConfig.strings.common.tryChangingFilters,
+    ListHeaderComponent,
+    onEndReached,
+    contentContainerStyle,
+    selectedIds,
+    onLongPressItem,
+    isSelectionModeActive,
+    selectionChrome,
+    style,
+  } = props;
 
-    const dismissFooter = selectionActive ? (
-      <View
-        onStartShouldSetResponder={() => {
-          selectionChrome.exitSelectionMode();
-          return false;
-        }}
-        style={styles.dismissFooter}
-      />
-    ) : null;
+  const selectionActive = !!isSelectionModeActive && !!selectionChrome;
+  const journalEntryCount = items.filter(i => i.type === 'journal').length;
 
-    const listFooter = (
-      <Stack>
-        {isLoadingMore && (
-          <Inline align="center" justify="center" space="sm" paddingVertical="lg">
-            <ActivityIndicator size="small" />
-            <AppText variant="caption" color="secondary">
-              {loadingMoreText || AppConfig.strings.common.loadingMore}
-            </AppText>
-          </Inline>
-        )}
-        {dismissFooter}
-        {props.ListFooterComponent}
+  const listEmpty =
+    isLoading && items.length === 0 ? (
+      <Stack gap="md">
+        {[1, 2, 3, 4, 5].map(i => (
+          <Stack key={i} gap="sm">
+            <Skeleton width={120} height={16} />
+            <Skeleton width="100%" height={80} radius="lg" />
+          </Stack>
+        ))}
       </Stack>
+    ) : (
+      <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
-    return (
-      <View style={[styles.container, style]}>
-        <FlashList
-          ref={ref}
-          data={items}
-          renderItem={({ item }: { item: JournalListItem }) =>
-            renderListItem({
-              item,
-              selectedIds,
-              onLongPressItem,
-              isSelectionModeActive,
-            })
-          }
-          keyExtractor={(item: JournalListItem) => item.id}
-          getItemType={(item: JournalListItem) => item.type}
-          contentContainerStyle={contentContainerStyle}
-          ListHeaderComponent={ListHeaderComponent}
-          ListEmptyComponent={listEmpty}
-          ListFooterComponent={listFooter}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          keyboardShouldPersistTaps="always"
+  const dismissFooter = selectionActive ? (
+    <View
+      onStartShouldSetResponder={() => {
+        selectionChrome.exitSelectionMode();
+        return false;
+      }}
+      style={styles.dismissFooter}
+    />
+  ) : null;
+
+  const listFooter = (
+    <Stack>
+      {isLoadingMore && (
+        <Inline align="center" justify="center" space="sm" paddingVertical="lg">
+          <ActivityIndicator size="small" />
+          <AppText variant="caption" color="secondary">
+            {loadingMoreText || AppConfig.strings.common.loadingMore}
+          </AppText>
+        </Inline>
+      )}
+      {dismissFooter}
+      {props.ListFooterComponent}
+    </Stack>
+  );
+
+  return (
+    <View style={[styles.container, style]}>
+      <FlashList
+        ref={listRef}
+        data={items}
+        renderItem={({ item }: { item: JournalListItem }) =>
+          renderListItem({
+            item,
+            selectedIds,
+            onLongPressItem,
+            isSelectionModeActive,
+          })
+        }
+        keyExtractor={(item: JournalListItem) => item.id}
+        getItemType={(item: JournalListItem) => item.type}
+        contentContainerStyle={contentContainerStyle}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        keyboardShouldPersistTaps="always"
+      />
+
+      {selectionChrome ? (
+        <SelectionActionBar
+          selectedCount={selectedIds?.size ?? 0}
+          totalCount={journalEntryCount}
+          onClear={selectionChrome.exitSelectionMode}
+          onSelectAll={selectionChrome.selectAll}
+          onDeselectAll={selectionChrome.clearItems}
+          onShare={selectionChrome.onShareSelected}
+          actions={selectionChrome.actions}
+          isVisible={selectionActive}
         />
-
-        {selectionChrome ? (
-          <SelectionActionBar
-            selectedCount={selectedIds?.size ?? 0}
-            totalCount={journalEntryCount}
-            onClear={selectionChrome.exitSelectionMode}
-            onSelectAll={selectionChrome.selectAll}
-            onDeselectAll={selectionChrome.clearItems}
-            onShare={selectionChrome.onShareSelected}
-            actions={selectionChrome.actions}
-            isVisible={selectionActive}
-          />
-        ) : null}
-      </View>
-    );
-  },
-);
-
-JournalEntryListView.displayName = 'JournalEntryListView';
+      ) : null}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
