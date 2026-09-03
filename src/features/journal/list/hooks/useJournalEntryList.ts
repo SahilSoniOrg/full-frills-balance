@@ -3,7 +3,7 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
-import { mapTimelineRowToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
+import { mapTimelineRowToEntryCardProps } from '@/src/features/journal/list/journalEntryCardViewModel';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';

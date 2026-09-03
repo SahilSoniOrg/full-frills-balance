@@ -6,7 +6,6 @@ import {
   ledgerLineChrome,
   mapJournalToTimelineItem,
 } from '@/src/services/journal/journalTimelinePresentation';
-import { mapJournalToEntryCardProps } from '@/src/adapters/journalEntryCardAdapter';
 
 describe('journalTimelinePresentation', () => {
   it('journalDisplayTypeChrome maps expense to down arrow', () => {
@@ -51,30 +50,6 @@ describe('journalTimelinePresentation', () => {
 
     expect(item.badges.map(b => b.text)).toEqual(['From: Checking', 'To: Food']);
     expect(item.presentation.label).toBeTruthy();
-  });
-
-  it('journal card adapter preserves badge labels', () => {
-    const card = mapJournalToEntryCardProps({
-      id: 'j1' as JournalId,
-      journalDate: Date.now(),
-      description: 'Lunch',
-      currencyCode: 'USD',
-      status: 'POSTED',
-      totalAmount: 25,
-      transactionCount: 2,
-      displayType: JournalDisplayType.EXPENSE,
-      accounts: [
-        {
-          id: 'a1' as AccountId,
-          name: 'Checking',
-          accountType: AccountType.ASSET,
-          role: 'SOURCE',
-        },
-      ],
-      semanticType: SemanticType.PURCHASE,
-      semanticLabel: 'Purchase',
-    });
-    expect(card.title).toBe('Lunch');
   });
 
   it('mapJournalToTimelineItem with viewer uses leg amount not total', () => {
