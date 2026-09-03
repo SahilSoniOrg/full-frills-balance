@@ -1,6 +1,6 @@
 import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { ImportPluginCard } from '@/src/components/common/ImportPluginCard';
+import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import type { ImportPlugin } from '@/src/services/import/types';
 import type { ImportStats } from '@/src/contexts/app-shell/AppRestartProvider';
 import { StyleSheet, View } from 'react-native';

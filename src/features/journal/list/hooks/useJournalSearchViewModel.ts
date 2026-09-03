@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';

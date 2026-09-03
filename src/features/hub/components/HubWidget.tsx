@@ -1,4 +1,4 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';

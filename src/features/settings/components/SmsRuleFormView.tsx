@@ -1,5 +1,5 @@
 import { AccountPickerModal } from '@/src/features/accounts';
-import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
+import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';

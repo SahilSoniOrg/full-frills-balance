@@ -21,7 +21,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
-import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
+import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { AccountPickerModal } from '@/src/components/account-selection';
 import type { AccountFields } from '@/src/types/plainDtos';
 import dayjs from 'dayjs';

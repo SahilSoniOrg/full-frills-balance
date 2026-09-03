@@ -1,8 +1,8 @@
-import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
-import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
-import { FormHeroSection } from '@/src/components/common/FormHeroSection';
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { FormField } from '@/src/components/common/FormField';
+import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
+import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
+import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
+import { FormField } from '@/src/components/forms/FormField';
 import { CurrencySelector, MultiAccountPickerModal } from '@/src/features/accounts';
 import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';

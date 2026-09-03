@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import type { DataPoint, HorizontalLine } from './chartMath';
 import React from 'react';
 import { Circle, Line, Text as SvgText } from 'react-native-svg';

@@ -1,4 +1,4 @@
-import { Section } from '@/src/components/common/Section';
+import { Section } from '@/src/components/shared/Section';
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';

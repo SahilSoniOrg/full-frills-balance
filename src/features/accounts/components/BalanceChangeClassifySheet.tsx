@@ -1,6 +1,6 @@
 import { AccountPickerList } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
-import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
+import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
 import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';

@@ -1,5 +1,5 @@
-import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
+import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { AppButton, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';

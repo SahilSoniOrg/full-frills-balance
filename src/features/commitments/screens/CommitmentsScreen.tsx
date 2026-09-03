@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { CommitmentsView } from '@/src/features/commitments/components/CommitmentsView';
 import { useCommitmentsViewModel } from '@/src/features/commitments/hooks/useCommitmentsViewModel';

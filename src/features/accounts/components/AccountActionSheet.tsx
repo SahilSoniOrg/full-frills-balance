@@ -1,6 +1,6 @@
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AppIcon, AppText, IvyIcon, type IconName } from '@/src/components/core';
-import { ModalSurface } from '@/src/components/common/ModalSurface';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';

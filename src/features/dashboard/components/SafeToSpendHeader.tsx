@@ -1,7 +1,7 @@
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
 
 interface SafeToSpendHeaderProps {

@@ -1,4 +1,4 @@
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { Spacing } from '@/src/constants';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 

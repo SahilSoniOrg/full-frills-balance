@@ -1,5 +1,5 @@
-import { EmptyStateView } from '@/src/components/common/EmptyStateView';
-import { WorkplaceEditorModal } from '@/src/components/common/workplace-setup/WorkplaceEditorModal';
+import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
 import { AppIcon, IconButton } from '@/src/components/core';
 import { isValidIconName } from '@/src/types/domainIcons';
 import { PlainWorkplace } from '@/src/types/plainDtos';

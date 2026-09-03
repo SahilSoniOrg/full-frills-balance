@@ -1,5 +1,5 @@
-import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

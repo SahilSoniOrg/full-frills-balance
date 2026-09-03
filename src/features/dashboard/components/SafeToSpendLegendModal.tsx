@@ -1,5 +1,5 @@
-import { InfoSheet } from '@/src/components/common/InfoSheet';
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
+import { InfoSheet } from '@/src/components/overlays/InfoSheet';
+import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';

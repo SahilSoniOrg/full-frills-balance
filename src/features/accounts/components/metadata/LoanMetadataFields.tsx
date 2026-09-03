@@ -1,5 +1,5 @@
 import { AppInput } from '@/src/components/core';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';

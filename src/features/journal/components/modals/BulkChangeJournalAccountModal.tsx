@@ -1,4 +1,4 @@
-import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';

@@ -1,4 +1,4 @@
-import type { SelectionTilePresentation } from '@/src/components/common/SelectionTileList';
+import type { SelectionTilePresentation } from '@/src/components/shared/SelectionTileList';
 import { Opacity, withOpacity } from '@/src/constants';
 
 export type ArchivedPickerRowPresentation = {

@@ -7,8 +7,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
+import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
 
 interface BulkEntryRowProps {

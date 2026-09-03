@@ -1,4 +1,4 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import { IconName } from '@/src/components/core';
 import type { AccountFields } from '@/src/types/plainDtos';
 import {

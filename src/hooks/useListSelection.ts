@@ -1,4 +1,4 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
 import { useUndoableAction } from '@/src/hooks/useUndoableAction';
 import { useCallback, useState } from 'react';

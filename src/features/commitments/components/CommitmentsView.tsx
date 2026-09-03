@@ -5,7 +5,7 @@ import { BudgetsTabPanel } from '@/src/features/commitments/components/BudgetsTa
 import { PlannedTabPanel } from '@/src/features/commitments/components/PlannedTabPanel';
 import type { CommitmentsViewModel } from '@/src/features/commitments/hooks/useCommitmentsViewModel';
 import { AppTabs } from '@/src/components/core';
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 
 export function CommitmentsView({
   activeTab,

@@ -1,5 +1,5 @@
-import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/components/account-selection';

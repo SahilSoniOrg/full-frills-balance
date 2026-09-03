@@ -1,4 +1,4 @@
-import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';

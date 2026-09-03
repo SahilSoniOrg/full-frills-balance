@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';

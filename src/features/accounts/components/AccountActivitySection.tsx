@@ -1,7 +1,7 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
-import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';

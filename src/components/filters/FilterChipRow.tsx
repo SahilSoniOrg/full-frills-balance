@@ -1,0 +1,10 @@
+import {
+  SelectionTileList,
+  SelectionTileListProps,
+} from '@/src/components/shared/SelectionTileList';
+
+type FilterChipRowProps = Omit<SelectionTileListProps, 'allowDeselect'>;
+
+export function FilterChipRow(props: FilterChipRowProps) {
+  return <SelectionTileList {...props} allowDeselect />;
+}

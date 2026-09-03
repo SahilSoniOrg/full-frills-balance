@@ -1,4 +1,4 @@
-import { JournalEntryCardProps } from '@/src/components/common/JournalEntryCard';
+import { JournalEntryCardProps } from '@/src/components/journal/JournalEntryCard';
 import type { IconName } from '@/src/types/domainIcons';
 import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
 import { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';

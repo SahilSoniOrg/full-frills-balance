@@ -1,5 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';

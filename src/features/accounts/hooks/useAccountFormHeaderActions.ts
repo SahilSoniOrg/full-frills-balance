@@ -1,4 +1,4 @@
-import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
+import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import {

@@ -1,4 +1,4 @@
-import { AppearancePickerModal } from '@/src/components/common/AppearancePickerModal';
+import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { AccountActionSheet } from '@/src/features/accounts/components/AccountActionSheet';
 import { BulkRenameAccountsModal } from '@/src/features/accounts/components/BulkRenameAccountsModal';
 import { BulkHierarchyMoveModal } from '@/src/features/accounts/components/hierarchy/BulkHierarchyMoveModal';

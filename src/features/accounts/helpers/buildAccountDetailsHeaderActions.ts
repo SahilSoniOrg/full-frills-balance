@@ -1,4 +1,4 @@
-import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
+import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import type { AccountDetailsViewModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import type { Theme } from '@/src/constants/design-tokens';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';

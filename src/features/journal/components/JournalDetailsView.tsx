@@ -1,5 +1,5 @@
-import { EmptyStateView } from '@/src/components/common/EmptyStateView';
-import { LoadingView } from '@/src/components/common/LoadingView';
+import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+import { LoadingView } from '@/src/components/shared/LoadingView';
 import { AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';

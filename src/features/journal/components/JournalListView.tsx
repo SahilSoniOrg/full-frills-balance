@@ -1,7 +1,7 @@
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
-import { type ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
+import { DateRangeFilter } from '@/src/components/filters/DateRangeFilter';
+import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
+import { type ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import {

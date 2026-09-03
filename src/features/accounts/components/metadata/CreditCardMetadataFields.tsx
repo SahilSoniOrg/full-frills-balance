@@ -1,6 +1,6 @@
-import { FormSelectorField } from '@/src/components/common/FormSelectorField';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
-import { SectionLabel } from '@/src/components/common/SectionLabel';
+import { FormSelectorField } from '@/src/components/forms/FormSelectorField';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { AppInput, AppText } from '@/src/components/core';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { Spacing } from '@/src/constants';

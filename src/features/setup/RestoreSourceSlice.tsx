@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import { ImportPluginCard } from '@/src/components/common/ImportPluginCard';
+import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
 import { importRegistry } from '@/src/services/import';
 import { toast } from '@/src/utils/alerts';

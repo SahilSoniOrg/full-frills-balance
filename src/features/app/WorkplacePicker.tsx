@@ -1,6 +1,6 @@
 import { AppIcon, AppText, LoadingView } from '@/src/components/core';
-import { SettingsMenu } from '@/src/components/common/SettingsMenu';
-import { SettingsMenuItem } from '@/src/components/common/SettingsMenuItem';
+import { SettingsMenu } from '@/src/components/settings/SettingsMenu';
+import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';

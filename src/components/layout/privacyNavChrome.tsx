@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 
 /** Stack screen with privacy eye only — Hub, Reports, InsightDetails, etc. */

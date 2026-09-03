@@ -1,5 +1,5 @@
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';

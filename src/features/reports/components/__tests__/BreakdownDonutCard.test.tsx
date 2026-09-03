@@ -6,7 +6,7 @@ jest.mock('@/src/components/charts/DonutChart', () => ({
   DonutChart: () => null,
 }));
 
-jest.mock('@/src/components/common/MoneyText', () => ({
+jest.mock('@/src/components/shared/MoneyText', () => ({
   MoneyText: () => null,
 }));
 

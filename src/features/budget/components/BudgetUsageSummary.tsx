@@ -1,5 +1,5 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';

@@ -1,4 +1,4 @@
-import { BulkActionModalSurface } from '@/src/components/common/BulkActionModalSurface';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { AppInput, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';

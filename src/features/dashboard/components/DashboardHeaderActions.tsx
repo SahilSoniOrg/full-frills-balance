@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

@@ -16,8 +16,8 @@
  * - If it looks wrong here, it is wrong everywhere
  * ========================================
  */
-import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
+import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
+import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
   AppButton,
   AppCard,

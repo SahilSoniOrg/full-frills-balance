@@ -1,7 +1,7 @@
 import type {
   ListSelectionChrome,
   SelectionAction,
-} from '@/src/components/common/SelectionActionBar';
+} from '@/src/components/shared/SelectionActionBar';
 import type {
   JournalActiveModal,
   JournalListModalsProps,

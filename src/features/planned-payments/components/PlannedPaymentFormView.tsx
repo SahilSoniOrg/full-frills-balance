@@ -1,9 +1,9 @@
 import { AccountPickerModal } from '@/src/features/accounts';
-import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
-import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
-import { FormHeroSection } from '@/src/components/common/FormHeroSection';
-import { FormField } from '@/src/components/common/FormField';
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
+import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
+import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
+import { FormField } from '@/src/components/forms/FormField';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';

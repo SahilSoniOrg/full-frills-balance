@@ -1,7 +1,7 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/components/common/SettingsMenuItem';
+import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
 import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSearchCatalog';
 import { useTheme } from '@/src/hooks/use-theme';
 import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSearchCatalog';

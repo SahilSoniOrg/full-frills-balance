@@ -1,5 +1,5 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
-import { Section } from '@/src/components/common/Section';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { Section } from '@/src/components/shared/Section';
 import { AppIcon, ListRow } from '@/src/components/core';
 import { Size, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';

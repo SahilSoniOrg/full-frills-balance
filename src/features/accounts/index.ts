@@ -2,7 +2,7 @@ export { type CreateAccountIntent } from './components/AccountPickerList';
 export { AccountPickerModal, MultiAccountPickerModal } from './components/AccountPickerModal';
 export { CurrencySelector } from './components/CurrencySelector';
 export { useAccount, useAccounts } from './hooks/useAccounts';
-export { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+export { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 export { getArchivedAccountTilePresentation } from './utils/archivedAccountDisplay';
 export { getAccountIcon } from '@/src/utils/accountIcon';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';

@@ -1,5 +1,5 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
-import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
 import { Size } from '@/src/constants';
 
 /** Primary nav actions only — period lives in the secondary filter bar. */

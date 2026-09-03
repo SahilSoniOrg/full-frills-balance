@@ -47,11 +47,11 @@ export { FloatingActionButton } from './FloatingActionButton';
 export { IconButton } from './IconButton';
 export { IvyIcon } from './IvyIcon';
 
-export { LoadingView } from '../common/LoadingView';
-export type { LoadingViewProps } from '../common/LoadingView';
+export { LoadingView } from '@/src/components/shared/LoadingView';
+export type { LoadingViewProps } from '@/src/components/shared/LoadingView';
 
-export { EmptyStateView } from '../common/EmptyStateView';
-export type { EmptyStateViewProps } from '../common/EmptyStateView';
+export { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+export type { EmptyStateViewProps } from '@/src/components/shared/EmptyStateView';
 
 export { AppToggle } from './AppToggle';
 export type { AppToggleProps } from './AppToggle';

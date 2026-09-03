@@ -1,6 +1,6 @@
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { MoneyText } from '@/src/components/common/MoneyText';
-import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';

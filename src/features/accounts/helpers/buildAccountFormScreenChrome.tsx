@@ -1,7 +1,7 @@
 import {
   ScreenHeaderActions,
   type ScreenHeaderActionItem,
-} from '@/src/components/common/ScreenHeaderActions';
+} from '@/src/components/shared/ScreenHeaderActions';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 
 export function buildAccountFormScreenChrome(

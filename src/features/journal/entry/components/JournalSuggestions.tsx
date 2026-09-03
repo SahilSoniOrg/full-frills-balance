@@ -1,5 +1,5 @@
-import { AccountCategoryPill } from '@/src/components/common/AccountCategoryPill';
-import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
+import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';

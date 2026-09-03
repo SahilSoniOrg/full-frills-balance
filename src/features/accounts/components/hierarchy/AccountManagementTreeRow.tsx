@@ -1,4 +1,4 @@
-import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { AppIcon, AppText, IvyIcon } from '@/src/components/core';
 import { Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

@@ -1,5 +1,5 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { TransactionType } from '@/src/types/enums';

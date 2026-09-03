@@ -1,4 +1,4 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';

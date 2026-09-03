@@ -1,5 +1,5 @@
-import { SelectionTileList } from '@/src/components/common/SelectionTileList';
-import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
+import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';

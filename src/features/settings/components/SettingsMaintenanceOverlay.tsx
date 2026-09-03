@@ -1,4 +1,4 @@
-import { ProgressBar } from '@/src/components/common/ProgressBar';
+import { ProgressBar } from '@/src/components/shared/ProgressBar';
 import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

@@ -1,5 +1,5 @@
 import { LineChart } from '@/src/components/charts/LineChart';
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';

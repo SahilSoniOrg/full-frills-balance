@@ -1,5 +1,5 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';

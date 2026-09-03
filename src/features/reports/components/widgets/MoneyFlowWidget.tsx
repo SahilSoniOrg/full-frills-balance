@@ -1,5 +1,5 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { SankeyChart } from '@/src/components/charts/SankeyChart';
 import {
   getSankeyNodeAmount,

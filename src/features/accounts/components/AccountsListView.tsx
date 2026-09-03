@@ -1,13 +1,13 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
-import { CashFlowCard } from '@/src/components/common/CashFlowCard';
-import { NetWorthCard } from '@/src/components/common/NetWorthCard';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
+import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
 import { AppIcon, AppTabs, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
-import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
+import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
   AccountCardViewModel,

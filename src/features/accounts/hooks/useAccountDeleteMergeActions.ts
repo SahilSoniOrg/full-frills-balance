@@ -1,5 +1,5 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { ScreenHeaderActionItem } from '@/src/components/common/ScreenHeaderActions';
+import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';

@@ -1,6 +1,6 @@
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
-import { InfoSheet } from '@/src/components/common/InfoSheet';
+import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';

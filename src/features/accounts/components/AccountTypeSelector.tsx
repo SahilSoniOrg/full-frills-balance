@@ -1,4 +1,4 @@
-import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';

@@ -1,8 +1,8 @@
 import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
-import { FilterChipRow } from '@/src/components/common/FilterChipRow';
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { FilterChipRow } from '@/src/components/filters/FilterChipRow';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
+import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
 import { StyleSheet, View } from 'react-native';

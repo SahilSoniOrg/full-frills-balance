@@ -1,7 +1,7 @@
 import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
+import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
 import { StyleSheet, Switch, View } from 'react-native';

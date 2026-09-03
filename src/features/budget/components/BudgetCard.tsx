@@ -1,4 +1,4 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppIcon, AppSurface } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';

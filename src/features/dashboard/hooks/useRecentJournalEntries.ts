@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import {
   useJournalEntryList,
   useJournalsBulkOperations,

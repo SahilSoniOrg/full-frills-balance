@@ -1,6 +1,6 @@
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
-import { AlertContainer } from '@/src/components/common/AlertContainer';
-import { ToastContainer } from '@/src/components/common/Toast';
+import { AlertContainer } from '@/src/components/overlays/AlertContainer';
+import { ToastContainer } from '@/src/components/overlays/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider } from '@/src/contexts/UIContext';

@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { WorkplaceSwitcher } from '@/src/components/common/WorkplaceSwitcher';
+import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';

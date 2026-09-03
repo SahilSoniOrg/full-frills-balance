@@ -1,7 +1,7 @@
 import {
   MoneyDetailHeaderActions,
   moneyDetailEditDeleteActions,
-} from '@/src/components/common/MoneyDetailHeaderActions';
+} from '@/src/components/shared/MoneyDetailHeaderActions';
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';

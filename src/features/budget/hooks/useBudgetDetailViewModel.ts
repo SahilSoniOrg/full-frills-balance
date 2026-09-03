@@ -10,7 +10,7 @@ import {
   useJournalsBulkOperations,
   type JournalListModalsProps,
 } from '@/src/features/journal';
-import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';

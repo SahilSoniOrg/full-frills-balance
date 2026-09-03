@@ -1,4 +1,4 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppIcon, AppText, Badge, type IconName } from '@/src/components/core';
 import { ColorKey, Size, Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';

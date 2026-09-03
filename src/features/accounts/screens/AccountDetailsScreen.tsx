@@ -1,5 +1,5 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
-import { MoneyDetailHeaderActions } from '@/src/components/common/MoneyDetailHeaderActions';
+import { MoneyDetailHeaderActions } from '@/src/components/shared/MoneyDetailHeaderActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';

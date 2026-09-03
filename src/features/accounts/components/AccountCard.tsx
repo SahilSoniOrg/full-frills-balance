@@ -1,6 +1,6 @@
-import { useMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppIcon, IconButton, IvyIcon } from '@/src/components/core';
-import { ArchivedAccountIndicator } from '@/src/components/common/ArchivedAccountIndicator';
+import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';

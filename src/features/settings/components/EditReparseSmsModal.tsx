@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppButton, AppCard, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
-import { MoneyText } from '@/src/components/common/MoneyText';
-import { ModalSurface } from '@/src/components/common/ModalSurface';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { smsService } from '@/src/services/sms-service';

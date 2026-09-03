@@ -1,4 +1,4 @@
-import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { SmsRuleFormView } from '@/src/features/settings/components/SmsRuleFormView';
 import { useSmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';

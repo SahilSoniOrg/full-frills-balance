@@ -1,5 +1,5 @@
-import { AccountInlineLabel } from '@/src/components/common/AccountInlineLabel';
-import { CalculatorAmountInput } from '@/src/components/common/CalculatorAmountInput';
+import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';

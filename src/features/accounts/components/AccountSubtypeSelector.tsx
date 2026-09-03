@@ -1,4 +1,4 @@
-import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { formatAccountSubtypeLabel, getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';

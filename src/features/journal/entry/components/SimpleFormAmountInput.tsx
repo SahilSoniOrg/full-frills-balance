@@ -1,6 +1,6 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
-import { AmountCalculatorSheet } from '@/src/components/common/AmountCalculatorSheet';
+import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';

@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
 import { IconButton, InlineSearchField } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';

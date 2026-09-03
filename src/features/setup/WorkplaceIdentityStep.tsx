@@ -1,5 +1,5 @@
-import { IconPickerModal } from '@/src/components/common/IconPickerModal';
-import { WorkplaceBasicInfoStep } from '@/src/components/common/workplace-setup/WorkplaceBasicInfoStep';
+import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
+import { WorkplaceBasicInfoStep } from '@/src/features/setup/components/workplace-setup/WorkplaceBasicInfoStep';
 import { IconName } from '@/src/components/core';
 import { useState } from 'react';
 

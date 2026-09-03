@@ -1,4 +1,4 @@
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppCard, AppText, EmptyStateView } from '@/src/components/core';
 import type { ScreenFabChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Spacing } from '@/src/constants';

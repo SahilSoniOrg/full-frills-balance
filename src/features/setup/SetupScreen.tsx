@@ -34,7 +34,7 @@ import {
   type SetupSliceId,
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
-import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
+import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
 
 function SetupJourneyScreen({
   journeyId,

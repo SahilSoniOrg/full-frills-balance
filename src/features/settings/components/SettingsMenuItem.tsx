@@ -1,7 +1,7 @@
 import {
   SettingsMenuItem as CommonSettingsMenuItem,
   type SettingsMenuItemProps as CommonSettingsMenuItemProps,
-} from '@/src/components/common/SettingsMenuItem';
+} from '@/src/components/settings/SettingsMenuItem';
 import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
 import { getSettingsSearchIcon } from '@/src/features/settings/components/settingsSearchCatalog';
 

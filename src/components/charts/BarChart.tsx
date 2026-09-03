@@ -1,4 +1,4 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';

@@ -1,4 +1,4 @@
-import type { ListSelectionChrome } from '@/src/components/common/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {

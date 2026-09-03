@@ -1,8 +1,8 @@
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { AppConfig } from '@/src/constants';
-import { WorkplaceAccountSelectionStep } from '@/src/components/common/workplace-setup/WorkplaceAccountSelectionStep';
-import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplace-setup/WorkplaceCategorySelectionStep';
-import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
+import { WorkplaceAccountSelectionStep } from '@/src/features/setup/components/workplace-setup/WorkplaceAccountSelectionStep';
+import { WorkplaceCategorySelectionStep } from '@/src/features/setup/components/workplace-setup/WorkplaceCategorySelectionStep';
+import { WorkplaceCurrencyStep } from '@/src/features/setup/components/workplace-setup/WorkplaceCurrencyStep';
 import { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 import { AppButton } from '@/src/components/core';
 import { useState } from 'react';

@@ -1,4 +1,4 @@
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppCard } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import React from 'react';

@@ -1,4 +1,4 @@
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';

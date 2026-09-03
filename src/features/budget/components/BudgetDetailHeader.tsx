@@ -1,6 +1,6 @@
-import { MoneyText } from '@/src/components/common/MoneyText';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
 import { BudgetPeriodStepper } from '@/src/features/budget/components/BudgetPeriodStepper';

@@ -1,4 +1,4 @@
-import { InfoSheet } from '@/src/components/common/InfoSheet';
+import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';

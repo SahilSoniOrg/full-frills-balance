@@ -5,7 +5,7 @@ import { AccountType } from '@/src/types/enums';
 import { defaultCascadeSelection, buildArchiveCascadeNodes } from '@/src/utils/accountArchive';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
-jest.mock('@/src/components/common/InfoSheet', () => {
+jest.mock('@/src/components/overlays/InfoSheet', () => {
   const React = jest.requireActual('react');
   const { Pressable, Text, View } = jest.requireActual('react-native');
   return {

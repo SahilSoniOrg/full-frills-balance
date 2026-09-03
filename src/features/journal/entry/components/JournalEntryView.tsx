@@ -1,6 +1,6 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { SubmitFooter } from '@/src/components/common/SubmitFooter';
-import { EmptyStateView } from '@/src/components/common/EmptyStateView';
+import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
+import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { Page } from '@/src/design-system';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import { JournalEntryModeBody } from '@/src/features/journal/entry/components/JournalEntryModeBody';

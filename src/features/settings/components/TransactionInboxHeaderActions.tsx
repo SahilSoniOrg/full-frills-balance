@@ -1,4 +1,4 @@
-import { PrivacyToggleButton } from '@/src/components/common/PrivacyToggleButton';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { AppButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { Platform, StyleSheet, View } from 'react-native';

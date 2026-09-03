@@ -1,4 +1,4 @@
-import { WorkplaceEditorModal } from '@/src/components/common/workplace-setup/WorkplaceEditorModal';
+import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
 import { AppIcon } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';

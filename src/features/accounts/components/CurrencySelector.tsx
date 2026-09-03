@@ -1,4 +1,4 @@
-import { CurrencyPickerSheet } from '@/src/components/common/CurrencyPickerSheet';
+import { CurrencyPickerSheet } from '@/src/components/filters/CurrencyPickerSheet';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { PlainCurrency } from '@/src/types/plainDtos';

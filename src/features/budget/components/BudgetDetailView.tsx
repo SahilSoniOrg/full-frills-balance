@@ -1,4 +1,4 @@
-import { JournalEntryListView } from '@/src/components/common/JournalEntryListView';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';

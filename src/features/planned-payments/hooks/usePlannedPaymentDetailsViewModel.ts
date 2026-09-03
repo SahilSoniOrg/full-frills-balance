@@ -1,4 +1,4 @@
-import type { SelectionAction } from '@/src/components/common/SelectionActionBar';
+import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import type { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';

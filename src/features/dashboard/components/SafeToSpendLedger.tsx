@@ -1,4 +1,4 @@
-import { useStsMoneyFormat } from '@/src/components/common/moneyFormat';
+import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
