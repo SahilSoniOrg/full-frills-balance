@@ -1,10 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/useInsightPatterns';
+import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
+import {
+  dismissSupplementalInsight,
+  restoreSupplementalInsight,
+} from '@/src/services/insight/supplementalInsightStore';
 import { useCallback, useMemo, useState } from 'react';
 
 export type HubTab = 'active' | 'dismissed';
@@ -37,22 +42,32 @@ export function useHubViewModel(): HubViewModel {
 
   const { data: activeInsights } = useInsightPatterns(workplaceId);
   const { data: dismissedInsights } = useDismissedInsightPatterns(workplaceId);
+  const supplementalInsights = useSupplementalInsights(workplaceId);
+  const dismissedSupplementalInsights = useSupplementalInsights(workplaceId, true);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
   const dismissInsight = useCallback(
     async (id: string) => {
+      if (supplementalInsights.some(insight => insight.id === id)) {
+        dismissSupplementalInsight(workplaceId, id);
+        return;
+      }
       analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
       await insightService.dismissPattern(workplaceId, id);
     },
-    [workplaceId],
+    [supplementalInsights, workplaceId],
   );
 
   const restoreInsight = useCallback(
     async (id: string) => {
+      if (dismissedSupplementalInsights.some(insight => insight.id === id)) {
+        restoreSupplementalInsight(workplaceId, id);
+        return;
+      }
       analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
       await insightService.undismissPattern(workplaceId, id);
     },
-    [workplaceId],
+    [dismissedSupplementalInsights, workplaceId],
   );
 
   const onOpenInbox = useCallback(() => {
@@ -81,23 +96,33 @@ export function useHubViewModel(): HubViewModel {
       {
         id: 'active' as const,
         label: hubStrings.activeTab,
-        badge: (activeInsights?.length ?? 0) + ((unreadSmsCount ?? 0) > 0 ? 1 : 0),
+        badge:
+          (activeInsights?.length ?? 0) +
+          supplementalInsights.length +
+          ((unreadSmsCount ?? 0) > 0 ? 1 : 0),
       },
       {
         id: 'dismissed' as const,
         label: hubStrings.dismissedTab,
-        badge: dismissedInsights?.length ?? 0,
+        badge: (dismissedInsights?.length ?? 0) + dismissedSupplementalInsights.length,
       },
     ],
-    [hubStrings, activeInsights?.length, unreadSmsCount, dismissedInsights?.length],
+    [
+      hubStrings,
+      activeInsights?.length,
+      supplementalInsights.length,
+      unreadSmsCount,
+      dismissedInsights?.length,
+      dismissedSupplementalInsights.length,
+    ],
   );
 
   return {
     activeTab,
     setActiveTab,
     tabOptions,
-    activeInsights: activeInsights ?? [],
-    dismissedInsights: dismissedInsights ?? [],
+    activeInsights: [...(activeInsights ?? []), ...supplementalInsights],
+    dismissedInsights: [...(dismissedInsights ?? []), ...dismissedSupplementalInsights],
     unreadSmsCount: unreadSmsCount ?? 0,
     currencyCode: defaultCurrencyCode,
     strings: hubStrings,
