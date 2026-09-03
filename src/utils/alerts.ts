@@ -30,6 +30,8 @@ export interface ToastOptions {
   duration?: number; // milliseconds, default AppConfig.timing.toastDurationMs
   type?: ToastType;
   action?: ToastAction;
+  onDismiss?: () => void;
+  dismissible?: boolean;
 }
 
 export interface ToastPayload {
@@ -37,6 +39,8 @@ export interface ToastPayload {
   type: ToastType;
   duration: number;
   action?: ToastAction;
+  onDismiss?: () => void;
+  dismissible?: boolean;
 }
 
 // Alert configuration
@@ -110,23 +114,58 @@ export const clearConfirmListener = () => {
 
 export const toast = {
   success: (message: string, options?: ToastOptions) => {
-    showToast(message, 'success', options?.duration, options?.action);
+    showToast(
+      message,
+      'success',
+      options?.duration,
+      options?.action,
+      options?.onDismiss,
+      options?.dismissible,
+    );
   },
 
   error: (message: string, options?: ToastOptions) => {
-    showToast(message, 'error', options?.duration, options?.action);
+    showToast(
+      message,
+      'error',
+      options?.duration,
+      options?.action,
+      options?.onDismiss,
+      options?.dismissible,
+    );
   },
 
   warning: (message: string, options?: ToastOptions) => {
-    showToast(message, 'warning', options?.duration, options?.action);
+    showToast(
+      message,
+      'warning',
+      options?.duration,
+      options?.action,
+      options?.onDismiss,
+      options?.dismissible,
+    );
   },
 
   info: (message: string, options?: ToastOptions) => {
-    showToast(message, 'info', options?.duration, options?.action);
+    showToast(
+      message,
+      'info',
+      options?.duration,
+      options?.action,
+      options?.onDismiss,
+      options?.dismissible,
+    );
   },
 };
 
-function showToast(message: string, type: ToastType, duration?: number, action?: ToastAction) {
+function showToast(
+  message: string,
+  type: ToastType,
+  duration?: number,
+  action?: ToastAction,
+  onDismiss?: () => void,
+  dismissible?: boolean,
+) {
   const resolvedDuration = duration ?? AppConfig.timing.toastDurationMs;
 
   // Emit to registered listener (ToastProvider)
@@ -136,6 +175,8 @@ function showToast(message: string, type: ToastType, duration?: number, action?:
       type,
       duration: resolvedDuration,
       action,
+      onDismiss,
+      dismissible,
     });
   } else {
     // Fallback to native alert if no toast provider (shouldn't happen in normal use)

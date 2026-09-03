@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export interface ToastItem extends ToastPayload {
   id: string;
+  dismiss: () => void;
 }
 
 /**
@@ -18,16 +19,23 @@ export function useToastListener() {
     const activeTimeoutIds = timeoutIds.current;
     const listener = (payload: ToastPayload) => {
       const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-      const newToast: ToastItem = { ...payload, id };
-
-      setToasts(prev => [...prev, newToast]);
-
       const timeoutId = setTimeout(() => {
         timeoutIds.current.delete(timeoutId);
         removeQueue.current.push(id);
         setToasts(prev => prev.filter(t => t.id !== id));
       }, payload.duration);
       timeoutIds.current.add(timeoutId);
+
+      const dismiss = () => {
+        clearTimeout(timeoutId);
+        timeoutIds.current.delete(timeoutId);
+        removeQueue.current.push(id);
+        setToasts(prev => prev.filter(t => t.id !== id));
+        payload.onDismiss?.();
+      };
+
+      const newToast: ToastItem = { ...payload, id, dismiss };
+      setToasts(prev => [...prev, newToast]);
     };
 
     setToastListener(listener);

@@ -7,7 +7,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
 import type { IconName } from '@/src/types/domainIcons';
-import { Animated, StyleSheet, View, TouchableOpacity } from 'react-native';
+import { Animated, PanResponder, StyleSheet, View, TouchableOpacity } from 'react-native';
 
 export function ToastContainer() {
   const { toasts } = useToastListener();
@@ -50,9 +50,18 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
 
   const colors = getToastColors(toast.type, theme);
   const icon = getToastIcon(toast.type);
+  const dismissGesture = toast.dismissible
+    ? PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gestureState) => gestureState.dy < -10,
+        onPanResponderRelease: (_event, gestureState) => {
+          if (gestureState.dy < -40) toast.dismiss();
+        },
+      })
+    : null;
 
   return (
     <Animated.View
+      {...(dismissGesture?.panHandlers ?? {})}
       style={[
         styles.toastWrapper,
         {
