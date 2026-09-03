@@ -41,6 +41,7 @@ import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { useWidgetSync } from './hooks/useWidgetSync';
+import { UpdateGate } from './UpdateGate';
 import {
   NATIVE_SPLASH_BACKGROUND,
   hasMeasuredSafeAreaInsets,
@@ -83,21 +84,23 @@ function RootLayout() {
               <DatabaseProvider database={database}>
                 <UIProvider>
                   <EarlyBootstrap />
-                  <LaunchCoordinatorProvider setupDraft={setupDraft}>
-                    <MaybeAnalyticsProvider client={analytics.posthog}>
-                      <ThemeProvider value={theme}>
-                        <LaunchCoordinatorContent gateChildren={<AppContent />}>
-                          <WorkplaceBootstrap />
-                          <AppLockInterceptor>
-                            <AppContent />
-                          </AppLockInterceptor>
-                        </LaunchCoordinatorContent>
-                        <AlertContainer />
-                        <ToastContainer />
-                        <SplashOrchestrator />
-                      </ThemeProvider>
-                    </MaybeAnalyticsProvider>
-                  </LaunchCoordinatorProvider>
+                  <ThemeProvider value={theme}>
+                    <LaunchCoordinatorProvider setupDraft={setupDraft}>
+                      <SplashOrchestrator />
+                      <ToastContainer />
+                      <UpdateGate>
+                        <MaybeAnalyticsProvider client={analytics.posthog}>
+                          <LaunchCoordinatorContent gateChildren={<AppContent />}>
+                            <WorkplaceBootstrap />
+                            <AppLockInterceptor>
+                              <AppContent />
+                            </AppLockInterceptor>
+                          </LaunchCoordinatorContent>
+                          <AlertContainer />
+                        </MaybeAnalyticsProvider>
+                      </UpdateGate>
+                    </LaunchCoordinatorProvider>
+                  </ThemeProvider>
                 </UIProvider>
               </DatabaseProvider>
             </ErrorBoundary>

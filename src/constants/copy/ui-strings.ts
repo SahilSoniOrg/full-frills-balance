@@ -15,6 +15,20 @@ export const UI_STRINGS = {
     searchPlaceholder: 'Search…',
     none: 'None',
   },
+  update: {
+    checking: 'Checking for updates…',
+    requiredTitle: 'Update required',
+    requiredSubtitle:
+      'This version of Full Frills is no longer supported. Update the app to keep using your books.',
+    availableMessage: 'A newer version of Full Frills Balance is available.',
+    updateNow: 'Update now',
+    retry: 'Check again',
+    unavailable: 'We could not open the app store. Check your connection and try again.',
+    exportBackup: 'Export a backup first',
+    exportingBackup: 'Preparing backup…',
+    exportHint: 'Want to leave instead? Save a backup of your current books before updating.',
+    exportFailed: 'Could not create the backup. Try again.',
+  },
   dashboard: {
     emptyTitle: 'Start with your first entry',
     emptySubtitle: 'Add income or spending and your available balance will update here.',

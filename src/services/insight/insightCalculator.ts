@@ -58,6 +58,10 @@ export function calculateInsights(input: CalculationInput): Insight[] {
         ),
         suggestion: AppConfig.strings.dashboard.hub.subscriptionAmnesia.suggestion,
         journalIds: (candidate.journalIds || '').split(','),
+        context: {
+          basis: { kind: 'lookback', days: insightsConfig.lookbackDays },
+          triggersCount: (candidate.journalIds || '').split(',').length,
+        },
         amount,
         currencyCode: candidate.currencyCode,
         accountSubtype: acc.accountSubtype,
@@ -140,6 +144,12 @@ export function calculateInsights(input: CalculationInput): Insight[] {
               .map(t => t.journalId),
           ),
         ),
+        context: {
+          basis: { kind: 'lookback', days: insightsConfig.lookbackDays },
+          triggersCount: currentWeekTransactions.filter(
+            t => accountMap.get(t.accountId)?.accountSubtype === subtype,
+          ).length,
+        },
       });
     }
   });
@@ -159,6 +169,9 @@ export function calculateInsights(input: CalculationInput): Insight[] {
         description: strings.description,
         suggestion: strings.suggestion,
         journalIds: [],
+        context: {
+          basis: { kind: 'lookback', days: insightsConfig.lookbackDays },
+        },
       });
     }
   }

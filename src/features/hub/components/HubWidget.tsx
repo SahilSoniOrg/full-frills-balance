@@ -60,6 +60,9 @@ export const HubWidget = ({
   };
 
   const getPrimaryActionLabel = (patternType: Insight['type']) => {
+    if (patternType === 'app-update') {
+      return AppConfig.strings.update.updateNow;
+    }
     if (patternType === 'subscription-amnesiac') {
       return AppConfig.strings.journal.plannedPayments;
     }
@@ -199,25 +202,29 @@ export const HubWidget = ({
                     {insight.description}
                   </AppText>
 
-                  <View style={styles.contextRow}>
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      numberOfLines={1}
-                      style={styles.contextText}
-                    >
-                      {AppConfig.strings.dashboard.notifications.basedOnLastDays(
-                        AppConfig.insights.lookbackDays,
-                      )}
-                    </AppText>
-                    {insight.journalIds.length > 0 ? (
-                      <AppText variant="caption" color="secondary" style={styles.contextText}>
-                        {AppConfig.strings.dashboard.notifications.triggersCount(
-                          insight.journalIds.length,
-                        )}
-                      </AppText>
-                    ) : null}
-                  </View>
+                  {insight.context ? (
+                    <View style={styles.contextRow}>
+                      {insight.context.basis?.kind === 'lookback' ? (
+                        <AppText
+                          variant="caption"
+                          color="secondary"
+                          numberOfLines={1}
+                          style={styles.contextText}
+                        >
+                          {AppConfig.strings.dashboard.notifications.basedOnLastDays(
+                            insight.context.basis.days,
+                          )}
+                        </AppText>
+                      ) : null}
+                      {insight.context.triggersCount ? (
+                        <AppText variant="caption" color="secondary" style={styles.contextText}>
+                          {AppConfig.strings.dashboard.notifications.triggersCount(
+                            insight.context.triggersCount,
+                          )}
+                        </AppText>
+                      ) : null}
+                    </View>
+                  ) : null}
 
                   <View style={[styles.footer, { borderTopColor: theme.border }]}>
                     <TouchableOpacity
