@@ -26,6 +26,10 @@ describe('Mandatory update gate', () => {
       .withTimeout(120000);
     await expect(element(by.id('update-export-backup'))).toBeVisible();
     await expect(element(by.id('update-now'))).toBeVisible();
+    await expect(element(by.id('update-view-changelog'))).toBeVisible();
+    await element(by.id('update-view-changelog')).tap();
+    await expect(element(by.text("What's new"))).toBeVisible();
+    await expect(element(by.id('update-changelog-item-0'))).toBeVisible();
   });
 });
 

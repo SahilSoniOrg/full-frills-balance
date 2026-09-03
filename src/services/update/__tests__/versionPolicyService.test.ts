@@ -28,6 +28,21 @@ describe('versionPolicyService', () => {
     );
   });
 
+  it('rejects a manifest with an invalid changelog', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ios: { ...policy, changelog: ['Valid item', ''] },
+        android: policy,
+        web: policy,
+      }),
+    });
+
+    await expect(
+      fetchVersionPolicy(fetchImpl, 'https://cdn.example.com/version-policy.json'),
+    ).rejects.toThrow('Version policy response was invalid');
+  });
+
   it('allows builds at or above the minimum', () => {
     expect(evaluateVersionPolicy(policy, 12)).toEqual({
       kind: 'allowed',

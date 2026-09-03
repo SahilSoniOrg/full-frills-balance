@@ -29,6 +29,15 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
             onPress={vm.onOpenTelegram}
           />
           <SettingsMenuItem
+            searchId="release-notes"
+            leftIcon="document"
+            iconColor
+            title={AppConfig.strings.settings.community.releaseNotesTitle}
+            description={AppConfig.strings.settings.community.releaseNotesDesc}
+            onPress={vm.onOpenReleaseNotes}
+            testID="settings-release-notes"
+          />
+          <SettingsMenuItem
             searchId="play-store"
             leftIcon="star"
             iconColor

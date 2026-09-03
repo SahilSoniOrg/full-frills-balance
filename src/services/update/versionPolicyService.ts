@@ -33,6 +33,9 @@ function isValidPolicy(value: unknown): value is VersionPolicy {
     hasValidStoreUrl &&
     (policy.message === undefined || typeof policy.message === 'string') &&
     (policy.availableMessage === undefined || typeof policy.availableMessage === 'string') &&
+    (policy.changelog === undefined ||
+      (Array.isArray(policy.changelog) &&
+        policy.changelog.every(item => typeof item === 'string' && item.trim().length > 0))) &&
     (policy.enabled === undefined || typeof policy.enabled === 'boolean')
   );
 }
@@ -77,12 +80,14 @@ export async function fetchVersionPolicy(
         latestBuild: Number.MAX_SAFE_INTEGER,
         storeUrl: 'https://example.com/full-frills-balance-update',
         availableMessage: 'A newer version of Full Frills Balance is available.',
+        changelog: ['See the latest improvements before updating.'],
       };
     }
     return {
       minimumBuild: Number.MAX_SAFE_INTEGER,
       storeUrl: 'https://example.com/full-frills-balance-update',
       message: 'This is a preview of the mandatory update screen.',
+      changelog: ['Preview the changes included in this update.'],
     };
   }
   if (!endpoint) return null;

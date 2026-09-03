@@ -4,6 +4,8 @@ export type VersionPolicy = {
   storeUrl: string;
   message?: string;
   availableMessage?: string;
+  /** Human-readable highlights shown before a required update. */
+  changelog?: string[];
   enabled?: boolean;
 };
 

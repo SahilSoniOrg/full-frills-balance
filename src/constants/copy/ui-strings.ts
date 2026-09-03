@@ -28,6 +28,8 @@ export const UI_STRINGS = {
     exportingBackup: 'Preparing backup…',
     exportHint: 'Want to leave instead? Save a backup of your current books before updating.',
     exportFailed: 'Could not create the backup. Try again.',
+    viewChangelog: "See what's new",
+    changelogTitle: "What's new",
   },
   dashboard: {
     emptyTitle: 'Start with your first entry',
@@ -447,6 +449,8 @@ export const UI_STRINGS = {
     community: {
       telegramTitle: 'Telegram',
       telegramDesc: 'Updates and discussion',
+      releaseNotesTitle: 'Release notes',
+      releaseNotesDesc: 'See what changed in each update',
       playStoreTitle: 'Rate on Play Store',
       playStoreDesc: 'Open app page',
       githubTitle: 'GitHub',

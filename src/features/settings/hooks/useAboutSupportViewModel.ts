@@ -11,6 +11,11 @@ export function useAboutSupportViewModel() {
     Linking.openURL('https://t.me/FullFrills');
   }, []);
 
+  const onOpenReleaseNotes = useCallback(() => {
+    analytics.trackFeatureUsage('settings', 'open_telegram');
+    Linking.openURL('https://web.telegram.org/a/#-1003546680694_2');
+  }, []);
+
   const onOpenPlayStore = useCallback(() => {
     analytics.trackFeatureUsage('settings', 'open_play_store');
     Linking.openURL('https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance');
@@ -33,6 +38,7 @@ export function useAboutSupportViewModel() {
 
   return {
     onOpenTelegram,
+    onOpenReleaseNotes,
     onOpenPlayStore,
     onOpenGithub,
     onShareBugReport,

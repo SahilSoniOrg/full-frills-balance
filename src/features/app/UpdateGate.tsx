@@ -1,6 +1,8 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { AppConfig } from '@/src/constants/app-config';
+import { Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   checkVersion,
@@ -17,7 +19,7 @@ import {
   dismissAvailableUpdate,
   publishAvailableUpdate,
 } from '@/src/services/update/updateAvailabilityStore';
-import { AppState, Platform, StyleSheet } from 'react-native';
+import { AppState, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -39,6 +41,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [isChangelogVisible, setIsChangelogVisible] = useState(false);
   const notifiedAvailableUpdate = useRef<string | null>(null);
 
   const check = useCallback(async () => {
@@ -143,50 +146,128 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
 
   return (
     <Box flex={1} background="background" justifyContent="center" alignItems="center" padding="xl">
-      <Stack gap="lg" alignItems="center" style={styles.content}>
-        <AppText testID="update-required-title" variant="heading" align="center">
-          {AppConfig.strings.update.requiredTitle}
-        </AppText>
-        <AppText variant="body" color="secondary" align="center">
-          {state.policy.message || AppConfig.strings.update.requiredSubtitle}
-        </AppText>
-        <AppText variant="caption" color="secondary" align="center">
-          {AppConfig.strings.update.exportHint}
-        </AppText>
-        <AppButton
-          testID="update-export-backup"
-          variant="secondary"
-          loading={isExporting}
-          onPress={() => void exportBackup()}
-        >
-          {isExporting
-            ? AppConfig.strings.update.exportingBackup
-            : AppConfig.strings.update.exportBackup}
-        </AppButton>
-        {exportFailed && (
-          <AppText variant="caption" color="secondary" align="center">
-            {AppConfig.strings.update.exportFailed}
-          </AppText>
-        )}
-        <AppButton testID="update-now" onPress={() => void openStore(state.policy)}>
-          {AppConfig.strings.update.updateNow}
-        </AppButton>
-        <AppButton variant="ghost" onPress={() => void check()}>
-          {AppConfig.strings.update.retry}
-        </AppButton>
-        {state.kind === 'error' && (
-          <AppText
-            variant="caption"
-            color="secondary"
-            align="center"
-            style={{ color: theme.textSecondary }}
+      <AppCard paddingSize="lg" radius="r3" elevation="md" style={styles.card}>
+        <Stack gap="xl" alignItems="center">
+          <Box
+            width={72}
+            height={72}
+            borderRadius="full"
+            background="primary"
+            backgroundOpacity="soft"
+            alignItems="center"
+            justifyContent="center"
           >
-            {AppConfig.strings.update.unavailable}
-          </AppText>
-        )}
-      </Stack>
+            <AppIcon name="sparkles" size={Size.iconLg} color={theme.primary} strokeWidth={1.8} />
+          </Box>
+
+          <Stack gap="sm" alignItems="center">
+            <AppText testID="update-required-title" variant="heading" align="center">
+              {AppConfig.strings.update.requiredTitle}
+            </AppText>
+            <AppText variant="body" color="secondary" align="center">
+              {state.policy.message || AppConfig.strings.update.requiredSubtitle}
+            </AppText>
+          </Stack>
+
+          {!!state.policy.changelog?.length && (
+            <Box
+              as={TouchableOpacity}
+              testID="update-view-changelog"
+              accessibilityRole="button"
+              accessibilityLabel={AppConfig.strings.update.viewChangelog}
+              onPress={() => setIsChangelogVisible(true)}
+              flexDirection="row"
+              alignItems="center"
+              width="100%"
+              padding="lg"
+              borderRadius="r2"
+              background="surfaceSecondary"
+              gap="md"
+            >
+              <AppIcon name="document" size={Size.iconMd} color={theme.primary} />
+              <Stack gap="xs" flex={1}>
+                <AppText weight="semibold">{AppConfig.strings.update.viewChangelog}</AppText>
+                <AppText variant="caption" color="secondary">
+                  {state.policy.changelog.length} update highlight
+                  {state.policy.changelog.length === 1 ? '' : 's'}
+                </AppText>
+              </Stack>
+              <AppIcon name="arrowRight" size={Size.iconSm} color={theme.textSecondary} />
+            </Box>
+          )}
+
+          <Stack gap="md" width="100%">
+            <AppButton testID="update-now" size="lg" onPress={() => void openStore(state.policy)}>
+              {AppConfig.strings.update.updateNow}
+            </AppButton>
+            <AppButton
+              testID="update-export-backup"
+              variant="secondary"
+              loading={isExporting}
+              onPress={() => void exportBackup()}
+            >
+              {isExporting
+                ? AppConfig.strings.update.exportingBackup
+                : AppConfig.strings.update.exportBackup}
+            </AppButton>
+          </Stack>
+
+          {exportFailed && (
+            <AppText variant="caption" color="secondary" align="center">
+              {AppConfig.strings.update.exportFailed}
+            </AppText>
+          )}
+
+          <Stack gap="sm" alignItems="center">
+            <AppText variant="caption" color="secondary" align="center">
+              {AppConfig.strings.update.exportHint}
+            </AppText>
+            <AppButton variant="ghost" size="sm" onPress={() => void check()}>
+              {AppConfig.strings.update.retry}
+            </AppButton>
+          </Stack>
+
+          {state.kind === 'error' && (
+            <AppText
+              variant="caption"
+              color="secondary"
+              align="center"
+              style={{ color: theme.textSecondary }}
+            >
+              {AppConfig.strings.update.unavailable}
+            </AppText>
+          )}
+        </Stack>
+      </AppCard>
+      <ModalSurface
+        visible={isChangelogVisible}
+        title={AppConfig.strings.update.changelogTitle}
+        onClose={() => setIsChangelogVisible(false)}
+        fixedHeight={false}
+        maxHeightPercent={76}
+        accessibilityCloseLabel="Close changelog"
+      >
+        <Stack gap="md">
+          {state.policy.changelog?.map((item, index) => (
+            <AppText
+              key={`${index}-${item}`}
+              testID={`update-changelog-item-${index}`}
+              variant="body"
+              color="secondary"
+            >
+              {'• '}
+              {item}
+            </AppText>
+          ))}
+        </Stack>
+      </ModalSurface>
     </Box>
   );
 }
 
-const styles = StyleSheet.create({ content: { maxWidth: 360 } });
+const styles = StyleSheet.create({
+  card: {
+    width: '100%',
+    maxWidth: 380,
+  },
+});

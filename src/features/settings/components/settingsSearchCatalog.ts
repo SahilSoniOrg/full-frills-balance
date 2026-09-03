@@ -37,6 +37,7 @@ const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   cleanup: 'delete',
   reset: 'refresh',
   'about-support': 'info',
+  'release-notes': 'document',
   'sms-inbox': 'messageSquare',
   'sms-rules': 'terminal',
   'sms-import': 'zap',
@@ -264,6 +265,14 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       section: 'Support',
       keywords: ['about', 'support', 'help', 'community', 'github', 'version', 'bug'],
       onPress: () => actions.onAbout('about-support'),
+    },
+    {
+      id: 'release-notes',
+      title: AppConfig.strings.settings.community.releaseNotesTitle,
+      description: AppConfig.strings.settings.community.releaseNotesDesc,
+      section: 'Support',
+      keywords: ['release', 'changelog', 'updates', 'what changed', 'telegram'],
+      onPress: () => actions.onAbout('release-notes'),
     },
   ];
 
