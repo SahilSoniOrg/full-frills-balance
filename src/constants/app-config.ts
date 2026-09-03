@@ -119,6 +119,9 @@ export const AppConfig = {
   // External API endpoints
   api: {
     exchangeRateBaseUrl: 'https://api.exchangerate-api.com/v4/latest',
+    // Set this when the version-policy endpoint is ready. Keeping it empty
+    // makes the app-side gate inert until the remote policy is deployed.
+    versionPolicyUrl: process.env.EXPO_PUBLIC_VERSION_POLICY_URL ?? '',
   },
 
   // Business Logic Constants
