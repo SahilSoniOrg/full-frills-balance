@@ -35,7 +35,10 @@ jest.mock('@/src/services/insight/InsightService', () => ({
   insightService: { preWarm: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('@/src/services/integrity', () => ({
-  integrityService: { runStartupCheck: jest.fn().mockResolvedValue(undefined) },
+  integrityService: {
+    runStartupCheck: jest.fn().mockResolvedValue(undefined),
+    cleanupGhostWorkplaces: jest.fn().mockResolvedValue({ cleanedCount: 0 }),
+  },
 }));
 jest.mock('@/src/services/notification/NotificationService', () => ({
   notificationService: { scheduleReminder: jest.fn().mockResolvedValue(undefined) },

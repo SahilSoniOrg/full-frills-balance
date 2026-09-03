@@ -16,6 +16,7 @@ jest.mock('@/src/components/core', () => {
     AppInput: ({ style, ...props }: any) => React.createElement(TextInput, { ...props, style }),
     AppIcon: ({ name, style, ...props }: any) =>
       React.createElement(View, { ...props, style, 'data-icon': name }),
+    isValidIconName: () => false,
   };
 });
 
