@@ -34,6 +34,21 @@ describe('Settings navigation', () => {
     await assertTextVisible('Preferences', 30000);
   });
 
+  it('offers v2 workplace scope selection for exports', async () => {
+    await launchOnboardedApp({ seedProfile: 'onboarded' });
+    await tapById(tabs.settings);
+    await tapById('settings-data-management');
+    await assertTextVisible('Data & Backup', 30000);
+    await tapById('data-export');
+    await assertTextVisible('Filename', 30000);
+    await device.takeScreenshot('settings-export-popup-spacing');
+    await tapById('data-export-scope');
+    await assertTextVisible('Backup scope', 30000);
+    await assertTextVisible('This workplace', 30000);
+    await assertTextVisible('All workplaces', 30000);
+    await assertTextVisible('Choose workplaces', 30000);
+  });
+
   it('keeps the workplace switcher on Settings but out of other screens', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await expect(element(by.id('header-workplace-switcher'))).not.toBeVisible();

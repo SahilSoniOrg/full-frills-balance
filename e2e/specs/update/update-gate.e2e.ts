@@ -30,6 +30,12 @@ describe('Mandatory update gate', () => {
     await element(by.id('update-view-changelog')).tap();
     await expect(element(by.text("What's new"))).toBeVisible();
     await expect(element(by.id('update-changelog-item-0'))).toBeVisible();
+    await element(by.id('update-close-changelog')).tap();
+    await element(by.id('update-export-backup')).tap();
+    await expect(element(by.text('Backup scope'))).toBeVisible();
+    await expect(element(by.text('All workplaces'))).toBeVisible();
+    await element(by.text('Choose workplaces')).tap();
+    await expect(element(by.text('Export backup'))).toBeVisible();
   });
 });
 

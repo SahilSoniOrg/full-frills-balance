@@ -1,6 +1,7 @@
 import {
   serializeExportPayload,
   serializeExportPayloadFromSources,
+  serializeMultiWorkplaceExport,
 } from '@/src/services/export/exportSerialization';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
 
@@ -128,5 +129,34 @@ describe('serializeExportPayload', () => {
     expect(events).toEqual(['accounts:start', 'accounts:end', 'journals:start']);
     expect(JSON.parse(json).accounts).toEqual([{ id: 'a1' }]);
     expect(JSON.parse(json).journals).toEqual([{ id: 'j1' }]);
+  });
+
+  it('serializes v2 data grouped by workplace', () => {
+    const json = serializeMultiWorkplaceExport({
+      format: 'full-frills-backup',
+      formatVersion: 2,
+      exportDate: '2026-01-01T00:00:00.000Z',
+      exportScope: 'selected',
+      preferences: DEFAULT_UI_PREFERENCES,
+      workplaces: [
+        {
+          workplace: {
+            id: 'home',
+            name: 'Home',
+            icon: 'wallet',
+            defaultCurrencyCode: 'USD',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          data: { accounts: [{ id: 'a1' }] },
+        },
+      ],
+    });
+
+    const parsed = JSON.parse(json);
+    expect(parsed.formatVersion).toBe(2);
+    expect(parsed.workplaces).toHaveLength(1);
+    expect(parsed.workplaces[0].workplace.name).toBe('Home');
+    expect(parsed.workplaces[0].data.accounts).toEqual([{ id: 'a1' }]);
   });
 });

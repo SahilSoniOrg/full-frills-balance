@@ -17,6 +17,30 @@ export interface ExportMetadata {
   };
 }
 
+export interface ExportWorkplaceMetadata {
+  id: string;
+  name: string;
+  icon: string;
+  defaultCurrencyCode: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MultiWorkplaceExportEntry {
+  workplace: ExportWorkplaceMetadata;
+  workplacePreferences?: WorkplacePreferences;
+  data: Record<string, readonly unknown[]>;
+}
+
+export interface MultiWorkplaceExportMetadata {
+  format: 'full-frills-backup';
+  formatVersion: 2;
+  exportDate: string;
+  exportScope: 'all' | 'selected';
+  preferences: UIPreferences;
+  workplaces: readonly MultiWorkplaceExportEntry[];
+}
+
 export type ExportTable = readonly [key: string, data: readonly unknown[]];
 export type ExportTableSource = readonly [key: string, load: () => Promise<readonly unknown[]>];
 
@@ -76,6 +100,16 @@ export async function serializeExportPayloadFromSources(
 
   await yieldToEventLoop(10);
   return `${chunks.join('')}}`;
+}
+
+export function serializeMultiWorkplaceExport(
+  metadata: MultiWorkplaceExportMetadata,
+  onProgress?: (message: string, progress: number) => void,
+): string {
+  onProgress?.('Serializing multi-workplace backup...', 0.95);
+  const result = JSON.stringify(metadata, exportReplacer);
+  onProgress?.('Multi-workplace backup serialized.', 1);
+  return result;
 }
 
 function exportReplacer(field: string, value: unknown): unknown {

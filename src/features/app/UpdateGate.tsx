@@ -1,14 +1,20 @@
 import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { BackupScopeSheet } from '@/src/features/app/BackupScopeSheet';
 import { Box, Stack } from '@/src/design-system';
 import { AppConfig } from '@/src/constants/app-config';
 import { Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useObservable } from '@/src/hooks/useObservable';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import type { BackupScope } from '@/src/services/export';
+import { preferences } from '@/src/services/preferences';
+import type { WorkplaceId } from '@/src/types/ids';
 import {
   checkVersion,
   isVersionPolicyConfigured,
 } from '@/src/services/update/versionPolicyService';
-import { exportCurrentWorkplaceBackup } from '@/src/services/export';
+import { exportUpdateBackup } from '@/src/services/export';
 import type { VersionPolicy } from '@/src/services/update/types';
 import { openStoreUrl } from '@/src/services/update/storeLinking';
 // Register update insights before the Hub can observe supplemental providers.
@@ -42,6 +48,14 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
   const [isChangelogVisible, setIsChangelogVisible] = useState(false);
+  const [isBackupScopeVisible, setIsBackupScopeVisible] = useState(false);
+  const [backupScope, setBackupScope] = useState<BackupScope>('all');
+  const [selectedWorkplaceIds, setSelectedWorkplaceIds] = useState<string[]>([]);
+  const { data: workplaces = [] } = useObservable(
+    () => workplaceService.observeAllWorkplaces(),
+    [],
+    [],
+  );
   const notifiedAvailableUpdate = useRef<string | null>(null);
 
   const check = useCallback(async () => {
@@ -124,12 +138,22 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     setExportFailed(false);
     setIsExporting(true);
     try {
-      await exportCurrentWorkplaceBackup();
+      await exportUpdateBackup(
+        backupScope,
+        selectedWorkplaceIds.map(id => id as WorkplaceId),
+      );
     } catch {
       setExportFailed(true);
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const openBackupScope = () => {
+    setSelectedWorkplaceIds(ids =>
+      ids.length > 0 ? ids : workplaces.map(workplace => workplace.id),
+    );
+    setIsBackupScopeVisible(true);
   };
 
   if (state.kind === 'allowed') return <>{children}</>;
@@ -204,7 +228,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
               testID="update-export-backup"
               variant="secondary"
               loading={isExporting}
-              onPress={() => void exportBackup()}
+              onPress={openBackupScope}
             >
               {isExporting
                 ? AppConfig.strings.update.exportingBackup
@@ -246,6 +270,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
         fixedHeight={false}
         maxHeightPercent={76}
         accessibilityCloseLabel="Close changelog"
+        closeTestID="update-close-changelog"
       >
         <Stack gap="md">
           {state.policy.changelog?.map((item, index) => (
@@ -261,6 +286,20 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           ))}
         </Stack>
       </ModalSurface>
+      <BackupScopeSheet
+        visible={isBackupScopeVisible}
+        workplaces={workplaces}
+        activeWorkplaceId={preferences.device.activeWorkplaceId ?? workplaces[0]?.id ?? ''}
+        scope={backupScope}
+        selectedWorkplaceIds={selectedWorkplaceIds}
+        onScopeChange={setBackupScope}
+        onSelectedWorkplaceIdsChange={setSelectedWorkplaceIds}
+        onClose={() => setIsBackupScopeVisible(false)}
+        onConfirm={() => {
+          setIsBackupScopeVisible(false);
+          void exportBackup();
+        }}
+      />
     </Box>
   );
 }

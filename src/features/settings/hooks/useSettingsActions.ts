@@ -1,6 +1,7 @@
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { analytics } from '@/src/services/analytics';
 import { exportService } from '@/src/services/export';
+import type { BackupScope } from '@/src/services/export';
 import { integrityService } from '@/src/services/integrity';
 
 import { useCallback } from 'react';
@@ -9,11 +10,13 @@ import { WorkplaceId } from '@/src/types/ids';
 export function useSettingsActions(workplaceId: WorkplaceId) {
   const { requireRestart } = useAppRestart();
 
-  const exportToJSON = useCallback(
-    async (onProgress?: (message: string, progress: number) => void) => {
-      return exportService.exportToJSON(workplaceId, onProgress);
-    },
-    [workplaceId],
+  const exportWorkplacesToJSON = useCallback(
+    async (
+      workplaceIds: readonly WorkplaceId[],
+      scope: Exclude<BackupScope, 'active'>,
+      onProgress?: (message: string, progress: number) => void,
+    ) => exportService.exportWorkplacesToJSON(workplaceIds, scope, onProgress),
+    [],
   );
 
   const runIntegrityCheck = useCallback(
@@ -34,7 +37,7 @@ export function useSettingsActions(workplaceId: WorkplaceId) {
   }, [requireRestart]);
 
   return {
-    exportToJSON,
+    exportWorkplacesToJSON,
     runIntegrityCheck,
     cleanupDatabase,
     resetApp,

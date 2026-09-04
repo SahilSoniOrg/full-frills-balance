@@ -26,10 +26,16 @@ export const UI_STRINGS = {
     unavailable: 'We could not open the app store. Check your connection and try again.',
     exportBackup: 'Export a backup first',
     exportingBackup: 'Preparing backup…',
-    exportHint: 'Want to leave instead? Save a backup of your current books before updating.',
+    exportHint: 'Want to leave instead? Save a backup of all your workplaces before updating.',
     exportFailed: 'Could not create the backup. Try again.',
     viewChangelog: "See what's new",
     changelogTitle: "What's new",
+    exportScopeTitle: 'Backup scope',
+    exportScopeActive: 'This workplace',
+    exportScopeAll: 'All workplaces',
+    exportScopeSelected: 'Choose workplaces',
+    exportScopeSelectedCount: (count: number) =>
+      `${count} workplace${count === 1 ? '' : 's'} selected`,
   },
   dashboard: {
     emptyTitle: 'Start with your first entry',

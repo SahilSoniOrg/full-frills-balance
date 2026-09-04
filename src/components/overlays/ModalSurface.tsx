@@ -22,6 +22,7 @@ interface ModalSurfaceProps {
   footer?: React.ReactNode;
   maxHeightPercent?: number;
   accessibilityCloseLabel?: string;
+  closeTestID?: string;
   fixedHeight?: boolean;
   scrollable?: boolean;
   /**
@@ -42,6 +43,7 @@ export function ModalSurface({
   footer,
   maxHeightPercent = AppConfig.layout.popupModalHeightPercent,
   accessibilityCloseLabel = 'Close dialog',
+  closeTestID,
   fixedHeight = true,
   scrollable = true,
   useNativeModal = process.env.NODE_ENV !== 'test',
@@ -93,6 +95,7 @@ export function ModalSurface({
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={accessibilityCloseLabel}
+              testID={closeTestID}
             >
               <AppIcon name="close" size={Size.sm} color={theme.textSecondary} />
             </TouchableOpacity>
