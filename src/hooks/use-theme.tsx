@@ -15,11 +15,13 @@ const _contrastCache = new Map<string, string>();
 export function useTheme() {
   const { themeMode: uiThemeMode, themeId, fontId } = useThemePrefs();
   const themeOverride = useThemeOverride();
-  const themeMode = themeOverride ?? uiThemeMode;
+  const themeMode = themeOverride?.mode ?? uiThemeMode;
+  const resolvedThemeId = themeOverride?.themeId ?? themeId;
+  const resolvedFontId = themeOverride?.fontId ?? fontId;
 
   // Resolve dynamic theme and fonts
-  const theme = getThemeColors(themeId, themeMode);
-  const fonts = getFontTheme(fontId);
+  const theme = getThemeColors(resolvedThemeId, themeMode);
+  const fonts = getFontTheme(resolvedFontId);
   const tokens = getContextualTokens(theme);
 
   /**
@@ -75,7 +77,7 @@ export function useTheme() {
   return {
     theme,
     themeMode,
-    themeId,
+    themeId: resolvedThemeId,
     fonts,
     tokens,
     onContrast,

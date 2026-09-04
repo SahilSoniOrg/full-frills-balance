@@ -14,17 +14,30 @@ import { AppReadyContext, AppReadyProvider } from '@/src/contexts/app-shell/AppR
 import type { AppReadyValue } from '@/src/contexts/app-shell/AppReadyProvider';
 import { AppRestartContext, AppRestartProvider } from '@/src/contexts/app-shell/AppRestartProvider';
 import type { AppRestartValue } from '@/src/contexts/app-shell/AppRestartProvider';
-import { ThemeMode } from '@/src/constants/design-tokens';
-import React, { createContext, useContext } from 'react';
+import { FontId, ThemeId, ThemeMode } from '@/src/constants/design-tokens';
+import React, { createContext, useContext, useMemo } from 'react';
 
 export type AppShellValue = AppReadyValue & AppLockValue & AppRestartValue & AppOnboardingValue;
 
-const ThemeOverrideContext = createContext<ThemeMode | null>(null);
+export type ThemeOverrideValue = {
+  mode?: ThemeMode;
+  themeId?: ThemeId;
+  fontId?: FontId;
+};
 
-export function ThemeOverride({ mode, children }: { mode?: ThemeMode; children: React.ReactNode }) {
-  return (
-    <ThemeOverrideContext.Provider value={mode ?? null}>{children}</ThemeOverrideContext.Provider>
+const ThemeOverrideContext = createContext<ThemeOverrideValue | null>(null);
+
+export function ThemeOverride({
+  mode,
+  themeId,
+  fontId,
+  children,
+}: ThemeOverrideValue & { children: React.ReactNode }) {
+  const value = useMemo<ThemeOverrideValue>(
+    () => ({ mode, themeId, fontId }),
+    [mode, themeId, fontId],
   );
+  return <ThemeOverrideContext.Provider value={value}>{children}</ThemeOverrideContext.Provider>;
 }
 
 export function useThemeOverride() {

@@ -1,6 +1,6 @@
-import { FontIds, ThemeIds } from '@/src/constants';
+import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants';
 import { AppearanceThemeStep } from './AppearanceThemeStep';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppearanceSetupOutput } from './setupTypes';
 
 export function AppearanceSetupSlice({
@@ -9,15 +9,22 @@ export function AppearanceSetupSlice({
   isCompleting,
   onContinue,
   onBack,
+  onPreviewChange,
 }: {
   readonly currencyCode: string;
   readonly initial?: AppearanceSetupOutput;
   readonly isCompleting: boolean;
   readonly onContinue: (output: AppearanceSetupOutput) => void;
   readonly onBack: () => void;
+  readonly onPreviewChange: (preview: { themeId: ThemeId; fontId: FontId }) => void;
 }) {
   const [themeId, setThemeId] = useState(initial?.themeId.value ?? ThemeIds.DEEP_SPACE);
   const [fontId, setFontId] = useState(initial?.fontId.value ?? FontIds.DEEP_SPACE);
+
+  useEffect(() => {
+    onPreviewChange({ themeId, fontId });
+  }, [fontId, onPreviewChange, themeId]);
+
   return (
     <AppearanceThemeStep
       currencyCode={currencyCode}

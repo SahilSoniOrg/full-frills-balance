@@ -1,6 +1,8 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
+import { FontId, ThemeId } from '@/src/constants';
+import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import {
   readSetupDraftSnapshot,
@@ -180,6 +182,10 @@ function SetupJourneyScreen({
   const [workplaceTargetStep, setWorkplaceTargetStep] = useState<
     'identity' | 'currency' | 'accounts' | 'categories' | undefined
   >();
+  const [appearancePreview, setAppearancePreview] = useState<{
+    themeId: ThemeId;
+    fontId: FontId;
+  }>();
 
   const goTo = (
     target: SetupSliceId,
@@ -285,6 +291,7 @@ function SetupJourneyScreen({
               getRestoreAppearancePrefill(draft)
             }
             isCompleting={busy}
+            onPreviewChange={setAppearancePreview}
             onContinue={output => void advance('appearance', output)}
             onBack={() => goTo(appearanceBackTarget)}
           />
@@ -308,45 +315,47 @@ function SetupJourneyScreen({
   };
 
   return (
-    <WorkplaceSetupLayout
-      testID="setup-screen"
-      currentStep={action.kind === 'present' ? action.progress.current : 1}
-      totalSteps={action.kind === 'present' ? action.progress.total : 1}
-      backAction={
-        !resolving && (slice === 'restore_source' || slice === 'restore_summary')
-          ? goBack
-          : undefined
-      }
-      backDisabled={busy}
-    >
-      {resolving && resolutionError ? (
-        <Box flex={1} padding="lg" justifyContent="center">
-          <Stack space="md">
-            <AppText variant="body" color="secondary">
-              {resolutionError}
-            </AppText>
-            <AppButton
-              variant="primary"
-              onPress={() => {
-                setResolutionError(undefined);
-                void settle();
-              }}
-            >
-              Retry
-            </AppButton>
-          </Stack>
-        </Box>
-      ) : resolving ? (
-        <LoadingView
-          loading
-          text={
-            bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
-          }
-        />
-      ) : (
-        renderSlice()
-      )}
-    </WorkplaceSetupLayout>
+    <ThemeOverride themeId={appearancePreview?.themeId} fontId={appearancePreview?.fontId}>
+      <WorkplaceSetupLayout
+        testID="setup-screen"
+        currentStep={action.kind === 'present' ? action.progress.current : 1}
+        totalSteps={action.kind === 'present' ? action.progress.total : 1}
+        backAction={
+          !resolving && (slice === 'restore_source' || slice === 'restore_summary')
+            ? goBack
+            : undefined
+        }
+        backDisabled={busy}
+      >
+        {resolving && resolutionError ? (
+          <Box flex={1} padding="lg" justifyContent="center">
+            <Stack space="md">
+              <AppText variant="body" color="secondary">
+                {resolutionError}
+              </AppText>
+              <AppButton
+                variant="primary"
+                onPress={() => {
+                  setResolutionError(undefined);
+                  void settle();
+                }}
+              >
+                Retry
+              </AppButton>
+            </Stack>
+          </Box>
+        ) : resolving ? (
+          <LoadingView
+            loading
+            text={
+              bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
+            }
+          />
+        ) : (
+          renderSlice()
+        )}
+      </WorkplaceSetupLayout>
+    </ThemeOverride>
   );
 }
 
