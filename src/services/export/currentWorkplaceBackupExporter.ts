@@ -43,12 +43,15 @@ export async function exportUpdateBackup(
   await preferences.loadPreferences();
   const workplaces = await database.collections.get<Workplace>('workplaces').query().fetch();
   const activeId = preferences.device.activeWorkplaceId;
-  const ids =
+  const fallbackId = activeId ?? workplaces[0]?.id;
+  const ids: readonly WorkplaceId[] =
     scope === 'all'
-      ? workplaces.map(workplace => workplace.id as WorkplaceId)
+      ? workplaces.map(workplace => workplace.id)
       : scope === 'selected'
         ? selectedWorkplaceIds
-        : ([activeId ?? workplaces[0]?.id].filter(Boolean) as WorkplaceId[]);
+        : fallbackId
+          ? [fallbackId]
+          : [];
   const base64Data = await exportWorkplacesToJSON(
     ids,
     scope === 'all' ? 'all' : 'selected',

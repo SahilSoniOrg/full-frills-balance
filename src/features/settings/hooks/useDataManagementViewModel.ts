@@ -92,9 +92,9 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     analytics.trackFeatureUsage('data_management', 'export_initiated');
     await new Promise(resolve => setTimeout(resolve, 200));
     try {
-      const ids =
+      const ids: WorkplaceId[] =
         backupScope === 'all'
-          ? workplaces.map(workplace => workplace.id as WorkplaceId)
+          ? workplaces.map(workplace => workplace.id)
           : backupScope === 'active'
             ? [workplaceId]
             : selectedWorkplaceIds.map(id => id as WorkplaceId);
