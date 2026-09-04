@@ -114,6 +114,8 @@ export interface FirstRunSetupDraft extends SetupDraftBase {
 export interface RestoreDraftState {
   readonly source?: RestoreSourceOutput;
   readonly handoff?: RestoreHandoff;
+  /** Durable publication results for every selected workplace, primary first. */
+  readonly handoffs?: readonly RestoreHandoff[];
   readonly summary?: RestoreSummaryOutput;
   readonly deviceCandidate?: Sourced<string>;
 }

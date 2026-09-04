@@ -8,4 +8,7 @@ export type E2eSeedProfile =
   | 'sms-ready'
   | 'sms-sync'
   | 'picker-ready'
-  | 'first-run-restore';
+  | 'first-run-restore'
+  | 'bulk-restore'
+  | 'bulk-restore-selection'
+  | 'settings-bulk-restore';

@@ -1,6 +1,6 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
-import { discardPublishedRestore } from '../setupFinishers';
+import { discardRestorePublication } from '../setupFinishers';
 import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from '../SetupDraftStore';
 import { getSetupRecipe } from '../setupRecipes';
 import {
@@ -15,7 +15,7 @@ jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: { toDashboard: jest.fn(), toSettings: jest.fn(), back: jest.fn() },
 }));
 jest.mock('../setupFinishers', () => ({
-  discardPublishedRestore: jest.fn(),
+  discardRestorePublication: jest.fn(),
   finishDeviceSetup: jest.fn(),
   finishSetup: jest.fn(),
 }));
@@ -59,7 +59,7 @@ function restoreDraft(handoff: boolean): RestoreSetupDraft {
 }
 
 describe('abandon restore', () => {
-  const discard = discardPublishedRestore as jest.Mock;
+  const discard = discardRestorePublication as jest.Mock;
   const clear = clearSetupDraft as jest.Mock;
 
   beforeEach(() => {

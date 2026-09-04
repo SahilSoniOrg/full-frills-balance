@@ -171,7 +171,8 @@ export async function pickAndPrepareRestore(
           progress === undefined ? undefined : (index + progress) / selectedEntries.length,
         ),
     });
-    rememberPreparedRestore(prepared);
+    const operationId = index === 0 ? undefined : (generator() as WorkplaceId);
+    rememberPreparedRestore(prepared, operationId);
     preparedSources.push({
       source: sourceRefFor(
         file,
@@ -179,7 +180,7 @@ export async function pickAndPrepareRestore(
         selectedEntries[index] ? selectedIndexes[index] : undefined,
       ),
       facts: prepared.facts,
-      ...(index === 0 ? {} : { operationId: generator() as WorkplaceId }),
+      ...(operationId ? { operationId } : {}),
     });
   }
   const [primary, ...batch] = preparedSources;
@@ -228,7 +229,7 @@ export async function loadPreparedRestores(draft: RestoreSetupDraft): Promise<Pr
     const plugin = importRegistry.detect(selectedContext);
     if (!plugin) throw new Error('Could not determine restore file format');
     const item = await prepareRestore(plugin, selectedContext);
-    rememberPreparedRestore(item);
+    rememberPreparedRestore(item, source.operationId);
     prepared.push(item);
   }
   return prepared;

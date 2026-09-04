@@ -219,7 +219,71 @@ describe('SetupCoordinator', () => {
     });
     expect(publishRestore).toHaveBeenCalledTimes(1);
     expect(coordinator.getDraft()).toMatchObject({
-      restore: { handoff: { workplaceId: 'published' } },
+      restore: {
+        handoff: { workplaceId: 'published' },
+        handoffs: [{ workplaceId: 'published' }],
+      },
+    });
+  });
+
+  it('persists every batch restore handoff after publication', async () => {
+    const store = memoryStore();
+    const secondOperationId = asWorkplaceId('operation-2');
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'settings_restore',
+      entryPolicy: 'optional',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source'],
+      restore: {
+        source: {
+          ...source,
+          batch: [
+            {
+              source: { ...source.source, workplaceIndex: 1 },
+              facts: { workplace: { name: 'Books 2' } },
+              operationId: secondOperationId,
+            },
+          ],
+        },
+      },
+    };
+    const secondary = {
+      operationId: secondOperationId,
+      workplaceId: secondOperationId,
+      fingerprint: 'abc',
+      facts: { workplace: { name: 'Books 2' } },
+      stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+      warnings: [],
+    };
+    const publishRestore = jest.fn().mockResolvedValue({
+      operationId,
+      workplaceId: asWorkplaceId('published'),
+      fingerprint: 'abc',
+      facts: { workplace: {} },
+      stats: { accounts: 1, journals: 2, transactions: 3, skippedTransactions: 0 },
+      warnings: [],
+      batch: [secondary],
+    });
+    const coordinator = createSetupCoordinator({
+      journeyId: 'settings_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+      resolution: {
+        getAutoOutput: sliceId => (sliceId === 'workplace' ? workplace : undefined),
+      },
+      effects: { publishRestore, commitDevice: mockCommitDevice },
+    });
+    await coordinator.runPendingEffect();
+    expect(coordinator.getDraft()).toMatchObject({
+      restore: {
+        handoff: { workplaceId: 'published' },
+        handoffs: [{ workplaceId: 'published' }, { workplaceId: secondOperationId }],
+      },
     });
   });
 

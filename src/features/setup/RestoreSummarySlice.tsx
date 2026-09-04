@@ -4,7 +4,7 @@ import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { loadRestoreSummary, type RestoreSummaryView } from './setupFinishers';
+import { loadRestoreSummaries, type RestoreSummaryView } from './setupFinishers';
 import type { RestoreSummaryActions } from './setupRecipes';
 import type { RestoreSetupDraft, RestoreSummaryIntent } from './setupTypes';
 
@@ -12,7 +12,7 @@ type Verification =
   | { readonly status: 'loading' }
   | { readonly status: 'missing' }
   | { readonly status: 'error' }
-  | { readonly status: 'ready'; readonly view: RestoreSummaryView };
+  | { readonly status: 'ready'; readonly views: readonly RestoreSummaryView[] };
 
 export function RestoreSummarySlice({
   draft,
@@ -33,9 +33,9 @@ export function RestoreSummarySlice({
     let cancelled = false;
     void (async () => {
       try {
-        const view = await loadRestoreSummary(draft);
+        const views = await loadRestoreSummaries(draft);
         if (cancelled) return;
-        setVerification(view ? { status: 'ready', view } : { status: 'missing' });
+        setVerification(views?.length ? { status: 'ready', views } : { status: 'missing' });
       } catch {
         if (!cancelled) setVerification({ status: 'error' });
       }
@@ -49,7 +49,8 @@ export function RestoreSummarySlice({
   const skippedItems = stats?.skippedItems ?? [];
   const warnings = draft.restore.handoff?.warnings ?? [];
   const verified = verification.status === 'ready';
-  const view = verification.status === 'ready' ? verification.view : undefined;
+  const views = verification.status === 'ready' ? verification.views : [];
+  const primaryLabel = views.length > 1 ? 'Choose a workplace' : actions.primary.label;
 
   return (
     <Box flex={1} padding="lg" testID="restore-summary-slice">
@@ -64,17 +65,31 @@ export function RestoreSummarySlice({
                 Restore is ready
               </AppText>
               <AppText variant="body" color="secondary" align="center" style={styles.completeText}>
-                {view?.name} was published and is ready for the final setup step.
+                {views.length === 1
+                  ? `${views[0]?.name} was published and is ready for the final setup step.`
+                  : `${views.length} workplaces were published and are ready for the final setup step.`}
               </AppText>
-              {view ? (
-                <View style={[styles.statsGrid, { borderColor: theme.border }]}>
-                  <RestoreStat label="Workplace" value={view.name} />
-                  <RestoreStat label="Currency" value={view.currency} />
-                  <RestoreStat label="Accounts" value={view.accounts} />
-                  <RestoreStat label="Categories" value={view.categories} />
-                  <RestoreStat label="Journals" value={view.journals} />
-                </View>
-              ) : null}
+              <Stack gap="sm">
+                {views.map((item, index) => (
+                  <View
+                    key={`${item.name}-${item.currency}-${index}`}
+                    style={[
+                      index > 0 && styles.workplaceDivider,
+                      index > 0 && { borderColor: theme.border },
+                    ]}
+                  >
+                    <AppText variant="subheading" weight="bold" style={styles.workplaceName}>
+                      {item.name}
+                    </AppText>
+                    <View style={[styles.statsGrid, { borderColor: theme.border }]}>
+                      <RestoreStat label="Currency" value={item.currency} />
+                      <RestoreStat label="Accounts" value={item.accounts} />
+                      <RestoreStat label="Categories" value={item.categories} />
+                      <RestoreStat label="Journals" value={item.journals} />
+                    </View>
+                  </View>
+                ))}
+              </Stack>
             </AppCard>
           ) : (
             <>
@@ -122,7 +137,7 @@ export function RestoreSummarySlice({
             loading={isCompleting}
             disabled={!verified}
           >
-            {actions.primary.label}
+            {primaryLabel}
           </AppButton>
           {actions.secondary ? (
             <AppButton
@@ -193,6 +208,11 @@ const styles = StyleSheet.create({
   },
   completeTitle: { marginBottom: Spacing.xs },
   completeText: { marginBottom: Spacing.md },
+  workplaceName: { marginBottom: Spacing.xs },
+  workplaceDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.sm,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

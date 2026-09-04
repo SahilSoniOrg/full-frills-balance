@@ -330,6 +330,9 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
     preferences.device.setActiveWorkplaceId(workplaceId);
     return workplaceId;
   }
+  if (profile === 'settings-bulk-restore') {
+    return seedOnboarded(profile);
+  }
 
   const workplaceId = await seedOnboarded(profile);
 

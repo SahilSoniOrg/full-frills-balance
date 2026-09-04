@@ -3,7 +3,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useDataMaintenanceActions';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
-import { useImport } from '@/src/hooks/use-import';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { analytics } from '@/src/services/analytics';
 import { sharingService } from '@/src/services/SharingService';
@@ -27,7 +26,6 @@ export interface DataManagementViewModel {
   isScopePickerVisible: boolean;
   setIsScopePickerVisible: (value: boolean) => void;
   isExporting: boolean;
-  isImporting: boolean;
   isMaintenanceMode: boolean;
   isCleaning: boolean;
   isResetting: boolean;
@@ -65,7 +63,6 @@ export function useDataManagementViewModel(): DataManagementViewModel {
   const { defaultShareFormat, setDefaultShareFormat } = useSharePrefs();
   const { exportWorkplacesToJSON, runIntegrityCheck, cleanupDatabase, resetApp } =
     useSettingsActions(workplaceId);
-  const { isImporting } = useImport();
   const maintenance = useDataMaintenanceActions({
     runIntegrityCheck,
     cleanupDatabase,
@@ -154,7 +151,6 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     isScopePickerVisible,
     setIsScopePickerVisible,
     isExporting,
-    isImporting,
     ...maintenance,
     isNamingExport,
     setIsNamingExport,

@@ -6,11 +6,15 @@ import { importRegistry } from '@/src/services/import';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { pickAndPrepareRestore } from './pickRestoreSource';
+import { pickAndPrepareRestore, rememberPreparedRestore } from './pickRestoreSource';
 import type { V2Backup } from './pickRestoreSource';
 import { V2RestoreSelectionSheet } from './V2RestoreSelectionSheet';
 import type { RestoreSourceOutput } from './setupTypes';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
+import { generator } from '@/src/data/database/idGenerator';
+import { prepareFirstRunRestoreFixture } from '@/src/testing/fixtures/firstRunRestoreBackup';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import type { PreparedRestore } from '@/src/services/import/restoreTypes';
 
 type WorkplaceEntry = NonNullable<V2Backup['workplaces']>[number];
 
@@ -29,6 +33,7 @@ export function RestoreSourceSlice({
   }>();
   const selectionResolver = useRef<((indexes: number[]) => void) | undefined>(undefined);
   const preparing = progressMessage !== undefined || isCompleting;
+  const isSettingsE2e = readE2eLaunchConfig()?.seedProfile === 'settings-bulk-restore';
 
   const selectV2Workplaces = useCallback((workplaces: WorkplaceEntry[]) => {
     return new Promise<number[]>(resolve => {
@@ -41,15 +46,39 @@ export function RestoreSourceSlice({
   }, []);
 
   useEffect(() => {
-    if (readE2eLaunchConfig()?.seedProfile !== 'bulk-restore-selection') return;
-    void selectV2Workplaces([
-      { workplace: { name: 'Personal', icon: 'briefcase', defaultCurrencyCode: 'USD' }, data: {} },
-      { workplace: { name: 'Freelance', icon: 'briefcase', defaultCurrencyCode: 'EUR' }, data: {} },
-      {
-        workplace: { name: 'Side project', icon: 'briefcase', defaultCurrencyCode: 'GBP' },
-        data: {},
-      },
-    ]);
+    const seedProfile = readE2eLaunchConfig()?.seedProfile;
+    if (seedProfile !== 'bulk-restore-selection' && seedProfile !== 'settings-bulk-restore') return;
+    const workplaces =
+      seedProfile === 'bulk-restore-selection'
+        ? [
+            {
+              workplace: { name: 'Personal', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+              data: {},
+            },
+            {
+              workplace: { name: 'Freelance', icon: 'briefcase', defaultCurrencyCode: 'EUR' },
+              data: {},
+            },
+            {
+              workplace: { name: 'Side project', icon: 'briefcase', defaultCurrencyCode: 'GBP' },
+              data: {},
+            },
+          ]
+        : [
+            {
+              workplace: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+              data: {},
+            },
+            {
+              workplace: {
+                name: 'Imported Books 2',
+                icon: 'briefcase',
+                defaultCurrencyCode: 'USD',
+              },
+              data: {},
+            },
+          ];
+    void selectV2Workplaces(workplaces);
   }, [selectV2Workplaces]);
 
   const onSelect = useCallback(
@@ -77,6 +106,55 @@ export function RestoreSourceSlice({
     },
     [onContinue, selectV2Workplaces],
   );
+
+  const completeSettingsE2eRestore = useCallback(
+    async (selectedIndexes: number[]) => {
+      setProgressMessage('Preparing restore source...');
+      try {
+        const preparedBase = await prepareFirstRunRestoreFixture();
+        const sources: RestoreSourceOutput[] = selectedIndexes.map((index, position) => {
+          const prepared = cloneSettingsFixture(preparedBase, position);
+          const operationId = position === 0 ? undefined : (generator() as WorkplaceId);
+          rememberPreparedRestore(prepared);
+          if (operationId) rememberPreparedRestore(prepared, operationId);
+          return {
+            source: {
+              uri: 'file:///e2e-settings-restore.json',
+              name: 'e2e-settings-restore.json',
+              fingerprint: prepared.fingerprint,
+            },
+            facts: {
+              ...prepared.facts,
+              workplace: {
+                ...prepared.facts.workplace,
+                name: index === 0 ? 'Imported Books' : 'Imported Books 2',
+              },
+            },
+            ...(operationId ? { operationId } : {}),
+          };
+        });
+        const [primary, ...batch] = sources;
+        if (!primary) throw new Error('Select at least one workplace to restore');
+        onContinue({ ...primary, ...(batch.length > 0 ? { batch } : {}) });
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not prepare the selected backup.',
+        );
+      } finally {
+        setProgressMessage(undefined);
+      }
+    },
+    [onContinue],
+  );
+
+  useEffect(() => {
+    if (!isSettingsE2e || !selection) return;
+    const timer = setTimeout(() => {
+      setSelection(undefined);
+      void completeSettingsE2eRestore(selection.selectedIndexes);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [completeSettingsE2eRestore, isSettingsE2e, selection]);
 
   return (
     <Box flex={1} testID="restore-source-slice">
@@ -119,6 +197,12 @@ export function RestoreSourceSlice({
             setSelection(undefined);
           }}
           onConfirm={() => {
+            if (isSettingsE2e) {
+              selectionResolver.current = undefined;
+              setSelection(undefined);
+              void completeSettingsE2eRestore(selection.selectedIndexes);
+              return;
+            }
             selectionResolver.current?.(selection.selectedIndexes);
             selectionResolver.current = undefined;
             setSelection(undefined);
@@ -127,6 +211,43 @@ export function RestoreSourceSlice({
       )}
     </Box>
   );
+}
+
+function cloneSettingsFixture(prepared: PreparedRestore, index: number): PreparedRestore {
+  const prefix = `settings-${index}-${generator()}`;
+  const accountIds = new Map<string, AccountId>(
+    prepared.canonicalData.accounts.map(account => [
+      account.id,
+      `${prefix}-${account.id}` as AccountId,
+    ]),
+  );
+  const journalIds = new Map<string, JournalId>(
+    prepared.canonicalData.journals.map(journal => [
+      journal.id,
+      `${prefix}-${journal.id}` as JournalId,
+    ]),
+  );
+  return {
+    ...prepared,
+    fingerprint: `${prepared.fingerprint}:${prefix}`,
+    canonicalData: {
+      ...prepared.canonicalData,
+      accounts: prepared.canonicalData.accounts.map(account => ({
+        ...account,
+        id: accountIds.get(account.id) ?? account.id,
+      })),
+      journals: prepared.canonicalData.journals.map(journal => ({
+        ...journal,
+        id: journalIds.get(journal.id) ?? journal.id,
+      })),
+      transactions: prepared.canonicalData.transactions.map(transaction => ({
+        ...transaction,
+        id: `${prefix}-${transaction.id}`,
+        accountId: accountIds.get(transaction.accountId) ?? transaction.accountId,
+        journalId: journalIds.get(transaction.journalId) ?? transaction.journalId,
+      })),
+    },
+  };
 }
 
 const styles = StyleSheet.create({

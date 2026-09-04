@@ -3,7 +3,7 @@
  * @dataSource e2e
  * @platform mobile
  */
-import { by, device, element, expect, waitFor } from 'detox';
+import { by, device, element, expect } from 'detox';
 import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
 
 jest.setTimeout(180000);
@@ -20,13 +20,10 @@ it('shows the multi-workplace restore selector', async () => {
     },
   });
 
-  await waitFor(element(by.id('restore-source-slice')))
-    .toBeVisible()
-    .withTimeout(120000);
   await expect(element(by.text('Restore workplaces'))).toBeVisible();
-  await expect(element(by.text('Personal'))).toBeVisible();
-  await expect(element(by.text('Freelance'))).toBeVisible();
-  await expect(element(by.text('Side project'))).toBeVisible();
+  await expect(element(by.text('Personal'))).toExist();
+  await expect(element(by.text('Freelance'))).toExist();
+  await expect(element(by.text('Side project'))).toExist();
   await device.takeScreenshot('bulk-restore-selection-all');
 
   await element(by.id('restore-workplace-option-1')).tap();

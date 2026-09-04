@@ -65,6 +65,8 @@ export interface RestoreHandoff {
   readonly stats: ImportStats;
   readonly facts: RestoreFacts;
   readonly warnings: readonly string[];
+  /** Additional handoffs produced by a multi-workplace restore. */
+  readonly batch?: readonly RestoreHandoff[];
 }
 
 /** Internal helper type for the parser seam; exported to keep tests and adapters honest. */

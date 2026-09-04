@@ -11,6 +11,7 @@ import {
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
+  RestoreSetupDraft,
   SetupDraft,
   WorkplaceSetupOutput,
 } from './setupTypes';
@@ -131,20 +132,39 @@ export type RestoreSummaryView = {
   readonly journals: number;
 };
 
+export async function loadRestoreSummaries(
+  draft: RestoreSetupDraft,
+): Promise<readonly RestoreSummaryView[] | undefined> {
+  const published = await publishedRestoreWorkplace(draft);
+  if (!published) return undefined;
+  const sources = [draft.restore.source, ...(draft.restore.source?.batch ?? [])].filter(Boolean);
+  const summaries: RestoreSummaryView[] = [];
+
+  for (const [index, source] of sources.entries()) {
+    const workplaceId = index === 0 ? published.workplace.id : source?.operationId;
+    if (!workplaceId) return undefined;
+    const workplace =
+      index === 0 ? published.workplace : await workplaceService.getWorkplace(workplaceId);
+    if (!workplace) return undefined;
+    const stats = await workplaceService.getPublishedBookStats(workplace.id);
+    summaries.push({
+      name: workplace.name,
+      icon: workplace.icon,
+      currency: workplace.defaultCurrencyCode,
+      accounts: stats.accounts,
+      categories: stats.categories,
+      journals: stats.journals,
+    });
+  }
+
+  return summaries;
+}
+
 export async function loadRestoreSummary(
   draft: SetupDraft,
 ): Promise<RestoreSummaryView | undefined> {
-  const published = await publishedRestoreWorkplace(draft);
-  if (!published) return undefined;
-  const stats = await workplaceService.getPublishedBookStats(published.workplace.id);
-  return {
-    name: published.workplace.name,
-    icon: published.workplace.icon,
-    currency: published.workplace.defaultCurrencyCode,
-    accounts: stats.accounts,
-    categories: stats.categories,
-    journals: stats.journals,
-  };
+  if (draft.kind !== 'restore') return undefined;
+  return (await loadRestoreSummaries(draft))?.[0];
 }
 
 /** Delete only this operation's inactive published Workplace, after the caller confirmed. */
@@ -163,6 +183,23 @@ export async function discardRestoredWorkplace(workplaceId: WorkplaceId): Promis
   if (workplace) await workplaceService.deleteWorkplace(workplaceId);
 }
 
+/** Delete every unpublished workplace produced by a restore, including a partial batch. */
+export async function discardRestorePublication(draft: RestoreSetupDraft): Promise<void> {
+  const published = await publishedRestoreWorkplace(draft);
+  if (published) {
+    await discardPublishedRestore(draft);
+  } else if (
+    draft.restore.source?.source.fingerprint &&
+    claimedRestoreFingerprint(draft.operationId) === draft.restore.source.source.fingerprint
+  ) {
+    // The publication effect may have failed before its handoff was persisted.
+    await discardRestoredWorkplace(draft.operationId);
+  }
+  for (const source of draft.restore.source?.batch ?? []) {
+    if (source.operationId) await discardRestoredWorkplace(source.operationId);
+  }
+}
+
 /** Terminal finisher used by the coordinator after Summary acceptance. */
 export async function finishSetup(
   draft: SetupDraft,
@@ -171,6 +208,18 @@ export async function finishSetup(
   if (draft.kind === 'restore') {
     const published = await publishedRestoreWorkplace(draft);
     if (!published) throw new Error('Restore publication is incomplete');
+    const batchSources = draft.restore.source?.batch ?? [];
+    const persistedHandoffs = draft.restore.handoffs;
+    if (batchSources.length > 0) {
+      if (!persistedHandoffs || persistedHandoffs.length !== batchSources.length + 1) {
+        throw new Error('Bulk restore handoffs are incomplete');
+      }
+      for (const source of batchSources) {
+        if (!source.operationId || !(await workplaceService.getWorkplace(source.operationId))) {
+          throw new Error('Bulk restore workplace is no longer available');
+        }
+      }
+    }
     const { workplace } = published;
     if (draft.workplace) {
       const name = draft.workplace.name.value.trim();

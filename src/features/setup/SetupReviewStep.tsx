@@ -2,6 +2,7 @@ import { AppButton, AppCard, AppIcon, AppText, IconName } from '@/src/components
 import { AppConfig, FontId, FontIds, Size, Spacing, ThemeId, ThemeIds } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import type { RestoreSummaryView } from './setupFinishers';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface SetupReviewStepProps {
@@ -26,6 +27,7 @@ interface SetupReviewStepProps {
   showAppearance?: boolean;
   showProfile?: boolean;
   workplaceEditable?: boolean;
+  importedWorkplaces?: readonly RestoreSummaryView[];
 }
 
 const THEME_LABELS: Record<ThemeId, string> = {
@@ -148,6 +150,7 @@ export function SetupReviewStep({
   showAppearance = true,
   showProfile = true,
   workplaceEditable,
+  importedWorkplaces = [],
 }: SetupReviewStepProps) {
   const strings = AppConfig.strings.onboarding.review;
   const { theme } = useTheme();
@@ -229,6 +232,41 @@ export function SetupReviewStep({
             />
           )}
         </AppCard>
+        {importedWorkplaces.length > 1 && (
+          <AppCard variant="outline" paddingSize="md" style={styles.importedWorkplaces}>
+            <AppText variant="caption" color="secondary">
+              Imported workplaces
+            </AppText>
+            <Stack space="sm">
+              {importedWorkplaces.map((item, index) => (
+                <Inline
+                  key={`${item.name}-${item.currency}-${index}`}
+                  align="center"
+                  justify="space-between"
+                  space="md"
+                  style={
+                    index > 0
+                      ? [styles.importedWorkplace, { borderTopColor: theme.border }]
+                      : undefined
+                  }
+                >
+                  <Stack space="xs" flex={1}>
+                    <AppText weight="semibold" numberOfLines={1}>
+                      {item.name}
+                    </AppText>
+                    <AppText variant="caption" color="secondary">
+                      {item.accounts} accounts · {item.categories} categories · {item.journals}{' '}
+                      journals
+                    </AppText>
+                  </Stack>
+                  <AppText variant="caption" weight="semibold" color="success">
+                    {item.currency}
+                  </AppText>
+                </Inline>
+              ))}
+            </Stack>
+          </AppCard>
+        )}
       </ScrollView>
 
       <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
@@ -259,6 +297,13 @@ const styles = StyleSheet.create({
   },
   centered: {
     textAlign: 'center',
+  },
+  importedWorkplaces: {
+    marginTop: Spacing.md,
+  },
+  importedWorkplace: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.sm,
   },
   readyText: {
     flex: 1,

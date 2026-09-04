@@ -2,6 +2,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { publishRestore } from '@/src/services/import/publishRestore';
 import { generator } from '@/src/data/database/idGenerator';
 import { preferences } from '@/src/services/preferences';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   createSetupCoordinator,
   createSetupDraft,
@@ -9,12 +10,7 @@ import {
 } from './SetupCoordinator';
 import { loadPreparedRestores } from './pickRestoreSource';
 import { getRestoreAutoOutput } from './restoreAutoOutput';
-import {
-  discardPublishedRestore,
-  discardRestoredWorkplace,
-  finishDeviceSetup,
-  finishSetup,
-} from './setupFinishers';
+import { discardRestorePublication, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
@@ -66,40 +62,50 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
         const preparedRestores = await loadPreparedRestores(restoreDraft);
         const workplace = restoreDraft.workplace;
         if (!workplace) throw new Error('Workplace corrections are missing');
-        const primary = await publishRestore(preparedRestores[0], {
-          operationId: restoreDraft.operationId,
-          corrections: {
-            name: workplace.name.value,
-            icon: workplace.icon.value,
-            defaultCurrencyCode: workplace.baseCurrency.value,
-          },
-        });
         const sources = restoreDraft.restore.source?.batch ?? [];
-        for (let index = 0; index < sources.length; index += 1) {
-          const source = sources[index];
-          const prepared = preparedRestores[index + 1];
-          if (!source.operationId || !prepared) throw new Error('Bulk restore state is incomplete');
-          const imported = source.facts.workplace;
-          if (!imported.name || !imported.icon || !imported.defaultCurrencyCode) {
-            throw new Error('Bulk restore workplace metadata is incomplete');
-          }
-          await publishRestore(prepared, {
-            operationId: source.operationId,
+        try {
+          const primary = await publishRestore(preparedRestores[0], {
+            operationId: restoreDraft.operationId,
             corrections: {
-              name: imported.name,
-              icon: imported.icon,
-              defaultCurrencyCode: imported.defaultCurrencyCode,
+              name: workplace.name.value,
+              icon: workplace.icon.value,
+              defaultCurrencyCode: workplace.baseCurrency.value,
             },
           });
+          const batchHandoffs = [];
+          for (let index = 0; index < sources.length; index += 1) {
+            const source = sources[index];
+            const prepared = preparedRestores[index + 1];
+            if (!source.operationId || !prepared)
+              throw new Error('Bulk restore state is incomplete');
+            const imported = source.facts.workplace;
+            if (!imported.name || !imported.icon || !imported.defaultCurrencyCode) {
+              throw new Error('Bulk restore workplace metadata is incomplete');
+            }
+            const handoff = await publishRestore(prepared, {
+              operationId: source.operationId,
+              corrections: {
+                name: imported.name,
+                icon: imported.icon,
+                defaultCurrencyCode: imported.defaultCurrencyCode,
+              },
+            });
+            if (!(await workplaceService.getWorkplace(source.operationId))) {
+              throw new Error(`Restored workplace was not saved: ${imported.name}`);
+            }
+            batchHandoffs.push(handoff);
+          }
+          return batchHandoffs.length > 0 ? { ...primary, batch: batchHandoffs } : primary;
+        } catch (error) {
+          await discardRestorePublication(restoreDraft).catch(() => undefined);
+          throw error;
         }
-        return primary;
       },
       discardRestorePublication: async restoreDraft => {
-        await discardPublishedRestore(restoreDraft);
+        await discardRestorePublication(restoreDraft);
         restorePublicationClaims.release(restoreDraft.operationId);
         for (const source of restoreDraft.restore.source?.batch ?? []) {
           if (!source.operationId) continue;
-          await discardRestoredWorkplace(source.operationId);
           restorePublicationClaims.release(source.operationId);
         }
       },
@@ -172,7 +178,7 @@ export async function abandonRestoreJourney(
   recipe: ReturnType<typeof getSetupRecipe>,
   onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
 ): Promise<void> {
-  await discardPublishedRestore(draft);
+  if (draft.kind === 'restore') await discardRestorePublication(draft);
   clearSetupDraft();
   const candidateName = draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined;
   applySetupOutcome({ kind: 'journey_discarded' }, recipe, onSwitchJourney, candidateName);

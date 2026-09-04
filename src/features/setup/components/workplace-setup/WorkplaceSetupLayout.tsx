@@ -21,7 +21,7 @@ export function WorkplaceSetupLayout({
   totalSteps,
   children,
   edges = ['top', 'bottom'],
-  keyboardAvoiding = true,
+  keyboardAvoiding = false,
   backAction,
   backDisabled = false,
   testID,

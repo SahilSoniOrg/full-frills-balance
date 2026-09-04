@@ -16,6 +16,7 @@ import type {
   DeviceSetupOutput,
   FirstRunSetupDraft,
   RestoreDraftState,
+  RestoreHandoff,
   RestoreSetupDraft,
   RestoreSourceOutput,
   RestoreSourceRef,
@@ -354,7 +355,7 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     !isRestoreJourneyId(value.journeyId) ||
     (value.entryPolicy !== 'blocking' && value.entryPolicy !== 'optional') ||
     !isRecord(value.restore) ||
-    !hasOnlyKeys(value.restore, ['source', 'handoff', 'summary', 'deviceCandidate'])
+    !hasOnlyKeys(value.restore, ['source', 'handoff', 'handoffs', 'summary', 'deviceCandidate'])
   ) {
     return undefined;
   }
@@ -364,6 +365,18 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     value.restore.handoff === undefined
       ? undefined
       : parseRestoreHandoff(value.restore.handoff, base.operationId);
+  const rawHandoffs = value.restore.handoffs;
+  const handoffs =
+    rawHandoffs === undefined
+      ? undefined
+      : Array.isArray(rawHandoffs)
+        ? rawHandoffs
+            .map(item => {
+              if (!isRecord(item) || !isWorkplaceId(item.operationId)) return undefined;
+              return parseRestoreHandoff(item, asWorkplaceId(item.operationId));
+            })
+            .filter((item): item is RestoreHandoff => item !== undefined)
+        : undefined;
   const restoreSummary =
     value.restore.summary === undefined ? undefined : parseRestoreSummary(value.restore.summary);
   const deviceCandidate =
@@ -377,6 +390,8 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   if (
     (value.restore.source !== undefined && !source) ||
     (value.restore.handoff !== undefined && !handoff) ||
+    (rawHandoffs !== undefined &&
+      (!Array.isArray(rawHandoffs) || !handoffs || handoffs.length !== rawHandoffs.length)) ||
     (value.restore.summary !== undefined && !restoreSummary) ||
     (value.restore.deviceCandidate !== undefined && !deviceCandidate) ||
     (value.device !== undefined && !device) ||
@@ -399,6 +414,7 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   const restore: RestoreDraftState = {
     ...(source ? { source } : {}),
     ...(handoff ? { handoff } : {}),
+    ...(handoffs ? { handoffs } : {}),
     ...(restoreSummary ? { summary: restoreSummary } : {}),
     ...(deviceCandidate ? { deviceCandidate } : {}),
   };
@@ -519,6 +535,9 @@ export class SetupDraftStore {
     const draft = this.load();
     if (draft?.kind === 'restore') {
       restorePublicationClaims.release(draft.operationId);
+      for (const source of draft.restore.source?.batch ?? []) {
+        if (source.operationId) restorePublicationClaims.release(source.operationId);
+      }
       forgetPreparedRestore(draft.restore.source?.source.fingerprint);
     }
     storage.remove(SETUP_DRAFT_KEY);

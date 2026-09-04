@@ -1,7 +1,7 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
-import { FontId, ThemeId } from '@/src/constants';
+import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import {
@@ -18,7 +18,11 @@ import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
 import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
-import { getRestoreAppearancePrefill, getRestoreWorkplacePrefill } from './restoreAutoOutput';
+import {
+  getRestoreAppearancePrefill,
+  getRestoreAutoOutput,
+  getRestoreWorkplacePrefill,
+} from './restoreAutoOutput';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
 import {
@@ -33,9 +37,11 @@ import {
   type RestoreSummaryIntent,
   type SetupJourneyId,
   type SetupSliceId,
+  type WorkplaceCheckpoint,
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
+import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from './visibleSetupProgress';
 
 function restoreSwitchForJourney(
   journeyId: SetupJourneyId,
@@ -70,7 +76,7 @@ function SetupJourneyScreen({
   const coordinator = useMemo(() => createJourneyCoordinator(journeyId), [journeyId]);
 
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
-  const [busy, setBusy] = useState(false);
+  const [submittingSlice, setSubmittingSlice] = useState<SetupSliceId>();
   const [resolutionError, setResolutionError] = useState<string>();
   const draft = coordinator.getDraft();
   const action = coordinator.next();
@@ -111,7 +117,7 @@ function SetupJourneyScreen({
     sliceId: K,
     output: SetupSliceOutputById[K],
   ): Promise<void> => {
-    setBusy(true);
+    setSubmittingSlice(sliceId);
     setResolutionError(undefined);
     try {
       await coordinator.accept(sliceId, output);
@@ -121,12 +127,12 @@ function SetupJourneyScreen({
       setResolutionError(message);
       toast.error(message);
     } finally {
-      setBusy(false);
+      setSubmittingSlice(undefined);
     }
   };
 
   const finish = async () => {
-    setBusy(true);
+    setSubmittingSlice('summary');
     setResolutionError(undefined);
     try {
       if (coordinator.next().kind !== 'finish') {
@@ -136,18 +142,18 @@ function SetupJourneyScreen({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not finish Setup.');
     } finally {
-      setBusy(false);
+      setSubmittingSlice(undefined);
     }
   };
 
   const discardRestore = async () => {
-    setBusy(true);
+    setSubmittingSlice('restore_summary');
     try {
       await abandonRestoreJourney(coordinator.getDraft(), recipe, onSwitchJourney);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not discard restore.');
     } finally {
-      setBusy(false);
+      setSubmittingSlice(undefined);
     }
   };
 
@@ -168,30 +174,34 @@ function SetupJourneyScreen({
       confirmAbandonRestore();
       return;
     }
-    setBusy(true);
+    setSubmittingSlice('restore_summary');
     try {
       await coordinator.accept('restore_summary', { intent });
       await settle();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not continue restore.');
     } finally {
-      setBusy(false);
+      setSubmittingSlice(undefined);
     }
   };
 
-  const [workplaceTargetStep, setWorkplaceTargetStep] = useState<
-    'identity' | 'currency' | 'accounts' | 'categories' | undefined
-  >();
+  const [workplaceTargetStep, setWorkplaceTargetStep] = useState<WorkplaceCheckpoint>();
+  const [workplaceStep, setWorkplaceStep] = useState<WorkplaceCheckpoint>(() =>
+    resolveWorkplaceStartCheckpoint({
+      identityMode: recipe.workplaceIdentity,
+      books: isRestoreJourneyId(journeyId) ? 'imported' : 'starters',
+      initial:
+        coordinator.getDraft().workplace ?? getRestoreWorkplacePrefill(coordinator.getDraft()),
+    }),
+  );
   const [appearancePreview, setAppearancePreview] = useState<{
     themeId: ThemeId;
     fontId: FontId;
   }>();
 
-  const goTo = (
-    target: SetupSliceId,
-    targetStep?: 'identity' | 'currency' | 'accounts' | 'categories',
-  ) => {
+  const goTo = (target: SetupSliceId, targetStep?: WorkplaceCheckpoint) => {
     setWorkplaceTargetStep(targetStep);
+    if (targetStep) setWorkplaceStep(targetStep);
     if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
   };
 
@@ -219,6 +229,28 @@ function SetupJourneyScreen({
     (draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined) ||
     candidateName;
   const workplaceInitial = draft.workplace ?? getRestoreWorkplacePrefill(draft);
+  const workplaceCheckpoint =
+    slice === 'workplace' ? (workplaceTargetStep ?? workplaceStep) : undefined;
+  const displayProgress =
+    action.kind === 'present'
+      ? visibleSetupProgress({
+          recipe,
+          draft,
+          definitions: { getAutoOutput: getRestoreAutoOutput },
+          currentSlice: action.sliceId,
+          workplaceCheckpoint,
+        })
+      : { current: 1, total: 1, completed: 0 };
+  const appearanceInitial =
+    ('appearance' in draft ? draft.appearance : undefined) ?? getRestoreAppearancePrefill(draft);
+  const appearanceOverride =
+    appearancePreview ??
+    ((slice === 'appearance' || slice === 'summary') && recipeContainsSlice(recipe, 'appearance')
+      ? {
+          themeId: appearanceInitial?.themeId.value ?? ThemeIds.DEEP_SPACE,
+          fontId: appearanceInitial?.fontId.value ?? FontIds.DEEP_SPACE,
+        }
+      : undefined);
   const renderSlice = () => {
     if (!slice || resolving) return null;
     switch (slice) {
@@ -226,7 +258,7 @@ function SetupJourneyScreen({
         return (
           <DeviceSetupSlice
             initialName={displayName}
-            isCompleting={busy}
+            isCompleting={submittingSlice === 'device'}
             onContinue={output => void advance('device', output)}
             onRestore={name => {
               startFirstRunRestoreFromDeviceName(name);
@@ -237,7 +269,7 @@ function SetupJourneyScreen({
       case 'restore_source':
         return (
           <RestoreSourceSlice
-            isCompleting={busy}
+            isCompleting={submittingSlice === 'restore_source'}
             onContinue={output => void advance('restore_source', output)}
           />
         );
@@ -250,7 +282,8 @@ function SetupJourneyScreen({
             initialStep={workplaceTargetStep}
             books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}
             identityMode={recipe.workplaceIdentity}
-            isCompleting={busy}
+            isCompleting={submittingSlice === 'workplace'}
+            onCheckpointChange={setWorkplaceStep}
             onContinue={output => {
               setWorkplaceTargetStep(undefined);
               void advance('workplace', output);
@@ -272,7 +305,7 @@ function SetupJourneyScreen({
           <RestoreSummarySlice
             draft={draft}
             actions={recipe.restoreSummary}
-            isCompleting={busy}
+            isCompleting={submittingSlice === 'restore_summary'}
             onIntent={intent => void acceptRestoreIntent(intent)}
           />
         ) : null;
@@ -286,11 +319,8 @@ function SetupJourneyScreen({
         return (
           <AppearanceSetupSlice
             currencyCode={draft.workplace?.baseCurrency.value ?? ''}
-            initial={
-              ('appearance' in draft ? draft.appearance : undefined) ??
-              getRestoreAppearancePrefill(draft)
-            }
-            isCompleting={busy}
+            initial={appearanceInitial}
+            isCompleting={submittingSlice === 'appearance'}
             onPreviewChange={setAppearancePreview}
             onContinue={output => void advance('appearance', output)}
             onBack={() => goTo(appearanceBackTarget)}
@@ -301,7 +331,7 @@ function SetupJourneyScreen({
         return (
           <SetupSummarySlice
             draft={coordinator.getDraft()}
-            isCompleting={busy}
+            isCompleting={submittingSlice === 'summary'}
             onEdit={goTo}
             onConfirm={() => void finish()}
             onBack={() =>
@@ -315,17 +345,20 @@ function SetupJourneyScreen({
   };
 
   return (
-    <ThemeOverride themeId={appearancePreview?.themeId} fontId={appearancePreview?.fontId}>
+    <ThemeOverride themeId={appearanceOverride?.themeId} fontId={appearanceOverride?.fontId}>
       <WorkplaceSetupLayout
         testID="setup-screen"
-        currentStep={action.kind === 'present' ? action.progress.current : 1}
-        totalSteps={action.kind === 'present' ? action.progress.total : 1}
+        currentStep={displayProgress.current}
+        totalSteps={displayProgress.total}
+        keyboardAvoiding={
+          slice === 'device' || (slice === 'workplace' && workplaceCheckpoint === 'identity')
+        }
         backAction={
           !resolving && (slice === 'restore_source' || slice === 'restore_summary')
             ? goBack
             : undefined
         }
-        backDisabled={busy}
+        backDisabled={submittingSlice !== undefined}
       >
         {resolving && resolutionError ? (
           <Box flex={1} padding="lg" justifyContent="center">
@@ -396,6 +429,7 @@ function SetupScreen() {
   const journeyId = resolveSetupJourney({ mode, journey }, journeyOverride);
   return (
     <SetupJourneyScreen
+      key={journeyId}
       journeyId={journeyId}
       candidateName={candidateName}
       onSwitchJourney={(nextJourney, name) => {

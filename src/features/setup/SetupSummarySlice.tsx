@@ -4,14 +4,14 @@ import { Box, Stack } from '@/src/design-system';
 import { SetupReviewStep } from './SetupReviewStep';
 import { View } from 'react-native';
 import { useEffect, useState } from 'react';
-import { loadRestoreSummary, type RestoreSummaryView } from './setupFinishers';
+import { loadRestoreSummaries, type RestoreSummaryView } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import type { SetupDraft, SetupSliceId } from './setupTypes';
 
 type ImportedBooks =
   | { readonly status: 'loading' }
   | { readonly status: 'failed' }
-  | { readonly status: 'ready'; readonly view: RestoreSummaryView };
+  | { readonly status: 'ready'; readonly views: readonly RestoreSummaryView[] };
 
 export function SetupSummarySlice({
   draft,
@@ -39,10 +39,10 @@ export function SetupSummarySlice({
   useEffect(() => {
     if (!imported) return;
     let cancelled = false;
-    void loadRestoreSummary(draft).then(
-      view => {
+    void loadRestoreSummaries(draft).then(
+      views => {
         if (cancelled) return;
-        setImportedBooks(view ? { status: 'ready', view } : { status: 'failed' });
+        setImportedBooks(views?.length ? { status: 'ready', views } : { status: 'failed' });
       },
       () => {
         if (!cancelled) setImportedBooks({ status: 'failed' });
@@ -88,17 +88,17 @@ export function SetupSummarySlice({
 
   const accounts = imported
     ? importedBooks.status === 'ready'
-      ? importedBooks.view.accounts
+      ? (importedBooks.views[0]?.accounts ?? 0)
       : 0
     : (workplace?.selectedAccounts.length ?? 0);
   const categories = imported
     ? importedBooks.status === 'ready'
-      ? importedBooks.view.categories
+      ? (importedBooks.views[0]?.categories ?? 0)
       : 0
     : (workplace?.selectedCategories.length ?? 0);
   const selectedCurrency =
     imported && importedBooks.status === 'ready'
-      ? importedBooks.view.currency
+      ? (importedBooks.views[0]?.currency ?? '')
       : (workplace?.baseCurrency.value ?? '');
 
   return (
@@ -122,6 +122,7 @@ export function SetupSummarySlice({
         onBack={onBack}
         isCompleting={isCompleting}
         isImportedWorkplace={imported}
+        importedWorkplaces={imported && importedBooks.status === 'ready' ? importedBooks.views : []}
         workplaceEditable={!imported}
         showAppearance={'appearance' in draft}
         showProfile={recipeContainsSlice(getSetupRecipe(draft.journeyId), 'device')}

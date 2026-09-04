@@ -21,7 +21,6 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
   const insets = useSafeAreaInsets();
   const {
     isExporting,
-    isImporting,
     onExport,
     onConfirmExport,
     onImport,
@@ -68,11 +67,11 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
         <SettingsFocusTarget targetId="data-import">
           <SettingsMenuItem
             searchId="data-import"
+            testID="data-import"
             leftIcon="refresh"
             title={AppConfig.strings.settings.data.importBtn}
             description={AppConfig.strings.settings.data.importDesc}
             onPress={onImport}
-            loading={isImporting}
           />
         </SettingsFocusTarget>
       </SettingsMenu>

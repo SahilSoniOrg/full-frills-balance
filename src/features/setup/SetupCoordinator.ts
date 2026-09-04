@@ -304,7 +304,14 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       throw new Error('Restore publication effect is not configured');
     }
     const handoff = await options.effects.publishRestore(draft);
-    persist({ ...draft, restore: { ...draft.restore, handoff } });
+    persist({
+      ...draft,
+      restore: {
+        ...draft.restore,
+        handoff,
+        ...(handoff.batch ? { handoffs: [handoff, ...handoff.batch] } : { handoffs: [handoff] }),
+      },
+    });
     return next();
   };
 

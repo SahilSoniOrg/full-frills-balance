@@ -5,22 +5,18 @@ import { WorkplaceCategorySelectionStep } from '@/src/features/setup/components/
 import { WorkplaceCurrencyStep } from '@/src/features/setup/components/workplace-setup/WorkplaceCurrencyStep';
 import { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 import { AppButton } from '@/src/components/core';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 import { generateWorkplaceName } from '@/src/utils/workplaceName';
 import type {
   StarterAccountInput,
   StarterCategoryInput,
+  WorkplaceCheckpoint,
   WorkplaceSetupOutput,
   WorkplaceSetupPrefill,
 } from './setupTypes';
-
-function importedStartStep(initial: WorkplaceSetupPrefill | undefined): 'identity' | 'currency' {
-  const hasIdentity = Boolean(initial?.name?.value.trim()) && initial?.icon?.source === 'imported';
-  const missingCurrency = initial?.baseCurrency?.source !== 'imported';
-  return hasIdentity && missingCurrency ? 'currency' : 'identity';
-}
+import { resolveWorkplaceStartCheckpoint } from './visibleSetupProgress';
 
 function keepImported<T>(initial: { value: T; source: string } | undefined, value: T) {
   return initial?.source === 'imported' && initial.value === value ? 'imported' : 'user_entered';
@@ -53,22 +49,22 @@ export function WorkplaceSetupSlice({
   onContinue,
   onBack,
   onRestore,
+  onCheckpointChange,
 }: {
   readonly initial?: WorkplaceSetupOutput | WorkplaceSetupPrefill;
   /** The journey recipe decides whether identity is seeded or editable. */
   readonly identityMode?: 'automatic' | 'editable';
   readonly books?: 'starters' | 'imported';
-  readonly initialStep?: 'identity' | 'currency' | 'accounts' | 'categories';
+  readonly initialStep?: WorkplaceCheckpoint;
   readonly isCompleting: boolean;
   readonly onContinue: (output: WorkplaceSetupOutput) => void;
   readonly onBack: () => void;
   readonly onRestore?: () => void;
+  readonly onCheckpointChange?: (step: WorkplaceCheckpoint) => void;
 }) {
-  const [step, setStep] = useState<'identity' | 'currency' | 'accounts' | 'categories'>(() => {
-    if (initialStep) return initialStep;
-    if (identityMode === 'automatic') return 'currency';
-    return books === 'imported' ? importedStartStep(initial) : 'identity';
-  });
+  const [step, setStep] = useState<WorkplaceCheckpoint>(() =>
+    resolveWorkplaceStartCheckpoint({ identityMode, books, initial, initialStep }),
+  );
   const [defaultWorkplaceName, setDefaultWorkplaceName] = useState(() => generateWorkplaceName());
   const [workplaceName, setWorkplaceName] = useState(initial?.name?.value ?? '');
   const [hasEditedWorkplaceName, setHasEditedWorkplaceName] = useState(false);
@@ -99,6 +95,9 @@ export function WorkplaceSetupSlice({
     );
   });
   const visibleStep = identityMode === 'automatic' && step === 'identity' ? 'currency' : step;
+  useLayoutEffect(() => {
+    onCheckpointChange?.(visibleStep);
+  }, [onCheckpointChange, visibleStep]);
 
   const derivedName = workplaceName || defaultWorkplaceName;
   const canGenerateName = !hasEditedWorkplaceName && !initial?.name?.value.trim();

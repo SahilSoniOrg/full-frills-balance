@@ -3,9 +3,11 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
 import {
   discardPublishedRestore,
+  discardRestorePublication,
   finishSetup,
   finishWorkplaceSetup,
   loadRestoreSummary,
+  loadRestoreSummaries,
 } from '../setupFinishers';
 import type { RestoreSetupDraft, WorkplaceSetupOutput } from '../setupTypes';
 
@@ -147,6 +149,44 @@ describe('restore finishers', () => {
     });
   });
 
+  it('loads every published workplace in a bulk restore summary', async () => {
+    const secondOperationId = asWorkplaceId('operation-2');
+    const draft = {
+      ...restoreDraft(),
+      restore: {
+        ...restoreDraft().restore,
+        source: {
+          ...restoreDraft().restore.source!,
+          batch: [
+            {
+              source: {
+                uri: 'file:///backup.json',
+                name: 'backup.json',
+                fingerprint: 'abc',
+                workplaceIndex: 1,
+              },
+              operationId: secondOperationId,
+              facts: { workplace: { name: 'Books 2' } },
+            },
+          ],
+        },
+      },
+    };
+    getWorkplace.mockImplementation(async (id: string) => ({
+      id,
+      name: id === operationId ? 'Books' : 'Books 2',
+      icon: 'briefcase',
+      defaultCurrencyCode: id === operationId ? 'USD' : 'EUR',
+    }));
+    getPublishedBookStats.mockResolvedValue({ accounts: 4, categories: 6, journals: 2 });
+
+    await expect(loadRestoreSummary(draft)).resolves.toMatchObject({ name: 'Books' });
+    await expect(loadRestoreSummaries(draft)).resolves.toMatchObject([
+      { name: 'Books', currency: 'USD' },
+      { name: 'Books 2', currency: 'EUR' },
+    ]);
+  });
+
   it('deletes only an operation-owned inactive Workplace', async () => {
     getWorkplace.mockResolvedValue({
       id: operationId,
@@ -161,6 +201,43 @@ describe('restore finishers', () => {
     (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = operationId;
     await discardPublishedRestore(restoreDraft());
     expect(deleteWorkplace).not.toHaveBeenCalled();
+  });
+
+  it('deletes every restore-created workplace, including a partial batch', async () => {
+    const secondOperationId = asWorkplaceId('operation-2');
+    getWorkplace.mockImplementation(async (id: string) => ({
+      id,
+      name: 'Books',
+      icon: 'briefcase',
+      defaultCurrencyCode: 'USD',
+    }));
+    const draft = {
+      ...restoreDraft(),
+      restore: {
+        ...restoreDraft().restore,
+        handoff: undefined,
+        source: {
+          ...restoreDraft().restore.source!,
+          batch: [
+            {
+              source: {
+                uri: 'file:///backup.json',
+                name: 'backup.json',
+                fingerprint: 'abc',
+                workplaceIndex: 1,
+              },
+              operationId: secondOperationId,
+              facts: { workplace: { name: 'Books 2' } },
+            },
+          ],
+        },
+      },
+    };
+
+    await discardRestorePublication(draft);
+
+    expect(deleteWorkplace).toHaveBeenCalledWith(operationId);
+    expect(deleteWorkplace).toHaveBeenCalledWith(secondOperationId);
   });
 
   it('fails closed when discard cannot verify the Workplace', async () => {

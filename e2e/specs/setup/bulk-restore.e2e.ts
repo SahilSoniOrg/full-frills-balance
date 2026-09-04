@@ -23,8 +23,11 @@ it('restores selected workplaces and returns to the workplace selector', async (
   await new Promise(resolve => setTimeout(resolve, 30000));
   await expect(element(by.id('restore-summary-slice'))).toExist();
   await expect(element(by.text('Restore is ready'))).toExist();
+  await expect(element(by.text('Imported Books'))).toExist();
+  await expect(element(by.text('Imported Books 2'))).toExist();
   await device.takeScreenshot('bulk-restore-ready');
   await element(by.id('restore-summary-continue')).tap();
+  await new Promise(resolve => setTimeout(resolve, 5000));
   await expect(element(by.id('onboarding-theme-continue-button'))).toExist();
   await element(by.id('onboarding-theme-continue-button')).tap();
   await expect(element(by.id('onboarding-summary-step'))).toExist();
@@ -35,4 +38,14 @@ it('restores selected workplaces and returns to the workplace selector', async (
   await expect(element(by.text('Imported Books'))).toExist();
   await expect(element(by.text('Imported Books 2'))).toExist();
   await device.takeScreenshot('bulk-restore-workplace-picker');
+
+  await device.terminateApp();
+  await device.launchApp({
+    newInstance: false,
+    launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
+  });
+  await new Promise(resolve => setTimeout(resolve, 15000));
+  await expect(element(by.id('workplace-picker-screen'))).toExist();
+  await expect(element(by.text('Imported Books'))).toExist();
+  await expect(element(by.text('Imported Books 2'))).toExist();
 });

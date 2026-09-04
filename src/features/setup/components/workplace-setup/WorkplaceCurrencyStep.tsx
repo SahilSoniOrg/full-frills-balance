@@ -3,6 +3,7 @@ import { AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, withOpacity } from '@/src/constants';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
+import { orderSetupCurrencies } from '@/src/features/setup/orderSetupCurrencies';
 import { useMemo, useState } from 'react';
 
 interface WorkplaceCurrencyStepProps {
@@ -23,34 +24,18 @@ export function WorkplaceCurrencyStep({
   const { theme } = useTheme();
   const { currencies } = useCurrencies();
   const [searchQuery, setSearchQuery] = useState('');
+  const [pinnedId] = useState(selectedCurrency);
 
   const currencyItems: SelectableItem[] = useMemo(() => {
     const uniqueCurrencies = Array.from(new Map(currencies.map(c => [c.code, c])).values());
-
-    let mappedItems = uniqueCurrencies.map(currency => ({
+    const mappedItems = uniqueCurrencies.map(currency => ({
       id: currency.code,
       name: currency.code,
       symbol: currency.symbol,
       subtitle: currency.name,
     }));
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      mappedItems = mappedItems.filter(
-        i =>
-          i.name.toLowerCase().includes(query) ||
-          (i.subtitle && i.subtitle.toLowerCase().includes(query)),
-      );
-    } else if (selectedCurrency) {
-      return [...mappedItems].sort((a, b) => {
-        if (a.id === selectedCurrency) return -1;
-        if (b.id === selectedCurrency) return 1;
-        return 0;
-      });
-    }
-
-    return mappedItems;
-  }, [currencies, searchQuery, selectedCurrency]);
+    return orderSetupCurrencies(mappedItems, pinnedId, searchQuery);
+  }, [currencies, pinnedId, searchQuery]);
 
   return (
     <SelectableGrid

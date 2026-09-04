@@ -3,14 +3,14 @@ import { asWorkplaceId } from '@/src/types/ids';
 import { ThemeIds, FontIds } from '@/src/constants';
 import type { ImportStats } from '@/src/services/import/types';
 import { SetupSummarySlice } from '../SetupSummarySlice';
-import { loadRestoreSummary } from '../setupFinishers';
+import { loadRestoreSummaries } from '../setupFinishers';
 import type { RestoreSetupDraft } from '../setupTypes';
 
 jest.mock('../setupFinishers', () => ({
-  loadRestoreSummary: jest.fn(),
+  loadRestoreSummaries: jest.fn(),
 }));
 
-const load = loadRestoreSummary as jest.MockedFunction<typeof loadRestoreSummary>;
+const load = loadRestoreSummaries as jest.MockedFunction<typeof loadRestoreSummaries>;
 
 const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
   schemaVersion: 1,
@@ -55,14 +55,16 @@ describe('SetupSummarySlice', () => {
   });
 
   it('uses verified published counts for the restore summary', async () => {
-    load.mockResolvedValue({
-      name: 'Books',
-      icon: 'briefcase',
-      currency: 'USD',
-      accounts: 4,
-      categories: 6,
-      journals: 2,
-    });
+    load.mockResolvedValue([
+      {
+        name: 'Books',
+        icon: 'briefcase',
+        currency: 'USD',
+        accounts: 4,
+        categories: 6,
+        journals: 2,
+      },
+    ]);
     const onConfirm = jest.fn();
     render(
       <SetupSummarySlice
@@ -89,14 +91,16 @@ describe('SetupSummarySlice', () => {
   });
 
   it('reads published book stats when the handoff still lumped categories into accounts', async () => {
-    load.mockResolvedValue({
-      name: 'Books',
-      icon: 'briefcase',
-      currency: 'USD',
-      accounts: 4,
-      categories: 6,
-      journals: 2,
-    });
+    load.mockResolvedValue([
+      {
+        name: 'Books',
+        icon: 'briefcase',
+        currency: 'USD',
+        accounts: 4,
+        categories: 6,
+        journals: 2,
+      },
+    ]);
 
     render(
       <SetupSummarySlice

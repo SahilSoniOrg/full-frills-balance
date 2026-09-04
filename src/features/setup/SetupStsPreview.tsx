@@ -8,7 +8,7 @@ import { SAFE_TO_SPEND_PREVIEW, SafeToSpendPreviewFixture } from './fixtures/saf
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React from 'react';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 type SetupStsPreviewProps = {
   currencyCode: string;
@@ -175,7 +175,13 @@ function OnboardingProjectionChart({
 }) {
   const { theme } = useTheme();
   const formatSts = useStsMoneyFormat(false);
-  const [chartWidth, setChartWidth] = React.useState(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const estimatedWidth = Math.min(
+    Math.max(0, windowWidth - Spacing.lg * 2),
+    AppConfig.layout.maxContentWidth,
+  );
+  const [measuredWidth, setMeasuredWidth] = React.useState<number>();
+  const chartWidth = measuredWidth ?? estimatedWidth;
   const data = [...projection.history, ...projection.projection].map(point => ({
     x: point.timestamp,
     y: point.value,
@@ -193,7 +199,10 @@ function OnboardingProjectionChart({
   return (
     <View
       style={{ width: '100%' }}
-      onLayout={event => setChartWidth(event.nativeEvent.layout.width)}
+      onLayout={event => {
+        const width = event.nativeEvent.layout.width;
+        if (width > 0) setMeasuredWidth(current => (current === width ? current : width));
+      }}
     >
       <View
         style={{
@@ -225,28 +234,26 @@ function OnboardingProjectionChart({
           </AppText>
         </View>
       </View>
-      {chartWidth > 0 ? (
-        <LineChart
-          data={data}
-          width={chartWidth}
-          height={AppConfig.layout.safeToSpendChartHeight}
-          currencyCode={currencyCode}
-          color={chartColor}
-          xTicks={xTicks}
-          formatXTick={x => dayjs(x).format('MMM D')}
-          todayX={todayX()}
-          extraHorizontalLines={[
-            { value: 0, label: '0', color: theme.error, strokeDasharray: '2,2' },
-            {
-              value: safeToSpend,
-              label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatSts(safeToSpend, currencyCode)}`,
-              color: chartColor,
-              strokeDasharray: '4,4',
-            },
-          ]}
-          avoidPointVertical
-        />
-      ) : null}
+      <LineChart
+        data={data}
+        width={chartWidth > 0 ? chartWidth : undefined}
+        height={AppConfig.layout.safeToSpendChartHeight}
+        currencyCode={currencyCode}
+        color={chartColor}
+        xTicks={xTicks}
+        formatXTick={x => dayjs(x).format('MMM D')}
+        todayX={todayX()}
+        extraHorizontalLines={[
+          { value: 0, label: '0', color: theme.error, strokeDasharray: '2,2' },
+          {
+            value: safeToSpend,
+            label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatSts(safeToSpend, currencyCode)}`,
+            color: chartColor,
+            strokeDasharray: '4,4',
+          },
+        ]}
+        avoidPointVertical
+      />
     </View>
   );
 }

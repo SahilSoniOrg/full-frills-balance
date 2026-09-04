@@ -10,7 +10,8 @@ export type E2eSeedProfile =
   | 'picker-ready'
   | 'first-run-restore'
   | 'bulk-restore'
-  | 'bulk-restore-selection';
+  | 'bulk-restore-selection'
+  | 'settings-bulk-restore';
 
 export const E2E_SEED_PROFILES: readonly E2eSeedProfile[] = [
   'onboarded',
@@ -22,4 +23,5 @@ export const E2E_SEED_PROFILES: readonly E2eSeedProfile[] = [
   'first-run-restore',
   'bulk-restore',
   'bulk-restore-selection',
+  'settings-bulk-restore',
 ] as const;

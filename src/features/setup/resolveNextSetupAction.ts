@@ -28,7 +28,11 @@ function isAccepted(draft: SetupDraft, sliceId: SetupSliceId): boolean {
 }
 
 function isRestorePublicationComplete(draft: SetupDraft): boolean {
-  return draft.kind === 'restore' && draft.restore.handoff?.operationId === draft.operationId;
+  if (draft.kind !== 'restore' || draft.restore.handoff?.operationId !== draft.operationId) {
+    return false;
+  }
+  const batchCount = draft.restore.source?.batch?.length ?? 0;
+  return batchCount === 0 || (draft.restore.handoffs?.length ?? 0) === batchCount + 1;
 }
 
 function isEffectComplete(draft: SetupDraft, entry: SetupRecipeEntry): boolean {
@@ -52,12 +56,12 @@ function hasAutoOutput(
  * Calculate progress from slices which can actually be presented. Auto-accepted
  * slices are deliberately absent from both history and the progress count.
  */
-function progressFor(
+export function visibleSetupSliceIds(
   recipe: SetupRecipe,
   draft: SetupDraft,
   definitions: SetupResolutionDefinitions,
   currentSlice: SetupSliceId,
-): SetupProgress {
+): SetupSliceId[] {
   const presented = new Set(draft.presentedHistory);
   const visibleSlices: SetupSliceId[] = [];
 
@@ -73,6 +77,16 @@ function progressFor(
   }
 
   if (!visibleSlices.includes(currentSlice)) visibleSlices.push(currentSlice);
+  return visibleSlices;
+}
+
+function progressFor(
+  recipe: SetupRecipe,
+  draft: SetupDraft,
+  definitions: SetupResolutionDefinitions,
+  currentSlice: SetupSliceId,
+): SetupProgress {
+  const visibleSlices = visibleSetupSliceIds(recipe, draft, definitions, currentSlice);
   const index = visibleSlices.indexOf(currentSlice);
   return {
     current: index + 1,

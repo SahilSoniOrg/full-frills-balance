@@ -1,14 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
 import { RestoreSummarySlice } from '../RestoreSummarySlice';
-import { loadRestoreSummary } from '../setupFinishers';
+import { loadRestoreSummaries } from '../setupFinishers';
 import type { RestoreSetupDraft } from '../setupTypes';
 
 jest.mock('../setupFinishers', () => ({
-  loadRestoreSummary: jest.fn(),
+  loadRestoreSummaries: jest.fn(),
 }));
 
-const load = loadRestoreSummary as jest.MockedFunction<typeof loadRestoreSummary>;
+const load = loadRestoreSummaries as jest.MockedFunction<typeof loadRestoreSummaries>;
 
 const draft: RestoreSetupDraft = {
   schemaVersion: 1,
@@ -35,6 +35,10 @@ const draft: RestoreSetupDraft = {
 };
 
 describe('RestoreSummarySlice', () => {
+  beforeEach(() => {
+    load.mockReset();
+  });
+
   it('blocks Stay and Open after a failed read and still allows Discard', async () => {
     load.mockRejectedValue(new Error('db'));
     const onIntent = jest.fn();

@@ -81,12 +81,20 @@ export async function cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }
 
     const activeWorkplaceId = preferences.device.activeWorkplaceId;
     const draftRaw = storage.getString('setup_draft_v1');
-    let draftOperationId: string | undefined;
+    const draftOperationIds = new Set<string>();
     if (draftRaw) {
       try {
         const parsed = JSON.parse(draftRaw);
         if (parsed && typeof parsed.operationId === 'string') {
-          draftOperationId = parsed.operationId;
+          draftOperationIds.add(parsed.operationId);
+        }
+        const batch = parsed?.restore?.source?.batch;
+        if (Array.isArray(batch)) {
+          for (const source of batch) {
+            if (source && typeof source.operationId === 'string') {
+              draftOperationIds.add(source.operationId);
+            }
+          }
         }
       } catch {
         // ignore parse error
@@ -97,7 +105,7 @@ export async function cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }
 
     for (const workplace of allWorkplaces) {
       if (workplace.id === activeWorkplaceId) continue;
-      if (workplace.id === draftOperationId) continue;
+      if (draftOperationIds.has(workplace.id)) continue;
 
       const hasRestoreClaim = Boolean(claimedRestoreFingerprint(workplace.id));
       if (hasRestoreClaim) {

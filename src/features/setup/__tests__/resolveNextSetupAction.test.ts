@@ -182,6 +182,43 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
+  it('reruns publication when bulk restore handoffs are incomplete', () => {
+    const prepared = restore({
+      acceptedSlices: ['restore_source', 'workplace'],
+      presentedHistory: ['restore_source'],
+      restore: {
+        source: {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: { workplace: { name: 'Books' } },
+          batch: [
+            {
+              source: {
+                uri: 'file:///backup.json',
+                name: 'backup.json',
+                fingerprint: 'abc',
+                workplaceIndex: 1,
+              },
+              operationId: asWorkplaceId('operation-2'),
+              facts: { workplace: { name: 'Books 2' } },
+            },
+          ],
+        },
+        handoff: {
+          operationId,
+          workplaceId: operationId,
+          fingerprint: 'abc',
+          facts: { workplace: {} },
+          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+          warnings: [],
+        },
+      },
+    });
+    expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), prepared)).toEqual({
+      kind: 'run_effect',
+      effectId: 'publish_restore',
+    });
+  });
+
   it('reopens an explicitly active slice without changing accepted outputs', () => {
     const draft = firstRun({
       acceptedSlices: ['device', 'workplace'],
