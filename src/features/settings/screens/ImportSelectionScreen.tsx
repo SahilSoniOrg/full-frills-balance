@@ -1,23 +1,30 @@
 import { LoadingView } from '@/src/components/core';
-import { AppNavigation } from '@/src/utils/navigation';
+import { Page } from '@/src/design-system';
 import { preferences } from '@/src/services/preferences';
+import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
+
+function restoreJourneyFromSource(source?: string): SetupJourneyId {
+  if (source === 'settings') return 'settings_restore';
+  // Legacy /import-selection?source=onboarding deep links.
+  if (source === 'onboarding') {
+    return preferences.device.deviceRegistered ? 'empty_device_restore' : 'first_run_restore';
+  }
+  return 'picker_restore';
+}
 
 export default function ImportSelectionScreen() {
   const { source } = useLocalSearchParams<{ source?: string }>();
 
   useEffect(() => {
-    const journey =
-      source === 'settings'
-        ? 'settings_restore'
-        : source === 'onboarding' && !preferences.device.deviceRegistered
-          ? 'first_run_restore'
-          : source === 'onboarding'
-            ? 'empty_device_restore'
-            : 'picker_restore';
-    AppNavigation.toSetupJourney(journey);
+    AppNavigation.toSetupJourney(restoreJourneyFromSource(source));
   }, [source]);
 
-  return <LoadingView loading />;
+  return (
+    <Page>
+      <LoadingView loading />
+    </Page>
+  );
 }

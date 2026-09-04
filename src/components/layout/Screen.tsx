@@ -43,6 +43,7 @@ export function Screen({
   keyboardAvoiding = false,
   footer,
   scrollViewProps,
+  scrollViewRef,
   headerStyle,
   style,
   ...rest
@@ -78,6 +79,7 @@ export function Screen({
       footer={footer}
       header={navigationBar}
       scrollViewProps={scrollViewProps}
+      scrollViewRef={scrollViewRef}
       {...rest}
     >
       {content}
@@ -86,19 +88,10 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   content: {
     flex: 1,
   },
   padded: {
     paddingHorizontal: Spacing.lg,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
 });

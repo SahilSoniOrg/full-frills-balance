@@ -6,7 +6,6 @@ import { DashboardHeaderActions } from '@/src/features/dashboard/components/Dash
 import { DashboardScreenView } from '@/src/features/dashboard/components/DashboardScreenView';
 import { useDashboardHeaderChrome } from '@/src/features/dashboard/hooks/useDashboardHeaderChrome';
 import { useDashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { logger } from '@/src/utils/logger';
 import {
   trackDashboardFirstPaint,
   useDashboardFeatureActions,
@@ -18,10 +17,6 @@ function DashboardScreen() {
   const vm = useDashboardViewModel();
   const header = useDashboardHeaderChrome();
   const listRef = useRef<JournalEntryListRef>(null);
-
-  useEffect(() => {
-    logger.info('[Dashboard] Screen Mounted');
-  }, []);
 
   useEffect(() => {
     trackDashboardFirstPaint();

@@ -1,14 +1,13 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
-import { Box } from '@/src/design-system';
+import { Box, Page, Stack } from '@/src/design-system';
 import {
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { View } from 'react-native';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppearanceSetupSlice } from './AppearanceSetupSlice';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
@@ -35,6 +34,26 @@ import {
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
+
+function restoreSwitchForJourney(
+  journeyId: SetupJourneyId,
+  displayName: string,
+  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
+): (() => void) | undefined {
+  switch (journeyId) {
+    case 'empty_device_workplace':
+      return () => onSwitchJourney('empty_device_restore');
+    case 'first_run':
+      return () => {
+        startFirstRunRestoreFromDeviceName(displayName);
+        onSwitchJourney('first_run_restore');
+      };
+    case 'create_workplace':
+      return () => onSwitchJourney('picker_restore');
+    default:
+      return undefined;
+  }
+}
 
 function SetupJourneyScreen({
   journeyId,
@@ -238,18 +257,7 @@ function SetupJourneyScreen({
                 goBack();
               }
             }}
-            onRestore={
-              journeyId === 'empty_device_workplace'
-                ? () => onSwitchJourney('empty_device_restore')
-                : journeyId === 'first_run'
-                  ? () => {
-                      startFirstRunRestoreFromDeviceName(displayName);
-                      onSwitchJourney('first_run_restore');
-                    }
-                  : journeyId === 'create_workplace'
-                    ? () => onSwitchJourney('picker_restore')
-                    : undefined
-            }
+            onRestore={restoreSwitchForJourney(journeyId, displayName, onSwitchJourney)}
           />
         );
       }
@@ -300,19 +308,20 @@ function SetupJourneyScreen({
   };
 
   return (
-    <View testID="setup-screen" style={{ flex: 1 }}>
-      <WorkplaceSetupLayout
-        currentStep={action.kind === 'present' ? action.progress.current : 1}
-        totalSteps={action.kind === 'present' ? action.progress.total : 1}
-        backAction={
-          !resolving && (slice === 'restore_source' || slice === 'restore_summary')
-            ? goBack
-            : undefined
-        }
-        backDisabled={busy}
-      >
-        {resolving && resolutionError ? (
-          <Box flex={1} padding="lg" justifyContent="center">
+    <WorkplaceSetupLayout
+      testID="setup-screen"
+      currentStep={action.kind === 'present' ? action.progress.current : 1}
+      totalSteps={action.kind === 'present' ? action.progress.total : 1}
+      backAction={
+        !resolving && (slice === 'restore_source' || slice === 'restore_summary')
+          ? goBack
+          : undefined
+      }
+      backDisabled={busy}
+    >
+      {resolving && resolutionError ? (
+        <Box flex={1} padding="lg" justifyContent="center">
+          <Stack space="md">
             <AppText variant="body" color="secondary">
               {resolutionError}
             </AppText>
@@ -325,36 +334,38 @@ function SetupJourneyScreen({
             >
               Retry
             </AppButton>
-          </Box>
-        ) : resolving ? (
-          <LoadingView
-            loading
-            text={
-              bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
-            }
-          />
-        ) : (
-          renderSlice()
-        )}
-      </WorkplaceSetupLayout>
-    </View>
+          </Stack>
+        </Box>
+      ) : resolving ? (
+        <LoadingView
+          loading
+          text={
+            bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
+          }
+        />
+      ) : (
+        renderSlice()
+      )}
+    </WorkplaceSetupLayout>
   );
 }
 
 function UnreadableSetupDraft() {
   return (
-    <View testID="setup-unreadable-draft" style={{ flex: 1 }}>
+    <Page testID="setup-unreadable-draft">
       <Box flex={1} padding="lg" justifyContent="center">
-        <AppText variant="title">Setup could not be resumed</AppText>
-        <AppText variant="body" color="secondary">
-          The saved setup draft is invalid. Discard it to start again. Published restore books, if
-          any, stay on this device until you delete them from Settings.
-        </AppText>
-        <AppButton variant="primary" onPress={() => discardUnreadableSetupDraft()}>
-          Discard saved setup
-        </AppButton>
+        <Stack space="md">
+          <AppText variant="title">Setup could not be resumed</AppText>
+          <AppText variant="body" color="secondary">
+            The saved setup draft is invalid. Discard it to start again. Published restore books, if
+            any, stay on this device until you delete them from Settings.
+          </AppText>
+          <AppButton variant="primary" onPress={() => discardUnreadableSetupDraft()}>
+            Discard saved setup
+          </AppButton>
+        </Stack>
       </Box>
-    </View>
+    </Page>
   );
 }
 

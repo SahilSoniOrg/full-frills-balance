@@ -13,6 +13,7 @@ interface WorkplaceSetupLayoutProps {
   keyboardAvoiding?: boolean;
   backAction?: () => void;
   backDisabled?: boolean;
+  testID?: string;
 }
 
 export function WorkplaceSetupLayout({
@@ -23,9 +24,11 @@ export function WorkplaceSetupLayout({
   keyboardAvoiding = true,
   backAction,
   backDisabled = false,
+  testID,
 }: WorkplaceSetupLayoutProps) {
   return (
     <Page
+      testID={testID}
       edges={edges}
       keyboardAvoiding={keyboardAvoiding}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}

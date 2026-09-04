@@ -1,7 +1,7 @@
 import { Screen } from '@/src/components/layout/Screen';
 import { render, screen } from '@/src/utils/test-utils';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Mock NavigationBar to avoid testing it here
@@ -85,6 +85,18 @@ describe('Screen', () => {
     );
 
     expect(screen.getByTestId('nav-actions')).toHaveTextContent('actions');
+  });
+
+  it('forwards scrollViewRef to the scroll view', () => {
+    const ref = React.createRef<ScrollView>();
+
+    render(
+      <Screen scrollable scrollViewRef={ref}>
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+
+    expect(ref.current).toBeTruthy();
   });
 
   it('renders non-scrollable content when scrollable is false', () => {

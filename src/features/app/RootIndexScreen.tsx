@@ -8,7 +8,7 @@ import { View } from 'react-native';
 
 /**
  * Root Index - Entry point for the application.
- * Routes user to the appropriate screen based on onboarding status.
+ * Routes an open Workplace into tabs, or stays a themed carrier while launch resolves.
  *
  * On cold start with a widget deeplink (e.g. fullfrillsbalance://journal-entry?...),
  * we detect the pending URL and skip the redirect so Expo Router can resolve
@@ -20,21 +20,16 @@ export function RootIndexScreen() {
   const { theme } = useTheme();
   // undefined = still loading, null = no initial URL
   const [initialUrl, setInitialUrl] = useState<string | null | undefined>(undefined);
+  const carrier = <View style={{ flex: 1, backgroundColor: theme.background }} />;
 
   useEffect(() => {
     Linking.getInitialURL().then(url => setInitialUrl(url ?? null));
   }, []);
 
-  if (!isAppReady) {
-    // TIGHTENED: Render a themed carrier view instead of null to prevent "black void" flicker
-    // during the handoff from native splash to React Native surface.
-    return <View style={{ flex: 1, backgroundColor: theme.background }} />;
+  if (!isAppReady || launch.kind === 'loading' || launch.kind === 'error') {
+    return carrier;
   }
-
-  if (launch.kind === 'loading' || launch.kind === 'error') {
-    return <View style={{ flex: 1, backgroundColor: theme.background }} />;
-  }
-  if (launch.kind !== 'open') return null;
+  if (launch.kind !== 'open') return carrier;
 
   // Bare books deep links are ambiguous before a Workplace is open. Only links
   // carrying the exact resolved Workplace identity may pass through.
