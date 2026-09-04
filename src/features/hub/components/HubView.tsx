@@ -1,7 +1,7 @@
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Size } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
@@ -59,7 +59,11 @@ export function HubView({
               hideManageDismissed
             />
           ) : unreadSmsCount === 0 ? (
-            <EmptyStateView icon="info" title={strings.emptyState} style={{ marginTop: 60 }} />
+            <EmptyStateView
+              icon="info"
+              title={strings.emptyState}
+              style={{ marginTop: Spacing.xxxl }}
+            />
           ) : null
         ) : dismissedInsights.length > 0 ? (
           <Stack gap="sm">
@@ -92,7 +96,11 @@ export function HubView({
             ))}
           </Stack>
         ) : (
-          <EmptyStateView icon="info" title={strings.noDismissed} style={{ marginTop: 60 }} />
+          <EmptyStateView
+            icon="info"
+            title={strings.noDismissed}
+            style={{ marginTop: Spacing.xxxl }}
+          />
         )}
       </Box>
     </ScreenWithChrome>

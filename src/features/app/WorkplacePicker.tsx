@@ -38,10 +38,12 @@ export function WorkplacePicker({
         <View style={[styles.icon, { backgroundColor: theme.surfaceSecondary }]}>
           <AppIcon name="briefcase" size={28} color={theme.primary} />
         </View>
-        <AppText variant="heading">{copy.title}</AppText>
-        <AppText variant="body" color="secondary">
-          {copy.subtitle}
-        </AppText>
+        <View style={styles.introCopy}>
+          <AppText variant="heading">{copy.title}</AppText>
+          <AppText variant="body" color="secondary">
+            {copy.subtitle}
+          </AppText>
+        </View>
       </View>
       {transitionError && (
         <View style={[styles.error, { backgroundColor: theme.errorLight }]}>
@@ -67,24 +69,26 @@ export function WorkplacePicker({
           ))}
         </SettingsMenu>
       )}
-      <SettingsMenu header="Start another">
-        <SettingsMenuItem
-          leftIcon="plus"
-          title={copy.create}
-          description="Set up a new set of books"
-          onPress={onCreate}
-          disabled={isTransitioning}
-          testID="workplace-picker-create"
-        />
-        <SettingsMenuItem
-          leftIcon="folderOpen"
-          title={copy.import}
-          description="Restore books from a backup"
-          onPress={onImport}
-          disabled={isTransitioning}
-          testID="workplace-picker-import"
-        />
-      </SettingsMenu>
+      <View style={styles.startAnother}>
+        <SettingsMenu header="Start another">
+          <SettingsMenuItem
+            leftIcon="plus"
+            title={copy.create}
+            description="Set up a new set of books"
+            onPress={onCreate}
+            disabled={isTransitioning}
+            testID="workplace-picker-create"
+          />
+          <SettingsMenuItem
+            leftIcon="folderOpen"
+            title={copy.import}
+            description="Restore books from a backup"
+            onPress={onImport}
+            disabled={isTransitioning}
+            testID="workplace-picker-import"
+          />
+        </SettingsMenu>
+      </View>
     </Page>
   );
 }
@@ -94,17 +98,27 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: Spacing.xl,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xxl,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xxl,
   },
-  intro: { gap: Spacing.sm },
+  intro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  introCopy: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  startAnother: {
+    marginTop: Spacing.sm,
+  },
   icon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
   },
   error: {
     flexDirection: 'row',
