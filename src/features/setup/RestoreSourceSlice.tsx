@@ -4,10 +4,15 @@ import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
 import { importRegistry } from '@/src/services/import';
 import { toast } from '@/src/utils/alerts';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { pickAndPrepareRestore } from './pickRestoreSource';
+import type { V2Backup } from './pickRestoreSource';
+import { V2RestoreSelectionSheet } from './V2RestoreSelectionSheet';
 import type { RestoreSourceOutput } from './setupTypes';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
+
+type WorkplaceEntry = NonNullable<V2Backup['workplaces']>[number];
 
 export function RestoreSourceSlice({
   isCompleting,
@@ -18,17 +23,48 @@ export function RestoreSourceSlice({
 }) {
   const plugins = useMemo(() => importRegistry.getAll(), []);
   const [progressMessage, setProgressMessage] = useState<string | undefined>();
+  const [selection, setSelection] = useState<{
+    workplaces: WorkplaceEntry[];
+    selectedIndexes: number[];
+  }>();
+  const selectionResolver = useRef<((indexes: number[]) => void) | undefined>(undefined);
   const preparing = progressMessage !== undefined || isCompleting;
+
+  const selectV2Workplaces = useCallback((workplaces: WorkplaceEntry[]) => {
+    return new Promise<number[]>(resolve => {
+      selectionResolver.current = resolve;
+      setSelection({
+        workplaces,
+        selectedIndexes: workplaces.map((_, index) => index),
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (readE2eLaunchConfig()?.seedProfile !== 'bulk-restore-selection') return;
+    void selectV2Workplaces([
+      { workplace: { name: 'Personal', icon: 'briefcase', defaultCurrencyCode: 'USD' }, data: {} },
+      { workplace: { name: 'Freelance', icon: 'briefcase', defaultCurrencyCode: 'EUR' }, data: {} },
+      {
+        workplace: { name: 'Side project', icon: 'briefcase', defaultCurrencyCode: 'GBP' },
+        data: {},
+      },
+    ]);
+  }, [selectV2Workplaces]);
 
   const onSelect = useCallback(
     async (pluginId: string) => {
       setProgressMessage('Preparing restore source...');
       try {
-        const result = await pickAndPrepareRestore(pluginId, (message, progress) => {
-          setProgressMessage(
-            progress === undefined ? message : `${message} ${Math.round(progress * 100)}%`,
-          );
-        });
+        const result = await pickAndPrepareRestore(
+          pluginId,
+          (message, progress) => {
+            setProgressMessage(
+              progress === undefined ? message : `${message} ${Math.round(progress * 100)}%`,
+            );
+          },
+          selectV2Workplaces,
+        );
         if (result === 'cancelled') return;
         onContinue(result);
       } catch (error) {
@@ -39,7 +75,7 @@ export function RestoreSourceSlice({
         setProgressMessage(undefined);
       }
     },
-    [onContinue],
+    [onContinue, selectV2Workplaces],
   );
 
   return (
@@ -69,6 +105,26 @@ export function RestoreSourceSlice({
           </View>
         </Box>
       </ScrollView>
+      {selection && (
+        <V2RestoreSelectionSheet
+          visible
+          workplaces={selection.workplaces}
+          selectedIndexes={selection.selectedIndexes}
+          onChange={selectedIndexes =>
+            setSelection(current => current && { ...current, selectedIndexes })
+          }
+          onClose={() => {
+            selectionResolver.current?.([]);
+            selectionResolver.current = undefined;
+            setSelection(undefined);
+          }}
+          onConfirm={() => {
+            selectionResolver.current?.(selection.selectedIndexes);
+            selectionResolver.current = undefined;
+            setSelection(undefined);
+          }}
+        />
+      )}
     </Box>
   );
 }

@@ -7,9 +7,14 @@ import {
   createSetupDraft,
   type SetupCoordinator,
 } from './SetupCoordinator';
-import { loadPreparedRestore } from './pickRestoreSource';
+import { loadPreparedRestores } from './pickRestoreSource';
 import { getRestoreAutoOutput } from './restoreAutoOutput';
-import { discardPublishedRestore, finishDeviceSetup, finishSetup } from './setupFinishers';
+import {
+  discardPublishedRestore,
+  discardRestoredWorkplace,
+  finishDeviceSetup,
+  finishSetup,
+} from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
@@ -58,10 +63,10 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
     effects: {
       commitDevice: finishDeviceSetup,
       publishRestore: async restoreDraft => {
-        const prepared = await loadPreparedRestore(restoreDraft);
+        const preparedRestores = await loadPreparedRestores(restoreDraft);
         const workplace = restoreDraft.workplace;
         if (!workplace) throw new Error('Workplace corrections are missing');
-        return publishRestore(prepared, {
+        const primary = await publishRestore(preparedRestores[0], {
           operationId: restoreDraft.operationId,
           corrections: {
             name: workplace.name.value,
@@ -69,10 +74,34 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
             defaultCurrencyCode: workplace.baseCurrency.value,
           },
         });
+        const sources = restoreDraft.restore.source?.batch ?? [];
+        for (let index = 0; index < sources.length; index += 1) {
+          const source = sources[index];
+          const prepared = preparedRestores[index + 1];
+          if (!source.operationId || !prepared) throw new Error('Bulk restore state is incomplete');
+          const imported = source.facts.workplace;
+          if (!imported.name || !imported.icon || !imported.defaultCurrencyCode) {
+            throw new Error('Bulk restore workplace metadata is incomplete');
+          }
+          await publishRestore(prepared, {
+            operationId: source.operationId,
+            corrections: {
+              name: imported.name,
+              icon: imported.icon,
+              defaultCurrencyCode: imported.defaultCurrencyCode,
+            },
+          });
+        }
+        return primary;
       },
       discardRestorePublication: async restoreDraft => {
         await discardPublishedRestore(restoreDraft);
         restorePublicationClaims.release(restoreDraft.operationId);
+        for (const source of restoreDraft.restore.source?.batch ?? []) {
+          if (!source.operationId) continue;
+          await discardRestoredWorkplace(source.operationId);
+          restorePublicationClaims.release(source.operationId);
+        }
       },
     },
     finish: async finished => finishJourney(finished, recipeContainsSlice(recipe, 'appearance')),
@@ -86,15 +115,23 @@ function createSeededDraft(journeyId: SetupJourneyId): SetupDraft {
 async function finishJourney(draft: SetupDraft, applyAppearance: boolean): Promise<SetupOutcome> {
   if (draft.kind === 'restore') {
     const intent = draft.restore.summary?.intent ?? 'continue';
+    const isBulkRestore = (draft.restore.source?.batch?.length ?? 0) > 0;
     const workplaceId = await finishSetup(draft, {
-      activate: intent === 'open' || intent === 'continue',
+      activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
       applyAppearance,
     });
     if (!workplaceId) throw new Error('Restore publication is incomplete');
+    if (isBulkRestore) preferences.device.setActiveWorkplaceId(undefined);
     return {
       kind: 'restore_accepted',
       workplaceId,
-      next: intent === 'stay' ? 'stay' : intent === 'return_to_picker' ? 'picker' : 'open',
+      next: isBulkRestore
+        ? 'picker'
+        : intent === 'stay'
+          ? 'stay'
+          : intent === 'return_to_picker'
+            ? 'picker'
+            : 'open',
     };
   }
   const workplaceId = await finishSetup(draft);

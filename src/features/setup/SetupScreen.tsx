@@ -58,6 +58,8 @@ function SetupJourneyScreen({
       ? action.sliceId
       : recipe.entries.find(entry => entry.kind === 'slice')?.sliceId;
   const resolving = action.kind === 'auto_accept' || action.kind === 'run_effect';
+  const bulkRestoreCount =
+    draft.kind === 'restore' ? (draft.restore.source?.batch?.length ?? 0) + 1 : 0;
 
   const settle = async () => {
     const nextAction = await coordinator.runPendingEffect();
@@ -325,7 +327,12 @@ function SetupJourneyScreen({
             </AppButton>
           </Box>
         ) : resolving ? (
-          <LoadingView loading />
+          <LoadingView
+            loading
+            text={
+              bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
+            }
+          />
         ) : (
           renderSlice()
         )}

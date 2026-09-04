@@ -8,7 +8,9 @@ export type E2eSeedProfile =
   | 'sms-ready'
   | 'sms-sync'
   | 'picker-ready'
-  | 'first-run-restore';
+  | 'first-run-restore'
+  | 'bulk-restore'
+  | 'bulk-restore-selection';
 
 export const E2E_SEED_PROFILES: readonly E2eSeedProfile[] = [
   'onboarded',
@@ -18,4 +20,6 @@ export const E2E_SEED_PROFILES: readonly E2eSeedProfile[] = [
   'sms-sync',
   'picker-ready',
   'first-run-restore',
+  'bulk-restore',
+  'bulk-restore-selection',
 ] as const;

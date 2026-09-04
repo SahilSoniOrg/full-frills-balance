@@ -190,11 +190,14 @@ function parseSourceRef(value: unknown): RestoreSourceRef | undefined {
     return undefined;
   }
   if (value.size !== undefined && !isNonNegativeInteger(value.size)) return undefined;
+  if (value.workplaceIndex !== undefined && !isNonNegativeInteger(value.workplaceIndex))
+    return undefined;
   return {
     uri: value.uri,
     name: value.name,
     ...(value.size === undefined ? {} : { size: value.size }),
     fingerprint: value.fingerprint,
+    ...(value.workplaceIndex === undefined ? {} : { workplaceIndex: value.workplaceIndex }),
   };
 }
 
@@ -202,7 +205,19 @@ function parseRestoreSource(value: unknown): RestoreSourceOutput | undefined {
   if (!isRecord(value)) return undefined;
   const source = parseSourceRef(value.source);
   const facts = parseRestoreFacts(value.facts);
-  return source && facts ? { source, facts } : undefined;
+  if (!source || !facts) return undefined;
+  const operationId =
+    value.operationId === undefined ? undefined : asWorkplaceId(String(value.operationId));
+  const batch = Array.isArray(value.batch) ? value.batch.map(parseRestoreSource) : undefined;
+  if (batch?.some(item => item === undefined)) return undefined;
+  return source && facts
+    ? {
+        source,
+        facts,
+        ...(operationId ? { operationId } : {}),
+        ...(batch ? { batch: batch as RestoreSourceOutput[] } : {}),
+      }
+    : undefined;
 }
 
 function parseDevice(value: unknown): DeviceSetupOutput | undefined {

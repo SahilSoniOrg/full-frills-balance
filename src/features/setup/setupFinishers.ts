@@ -156,6 +156,13 @@ export async function discardPublishedRestore(draft: SetupDraft): Promise<void> 
   await workplaceService.deleteWorkplace(published.workplace.id);
 }
 
+/** Delete an unpublished bulk-restore workplace by its stable operation ID. */
+export async function discardRestoredWorkplace(workplaceId: WorkplaceId): Promise<void> {
+  if (preferences.device.activeWorkplaceId === workplaceId) return;
+  const workplace = await workplaceService.getWorkplace(workplaceId);
+  if (workplace) await workplaceService.deleteWorkplace(workplaceId);
+}
+
 /** Terminal finisher used by the coordinator after Summary acceptance. */
 export async function finishSetup(
   draft: SetupDraft,

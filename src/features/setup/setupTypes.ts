@@ -66,6 +66,7 @@ export interface RestoreSourceRef {
   readonly name: string;
   readonly size?: number;
   readonly fingerprint: string;
+  readonly workplaceIndex?: number;
 }
 
 /** Import owns the restore facts/handoff shape; Setup only stores the typed seam. */
@@ -76,6 +77,9 @@ export type RestoreStats = ImportStats;
 export interface RestoreSourceOutput {
   readonly source: RestoreSourceRef;
   readonly facts: RestoreFacts;
+  readonly operationId?: WorkplaceId;
+  /** Additional v2 workplaces selected for bulk restore. The first source remains primary. */
+  readonly batch?: readonly RestoreSourceOutput[];
 }
 
 export type RestoreSummaryIntent = 'continue' | 'open' | 'stay' | 'return_to_picker' | 'discard';

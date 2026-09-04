@@ -13,8 +13,9 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
-import { saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
+import { loadSetupDraft, saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
+import { createSetupDraft } from '@/src/features/setup/SetupCoordinator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -136,6 +137,36 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
         facts: prepared.facts,
       },
       deviceCandidate: { value: FIRST_RUN_RESTORE_CANDIDATE, source: 'user_entered' },
+    },
+  });
+  return operationId;
+}
+
+async function seedBulkRestore(): Promise<WorkplaceId> {
+  const operationId = await seedFirstRunRestore();
+  const draft = loadSetupDraft();
+  if (!draft || draft.kind !== 'restore' || !draft.restore.source) return operationId;
+  const source = draft.restore.source;
+  const secondPrepared = await prepareFirstRunRestoreFixture();
+  const secondOperationId = generator() as WorkplaceId;
+  rememberPreparedRestore(secondPrepared, secondOperationId);
+  saveSetupDraft({
+    ...draft,
+    restore: {
+      ...draft.restore,
+      source: {
+        ...source,
+        batch: [
+          {
+            ...source,
+            operationId: secondOperationId,
+            facts: {
+              ...source.facts,
+              workplace: { ...source.facts.workplace, name: 'Imported Books 2' },
+            },
+          },
+        ],
+      },
     },
   });
   return operationId;
@@ -289,6 +320,15 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
   logger.info(`[E2E] Seeding profile: ${profile}`);
   if (profile === 'first-run-restore') {
     return seedFirstRunRestore();
+  }
+  if (profile === 'bulk-restore') {
+    return seedBulkRestore();
+  }
+  if (profile === 'bulk-restore-selection') {
+    const workplaceId = await seedOnboarded(profile);
+    saveSetupDraft(createSetupDraft('picker_restore', generator() as WorkplaceId));
+    preferences.device.setActiveWorkplaceId(workplaceId);
+    return workplaceId;
   }
 
   const workplaceId = await seedOnboarded(profile);
