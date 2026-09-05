@@ -14,6 +14,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
 import { loadSetupDraft, saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
+import { restoreSources } from '@/src/features/setup/setupTypes';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
 import { createSetupDraft } from '@/src/features/setup/SetupCoordinator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
@@ -28,8 +29,8 @@ import { E2eSeedProfile } from './e2eConstants';
 import { smsMessageFromFixture } from './smsFixtures';
 import { files } from '@/src/utils/files';
 import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/import/orchestrator';
-import { importService } from '@/src/services/import/ImportService';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
+import { prepareRestore, publishRestore } from '@/src/services/import/restore';
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
 import {
   FIRST_RUN_RESTORE_SOURCE_NAME,
@@ -128,14 +129,16 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
       acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
     },
     restore: {
-      source: {
-        source: {
-          uri: FIRST_RUN_RESTORE_SOURCE_URI,
-          name: FIRST_RUN_RESTORE_SOURCE_NAME,
-          fingerprint: prepared.fingerprint,
+      sources: [
+        {
+          source: {
+            uri: FIRST_RUN_RESTORE_SOURCE_URI,
+            name: FIRST_RUN_RESTORE_SOURCE_NAME,
+            fingerprint: prepared.fingerprint,
+          },
+          facts: prepared.facts,
         },
-        facts: prepared.facts,
-      },
+      ],
       deviceCandidate: { value: FIRST_RUN_RESTORE_CANDIDATE, source: 'user_entered' },
     },
   });
@@ -145,8 +148,10 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
 async function seedBulkRestore(): Promise<WorkplaceId> {
   const operationId = await seedFirstRunRestore();
   const draft = loadSetupDraft();
-  if (!draft || draft.kind !== 'restore' || !draft.restore.source) return operationId;
-  const source = draft.restore.source;
+  if (!draft || draft.kind !== 'restore') return operationId;
+  const sources = restoreSources(draft);
+  const source = sources[0];
+  if (!source) return operationId;
   const secondPrepared = await prepareFirstRunRestoreFixture();
   const secondOperationId = generator() as WorkplaceId;
   rememberPreparedRestore(secondPrepared, secondOperationId);
@@ -154,19 +159,17 @@ async function seedBulkRestore(): Promise<WorkplaceId> {
     ...draft,
     restore: {
       ...draft.restore,
-      source: {
-        ...source,
-        batch: [
-          {
-            ...source,
-            operationId: secondOperationId,
-            facts: {
-              ...source.facts,
-              workplace: { ...source.facts.workplace, name: 'Imported Books 2' },
-            },
+      sources: [
+        source,
+        {
+          ...source,
+          operationId: secondOperationId,
+          facts: {
+            ...source.facts,
+            workplace: { ...source.facts.workplace, name: 'Imported Books 2' },
           },
-        ],
-      },
+        },
+      ],
     },
   });
   return operationId;
@@ -367,18 +370,31 @@ export async function executeE2eBootstrap(config: {
   }
 
   if (config.seedProfile) {
-    const workplaceId = await runE2eSeedProfile(config.seedProfile);
+    await runE2eSeedProfile(config.seedProfile);
     if (config.backupPath) {
       let rawBytes = await files.readBytes(config.backupPath);
       rawBytes = await extractIfZip(rawBytes);
       const text = sanitizeContent(decodeContent(rawBytes));
-      const stats = await importService.executeImport(
-        nativePlugin,
-        { uri: config.backupPath, name: 'e2e-backup.json', rawBytes, text, json: JSON.parse(text) },
-        workplaceId,
-      );
+      const prepared = await prepareRestore(nativePlugin, {
+        uri: config.backupPath,
+        name: 'e2e-backup.json',
+        rawBytes,
+        text,
+        json: JSON.parse(text),
+      });
+      const operationId = generator() as WorkplaceId;
+      const restored = await publishRestore(prepared, {
+        operationId,
+        corrections: {
+          name: prepared.facts.workplace.name ?? 'Imported workplace',
+          icon: prepared.facts.workplace.icon ?? 'briefcase',
+          defaultCurrencyCode:
+            prepared.facts.workplace.defaultCurrencyCode ?? AppConfig.defaultCurrency,
+        },
+      });
+      preferences.device.setActiveWorkplaceId(restored.workplaceId);
       console.log(
-        `[E2E-BACKUP] imported accounts=${stats.accounts} journals=${stats.journals} transactions=${stats.transactions}`,
+        `[E2E-BACKUP] imported accounts=${restored.stats.accounts} journals=${restored.stats.journals} transactions=${restored.stats.transactions}`,
       );
     }
   }

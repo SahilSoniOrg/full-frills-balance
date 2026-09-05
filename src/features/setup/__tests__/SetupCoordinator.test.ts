@@ -123,7 +123,7 @@ describe('SetupCoordinator', () => {
       operationId,
       presentedHistory: ['restore_source'],
       acceptedSlices: ['restore_source', 'workplace'],
-      restore: { source },
+      restore: { sources: [source] },
       workplace,
     };
     const coordinator = createSetupCoordinator({
@@ -135,9 +135,9 @@ describe('SetupCoordinator', () => {
       finish: unusedFinish,
       effects: { commitDevice: mockCommitDevice },
     });
-    expect(await coordinator.advanceAutoAccepted()).toEqual({
-      kind: 'run_effect',
-      effectId: 'publish_restore',
+    expect(await coordinator.advanceAutoAccepted()).toMatchObject({
+      kind: 'present',
+      sliceId: 'restore_summary',
     });
     expect(coordinator.getDraft().acceptedSlices).toContain('workplace');
   });
@@ -153,16 +153,18 @@ describe('SetupCoordinator', () => {
       presentedHistory: ['restore_source'],
       acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
-        source,
+        sources: [source],
         summary: { intent: 'continue' },
-        handoff: {
-          operationId,
-          workplaceId: operationId,
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-          warnings: [],
-        },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: operationId,
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
       workplace,
     };
@@ -191,17 +193,20 @@ describe('SetupCoordinator', () => {
       entryPolicy: 'optional',
       operationId,
       presentedHistory: ['restore_source'],
-      acceptedSlices: ['restore_source'],
-      restore: { source },
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: { sources: [source], summary: { intent: 'open' } },
+      workplace,
     };
-    const publishRestore = jest.fn().mockResolvedValue({
-      operationId,
-      workplaceId: asWorkplaceId('published'),
-      fingerprint: 'abc',
-      facts: { workplace: {} },
-      stats: { accounts: 1, journals: 2, transactions: 3, skippedTransactions: 0 },
-      warnings: [],
-    });
+    const publishRestore = jest.fn().mockResolvedValue([
+      {
+        operationId,
+        workplaceId: asWorkplaceId('published'),
+        fingerprint: 'abc',
+        facts: { workplace: {} },
+        stats: { accounts: 1, journals: 2, transactions: 3, skippedTransactions: 0 },
+        warnings: [],
+      },
+    ]);
     const coordinator = createSetupCoordinator({
       journeyId: 'settings_restore',
       operationId,
@@ -213,14 +218,10 @@ describe('SetupCoordinator', () => {
       },
       effects: { publishRestore, commitDevice: mockCommitDevice },
     });
-    expect(await coordinator.runPendingEffect()).toMatchObject({
-      kind: 'present',
-      sliceId: 'restore_summary',
-    });
+    expect(await coordinator.runPendingEffect()).toEqual({ kind: 'finish' });
     expect(publishRestore).toHaveBeenCalledTimes(1);
     expect(coordinator.getDraft()).toMatchObject({
       restore: {
-        handoff: { workplaceId: 'published' },
         handoffs: [{ workplaceId: 'published' }],
       },
     });
@@ -236,19 +237,19 @@ describe('SetupCoordinator', () => {
       entryPolicy: 'optional',
       operationId,
       presentedHistory: ['restore_source'],
-      acceptedSlices: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
-        source: {
-          ...source,
-          batch: [
-            {
-              source: { ...source.source, workplaceIndex: 1 },
-              facts: { workplace: { name: 'Books 2' } },
-              operationId: secondOperationId,
-            },
-          ],
-        },
+        sources: [
+          source,
+          {
+            source: { ...source.source, workplaceIndex: 1 },
+            facts: { workplace: { name: 'Books 2' } },
+            operationId: secondOperationId,
+          },
+        ],
+        summary: { intent: 'open' },
       },
+      workplace,
     };
     const secondary = {
       operationId: secondOperationId,
@@ -258,15 +259,17 @@ describe('SetupCoordinator', () => {
       stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
       warnings: [],
     };
-    const publishRestore = jest.fn().mockResolvedValue({
-      operationId,
-      workplaceId: asWorkplaceId('published'),
-      fingerprint: 'abc',
-      facts: { workplace: {} },
-      stats: { accounts: 1, journals: 2, transactions: 3, skippedTransactions: 0 },
-      warnings: [],
-      batch: [secondary],
-    });
+    const publishRestore = jest.fn().mockResolvedValue([
+      {
+        operationId,
+        workplaceId: asWorkplaceId('published'),
+        fingerprint: 'abc',
+        facts: { workplace: {} },
+        stats: { accounts: 1, journals: 2, transactions: 3, skippedTransactions: 0 },
+        warnings: [],
+      },
+      secondary,
+    ]);
     const coordinator = createSetupCoordinator({
       journeyId: 'settings_restore',
       operationId,
@@ -281,13 +284,12 @@ describe('SetupCoordinator', () => {
     await coordinator.runPendingEffect();
     expect(coordinator.getDraft()).toMatchObject({
       restore: {
-        handoff: { workplaceId: 'published' },
         handoffs: [{ workplaceId: 'published' }, { workplaceId: secondOperationId }],
       },
     });
   });
 
-  it('resumes restore publication from the stored handoff after a crash', async () => {
+  it('skips republication when stored handoffs already complete the effect', async () => {
     const store = memoryStore();
     const draft: RestoreSetupDraft = {
       schemaVersion: 1,
@@ -296,17 +298,20 @@ describe('SetupCoordinator', () => {
       entryPolicy: 'blocking',
       operationId,
       presentedHistory: ['restore_source'],
-      acceptedSlices: ['restore_source', 'workplace'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
-        source,
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('published'),
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
-          warnings: [],
-        },
+        sources: [source],
+        summary: { intent: 'open' },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('published'),
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
       workplace,
     };
@@ -319,10 +324,7 @@ describe('SetupCoordinator', () => {
       finish: unusedFinish,
       effects: { publishRestore, commitDevice: mockCommitDevice },
     });
-    expect(await coordinator.runPendingEffect()).toMatchObject({
-      kind: 'present',
-      sliceId: 'restore_summary',
-    });
+    expect(await coordinator.runPendingEffect()).toEqual({ kind: 'finish' });
     expect(publishRestore).not.toHaveBeenCalled();
   });
 
@@ -449,7 +451,7 @@ describe('SetupCoordinator', () => {
       operationId,
       presentedHistory: ['restore_source'],
       acceptedSlices: ['restore_source', 'workplace'],
-      restore: { source },
+      restore: { sources: [source] },
       workplace,
     };
     const coordinator = createSetupCoordinator({
@@ -461,13 +463,15 @@ describe('SetupCoordinator', () => {
       effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('restore_source');
-    await coordinator.accept('restore_source', {
-      source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
-      facts: { workplace: { name: 'Other' } },
-    });
+    await coordinator.accept('restore_source', [
+      {
+        source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+        facts: { workplace: { name: 'Other' } },
+      },
+    ]);
     const next = coordinator.getDraft();
     expect(next.acceptedSlices).toEqual(['restore_source']);
-    expect(next.kind === 'restore' && next.restore.handoff).toBeUndefined();
+    expect(next.kind === 'restore' && next.restore.handoffs).toBeUndefined();
     expect(next.workplace).toBeUndefined();
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
   });
@@ -483,15 +487,17 @@ describe('SetupCoordinator', () => {
       presentedHistory: ['restore_source', 'restore_summary'],
       acceptedSlices: ['restore_source', 'workplace'],
       restore: {
-        source,
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('published'),
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
-          warnings: [],
-        },
+        sources: [source],
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('published'),
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
       workplace,
     };
@@ -504,14 +510,16 @@ describe('SetupCoordinator', () => {
       effects: { commitDevice: mockCommitDevice },
     });
     coordinator.edit('restore_source');
-    await coordinator.accept('restore_source', {
-      ...source,
-      source: { ...source.source, uri: 'file:///reselected.json' },
-    });
+    await coordinator.accept('restore_source', [
+      {
+        ...source,
+        source: { ...source.source, uri: 'file:///reselected.json' },
+      },
+    ]);
     expect(coordinator.getDraft()).toMatchObject({
       restore: {
-        source: { source: { uri: 'file:///reselected.json', fingerprint: 'abc' } },
-        handoff: { workplaceId: 'published' },
+        sources: [{ source: { uri: 'file:///reselected.json', fingerprint: 'abc' } }],
+        handoffs: [{ workplaceId: 'published' }],
       },
     });
   });
@@ -540,15 +548,17 @@ describe('SetupCoordinator', () => {
       presentedHistory: ['restore_source'],
       acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
-        source,
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('published'),
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
-          warnings: [],
-        },
+        sources: [source],
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('published'),
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
       workplace,
     };
@@ -561,28 +571,91 @@ describe('SetupCoordinator', () => {
       effects: { commitDevice: mockCommitDevice, discardRestorePublication },
     });
     coordinator.edit('restore_source');
-    await coordinator.accept('restore_source', {
-      source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
-      facts: { workplace: { name: 'Other' } },
-    });
+    await coordinator.accept('restore_source', [
+      {
+        source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+        facts: { workplace: { name: 'Other' } },
+      },
+    ]);
     expect(coordinator.getDraft()).toMatchObject({
       acceptedSlices: ['restore_source'],
       restore: {
-        source: {
-          source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
-        },
+        sources: [
+          {
+            source: { uri: 'file:///other.json', name: 'other.json', fingerprint: 'other' },
+          },
+        ],
       },
     });
     const updatedDraft = coordinator.getDraft();
     expect(
-      updatedDraft.kind === 'restore' ? updatedDraft.restore.handoff : undefined,
+      updatedDraft.kind === 'restore' ? updatedDraft.restore.handoffs : undefined,
     ).toBeUndefined();
     expect(updatedDraft.workplace).toBeUndefined();
     expect(discardRestorePublication).toHaveBeenCalledWith(
       expect.objectContaining({
         operationId,
-        restore: expect.objectContaining({ handoff: draft.restore.handoff }),
+        restore: expect.objectContaining({ handoffs: draft.restore.handoffs }),
       }),
     );
+  });
+
+  it('discards publication when the selected workplace set changes', async () => {
+    const store = memoryStore();
+    const secondOperationId = asWorkplaceId('operation-2');
+    const secondary = {
+      source: { ...source.source, workplaceIndex: 1, fingerprint: 'abc-2' },
+      facts: { workplace: { name: 'Books 2' } },
+      operationId: secondOperationId,
+    };
+    const discardRestorePublication = jest.fn().mockResolvedValue(undefined);
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'settings_restore',
+      entryPolicy: 'optional',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: {
+        sources: [source, secondary],
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('published'),
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+            warnings: [],
+          },
+          {
+            operationId: secondOperationId,
+            workplaceId: secondOperationId,
+            fingerprint: 'abc-2',
+            facts: { workplace: { name: 'Books 2' } },
+            stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
+      },
+      workplace,
+    };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'settings_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      finish: unusedFinish,
+      effects: { commitDevice: mockCommitDevice, discardRestorePublication },
+    });
+    coordinator.edit('restore_source');
+    await coordinator.accept('restore_source', [source]);
+    expect(discardRestorePublication).toHaveBeenCalledTimes(1);
+    const next = coordinator.getDraft();
+    expect(next).toMatchObject({
+      acceptedSlices: ['restore_source'],
+      restore: { sources: [source] },
+    });
+    expect(next.kind === 'restore' ? next.restore.handoffs : undefined).toBeUndefined();
   });
 });

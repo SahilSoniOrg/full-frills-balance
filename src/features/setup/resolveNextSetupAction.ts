@@ -28,11 +28,14 @@ function isAccepted(draft: SetupDraft, sliceId: SetupSliceId): boolean {
 }
 
 function isRestorePublicationComplete(draft: SetupDraft): boolean {
-  if (draft.kind !== 'restore' || draft.restore.handoff?.operationId !== draft.operationId) {
-    return false;
-  }
-  const batchCount = draft.restore.source?.batch?.length ?? 0;
-  return batchCount === 0 || (draft.restore.handoffs?.length ?? 0) === batchCount + 1;
+  if (draft.kind !== 'restore') return false;
+  const sources = draft.restore.sources ?? [];
+  const handoffs = draft.restore.handoffs ?? [];
+  return (
+    sources.length > 0 &&
+    handoffs.length === sources.length &&
+    handoffs[0]?.operationId === draft.operationId
+  );
 }
 
 function isEffectComplete(draft: SetupDraft, entry: SetupRecipeEntry): boolean {

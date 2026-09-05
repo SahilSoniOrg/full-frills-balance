@@ -1,13 +1,14 @@
 import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
-import type {
-  AppearanceSetupOutput,
-  DeviceSetupOutput,
-  SetupDraft,
-  SetupSliceId,
-  SetupSliceOutput,
-  WorkplaceSetupOutput,
-  WorkplaceSetupPrefill,
+import {
+  primaryRestoreSource,
+  type AppearanceSetupOutput,
+  type DeviceSetupOutput,
+  type SetupDraft,
+  type SetupSliceId,
+  type SetupSliceOutput,
+  type WorkplaceSetupOutput,
+  type WorkplaceSetupPrefill,
 } from './setupTypes';
 
 export function getRestoreAutoOutput(
@@ -15,7 +16,7 @@ export function getRestoreAutoOutput(
   draft: SetupDraft,
 ): SetupSliceOutput | undefined {
   if (draft.kind !== 'restore') return undefined;
-  const facts = draft.restore.source?.facts;
+  const facts = primaryRestoreSource(draft)?.facts;
   if (!facts) return undefined;
   if (sliceId === 'workplace') return workplaceFromFacts(facts.workplace);
   if (sliceId === 'device') {
@@ -27,7 +28,7 @@ export function getRestoreAutoOutput(
 /** Prefill imported identity/currency even when the slice still must be presented. */
 export function getRestoreWorkplacePrefill(draft: SetupDraft): WorkplaceSetupPrefill | undefined {
   if (draft.kind !== 'restore') return undefined;
-  const workplace = draft.restore.source?.facts.workplace;
+  const workplace = primaryRestoreSource(draft)?.facts.workplace;
   if (!workplace) return undefined;
   const prefill = workplacePrefill(workplace);
   return prefill.name || prefill.icon || prefill.baseCurrency ? prefill : undefined;
@@ -35,7 +36,7 @@ export function getRestoreWorkplacePrefill(draft: SetupDraft): WorkplaceSetupPre
 
 export function getRestoreAppearancePrefill(draft: SetupDraft): AppearanceSetupOutput | undefined {
   if (draft.kind !== 'restore') return undefined;
-  const appearance = draft.restore.source?.facts.appearance;
+  const appearance = primaryRestoreSource(draft)?.facts.appearance;
   if (!appearance?.themeId && !appearance?.fontId) return undefined;
   return {
     themeId: {

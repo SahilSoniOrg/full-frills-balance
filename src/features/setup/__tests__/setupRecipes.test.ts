@@ -9,17 +9,17 @@ describe('Setup recipes', () => {
       [
         'restore_source',
         'workplace',
-        'publish_restore',
         'restore_summary',
+        'publish_restore',
         'device',
         'appearance',
         'summary',
       ],
     ],
     ['empty_device_workplace', ['workplace', 'summary']],
-    ['empty_device_restore', ['restore_source', 'workplace', 'publish_restore', 'restore_summary']],
-    ['picker_restore', ['restore_source', 'workplace', 'publish_restore', 'restore_summary']],
-    ['settings_restore', ['restore_source', 'workplace', 'publish_restore', 'restore_summary']],
+    ['empty_device_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],
+    ['picker_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],
+    ['settings_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],
     ['create_workplace', ['workplace', 'summary']],
   ] as const)('%s contains the canonical linear order', (journeyId, expected) => {
     const recipe = getSetupRecipe(journeyId as SetupJourneyId);

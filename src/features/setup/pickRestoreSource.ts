@@ -5,12 +5,10 @@ import {
   readFileAsBytes,
   sanitizeContent,
 } from '@/src/services/import';
-import { prepareRestore } from '@/src/services/import/prepareRestore';
+import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
-import type { PreparedRestore } from '@/src/services/import/restoreTypes';
-import type { RestoreSetupDraft, RestoreSourceOutput } from './setupTypes';
+import { restoreSources, type RestoreSetupDraft, type RestoreSourceOutput } from './setupTypes';
 import * as DocumentPicker from 'expo-document-picker';
-import { Alert } from 'react-native';
 import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
 
@@ -25,13 +23,24 @@ export function rememberPreparedRestore(
   else preparedByFingerprint.set(prepared.fingerprint, prepared);
 }
 
-export function forgetPreparedRestore(fingerprint: string | undefined): void {
-  if (fingerprint) preparedByFingerprint.delete(fingerprint);
-}
-
 export function forgetAllPreparedRestores(): void {
   preparedByFingerprint.clear();
   preparedByOperationId.clear();
+}
+
+export function keepPreparedRestores(sources: readonly RestoreSourceOutput[]): void {
+  const fingerprints = new Set(
+    sources.filter(source => !source.operationId).map(source => source.source.fingerprint),
+  );
+  const operationIds = new Set<string>(
+    sources.flatMap(source => (source.operationId ? [source.operationId] : [])),
+  );
+  for (const fingerprint of preparedByFingerprint.keys()) {
+    if (!fingerprints.has(fingerprint)) preparedByFingerprint.delete(fingerprint);
+  }
+  for (const operationId of preparedByOperationId.keys()) {
+    if (!operationIds.has(operationId)) preparedByOperationId.delete(operationId);
+  }
 }
 
 /** Detected format must match the plugin the user selected. */
@@ -99,41 +108,10 @@ function sourceRefFor(
   };
 }
 
-async function selectV2Workplace(context: ImportFileContext): Promise<ImportFileContext> {
-  if (!isV2Backup(context.json)) return context;
-  const workplaces = context.json.workplaces ?? [];
-  if (workplaces.length === 0) throw new Error('This backup contains no workplaces');
-
-  let selectedIndex = 0;
-  if (workplaces.length > 1) {
-    const choice = await new Promise<number | undefined>(resolve => {
-      Alert.alert(
-        'Choose workplace to restore',
-        'This backup contains multiple workplaces. Restore one at a time.',
-        workplaces.map((entry, index) => ({
-          text:
-            typeof entry.workplace === 'object' && entry.workplace !== null
-              ? String((entry.workplace as { name?: unknown }).name ?? `Workplace ${index + 1}`)
-              : `Workplace ${index + 1}`,
-          onPress: () => resolve(index),
-        })),
-        { cancelable: true, onDismiss: () => resolve(undefined) },
-      );
-    });
-    if (choice === undefined) throw new Error('Restore cancelled');
-    selectedIndex = choice;
-  }
-
-  return normalizeV2Workplace(context, workplaces[selectedIndex]);
-}
-
 export async function pickAndPrepareRestore(
   expectedPluginId: string,
   onProgress?: (message: string, progress?: number) => void,
-  selectV2Workplaces?: (
-    workplaces: NonNullable<V2Backup['workplaces']>[number][],
-  ) => Promise<number[]>,
-): Promise<RestoreSourceOutput | 'cancelled'> {
+): Promise<readonly RestoreSourceOutput[] | 'cancelled'> {
   const result = await DocumentPicker.getDocumentAsync({
     type: [
       'application/json',
@@ -145,72 +123,73 @@ export async function pickAndPrepareRestore(
     copyToCacheDirectory: true,
   });
   if (result.canceled) return 'cancelled';
+  forgetAllPreparedRestores();
   const file = result.assets[0];
   const context = await fileContext(file.uri, file.name);
   const v2 = isV2Backup(context.json) ? (context.json.workplaces ?? []) : undefined;
-  const selectedIndexes =
-    v2 && v2.length > 1
-      ? await (selectV2Workplaces ? selectV2Workplaces(v2) : Promise.resolve([0]))
-      : [0];
-  if (selectedIndexes.length === 0) throw new Error('Select at least one workplace to restore');
-  const selectedEntries = v2
-    ? selectedIndexes.map(index => v2[index]).filter(Boolean)
-    : [undefined];
+  if (v2?.length === 0) throw new Error('This backup contains no workplaces');
+  const entries = v2 ?? [undefined];
   const preparedSources: RestoreSourceOutput[] = [];
-  for (let index = 0; index < selectedEntries.length; index += 1) {
-    const selectedContext = selectedEntries[index]
-      ? normalizeV2Workplace(context, selectedEntries[index]!)
-      : await selectV2Workplace(context);
-    const plugin = resolveRestorePlugin(selectedContext, expectedPluginId);
-    const prepared = await prepareRestore(plugin, selectedContext, {
-      onProgress: (message, progress) =>
-        onProgress?.(
-          selectedEntries.length > 1
-            ? `${message} (${index + 1}/${selectedEntries.length})`
-            : message,
-          progress === undefined ? undefined : (index + progress) / selectedEntries.length,
-        ),
-    });
-    const operationId = index === 0 ? undefined : (generator() as WorkplaceId);
-    rememberPreparedRestore(prepared, operationId);
-    preparedSources.push({
-      source: sourceRefFor(
-        file,
-        prepared.fingerprint,
-        selectedEntries[index] ? selectedIndexes[index] : undefined,
-      ),
-      facts: prepared.facts,
-      ...(operationId ? { operationId } : {}),
-    });
+  const preparationErrors: { index: number; error: unknown }[] = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    try {
+      const selectedContext = entries[index]
+        ? normalizeV2Workplace(context, entries[index]!)
+        : context;
+      const plugin = resolveRestorePlugin(selectedContext, expectedPluginId);
+      const prepared = await prepareRestore(plugin, selectedContext, {
+        onProgress: (message, progress) =>
+          onProgress?.(
+            entries.length > 1 ? `${message} (${index + 1}/${entries.length})` : message,
+            progress === undefined ? undefined : (index + progress) / entries.length,
+          ),
+      });
+      const operationId = preparedSources.length === 0 ? undefined : (generator() as WorkplaceId);
+      rememberPreparedRestore(prepared, operationId);
+      preparedSources.push({
+        source: sourceRefFor(file, prepared.fingerprint, entries[index] ? index : undefined),
+        facts: prepared.facts,
+        stats: prepared.stats,
+        warnings: prepared.warnings,
+        ...(operationId ? { operationId } : {}),
+      });
+    } catch (error) {
+      // A malformed workplace should be discardable while retaining valid books
+      // from the same V2 backup. Keep processing the remaining entries.
+      preparationErrors.push({ index, error });
+    }
   }
-  const [primary, ...batch] = preparedSources;
-  return {
-    ...primary,
-    ...(batch.length > 0 ? { batch } : {}),
-  };
+  if (preparedSources.length === 0) {
+    const firstError = preparationErrors[0]?.error;
+    throw firstError instanceof Error
+      ? firstError
+      : new Error('No workplaces in this backup could be restored');
+  }
+  if (preparationErrors.length > 0) {
+    const skipped = preparationErrors.map(item => `Workplace ${item.index + 1}`).join(', ');
+    preparedSources[0] = {
+      ...preparedSources[0],
+      warnings: [
+        ...(preparedSources[0]?.warnings ?? []),
+        `Could not prepare ${skipped}; those workplaces were discarded.`,
+      ],
+    };
+  }
+  return preparedSources;
 }
 
-export async function loadPreparedRestore(draft: RestoreSetupDraft): Promise<PreparedRestore> {
-  const source = draft.restore.source;
-  if (!source) throw new Error('Restore source is missing');
-  const cached = preparedByFingerprint.get(source.source.fingerprint);
-  if (cached) return cached;
-  const context = await fileContext(source.source.uri, source.source.name);
-  const selectedContext = await selectV2WorkplaceAtIndex(context, source.source.workplaceIndex);
-  const plugin = importRegistry.detect(selectedContext);
-  if (!plugin) throw new Error('Could not determine restore file format');
-  const prepared = await prepareRestore(plugin, selectedContext);
-  if (prepared.fingerprint !== source.source.fingerprint) {
-    throw new Error('Restore source no longer matches the selected backup');
-  }
-  rememberPreparedRestore(prepared);
-  return prepared;
+/** Keep only the candidates the user chose after validation. */
+export function selectPreparedRestoreSources(
+  sources: readonly RestoreSourceOutput[],
+  selectedIndexes: readonly number[],
+): RestoreSourceOutput[] | undefined {
+  const selectedSet = new Set(selectedIndexes);
+  const selected = sources.filter((_, index) => selectedSet.has(index));
+  return selected.length > 0 ? selected : undefined;
 }
 
 export async function loadPreparedRestores(draft: RestoreSetupDraft): Promise<PreparedRestore[]> {
-  const sources = [draft.restore.source, ...(draft.restore.source?.batch ?? [])].filter(
-    (source): source is RestoreSourceOutput => source !== undefined,
-  );
+  const sources = restoreSources(draft);
   const prepared: PreparedRestore[] = [];
   for (const source of sources) {
     // A v2 file has one raw fingerprint but multiple workplace payloads. Only the
@@ -239,9 +218,12 @@ async function selectV2WorkplaceAtIndex(
   context: ImportFileContext,
   index?: number,
 ): Promise<ImportFileContext> {
-  if (index === undefined) return selectV2Workplace(context);
   if (!isV2Backup(context.json)) return context;
-  const entry = context.json.workplaces?.[index];
+  const workplaces = context.json.workplaces ?? [];
+  if (index === undefined && workplaces.length > 1) {
+    throw new Error('Restore selection must be restarted for this multi-workplace backup');
+  }
+  const entry = workplaces[index ?? 0];
   if (!entry) throw new Error('Selected workplace is missing from the backup');
   return normalizeV2Workplace(context, entry);
 }

@@ -70,20 +70,14 @@ describe('visibleSetupProgress', () => {
       acceptedSlices: ['restore_source', 'workplace'],
       presentedHistory: ['restore_source'],
       restore: {
-        source: {
-          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-          facts: {
-            workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: {
+              workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+            },
           },
-        },
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('published-workplace'),
-          fingerprint: 'fingerprint',
-          facts: { workplace: {} },
-          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-          warnings: [],
-        },
+        ],
       },
     });
     expect(

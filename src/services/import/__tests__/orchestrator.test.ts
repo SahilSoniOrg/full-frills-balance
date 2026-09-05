@@ -1,4 +1,4 @@
-import { extractIfZip } from '../orchestrator';
+import { decodeContent, extractIfZip } from '../orchestrator';
 import { compression } from '@/src/utils/compression';
 import { logger } from '@/src/utils/logger';
 
@@ -53,5 +53,27 @@ describe('ImportOrchestrator - extractIfZip', () => {
       expect.stringContaining('ZIP extraction failed'),
       expect.any(Error),
     );
+  });
+});
+
+function utf16Be(value: string): Uint8Array {
+  const bytes = new Uint8Array(value.length * 2);
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    bytes[index * 2] = code >> 8;
+    bytes[index * 2 + 1] = code & 0xff;
+  }
+  return bytes;
+}
+
+describe('decodeContent', () => {
+  it('accepts UTF-8 CSV instead of treating non-JSON text as an encoding failure', () => {
+    const csv = 'date,description,amount\n2026-09-05,Coffee,4.50\n';
+    expect(decodeContent(new TextEncoder().encode(csv))).toBe(csv);
+  });
+
+  it('falls back to UTF-16BE when UTF-8 decoding contains NUL markers', () => {
+    const json = '{"accounts":[]}';
+    expect(decodeContent(utf16Be(json))).toBe(json);
   });
 });

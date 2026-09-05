@@ -2,12 +2,18 @@ import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
-import type { V2Backup } from './pickRestoreSource';
 import { TouchableOpacity } from 'react-native';
+import { useTheme } from '@/src/hooks/use-theme';
 
-type WorkplaceEntry = NonNullable<V2Backup['workplaces']>[number];
+export interface RestoreWorkplaceCandidate {
+  readonly name: string;
+  readonly currency: string;
+  readonly accounts?: number;
+  readonly categories?: number;
+  readonly journals?: number;
+}
 
-export function V2RestoreSelectionSheet({
+export function RestoreWorkplaceSelectionSheet({
   visible,
   workplaces,
   selectedIndexes,
@@ -16,12 +22,13 @@ export function V2RestoreSelectionSheet({
   onConfirm,
 }: {
   visible: boolean;
-  workplaces: WorkplaceEntry[];
-  selectedIndexes: number[];
-  onChange: (indexes: number[]) => void;
+  workplaces: readonly RestoreWorkplaceCandidate[];
+  selectedIndexes: readonly number[];
+  onChange: (indexes: readonly number[]) => void;
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { theme } = useTheme();
   const allSelected = selectedIndexes.length === workplaces.length;
   return (
     <ModalSurface
@@ -35,7 +42,7 @@ export function V2RestoreSelectionSheet({
     >
       <Stack gap="sm">
         <AppText variant="caption" color="secondary">
-          Choose which workplaces to restore from this backup.
+          Choose which validated workplaces to save. Unselected workplaces will be discarded.
         </AppText>
         <TouchableOpacity
           onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
@@ -46,7 +53,7 @@ export function V2RestoreSelectionSheet({
             <AppIcon
               name={allSelected ? 'checkSquare' : 'square'}
               size={Size.iconSm}
-              color={allSelected ? 'primary' : 'secondary'}
+              color={allSelected ? theme.primary : theme.textSecondary}
             />
             <AppText weight="semibold">Select all</AppText>
           </Box>
@@ -54,20 +61,9 @@ export function V2RestoreSelectionSheet({
         <Stack gap="xs" style={{ marginTop: Spacing.xs }}>
           {workplaces.map((entry, index) => {
             const selected = selectedIndexes.includes(index);
-            const workplace = entry.workplace;
-            const name =
-              typeof workplace === 'object' && workplace !== null && 'name' in workplace
-                ? String((workplace as { name?: unknown }).name ?? `Workplace ${index + 1}`)
-                : `Workplace ${index + 1}`;
-            const currency =
-              typeof workplace === 'object' &&
-              workplace !== null &&
-              'defaultCurrencyCode' in workplace
-                ? String((workplace as { defaultCurrencyCode?: unknown }).defaultCurrencyCode ?? '')
-                : '';
             return (
               <TouchableOpacity
-                key={`${name}-${index}`}
+                key={`${entry.name}-${index}`}
                 onPress={() =>
                   onChange(
                     selected
@@ -83,13 +79,19 @@ export function V2RestoreSelectionSheet({
                   <AppIcon
                     name={selected ? 'checkSquare' : 'square'}
                     size={Size.iconSm}
-                    color={selected ? 'primary' : 'secondary'}
+                    color={selected ? theme.primary : theme.textSecondary}
                   />
                   <Stack gap="xs" flex={1}>
-                    <AppText>{name}</AppText>
-                    {currency ? (
+                    <AppText>{entry.name}</AppText>
+                    {entry.currency ? (
                       <AppText variant="caption" color="secondary">
-                        {currency}
+                        {entry.currency}
+                      </AppText>
+                    ) : null}
+                    {entry.accounts !== undefined ? (
+                      <AppText variant="caption" color="secondary">
+                        {entry.accounts} accounts · {entry.categories ?? 0} categories ·{' '}
+                        {entry.journals ?? 0} journals
                       </AppText>
                     ) : null}
                   </Stack>
@@ -99,12 +101,14 @@ export function V2RestoreSelectionSheet({
           })}
         </Stack>
         <AppButton
+          variant={selectedIndexes.length === 0 ? 'destructive' : 'primary'}
           onPress={onConfirm}
-          disabled={selectedIndexes.length === 0}
           style={{ marginTop: Spacing.md }}
           testID="restore-selected-workplaces"
         >
-          Restore {selectedIndexes.length} workplace{selectedIndexes.length === 1 ? '' : 's'}
+          {selectedIndexes.length === 0
+            ? 'Discard all'
+            : `Save ${selectedIndexes.length} workplace${selectedIndexes.length === 1 ? '' : 's'}`}
         </AppButton>
       </Stack>
     </ModalSurface>

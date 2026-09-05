@@ -464,7 +464,7 @@ export const UI_STRINGS = {
     },
     importTitle: 'Import',
     importIntro: 'Choose a backup format to replace the data on this device.',
-    importNote: 'Import replaces all data for the active workplace.',
+    importNote: 'Restore creates a new Workplace. Existing Workplaces are not changed.',
     newWorkplaceImportIntro:
       'Create a new Workplace from this backup. Existing Workplaces will not be changed.',
     newWorkplaceImportNote: 'The restored books will become a new Workplace.',

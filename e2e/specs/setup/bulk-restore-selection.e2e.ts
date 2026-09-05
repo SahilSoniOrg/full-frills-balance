@@ -27,6 +27,6 @@ it('shows the multi-workplace restore selector', async () => {
   await device.takeScreenshot('bulk-restore-selection-all');
 
   await element(by.id('restore-workplace-option-1')).tap();
-  await expect(element(by.text('Restore 2 workplaces'))).toBeVisible();
+  await expect(element(by.text('Save 2 workplaces'))).toBeVisible();
   await device.takeScreenshot('bulk-restore-selection-custom');
 });

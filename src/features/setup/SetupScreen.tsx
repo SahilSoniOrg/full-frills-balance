@@ -34,6 +34,7 @@ import {
 } from './setupRuntime';
 import {
   isRestoreJourneyId,
+  restoreSources,
   type RestoreSummaryIntent,
   type SetupJourneyId,
   type SetupSliceId,
@@ -85,8 +86,7 @@ function SetupJourneyScreen({
       ? action.sliceId
       : recipe.entries.find(entry => entry.kind === 'slice')?.sliceId;
   const resolving = action.kind === 'auto_accept' || action.kind === 'run_effect';
-  const bulkRestoreCount =
-    draft.kind === 'restore' ? (draft.restore.source?.batch?.length ?? 0) + 1 : 0;
+  const bulkRestoreCount = draft.kind === 'restore' ? restoreSources(draft).length : 0;
 
   const settle = async () => {
     const nextAction = await coordinator.runPendingEffect();
@@ -160,7 +160,9 @@ function SetupJourneyScreen({
   const confirmAbandonRestore = () => {
     confirm.show({
       title: 'Discard restore?',
-      message: 'This deletes the imported workplace from this restore and cannot be undone.',
+      message: restoreLeaveNeedsConfirm(coordinator.getDraft())
+        ? 'This deletes the restored workplace from this device and cannot be undone.'
+        : 'This discards the prepared backup. Nothing has been saved to this device yet.',
       confirmText: 'Discard',
       destructive: true,
       onConfirm: () => {
@@ -171,7 +173,8 @@ function SetupJourneyScreen({
 
   const acceptRestoreIntent = async (intent: RestoreSummaryIntent) => {
     if (intent === 'discard') {
-      confirmAbandonRestore();
+      if (restoreLeaveNeedsConfirm(coordinator.getDraft())) confirmAbandonRestore();
+      else await discardRestore();
       return;
     }
     setSubmittingSlice('restore_summary');
@@ -179,7 +182,9 @@ function SetupJourneyScreen({
       await coordinator.accept('restore_summary', { intent });
       await settle();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not continue restore.');
+      const message = error instanceof Error ? error.message : 'Could not continue restore.';
+      setResolutionError(message);
+      toast.error(message);
     } finally {
       setSubmittingSlice(undefined);
     }

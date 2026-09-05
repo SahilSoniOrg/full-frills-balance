@@ -1,7 +1,6 @@
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
-import { prepareRestore } from '@/src/services/import/prepareRestore';
+import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext } from '@/src/services/import/types';
-import type { PreparedRestore } from '@/src/services/import/restoreTypes';
 
 /** Minimal native backup used by first-run restore publication seeding. */
 export const FIRST_RUN_RESTORE_BACKUP = {

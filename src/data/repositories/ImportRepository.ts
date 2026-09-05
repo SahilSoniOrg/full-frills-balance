@@ -13,8 +13,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { Model, Q } from '@nozbe/watermelondb';
-import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
+import { Model } from '@nozbe/watermelondb';
 
 export class ImportRepository {
   private async prepareImportData(
@@ -79,42 +78,6 @@ export class ImportRepository {
 
     await database.write(async () => {
       await this.batchPreparedOperations(this.prepareOperations(workplaceId, data), onProgress);
-    });
-  }
-
-  /** Replace a published Workplace atomically; failed writes leave old books intact. */
-  async replaceWorkplace(
-    workplaceId: WorkplaceId,
-    data: BatchImportData,
-    onProgress?: (message: string, progress?: number) => void,
-    metadata?: { name?: string; icon?: string; defaultCurrencyCode?: string },
-  ): Promise<void> {
-    await this.prepareImportData(data, onProgress);
-    const operations = this.prepareOperations(workplaceId, data);
-    await database.write(async () => {
-      const deletions: Model[] = [];
-      for (const table of WORKPLACE_SCOPED_TABLE_NAMES) {
-        const records = await database.collections
-          .get<Model>(table)
-          .query(Q.where('workplace_id', workplaceId))
-          .fetch();
-        deletions.push(...records.map(record => record.prepareDestroyPermanently()));
-      }
-      const workplace = await workplaceRepository.find(workplaceId);
-      if (!workplace) throw new Error(`Workplace not found: ${workplaceId}`);
-      const workplaceUpdate = workplace.prepareUpdate(record => {
-        if (metadata?.name) record.name = metadata.name;
-        if (metadata?.icon) record.icon = metadata.icon;
-        if (metadata?.defaultCurrencyCode) {
-          record.defaultCurrencyCode = metadata.defaultCurrencyCode;
-        }
-        record.updatedAt = new Date();
-      });
-      await this.batchPreparedOperations(
-        [...deletions, workplaceUpdate, ...operations],
-        onProgress,
-        true,
-      );
     });
   }
 

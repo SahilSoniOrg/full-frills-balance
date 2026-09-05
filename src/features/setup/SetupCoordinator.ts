@@ -17,7 +17,7 @@ import type {
   SetupSliceId,
   SetupSliceOutput,
 } from './setupTypes';
-import { isRestoreJourneyId } from './setupTypes';
+import { isRestoreJourneyId, sameRestoreSources } from './setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
 import { generator } from '@/src/data/database/idGenerator';
@@ -46,7 +46,7 @@ export interface SetupCoordinatorOptions {
     draft: SetupDraft,
   ) => void | Promise<void>;
   readonly effects?: {
-    readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<RestoreHandoff>;
+    readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<readonly RestoreHandoff[]>;
     readonly discardRestorePublication?: (draft: RestoreSetupDraft) => Promise<void>;
     readonly commitDevice?: (output: DeviceSetupOutput) => void;
   };
@@ -136,14 +136,13 @@ function withoutSlices(
 
 function applyRestoreSource(
   draft: RestoreSetupDraft,
-  output: RestoreSourceOutput,
+  output: readonly RestoreSourceOutput[],
 ): RestoreSetupDraft {
-  const previousFingerprint = draft.restore.source?.source.fingerprint;
-  if (previousFingerprint === output.source.fingerprint) {
+  if (sameRestoreSources(draft.restore.sources, output)) {
     return {
       ...draft,
       acceptedSlices: appendUnique(draft.acceptedSlices, 'restore_source'),
-      restore: { ...draft.restore, source: output },
+      restore: { ...draft.restore, sources: output },
     };
   }
   return {
@@ -153,7 +152,7 @@ function applyRestoreSource(
       'restore_source',
     ),
     restore: {
-      source: output,
+      sources: output,
       ...(draft.restore.deviceCandidate ? { deviceCandidate: draft.restore.deviceCandidate } : {}),
     },
     workplace: undefined,
@@ -228,9 +227,8 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     if (
       sliceId === 'restore_source' &&
       draft.kind === 'restore' &&
-      draft.restore.source?.source.fingerprint !==
-        (output as RestoreSourceOutput).source.fingerprint &&
-      draft.restore.handoff
+      (draft.restore.handoffs?.length ?? 0) > 0 &&
+      !sameRestoreSources(draft.restore.sources, output as readonly RestoreSourceOutput[])
     ) {
       if (!options.effects?.discardRestorePublication) {
         throw new Error('Restore publication cleanup is not configured');
@@ -303,13 +301,12 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     if (draft.kind !== 'restore' || !options.effects?.publishRestore) {
       throw new Error('Restore publication effect is not configured');
     }
-    const handoff = await options.effects.publishRestore(draft);
+    const handoffs = await options.effects.publishRestore(draft);
     persist({
       ...draft,
       restore: {
         ...draft.restore,
-        handoff,
-        ...(handoff.batch ? { handoffs: [handoff, ...handoff.batch] } : { handoffs: [handoff] }),
+        handoffs,
       },
     });
     return next();

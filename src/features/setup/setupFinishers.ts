@@ -4,10 +4,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
 import { generateWorkplaceName } from '@/src/utils/workplaceName';
-import {
-  claimedRestoreFingerprint,
-  isRestoreOwnershipTuple,
-} from '@/src/services/import/restoreOwnership';
+import { claimedRestoreFingerprint, isRestoreOwnershipTuple } from '@/src/services/import/restore';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -15,6 +12,7 @@ import type {
   SetupDraft,
   WorkplaceSetupOutput,
 } from './setupTypes';
+import { primaryRestoreSource, restoreSources } from './setupTypes';
 
 function starterAccounts(output: WorkplaceSetupOutput) {
   return output.selectedAccounts.map(item => {
@@ -102,12 +100,12 @@ export interface FinishSetupOptions {
 
 async function publishedRestoreWorkplace(draft: SetupDraft) {
   if (draft.kind !== 'restore') return undefined;
-  const handoff = draft.restore.handoff;
+  const handoff = draft.restore.handoffs?.[0];
   if (!handoff) return undefined;
   if (
     !isRestoreOwnershipTuple({
       operationId: draft.operationId,
-      sourceFingerprint: draft.restore.source?.source.fingerprint,
+      sourceFingerprint: primaryRestoreSource(draft)?.source.fingerprint,
       handoff,
       claimedFingerprint: claimedRestoreFingerprint(draft.operationId),
     })
@@ -137,7 +135,7 @@ export async function loadRestoreSummaries(
 ): Promise<readonly RestoreSummaryView[] | undefined> {
   const published = await publishedRestoreWorkplace(draft);
   if (!published) return undefined;
-  const sources = [draft.restore.source, ...(draft.restore.source?.batch ?? [])].filter(Boolean);
+  const sources = restoreSources(draft);
   const summaries: RestoreSummaryView[] = [];
 
   for (const [index, source] of sources.entries()) {
@@ -186,16 +184,18 @@ export async function discardRestoredWorkplace(workplaceId: WorkplaceId): Promis
 /** Delete every unpublished workplace produced by a restore, including a partial batch. */
 export async function discardRestorePublication(draft: RestoreSetupDraft): Promise<void> {
   const published = await publishedRestoreWorkplace(draft);
+  const sources = restoreSources(draft);
+  const primary = sources[0];
   if (published) {
     await discardPublishedRestore(draft);
   } else if (
-    draft.restore.source?.source.fingerprint &&
-    claimedRestoreFingerprint(draft.operationId) === draft.restore.source.source.fingerprint
+    primary?.source.fingerprint &&
+    claimedRestoreFingerprint(draft.operationId) === primary.source.fingerprint
   ) {
     // The publication effect may have failed before its handoff was persisted.
     await discardRestoredWorkplace(draft.operationId);
   }
-  for (const source of draft.restore.source?.batch ?? []) {
+  for (const source of sources.slice(1)) {
     if (source.operationId) await discardRestoredWorkplace(source.operationId);
   }
 }
@@ -208,16 +208,14 @@ export async function finishSetup(
   if (draft.kind === 'restore') {
     const published = await publishedRestoreWorkplace(draft);
     if (!published) throw new Error('Restore publication is incomplete');
-    const batchSources = draft.restore.source?.batch ?? [];
+    const sources = restoreSources(draft);
     const persistedHandoffs = draft.restore.handoffs;
-    if (batchSources.length > 0) {
-      if (!persistedHandoffs || persistedHandoffs.length !== batchSources.length + 1) {
-        throw new Error('Bulk restore handoffs are incomplete');
-      }
-      for (const source of batchSources) {
-        if (!source.operationId || !(await workplaceService.getWorkplace(source.operationId))) {
-          throw new Error('Bulk restore workplace is no longer available');
-        }
+    if (!persistedHandoffs || persistedHandoffs.length !== sources.length) {
+      throw new Error('Restore publication is incomplete');
+    }
+    for (const source of sources.slice(1)) {
+      if (!source.operationId || !(await workplaceService.getWorkplace(source.operationId))) {
+        throw new Error('Bulk restore workplace is no longer available');
       }
     }
     const { workplace } = published;

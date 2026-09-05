@@ -46,8 +46,11 @@ jest.mock('@/src/data/database/Database', () => ({
 }));
 
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
-import { prepareRestore, fingerprintRestoreSource } from '@/src/services/import/prepareRestore';
-import { publishRestore } from '@/src/services/import/publishRestore';
+import {
+  prepareRestore,
+  fingerprintRestoreSource,
+  publishRestore,
+} from '@/src/services/import/restore';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { importRepository } from '@/src/data/repositories/ImportRepository';

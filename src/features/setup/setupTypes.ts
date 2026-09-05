@@ -5,7 +5,7 @@ import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type {
   RestoreFacts as ImportedRestoreFacts,
   RestoreHandoff as ImportedRestoreHandoff,
-} from '@/src/services/import/restoreTypes';
+} from '@/src/services/import/restore';
 import type { ImportStats } from '@/src/services/import/types';
 
 export { isSetupJourneyId, type SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
@@ -77,9 +77,10 @@ export type RestoreStats = ImportStats;
 export interface RestoreSourceOutput {
   readonly source: RestoreSourceRef;
   readonly facts: RestoreFacts;
+  /** Present on newly prepared sources; omitted by legacy persisted drafts. */
+  readonly stats?: RestoreStats;
+  readonly warnings?: readonly string[];
   readonly operationId?: WorkplaceId;
-  /** Additional v2 workplaces selected for bulk restore. The first source remains primary. */
-  readonly batch?: readonly RestoreSourceOutput[];
 }
 
 export type RestoreSummaryIntent = 'continue' | 'open' | 'stay' | 'return_to_picker' | 'discard';
@@ -112,9 +113,9 @@ export interface FirstRunSetupDraft extends SetupDraftBase {
 }
 
 export interface RestoreDraftState {
-  readonly source?: RestoreSourceOutput;
-  readonly handoff?: RestoreHandoff;
-  /** Durable publication results for every selected workplace, primary first. */
+  /** Selected workplaces, primary first. */
+  readonly sources?: readonly RestoreSourceOutput[];
+  /** Publication results aligned with `sources`, primary first. */
   readonly handoffs?: readonly RestoreHandoff[];
   readonly summary?: RestoreSummaryOutput;
   readonly deviceCandidate?: Sourced<string>;
@@ -146,13 +147,13 @@ export type SetupSliceOutput =
   | DeviceSetupOutput
   | WorkplaceSetupOutput
   | AppearanceSetupOutput
-  | RestoreSourceOutput
+  | readonly RestoreSourceOutput[]
   | RestoreSummaryOutput
   | SetupSummaryOutput;
 
 export interface SetupSliceOutputById {
   readonly device: DeviceSetupOutput;
-  readonly restore_source: RestoreSourceOutput;
+  readonly restore_source: readonly RestoreSourceOutput[];
   readonly workplace: WorkplaceSetupOutput;
   readonly restore_summary: RestoreSummaryOutput;
   readonly appearance: AppearanceSetupOutput;
@@ -231,6 +232,32 @@ export function isWorkplaceId(value: unknown): value is WorkplaceId {
 /** Keep the raw-boundary brand in one place for draft deserialization. */
 export function parseWorkplaceId(value: unknown): WorkplaceId | undefined {
   return isWorkplaceId(value) ? asWorkplaceId(value) : undefined;
+}
+
+export function restoreSources(draft: RestoreSetupDraft): readonly RestoreSourceOutput[] {
+  return draft.restore.sources ?? [];
+}
+
+export function primaryRestoreSource(draft: RestoreSetupDraft): RestoreSourceOutput | undefined {
+  return draft.restore.sources?.[0];
+}
+
+export function sameRestoreSources(
+  left: readonly RestoreSourceOutput[] | undefined,
+  right: readonly RestoreSourceOutput[] | undefined,
+): boolean {
+  const previous = left ?? [];
+  const next = right ?? [];
+  if (previous.length !== next.length) return false;
+  return previous.every((item, index) => {
+    const other = next[index];
+    return (
+      other !== undefined &&
+      item.source.fingerprint === other.source.fingerprint &&
+      item.source.workplaceIndex === other.source.workplaceIndex &&
+      item.operationId === other.operationId
+    );
+  });
 }
 
 export function isIconName(value: unknown): value is IconName {

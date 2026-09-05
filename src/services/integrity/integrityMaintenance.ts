@@ -14,6 +14,7 @@ import { preferences } from '@/src/services/preferences';
 import { storage } from '@/src/utils/storage';
 import { claimedRestoreFingerprint } from '@/src/services/import/restoreOwnership';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
+import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
 
 const RESETTABLE_DRAFT_KEYS = [
   'onboarding_resume_state_v1',
@@ -80,7 +81,7 @@ export async function cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }
     if (allWorkplaces.length === 0) return { cleanedCount: 0 };
 
     const activeWorkplaceId = preferences.device.activeWorkplaceId;
-    const draftRaw = storage.getString('setup_draft_v1');
+    const draftRaw = storage.getString(SETUP_DRAFT_KEY);
     const draftOperationIds = new Set<string>();
     if (draftRaw) {
       try {
@@ -88,12 +89,16 @@ export async function cleanupGhostWorkplaces(): Promise<{ cleanedCount: number }
         if (parsed && typeof parsed.operationId === 'string') {
           draftOperationIds.add(parsed.operationId);
         }
-        const batch = parsed?.restore?.source?.batch;
-        if (Array.isArray(batch)) {
-          for (const source of batch) {
-            if (source && typeof source.operationId === 'string') {
-              draftOperationIds.add(source.operationId);
-            }
+        const restore = parsed?.restore;
+        const nested = restore?.source;
+        const sources = Array.isArray(restore?.sources)
+          ? restore.sources
+          : nested
+            ? [nested, ...(Array.isArray(nested.batch) ? nested.batch : [])]
+            : [];
+        for (const source of sources) {
+          if (source && typeof source.operationId === 'string') {
+            draftOperationIds.add(source.operationId);
           }
         }
       } catch {

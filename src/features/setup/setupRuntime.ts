@@ -1,5 +1,5 @@
 import { AppNavigation } from '@/src/utils/navigation';
-import { publishRestore } from '@/src/services/import/publishRestore';
+import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
 import { generator } from '@/src/data/database/idGenerator';
 import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -13,9 +13,9 @@ import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardRestorePublication, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
-import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import {
   isSetupJourneyId,
+  restoreSources,
   type SetupDraft,
   type SetupJourneyId,
   type SetupOutcome,
@@ -62,40 +62,41 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
         const preparedRestores = await loadPreparedRestores(restoreDraft);
         const workplace = restoreDraft.workplace;
         if (!workplace) throw new Error('Workplace corrections are missing');
-        const sources = restoreDraft.restore.source?.batch ?? [];
+        const sources = restoreSources(restoreDraft);
+        if (preparedRestores.length !== sources.length) {
+          throw new Error('Bulk restore state is incomplete');
+        }
         try {
-          const primary = await publishRestore(preparedRestores[0], {
-            operationId: restoreDraft.operationId,
-            corrections: {
-              name: workplace.name.value,
-              icon: workplace.icon.value,
-              defaultCurrencyCode: workplace.baseCurrency.value,
-            },
-          });
-          const batchHandoffs = [];
+          const handoffs = [];
           for (let index = 0; index < sources.length; index += 1) {
             const source = sources[index];
-            const prepared = preparedRestores[index + 1];
-            if (!source.operationId || !prepared)
-              throw new Error('Bulk restore state is incomplete');
+            const prepared = preparedRestores[index];
+            if (!prepared) throw new Error('Bulk restore state is incomplete');
+            const operationId = index === 0 ? restoreDraft.operationId : source.operationId;
+            if (!operationId) throw new Error('Bulk restore state is incomplete');
             const imported = source.facts.workplace;
-            if (!imported.name || !imported.icon || !imported.defaultCurrencyCode) {
-              throw new Error('Bulk restore workplace metadata is incomplete');
-            }
-            const handoff = await publishRestore(prepared, {
-              operationId: source.operationId,
-              corrections: {
-                name: imported.name,
-                icon: imported.icon,
-                defaultCurrencyCode: imported.defaultCurrencyCode,
-              },
-            });
-            if (!(await workplaceService.getWorkplace(source.operationId))) {
+            const corrections =
+              index === 0
+                ? {
+                    name: workplace.name.value,
+                    icon: workplace.icon.value,
+                    defaultCurrencyCode: workplace.baseCurrency.value,
+                  }
+                : imported.name && imported.icon && imported.defaultCurrencyCode
+                  ? {
+                      name: imported.name,
+                      icon: imported.icon,
+                      defaultCurrencyCode: imported.defaultCurrencyCode,
+                    }
+                  : undefined;
+            if (!corrections) throw new Error('Bulk restore workplace metadata is incomplete');
+            const handoff = await publishRestore(prepared, { operationId, corrections });
+            if (index > 0 && !(await workplaceService.getWorkplace(operationId))) {
               throw new Error(`Restored workplace was not saved: ${imported.name}`);
             }
-            batchHandoffs.push(handoff);
+            handoffs.push(handoff);
           }
-          return batchHandoffs.length > 0 ? { ...primary, batch: batchHandoffs } : primary;
+          return handoffs;
         } catch (error) {
           await discardRestorePublication(restoreDraft).catch(() => undefined);
           throw error;
@@ -104,7 +105,7 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
       discardRestorePublication: async restoreDraft => {
         await discardRestorePublication(restoreDraft);
         restorePublicationClaims.release(restoreDraft.operationId);
-        for (const source of restoreDraft.restore.source?.batch ?? []) {
+        for (const source of restoreSources(restoreDraft)) {
           if (!source.operationId) continue;
           restorePublicationClaims.release(source.operationId);
         }
@@ -121,7 +122,7 @@ function createSeededDraft(journeyId: SetupJourneyId): SetupDraft {
 async function finishJourney(draft: SetupDraft, applyAppearance: boolean): Promise<SetupOutcome> {
   if (draft.kind === 'restore') {
     const intent = draft.restore.summary?.intent ?? 'continue';
-    const isBulkRestore = (draft.restore.source?.batch?.length ?? 0) > 0;
+    const isBulkRestore = restoreSources(draft).length > 1;
     const workplaceId = await finishSetup(draft, {
       activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
       applyAppearance,
@@ -169,7 +170,7 @@ export function applySetupOutcome(
 }
 
 export function restoreLeaveNeedsConfirm(draft: SetupDraft): boolean {
-  return draft.kind === 'restore' && draft.restore.handoff !== undefined;
+  return draft.kind === 'restore' && (draft.restore.handoffs?.length ?? 0) > 0;
 }
 
 /** Delete unpublished restore books, drop the draft, then follow discardTo. */

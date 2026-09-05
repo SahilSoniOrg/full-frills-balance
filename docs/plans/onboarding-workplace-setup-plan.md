@@ -283,8 +283,8 @@ const firstRun = [
 const firstRunRestore = [
   slice('restore_source', 'required'),
   slice('workplace', 'when_missing'),
-  effect('publish_restore'),
   slice('restore_summary', 'required'),
+  effect('publish_restore'),
   slice('device', 'when_missing'),
   slice('appearance', 'always_show'),
   slice('summary', 'required'),
@@ -602,7 +602,7 @@ Delete or replace after all consumers move:
 - post-import route parameters and effects in `ImportSelectionScreen`;
 - numeric-step progress and fixed-step E2E assumptions;
 - immediate appearance writes from Setup components;
-- first-run global preference restoration inside ImportService.
+- first-run global preference restoration inside the former legacy import service.
 
 Keep or adapt:
 

@@ -2,17 +2,36 @@ import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { loadRestoreSummaries, type RestoreSummaryView } from './setupFinishers';
 import type { RestoreSummaryActions } from './setupRecipes';
-import type { RestoreSetupDraft, RestoreSummaryIntent } from './setupTypes';
+import { restoreSources, type RestoreSetupDraft, type RestoreSummaryIntent } from './setupTypes';
 
-type Verification =
-  | { readonly status: 'loading' }
-  | { readonly status: 'missing' }
-  | { readonly status: 'error' }
-  | { readonly status: 'ready'; readonly views: readonly RestoreSummaryView[] };
+type RestorePreview = {
+  readonly name: string;
+  readonly currency: string;
+  readonly accounts: number;
+  readonly categories: number;
+  readonly journals: number;
+};
+
+function restorePreviews(draft: RestoreSetupDraft): readonly RestorePreview[] {
+  const sources = restoreSources(draft);
+  const workplace = draft.workplace;
+  if (sources.length === 0 || !workplace) return [];
+  return sources.map((source, index) => ({
+    name:
+      index === 0
+        ? workplace.name.value
+        : (source.facts.workplace.name ?? `Workplace ${index + 1}`),
+    currency:
+      index === 0
+        ? workplace.baseCurrency.value
+        : (source.facts.workplace.defaultCurrencyCode ?? ''),
+    accounts: source.stats?.accounts ?? 0,
+    categories: source.stats?.categories ?? 0,
+    journals: source.stats?.journals ?? 0,
+  }));
+}
 
 export function RestoreSummarySlice({
   draft,
@@ -26,37 +45,17 @@ export function RestoreSummarySlice({
   readonly onIntent: (intent: RestoreSummaryIntent) => void;
 }) {
   const { theme } = useTheme();
-  const [retryKey, setRetryKey] = useState(0);
-  const [verification, setVerification] = useState<Verification>({ status: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const views = await loadRestoreSummaries(draft);
-        if (cancelled) return;
-        setVerification(views?.length ? { status: 'ready', views } : { status: 'missing' });
-      } catch {
-        if (!cancelled) setVerification({ status: 'error' });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [draft, retryKey]);
-
-  const stats = draft.restore.handoff?.stats;
-  const skippedItems = stats?.skippedItems ?? [];
-  const warnings = draft.restore.handoff?.warnings ?? [];
-  const verified = verification.status === 'ready';
-  const views = verification.status === 'ready' ? verification.views : [];
-  const primaryLabel = views.length > 1 ? 'Choose a workplace' : actions.primary.label;
+  const sources = restoreSources(draft);
+  const skippedItems = sources.flatMap(source => source.stats?.skippedItems ?? []);
+  const warnings = sources.flatMap(source => source.warnings ?? []);
+  const views = restorePreviews(draft);
+  const ready = views.length > 0;
 
   return (
     <Box flex={1} padding="lg" testID="restore-summary-slice">
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Stack gap="md">
-          {verified ? (
+          {ready ? (
             <AppCard elevation="sm" paddingSize="lg" style={styles.completeCard}>
               <View style={[styles.successMark, { backgroundColor: theme.success + '22' }]}>
                 <AppIcon name="check" size={Size.iconMd} color={theme.success} />
@@ -66,8 +65,8 @@ export function RestoreSummarySlice({
               </AppText>
               <AppText variant="body" color="secondary" align="center" style={styles.completeText}>
                 {views.length === 1
-                  ? `${views[0]?.name} was published and is ready for the final setup step.`
-                  : `${views.length} workplaces were published and are ready for the final setup step.`}
+                  ? `${views[0]?.name} is validated and ready to restore.`
+                  : `${views.length} workplaces are validated and ready to restore.`}
               </AppText>
               <Stack gap="sm">
                 {views.map((item, index) => (
@@ -91,17 +90,8 @@ export function RestoreSummarySlice({
                 ))}
               </Stack>
             </AppCard>
-          ) : (
-            <>
-              <AppText variant="title">Restore is ready</AppText>
-              <AppText variant="body" color="secondary">
-                {verification.status === 'loading'
-                  ? 'Verifying the published workplace...'
-                  : 'Restore publication could not be verified. Retry or discard this restore.'}
-              </AppText>
-            </>
-          )}
-          {verified && skippedItems.length > 0 ? (
+          ) : null}
+          {ready && skippedItems.length > 0 ? (
             <AppCard elevation="sm" paddingSize="md">
               <Stack gap="xs">
                 <AppText variant="caption">Skipped items</AppText>
@@ -114,7 +104,7 @@ export function RestoreSummarySlice({
               </Stack>
             </AppCard>
           ) : null}
-          {verified && warnings.length > 0 ? (
+          {ready && warnings.length > 0 ? (
             <AppCard elevation="sm" paddingSize="md">
               <Stack gap="xs">
                 <AppText variant="caption">Warnings</AppText>
@@ -135,9 +125,9 @@ export function RestoreSummarySlice({
             }
             onPress={() => onIntent(actions.primary.intent)}
             loading={isCompleting}
-            disabled={!verified}
+            disabled={!ready}
           >
-            {primaryLabel}
+            {actions.primary.label}
           </AppButton>
           {actions.secondary ? (
             <AppButton
@@ -147,22 +137,9 @@ export function RestoreSummarySlice({
                 const secondary = actions.secondary;
                 if (secondary) onIntent(secondary.intent);
               }}
-              disabled={!verified || isCompleting}
+              disabled={!ready || isCompleting}
             >
               {actions.secondary.label}
-            </AppButton>
-          ) : null}
-          {verification.status === 'missing' || verification.status === 'error' ? (
-            <AppButton
-              variant="outline"
-              testID="restore-summary-retry"
-              onPress={() => {
-                setVerification({ status: 'loading' });
-                setRetryKey(key => key + 1);
-              }}
-              disabled={isCompleting}
-            >
-              Retry
             </AppButton>
           ) : null}
           <AppButton variant="ghost" onPress={() => onIntent('discard')} disabled={isCompleting}>

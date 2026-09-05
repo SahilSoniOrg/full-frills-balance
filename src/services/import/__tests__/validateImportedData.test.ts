@@ -69,11 +69,11 @@ function minimalImport(overrides?: {
 }
 
 describe('validateImportedData', () => {
-  it('accepts structurally valid imports without re-checking journal balance', () => {
+  it('accepts structurally valid, balanced imports', () => {
     expect(() => validateImportedData(minimalImport())).not.toThrow();
   });
 
-  it('trusts historical amounts and does not soft-delete unbalanced journals', () => {
+  it('rejects historically unbalanced journals before persistence', () => {
     const data = minimalImport({
       transactions: [
         {
@@ -88,9 +88,38 @@ describe('validateImportedData', () => {
       ],
     });
 
-    expect(() => validateImportedData(data)).not.toThrow();
+    expect(() => validateImportedData(data)).toThrow(/journal "j-1" is not balanced/);
     expect(data.journals[0].deletedAt).toBeUndefined();
     expect(data.transactions[0].deletedAt).toBeUndefined();
+  });
+
+  it('rejects journals that are balanced only at a reciprocal FX quote', () => {
+    const data = minimalImport({
+      transactions: [
+        {
+          id: 't-1' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'acc-2' as AccountId,
+          amount: 150,
+          transactionType: 'DEBIT',
+          currencyCode: 'USD',
+          transactionDate: Date.now(),
+        },
+        {
+          id: 't-2' as TransactionId,
+          journalId: 'j-1' as JournalId,
+          accountId: 'acc-1' as AccountId,
+          amount: 100,
+          transactionType: 'CREDIT',
+          currencyCode: 'EUR',
+          exchangeRate: 1 / 1.5,
+          transactionDate: Date.now(),
+        },
+      ],
+    });
+    data.accounts[1] = { ...data.accounts[1], currencyCode: 'EUR' };
+
+    expect(() => validateImportedData(data)).toThrow(/journal "j-1" is not balanced/);
   });
 
   it('rejects transactions that reference a missing account', () => {

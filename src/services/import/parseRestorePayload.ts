@@ -126,7 +126,7 @@ function parseSkippedItems(value: unknown): ImportStats['skippedItems'] | undefi
   return skippedItems.length > 0 ? skippedItems : undefined;
 }
 
-function parseRestoreStats(value: unknown): ImportStats | undefined {
+export function parseRestoreStats(value: unknown): ImportStats | undefined {
   if (
     !isRecord(value) ||
     !isNonNegativeInteger(value.accounts) ||

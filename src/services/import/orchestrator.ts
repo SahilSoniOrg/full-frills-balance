@@ -107,14 +107,12 @@ export async function extractIfZip(bytes: Uint8Array): Promise<Uint8Array> {
  */
 export function decodeContent(bytes: Uint8Array): string {
   try {
-    // Try UTF-8 first (fast path for standard JSON)
+    // UTF-8 is valid for JSON, CSV, and other text import formats. A decoded
+    // NUL is the useful signal for Ivy's UTF-16BE payloads, not whether the
+    // content happens to start with a JSON delimiter.
     const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
     const content = utf8Decoder.decode(bytes);
-
-    // Basic check if it looks like JSON
-    if (!content.trim().startsWith('{') && !content.trim().startsWith('[')) {
-      throw new Error('Likely encoding issue (not UTF-8)');
-    }
+    if (content.includes('\u0000')) throw new Error('Likely UTF-16 content');
 
     return content;
   } catch {

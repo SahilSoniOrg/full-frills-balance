@@ -58,8 +58,8 @@ const effect = (effectId: SetupEffectId): SetupRecipeEntry => ({
 const restoreCore: readonly SetupRecipeEntry[] = [
   slice('restore_source', 'required'),
   slice('workplace', 'when_missing'),
-  effect('publish_restore'),
   slice('restore_summary', 'required'),
+  effect('publish_restore'),
 ];
 
 const firstRun: SetupRecipe = {

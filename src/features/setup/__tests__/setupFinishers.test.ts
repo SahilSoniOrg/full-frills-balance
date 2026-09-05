@@ -63,18 +63,22 @@ function restoreDraft(): RestoreSetupDraft {
     presentedHistory: ['restore_source', 'restore_summary'],
     acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
     restore: {
-      source: {
-        source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-        facts: { workplace: { name: 'Books' } },
-      },
-      handoff: {
-        operationId,
-        workplaceId: operationId,
-        fingerprint: 'abc',
-        facts: { workplace: { name: 'Books' } },
-        stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
-        warnings: [],
-      },
+      sources: [
+        {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: { workplace: { name: 'Books' } },
+        },
+      ],
+      handoffs: [
+        {
+          operationId,
+          workplaceId: operationId,
+          fingerprint: 'abc',
+          facts: { workplace: { name: 'Books' } },
+          stats: { accounts: 1, journals: 1, transactions: 1, skippedTransactions: 0 },
+          warnings: [],
+        },
+      ],
       summary: { intent: 'open' },
     },
     workplace,
@@ -155,21 +159,19 @@ describe('restore finishers', () => {
       ...restoreDraft(),
       restore: {
         ...restoreDraft().restore,
-        source: {
-          ...restoreDraft().restore.source!,
-          batch: [
-            {
-              source: {
-                uri: 'file:///backup.json',
-                name: 'backup.json',
-                fingerprint: 'abc',
-                workplaceIndex: 1,
-              },
-              operationId: secondOperationId,
-              facts: { workplace: { name: 'Books 2' } },
+        sources: [
+          restoreDraft().restore.sources![0],
+          {
+            source: {
+              uri: 'file:///backup.json',
+              name: 'backup.json',
+              fingerprint: 'abc',
+              workplaceIndex: 1,
             },
-          ],
-        },
+            operationId: secondOperationId,
+            facts: { workplace: { name: 'Books 2' } },
+          },
+        ],
       },
     };
     getWorkplace.mockImplementation(async (id: string) => ({
@@ -215,22 +217,20 @@ describe('restore finishers', () => {
       ...restoreDraft(),
       restore: {
         ...restoreDraft().restore,
-        handoff: undefined,
-        source: {
-          ...restoreDraft().restore.source!,
-          batch: [
-            {
-              source: {
-                uri: 'file:///backup.json',
-                name: 'backup.json',
-                fingerprint: 'abc',
-                workplaceIndex: 1,
-              },
-              operationId: secondOperationId,
-              facts: { workplace: { name: 'Books 2' } },
+        handoffs: undefined,
+        sources: [
+          restoreDraft().restore.sources![0],
+          {
+            source: {
+              uri: 'file:///backup.json',
+              name: 'backup.json',
+              fingerprint: 'abc',
+              workplaceIndex: 1,
             },
-          ],
-        },
+            operationId: secondOperationId,
+            facts: { workplace: { name: 'Books 2' } },
+          },
+        ],
       },
     };
 

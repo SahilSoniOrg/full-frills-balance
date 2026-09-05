@@ -21,18 +21,22 @@ const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
   presentedHistory: ['restore_source', 'restore_summary', 'device', 'appearance', 'summary'],
   acceptedSlices: ['restore_source', 'workplace', 'restore_summary', 'device', 'appearance'],
   restore: {
-    source: {
-      source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-      facts: { workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'USD' } },
-    },
-    handoff: {
-      operationId: asWorkplaceId('operation'),
-      workplaceId: asWorkplaceId('operation'),
-      fingerprint: 'abc',
-      facts: { workplace: { name: 'Books' } },
-      stats,
-      warnings: [],
-    },
+    sources: [
+      {
+        source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+        facts: { workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'USD' } },
+      },
+    ],
+    handoffs: [
+      {
+        operationId: asWorkplaceId('operation'),
+        workplaceId: asWorkplaceId('operation'),
+        fingerprint: 'abc',
+        facts: { workplace: { name: 'Books' } },
+        stats,
+        warnings: [],
+      },
+    ],
   },
   device: { displayName: { value: 'Typed', source: 'user_entered' } },
   workplace: {

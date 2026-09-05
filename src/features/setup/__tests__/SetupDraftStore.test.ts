@@ -34,10 +34,12 @@ const restoreDraft: RestoreSetupDraft = {
   presentedHistory: ['restore_source'],
   acceptedSlices: ['restore_source'],
   restore: {
-    source: {
-      source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-      facts: { workplace: { name: 'Imported', defaultCurrencyCode: 'USD' } },
-    },
+    sources: [
+      {
+        source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+        facts: { workplace: { name: 'Imported', defaultCurrencyCode: 'USD' } },
+      },
+    ],
   },
 };
 
@@ -109,14 +111,16 @@ describe('SetupDraftStore', () => {
         entryPolicy: 'blocking',
         restore: {
           ...restoreDraft.restore,
-          handoff: {
-            operationId: asWorkplaceId('other-operation'),
-            workplaceId: asWorkplaceId('published'),
-            fingerprint: 'abc',
-            facts: { workplace: {} },
-            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-            warnings: [],
-          },
+          handoffs: [
+            {
+              operationId: asWorkplaceId('other-operation'),
+              workplaceId: asWorkplaceId('published'),
+              fingerprint: 'abc',
+              facts: { workplace: {} },
+              stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+              warnings: [],
+            },
+          ],
         },
       }),
     ).toBeUndefined();
@@ -127,14 +131,16 @@ describe('SetupDraftStore', () => {
       ...restoreDraft,
       restore: {
         ...restoreDraft.restore,
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('other-workplace'),
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-          warnings: [],
-        },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('other-workplace'),
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
     };
     mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
@@ -144,6 +150,48 @@ describe('SetupDraftStore', () => {
       ...restoreDraft,
       restore: {
         ...restoreDraft.restore,
+        handoffs: [
+          {
+            operationId,
+            workplaceId: operationId,
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
+      },
+    };
+    mockGetString.mockReturnValue(undefined);
+    expect(parseSetupDraft(matching)).toBeUndefined();
+    mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
+    const parsed = parseSetupDraft(matching);
+    expect(parsed?.kind === 'restore' && parsed.restore.handoffs?.[0]?.workplaceId).toBe(
+      operationId,
+    );
+  });
+
+  it('flattens a legacy nested source and handoff into sources and handoffs', () => {
+    mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
+    const parsed = parseSetupDraft({
+      ...restoreDraft,
+      restore: {
+        source: {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: { workplace: { name: 'Imported', defaultCurrencyCode: 'USD' } },
+          batch: [
+            {
+              source: {
+                uri: 'file:///backup.json',
+                name: 'backup.json',
+                fingerprint: 'abc',
+                workplaceIndex: 1,
+              },
+              operationId: asWorkplaceId('operation-2'),
+              facts: { workplace: { name: 'Books 2' } },
+            },
+          ],
+        },
         handoff: {
           operationId,
           workplaceId: operationId,
@@ -153,12 +201,15 @@ describe('SetupDraftStore', () => {
           warnings: [],
         },
       },
-    };
-    mockGetString.mockReturnValue(undefined);
-    expect(parseSetupDraft(matching)).toBeUndefined();
-    mockGetString.mockReturnValue(JSON.stringify({ [operationId]: 'abc' }));
-    const parsed = parseSetupDraft(matching);
-    expect(parsed?.kind === 'restore' && parsed.restore.handoff?.workplaceId).toBe(operationId);
+    });
+    expect(
+      parsed?.kind === 'restore' && parsed.restore.sources?.map(item => item.facts.workplace.name),
+    ).toEqual(['Imported', 'Books 2']);
+    expect(parsed?.kind === 'restore' && parsed.restore.handoffs?.[0]?.workplaceId).toBe(
+      operationId,
+    );
+    expect(parsed?.kind === 'restore' && 'source' in parsed.restore).toBe(false);
+    expect(parsed?.kind === 'restore' && 'handoff' in parsed.restore).toBe(false);
   });
 
   it('clears only the setup draft key', () => {

@@ -17,7 +17,7 @@ function restore(source: RestoreSourceOutput): RestoreSetupDraft {
     operationId,
     presentedHistory: ['restore_source'],
     acceptedSlices: ['restore_source'],
-    restore: { source },
+    restore: { sources: [source] },
   };
 }
 
@@ -28,7 +28,7 @@ describe('getRestoreAutoOutput', () => {
       user: { name: 'Imported' },
       workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
     },
-  } satisfies NonNullable<RestoreSetupDraft['restore']['source']>;
+  } satisfies RestoreSourceOutput;
 
   it('auto-completes Workplace only when imported identity and currency exist', () => {
     expect(getRestoreAutoOutput('workplace', restore(completeSource))).toMatchObject({
@@ -66,10 +66,12 @@ describe('getRestoreAutoOutput', () => {
         facts: { workplace: completeSource.facts.workplace },
       }),
       restore: {
-        source: {
-          ...completeSource,
-          facts: { workplace: completeSource.facts.workplace },
-        },
+        sources: [
+          {
+            ...completeSource,
+            facts: { workplace: completeSource.facts.workplace },
+          },
+        ],
         deviceCandidate: { value: 'Typed', source: 'user_entered' },
       },
     };

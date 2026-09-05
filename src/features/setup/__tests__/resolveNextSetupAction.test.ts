@@ -71,10 +71,12 @@ describe('resolveNextSetupAction', () => {
       acceptedSlices: ['restore_source'],
       presentedHistory: ['restore_source'],
       restore: {
-        source: {
-          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-          facts: { workplace: { name: 'Books', icon: 'briefcase' } },
-        },
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: { workplace: { name: 'Books', icon: 'briefcase' } },
+          },
+        ],
       },
     });
     expect(
@@ -114,12 +116,14 @@ describe('resolveNextSetupAction', () => {
       acceptedSlices: ['restore_source'],
       presentedHistory: ['restore_source'],
       restore: {
-        source: {
-          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-          facts: {
-            workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: {
+              workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+            },
           },
-        },
+        ],
       },
     });
     expect(
@@ -154,63 +158,85 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
-  it('runs restore publication until an operation-matching handoff exists', () => {
+  it('shows review before publication and then publishes after consent', () => {
     const prepared = restore({
       acceptedSlices: ['restore_source', 'workplace'],
       presentedHistory: ['restore_source'],
     });
-    expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), prepared)).toEqual({
+    expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), prepared)).toMatchObject({
+      kind: 'present',
+      sliceId: 'restore_summary',
+    });
+    const accepted = restore({
+      ...prepared,
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: { ...prepared.restore, summary: { intent: 'continue' } },
+    });
+    expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), accepted)).toEqual({
       kind: 'run_effect',
       effectId: 'publish_restore',
     });
     const published = restore({
       ...prepared,
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       restore: {
-        handoff: {
-          operationId,
-          workplaceId: asWorkplaceId('published-workplace'),
-          fingerprint: 'fingerprint',
-          facts: { workplace: {} },
-          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-          warnings: [],
-        },
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: { workplace: { name: 'Books' } },
+          },
+        ],
+        summary: { intent: 'continue' },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: asWorkplaceId('published-workplace'),
+            fingerprint: 'fingerprint',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
       },
     });
     expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), published)).toMatchObject({
       kind: 'present',
-      sliceId: 'restore_summary',
+      sliceId: 'device',
     });
   });
 
   it('reruns publication when bulk restore handoffs are incomplete', () => {
     const prepared = restore({
-      acceptedSlices: ['restore_source', 'workplace'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
       presentedHistory: ['restore_source'],
       restore: {
-        source: {
-          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-          facts: { workplace: { name: 'Books' } },
-          batch: [
-            {
-              source: {
-                uri: 'file:///backup.json',
-                name: 'backup.json',
-                fingerprint: 'abc',
-                workplaceIndex: 1,
-              },
-              operationId: asWorkplaceId('operation-2'),
-              facts: { workplace: { name: 'Books 2' } },
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: { workplace: { name: 'Books' } },
+          },
+          {
+            source: {
+              uri: 'file:///backup.json',
+              name: 'backup.json',
+              fingerprint: 'abc',
+              workplaceIndex: 1,
             },
-          ],
-        },
-        handoff: {
-          operationId,
-          workplaceId: operationId,
-          fingerprint: 'abc',
-          facts: { workplace: {} },
-          stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
-          warnings: [],
-        },
+            operationId: asWorkplaceId('operation-2'),
+            facts: { workplace: { name: 'Books 2' } },
+          },
+        ],
+        handoffs: [
+          {
+            operationId,
+            workplaceId: operationId,
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
+        summary: { intent: 'continue' },
       },
     });
     expect(resolveNextSetupAction(getSetupRecipe('first_run_restore'), prepared)).toEqual({

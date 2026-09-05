@@ -37,21 +37,25 @@ function restoreDraft(handoff: boolean): RestoreSetupDraft {
     presentedHistory: ['restore_source'],
     acceptedSlices: ['restore_source'],
     restore: {
-      source: {
-        source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-        facts: { workplace: { name: 'Books' } },
-      },
+      sources: [
+        {
+          source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+          facts: { workplace: { name: 'Books' } },
+        },
+      ],
       deviceCandidate: { value: 'Sahil', source: 'user_entered' },
       ...(handoff
         ? {
-            handoff: {
-              operationId,
-              workplaceId: operationId,
-              fingerprint: 'abc',
-              facts: { workplace: { name: 'Books' } },
-              stats: { accounts: 1, journals: 0, transactions: 0, skippedTransactions: 0 },
-              warnings: [],
-            },
+            handoffs: [
+              {
+                operationId,
+                workplaceId: operationId,
+                fingerprint: 'abc',
+                facts: { workplace: { name: 'Books' } },
+                stats: { accounts: 1, journals: 0, transactions: 0, skippedTransactions: 0 },
+                warnings: [],
+              },
+            ],
           }
         : {}),
     },

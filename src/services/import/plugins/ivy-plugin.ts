@@ -1,6 +1,7 @@
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { IconName } from '@/src/types/domainIcons';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
+import type { CanonicalImport } from '@/src/services/import/canonicalImport';
 import {
   advanceOccurrence,
   mapToNearestAccountColor,
@@ -88,6 +89,23 @@ interface IvyData {
   budgets?: IvyBudget[];
   settings?: IvySettings[];
   plannedPaymentRules?: IvyPlannedPaymentRule[];
+}
+
+function quoteIvyExchangeRatesAsNative(
+  canonical: CanonicalImport,
+  baseCurrency: string,
+): CanonicalImport {
+  return {
+    ...canonical,
+    transactions: canonical.transactions.map(transaction => {
+      const rate = transaction.exchangeRate;
+      if (!rate || rate <= 0) return transaction;
+      if (!transaction.currencyCode || transaction.currencyCode === baseCurrency) {
+        return transaction;
+      }
+      return { ...transaction, exchangeRate: 1 / rate };
+    }),
+  };
 }
 
 export const ivyPlugin: ImportPlugin = {
@@ -332,7 +350,9 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     onProgress?.('Building canonical import...', 0.95);
-    const { canonical, issues } = builder.build();
+    const built = builder.build();
+    const canonical = quoteIvyExchangeRatesAsNative(built.canonical, ivyBaseCurrency);
+    const issues = built.issues;
 
     for (const issue of issues) {
       skippedItems.push({

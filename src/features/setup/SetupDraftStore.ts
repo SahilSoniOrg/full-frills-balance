@@ -4,13 +4,15 @@ import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
-import { parseRestoreFacts, parseRestoreHandoff } from '@/src/services/import/parseRestorePayload';
 import {
   claimedRestoreFingerprint,
   isRestoreOwnershipTuple,
-} from '@/src/services/import/restoreOwnership';
-import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
-import { forgetAllPreparedRestores, forgetPreparedRestore } from './pickRestoreSource';
+  parseRestoreFacts,
+  parseRestoreHandoff,
+  parseRestoreStats,
+  restorePublicationClaims,
+} from '@/src/services/import/restore';
+import { forgetAllPreparedRestores } from './pickRestoreSource';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
@@ -40,6 +42,7 @@ import {
   isSetupSliceId,
   isThemeId,
   isWorkplaceId,
+  restoreSources,
 } from './setupTypes';
 
 export { SETUP_DRAFT_KEY };
@@ -202,23 +205,50 @@ function parseSourceRef(value: unknown): RestoreSourceRef | undefined {
   };
 }
 
-function parseRestoreSource(value: unknown): RestoreSourceOutput | undefined {
+function parseRestoreSourceRecord(value: unknown): RestoreSourceOutput | undefined {
   if (!isRecord(value)) return undefined;
   const source = parseSourceRef(value.source);
   const facts = parseRestoreFacts(value.facts);
-  if (!source || !facts) return undefined;
+  const stats = value.stats === undefined ? undefined : parseRestoreStats(value.stats);
+  const warnings =
+    value.warnings === undefined
+      ? undefined
+      : Array.isArray(value.warnings)
+        ? value.warnings.filter((item): item is string => typeof item === 'string')
+        : undefined;
+  if (
+    !source ||
+    !facts ||
+    (value.stats !== undefined && !stats) ||
+    (value.warnings !== undefined &&
+      (!warnings || warnings.length !== (value.warnings as unknown[]).length))
+  ) {
+    return undefined;
+  }
   const operationId =
     value.operationId === undefined ? undefined : asWorkplaceId(String(value.operationId));
-  const batch = Array.isArray(value.batch) ? value.batch.map(parseRestoreSource) : undefined;
-  if (batch?.some(item => item === undefined)) return undefined;
-  return source && facts
-    ? {
-        source,
-        facts,
-        ...(operationId ? { operationId } : {}),
-        ...(batch ? { batch: batch as RestoreSourceOutput[] } : {}),
-      }
-    : undefined;
+  return {
+    source,
+    facts,
+    ...(stats ? { stats } : {}),
+    ...(warnings ? { warnings } : {}),
+    ...(operationId ? { operationId } : {}),
+  };
+}
+
+function parseRestoreSources(value: unknown): RestoreSourceOutput[] | undefined {
+  if (Array.isArray(value)) {
+    const items = value.map(parseRestoreSourceRecord);
+    if (items.length === 0 || items.some(item => item === undefined)) return undefined;
+    return items as RestoreSourceOutput[];
+  }
+  const primary = parseRestoreSourceRecord(value);
+  if (!primary || !isRecord(value)) return undefined;
+  if (value.batch === undefined) return [primary];
+  if (!Array.isArray(value.batch)) return undefined;
+  const rest = value.batch.map(parseRestoreSourceRecord);
+  if (rest.some(item => item === undefined)) return undefined;
+  return [primary, ...(rest as RestoreSourceOutput[])];
 }
 
 function parseDevice(value: unknown): DeviceSetupOutput | undefined {
@@ -279,7 +309,7 @@ function acceptedOutputIsPresent(draft: SetupDraft): boolean {
   if (accepted.has('workplace') && !draft.workplace) return false;
   if (accepted.has('summary') && !draft.summary) return false;
   if (draft.kind === 'restore') {
-    if (accepted.has('restore_source') && !draft.restore.source) return false;
+    if (accepted.has('restore_source') && restoreSources(draft).length === 0) return false;
     if (accepted.has('restore_summary') && !draft.restore.summary) return false;
   }
   return true;
@@ -355,18 +385,21 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     !isRestoreJourneyId(value.journeyId) ||
     (value.entryPolicy !== 'blocking' && value.entryPolicy !== 'optional') ||
     !isRecord(value.restore) ||
-    !hasOnlyKeys(value.restore, ['source', 'handoff', 'handoffs', 'summary', 'deviceCandidate'])
+    !hasOnlyKeys(value.restore, [
+      'sources',
+      'source',
+      'handoffs',
+      'handoff',
+      'summary',
+      'deviceCandidate',
+    ])
   ) {
     return undefined;
   }
-  const source =
-    value.restore.source === undefined ? undefined : parseRestoreSource(value.restore.source);
-  const handoff =
-    value.restore.handoff === undefined
-      ? undefined
-      : parseRestoreHandoff(value.restore.handoff, base.operationId);
+  const rawSources = value.restore.sources ?? value.restore.source;
+  const sources = rawSources === undefined ? undefined : parseRestoreSources(rawSources);
   const rawHandoffs = value.restore.handoffs;
-  const handoffs =
+  const parsedHandoffs =
     rawHandoffs === undefined
       ? undefined
       : Array.isArray(rawHandoffs)
@@ -377,6 +410,11 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
             })
             .filter((item): item is RestoreHandoff => item !== undefined)
         : undefined;
+  const legacyHandoff =
+    value.restore.handoff === undefined
+      ? undefined
+      : parseRestoreHandoff(value.restore.handoff, base.operationId);
+  const handoffs = parsedHandoffs ?? (legacyHandoff ? [legacyHandoff] : undefined);
   const restoreSummary =
     value.restore.summary === undefined ? undefined : parseRestoreSummary(value.restore.summary);
   const deviceCandidate =
@@ -388,10 +426,12 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   const appearance = value.appearance === undefined ? undefined : parseAppearance(value.appearance);
   const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
   if (
-    (value.restore.source !== undefined && !source) ||
-    (value.restore.handoff !== undefined && !handoff) ||
+    (rawSources !== undefined && !sources) ||
+    (value.restore.handoff !== undefined && !legacyHandoff) ||
     (rawHandoffs !== undefined &&
-      (!Array.isArray(rawHandoffs) || !handoffs || handoffs.length !== rawHandoffs.length)) ||
+      (!Array.isArray(rawHandoffs) ||
+        !parsedHandoffs ||
+        parsedHandoffs.length !== rawHandoffs.length)) ||
     (value.restore.summary !== undefined && !restoreSummary) ||
     (value.restore.deviceCandidate !== undefined && !deviceCandidate) ||
     (value.device !== undefined && !device) ||
@@ -404,16 +444,15 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   if (
     !isRestoreOwnershipTuple({
       operationId: base.operationId,
-      sourceFingerprint: source?.source.fingerprint,
-      handoff,
+      sourceFingerprint: sources?.[0]?.source.fingerprint,
+      handoff: handoffs?.[0],
       claimedFingerprint: claimedRestoreFingerprint(base.operationId),
     })
   ) {
     return undefined;
   }
   const restore: RestoreDraftState = {
-    ...(source ? { source } : {}),
-    ...(handoff ? { handoff } : {}),
+    ...(sources ? { sources } : {}),
     ...(handoffs ? { handoffs } : {}),
     ...(restoreSummary ? { summary: restoreSummary } : {}),
     ...(deviceCandidate ? { deviceCandidate } : {}),
@@ -535,10 +574,10 @@ export class SetupDraftStore {
     const draft = this.load();
     if (draft?.kind === 'restore') {
       restorePublicationClaims.release(draft.operationId);
-      for (const source of draft.restore.source?.batch ?? []) {
+      for (const source of restoreSources(draft)) {
         if (source.operationId) restorePublicationClaims.release(source.operationId);
       }
-      forgetPreparedRestore(draft.restore.source?.source.fingerprint);
+      forgetAllPreparedRestores();
     }
     storage.remove(SETUP_DRAFT_KEY);
     notifySetupDraftChanged();
