@@ -2,6 +2,7 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { useCallback, useState } from 'react';
 
 const mockFetchRate = jest.fn();
 jest.mock('@/src/hooks/useExchangeRate', () => ({
@@ -248,5 +249,48 @@ describe('useSimpleJournalEditor', () => {
     // Stale EUR rate must not overwrite the newer GBP→USD rate
     expect(result.current.exchangeRate).toBe(1.25);
     expect(result.current.sourceCurrency).toBe('GBP');
+  });
+
+  it('restores the complete expense draft after visiting another transaction tab', async () => {
+    function useHarness() {
+      const [transactionType, setTransactionType] = useState<'expense' | 'income' | 'transfer'>(
+        'expense',
+      );
+      const [lines, setLines] = useState(createEditor().lines);
+      const updateLine = useCallback((id: string, updates: Record<string, unknown>) => {
+        setLines(current => current.map(line => (line.id === id ? { ...line, ...updates } : line)));
+      }, []);
+      const updateLines = useCallback((updates: Record<string, Record<string, unknown>>) => {
+        setLines(current =>
+          current.map(line => (updates[line.id] ? { ...line, ...updates[line.id] } : line)),
+        );
+      }, []);
+      const editor = {
+        ...createEditor(),
+        transactionType,
+        setTransactionType,
+        isEdit: true,
+        lines,
+        setLines,
+        updateLine,
+        updateLines,
+      } as any;
+      const simple = useSimpleJournalEditor({
+        accounts,
+        editor,
+        onSelectAccountRequest: jest.fn(),
+      });
+      return { simple, lines };
+    }
+
+    const { result } = renderHook(useHarness);
+    const original = result.current.lines.map(line => ({ ...line }));
+
+    act(() => result.current.simple.setType('income'));
+    await waitFor(() => expect(result.current.simple.type).toBe('income'));
+    act(() => result.current.simple.setType('expense'));
+    await waitFor(() => expect(result.current.simple.type).toBe('expense'));
+
+    expect(result.current.lines).toEqual(original);
   });
 });

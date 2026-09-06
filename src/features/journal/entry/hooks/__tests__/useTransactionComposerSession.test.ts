@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { AccountType } from '@/src/types/enums';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useTransactionComposerSession } from '../useTransactionComposerSession';
 
@@ -202,7 +202,7 @@ describe('useTransactionComposerSession', () => {
           accountType: AccountType.ASSET,
           accountCurrency: 'USD',
           amount: '75',
-          transactionType: 'CREDIT',
+          transactionType: TransactionType.CREDIT,
           notes: '',
           exchangeRate: '',
         },
@@ -221,5 +221,102 @@ describe('useTransactionComposerSession', () => {
 
     await waitFor(() => expect(result.current.editor.loadState).toBe('loaded'));
     expect(result.current.splitState.totalAmount).toBe('75');
+  });
+
+  it('preserves every leg when submitting a multi-credit expert journal edit', async () => {
+    const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');
+    journalService.postPostingPlan.mockResolvedValue({ success: true, action: 'updated' });
+    const extendedAccounts = [
+      ...accounts,
+      {
+        id: asAccountId('income'),
+        name: 'Income',
+        accountType: AccountType.INCOME,
+        currencyCode: 'USD',
+      },
+      {
+        id: asAccountId('rent'),
+        name: 'Rent',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts: extendedAccounts,
+        currencyCode: 'USD',
+        journalId: 'journal-merged' as JournalId,
+        initialMode: 'advanced',
+      }),
+    );
+
+    act(() => {
+      result.current.editor.setLines([
+        {
+          id: 'credit-cash' as any,
+          accountId: asAccountId('cash'),
+          accountName: 'Cash',
+          accountType: AccountType.ASSET,
+          accountCurrency: 'USD',
+          amount: '30',
+          transactionType: TransactionType.CREDIT,
+          notes: '',
+          exchangeRate: '',
+        },
+        {
+          id: 'credit-income' as any,
+          accountId: asAccountId('income'),
+          accountName: 'Income',
+          accountType: AccountType.INCOME,
+          accountCurrency: 'USD',
+          amount: '20',
+          transactionType: TransactionType.CREDIT,
+          notes: '',
+          exchangeRate: '',
+        },
+        {
+          id: 'debit-food' as any,
+          accountId: asAccountId('food'),
+          accountName: 'Food',
+          accountType: AccountType.EXPENSE,
+          accountCurrency: 'USD',
+          amount: '25',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '',
+        },
+        {
+          id: 'debit-rent' as any,
+          accountId: asAccountId('rent'),
+          accountName: 'Rent',
+          accountType: AccountType.EXPENSE,
+          accountCurrency: 'USD',
+          amount: '25',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '',
+        },
+      ]);
+      result.current.editor.setDescription('Merged transaction');
+    });
+
+    await act(async () => {
+      await result.current.submit('editor');
+    });
+
+    expect(journalService.postPostingPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plan: expect.objectContaining({
+          lines: expect.arrayContaining([
+            expect.objectContaining({ accountId: asAccountId('cash'), amount: '30' }),
+            expect.objectContaining({ accountId: asAccountId('income'), amount: '20' }),
+            expect.objectContaining({ accountId: asAccountId('food'), amount: '25' }),
+            expect.objectContaining({ accountId: asAccountId('rent'), amount: '25' }),
+          ]),
+        }),
+      }),
+    );
+    expect(journalService.postPostingPlan.mock.calls.at(-1)[0].plan.lines).toHaveLength(4);
   });
 });

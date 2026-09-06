@@ -11,7 +11,7 @@ import { LayoutAnimation } from 'react-native';
 
 type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
-  'isGuidedMode' | 'setIsGuidedMode' | 'setTransactionType' | 'lines'
+  'isGuidedMode' | 'setIsGuidedMode' | 'lines'
 >;
 
 export function useJournalEntryModeState(
@@ -21,12 +21,11 @@ export function useJournalEntryModeState(
   const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
     resolveJournalEntryScreenMode(routeMode),
   );
-  const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, setTransactionType, lines } = editor;
+  const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'basic');
-    if (activeMode === 'allocation') setTransactionType('expense');
-  }, [activeMode, setIsGuidedMode, setTransactionType]);
+  }, [activeMode, setIsGuidedMode]);
 
   const wasEditorGuidedRef = useRef(editorIsGuidedMode);
   useEffect(() => {

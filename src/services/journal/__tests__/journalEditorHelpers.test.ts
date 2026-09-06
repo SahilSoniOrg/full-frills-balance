@@ -260,5 +260,25 @@ describe('journalEditorHelpers', () => {
       ];
       expect(isSimpleModeDisabledByLines(lines)).toBe(true);
     });
+
+    it('blocks simple mode when an extra line contains notes or an exchange rate', () => {
+      const base = [
+        { ...emptyLine('source', TransactionType.CREDIT), accountId: 'cash' as any, amount: '15' },
+        { ...emptyLine('split-1', TransactionType.DEBIT), accountId: 'a1' as any, amount: '15' },
+      ];
+
+      expect(
+        isSimpleModeDisabledByLines([
+          ...base,
+          { ...emptyLine('notes', TransactionType.DEBIT), notes: 'Reimburse later' },
+        ]),
+      ).toBe(true);
+      expect(
+        isSimpleModeDisabledByLines([
+          ...base,
+          { ...emptyLine('rate', TransactionType.DEBIT), exchangeRate: '1.25' },
+        ]),
+      ).toBe(true);
+    });
   });
 });

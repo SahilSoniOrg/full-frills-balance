@@ -98,6 +98,7 @@ export function useTransactionComposerSession(
           : undefined,
     };
   }, [
+    accounts,
     destinationLines,
     editor.description,
     editor.isGuidedMode,
@@ -150,6 +151,24 @@ export function useTransactionComposerSession(
               )
             : `${editor.transactionType.charAt(0).toUpperCase()}${editor.transactionType.slice(1)}`);
       if (!editor.description.trim()) editor.setDescription(description);
+
+      // Expert mode is the lossless editor for arbitrary journal shapes. A merged
+      // journal may contain multiple credit legs; reducing it to the guided intent
+      // (one source plus debit allocations) would silently drop those legs on save.
+      if (mode === 'editor' && !editor.isGuidedMode) {
+        const time = editor.journalTime || '00:00';
+        const date = new Date(`${editor.journalDate}T${time}`).getTime();
+        return editor.submitPlan(
+          {
+            lines: editor.lines,
+            currencyCode,
+            description,
+            date,
+            notes: editor.notes || undefined,
+          },
+          'advanced',
+        );
+      }
 
       const submissionIntent = { ...intent, description };
       const resolution = resolveTransactionIntent(submissionIntent, { accounts, currencyCode });

@@ -14,7 +14,7 @@ import {
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
 import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
@@ -49,6 +49,9 @@ export function useSimpleJournalEditor({
   const type = editor.transactionType;
   const isGuidedMode = editor.isGuidedMode;
   const updateLines = editor.updateLines;
+  const tabDraftsRef = useRef<Partial<Record<TabType, JournalEntryLine[]>>>({
+    [type]: editor.lines.map(line => ({ ...line })),
+  });
 
   const sourceLine = useMemo(
     () => editor.lines.find(l => l.transactionType === TransactionType.CREDIT),
@@ -163,7 +166,16 @@ export function useSimpleJournalEditor({
   // Helpers to update editor state
   const setType = useCallback(
     (newType: TabType) => {
+      if (newType === type) return;
+
+      tabDraftsRef.current[type] = editor.lines.map(line => ({ ...line }));
+      const savedDraft = tabDraftsRef.current[newType];
       editor.setTransactionType(newType);
+
+      if (savedDraft) {
+        editor.setLines(savedDraft.map(line => ({ ...line })));
+        return;
+      }
 
       const accountsById = new Map(accounts.map(a => [a.id, a]));
       const { sourceAccountId: nextSourceId, destinationAccountId: nextDestId } =
@@ -198,7 +210,7 @@ export function useSimpleJournalEditor({
       applyAccountToLine(sourceLine, nextSourceId, TransactionType.CREDIT);
       applyAccountToLine(destinationLine, nextDestId, TransactionType.DEBIT);
     },
-    [editor, sourceLine, destinationLine, accounts, sourceId, destinationId],
+    [type, editor, sourceLine, destinationLine, accounts, sourceId, destinationId],
   );
 
   const setAmount = useCallback(

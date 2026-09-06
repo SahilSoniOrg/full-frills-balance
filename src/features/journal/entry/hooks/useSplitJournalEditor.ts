@@ -26,7 +26,7 @@ export function useSplitJournalEditor({
 }: UseSplitJournalEditorProps): SplitJournalController {
   const initializedRef = useRef(false);
 
-  const { setTransactionType, setIsGuidedMode, isEdit, isSubmitting } = editor;
+  const { setIsGuidedMode, isEdit, isSubmitting } = editor;
 
   const sourceLine = editor.lines.find(line => line.transactionType === 'CREDIT');
   const destinationLines = editor.lines.filter(line => line.transactionType === 'DEBIT');
@@ -106,9 +106,8 @@ export function useSplitJournalEditor({
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    setTransactionType('expense');
     setIsGuidedMode(false);
-  }, [setIsGuidedMode, setTransactionType]);
+  }, [setIsGuidedMode]);
 
   const totals = useMemo(() => computeSplitTotals(totalAmount, splits), [totalAmount, splits]);
 

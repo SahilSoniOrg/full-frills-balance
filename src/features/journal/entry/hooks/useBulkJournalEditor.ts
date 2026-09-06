@@ -28,6 +28,7 @@ export function useBulkJournalEditor({
   const { fetchRate } = useExchangeRate();
   const { saveBulkJournalEntries } = useJournalActions(workplaceId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlightRef = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Initialize with one empty row
@@ -249,7 +250,7 @@ export function useBulkJournalEditor({
   const isAtMaxRows = rows.length >= MAX_BULK_JOURNAL_ROWS;
 
   const saveAll = useCallback(async () => {
-    if (isSubmitting) return;
+    if (submissionInFlightRef.current) return;
 
     let hasErrors = false;
     const validatedRows = latestRowsRef.current.map(row => {
@@ -265,6 +266,7 @@ export function useBulkJournalEditor({
       return;
     }
 
+    submissionInFlightRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -290,16 +292,10 @@ export function useBulkJournalEditor({
         err instanceof Error ? err.message : 'An error occurred while saving the journals.';
       setSubmitError(message);
     } finally {
+      submissionInFlightRef.current = false;
       setIsSubmitting(false);
     }
-  }, [
-    accounts,
-    workplaceId,
-    workplaceCurrency,
-    isSubmitting,
-    onSaveSuccess,
-    saveBulkJournalEntries,
-  ]);
+  }, [accounts, workplaceId, workplaceCurrency, onSaveSuccess, saveBulkJournalEntries]);
 
   return {
     rows,

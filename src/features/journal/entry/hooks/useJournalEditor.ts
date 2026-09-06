@@ -16,7 +16,7 @@ import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journ
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
 import { useJournalEditorLineState } from './useJournalEditorLineState';
 
@@ -144,6 +144,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlightRef = useRef(false);
   const hydrateEditor = useCallback(
     (snapshot: JournalEditorHydration) => {
       setDescription(snapshot.description);
@@ -181,6 +182,10 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
   const submitPlan = useCallback(
     async (plan: PostingPlan, mode: 'simple' | 'advanced' | 'import') => {
+      if (submissionInFlightRef.current) {
+        return { success: false, error: 'Submission already in progress' } as const;
+      }
+      submissionInFlightRef.current = true;
       setIsSubmitting(true);
       try {
         const result = await postPostingPlan({
@@ -218,6 +223,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         showErrorAlert('Unexpected error occurred');
         return { success: false, error: 'Unexpected error occurred' };
       } finally {
+        submissionInFlightRef.current = false;
         setIsSubmitting(false);
       }
     },

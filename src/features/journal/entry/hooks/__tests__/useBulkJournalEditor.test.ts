@@ -269,6 +269,40 @@ describe('useBulkJournalEditor', () => {
     ]);
   });
 
+  it('coalesces rapid duplicate bulk submissions while the first save is in flight', async () => {
+    let resolveSave!: (value: { success: boolean; summaries: never[] }) => void;
+    const pendingSave = new Promise<{ success: boolean; summaries: never[] }>(resolve => {
+      resolveSave = resolve;
+    });
+    (journalService.saveBulkJournalEntries as jest.Mock).mockReturnValue(pendingSave);
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+    act(() => {
+      const rowId = result.current.rows[0].id;
+      result.current.updateRowField(rowId, 'description', 'Salary');
+      result.current.updateRowField(rowId, 'amount', '500');
+      result.current.updateRowField(rowId, 'sourceId', 'acc1');
+      result.current.updateRowField(rowId, 'destinationId', 'acc2');
+    });
+
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = result.current.saveAll();
+      second = result.current.saveAll();
+    });
+
+    expect(journalService.saveBulkJournalEntries).toHaveBeenCalledTimes(1);
+    resolveSave({ success: true, summaries: [] });
+    await act(async () => Promise.all([first, second]));
+  });
+
   it('clearRows resets to a single empty row and clears submit error', () => {
     const { result } = renderHook(() =>
       useBulkJournalEditor({

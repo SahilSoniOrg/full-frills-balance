@@ -18,6 +18,10 @@ import {
   GuidedVoiceActions,
 } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
+import {
+  createJournalDraftFingerprint,
+  useJournalEntryLeaveGuard,
+} from '@/src/features/journal/entry/hooks/useJournalEntryLeaveGuard';
 import { useTransactionComposerSession } from '@/src/features/journal/entry/hooks/useTransactionComposerSession';
 import { useBatchJournalSession } from '@/src/features/journal/entry/hooks/useBatchJournalSession';
 import type { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
@@ -33,7 +37,7 @@ import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Shell-facing contract for journal entry.
@@ -100,7 +104,8 @@ export function useJournalEntryShell(): JournalEntryShell {
     [seed.sourceContext?.smsId],
   );
 
-  const onSuccess = useCallback(() => AppNavigation.back(), []);
+  const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
+  const onSuccess = useCallback(() => leaveAfterSaveRef.current(), []);
 
   const session = useTransactionComposerSession(workplaceId, {
     accounts,
@@ -136,6 +141,23 @@ export function useJournalEntryShell(): JournalEntryShell {
     onToggleMode,
   );
   const { saveAll: saveBatch } = batchEditor;
+
+  const draftFingerprint = createJournalDraftFingerprint({
+    description: editor.description,
+    notes: editor.notes,
+    journalDate: editor.journalDate,
+    journalTime: editor.journalTime,
+    transactionType: editor.transactionType,
+    lines: editor.lines,
+    batchRows: batchEditor.rows,
+  });
+  const leaveGuard = useJournalEntryLeaveGuard({
+    fingerprint: draftFingerprint,
+    baselineReady: !editor.isEdit || editor.loadState === 'loaded',
+  });
+  useEffect(() => {
+    leaveAfterSaveRef.current = leaveGuard.leaveAfterSave;
+  }, [leaveGuard.leaveAfterSave]);
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
@@ -225,7 +247,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,
     showAccountPicker,
     onCloseAccountPicker,
-    onClose: onSuccess,
+    onClose: leaveGuard.onClose,
     onSelectAccountRequest,
     onAccountSelected,
     selectedAccountId,

@@ -203,6 +203,32 @@ describe('useJournalEditor', () => {
     expect(showErrorAlert).not.toHaveBeenCalled();
   });
 
+  it('coalesces rapid duplicate submissions while the first save is in flight', async () => {
+    let resolveSave!: (value: { success: boolean }) => void;
+    const pendingSave = new Promise<{ success: boolean }>(resolve => {
+      resolveSave = resolve;
+    });
+    (journalService.postPostingPlan as jest.Mock).mockReturnValue(pendingSave);
+    const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
+    const plan = {
+      lines: result.current.lines,
+      currencyCode: 'USD',
+      description: 'Expense',
+      date: Date.now(),
+    };
+
+    let first!: Promise<unknown>;
+    let second!: Promise<unknown>;
+    act(() => {
+      first = result.current.submitPlan(plan, 'simple');
+      second = result.current.submitPlan(plan, 'simple');
+    });
+
+    expect(journalService.postPostingPlan).toHaveBeenCalledTimes(1);
+    resolveSave({ success: true });
+    await act(async () => Promise.all([first, second]));
+  });
+
   it('should load journal data on edit', async () => {
     const mockEditorData = {
       journal: {

@@ -146,7 +146,9 @@ export function isSubstantiveEditorLine(line: JournalEntryLine): boolean {
   const hasAccount = line.accountId !== EMPTY_ACCOUNT_ID;
   const amountStr = String(line.amount ?? '').trim();
   const hasAmount = amountStr !== '' && !Number.isNaN(Number.parseFloat(amountStr));
-  return hasAccount || hasAmount;
+  const hasNotes = String(line.notes ?? '').trim() !== '';
+  const hasExchangeRate = String(line.exchangeRate ?? '').trim() !== '';
+  return hasAccount || hasAmount || hasNotes || hasExchangeRate;
 }
 
 export function countSubstantiveEditorLines(lines: JournalEntryLine[]): number {
