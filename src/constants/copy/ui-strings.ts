@@ -396,7 +396,7 @@ export const UI_STRINGS = {
     },
     data: {
       backupRestoreHeader: 'Backup & Restore',
-      sharingReviewHeader: 'Sharing & Review',
+      reviewHeader: 'Review',
       exportDesc: 'Export your ledger to a JSON backup file.',
       exportBtn: 'Create Backup',
       exportingTitle: 'Exporting Backup',

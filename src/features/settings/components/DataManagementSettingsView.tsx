@@ -61,9 +61,6 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
           onPress={onExport}
           loading={isExporting}
         />
-        <SettingsFocusTarget targetId="share-format">
-          <ShareFormatPreferenceView value={defaultShareFormat} onChange={setDefaultShareFormat} />
-        </SettingsFocusTarget>
         <SettingsFocusTarget targetId="data-import">
           <SettingsMenuItem
             searchId="data-import"
@@ -76,7 +73,11 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
         </SettingsFocusTarget>
       </SettingsMenu>
 
-      <SettingsMenu header={AppConfig.strings.settings.data.sharingReviewHeader}>
+      <SettingsFocusTarget targetId="share-format">
+        <ShareFormatPreferenceView value={defaultShareFormat} onChange={setDefaultShareFormat} />
+      </SettingsFocusTarget>
+
+      <SettingsMenu header={AppConfig.strings.settings.data.reviewHeader}>
         <SettingsMenuItem
           searchId="audit-log"
           leftIcon="history"

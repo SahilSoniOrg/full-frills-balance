@@ -36,8 +36,11 @@ describe('settings search catalog', () => {
   it('keeps the destination callback on each result', () => {
     const catalog = createSettingsSearchCatalog(actions);
     const result = filterSettingsSearchItems(catalog, 'currency')[0];
+    const shareFormat = filterSettingsSearchItems(catalog, 'share format')[0];
 
     result.onPress();
+    shareFormat.onPress();
     expect(actions.onCurrentWorkplace).toHaveBeenCalled();
+    expect(actions.onDataManagement).toHaveBeenCalledWith('share-format');
   });
 });
