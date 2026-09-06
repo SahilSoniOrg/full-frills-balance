@@ -155,8 +155,13 @@ export function useAccountTreeDragController({
           return candidate ? canReceiveChildren(candidate) : false;
         },
       );
-      if (!visualHover || dragLayout.activeSubtreeAccountIds.has(visualHover.hoveredAccountId))
+      if (!visualHover || dragLayout.activeSubtreeAccountIds.has(visualHover.hoveredAccountId)) {
+        // Crossing a section/header gap or the dragged subtree must not retain
+        // the previous target while the pointer is between valid rows.
+        hoverRef.current = null;
+        setHover(null);
         return;
+      }
       const draggedAccount = accountsById.get(accountId);
       const hoveredAccount = accountsById.get(visualHover.hoveredAccountId);
       if (
