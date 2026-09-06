@@ -71,7 +71,7 @@ function MergeJournalsModalContent({
       onClose={onClose}
       title="Merge Journal Entries"
       itemCount={journalIds.length}
-      confirmLabel="Merge Journal Entries"
+      confirmLabel="Merge"
       onConfirm={handleConfirm}
       isSubmitting={isMerging}
       isConfirmDisabled={!preview?.canMerge}

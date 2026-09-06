@@ -196,6 +196,8 @@ const styles = StyleSheet.create({
   scrollFit: {
     marginTop: Spacing.md,
     flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
   },
   scrollContent: {
     gap: Spacing.md,

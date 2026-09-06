@@ -58,28 +58,32 @@ export function BulkActionModalSurface({
       scrollable={true}
       footer={
         <View style={styles.footerRow}>
-          <AppButton
-            variant="outline"
-            onPress={onClose}
-            style={styles.button}
-            disabled={isSubmitting}
-            accessibilityLabel={cancelAccessibilityLabel ?? cancelLabel}
-            testID={`${testID ?? 'bulk-modal'}-cancel`}
-          >
-            {cancelLabel}
-          </AppButton>
-          {onConfirm && (
+          <View style={styles.cancelSlot}>
             <AppButton
-              variant={confirmVariant}
-              onPress={onConfirm}
+              variant="outline"
+              onPress={onClose}
               style={styles.button}
-              disabled={isConfirmDisabled || isSubmitting}
-              loading={isSubmitting}
-              accessibilityLabel={confirmAccessibilityLabel ?? confirmLabel}
-              testID={`${testID ?? 'bulk-modal'}-confirm`}
+              disabled={isSubmitting}
+              accessibilityLabel={cancelAccessibilityLabel ?? cancelLabel}
+              testID={`${testID ?? 'bulk-modal'}-cancel`}
             >
-              {confirmLabel}
+              {cancelLabel}
             </AppButton>
+          </View>
+          {onConfirm && (
+            <View style={styles.confirmSlot}>
+              <AppButton
+                variant={confirmVariant}
+                onPress={onConfirm}
+                style={styles.button}
+                disabled={isConfirmDisabled || isSubmitting}
+                loading={isSubmitting}
+                accessibilityLabel={confirmAccessibilityLabel ?? confirmLabel}
+                testID={`${testID ?? 'bulk-modal'}-confirm`}
+              >
+                {confirmLabel}
+              </AppButton>
+            </View>
           )}
         </View>
       }
@@ -104,8 +108,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.md,
     width: '100%',
+    paddingTop: Spacing.md,
   },
   button: {
-    flex: 1,
+    width: '100%',
+  },
+  cancelSlot: {
+    flexGrow: 0.8,
+    flexShrink: 1,
+    flexBasis: 0,
+    width: 0,
+  },
+  confirmSlot: {
+    flexGrow: 1.2,
+    flexShrink: 1,
+    flexBasis: 0,
+    width: 0,
   },
 });

@@ -158,6 +158,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     <View style={[styles.container, style]}>
       <FlashList
         ref={listRef}
+        testID="journal-entry-list"
         data={items}
         renderItem={({ item }: { item: JournalListItem }) =>
           renderListItem({
