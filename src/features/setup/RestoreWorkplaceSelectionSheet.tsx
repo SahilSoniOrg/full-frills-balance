@@ -47,6 +47,7 @@ export function RestoreWorkplaceSelectionSheet({
         <TouchableOpacity
           onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
           accessibilityRole="checkbox"
+          accessibilityLabel="Select all workplaces"
           accessibilityState={{ checked: allSelected }}
         >
           <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
@@ -72,6 +73,7 @@ export function RestoreWorkplaceSelectionSheet({
                   )
                 }
                 accessibilityRole="checkbox"
+                accessibilityLabel={`${selected ? 'Deselect' : 'Select'} ${entry.name}`}
                 accessibilityState={{ checked: selected }}
                 testID={`restore-workplace-option-${index}`}
               >

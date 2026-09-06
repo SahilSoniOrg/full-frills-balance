@@ -251,7 +251,7 @@ export function SetupReviewStep({
                   }
                 >
                   <Stack space="xs" flex={1}>
-                    <AppText weight="semibold" numberOfLines={1}>
+                    <AppText weight="semibold" numberOfLines={2} ellipsizeMode="tail">
                       {item.name}
                     </AppText>
                     <AppText variant="caption" color="secondary">

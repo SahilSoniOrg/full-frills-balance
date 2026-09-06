@@ -143,7 +143,7 @@ export function RestoreSummarySlice({
             </AppButton>
           ) : null}
           <AppButton variant="ghost" onPress={() => onIntent('discard')} disabled={isCompleting}>
-            Discard
+            Discard restore
           </AppButton>
         </Stack>
       </ScrollView>

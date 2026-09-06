@@ -1,5 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import {
@@ -54,6 +55,7 @@ export function ModalSurface({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const isBottomSheet = position === 'bottomSheet';
+  const reduceMotion = useReducedMotion();
 
   const content = (
     <View
@@ -95,6 +97,7 @@ export function ModalSurface({
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={accessibilityCloseLabel}
+              hitSlop={Spacing.sm}
               testID={closeTestID}
             >
               <AppIcon name="close" size={Size.sm} color={theme.textSecondary} />
@@ -124,7 +127,7 @@ export function ModalSurface({
       <Modal
         visible={visible}
         transparent
-        animationType={animationType ?? (isBottomSheet ? 'slide' : 'fade')}
+        animationType={animationType ?? (isBottomSheet && !reduceMotion ? 'slide' : 'fade')}
         onRequestClose={onClose}
       >
         {content}

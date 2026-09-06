@@ -49,7 +49,7 @@ describe('RestoreSummarySlice', () => {
     expect(screen.getByText('Books is validated and ready to restore.')).toBeTruthy();
     expect(screen.getByTestId('restore-summary-secondary')).toBeEnabled();
     expect(screen.getByTestId('restore-summary-open')).toBeEnabled();
-    fireEvent.press(screen.getByText('Discard'));
+    fireEvent.press(screen.getByText('Discard restore'));
     expect(onIntent).toHaveBeenCalledWith('discard');
   });
 });

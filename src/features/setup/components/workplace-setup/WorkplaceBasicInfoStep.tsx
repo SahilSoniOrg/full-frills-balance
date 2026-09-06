@@ -1,4 +1,5 @@
 import { AppButton, AppIcon, AppInput, AppText, IconButton, IconName } from '@/src/components/core';
+import { Typography } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
@@ -46,7 +47,7 @@ export function WorkplaceBasicInfoStep({
       >
         <Stack gap="xl" flex={1} justifyContent="space-between">
           <Stack gap="md" align="center" paddingTop="xl">
-            <AppText variant="hero" style={{ textAlign: 'center' }}>
+            <AppText variant="title" style={styles.title}>
               {title}
             </AppText>
             <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
@@ -142,6 +143,11 @@ export function WorkplaceBasicInfoStep({
 }
 
 const styles = StyleSheet.create({
+  title: {
+    maxWidth: 350,
+    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
+    textAlign: 'center',
+  },
   refreshButton: {
     marginBottom: 1,
   },

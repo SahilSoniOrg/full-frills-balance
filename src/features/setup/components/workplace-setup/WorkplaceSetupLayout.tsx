@@ -34,7 +34,7 @@ export function WorkplaceSetupLayout({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
     >
       <Box flex={1}>
-        <Inset horizontal="lg" top={0} bottom={0} flex={1}>
+        <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
           <Box
             maxWidth={AppConfig.layout.maxContentWidth}
             width="100%"

@@ -1,5 +1,10 @@
 import { AppButton } from '@/src/components/core/AppButton';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
+
+jest.mock('@/src/hooks/use-reduced-motion', () => ({
+  useReducedMotion: jest.fn(() => false),
+}));
 
 describe('AppButton', () => {
   it('renders with title', () => {
@@ -103,6 +108,24 @@ describe('AppButton', () => {
       </AppButton>,
     );
     expect(screen.getByText('Large')).toBeTruthy();
+  });
+
+  it('still calls caller onPressIn and onPressOut', () => {
+    jest.mocked(useReducedMotion).mockReturnValueOnce(true);
+    const onPressIn = jest.fn();
+    const onPressOut = jest.fn();
+    render(
+      <AppButton onPress={() => {}} onPressIn={onPressIn} onPressOut={onPressOut}>
+        Press
+      </AppButton>,
+    );
+
+    const button = screen.getByRole('button');
+    fireEvent(button, 'pressIn');
+    fireEvent(button, 'pressOut');
+
+    expect(onPressIn).toHaveBeenCalledTimes(1);
+    expect(onPressOut).toHaveBeenCalledTimes(1);
   });
 
   it('passes testID to component', () => {

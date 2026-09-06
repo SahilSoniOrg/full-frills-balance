@@ -11,11 +11,12 @@ import {
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { Box, Stack } from '@/src/design-system';
 import { SetupStsPreview } from './SetupStsPreview';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { MotiView } from 'moti';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
 import {
   GestureResponderEvent,
@@ -41,6 +42,30 @@ type AppearanceThemeStepProps = {
 
 let globalThemeId: ThemeId | null = null;
 
+function ThemeLabelMotion({
+  motionKey,
+  fromX,
+  reduceMotion,
+  children,
+}: {
+  motionKey: string;
+  fromX: number;
+  reduceMotion: boolean;
+  children: ReactNode;
+}) {
+  if (reduceMotion) return children;
+  return (
+    <MotiView
+      key={motionKey}
+      from={{ opacity: 0, translateX: fromX }}
+      animate={{ opacity: 1, translateX: 0 }}
+      transition={{ type: 'timing', duration: 250 }}
+    >
+      {children}
+    </MotiView>
+  );
+}
+
 export function AppearanceThemeStep(props: AppearanceThemeStepProps) {
   return <AppearanceThemeStepContent {...props} />;
 }
@@ -48,6 +73,7 @@ export function AppearanceThemeStep(props: AppearanceThemeStepProps) {
 function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
   const { currencyCode } = props;
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const {
     themeId: persistedThemeId,
     fontId: persistedFontId,
@@ -177,8 +203,8 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
             variant="caption"
             weight={isSelected ? 'bold' : 'regular'}
             style={{ textAlign: 'center' }}
-            numberOfLines={1}
-            adjustsFontSizeToFit
+            numberOfLines={2}
+            ellipsizeMode="tail"
           >
             {label}
           </AppText>
@@ -226,38 +252,46 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
           <Pressable
             onPress={() => cycleTheme(-1)}
             hitSlop={20}
+            accessibilityRole="button"
+            accessibilityLabel={`Previous theme, ${getThemeLabel(-1)}`}
             testID="onboarding-theme-previous-button"
             style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 4 }}
           >
             <AppIcon name="chevronLeft" size={20} color={theme.textSecondary} />
-            <MotiView
-              key={`prev-${themeId}`}
-              from={{ opacity: 0, translateX: slideDirection * 10 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 250 }}
+            <ThemeLabelMotion
+              motionKey={`prev-${themeId}`}
+              fromX={slideDirection * 10}
+              reduceMotion={reduceMotion}
             >
-              <AppText variant="caption" color="secondary" numberOfLines={1}>
+              <AppText
+                variant="caption"
+                color="secondary"
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={styles.themeNeighborLabel}
+              >
                 {getThemeLabel(-1)}
               </AppText>
-            </MotiView>
+            </ThemeLabelMotion>
           </Pressable>
 
           <View style={{ flex: 1, alignItems: 'center', overflow: 'hidden' }}>
-            <MotiView
-              key={`curr-${themeId}`}
-              from={{ opacity: 0, translateX: slideDirection * 20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 250 }}
+            <ThemeLabelMotion
+              motionKey={`curr-${themeId}`}
+              fromX={slideDirection * 20}
+              reduceMotion={reduceMotion}
             >
               <AppText weight="bold" numberOfLines={1}>
                 {getThemeLabel(0)}
               </AppText>
-            </MotiView>
+            </ThemeLabelMotion>
           </View>
 
           <Pressable
             onPress={() => cycleTheme(1)}
             hitSlop={20}
+            accessibilityRole="button"
+            accessibilityLabel={`Next theme, ${getThemeLabel(1)}`}
             testID="onboarding-theme-next-button"
             style={{
               flexDirection: 'row',
@@ -267,16 +301,21 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
               gap: 4,
             }}
           >
-            <MotiView
-              key={`next-${themeId}`}
-              from={{ opacity: 0, translateX: slideDirection * 10 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 250 }}
+            <ThemeLabelMotion
+              motionKey={`next-${themeId}`}
+              fromX={slideDirection * 10}
+              reduceMotion={reduceMotion}
             >
-              <AppText variant="caption" color="secondary" numberOfLines={1}>
+              <AppText
+                variant="caption"
+                color="secondary"
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={styles.themeNeighborLabel}
+              >
                 {getThemeLabel(1)}
               </AppText>
-            </MotiView>
+            </ThemeLabelMotion>
             <AppIcon name="chevronRight" size={20} color={theme.textSecondary} />
           </Pressable>
         </View>
@@ -326,6 +365,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: Spacing.lg,
+  },
+  themeNeighborLabel: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   optionsContainer: {
     flexDirection: 'row',

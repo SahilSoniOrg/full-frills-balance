@@ -53,6 +53,8 @@ describe('AppearanceThemeStep', () => {
       />,
     );
 
+    expect(screen.getByRole('button', { name: 'Previous theme, Editorial' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Next theme, Gold Obsidian' })).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-theme-next-button'));
     fireEvent.press(screen.getByTestId('onboarding-font-editorial-option'));
 

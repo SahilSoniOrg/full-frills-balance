@@ -20,8 +20,24 @@ describe('RestoreWorkplaceSelectionSheet', () => {
     );
 
     expect(screen.getByText('Save 2 workplaces')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Select all workplaces' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Deselect Work' })).toBeTruthy();
     fireEvent.press(screen.getByTestId('restore-workplace-option-1'));
     expect(onChange).toHaveBeenCalledWith([0]);
+    rerender(
+      <RestoreWorkplaceSelectionSheet
+        visible
+        workplaces={[
+          { name: 'Personal', currency: 'USD', accounts: 2, categories: 1, journals: 3 },
+          { name: 'Work', currency: 'EUR', accounts: 4, categories: 2, journals: 6 },
+        ]}
+        selectedIndexes={[0]}
+        onChange={onChange}
+        onClose={jest.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Select Work' })).toBeTruthy();
 
     rerender(
       <RestoreWorkplaceSelectionSheet

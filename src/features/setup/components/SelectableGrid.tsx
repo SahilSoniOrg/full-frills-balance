@@ -1,6 +1,7 @@
 import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
 import { FlatList, Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -55,6 +56,7 @@ interface SelectableGridItemProps {
   renderIcon?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
   renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
   disableAnimation?: boolean;
+  reduceMotion?: boolean;
 }
 
 const SelectableGridItem = React.memo(
@@ -72,6 +74,7 @@ const SelectableGridItem = React.memo(
     renderIcon,
     renderSubtitle,
     disableAnimation,
+    reduceMotion,
   }: SelectableGridItemProps) => {
     const { id, name, icon, symbol, subtitle } = item;
 
@@ -130,7 +133,8 @@ const SelectableGridItem = React.memo(
             <AppText
               variant="subheading"
               style={{ color: isSelected ? accentColor : textColor }}
-              numberOfLines={1}
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
               {name}
             </AppText>
@@ -158,14 +162,22 @@ const SelectableGridItem = React.memo(
 
     return (
       <MotiView
-        from={{ opacity: 0, scale: 0.9, translateY: 15 }}
-        animate={{ opacity: 1, scale: 1, translateY: 0 }}
-        transition={{
-          type: 'spring',
-          damping: 15,
-          stiffness: 120,
-          delay: Math.min(50 + index * 30, 300),
+        from={{
+          opacity: 0,
+          scale: reduceMotion ? 1 : 0.9,
+          translateY: reduceMotion ? 0 : 15,
         }}
+        animate={{ opacity: 1, scale: 1, translateY: 0 }}
+        transition={
+          reduceMotion
+            ? { type: 'timing', duration: 100 }
+            : {
+                type: 'spring',
+                damping: 15,
+                stiffness: 120,
+                delay: Math.min(50 + index * 30, 300),
+              }
+        }
         style={styles.itemWrapper}
       >
         {content}
@@ -187,7 +199,8 @@ const SelectableGridItem = React.memo(
       prev.item.icon === next.item.icon &&
       prev.item.symbol === next.item.symbol &&
       prev.item.subtitle === next.item.subtitle &&
-      prev.item.color === next.item.color
+      prev.item.color === next.item.color &&
+      prev.reduceMotion === next.reduceMotion
     );
   },
 );
@@ -218,6 +231,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   sections,
 }) => {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const effectiveAccentColor = accentColor || theme.primary;
 
   // Kill O(n^2) selection lookups
@@ -257,6 +271,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
           renderIcon={renderIcon}
           renderSubtitle={renderSubtitle}
           disableAnimation={disableAnimation}
+          reduceMotion={reduceMotion}
         />
       );
     },
@@ -269,6 +284,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
       renderSubtitle,
       handleToggle,
       disableAnimation,
+      reduceMotion,
     ],
   );
 

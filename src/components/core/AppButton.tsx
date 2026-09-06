@@ -1,12 +1,15 @@
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   StyleSheet,
   TouchableOpacity,
+  type GestureResponderEvent,
   type TouchableOpacityProps,
 } from 'react-native';
 
@@ -25,9 +28,13 @@ export function AppButton({
   disabled,
   style,
   onPress,
+  onPressIn,
+  onPressOut,
   ...props
 }: AppButtonProps) {
   const { theme, fonts, getVariantColors } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const [pressScale] = useState(() => new Animated.Value(1));
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
     const helperVariant: ComponentVariant =
@@ -153,17 +160,40 @@ export function AppButton({
     });
   };
 
+  const handlePressIn = (event: GestureResponderEvent) => {
+    onPressIn?.(event);
+    if (reduceMotion) return;
+    Animated.timing(pressScale, {
+      toValue: 0.98,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = (event: GestureResponderEvent) => {
+    onPressOut?.(event);
+    if (reduceMotion) return;
+    Animated.timing(pressScale, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <TouchableOpacity
-      style={buttonCombinedStyle}
+      {...props}
       disabled={disabled || loading}
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       activeOpacity={Opacity.heavy}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
-      {...props}
     >
-      {renderChildren()}
+      <Animated.View style={[buttonCombinedStyle, { transform: [{ scale: pressScale }] }]}>
+        {renderChildren()}
+      </Animated.View>
     </TouchableOpacity>
   );
 }
