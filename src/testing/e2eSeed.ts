@@ -319,6 +319,49 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
   ]);
 }
 
+/** Three SMS-originated two-leg journals used to exercise merge → edit losslessness. */
+async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
+  rebuildQueueService.stop();
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
+  const groceries = await accountQueryRepository.findByName(workplaceId, 'Groceries');
+  if (!bank || !food || !groceries) {
+    throw new Error('[E2E] merge-edit seed requires Bank, Food & Drink, and Groceries accounts');
+  }
+  const sports = await createAccount(workplaceId, {
+    name: 'Sports',
+    accountType: AccountType.EXPENSE,
+    currencyCode: 'USD',
+    initialBalance: 0,
+    icon: 'activity',
+    workplaceId,
+  });
+  const legs = [
+    { id: 'e2e-merge-food', account: food, amount: 300, description: 'SMS Food' },
+    { id: 'e2e-merge-groceries', account: groceries, amount: 200, description: 'SMS Groceries' },
+    { id: 'e2e-merge-sports', account: sports, amount: 100, description: 'SMS Sports' },
+  ];
+  for (const leg of legs) {
+    await ledgerWriteService.createJournal(
+      {
+        description: leg.description,
+        journalDate: Date.now() - 60 * 60 * 1000,
+        currencyCode: 'USD',
+        metadata: {
+          importSource: 'sms',
+          originalSmsId: leg.id,
+        },
+        transactions: [
+          { accountId: bank.id, amount: leg.amount, transactionType: TransactionType.CREDIT },
+          { accountId: leg.account.id, amount: leg.amount, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      workplaceId,
+    );
+  }
+  await rebuildQueueService.flush();
+}
+
 export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<WorkplaceId> {
   logger.info(`[E2E] Seeding profile: ${profile}`);
   if (profile === 'first-run-restore') {
@@ -354,6 +397,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
 
   if (profile === 'sms-sync') {
     await seedSmsSyncHarness(workplaceId);
+  }
+
+  if (profile === 'merge-edit') {
+    await seedMergeEditData(workplaceId);
   }
 
   return workplaceId;

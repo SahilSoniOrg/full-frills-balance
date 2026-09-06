@@ -7,6 +7,7 @@ export type E2eSeedProfile =
   | 'planned-payments'
   | 'sms-ready'
   | 'sms-sync'
+  | 'merge-edit'
   | 'picker-ready'
   | 'first-run-restore'
   | 'bulk-restore'
