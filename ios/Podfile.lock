@@ -2648,13 +2648,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNZipArchive (7.1.2):
+  - RNZipArchive (9.5.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
-    - RNZipArchive/Core (= 7.1.2)
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
     - SSZipArchive (~> 2.5.5)
-  - RNZipArchive/Core (7.1.2):
-    - React-Core
-    - SSZipArchive (~> 2.5.5)
+    - Yoga
   - Sentry/HybridSDK (8.58.0)
   - simdjson (3.9.4)
   - SSZipArchive (2.5.5)
@@ -3219,7 +3235,7 @@ SPEC CHECKSUMS:
   RNSentry: c2b739c5dbdd77f439fbd197d1d45724b22a0437
   RNSVG: 3fe8590403ac9f107b4d14591bc6e54da4894e5c
   RNWorklets: 43af89f696342f91118a2f1f3a879056e2f47331
-  RNZipArchive: b390452af35c081c3be04a85c66ad31ff9ffd955
+  RNZipArchive: b6c1f05a033185e906e8d2f44e40eb5b9714250a
   Sentry: d587a8fe91ca13503ecd69a1905f3e8a0fcf61be
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
   SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4
