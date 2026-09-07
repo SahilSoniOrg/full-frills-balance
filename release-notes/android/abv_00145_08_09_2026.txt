@@ -1,0 +1,23 @@
+New release 🚀
+
+This one is about getting ready for online accounts. When books can live on a server as well as on your phone, “you,” “this device,” and “this workplace” can’t be mixed together anymore — so Setup and Settings now keep those layers apart. Restore is a draft you can finish or throw away, which is how we’ll keep a half-imported book from ever becoming the live one.
+
+---
+
+Also in this update:
+
+* Backup & restore: Export this workplace, every workplace, or just the ones you pick. If a backup holds several books, you choose which to bring back, review the counts, then accept. Backing out drops the draft, so nothing lands in the app until you say so.
+* Settings: Search jumps to the right screen and highlights the setting. Your name and this device sit under Your Account. Currency and Safe-to-Spend sit with the workplace you’re in. Appearance, privacy, and reminders are Preferences. You can create, rename, switch, or delete a workplace from Settings — new ones start with a generated name you can refresh.
+* Privacy: Setup asks you to read a plain-language notice before you continue, and you can open it again from Settings. Your books stay on this device unless you export or share them. That’s the local-first promise we’re taking into online accounts.
+* App updates: When a newer version is out you’ll get a notice you can dismiss, including from Hub. If this install is too old, you’ll be asked to update — with a chance to back up first. What’s new is on that screen, and the full history lives under Settings → About & Support → Release notes.
+* Plus bug fixes and other small improvements.
+
+---
+
+Big difference you’ll notice:
+
+* Settings is the home for the three layers: you, this phone, and the workplace you’re in. Search makes that list usable. Restore finally matches how people actually back up — more than one workplace in a file, and nothing published until you accept.
+
+---
+
+Under the hood, settings that belong on this phone stay on the device, and workplace data stays with the books. That’s the split we need before online accounts.
