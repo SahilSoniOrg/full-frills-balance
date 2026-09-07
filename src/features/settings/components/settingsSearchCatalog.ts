@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import type { IconName } from '@/src/components/core';
 import { Platform } from 'react-native';
+import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 
 export type SettingsSearchItem = {
   id: string;
@@ -32,6 +33,7 @@ const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   'privacy-security': 'shield',
   'widget-privacy': 'eyeOff',
   'app-lock': 'lock',
+  'privacy-notice': 'document',
   'data-management': 'database',
   'data-import': 'folderOpen',
   'audit-log': 'history',
@@ -54,6 +56,7 @@ type SettingsSearchActions = {
   onAppearance: (target?: string) => void;
   onAutomation: (target?: string) => void;
   onPrivacy: (target?: string) => void;
+  onPrivacyNotice: () => void;
   onCurrentWorkplace: (target?: string) => void;
   onDataManagement: (target?: string) => void;
   onMaintenance: (target?: string) => void;
@@ -212,6 +215,14 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       section: 'Preferences',
       keywords: ['privacy', 'security', 'lock', 'passcode'],
       navigate: actions.onPrivacy,
+    },
+    {
+      id: 'privacy-notice',
+      title: PRIVACY_NOTICE_STRINGS.title,
+      description: PRIVACY_NOTICE_STRINGS.subtitle,
+      section: `Your Account · ${AppConfig.strings.settings.sections.documents}`,
+      keywords: ['privacy', 'data', 'policy', 'analytics', 'backup', 'local', 'notice'],
+      navigate: actions.onPrivacyNotice,
     },
     {
       id: 'data-management',

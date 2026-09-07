@@ -124,6 +124,16 @@ export const AppConfig = {
     versionPolicyUrl: process.env.EXPO_PUBLIC_VERSION_POLICY_URL ?? '',
   },
 
+  // Public legal and support links
+  links: {
+    privacyPolicyUrl: 'https://full-frills-landing.vercel.app/privacy.html',
+  },
+
+  // Legal document versions used for local acknowledgement records
+  legal: {
+    privacyPolicyVersion: '2026-09-07',
+  },
+
   // Business Logic Constants
   constants: {
     precision: 2,

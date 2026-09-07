@@ -20,6 +20,10 @@ import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
+import {
+  hasAcknowledgedCurrentPrivacyPolicy,
+  subscribeToPrivacyPolicyAcknowledgement,
+} from '@/src/services/legal/privacyPolicyAcceptance';
 import React, {
   createContext,
   useContext,
@@ -40,6 +44,8 @@ export type LaunchCoordinatorState =
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
   | Extract<LaunchResolution, { kind: 'open' }>;
 
+const GATE_ROUTES = new Set(['/onboarding', '/import-selection', '/privacy-notice']);
+
 const LaunchCoordinatorContext = createContext<LaunchCoordinatorState | undefined>(undefined);
 
 export function useLaunchCoordinator(): LaunchCoordinatorState {
@@ -52,8 +58,19 @@ export function shouldRenderGateChildren(
   kind: LaunchCoordinatorState['kind'],
   pathname: string,
 ): boolean {
-  const isGateRoute = pathname === '/onboarding' || pathname === '/import-selection';
-  return isGateRoute && (kind === 'setup' || kind === 'picker');
+  return GATE_ROUTES.has(pathname) && (kind === 'setup' || kind === 'picker');
+}
+
+export function shouldRedirectToPrivacyNotice(
+  kind: LaunchCoordinatorState['kind'],
+  pathname: string,
+  isPrivacyPolicyAcknowledged: boolean,
+): boolean {
+  return (
+    !isPrivacyPolicyAcknowledged &&
+    pathname !== '/privacy-notice' &&
+    (kind === 'picker' || kind === 'open')
+  );
 }
 
 function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
@@ -218,7 +235,13 @@ export function LaunchCoordinatorContent({
   const { isRestartRequired } = useAppRestart();
   const router = useRouter();
   const pathname = usePathname();
+  const isPrivacyPolicyAcknowledged = useSyncExternalStore(
+    subscribeToPrivacyPolicyAcknowledgement,
+    hasAcknowledgedCurrentPrivacyPolicy,
+    hasAcknowledgedCurrentPrivacyPolicy,
+  );
   const previousOpenWorkplaceId = useRef<string | null>(null);
+  const privacyRedirectInFlight = useRef(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [pendingDeletionId, setPendingDeletionId] = useState<WorkplaceId | null>(null);
@@ -236,8 +259,17 @@ export function LaunchCoordinatorContent({
     reject: (error: unknown) => void;
   } | null>(null);
   useEffect(() => {
+    if (shouldRedirectToPrivacyNotice(state.kind, pathname, isPrivacyPolicyAcknowledged)) {
+      if (!privacyRedirectInFlight.current) {
+        privacyRedirectInFlight.current = true;
+        router.push({ pathname: '/privacy-notice', params: { required: '1' } });
+      }
+      return;
+    }
+    privacyRedirectInFlight.current = false;
+
     if (state.kind === 'setup') {
-      if (pathname !== '/onboarding' && pathname !== '/import-selection') {
+      if (!GATE_ROUTES.has(pathname)) {
         // Prevent a direct books deep link from mounting without a Workplace.
         router.replace('/onboarding');
       }
@@ -247,8 +279,7 @@ export function LaunchCoordinatorContent({
       state.kind === 'picker' &&
       pathname !== '/' &&
       pathname !== '' &&
-      pathname !== '/onboarding' &&
-      pathname !== '/import-selection'
+      !GATE_ROUTES.has(pathname)
     ) {
       // A books deep link has no unambiguous Workplace while the picker is open.
       router.replace('/');
@@ -263,7 +294,7 @@ export function LaunchCoordinatorContent({
       router.replace('/');
     }
     if (state.kind === 'open') previousOpenWorkplaceId.current = state.workplaceId;
-  }, [pathname, router, state]);
+  }, [isPrivacyPolicyAcknowledged, pathname, router, state]);
   const transitionToWorkplace = async (targetId: WorkplaceId, previousId?: WorkplaceId) => {
     if (transitionInFlightRef.current) {
       await transitionInFlightRef.current;
@@ -443,12 +474,7 @@ export function LaunchCoordinatorContent({
   if (state.kind === 'loading') {
     return <LoadingView loading text={AppConfig.strings.common.loading} />;
   }
-  if (
-    gateChildren &&
-    state.kind === 'setup' &&
-    pathname !== '/onboarding' &&
-    pathname !== '/import-selection'
-  ) {
+  if (gateChildren && state.kind === 'setup' && !GATE_ROUTES.has(pathname)) {
     return <Redirect href="/onboarding" />;
   }
   if (gateChildren && shouldRenderGateChildren(state.kind, pathname)) {

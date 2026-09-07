@@ -13,6 +13,7 @@ import {
   REMOVED_PREFERENCE_KEYS,
   UIPreferences,
   USER_PREFERENCES_KEY,
+  isPrivacyPolicyAcknowledgement,
 } from './types';
 
 /**
@@ -111,6 +112,12 @@ export class PreferencesStore {
       delete sanitized.defaultShareFormat;
     }
     if (
+      sanitized.privacyPolicyAcknowledgement !== undefined &&
+      !isPrivacyPolicyAcknowledgement(sanitized.privacyPolicyAcknowledgement)
+    ) {
+      delete sanitized.privacyPolicyAcknowledgement;
+    }
+    if (
       sanitized.notificationHour !== undefined &&
       (typeof sanitized.notificationHour !== 'number' ||
         sanitized.notificationHour < 0 ||
@@ -158,7 +165,10 @@ export class PreferencesStore {
   }
 
   restorePreferences(data?: unknown): void {
-    const { user, legacyCurrency } = splitPreferenceBags(data);
+    const { user: importedUser, legacyCurrency } = splitPreferenceBags(data);
+    const user = { ...importedUser };
+    // Policy acknowledgement is local legal state, not transferable backup data.
+    delete user.privacyPolicyAcknowledgement;
 
     for (const [key, value] of Object.entries(legacyCurrency)) {
       this.legacyData[key] = value;

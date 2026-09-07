@@ -1,11 +1,13 @@
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { analytics } from '@/src/services/analytics';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface PersonalizationViewModel {
   draftName: string;
   setDraftName: (value: string) => void;
   commitName: () => void;
+  onOpenPrivacyNotice: () => void;
 }
 
 export function usePersonalizationViewModel(): PersonalizationViewModel {
@@ -53,5 +55,6 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
     draftName,
     setDraftName,
     commitName,
+    onOpenPrivacyNotice: AppNavigation.toPrivacyNotice,
   };
 }

@@ -4,6 +4,7 @@ export type {
   DashboardPrefs,
   NotificationPrefs,
   PrivacyPrefs,
+  PrivacyPolicyAcknowledgement,
   ThemeAppearance,
   ThemePrefs,
   UIPreferences,

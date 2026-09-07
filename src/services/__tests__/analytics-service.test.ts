@@ -36,6 +36,7 @@ describe('AnalyticsService', () => {
   it('should not throw when calling specialized events', () => {
     expect(() => analytics.logAccountCreated('Checking', 'USD')).not.toThrow();
     expect(() => analytics.logOnboardingComplete('USD')).not.toThrow();
+    expect(() => analytics.logPrivacyPolicyAcknowledged('2026-09-07')).not.toThrow();
     expect(() => analytics.logFactoryReset()).not.toThrow();
   });
 
@@ -47,5 +48,11 @@ describe('AnalyticsService', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('does not initialize PostHog for pre-bootstrap privacy acknowledgement telemetry', () => {
+    expect(analytics.posthog).toBeNull();
+    expect(analytics.logPrivacyPolicyAcknowledged('2026-09-07')).toBe(false);
+    expect(analytics.posthog).toBeNull();
   });
 });

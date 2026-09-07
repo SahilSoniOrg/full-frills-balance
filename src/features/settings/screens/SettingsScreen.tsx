@@ -8,6 +8,7 @@ export default function SettingsScreen() {
       onAppearance={AppNavigation.toAppearanceSettings}
       onAutomation={AppNavigation.toAutomationSettings}
       onPrivacy={AppNavigation.toPrivacySecuritySettings}
+      onPrivacyNotice={AppNavigation.toPrivacyNotice}
       onCurrentWorkplace={AppNavigation.toCurrentWorkplaceSettings}
       onDataManagement={AppNavigation.toDataManagementSettings}
       onMaintenance={AppNavigation.toMaintenanceSettings}

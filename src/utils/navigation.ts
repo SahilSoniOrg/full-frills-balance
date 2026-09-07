@@ -376,6 +376,13 @@ export const AppNavigation = {
   },
 
   /**
+   * Open the plain-language privacy and data notice.
+   */
+  toPrivacyNotice: () => {
+    router.push('/privacy-notice');
+  },
+
+  /**
    * Navigate to reminders and automation settings.
    */
   toAutomationSettings: (focus?: string) => {

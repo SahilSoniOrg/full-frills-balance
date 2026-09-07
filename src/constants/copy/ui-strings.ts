@@ -300,6 +300,7 @@ export const UI_STRINGS = {
     sections: {
       personalization: 'Profile & Money Defaults',
       profile: 'Profile',
+      documents: 'Documents',
       currentWorkplace: 'Current Workplace',
       devicesAndSessions: 'Devices & Sessions',
       forecasting: 'Forecasting',
@@ -397,7 +398,7 @@ export const UI_STRINGS = {
     data: {
       backupRestoreHeader: 'Backup & Restore',
       reviewHeader: 'Review',
-      exportDesc: 'Export your ledger to a JSON backup file.',
+      exportDesc: 'Export your ledger to a ZIP backup file.',
       exportBtn: 'Create Backup',
       exportingTitle: 'Exporting Backup',
       exportingWait: 'Optimizing and compressing data...',

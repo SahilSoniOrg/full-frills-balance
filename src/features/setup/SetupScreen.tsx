@@ -269,6 +269,7 @@ function SetupJourneyScreen({
               startFirstRunRestoreFromDeviceName(name);
               onSwitchJourney('first_run_restore');
             }}
+            onPrivacyNotice={AppNavigation.toPrivacyNotice}
           />
         );
       case 'restore_source':

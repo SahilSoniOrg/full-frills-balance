@@ -120,8 +120,8 @@ export class AnalyticsService {
   /**
    * Track a custom event
    */
-  track(eventName: string, props?: AnalyticsProperties) {
-    if (!this.posthog) return;
+  track(eventName: string, props?: AnalyticsProperties): boolean {
+    if (!this.posthog) return false;
 
     try {
       this.posthog.capture(
@@ -133,8 +133,10 @@ export class AnalyticsService {
       if (__DEV__) {
         logger.debug(`[Analytics] Tracked: ${eventName}`, props);
       }
+      return true;
     } catch (error) {
       logger.error(`[Analytics] Failed to track event: ${eventName}`, error);
+      return false;
     }
   }
 
@@ -192,6 +194,15 @@ export class AnalyticsService {
 
   logOnboardingComplete(currency: string) {
     this.track('onboarding_complete', { currency });
+  }
+
+  /** Product telemetry only. The local MMKV acknowledgement is authoritative. */
+  logPrivacyPolicyAcknowledged(policyVersion: string): boolean {
+    // This event follows the same pre-bootstrap policy as every other event:
+    // it is best-effort and is dropped until the central bootstrap initializes PostHog.
+    return this.track('privacy_policy_acknowledged', {
+      policy_version: policyVersion,
+    });
   }
 
   logCurrencyChanged(oldCurrency: string, newCurrency: string) {

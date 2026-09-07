@@ -123,6 +123,11 @@ const ROUTE_METADATA_MAP: Record<
     flowContext: 'privacy_security',
     isModal: false,
   },
+  'privacy-notice': {
+    screenType: 'settings',
+    flowContext: 'privacy_notice',
+    isModal: false,
+  },
   'workplace-settings': {
     screenType: 'settings',
     flowContext: 'workplace_management',

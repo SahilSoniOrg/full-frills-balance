@@ -16,6 +16,7 @@ export interface SettingsViewProps {
   onAppearance: () => void;
   onAutomation: () => void;
   onPrivacy: () => void;
+  onPrivacyNotice: () => void;
   onCurrentWorkplace: () => void;
   onDataManagement: () => void;
   onMaintenance: () => void;
@@ -28,6 +29,7 @@ export function SettingsView({
   onAppearance,
   onAutomation,
   onPrivacy,
+  onPrivacyNotice,
   onCurrentWorkplace,
   onDataManagement,
   onMaintenance,
@@ -43,6 +45,7 @@ export function SettingsView({
         onAppearance,
         onAutomation,
         onPrivacy,
+        onPrivacyNotice,
         onCurrentWorkplace,
         onDataManagement,
         onMaintenance,
@@ -58,6 +61,7 @@ export function SettingsView({
       onDeviceSettings,
       onMaintenance,
       onPrivacy,
+      onPrivacyNotice,
       onProfile,
     ],
   );
@@ -93,7 +97,7 @@ export function SettingsView({
                 searchId="profile"
                 leftIcon="user"
                 title={AppConfig.strings.settings.sections.profile}
-                description="Your name and device settings"
+                description="Your name, documents, and device settings"
                 onPress={onProfile}
                 testID="settings-profile"
               />

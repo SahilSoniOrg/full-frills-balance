@@ -81,4 +81,33 @@ describe('PreferencesFacade import restore', () => {
     expect(preferences.device.isSmsImportEnabled).toBe(true);
     expect(preferences.device.anonymizedId).toBe('device-id');
   });
+
+  it('clears user-scoped privacy acknowledgement with the user bag', () => {
+    const preferences = createPreferencesFacade();
+    preferences.privacy.setPrivacyPolicyAcknowledgement({
+      version: '2026-09-07',
+      acknowledgedAt: '2026-09-07T12:34:56.000Z',
+    });
+
+    preferences.clearPreferences();
+
+    expect(preferences.privacy.privacyPolicyAcknowledgement).toBeUndefined();
+  });
+
+  it('does not import privacy acknowledgement from backup data', () => {
+    const preferences = createPreferencesFacade();
+
+    preferences.restoreImportedPreferences(
+      {
+        privacyPolicyAcknowledgement: {
+          version: '2026-09-07',
+          acknowledgedAt: '2026-09-07T12:34:56.000Z',
+        },
+      },
+      'workplace-1' as WorkplaceId,
+      'all',
+    );
+
+    expect(preferences.privacy.privacyPolicyAcknowledgement).toBeUndefined();
+  });
 });

@@ -3,6 +3,11 @@ import { ShareFormat } from '@/src/types/sharing';
 import type { HourCyclePreference } from '@/src/utils/hourCycle';
 
 /** Chrome and identity that follow the person across workplaces. */
+export interface PrivacyPolicyAcknowledgement {
+  version: string;
+  acknowledgedAt: string;
+}
+
 export interface UIPreferences {
   userName?: string;
   theme?: 'light' | 'dark' | 'system';
@@ -11,6 +16,7 @@ export interface UIPreferences {
   fontId?: FontId;
   isPrivacyMode: boolean;
   isWidgetPrivacyEnabled: boolean;
+  privacyPolicyAcknowledgement?: PrivacyPolicyAcknowledgement;
   showAccountMonthlyStats: boolean;
   useCompactAccountPicker: boolean;
   advancedMode: boolean;
@@ -25,7 +31,10 @@ export interface UIPreferences {
 export type ThemeAppearance = 'light' | 'dark' | 'system';
 
 export type ThemePrefs = Pick<UIPreferences, 'theme' | 'themeId' | 'fontId'>;
-export type PrivacyPrefs = Pick<UIPreferences, 'isPrivacyMode' | 'isWidgetPrivacyEnabled'>;
+export type PrivacyPrefs = Pick<
+  UIPreferences,
+  'isPrivacyMode' | 'isWidgetPrivacyEnabled' | 'privacyPolicyAcknowledgement'
+>;
 export type DashboardPrefs = Pick<UIPreferences, 'showSafeToSpendChart'>;
 export type NotificationPrefs = Pick<
   UIPreferences,
@@ -36,6 +45,7 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   userName: '',
   isPrivacyMode: false,
   isWidgetPrivacyEnabled: false,
+  privacyPolicyAcknowledgement: undefined,
   showAccountMonthlyStats: true,
   useCompactAccountPicker: false,
   advancedMode: false,
@@ -58,6 +68,7 @@ export const USER_PREFERENCE_KEYS = [
   'fontId',
   'isPrivacyMode',
   'isWidgetPrivacyEnabled',
+  'privacyPolicyAcknowledgement',
   'showAccountMonthlyStats',
   'useCompactAccountPicker',
   'advancedMode',
@@ -79,3 +90,17 @@ export const REMOVED_PREFERENCE_KEYS = [
   'aiInferenceMode',
   'archetype',
 ] as const;
+
+export function isPrivacyPolicyAcknowledgement(
+  value: unknown,
+): value is PrivacyPolicyAcknowledgement {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.version === 'string' &&
+    candidate.version.length > 0 &&
+    typeof candidate.acknowledgedAt === 'string' &&
+    Number.isFinite(Date.parse(candidate.acknowledgedAt))
+  );
+}

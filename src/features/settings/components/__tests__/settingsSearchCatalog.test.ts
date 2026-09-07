@@ -8,6 +8,7 @@ const actions = {
   onAppearance: jest.fn(),
   onAutomation: jest.fn(),
   onPrivacy: jest.fn(),
+  onPrivacyNotice: jest.fn(),
   onCurrentWorkplace: jest.fn(),
   onDataManagement: jest.fn(),
   onMaintenance: jest.fn(),

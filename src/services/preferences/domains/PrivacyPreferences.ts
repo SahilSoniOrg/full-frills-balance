@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import type { DevicePreferencesStore } from '../DevicePreferencesStore';
 import type { PreferencesStore } from '../PreferencesStore';
+import type { PrivacyPolicyAcknowledgement } from '../types';
 
 /** Privacy mask is User; app lock is Device. */
 export class PrivacyPreferences {
@@ -25,6 +26,18 @@ export class PrivacyPreferences {
     this.user.update({ isWidgetPrivacyEnabled: isEnabled });
   }
 
+  get privacyPolicyAcknowledgement(): PrivacyPolicyAcknowledgement | undefined {
+    return this.user.getSnapshot().privacyPolicyAcknowledgement;
+  }
+
+  setPrivacyPolicyAcknowledgement(acknowledgement: PrivacyPolicyAcknowledgement): void {
+    this.user.update({ privacyPolicyAcknowledgement: acknowledgement });
+  }
+
+  clearPrivacyPolicyAcknowledgement(): void {
+    this.user.update({ privacyPolicyAcknowledgement: undefined });
+  }
+
   get isAppLockEnabled(): boolean {
     return this.device.isAppLockEnabled;
   }
@@ -39,6 +52,10 @@ export class PrivacyPreferences {
 
   observeWidgetPrivacyEnabled(): Observable<boolean> {
     return this.user.observe('isWidgetPrivacyEnabled');
+  }
+
+  observePrivacyPolicyAcknowledgement(): Observable<PrivacyPolicyAcknowledgement | undefined> {
+    return this.user.observe('privacyPolicyAcknowledgement');
   }
 
   observeAppLockEnabled(): Observable<boolean> {

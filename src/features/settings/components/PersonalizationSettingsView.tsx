@@ -5,6 +5,7 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { PersonalizationViewModel } from '@/src/features/settings/hooks/usePersonalizationViewModel';
+import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { AppNavigation } from '@/src/utils/navigation';
 import { View } from 'react-native';
 
@@ -36,6 +37,17 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
                 />
               </View>
             }
+          />
+        </SettingsMenu>
+
+        <SettingsMenu header={AppConfig.strings.settings.sections.documents}>
+          <SettingsMenuItem
+            searchId="privacy-notice"
+            leftIcon="document"
+            title={PRIVACY_NOTICE_STRINGS.title}
+            description={PRIVACY_NOTICE_STRINGS.subtitle}
+            onPress={vm.onOpenPrivacyNotice}
+            testID="settings-privacy-notice"
           />
         </SettingsMenu>
 
