@@ -66,8 +66,8 @@ export function SmsRulesView({
         ListEmptyComponent={
           rules.length === 0 ? (
             <EmptyStateView
-              title="No Auto-Post Rules"
-              subtitle="Automatically post journal entries when matching SMS messages are received."
+              title="No auto-entry rules"
+              subtitle="Create a rule to turn incoming bank and card SMS receipts into entries automatically."
             />
           ) : null
         }

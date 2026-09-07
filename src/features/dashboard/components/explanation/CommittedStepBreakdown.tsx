@@ -50,7 +50,7 @@ export const CommittedStepBreakdown = ({
                   det.type === 'BUDGET'
                     ? 'Budget'
                     : det.type === 'PLANNED_PAYMENT'
-                      ? 'Planned Payment'
+                      ? 'Scheduled Bill'
                       : 'Transfer';
 
                 return (

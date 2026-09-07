@@ -192,9 +192,9 @@ export function AccountManagementTreeList({
 function getDropIntentLabel(kind: AccountTreeDropKind, accountName: string): string {
   switch (kind) {
     case 'child':
-      return `Make child of ${accountName}`;
+      return `Place inside ${accountName}`;
     case 'outside':
-      return `Move outside ${accountName}`;
+      return `Move out of ${accountName}`;
     case 'sibling-before':
       return `Move before ${accountName}`;
     case 'sibling-after':

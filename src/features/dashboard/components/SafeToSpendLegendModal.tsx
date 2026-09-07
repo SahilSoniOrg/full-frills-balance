@@ -89,7 +89,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                         </AppText>
                         <AppText variant="caption" color="secondary">
                           Day {inc.dayOffset} •{' '}
-                          {inc.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Transfer'}
+                          {inc.type === 'PLANNED_PAYMENT' ? 'Scheduled Income' : 'Transfer'}
                         </AppText>
                       </View>
                       <AppText variant="caption" weight="bold" color="success" tabular>
@@ -166,10 +166,10 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                             </AppText>
                             <AppText variant="caption" color="secondary">
                               {item.type === 'BUDGET'
-                                ? 'Budget Reserve'
+                                ? 'Category Budget'
                                 : item.type === 'PLANNED_PAYMENT'
-                                  ? 'Planned Payment'
-                                  : 'Planned Transfer'}{' '}
+                                  ? 'Scheduled Bill'
+                                  : 'Scheduled Transfer'}{' '}
                               • {item.accountName}
                             </AppText>
                           </View>

@@ -230,7 +230,7 @@ export function BudgetEditView({
           <FormSectionGroup title="Scope">
             <Stack space="md" paddingHorizontal="md">
               <AccountSelectionRow
-                title="Target Categories"
+                title="Expense Categories"
                 accounts={expenseAccounts}
                 selectedAccountIds={selectedAccountIds}
                 placeholder="Select categories"
@@ -243,7 +243,7 @@ export function BudgetEditView({
               />
 
               <AccountSelectionRow
-                title="Funding Accounts"
+                title="Accounts to Pay From"
                 accounts={liquidAssetAccounts}
                 selectedAccountIds={assetAccountIds}
                 placeholder="Select accounts"
@@ -259,7 +259,7 @@ export function BudgetEditView({
         visible={isAccountPickerVisible}
         accounts={expenseAccounts}
         selectedIds={selectedAccountIds}
-        title="Select Target Categories"
+        title="Choose Categories"
         onClose={() => setIsAccountPickerVisible(false)}
         onSelect={ids => {
           setSelectedAccountIds(ids);
@@ -271,7 +271,7 @@ export function BudgetEditView({
         visible={isAssetPickerVisible}
         accounts={liquidAssetAccounts}
         selectedIds={assetAccountIds}
-        title="Select Funding Accounts"
+        title="Choose Accounts to Pay From"
         onClose={() => setIsAssetPickerVisible(false)}
         onSelect={ids => {
           setAssetAccountIds(ids);

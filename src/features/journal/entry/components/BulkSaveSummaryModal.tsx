@@ -29,7 +29,7 @@ export function BulkSaveSummaryModal({
               Saved Successfully
             </AppText>
             <AppText variant="body" color="secondary" style={styles.modalSubtitle}>
-              Recorded {summary?.count} journals to the ledger.
+              Recorded {summary?.count} entries.
             </AppText>
           </View>
 
@@ -51,7 +51,7 @@ export function BulkSaveSummaryModal({
 
           <View style={styles.modalActions}>
             <AppButton variant="outline" onPress={onContinueBulk} style={styles.modalButton}>
-              Continue Bulk
+              Keep Adding
             </AppButton>
             <AppButton variant="primary" onPress={onDone} style={styles.modalButton}>
               Done

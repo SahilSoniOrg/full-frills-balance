@@ -117,11 +117,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 </View>
               ) : (
                 <EmptyStateView
-                  title="No pending transactions"
+                  title="Inbox is clear"
                   subtitle={
                     isAndroid
                       ? 'Try refreshing or loading older messages.'
-                      : 'Your pending draft queue is empty.'
+                      : 'No pending drafts to review.'
                   }
                 />
               )

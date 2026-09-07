@@ -76,7 +76,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dateRange: dateRange ?? undefined,
     queryOptions: { accountIds: [accountId] },
     viewer,
-    shareTitle: `Journal entries for ${account?.name || 'Account'}`,
+    shareTitle: `Entries for ${account?.name || 'Account'}`,
     paginationPolicy: 'default',
   });
 

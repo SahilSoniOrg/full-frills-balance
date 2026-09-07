@@ -185,11 +185,11 @@ export function PlannedPaymentFormView({
                 </FadeIn>
               )}
 
-              <FormField label="Auto-Post">
+              <FormField label="Auto-Record">
                 <ListRow
                   padding="sm"
-                  title="Post Automatically"
-                  subtitle="To ledger on due date"
+                  title="Save Automatically"
+                  subtitle="Creates entry on the scheduled date"
                   trailing={
                     <AppToggle
                       value={form.isAutoPost}

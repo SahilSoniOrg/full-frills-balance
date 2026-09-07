@@ -125,8 +125,8 @@ export function DuplicateConflictResolutionModal({
             ))}
           </View>
           <AppText variant="caption" color="secondary">
-            This incoming message matches an existing entry already posted in your ledger. Review
-            the comparison below and choose an action.
+            This incoming message matches an existing entry already saved in your books. Review the
+            comparison below and choose an action.
           </AppText>
         </View>
 
@@ -213,7 +213,7 @@ export function DuplicateConflictResolutionModal({
             <View style={styles.cardHeader}>
               <AppIcon name="bookOpen" size={14} color={theme.textSecondary} />
               <AppText variant="caption" weight="bold" color="secondary">
-                EXISTING JOURNAL ENTRY
+                EXISTING ENTRY
               </AppText>
             </View>
 
@@ -260,10 +260,10 @@ export function DuplicateConflictResolutionModal({
 
             <View style={styles.fieldGroup}>
               <AppText variant="caption" color="secondary">
-                Ledger Status
+                Status
               </AppText>
               <AppText variant="caption" weight="semibold" color="secondary">
-                Posted in Ledger
+                Saved in Books
               </AppText>
             </View>
           </AppCard>

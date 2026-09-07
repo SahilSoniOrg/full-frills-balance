@@ -45,8 +45,8 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
       <AppCard variant="outline" paddingSize="sm" style={styles.panelCard}>
         <AppText variant="caption" color="secondary" style={styles.subHelperText}>
-          Auto-post creates transactions instantly without confirmation. Require Review places
-          matches in the inbox queue. Ignore dismisses matching messages silently.
+          Auto-record saves entries right away. Require Review places matches in your inbox first.
+          Ignore dismisses matching messages silently.
         </AppText>
 
         <AppInput

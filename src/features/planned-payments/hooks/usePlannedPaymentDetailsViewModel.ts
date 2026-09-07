@@ -130,13 +130,13 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         selectedJournals.map(j => ({
           id: j.id,
           date: j.journalDate,
-          description: j.description || j.semanticLabel || 'Journal entry',
+          description: j.description || j.semanticLabel || 'Entry',
           amount: j.totalAmount,
           currencyCode: j.currencyCode,
           displayType: j.displayType,
         })),
         {
-          title: `Transactions for ${item?.name || 'Planned Payment'}`,
+          title: `Entries for ${item?.name || 'Scheduled Bill'}`,
           includeTime: true,
           sort: 'desc',
           showEmojis: true,

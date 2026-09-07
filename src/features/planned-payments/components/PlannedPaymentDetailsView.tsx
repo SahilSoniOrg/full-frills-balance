@@ -217,7 +217,7 @@ export function PlannedPaymentDetailsView({
                 <Row align="center" justify="center" gap="sm">
                   <AppIcon name="check" size={18} color={theme.onPrimary} />
                   <Text variant="base" weight="bold" style={{ color: theme.onPrimary }}>
-                    Post Next Occurrence
+                    Record Next Occurrence
                   </Text>
                 </Row>
               </AppButton>
@@ -266,7 +266,7 @@ export function PlannedPaymentDetailsView({
                 }}
               >
                 <Text color="secondary" align="center">
-                  No transactions generated yet.
+                  No entries recorded yet.
                 </Text>
               </AppSurface>
             ) : (

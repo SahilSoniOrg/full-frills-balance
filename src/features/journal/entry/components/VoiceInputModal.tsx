@@ -82,10 +82,10 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             <IconButton name="close" onPress={onClose} />
             <View style={styles.headerTitle}>
               <AppText variant="subheading" weight="bold">
-                Voice Input Parser
+                Voice Input
               </AppText>
               <AppText variant="caption" color="secondary">
-                Speech to Ledger Resolution
+                Speak naturally to record an entry
               </AppText>
             </View>
             <View style={{ width: Size.md + Spacing.md }} />

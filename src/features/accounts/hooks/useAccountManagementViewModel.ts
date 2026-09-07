@@ -188,9 +188,9 @@ export function useAccountManagementViewModel() {
       const committed = createAccountTreeDraft(current.accounts);
       draftRef.current = committed;
       setDraft(committed);
-      toast.success('Account hierarchy saved');
+      toast.success('Account layout saved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to save account hierarchy');
+      toast.error(error instanceof Error ? error.message : 'Unable to save account layout');
     } finally {
       setIsSavingDraft(false);
     }
@@ -222,16 +222,16 @@ export function useAccountManagementViewModel() {
     (leaveAction: () => void) => {
       confirm.show({
         title: 'Discard changes?',
-        message: `Your ${draft.operations.length} staged ${draft.operations.length === 1 ? 'change has' : 'changes have'} not been saved.`,
-        confirmText: 'Discard changes',
-        cancelText: 'Keep editing',
+        message: 'You have unsaved changes that will be lost if you leave now.',
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing',
         destructive: true,
         onConfirm: () => {
           discardThenLeave(leaveAction);
         },
       });
     },
-    [discardThenLeave, draft.operations.length],
+    [discardThenLeave],
   );
 
   const requestDiscardChangesPrompt = useCallback(

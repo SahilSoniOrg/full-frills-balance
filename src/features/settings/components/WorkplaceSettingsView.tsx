@@ -93,9 +93,9 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
           ) : (
             <EmptyStateView
               icon="briefcase"
-              title="No Workplaces"
-              subtitle="Create a new workplace to get started."
-              primaryActionLabel="Create Workplace"
+              title="No workplaces found"
+              subtitle="Create a new workspace to get started."
+              primaryActionLabel="Create Workspace"
               onPrimaryAction={vm.startCreateWorkplace}
             />
           )}

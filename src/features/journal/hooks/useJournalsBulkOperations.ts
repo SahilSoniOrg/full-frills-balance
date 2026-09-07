@@ -94,11 +94,10 @@ export function useJournalsBulkOperations({
           workplaceId,
           duplicated.map(journal => journal.id),
         ),
-      duplicated =>
-        `Duplicated ${duplicated.length} journal entr${duplicated.length === 1 ? 'y' : 'ies'}`,
+      duplicated => `Duplicated ${duplicated.length} entr${duplicated.length === 1 ? 'y' : 'ies'}`,
       {
-        errorMessage: 'Failed to duplicate journal entries',
-        undoSuccessMessage: 'Duplicated journal entries removed',
+        errorMessage: 'Failed to duplicate entries',
+        undoSuccessMessage: 'Duplicated entries removed',
         onUndoError: error => showErrorAlert(error, 'Failed to undo duplication'),
       },
     );
@@ -107,7 +106,7 @@ export function useJournalsBulkOperations({
   // 3. Merge
   const handleOpenMerge = useCallback(() => {
     if (selection.selectedIds.size < 2) {
-      toast.info('Select at least 2 journal entries to merge.');
+      toast.info('Select at least 2 entries to merge.');
       return;
     }
     openModal({ type: 'merge', journalIds: Array.from(selection.selectedIds) });
@@ -121,9 +120,9 @@ export function useJournalsBulkOperations({
         await mergeJournalsCommand(workplaceId, ids, params);
         selection.exitSelectionMode();
         closeModal();
-        toast.success(`Successfully merged ${ids.length} journal entries into 1`);
+        toast.success(`Successfully merged ${ids.length} entries into 1`);
       } catch (error) {
-        showErrorAlert(error, 'Failed to merge journal entries');
+        showErrorAlert(error, 'Failed to merge entries');
       }
     },
     [workplaceId, selection, closeModal],
@@ -146,9 +145,9 @@ export function useJournalsBulkOperations({
         res =>
           undoBulkChangeJournalAccountCommand(workplaceId, res.originalAccountIdByTransactionId),
         res =>
-          `Updated ${legName} account for ${res.updatedCount} journal entr${res.updatedCount === 1 ? 'y' : 'ies'}`,
+          `Updated ${legName} account for ${res.updatedCount} entr${res.updatedCount === 1 ? 'y' : 'ies'}`,
         {
-          errorMessage: 'Failed to update journal entry account',
+          errorMessage: 'Failed to update entry account',
           undoSuccessMessage: 'Account change undone',
           onUndoError: error => showErrorAlert(error, 'Failed to undo account change'),
         },
@@ -163,8 +162,8 @@ export function useJournalsBulkOperations({
     const ids = Array.from(selection.selectedIds);
 
     confirm.show({
-      title: 'Delete Journal Entries',
-      message: `Are you sure you want to delete ${ids.length} selected journal entr${ids.length === 1 ? 'y' : 'ies'}?`,
+      title: 'Delete Entries',
+      message: `Are you sure you want to delete ${ids.length} selected entr${ids.length === 1 ? 'y' : 'ies'}?`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       destructive: true,
@@ -172,10 +171,10 @@ export function useJournalsBulkOperations({
         await runUndoableAction(
           () => bulkDeleteJournalsCommand(workplaceId, ids),
           token => bulkRestoreJournalsCommand(workplaceId, token),
-          `Deleted ${ids.length} journal entr${ids.length === 1 ? 'y' : 'ies'}`,
+          `Deleted ${ids.length} entr${ids.length === 1 ? 'y' : 'ies'}`,
           {
-            errorMessage: 'Failed to delete journal entries',
-            undoSuccessMessage: 'Deleted journal entries restored',
+            errorMessage: 'Failed to delete entries',
+            undoSuccessMessage: 'Deleted entries restored',
             onUndoError: error => showErrorAlert(error, 'Failed to undo deletion'),
           },
         );

@@ -79,7 +79,7 @@ export function HierarchyMoveModal({
                   >
                     <AppIcon name="eject" size={Size.iconSm} color={theme.textSecondary} />
                     <AppText variant="body" style={{ flex: 1 }}>
-                      No parent
+                      Top level (no group)
                     </AppText>
                     {!selectedAccount?.parentAccountId && (
                       <AppIcon name="check" size={Size.iconSm} color={theme.success} />

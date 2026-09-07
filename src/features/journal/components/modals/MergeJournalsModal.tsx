@@ -69,7 +69,7 @@ function MergeJournalsModalContent({
     <BulkActionModalSurface
       visible={true}
       onClose={onClose}
-      title="Merge Journal Entries"
+      title="Merge Entries"
       itemCount={journalIds.length}
       confirmLabel="Merge"
       onConfirm={handleConfirm}
@@ -98,7 +98,7 @@ function MergeJournalsModalContent({
           >
             <AppIcon name="alert" size={20} color={theme.error} />
             <AppText style={[styles.errorText, { color: theme.error }]}>
-              {preview.reason || 'These journal entries cannot be merged.'}
+              {preview.reason || 'These entries cannot be merged.'}
             </AppText>
           </View>
         </View>
@@ -149,7 +149,7 @@ function MergeJournalsModalContent({
             <AppText
               style={[styles.sectionHeading, { fontFamily: fonts.semibold, color: theme.text }]}
             >
-              Consolidated Legs ({preview.combinedLines.length})
+              Consolidated Accounts ({preview.combinedLines.length})
             </AppText>
           </View>
 
@@ -166,7 +166,7 @@ function MergeJournalsModalContent({
                   size="sm"
                   variant={line.transactionType === 'DEBIT' ? 'default' : 'secondary'}
                 >
-                  {line.transactionType === 'DEBIT' ? 'DEST' : 'SRC'}
+                  {line.transactionType === 'DEBIT' ? 'TO' : 'FROM'}
                 </Badge>
                 <AppText style={[styles.accountName, { color: theme.text }]}>
                   {accountsById.get(line.accountId) || 'Account'}
@@ -185,7 +185,7 @@ function MergeJournalsModalContent({
             <AppText
               style={[styles.sectionHeading, { fontFamily: fonts.semibold, color: theme.text }]}
             >
-              Journal Entries to Merge ({preview.sourceJournals.length})
+              Entries to Merge ({preview.sourceJournals.length})
             </AppText>
           </View>
 

@@ -62,8 +62,8 @@ export function AccountDetailsView({
             isLoading={journalsLoading}
             isLoadingMore={journalsLoadingMore}
             onEndReached={onLoadMore}
-            emptyTitle="No journal entries yet"
-            emptySubtitle="Journal entries for this account will appear here."
+            emptyTitle="No entries yet"
+            emptySubtitle="Activity for this account will appear here."
             selectedIds={selectedIds}
             onLongPressItem={onLongPressItem}
             isSelectionModeActive={isSelectionModeActive}

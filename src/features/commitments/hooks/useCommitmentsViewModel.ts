@@ -29,8 +29,8 @@ export function useCommitmentsViewModel(): CommitmentsViewModel {
     tabOptions: TAB_OPTIONS,
     subtitle:
       activeTab === 'budgets'
-        ? 'Monthly budget limits and usage.'
-        : 'Recurring rules and upcoming posts.',
+        ? 'Monthly category limits to keep your spending comfortable.'
+        : 'Upcoming bills, rent, and subscriptions that protect your balance.',
     fab: {
       onPress: () => {
         if (activeTab === 'budgets') {
@@ -39,9 +39,9 @@ export function useCommitmentsViewModel(): CommitmentsViewModel {
           AppNavigation.toPlannedPaymentForm();
         }
       },
-      label: activeTab === 'budgets' ? 'New Budget' : 'New Planned Payment',
+      label: activeTab === 'budgets' ? 'New Budget' : 'New Recurring Bill',
       accessibilityLabel:
-        activeTab === 'budgets' ? 'Create a new budget' : 'Create a new planned payment',
+        activeTab === 'budgets' ? 'Create a new budget' : 'Create a new recurring bill',
     },
   };
 }

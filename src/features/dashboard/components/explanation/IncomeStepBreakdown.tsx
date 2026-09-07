@@ -50,7 +50,7 @@ export const IncomeStepBreakdown = ({
                 />
                 <AppText variant="caption" color="secondary">
                   Day {inc.dayOffset} •{' '}
-                  {inc.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Transfer'}
+                  {inc.type === 'PLANNED_PAYMENT' ? 'Scheduled Income' : 'Transfer'}
                 </AppText>
               </View>
             </View>

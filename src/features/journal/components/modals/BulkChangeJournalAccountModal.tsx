@@ -123,12 +123,12 @@ function BulkChangeJournalAccountModalContent({
                       },
                     ]}
                   >
-                    Change Destination Account (Debit)
+                    Change Destination Account (To)
                   </AppText>
                   <AppText style={[styles.optionDesc, { color: theme.textSecondary }]}>
                     {eligibility.canEditDebit
-                      ? 'All selected transactions have exactly 1 destination account.'
-                      : 'Cannot change: some selected transactions have multiple debit legs.'}
+                      ? 'All selected entries have exactly 1 destination account.'
+                      : 'Cannot change: some selected entries have multiple destination accounts.'}
                   </AppText>
                 </View>
               </View>
@@ -163,12 +163,12 @@ function BulkChangeJournalAccountModalContent({
                       },
                     ]}
                   >
-                    Change Source Account (Credit)
+                    Change Source Account (From)
                   </AppText>
                   <AppText style={[styles.optionDesc, { color: theme.textSecondary }]}>
                     {eligibility.canEditCredit
-                      ? 'All selected transactions have exactly 1 source account.'
-                      : 'Cannot change: some selected transactions have multiple credit legs.'}
+                      ? 'All selected entries have exactly 1 source account.'
+                      : 'Cannot change: some selected entries have multiple source accounts.'}
                   </AppText>
                 </View>
               </View>
