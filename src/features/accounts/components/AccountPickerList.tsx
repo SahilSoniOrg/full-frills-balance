@@ -331,7 +331,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       if (useCompactAccountPicker) {
         const accountsInRow = item as PickerAccount[];
         return (
-          <View style={styles.pillGrid}>
+          <View pointerEvents="box-none" style={styles.pillGrid}>
             {accountsInRow.map(account => (
               <AccountPickerPill
                 key={account.id}
@@ -396,6 +396,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       <View style={styles.listWrapper}>
         <SectionList<PickerAccount | PickerAccount[], DisplaySection>
           sections={displaySections}
+          testID="account-picker-list"
           keyExtractor={(item, index) => {
             if (Array.isArray(item)) return `account-picker-row-${index}`;
             return (item as PickerAccount).id;
@@ -407,6 +408,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
           keyboardShouldPersistTaps="always"
+          style={styles.list}
         />
       </View>
       {isMultiple && onApply && (
@@ -432,7 +434,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, display: 'flex' },
+  container: { flex: 1, minHeight: 0 },
   header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
   searchRow: {
     flexDirection: 'row',
@@ -441,8 +443,9 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1 },
   countIndicator: { marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
-  listWrapper: { flex: 1, minHeight: 400 },
-  listContent: { paddingBottom: Spacing.xl },
+  listWrapper: { flex: 1, minHeight: 0, width: '100%' },
+  list: { flex: 1, minHeight: 0, width: '100%' },
+  listContent: { flexGrow: 1, paddingBottom: Spacing.xl },
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
   sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

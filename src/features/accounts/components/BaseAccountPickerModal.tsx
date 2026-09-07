@@ -3,7 +3,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ReactNode } from 'react';
-import { Modal, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface BaseAccountPickerModalProps {
   visible: boolean;
@@ -29,29 +29,33 @@ export function BaseAccountPickerModal({
       statusBarTranslucent
       hardwareAccelerated
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-              <View style={styles.modalHeader}>
-                <AppText variant="heading">{title}</AppText>
-                <TouchableOpacity
-                  onPress={onClose}
-                  accessibilityLabel="Close"
-                  accessibilityRole="button"
-                  style={styles.headerIconButton}
-                >
-                  <AppIcon name="close" size={Size.iconMd} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
+      <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
+        <Pressable
+          testID="account-picker-modal-backdrop"
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+        />
+        <View
+          testID="account-picker-modal-content"
+          style={[styles.modalContent, { backgroundColor: theme.background }]}
+        >
+          <View style={styles.modalHeader}>
+            <AppText variant="heading">{title}</AppText>
+            <TouchableOpacity
+              onPress={onClose}
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+              style={styles.headerIconButton}
+            >
+              <AppIcon name="close" size={Size.iconMd} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
-              {visible ? (
-                <ArchiveVisibilityScopeProvider>{children}</ArchiveVisibilityScopeProvider>
-              ) : null}
-            </View>
-          </TouchableWithoutFeedback>
+          {visible ? (
+            <ArchiveVisibilityScopeProvider>{children}</ArchiveVisibilityScopeProvider>
+          ) : null}
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 }
@@ -69,6 +73,7 @@ const styles = StyleSheet.create({
     width: '100%',
     elevation: 5,
     display: 'flex',
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
