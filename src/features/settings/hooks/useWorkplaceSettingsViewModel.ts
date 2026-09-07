@@ -8,7 +8,9 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AppConfig } from '@/src/constants/app-config';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+
+const EMPTY_WORKPLACES: PlainWorkplace[] = [];
 
 export interface WorkplaceSettingsViewModel {
   workplaces: PlainWorkplace[];
@@ -30,11 +32,12 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     setWorkplaceId: setActiveWorkplaceId,
     deleteWorkplace: deleteActiveWorkplace,
   } = useWorkplace();
-  const { data: workplaces = [] } = useObservable(
+  const { data: observedWorkplaces } = useObservable(
     () => workplaceService.observeAllWorkplaces(),
     [],
     [],
   );
+  const workplaces = observedWorkplaces ?? EMPTY_WORKPLACES;
 
   const { data: activeWorkplace } = useWorkplaceSnapshot(activeWorkplaceId);
   const [deletingWorkplaceId, setDeletingWorkplaceId] = useState<string | null>(null);
@@ -102,8 +105,13 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     [activeWorkplaceId, deleteActiveWorkplace, workplaces.length],
   );
 
+  const sortedWorkplaces = useMemo(
+    () => [...workplaces].sort((a, b) => a.name.localeCompare(b.name)),
+    [workplaces],
+  );
+
   return {
-    workplaces: [...workplaces].sort((a, b) => a.name.localeCompare(b.name)),
+    workplaces: sortedWorkplaces,
     activeWorkplace: activeWorkplace ?? undefined,
     setActiveWorkplace,
     updateWorkplaceDetails,

@@ -3,6 +3,7 @@ import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';
+import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRuleCardViewProps {
@@ -34,7 +35,13 @@ export function getActionLabel(rule: PlainSmsRule) {
 }
 
 export function getConditionSummary(rule: PlainSmsRule) {
-  const conditions = getConditions(rule);
+  return getConditionSummaryFromConditions(rule, getConditions(rule));
+}
+
+export function getConditionSummaryFromConditions(
+  rule: PlainSmsRule,
+  conditions: SmsRuleCondition[],
+) {
   if (conditions.length === 0) {
     return rule.bodyMatch
       ? `Regex: ${rule.senderMatch} / ${rule.bodyMatch}`
@@ -71,12 +78,19 @@ export function getConditionSummary(rule: PlainSmsRule) {
 
 export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewProps) {
   const { theme } = useTheme();
+  const conditions = useMemo(() => getConditions(item), [item]);
+  const actionLabel = useMemo(() => getActionLabel(item), [item]);
+  const conditionSummary = useMemo(
+    () => getConditionSummaryFromConditions(item, conditions),
+    [conditions, item],
+  );
+
   return (
     <TouchableOpacity activeOpacity={Opacity.heavy} onPress={() => onPress(item)}>
       <AppCard elevation="sm" style={styles.card}>
         <View style={styles.cardHeader}>
           <AppText variant="subheading" weight="semibold">
-            {getConditions(item).length > 0 ? 'Structured rule' : item.senderMatch}
+            {conditions.length > 0 ? 'Structured rule' : item.senderMatch}
           </AppText>
           <View
             style={[
@@ -97,13 +111,12 @@ export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewPr
           </View>
         </View>
         <AppText variant="body" color="secondary" style={styles.bodyMatch}>
-          {getConditionSummary(item)}
+          {conditionSummary}
         </AppText>
         <AppText variant="caption" color="secondary">
-          Action: {getActionLabel(item)} | Priority: {item.priority ?? 100}
+          Action: {actionLabel} | Priority: {item.priority ?? 100}
         </AppText>
-        {getActionLabel(item) === 'Auto-post' &&
-        (!!item.sourceAccountId || !!item.categoryAccountId) ? (
+        {actionLabel === 'Auto-post' && (!!item.sourceAccountId || !!item.categoryAccountId) ? (
           <View style={styles.accountsRow}>
             <AppText variant="caption" color="secondary">
               {accountMap.get(item.sourceAccountId) || item.sourceAccountId}
