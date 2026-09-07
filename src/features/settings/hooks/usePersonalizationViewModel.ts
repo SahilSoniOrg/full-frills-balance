@@ -1,29 +1,57 @@
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { analytics } from '@/src/services/analytics';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface PersonalizationViewModel {
-  userName: string;
-  setUserName: (value: string) => void;
+  draftName: string;
+  setDraftName: (value: string) => void;
+  commitName: () => void;
 }
 
 export function usePersonalizationViewModel(): PersonalizationViewModel {
   const { userName, setUserName: persistUserName } = useProfilePrefs();
+  const [draftName, setDraftNameState] = useState(userName);
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const previousUserNameRef = useRef(userName);
 
-  const setUserName = useCallback(
-    (newName: string) => {
-      if (newName.trim() && newName !== userName) {
-        persistUserName(newName.trim());
-        analytics.trackFeatureUsage('settings', 'change_name', {
-          name_length: newName.trim().length,
-        });
-      }
+  useEffect(() => {
+    const hasUserNameChanged = userName !== previousUserNameRef.current;
+    previousUserNameRef.current = userName;
+    if (hasUserNameChanged && !isDraftDirty && userName !== draftName) {
+      setDraftNameState(userName);
+    }
+  }, [draftName, isDraftDirty, userName]);
+
+  const setDraftName = useCallback(
+    (value: string) => {
+      setDraftNameState(value);
+      setIsDraftDirty(value.trim() !== userName);
     },
-    [persistUserName, userName],
+    [userName],
   );
 
+  const commitName = useCallback(() => {
+    const normalizedName = draftName.trim();
+    if (!normalizedName) {
+      setDraftNameState(userName);
+      setIsDraftDirty(false);
+      return;
+    }
+
+    if (normalizedName !== userName) {
+      persistUserName(normalizedName);
+      analytics.trackFeatureUsage('settings', 'change_name', {
+        name_length: normalizedName.length,
+      });
+    }
+
+    setDraftNameState(normalizedName);
+    setIsDraftDirty(false);
+  }, [draftName, persistUserName, userName]);
+
   return {
-    userName,
-    setUserName,
+    draftName,
+    setDraftName,
+    commitName,
   };
 }
