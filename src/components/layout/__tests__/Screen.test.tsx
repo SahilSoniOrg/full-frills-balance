@@ -75,6 +75,17 @@ describe('Screen', () => {
     expect(screen.getByTestId('nav-back')).toHaveTextContent('back');
   });
 
+  it('renders NavigationBar for a back-only screen', () => {
+    render(
+      <Screen showBack onBack={() => {}}>
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+
+    expect(screen.getByTestId('navigation-bar')).toBeTruthy();
+    expect(screen.getByTestId('nav-back')).toHaveTextContent('back');
+  });
+
   it('renders with header actions', () => {
     const TestActions = () => <MockView testID="test-actions" />;
 

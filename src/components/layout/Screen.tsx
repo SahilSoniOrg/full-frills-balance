@@ -55,7 +55,7 @@ export function Screen({
   );
 
   const navigationBar =
-    title || headerActions ? (
+    showBack || title || headerActions ? (
       <NavigationBar
         title={title || ''}
         subtitle={subtitle}
