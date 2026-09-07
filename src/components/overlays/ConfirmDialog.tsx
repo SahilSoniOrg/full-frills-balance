@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   footer: {
+    width: '100%',
     paddingTop: Spacing.md,
     borderTopWidth: 0,
     flexDirection: 'row',

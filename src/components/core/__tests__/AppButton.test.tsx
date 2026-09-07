@@ -1,6 +1,7 @@
 import { AppButton } from '@/src/components/core/AppButton';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { Animated, StyleSheet } from 'react-native';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: jest.fn(() => false),
@@ -135,5 +136,29 @@ describe('AppButton', () => {
       </AppButton>,
     );
     expect(screen.getByTestId('custom-button')).toBeTruthy();
+  });
+
+  it('applies layout styles to the touchable container', () => {
+    render(
+      <AppButton onPress={() => {}} style={{ flex: 1, width: '100%' }}>
+        Full width
+      </AppButton>,
+    );
+
+    expect(screen.getByRole('button')).toHaveStyle({ flex: 1, width: '100%' });
+  });
+
+  it('applies visual styles to the animated button surface', () => {
+    render(
+      <AppButton onPress={() => {}} buttonStyle={{ height: 64, borderRadius: 4 }}>
+        Custom surface
+      </AppButton>,
+    );
+
+    const animatedSurfaces = screen.UNSAFE_getAllByType(Animated.View);
+    const animatedSurface = animatedSurfaces[animatedSurfaces.length - 1];
+    expect(StyleSheet.flatten(animatedSurface.props.style)).toEqual(
+      expect.objectContaining({ height: 64, borderRadius: 4 }),
+    );
   });
 });

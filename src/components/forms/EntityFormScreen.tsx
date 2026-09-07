@@ -65,7 +65,8 @@ export function EntityFormScreen({
                 variant={secondaryAction.variant || 'outline'}
                 onPress={secondaryAction.onPress}
                 disabled={secondaryAction.disabled}
-                style={styles.secondaryActionButton}
+                style={styles.secondaryActionButtonContainer}
+                buttonStyle={styles.secondaryActionButton}
               >
                 {secondaryAction.label}
               </AppButton>
@@ -93,8 +94,10 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
   },
-  secondaryActionButton: {
+  secondaryActionButtonContainer: {
     width: '100%',
+  },
+  secondaryActionButton: {
     borderRadius: Shape.radius.full,
   },
 });

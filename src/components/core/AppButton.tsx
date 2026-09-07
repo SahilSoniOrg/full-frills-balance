@@ -10,13 +10,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   type GestureResponderEvent,
+  type StyleProp,
   type TouchableOpacityProps,
+  type ViewStyle,
 } from 'react-native';
 
 export type AppButtonProps = TouchableOpacityProps & {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  /** Styles applied to the animated visual surface inside the touchable container. */
+  buttonStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 };
 
@@ -24,6 +28,7 @@ export function AppButton({
   variant = 'primary',
   size = 'md',
   loading = false,
+  buttonStyle,
   children,
   disabled,
   style,
@@ -121,7 +126,7 @@ export function AppButton({
     })();
 
     return {
-      buttonCombinedStyle: [baseStyles, variantStyle, sizeStyles, style],
+      buttonCombinedStyle: [baseStyles, variantStyle, sizeStyles],
       textCombinedStyle: [
         styles.textBase,
         textTypography,
@@ -129,7 +134,7 @@ export function AppButton({
       ],
       finalTextColor: textColor,
     };
-  }, [theme, variant, size, disabled, style, fonts, getVariantColors]);
+  }, [theme, variant, size, disabled, fonts, getVariantColors]);
 
   const isTextContent = (node: React.ReactNode): boolean => {
     if (typeof node === 'string' || typeof node === 'number') return true;
@@ -183,6 +188,7 @@ export function AppButton({
   return (
     <TouchableOpacity
       {...props}
+      style={style}
       disabled={disabled || loading}
       onPress={onPress}
       onPressIn={handlePressIn}
@@ -191,7 +197,9 @@ export function AppButton({
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
     >
-      <Animated.View style={[buttonCombinedStyle, { transform: [{ scale: pressScale }] }]}>
+      <Animated.View
+        style={[buttonCombinedStyle, buttonStyle, { transform: [{ scale: pressScale }] }]}
+      >
         {renderChildren()}
       </Animated.View>
     </TouchableOpacity>

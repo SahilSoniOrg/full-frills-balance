@@ -467,6 +467,7 @@ export function DateRangeMenuContent({
           onPress={onSelectAllTime}
           size="sm"
           style={styles.allTimeBtn}
+          buttonStyle={styles.allTimeBtn}
         >
           {allTimeActive ? 'Selected' : 'Use'}
         </AppButton>

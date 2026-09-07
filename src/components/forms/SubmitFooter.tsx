@@ -40,6 +40,7 @@ export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: Sub
         disabled={disabled}
         loading={loading}
         style={styles.button}
+        buttonStyle={styles.button}
         testID="submit-footer-button"
       >
         {label}

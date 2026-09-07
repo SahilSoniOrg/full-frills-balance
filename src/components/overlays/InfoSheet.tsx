@@ -45,7 +45,8 @@ export function InfoSheet({
           <AppButton
             variant={secondaryAction.variant || 'secondary'}
             onPress={secondaryAction.onPress}
-            style={styles.actionButton}
+            style={styles.actionButtonContainer}
+            buttonStyle={styles.actionButton}
           >
             {secondaryAction.label}
           </AppButton>
@@ -55,7 +56,8 @@ export function InfoSheet({
             variant={primaryAction.variant || 'primary'}
             onPress={primaryAction.onPress}
             disabled={primaryAction.disabled}
-            style={styles.actionButton}
+            style={styles.actionButtonContainer}
+            buttonStyle={styles.actionButton}
           >
             {primaryAction.label}
           </AppButton>
@@ -89,8 +91,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
-  actionButton: {
+  actionButtonContainer: {
     flex: 1,
+  },
+  actionButton: {
     borderRadius: Shape.radius.full,
   },
 });
