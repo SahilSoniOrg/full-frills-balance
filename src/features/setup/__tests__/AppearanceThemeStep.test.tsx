@@ -3,7 +3,9 @@ import { AppearanceThemeStep } from '../AppearanceThemeStep';
 import type { ReactNode } from 'react';
 
 jest.mock('@/src/components/core', () => {
-  const { Text, TouchableOpacity, View } = require('react-native');
+  const { Text, TouchableOpacity, View } = jest.requireActual(
+    'react-native',
+  ) as typeof import('react-native');
   return {
     AppButton: ({ children, ...props }: { children: ReactNode }) => (
       <TouchableOpacity {...props}>

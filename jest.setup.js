@@ -2,6 +2,20 @@
 // Mock Platform before any other imports
 import '@testing-library/jest-native/extend-expect';
 
+// WatermelonDB's development-only queue warning timer is diagnostic and must
+// not keep the Jest process alive after a concurrent writer test completes.
+const jestSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = (callback, delay, ...args) => {
+  const timer = jestSetTimeout(callback, delay, ...args);
+  if (delay === 1500 && typeof timer === 'object' && timer !== null && 'unref' in timer) {
+    const stack = new Error().stack;
+    if (stack?.includes('@nozbe/watermelondb/Database/WorkQueue')) {
+      timer.unref();
+    }
+  }
+  return timer;
+};
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => {
   const Platform = {
     OS: 'ios',
