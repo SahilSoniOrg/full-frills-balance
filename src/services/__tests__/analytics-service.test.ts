@@ -38,4 +38,14 @@ describe('AnalyticsService', () => {
     expect(() => analytics.logOnboardingComplete('USD')).not.toThrow();
     expect(() => analytics.logFactoryReset()).not.toThrow();
   });
+
+  it('does not schedule session tracking before PostHog initializes', () => {
+    jest.useFakeTimers();
+    try {
+      analytics.trackFeatureUsage('account', 'reconcile');
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

@@ -352,6 +352,10 @@ export class AnalyticsService {
   }
 
   updateActivity() {
+    // Session tracking starts with PostHog. Before that point there is no
+    // active session to keep alive, and scheduling a timer only leaks work in
+    // non-analytics environments (including Jest).
+    if (!this._posthog) return;
     this.setupSessionTimeout();
   }
 
