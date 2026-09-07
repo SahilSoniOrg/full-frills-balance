@@ -1,7 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { CurrencyPreferenceView } from './CurrencyPreferenceView';
+import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 
-// Mock dependencies
 jest.mock('react-native/Libraries/Modal/Modal', () => ({
   __esModule: true,
   default: ({ visible, children }: any) => (visible ? children : null),
@@ -40,45 +39,38 @@ const mockCurrencies = [
   { code: 'AMD', name: 'Armenian Dram', symbol: '֏' } as any,
 ];
 
-describe('CurrencyPreferenceView', () => {
+describe('CurrencySelector', () => {
   it('filters currencies based on search query', async () => {
-    const onSelect = jest.fn();
     const { getByText, getByPlaceholderText, queryByText } = render(
-      <CurrencyPreferenceView
+      <CurrencySelector
         selectedCurrency="USD"
         currencies={mockCurrencies}
-        workplaceName="Test Workplace"
-        onSelect={onSelect}
+        onSelect={jest.fn()}
+        variant="pill"
       />,
     );
 
-    // Open modal
     fireEvent.press(getByText('USD $'));
 
-    // Verify initial list shows all
     expect(getByText('US Dollar')).toBeTruthy();
     expect(getByText('Euro')).toBeTruthy();
     expect(getByText('Armenian Dram')).toBeTruthy();
 
-    // Search for "Euro"
     const searchInput = getByPlaceholderText(/Search/i);
     fireEvent.changeText(searchInput, 'Euro');
 
-    // Verify list is filtered
     await waitFor(() => {
       expect(queryByText('US Dollar')).toBeNull();
       expect(getByText('Euro')).toBeTruthy();
       expect(queryByText('Armenian Dram')).toBeNull();
     });
 
-    // Search for "AMD" (Code)
     fireEvent.changeText(searchInput, 'AMD');
     await waitFor(() => {
       expect(getByText('Armenian Dram')).toBeTruthy();
       expect(queryByText('Euro')).toBeNull();
     });
 
-    // Search for "֏" (Symbol)
     fireEvent.changeText(searchInput, '֏');
     await waitFor(() => {
       expect(getByText('Armenian Dram')).toBeTruthy();

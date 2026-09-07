@@ -53,26 +53,9 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                         vm.setActiveWorkplace(workplace);
                       }
                     }}
-                    leftIcon={
-                      <Box
-                        background={isActive ? 'transparent' : 'surfaceSecondary'}
-                        backgroundOpacity={isActive ? 'selection' : undefined}
-                        borderRadius={isActive ? 'full' : 'r2'}
-                        borderWidth={0}
-                        padding="xs"
-                        alignItems="center"
-                        justifyContent="center"
-                        style={{ width: 34, height: 34 }}
-                      >
-                        <AppIcon
-                          name={isValidIconName(workplace.icon) ? workplace.icon : 'briefcase'}
-                          size={21}
-                          color={isActive ? theme.primary : theme.text}
-                        />
-                      </Box>
-                    }
+                    leftIcon={isValidIconName(workplace.icon) ? workplace.icon : 'briefcase'}
                     rightContent={
-                      isActive ? <AppIcon name="check" color="#10B981" size={20} /> : null
+                      isActive ? <AppIcon name="check" color={theme.success} size={20} /> : null
                     }
                     rightAction={
                       <Box flexDirection="row" alignItems="center">

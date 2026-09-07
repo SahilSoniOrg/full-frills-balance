@@ -4,5 +4,5 @@ import {
 } from '@/src/components/settings/SettingsMenu';
 
 export function SettingsMenu(props: CommonSettingsMenuProps) {
-  return <CommonSettingsMenu {...props} allowOverflow />;
+  return <CommonSettingsMenu {...props} variant={props.variant ?? 'flat'} />;
 }

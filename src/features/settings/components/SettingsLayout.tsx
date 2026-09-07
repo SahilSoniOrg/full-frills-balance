@@ -6,7 +6,7 @@ import type {
 } from '@/src/components/layout/screenChrome';
 import { Inset, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
-import { SettingsFocusProvider } from '@/src/features/settings/components/SettingsFocusTarget';
+import { SettingsFocusProvider } from '@/src/components/settings/SettingsFocusTarget';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useRef } from 'react';
@@ -77,7 +77,7 @@ export function SettingsLayout({
         }}
         scrollViewRef={scrollViewRef}
       >
-        <Inset space="md" vertical="md" flex={scrollable ? undefined : 1}>
+        <Inset space="lg" vertical="md" flex={scrollable ? undefined : 1}>
           <Stack space="xl" flex={scrollable ? undefined : 1}>
             {children}
             {!hideFooter && <SettingsFooter />}

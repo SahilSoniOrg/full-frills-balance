@@ -72,11 +72,11 @@ export function SettingsSearchResults({
           {results.map(item => (
             <SettingsMenuItem
               key={item.id}
-              leftIcon={<AppIcon name={item.icon} size={20} color={theme.primary} />}
+              leftIcon={item.icon}
               iconBackground={false}
               title={item.title}
               description={`${item.section} · ${item.description}`}
-              onPress={item.onPress}
+              onPress={() => item.navigate(item.focusId)}
               testID={`settings-search-result-${item.id}`}
             />
           ))}

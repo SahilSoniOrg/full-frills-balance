@@ -1,13 +1,16 @@
-import { AppIcon, AppText, type IconName, isValidIconName } from '@/src/components/core';
+import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SettingsIcon } from '@/src/components/settings/SettingsIcon';
+import { SettingsFocusTarget } from '@/src/components/settings/SettingsFocusTarget';
 import { MotiView } from 'moti';
 import React from 'react';
 import { TouchableOpacity, type ViewProps } from 'react-native';
 
 export type SettingsMenuItemProps = {
   title: string;
+  titleMeta?: string;
   description?: string;
   leftIcon?: IconName | React.ReactNode;
   rightContent?: React.ReactNode;
@@ -20,12 +23,15 @@ export type SettingsMenuItemProps = {
   prominent?: boolean;
   style?: ViewProps['style'];
   testID?: string;
+  /** Stable id used by settings search and focus navigation. */
+  focusId?: string;
   rightAction?: React.ReactNode;
   iconBackground?: boolean;
 };
 
 export function SettingsMenuItem({
   title,
+  titleMeta,
   description,
   leftIcon,
   rightContent,
@@ -38,62 +44,11 @@ export function SettingsMenuItem({
   prominent = false,
   style,
   testID,
+  focusId,
   rightAction,
   iconBackground = true,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
-
-  const renderLeftIcon = () => {
-    if (!leftIcon) return null;
-    if (typeof leftIcon === 'string') {
-      const isActualIcon = isValidIconName(leftIcon);
-      return (
-        <Box
-          background={
-            iconBackground
-              ? danger
-                ? 'errorLight'
-                : prominent
-                  ? 'transparent'
-                  : 'surfaceSecondary'
-              : undefined
-          }
-          backgroundOpacity={iconBackground && prominent && !danger ? 'selection' : undefined}
-          borderRadius={iconBackground ? (prominent ? 'full' : 'r2') : undefined}
-          borderWidth={0}
-          padding={iconBackground ? 'xs' : undefined}
-          alignItems="center"
-          justifyContent="center"
-          style={{ width: prominent ? 34 : 32, height: prominent ? 34 : 32 }}
-        >
-          {isActualIcon ? (
-            <AppIcon
-              name={leftIcon}
-              size={prominent ? 21 : 20}
-              color={
-                disabled
-                  ? theme.textSecondary
-                  : danger
-                    ? theme.error
-                    : iconColor || prominent
-                      ? theme.primary
-                      : theme.text
-              }
-            />
-          ) : (
-            <AppText variant="body" style={{ fontSize: 16 }}>
-              {leftIcon}
-            </AppText>
-          )}
-        </Box>
-      );
-    }
-    return (
-      <Box width={prominent ? 34 : 32} alignItems="center" justifyContent="center">
-        {leftIcon}
-      </Box>
-    );
-  };
 
   const renderRightContent = () => {
     if (loading) {
@@ -130,10 +85,10 @@ export function SettingsMenuItem({
     );
   };
 
-  return (
+  const row = (
     <Inline align="center" style={style}>
       <TouchableOpacity
-        onPress={onPress}
+        onPress={onPress ? () => onPress() : undefined}
         disabled={disabled}
         activeOpacity={Opacity.heavy}
         accessibilityRole={onPress ? 'button' : undefined}
@@ -151,19 +106,36 @@ export function SettingsMenuItem({
           space="md"
         >
           <Inline align="center" space="md" flex={1}>
-            {renderLeftIcon()}
+            {leftIcon && (
+              <SettingsIcon
+                icon={leftIcon}
+                prominent={prominent}
+                disabled={disabled}
+                danger={danger}
+                iconColor={iconColor}
+                background={iconBackground}
+              />
+            )}
             <Stack space={0} flex={1}>
-              <AppText
-                variant="body"
-                weight={prominent ? 'semibold' : 'medium'}
-                color={danger ? 'error' : 'text'}
-              >
-                {title}
-              </AppText>
+              <Inline align="center" space="sm">
+                <AppText
+                  variant="body"
+                  weight={prominent ? 'bold' : 'semibold'}
+                  color={danger ? 'error' : 'text'}
+                >
+                  {title}
+                </AppText>
+                {titleMeta && (
+                  <AppText variant="caption" color="secondary">
+                    {titleMeta}
+                  </AppText>
+                )}
+              </Inline>
               {description && (
                 <AppText
                   variant="caption"
                   color="secondary"
+                  weight="medium"
                   style={{ marginTop: prominent ? 3 : 2 }}
                 >
                   {description}
@@ -177,4 +149,6 @@ export function SettingsMenuItem({
       {rightAction}
     </Inline>
   );
+
+  return focusId ? <SettingsFocusTarget targetId={focusId}>{row}</SettingsFocusTarget> : row;
 }

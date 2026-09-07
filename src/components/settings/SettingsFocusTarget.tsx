@@ -124,6 +124,7 @@ export function SettingsFocusTarget({
       Animated.timing(highlightOpacity, { toValue: 0, duration: 420, useNativeDriver: false }),
     ]).start();
   }, [highlightOpacity, isHighlighted]);
+
   const onLayout = useCallback(() => {
     if (targetRef.current) {
       context?.registerTarget(targetId, targetRef.current);

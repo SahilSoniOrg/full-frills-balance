@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { SafeToSpendPreferenceView } from '@/src/features/settings/components/SafeToSpendPreferenceView';
+import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
 jest.mock('@/src/components/core', () => {
@@ -28,13 +28,22 @@ jest.mock('@/src/components/core', () => {
   };
 });
 
-describe('SafeToSpendPreferenceView', () => {
-  it('offers and persists the 90-day workplace-scoped horizon', () => {
+describe('SettingsSegmentedControl', () => {
+  it('preserves numeric option values', () => {
     const onChange = jest.fn();
 
-    render(<SafeToSpendPreferenceView days={60} workplaceName="Household" onChange={onChange} />);
+    render(
+      <SettingsSegmentedControl
+        title="Forecast horizon"
+        options={[
+          { id: 30, label: '30 Days' },
+          { id: 90, label: '90 Days' },
+        ]}
+        value={30}
+        onChange={onChange}
+      />,
+    );
 
-    expect(screen.getByText('Saved for Household only.')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('90 Days'));
 
     expect(onChange).toHaveBeenCalledWith(90);

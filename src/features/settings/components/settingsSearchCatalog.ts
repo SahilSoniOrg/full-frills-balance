@@ -4,19 +4,21 @@ import { Platform } from 'react-native';
 
 export type SettingsSearchItem = {
   id: string;
+  /** Rendered row or section target used by SettingsFocusProvider. */
+  focusId: string;
   icon: IconName;
   title: string;
   description: string;
   section: string;
   keywords: string[];
-  onPress: () => void;
+  navigate: (target: string) => void;
 };
 
 const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   'profile-name': 'user',
   devices: 'settings',
   workplace: 'briefcase',
-  currency: 'transaction',
+  currency: 'bank',
   'safe-to-spend-forecast': 'safe',
   notifications: 'notifications',
   'share-format': 'share',
@@ -64,14 +66,14 @@ type SettingsSearchActions = {
  * intentional instead of depending on the rendered React tree.
  */
 export function createSettingsSearchCatalog(actions: SettingsSearchActions): SettingsSearchItem[] {
-  const catalog: Omit<SettingsSearchItem, 'icon'>[] = [
+  const catalog: (Omit<SettingsSearchItem, 'focusId' | 'icon'> & { focusId?: string })[] = [
     {
       id: 'profile-name',
       title: AppConfig.strings.settings.personalization.yourName,
       description: AppConfig.strings.settings.personalization.yourNameDesc,
       section: 'Your Account',
       keywords: ['account', 'name', 'profile', 'user'],
-      onPress: () => actions.onProfile('profile-name'),
+      navigate: actions.onProfile,
     },
     {
       id: 'devices',
@@ -79,7 +81,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: 'This device, local preferences, and future sessions',
       section: 'Your Account',
       keywords: ['device', 'session', 'sms import', 'android'],
-      onPress: () => actions.onDeviceSettings('devices'),
+      navigate: actions.onDeviceSettings,
     },
     {
       id: 'workplace',
@@ -87,7 +89,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: 'Rename this workplace or change its icon',
       section: 'Workplaces',
       keywords: ['workplace', 'books', 'rename', 'icon'],
-      onPress: () => actions.onCurrentWorkplace('workplace'),
+      navigate: actions.onCurrentWorkplace,
     },
     {
       id: 'currency',
@@ -95,7 +97,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.currency.description,
       section: 'Workplaces',
       keywords: ['workplace', 'money', 'currency code', 'default currency'],
-      onPress: () => actions.onCurrentWorkplace('currency'),
+      navigate: actions.onCurrentWorkplace,
     },
     {
       id: 'safe-to-spend-forecast',
@@ -112,7 +114,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         '60 days',
         '90 days',
       ],
-      onPress: () => actions.onCurrentWorkplace('safe-to-spend-forecast'),
+      navigate: actions.onCurrentWorkplace,
     },
     {
       id: 'notifications',
@@ -120,7 +122,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.notifications.description,
       section: 'Preferences',
       keywords: ['notification', 'reminder', 'schedule', 'daily', 'weekly'],
-      onPress: () => actions.onAutomation('notifications'),
+      navigate: actions.onAutomation,
     },
     {
       id: 'share-format',
@@ -128,7 +130,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.data.shareFormatDesc,
       section: 'Data',
       keywords: ['data', 'share', 'format', 'csv', 'text', 'markdown'],
-      onPress: () => actions.onDataManagement('share-format'),
+      navigate: actions.onDataManagement,
     },
     {
       id: 'appearance',
@@ -136,15 +138,16 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.appearance.themeDesc,
       section: 'Preferences',
       keywords: ['appearance', 'theme', 'dark mode', 'light mode', 'color'],
-      onPress: () => actions.onAppearance('appearance'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'appearance-mode',
+      focusId: 'mode',
       title: AppConfig.strings.settings.appearance.modeTitle,
       description: 'Choose how the selected theme follows your device.',
       section: 'Preferences',
       keywords: ['appearance', 'theme', 'system', 'light', 'dark', 'mode'],
-      onPress: () => actions.onAppearance('mode'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'typography',
@@ -152,7 +155,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.appearance.typographyDesc,
       section: 'Preferences',
       keywords: ['appearance', 'font', 'fonts', 'type', 'serif', 'sans'],
-      onPress: () => actions.onAppearance('typography'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'time-format',
@@ -160,7 +163,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.appearance.hourCycleDesc,
       section: 'Preferences',
       keywords: ['appearance', 'time', 'clock', '12 hour', '24 hour'],
-      onPress: () => actions.onAppearance('time-format'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'compact-account-picker',
@@ -168,7 +171,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.accountPicker.description,
       section: 'Preferences · Display Options',
       keywords: ['appearance', 'display', 'options', 'accounts', 'compact', 'picker'],
-      onPress: () => actions.onAppearance('compact-account-picker'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'account-statistics',
@@ -176,7 +179,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.stats.description,
       section: 'Preferences · Display Options',
       keywords: ['appearance', 'display', 'options', 'account', 'statistics', 'stats', 'monthly'],
-      onPress: () => actions.onAppearance('account-statistics'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'safe-to-spend-chart',
@@ -184,7 +187,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.stsChart.description,
       section: 'Preferences · Display Options',
       keywords: ['appearance', 'display', 'options', 'safe to spend', 'chart', 'projection'],
-      onPress: () => actions.onAppearance('safe-to-spend-chart'),
+      navigate: actions.onAppearance,
     },
     {
       id: 'privacy-security',
@@ -192,7 +195,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.privacy.description,
       section: 'Preferences',
       keywords: ['privacy', 'security', 'hide', 'balance'],
-      onPress: () => actions.onPrivacy('privacy-security'),
+      navigate: actions.onPrivacy,
     },
     {
       id: 'widget-privacy',
@@ -200,7 +203,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.privacy.widgetPrivacyDesc,
       section: 'Preferences',
       keywords: ['privacy', 'security', 'widget', 'hide'],
-      onPress: () => actions.onPrivacy('widget-privacy'),
+      navigate: actions.onPrivacy,
     },
     {
       id: 'app-lock',
@@ -208,15 +211,16 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.privacy.appLockDesc,
       section: 'Preferences',
       keywords: ['privacy', 'security', 'lock', 'passcode'],
-      onPress: () => actions.onPrivacy('app-lock'),
+      navigate: actions.onPrivacy,
     },
     {
       id: 'data-management',
+      focusId: 'data-export',
       title: AppConfig.strings.settings.data.exportBtn,
       description: AppConfig.strings.settings.data.exportDesc,
       section: 'Data',
       keywords: ['data', 'backup', 'export', 'save'],
-      onPress: () => actions.onDataManagement('data-export'),
+      navigate: actions.onDataManagement,
     },
     {
       id: 'data-import',
@@ -224,7 +228,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.data.importDesc,
       section: 'Data',
       keywords: ['data', 'restore', 'import', 'load'],
-      onPress: () => actions.onDataManagement('data-import'),
+      navigate: actions.onDataManagement,
     },
     {
       id: 'audit-log',
@@ -232,15 +236,16 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.data.auditDesc,
       section: 'Data',
       keywords: ['data', 'review', 'history', 'changes', 'audit'],
-      onPress: () => actions.onDataManagement('audit-log'),
+      navigate: actions.onDataManagement,
     },
     {
       id: 'maintenance',
+      focusId: 'integrity',
       title: AppConfig.strings.settings.maintenance.integrityBtn,
       description: AppConfig.strings.settings.maintenance.integrityDesc,
       section: 'Data',
       keywords: ['maintenance', 'integrity', 'verify', 'repair', 'books'],
-      onPress: () => actions.onMaintenance('integrity'),
+      navigate: actions.onMaintenance,
     },
     {
       id: 'cleanup',
@@ -248,7 +253,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.danger.cleanupDesc,
       section: 'Data',
       keywords: ['maintenance', 'cleanup', 'purge', 'deleted'],
-      onPress: () => actions.onMaintenance('cleanup'),
+      navigate: actions.onMaintenance,
     },
     {
       id: 'reset',
@@ -256,7 +261,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.danger.resetDesc,
       section: 'Data',
       keywords: ['maintenance', 'reset', 'delete', 'start over'],
-      onPress: () => actions.onMaintenance('reset'),
+      navigate: actions.onMaintenance,
     },
     {
       id: 'about-support',
@@ -264,7 +269,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: 'Community, ratings, source code, and version',
       section: 'Support',
       keywords: ['about', 'support', 'help', 'community', 'github', 'version', 'bug'],
-      onPress: () => actions.onAbout('about-support'),
+      navigate: actions.onAbout,
     },
     {
       id: 'release-notes',
@@ -272,7 +277,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.community.releaseNotesDesc,
       section: 'Support',
       keywords: ['release', 'changelog', 'updates', 'what changed', 'telegram'],
-      onPress: () => actions.onAbout('release-notes'),
+      navigate: actions.onAbout,
     },
   ];
 
@@ -284,7 +289,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         description: AppConfig.strings.settings.personalization.smsInboxDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'inbox', 'messages', 'transactions'],
-        onPress: () => actions.onAutomation('sms-inbox'),
+        navigate: actions.onAutomation,
       },
       {
         id: 'sms-rules',
@@ -292,7 +297,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         description: AppConfig.strings.settings.personalization.smsAutoPostDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'rules', 'automation', 'auto post'],
-        onPress: () => actions.onAutomation('sms-rules'),
+        navigate: actions.onAutomation,
       },
     );
     catalog.push({
@@ -301,14 +306,14 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: 'Automatically scan for transaction messages on this device.',
       section: 'Devices & Sessions',
       keywords: ['sms', 'text message', 'transaction', 'import', 'android'],
-      onPress: () => actions.onDeviceSettings('sms-import'),
+      navigate: actions.onDeviceSettings,
     });
   }
 
   return catalog.map(item => {
     const icon = getSettingsSearchIcon(item.id);
     if (!icon) throw new Error(`Missing settings search icon for ${item.id}`);
-    return { ...item, icon };
+    return { ...item, focusId: item.focusId ?? item.id, icon };
   });
 }
 

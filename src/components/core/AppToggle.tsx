@@ -7,13 +7,19 @@ export interface AppToggleProps {
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 /**
  * AppToggle - A premium, custom switch component
  * Provides a more tactile and visually appealing experience than the standard Switch.
  */
-export const AppToggle = ({ value, onValueChange, disabled = false }: AppToggleProps) => {
+export const AppToggle = ({
+  value,
+  onValueChange,
+  disabled = false,
+  accessibilityLabel,
+}: AppToggleProps) => {
   const { theme } = useTheme();
   const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
@@ -28,7 +34,7 @@ export const AppToggle = ({ value, onValueChange, disabled = false }: AppToggleP
 
   const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [2, 22], // adjust based on width
+    outputRange: [2, 22],
   });
 
   const backgroundColor = animatedValue.interpolate({
@@ -42,6 +48,7 @@ export const AppToggle = ({ value, onValueChange, disabled = false }: AppToggleP
       onPress={() => !disabled && onValueChange(!value)}
       disabled={disabled}
       accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: value, disabled }}
     >
       <Animated.View

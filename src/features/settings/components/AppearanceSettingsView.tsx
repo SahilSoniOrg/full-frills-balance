@@ -1,13 +1,11 @@
-import { AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { Stack } from '@/src/design-system';
 import { FontSelectorView } from '@/src/features/settings/components/FontSelectorView';
 import { HourCycleSelectorView } from '@/src/features/settings/components/HourCycleSelectorView';
-import { ModeSelectorView } from '@/src/features/settings/components/ModeSelectorView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
+import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
 
@@ -15,72 +13,61 @@ interface AppearanceSettingsViewProps {
   vm: AppearanceSettingsViewModel;
 }
 
+const MODE_OPTIONS = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+] as const;
+
 export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.appearance}>
       <Stack space="xl">
-        <SettingsFocusTarget targetId="appearance">
-          <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
-        </SettingsFocusTarget>
+        <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
 
-        <SettingsFocusTarget targetId="mode">
-          <ModeSelectorView
-            themePreference={vm.themePreference}
-            setThemePreference={vm.setThemePreference}
-          />
-        </SettingsFocusTarget>
+        <SettingsSegmentedControl
+          leftIcon="sliders"
+          focusId="mode"
+          title={AppConfig.strings.settings.appearance.modeTitle}
+          description="Choose how the selected theme follows your device."
+          options={MODE_OPTIONS}
+          value={vm.themePreference}
+          onChange={vm.setThemePreference}
+        />
 
-        <SettingsFocusTarget targetId="time-format">
-          <HourCycleSelectorView
-            hourCyclePreference={vm.hourCyclePreference}
-            resolvedHourCycle={vm.resolvedHourCycle}
-            setHourCyclePreference={vm.setHourCyclePreference}
-          />
-        </SettingsFocusTarget>
+        <HourCycleSelectorView
+          hourCyclePreference={vm.hourCyclePreference}
+          resolvedHourCycle={vm.resolvedHourCycle}
+          setHourCyclePreference={vm.setHourCyclePreference}
+          focusId="time-format"
+        />
 
-        <SettingsFocusTarget targetId="typography">
-          <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />
-        </SettingsFocusTarget>
+        <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />
 
         <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
-          <SettingsMenuItem
+          <SettingsToggleItem
             searchId="compact-account-picker"
             leftIcon="wallet"
             title={AppConfig.strings.settings.accountPicker.title}
             description={AppConfig.strings.settings.accountPicker.description}
-            hasArrow={false}
-            rightContent={
-              <AppToggle
-                value={vm.useCompactAccountPicker}
-                onValueChange={vm.onToggleCompactAccountPicker}
-              />
-            }
+            value={vm.useCompactAccountPicker}
+            onValueChange={vm.onToggleCompactAccountPicker}
           />
-          <SettingsMenuItem
+          <SettingsToggleItem
             searchId="account-statistics"
             leftIcon="barChart"
             title={AppConfig.strings.settings.stats.title}
             description={AppConfig.strings.settings.stats.description}
-            hasArrow={false}
-            rightContent={
-              <AppToggle
-                value={vm.showAccountMonthlyStats}
-                onValueChange={vm.onToggleAccountMonthlyStats}
-              />
-            }
+            value={vm.showAccountMonthlyStats}
+            onValueChange={vm.onToggleAccountMonthlyStats}
           />
-          <SettingsMenuItem
+          <SettingsToggleItem
             searchId="safe-to-spend-chart"
             leftIcon="trendingUp"
             title={AppConfig.strings.settings.stsChart.title}
             description={AppConfig.strings.settings.stsChart.description}
-            hasArrow={false}
-            rightContent={
-              <AppToggle
-                value={vm.showSafeToSpendChart}
-                onValueChange={vm.onToggleSafeToSpendChart}
-              />
-            }
+            value={vm.showSafeToSpendChart}
+            onValueChange={vm.onToggleSafeToSpendChart}
             testID="settings-sts-chart-toggle"
           />
         </SettingsMenu>

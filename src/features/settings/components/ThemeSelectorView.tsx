@@ -1,5 +1,8 @@
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
+import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
+import { Box, Stack } from '@/src/design-system';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
@@ -36,99 +39,87 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
   const { theme, onContrast } = useTheme();
 
   return (
-    <View>
-      <View style={styles.sectionHeader}>
-        <AppText variant="subheading">{AppConfig.strings.settings.appearance.themeTitle}</AppText>
-        <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
-          {AppConfig.strings.settings.appearance.themeDesc}
-        </AppText>
-      </View>
+    <Stack space={0}>
+      <SettingsMenuItem
+        searchId="appearance"
+        leftIcon="palette"
+        title={AppConfig.strings.settings.appearance.themeTitle}
+        description={AppConfig.strings.settings.appearance.themeDesc}
+        hasArrow={false}
+      />
+      <Box paddingHorizontal="md" marginTop="md">
+        <View style={styles.grid}>
+          {THEME_OPTIONS.map(option => {
+            const selected = themeId === option.id;
+            const light = ThemeSchemes[option.id].light;
+            const dark = ThemeSchemes[option.id].dark;
 
-      <View style={styles.grid}>
-        {THEME_OPTIONS.map(option => {
-          const selected = themeId === option.id;
-          const light = ThemeSchemes[option.id].light;
-          const dark = ThemeSchemes[option.id].dark;
+            const bg = selected ? light.primaryLight : theme.surface;
+            const textColor = onContrast(bg);
 
-          const bg = selected ? light.primaryLight : theme.surface;
-          const textColor = onContrast(bg);
-
-          return (
-            <Pressable
-              key={option.id}
-              onPress={() => setThemeId(option.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              style={({ pressed }) => [
-                styles.tile,
-                {
-                  backgroundColor: bg,
-                  borderColor: selected ? theme.primary : theme.border,
-                  opacity: pressed ? Opacity.heavy : 1,
-                },
-              ]}
-            >
-              <View style={styles.swatchRail}>
-                {[dark.background, dark.surface, dark.primary, light.background].map(
-                  (color, index) => (
-                    <View
-                      key={`${option.id}-${index}`}
-                      style={[
-                        styles.swatch,
-                        {
-                          backgroundColor: color,
-                          borderColor: theme.border,
-                        },
-                      ]}
-                    />
-                  ),
-                )}
-              </View>
-
-              <View style={styles.tileText}>
-                <AppText
-                  variant="body"
-                  weight="semibold"
-                  numberOfLines={1}
-                  style={{ color: textColor }}
-                >
-                  {option.label}
-                </AppText>
-                <AppText
-                  variant="caption"
-                  numberOfLines={1}
-                  style={{ color: withOpacity(textColor, Opacity.heavy) }}
-                >
-                  {option.desc}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.check,
+            return (
+              <Pressable
+                key={option.id}
+                onPress={() => setThemeId(option.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={({ pressed }) => [
+                  styles.tile,
                   {
-                    backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
+                    backgroundColor: bg,
                     borderColor: selected ? theme.primary : theme.border,
+                    opacity: pressed ? Opacity.heavy : 1,
                   },
                 ]}
               >
-                {selected && <AppIcon name="check" size={13} color={theme.onPrimary} />}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
+                <View style={styles.swatchRail}>
+                  {[dark.background, dark.surface, dark.primary, light.background].map(
+                    (color, index) => (
+                      <View
+                        key={`${option.id}-${index}`}
+                        style={[
+                          styles.swatch,
+                          {
+                            backgroundColor: color,
+                            borderColor: theme.border,
+                          },
+                        ]}
+                      />
+                    ),
+                  )}
+                </View>
+
+                <View style={styles.tileText}>
+                  <AppText
+                    variant="body"
+                    weight="semibold"
+                    numberOfLines={1}
+                    style={{ color: textColor }}
+                  >
+                    {option.label}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    numberOfLines={1}
+                    style={{ color: withOpacity(textColor, Opacity.heavy) }}
+                  >
+                    {option.desc}
+                  </AppText>
+                </View>
+
+                <View style={styles.check}>
+                  <SettingsSelectionIndicator selected={selected} />
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Box>
+    </Stack>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionHeader: {
-    marginBottom: 12,
-  },
-  sectionDesc: {
-    marginTop: 4,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -160,11 +151,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
     bottom: 10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

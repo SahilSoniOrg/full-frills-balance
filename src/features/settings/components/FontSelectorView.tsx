@@ -1,5 +1,8 @@
 import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constants';
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
+import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
+import { Box, Stack } from '@/src/design-system';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -29,83 +32,71 @@ const FONT_OPTIONS = [
 export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
   const { theme } = useTheme();
   return (
-    <View>
-      <View style={styles.sectionHeader}>
-        <AppText variant="subheading">
-          {AppConfig.strings.settings.appearance.typographyTitle}
-        </AppText>
-        <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
-          {AppConfig.strings.settings.appearance.typographyDesc}
-        </AppText>
-      </View>
+    <Stack space={0}>
+      <SettingsMenuItem
+        searchId="typography"
+        leftIcon={
+          <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
+            Aa
+          </AppText>
+        }
+        title={AppConfig.strings.settings.appearance.typographyTitle}
+        description={AppConfig.strings.settings.appearance.typographyDesc}
+        hasArrow={false}
+      />
+      <Box paddingHorizontal="md" marginTop="md">
+        <View style={[styles.list, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+          {FONT_OPTIONS.map((option, index) => {
+            const selected = fontId === option.id;
+            const font = FontSchemes[option.id];
 
-      <View style={[styles.list, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-        {FONT_OPTIONS.map((option, index) => {
-          const selected = fontId === option.id;
-          const font = FontSchemes[option.id];
-
-          return (
-            <Pressable
-              key={option.id}
-              onPress={() => setFontId(option.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              style={({ pressed }) => [
-                styles.row,
-                index < FONT_OPTIONS.length - 1 && {
-                  borderBottomColor: theme.border,
-                  borderBottomWidth: 1,
-                },
-                pressed && { opacity: Opacity.heavy },
-              ]}
-            >
-              <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
-                <AppText
-                  variant="heading"
-                  style={{
-                    fontFamily: font.heading,
-                    color: selected ? theme.primary : theme.text,
-                  }}
-                >
-                  Aa
-                </AppText>
-              </View>
-
-              <View style={styles.copy}>
-                <AppText variant="body" weight="semibold">
-                  {option.label}
-                </AppText>
-                <AppText variant="caption" color="secondary" numberOfLines={1}>
-                  {option.desc}
-                </AppText>
-              </View>
-
-              <View
-                style={[
-                  styles.check,
-                  {
-                    backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
-                    borderColor: selected ? theme.primary : theme.border,
+            return (
+              <Pressable
+                key={option.id}
+                onPress={() => setFontId(option.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={({ pressed }) => [
+                  styles.row,
+                  index < FONT_OPTIONS.length - 1 && {
+                    borderBottomColor: theme.border,
+                    borderBottomWidth: 1,
                   },
+                  pressed && { opacity: Opacity.heavy },
                 ]}
               >
-                {selected && <AppIcon name="check" size={13} color={theme.onPrimary} />}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
+                <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
+                  <AppText
+                    variant="heading"
+                    style={{
+                      fontFamily: font.heading,
+                      color: selected ? theme.primary : theme.text,
+                    }}
+                  >
+                    Aa
+                  </AppText>
+                </View>
+
+                <View style={styles.copy}>
+                  <AppText variant="body" weight="semibold">
+                    {option.label}
+                  </AppText>
+                  <AppText variant="caption" color="secondary" numberOfLines={1}>
+                    {option.desc}
+                  </AppText>
+                </View>
+
+                <SettingsSelectionIndicator selected={selected} />
+              </Pressable>
+            );
+          })}
+        </View>
+      </Box>
+    </Stack>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionHeader: {
-    marginBottom: 12,
-  },
-  sectionDesc: {
-    marginTop: 4,
-  },
   list: {
     borderWidth: 1,
     borderRadius: 14,
@@ -128,13 +119,5 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-  },
-  check: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

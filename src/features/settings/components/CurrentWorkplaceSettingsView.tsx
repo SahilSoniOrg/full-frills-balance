@@ -1,23 +1,29 @@
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
-import { AppIcon } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
-import { Box, Stack } from '@/src/design-system';
-import { CurrencyPreferenceView } from '@/src/features/settings/components/CurrencyPreferenceView';
-import { SafeToSpendPreferenceView } from '@/src/features/settings/components/SafeToSpendPreferenceView';
+import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
+import { AppConfig, Opacity, withOpacity } from '@/src/constants';
+import { Stack } from '@/src/design-system';
+import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { SettingsFocusTarget } from '@/src/features/settings/components/SettingsFocusTarget';
 import type { CurrentWorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useCurrentWorkplaceSettingsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidIconName } from '@/src/types/domainIcons';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 
 interface CurrentWorkplaceSettingsViewProps {
   vm: CurrentWorkplaceSettingsViewModel;
 }
 
+const SAFE_TO_SPEND_OPTIONS = [
+  { id: 30, label: '30 Days' },
+  { id: 60, label: '60 Days' },
+  { id: 90, label: '90 Days' },
+] as const;
+
 export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsViewProps) {
+  const { theme } = useTheme();
   const [isEditorVisible, setIsEditorVisible] = useState(false);
 
   return (
@@ -28,24 +34,9 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
             <SettingsMenuItem
               searchId="workplace"
               leftIcon={
-                <Box
-                  background="surfaceSecondary"
-                  borderRadius="full"
-                  width={34}
-                  height={34}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <AppIcon
-                    name={
-                      vm.activeWorkplace && isValidIconName(vm.activeWorkplace.icon)
-                        ? vm.activeWorkplace.icon
-                        : 'briefcase'
-                    }
-                    size={21}
-                    color="primary"
-                  />
-                </Box>
+                vm.activeWorkplace && isValidIconName(vm.activeWorkplace.icon)
+                  ? vm.activeWorkplace.icon
+                  : 'briefcase'
               }
               title={vm.activeWorkplace?.name || 'Current workplace'}
               description="Rename this workplace or change its icon"
@@ -66,23 +57,37 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           </SettingsMenu>
 
           <SettingsMenu header={AppConfig.strings.settings.sections.moneyDefaults}>
-            <CurrencyPreferenceView
-              selectedCurrency={vm.workplaceCurrency}
-              currencies={vm.currencies}
-              workplaceName={vm.workplaceName}
-              onSelect={vm.onUpdateCurrency}
+            <SettingsMenuItem
+              searchId="currency"
+              leftIcon="bank"
+              title={AppConfig.strings.settings.currency.title}
+              description={`${AppConfig.strings.settings.currency.description} for ${vm.workplaceName || 'current workplace'}`}
+              hasArrow={false}
+              rightContent={
+                <CurrencySelector
+                  selectedCurrency={vm.workplaceCurrency}
+                  currencies={vm.currencies}
+                  onSelect={vm.onUpdateCurrency}
+                  variant="pill"
+                  title={AppConfig.strings.settings.currency.selectTitle}
+                  selectedBackgroundColor={withOpacity(theme.primary, Opacity.soft / 2)}
+                />
+              }
             />
           </SettingsMenu>
 
-          <SettingsFocusTarget targetId="safe-to-spend-forecast">
-            <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
-              <SafeToSpendPreferenceView
-                days={vm.safeToSpendDays}
-                workplaceName={vm.workplaceName}
-                onChange={vm.setSafeToSpendDays}
-              />
-            </SettingsMenu>
-          </SettingsFocusTarget>
+          <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
+            <SettingsSegmentedControl
+              leftIcon="trendingUp"
+              focusId="safe-to-spend-forecast"
+              title={AppConfig.strings.settings.personalization.forecastTitle}
+              description={AppConfig.strings.settings.personalization.forecastDesc}
+              options={SAFE_TO_SPEND_OPTIONS}
+              value={vm.safeToSpendDays}
+              onChange={vm.setSafeToSpendDays}
+              controlTestID="safe-to-spend-horizon"
+            />
+          </SettingsMenu>
         </Stack>
       </SettingsLayout>
       {vm.activeWorkplace && (

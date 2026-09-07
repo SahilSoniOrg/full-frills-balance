@@ -1,9 +1,10 @@
-import { AppText, AppToggle } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { Platform } from 'react-native';
 
 interface DeviceSettingsViewProps {
@@ -18,7 +19,7 @@ export function DeviceSettingsView({
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.devicesAndSessions}>
       <Stack space="xl">
-        <SettingsMenu header="This Device">
+        <SettingsMenu header="This Device" focusId="devices">
           <SettingsMenuItem
             searchId="local-device"
             leftIcon="settings"
@@ -31,15 +32,13 @@ export function DeviceSettingsView({
 
         {Platform.OS === 'android' && (
           <SettingsMenu header="Device Preferences">
-            <SettingsMenuItem
+            <SettingsToggleItem
               searchId="sms-import"
               leftIcon="zap"
               title={AppConfig.strings.settings.personalization.smsImportTitle}
               description="Automatically scan for transaction messages on this device."
-              hasArrow={false}
-              rightContent={
-                <AppToggle value={isSmsImportEnabled} onValueChange={onToggleSmsImport} />
-              }
+              value={isSmsImportEnabled}
+              onValueChange={onToggleSmsImport}
               testID="device-sms-import-toggle"
             />
           </SettingsMenu>

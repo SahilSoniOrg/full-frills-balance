@@ -1,16 +1,16 @@
-import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import {
   HOUR_CYCLE_PREFERENCES,
   type HourCyclePreference,
   type ResolvedHourCycle,
 } from '@/src/utils/hourCycle';
-import { StyleSheet, View } from 'react-native';
 
 type HourCycleSelectorProps = {
   hourCyclePreference: HourCyclePreference;
   resolvedHourCycle: ResolvedHourCycle;
   setHourCyclePreference: (pref: HourCyclePreference) => void;
+  focusId?: string;
 };
 
 const HOUR_CYCLE_LABELS: Record<HourCyclePreference, string> = {
@@ -36,45 +36,18 @@ export function HourCycleSelectorView({
   hourCyclePreference,
   resolvedHourCycle,
   setHourCyclePreference,
+  focusId,
 }: HourCycleSelectorProps) {
   return (
-    <View>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <AppText variant="subheading">
-            {AppConfig.strings.settings.appearance.hourCycleTitle}
-          </AppText>
-          <AppText variant="caption" color="secondary" weight="regular">
-            {hourCycleHint(hourCyclePreference, resolvedHourCycle)}
-          </AppText>
-        </View>
-        <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
-          {AppConfig.strings.settings.appearance.hourCycleDesc}
-        </AppText>
-      </View>
-
-      <AppSegmentedControl
-        options={HOUR_CYCLE_OPTIONS}
-        value={hourCyclePreference}
-        onChange={setHourCyclePreference}
-        flex
-        size="md"
-      />
-    </View>
+    <SettingsSegmentedControl
+      leftIcon="clock"
+      focusId={focusId}
+      title={AppConfig.strings.settings.appearance.hourCycleTitle}
+      description={AppConfig.strings.settings.appearance.hourCycleDesc}
+      titleMeta={hourCycleHint(hourCyclePreference, resolvedHourCycle)}
+      options={HOUR_CYCLE_OPTIONS}
+      value={hourCyclePreference}
+      onChange={setHourCyclePreference}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    marginBottom: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sectionDesc: {
-    marginTop: 4,
-  },
-});
