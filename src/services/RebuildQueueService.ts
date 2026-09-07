@@ -234,12 +234,16 @@ class RebuildQueueService {
   private scheduleProcessing(): void {
     this.clearProcessingTimer();
     const generation = this.lifecycleGeneration;
-    this.timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       this.timeoutId = null;
       if (generation === this.lifecycleGeneration) {
         void this.processQueue();
       }
     }, this.config.debounceMs);
+    this.timeoutId = timeoutId;
+    if (typeof timeoutId === 'object' && timeoutId !== null && 'unref' in timeoutId) {
+      (timeoutId as { unref: () => void }).unref();
+    }
   }
 
   private clearProcessingTimer(): void {
