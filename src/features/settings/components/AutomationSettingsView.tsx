@@ -8,10 +8,18 @@ import type { NotificationSettingsViewModel } from '@/src/features/settings/hook
 import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
-  vm: NotificationSettingsViewModel;
+  notifications: NotificationSettingsViewModel;
+  isSmsImportEnabled: boolean;
+  onOpenInbox: () => void;
+  onOpenSmsRules: () => void;
 }
 
-export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
+export function AutomationSettingsView({
+  notifications,
+  isSmsImportEnabled,
+  onOpenInbox,
+  onOpenSmsRules,
+}: AutomationSettingsViewProps) {
   const title =
     Platform.OS === 'android'
       ? AppConfig.strings.settings.notifications.automationTitle
@@ -20,24 +28,15 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
   return (
     <SettingsLayout title={title}>
       <Stack space="xl">
-        <SettingsMenu header={AppConfig.strings.settings.notifications.title} hideSeparator>
-          <SettingsMenuItem
-            searchId="notifications-summary"
-            leftIcon="notifications"
-            title={AppConfig.strings.settings.notifications.title}
-            description={AppConfig.strings.settings.notifications.description}
-            hasArrow={false}
-          />
-          <NotificationPreferenceView
-            cadence={vm.notificationCadence}
-            hour={vm.notificationHour}
-            minute={vm.notificationMinute}
-            weekday={vm.notificationWeekday}
-            onUpdateCadence={vm.onUpdateNotificationCadence}
-            onUpdateTime={vm.onUpdateNotificationTime}
-            onSendTest={vm.onSendTestNotification}
-          />
-        </SettingsMenu>
+        <NotificationPreferenceView
+          cadence={notifications.notificationCadence}
+          hour={notifications.notificationHour}
+          minute={notifications.notificationMinute}
+          weekday={notifications.notificationWeekday}
+          onUpdateCadence={notifications.onUpdateNotificationCadence}
+          onUpdateTime={notifications.onUpdateNotificationTime}
+          onSendTest={notifications.onSendTestNotification}
+        />
 
         {Platform.OS === 'android' && (
           <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
@@ -46,17 +45,17 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
               leftIcon="messageSquare"
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
-              onPress={vm.onOpenInbox}
+              onPress={onOpenInbox}
               testID="settings-sms-inbox"
             />
-            {vm.isSmsImportEnabled && (
+            {isSmsImportEnabled && (
               <>
                 <SettingsMenuItem
                   searchId="sms-rules"
                   leftIcon="terminal"
                   title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
                   description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
-                  onPress={vm.onOpenSmsRules}
+                  onPress={onOpenSmsRules}
                 />
               </>
             )}

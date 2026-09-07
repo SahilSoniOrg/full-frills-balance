@@ -2,13 +2,14 @@ import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModa
 import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { NotificationCadence } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime } from '@/src/utils/dateUtils';
 import { useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface NotificationPreferenceViewProps {
   cadence: NotificationCadence;
@@ -50,59 +51,70 @@ export const NotificationPreferenceView = ({
   const displayTime = formatClockTime(dayjs().hour(hour).minute(minute), resolvedHourCycle);
 
   return (
-    <Stack space="sm" paddingHorizontal="md" paddingBottom="md">
-      <Box flexDirection="row" alignItems="center" justifyContent="space-between">
+    <Stack space={0}>
+      <SettingsMenuItem
+        searchId="notifications"
+        leftIcon="notifications"
+        title={AppConfig.strings.settings.notifications.title}
+        description={AppConfig.strings.settings.notifications.description}
+        hasArrow={false}
+      />
+      <Box paddingHorizontal="md" marginTop="md">
         <AppSegmentedControl
           options={options}
           value={cadence}
           onChange={onUpdateCadence}
-          minWidth={64}
-          flex={false}
-          size="sm"
+          flex
+          size="md"
         />
 
-        <TouchableOpacity
-          onPress={() => cadence !== 'none' && setShowTimePicker(true)}
-          activeOpacity={cadence === 'none' ? 1 : Opacity.heavy}
-          disabled={cadence === 'none'}
-        >
-          <Box
-            flexDirection="row"
-            alignItems="center"
-            paddingHorizontal="md"
-            paddingVertical="sm"
-            borderRadius="full"
-            background="surfaceSecondary"
-            style={{ opacity: cadence === 'none' ? Opacity.muted : 1 }}
+        <Box marginTop="md" flexDirection="row" alignItems="center" justifyContent="space-between">
+          <AppText variant="caption" color="secondary">
+            Reminder time
+          </AppText>
+          <TouchableOpacity
+            onPress={() => cadence !== 'none' && setShowTimePicker(true)}
+            activeOpacity={cadence === 'none' ? 1 : Opacity.heavy}
+            disabled={cadence === 'none'}
           >
-            <AppText variant="caption" weight="semibold" color="text">
-              {displayTime}
-            </AppText>
-            <AppIcon
-              name="clock"
-              size={14}
-              color={theme.textSecondary}
-              style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}
-            />
-          </Box>
-        </TouchableOpacity>
-      </Box>
+            <Box
+              flexDirection="row"
+              alignItems="center"
+              paddingHorizontal="md"
+              paddingVertical="sm"
+              borderRadius="full"
+              background="surfaceSecondary"
+              style={{ opacity: cadence === 'none' ? Opacity.muted : 1 }}
+            >
+              <AppText variant="caption" weight="semibold" color="text">
+                {displayTime}
+              </AppText>
+              <AppIcon
+                name="clock"
+                size={14}
+                color={theme.textSecondary}
+                style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}
+              />
+            </Box>
+          </TouchableOpacity>
+        </Box>
 
-      {cadence !== 'none' && (
-        <TouchableOpacity onPress={onSendTest}>
-          <Box
-            paddingVertical="xs"
-            paddingHorizontal="md"
-            borderRadius="sm"
-            style={{ borderWidth: 1, borderColor: theme.border }}
-            alignSelf="flex-start"
-          >
-            <AppText variant="caption" color="secondary">
-              Send Test Notification (Now)
-            </AppText>
-          </Box>
-        </TouchableOpacity>
-      )}
+        {cadence !== 'none' && (
+          <TouchableOpacity onPress={onSendTest} style={styles.testButton}>
+            <Box
+              paddingVertical="xs"
+              paddingHorizontal="md"
+              borderRadius="sm"
+              style={{ borderWidth: 1, borderColor: theme.border }}
+              alignSelf="flex-start"
+            >
+              <AppText variant="caption" color="secondary">
+                Send Test Notification (Now)
+              </AppText>
+            </Box>
+          </TouchableOpacity>
+        )}
+      </Box>
 
       <DateTimePickerModal
         visible={showTimePicker}
@@ -117,3 +129,7 @@ export const NotificationPreferenceView = ({
     </Stack>
   );
 };
+
+const styles = StyleSheet.create({
+  testButton: { alignSelf: 'flex-start', marginTop: Spacing.md },
+});

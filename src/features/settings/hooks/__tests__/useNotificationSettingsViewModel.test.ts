@@ -16,14 +16,9 @@ jest.mock('@/src/hooks/useNotificationPrefs', () => ({
   }),
 }));
 
-jest.mock('@/src/hooks/useSmsPrefs', () => ({
-  useSmsPrefs: () => ({ isSmsImportEnabled: false, setIsSmsImportEnabled: jest.fn() }),
-}));
-
 jest.mock('@/src/services/analytics', () => ({
   analytics: {
     logNotificationPreferenceChanged: jest.fn(),
-    logSmsImportSettingsChanged: jest.fn(),
     trackFeatureUsage: jest.fn(),
   },
 }));

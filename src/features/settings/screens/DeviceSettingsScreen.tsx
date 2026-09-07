@@ -1,13 +1,13 @@
 import { DeviceSettingsView } from '@/src/features/settings/components/DeviceSettingsView';
-import { useNotificationSettingsViewModel } from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
+import { useSmsImportSetting } from '@/src/features/settings/hooks/useSmsImportSetting';
 
 export default function DeviceSettingsScreen() {
-  const notifications = useNotificationSettingsViewModel();
+  const smsImport = useSmsImportSetting();
 
   return (
     <DeviceSettingsView
-      isSmsImportEnabled={notifications.isSmsImportEnabled}
-      onToggleSmsImport={notifications.setIsSmsImportEnabled}
+      isSmsImportEnabled={smsImport.isSmsImportEnabled}
+      onToggleSmsImport={smsImport.setIsSmsImportEnabled}
     />
   );
 }

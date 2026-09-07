@@ -1,11 +1,9 @@
 import { useNotificationPrefs } from '@/src/hooks/useNotificationPrefs';
-import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { analytics } from '@/src/services/analytics';
 import {
   notificationService,
   NotificationCadence,
 } from '@/src/services/notification/NotificationService';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useRef } from 'react';
 
 export interface NotificationSettingsViewModel {
@@ -16,10 +14,6 @@ export interface NotificationSettingsViewModel {
   onUpdateNotificationCadence: (cadence: NotificationCadence) => Promise<void>;
   onUpdateNotificationTime: (hour: number, minute: number, weekday?: number) => Promise<void>;
   onSendTestNotification: () => void;
-  isSmsImportEnabled: boolean;
-  setIsSmsImportEnabled: (enabled: boolean) => void;
-  onOpenInbox: () => void;
-  onOpenSmsRules: () => void;
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
@@ -32,7 +26,6 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     setNotificationTime,
     setNotificationWeekday,
   } = useNotificationPrefs();
-  const { isSmsImportEnabled, setIsSmsImportEnabled } = useSmsPrefs();
   const notificationUpdateGenerationRef = useRef(0);
 
   const onUpdateNotificationCadence = useCallback(
@@ -77,15 +70,6 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     [setNotificationTime, setNotificationWeekday, notificationCadence, notificationWeekday],
   );
 
-  const handleSetIsSmsImportEnabled = useCallback(
-    (enabled: boolean) => {
-      setIsSmsImportEnabled(enabled);
-      analytics.logSmsImportSettingsChanged(enabled);
-      analytics.trackFeatureUsage('settings', 'toggle_sms_import', { enabled });
-    },
-    [setIsSmsImportEnabled],
-  );
-
   return {
     notificationCadence,
     notificationHour,
@@ -94,9 +78,5 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     onUpdateNotificationCadence,
     onUpdateNotificationTime,
     onSendTestNotification: () => notificationService.sendImmediateTest(),
-    isSmsImportEnabled,
-    setIsSmsImportEnabled: handleSetIsSmsImportEnabled,
-    onOpenInbox: AppNavigation.toTransactionInbox,
-    onOpenSmsRules: AppNavigation.toSmsRules,
   };
 }
