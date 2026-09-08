@@ -1,8 +1,7 @@
 # Setup simplification plan
 
-**Status:** In progress
+**Status:** Core architecture implemented; targeted cleanup and verification remain
 **Date:** 2026-09-01
-**Parent:** [`onboarding-workplace-setup-plan.md`](./onboarding-workplace-setup-plan.md)
 **Contract:** [`../specs/user-device-workplace/spec.md`](../specs/user-device-workplace/spec.md)
 **Origin:** Thermo-nuclear review of Setup after `de897060`. The coordinator/recipe/restore seams are right; the UI still wraps old onboarding, the draft store re-parses import, and launch still has three gates.
 
@@ -15,7 +14,7 @@ Setup already has a linear resolver, typed draft union, recipes, and restore pub
 1. Keeps `SetupScreen` as the onboarding god-component, with the coordinator as a sidecar.
 2. Re-parses `RestoreFacts`, `ImportStats`, and workplace preferences inside `SetupDraftStore`.
 3. Treats `device_onboarding`, `workplace_creation`, and `setup` as three UI modes.
-4. Ships restore machinery that production Setup never calls (`clearSetupDraft` + `/import-selection`).
+4. Retains compatibility paths around restore (`clearSetupDraft` and `/import-selection`) that need a final consumer audit.
 5. Injects keyed optional finishers and overlapping navigation flags (`editingSlice`).
 
 ## Solution
@@ -23,7 +22,7 @@ Setup already has a linear resolver, typed draft union, recipes, and restore pub
 1. Draft store owns Setup identity only. Import owns restore fact/handoff parsing.
 2. `SetupScreen` renders `coordinator.next()`.
 3. Launch content sees `setup | picker | open`.
-4. Restore uses the coordinator, then the legacy post-import path dies.
+4. Restore uses the coordinator; obsolete post-import compatibility paths are removed only after their live consumers are verified.
 5. Coordinator takes one `finish(draft)`. Three named finishers stay behind that call.
 
 ## Defaults
@@ -39,6 +38,27 @@ Setup already has a linear resolver, typed draft union, recipes, and restore pub
 | Demo journal / replacement restore | Out of scope. |
 | `/onboarding` URL | Keep. |
 | Push | Do not push. Small logical commits on main (or squash-merge worktrees into main). |
+
+## Verified remaining work
+
+The core coordinator, recipe resolver, typed draft, restore preparation, restore summary, and
+review-before-publication flow are already implemented. The remaining work is cleanup and targeted
+verification, not a second architecture:
+
+- The default Workplace name is still generated independently in
+  `WorkplaceSetupSlice`; decide whether the contract requires deriving it from the accepted User
+  display name.
+- `publishRestore` accepts progress callbacks, but `setupRuntime` does not pass publication
+  progress through to the Setup UI.
+- Setup runtime/screen code still performs some direct `AppNavigation` calls; move terminal
+  outcome ownership to the launch boundary if the contract remains authoritative.
+- `AppOnboardingProvider`, `hasCompletedOnboarding`, and the `/import-selection` compatibility
+  route still have consumers. Remove them only after distinguishing live compatibility from dead
+  legacy state.
+- Resume/interruption restore flows still need supported-device verification and reference
+  screenshots.
+- Explicit tests are still needed for replacing an unavailable resumable source and preserving
+  preparation warnings, if those behaviors remain product requirements.
 
 ## Sequence
 
@@ -81,7 +101,7 @@ Restore may still bail to legacy import until phase E. That is a temporary hole,
 19. Production `getAutoOutput` for `when_missing` workplace (and later device).
 20. Screen loop runs `runPendingEffect` → `publishRestore`.
 21. Restore summary slice — intents only; no navigation inside the slice.
-22. Delete first-run `clearSetupDraft` + `toImportSelection`. Restore is a journey switch, not a competing flow.
+22. Delete only the obsolete first-run `clearSetupDraft` + `toImportSelection` path after confirming the settings compatibility route is still isolated. Restore is a journey switch, not a competing flow.
 23. Delete the `OnboardingScreen` post-import branch once restore summary is the acknowledgement.
 
 ### F — Remove the old onboarding orchestrator

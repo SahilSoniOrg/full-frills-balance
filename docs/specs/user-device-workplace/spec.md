@@ -2,8 +2,8 @@
 
 **Product:** Full Frills Balance
 **Date:** 2026-09-01
-**Status:** Approved behavior; implementation pending
-**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [`docs/plans/onboarding-workplace-setup-plan.md`](../../plans/onboarding-workplace-setup-plan.md)
+**Status:** Approved behavior; core implementation exists, targeted cleanup remains
+**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [`docs/plans/setup-simplification-plan.md`](../../plans/setup-simplification-plan.md)
 
 This is the canonical behavior and ownership contract. Terms follow `CONTEXT.md`. File paths and component names are intentionally excluded.
 

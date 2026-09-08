@@ -1,6 +1,6 @@
 # Workplace transition simplification plan
 
-Status: implementation record; follow-up verification remains
+Status: core implementation complete; targeted correctness verification remains
 
 ## Implemented outcomes
 
@@ -14,6 +14,13 @@ The following fixes are now committed locally:
 - the superseded oversized remediation plan was removed.
 
 The deletion ordering is implemented through the committed loading/unmount render boundary and is covered indirectly by the existing transition tests. A direct coordinator test was attempted and intentionally not kept: the mocked provider made React’s effect-owned deletion promise produce harness lifecycle errors, so adding more test-only orchestration would increase the complexity this plan is meant to remove.
+
+## Verified remaining risk
+
+`LaunchCoordinator` calls `evictWorkplaceReactiveCaches` after `workplaceService.deleteWorkplace`
+inside the same failure path. If cache eviction throws, the database deletion has already
+committed but Settings can still report that the books were unchanged. Cache eviction must become
+best-effort or be represented as a committed warning, with a regression test covering that path.
 
 ## Design constraints
 
@@ -33,6 +40,7 @@ The deletion ordering is implemented through the committed loading/unmount rende
 - [x] Evict deleted Workplace caches for both active and non-active deletion.
 - [x] Serialize service-level switch and delete operations.
 - [ ] Add direct coordinator tests for failed pointer repair and deletion races.
+- [ ] Make post-commit cache eviction best-effort and verify callers never report committed deletion as unchanged books.
 - [x] Prevent pointer-repair failure from leaving launch permanently loading.
 - [ ] Add serialization tests for duplicate switch/delete requests and rollback.
 - [x] Remove Settings re-query and post-delete navigation.

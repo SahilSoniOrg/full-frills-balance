@@ -1,6 +1,6 @@
 # Transaction Composer Remediation Plan
 
-Status: in progress
+Status: core remediation implemented; Expert-mode boundary and disclosure UI remain
 
 Progress:
 
@@ -8,9 +8,10 @@ Progress:
   coverage for Allocation. The remaining canonical-draft work will remove this temporary bridge.
 - Removed the separate Split draft store. Allocation rows now project directly from editor lines,
   so row edits, amount changes, validation, and submit all observe the same line state.
-- Routed session submission through `resolveTransactionIntent` and the editor’s shared
-  `submitPlan` command for Basic, Allocation, and Expert. The editor remains a UI/persistence
-  adapter temporarily; the session now owns the live intent-to-plan decision.
+- Routed Basic and Allocation submission through `resolveTransactionIntent` and the editor’s
+  shared `submitPlan` command. Expert intentionally remains a lossless raw-line adapter because
+  arbitrary multi-credit journals cannot be represented by the guided intent without dropping
+  data.
 - Removed the legacy editor `submit` adapter. The session is now the only production submit
   command for single-entry saves; the editor exposes only the persistence-facing `submitPlan`.
 - Removed the dead Simple/Split save handlers, Bulk-only presentation arguments, and no-op amount
@@ -24,8 +25,8 @@ Progress:
   outside this composer change and remains intentionally untouched.
 
 This plan addresses the thermo-nuclear review of the unpushed transaction-composer work. The
-original architecture plan remains the design reference:
-[`transaction-composer-architecture-plan.md`](./transaction-composer-architecture-plan.md).
+completed architecture decision is embodied in the current transaction-composer domain and
+session code; this is the active design and remediation reference.
 
 ## Problem statement
 
@@ -41,7 +42,8 @@ The intended model is:
 one composer draft boundary → TransactionIntent → resolve → validate → post
 ```
 
-The remediation must reduce concepts, not add another synchronization layer.
+The remediation must reduce concepts, not add another synchronization layer. Expert mode is an
+explicit lossless exception to the guided intent path, not an accidental second save model.
 
 ## Work plan
 
@@ -63,8 +65,9 @@ Exit criteria:
 
 ### Phase 2: Make intent resolution the live command path
 
-- Build `TransactionIntent` from the canonical draft boundary, not from a mode-specific save
-  branch.
+- Build `TransactionIntent` from the canonical draft boundary for Basic and Allocation, not from
+  a mode-specific guided save branch. Expert keeps its explicit raw-line adapter because its
+  supported journal shapes exceed the guided intent model.
 - Resolve intent into one `PostingPlan` inside the session.
 - Validate that plan once against the current account snapshot.
 - Make the session submit that validated plan through `postPostingPlan`.
@@ -74,7 +77,8 @@ Exit criteria:
 
 - production has one intent → plan → validation → persistence path;
 - `resolveTransactionIntent` has production callers;
-- allocation and non-allocation saves use the same command contract.
+- Basic and Allocation saves use the same intent → plan → validation contract; Expert’s raw-line
+  contract is explicit and covered separately.
 
 ### Phase 3: Remove duplicate command and presentation surfaces
 
