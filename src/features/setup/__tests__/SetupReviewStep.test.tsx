@@ -43,7 +43,7 @@ describe('SetupReviewStep', () => {
       />,
     );
 
-    expect(screen.getByText('Review your setup')).toBeTruthy();
+    expect(screen.getByText('Ready when you are')).toBeTruthy();
     expect(screen.getByText("Sahil's Personal workplace")).toBeTruthy();
     expect(screen.getByText('USD')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();

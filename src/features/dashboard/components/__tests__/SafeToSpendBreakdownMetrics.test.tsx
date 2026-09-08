@@ -40,7 +40,7 @@ describe('SafeToSpendBreakdownMetrics', () => {
 
     expect(screen.getByRole('button', { name: 'Safe to Spend: ₹33,580' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reserved: ₹221,554' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Outstanding: ₹215,716' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Upcoming: ₹215,716' })).toBeTruthy();
   });
 
   it('reports the selected metric through its interface', () => {
