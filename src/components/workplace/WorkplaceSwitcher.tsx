@@ -31,7 +31,11 @@ export function WorkplaceSwitcher() {
     () =>
       [...workplaces]
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map(item => ({ id: item.id, label: item.name, icon: 'briefcase' })),
+        .map(item => ({
+          id: item.id,
+          label: item.name,
+          icon: item.icon,
+        })),
     [workplaces],
   );
 
@@ -67,7 +71,7 @@ export function WorkplaceSwitcher() {
         {isSwitching ? (
           <AppIcon name="refresh" size={21} color={theme.primary} />
         ) : (
-          <AppIcon name="briefcase" size={21} color={theme.primary} />
+          <AppIcon name={currentWorkplace?.icon ?? 'briefcase'} size={21} color={theme.primary} />
         )}
       </TouchableOpacity>
       <SelectionPickerSheet

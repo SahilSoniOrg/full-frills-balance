@@ -122,7 +122,7 @@ export interface PlainPlannedPayment {
 export interface PlainWorkplace {
   id: WorkplaceId;
   name: string;
-  icon: string;
+  icon: IconName;
   defaultCurrencyCode: string;
 }
 

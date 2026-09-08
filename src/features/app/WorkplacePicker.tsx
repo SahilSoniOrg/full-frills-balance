@@ -59,7 +59,7 @@ export function WorkplacePicker({
           {workplaces.map(workplace => (
             <SettingsMenuItem
               key={workplace.id}
-              leftIcon="briefcase"
+              leftIcon={workplace.icon}
               title={workplace.name}
               description="Open this workplace"
               onPress={() => onSelect(workplace.id)}

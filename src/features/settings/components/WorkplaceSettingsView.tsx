@@ -1,7 +1,6 @@
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
 import { AppIcon, IconButton } from '@/src/components/core';
-import { isValidIconName } from '@/src/types/domainIcons';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -53,7 +52,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                         vm.setActiveWorkplace(workplace);
                       }
                     }}
-                    leftIcon={isValidIconName(workplace.icon) ? workplace.icon : 'briefcase'}
+                    leftIcon={workplace.icon}
                     rightContent={
                       isActive ? <AppIcon name="check" color={theme.success} size={20} /> : null
                     }
@@ -106,7 +105,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
           key={`${editingWorkplace.id}:${editingWorkplace.name}:${editingWorkplace.icon}`}
           visible
           name={editingWorkplace.name}
-          icon={isValidIconName(editingWorkplace.icon) ? editingWorkplace.icon : 'briefcase'}
+          icon={editingWorkplace.icon}
           onClose={() => setEditingWorkplace(null)}
           onSave={async (name, icon) => {
             await vm.updateWorkplaceDetails(editingWorkplace, name, icon);

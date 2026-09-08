@@ -8,7 +8,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { CurrentWorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useCurrentWorkplaceSettingsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
-import { isValidIconName } from '@/src/types/domainIcons';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 
@@ -33,11 +32,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           <SettingsMenu header="Current Workplace">
             <SettingsMenuItem
               searchId="workplace"
-              leftIcon={
-                vm.activeWorkplace && isValidIconName(vm.activeWorkplace.icon)
-                  ? vm.activeWorkplace.icon
-                  : 'briefcase'
-              }
+              leftIcon={vm.activeWorkplace?.icon ?? 'briefcase'}
               title={vm.activeWorkplace?.name || 'Current workplace'}
               description="Rename this workplace or change its icon"
               onPress={() => setIsEditorVisible(true)}
@@ -95,7 +90,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           key={`${vm.activeWorkplace.id}:${vm.activeWorkplace.name}:${vm.activeWorkplace.icon}`}
           visible={isEditorVisible}
           name={vm.activeWorkplace.name}
-          icon={isValidIconName(vm.activeWorkplace.icon) ? vm.activeWorkplace.icon : 'briefcase'}
+          icon={vm.activeWorkplace.icon}
           onClose={() => setIsEditorVisible(false)}
           onSave={async (name, icon) => {
             if (await vm.updateWorkplaceDetails(name, icon)) {

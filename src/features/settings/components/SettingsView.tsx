@@ -106,7 +106,7 @@ export function SettingsView({
             <SettingsMenu header="Workplaces">
               <SettingsMenuItem
                 searchId="workplace"
-                leftIcon="briefcase"
+                leftIcon={currentWorkplace?.icon ?? 'briefcase'}
                 title={
                   currentWorkplace?.name ?? AppConfig.strings.settings.sections.currentWorkplace
                 }

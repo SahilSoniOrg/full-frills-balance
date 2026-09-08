@@ -1,8 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
 import { WorkplaceId } from '@/src/types/ids';
-import { Q } from '@nozbe/watermelondb';
-import { map } from 'rxjs/operators';
+import { catchError, of } from 'rxjs';
 import { AccountType } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 import { accountWriteRepository } from './account/AccountWriteRepository';
@@ -10,6 +9,8 @@ import {
   getBalanceCorrectionAccountInput,
   getOpeningBalancesAccountInput,
 } from '@/src/services/accounts/accountSystemAccountInputs';
+
+const WORKPLACE_OBSERVE_COLUMNS = ['name', 'icon', 'default_currency_code', 'updated_at'] as const;
 
 export class WorkplaceRepository {
   private get workplaces() {
@@ -143,14 +144,11 @@ export class WorkplaceRepository {
   }
 
   observeAll() {
-    return this.workplaces.query().observe();
+    return this.workplaces.query().observeWithColumns([...WORKPLACE_OBSERVE_COLUMNS]);
   }
 
   observeById(id: WorkplaceId) {
-    return this.workplaces
-      .query(Q.where('id', id))
-      .observe()
-      .pipe(map(workplaces => workplaces[0] ?? null));
+    return this.workplaces.findAndObserve(id).pipe(catchError(() => of(null)));
   }
 }
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
-import { render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
 jest.mock('@/src/components/core', () => {
   const React = require('react');
@@ -18,14 +18,14 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 }));
 
 jest.mock('@/src/hooks/useWorkplaceSnapshot', () => ({
-  useWorkplaceSnapshot: () => ({ data: { id: 'wp-1', name: 'Household' } }),
+  useWorkplaceSnapshot: () => ({ data: { id: 'wp-1', name: 'Household', icon: 'home' } }),
 }));
 
 jest.mock('@/src/hooks/useObservable', () => ({
   useObservable: () => ({
     data: [
-      { id: 'wp-2', name: 'Business' },
-      { id: 'wp-1', name: 'Household' },
+      { id: 'wp-2', name: 'Business', icon: 'bank' },
+      { id: 'wp-1', name: 'Household', icon: 'home' },
     ],
   }),
 }));
@@ -42,7 +42,7 @@ jest.mock('@/src/components/filters/SelectionPickerSheet', () => ({
             React.createElement(
               MockPressable,
               { key: option.id, onPress: () => onSelect(option.id) },
-              React.createElement(MockText, null, option.label),
+              React.createElement(MockText, null, `${option.label}:${option.icon}`),
             ),
           ),
         )
@@ -57,5 +57,14 @@ describe('WorkplaceSwitcher', () => {
     render(<WorkplaceSwitcher />);
 
     expect(screen.getByLabelText('Current workplace: Household')).toBeTruthy();
+  });
+
+  it('uses each workplace icon in the switcher list', () => {
+    render(<WorkplaceSwitcher />);
+
+    fireEvent.press(screen.getByTestId('header-workplace-switcher'));
+
+    expect(screen.getByText('Household:home')).toBeTruthy();
+    expect(screen.getByText('Business:bank')).toBeTruthy();
   });
 });
