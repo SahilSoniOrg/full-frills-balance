@@ -1,4 +1,4 @@
-import { AccountPickerModal } from './AccountPickerModal';
+import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
 import {
   AccountArchiveCascadeModal,
   type AccountArchiveCascadeModalProps,

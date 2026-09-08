@@ -35,7 +35,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'workplace', defaultCurrencyCode: 'USD' }),
 }));
 
-jest.mock('@/src/features/accounts/hooks/useAccounts', () => ({
+jest.mock('@/src/hooks/useAccounts', () => ({
   useAccounts: () => ({ accounts: mockAccounts, isLoading: false }),
   useAccountBalances: () => ({
     balancesByAccountId: new Map(
@@ -124,7 +124,7 @@ describe('useAccountManagementViewModel draft lifecycle', () => {
     expect(saveAccountTreeDraft).toHaveBeenCalledTimes(1);
     expect(result.current.isDraftDirty).toBe(false);
     expect(mockPreventRemove).toBe(false);
-    expect(toast.success).toHaveBeenCalledWith('Account hierarchy saved');
+    expect(toast.success).toHaveBeenCalledWith('Account layout saved');
   });
 
   it('keeps the draft and leave guard when save fails', async () => {

@@ -1,7 +1,7 @@
 import {
   getArchivedAccountPickerRowPresentation,
   getArchivedAccountTilePresentation,
-} from '@/src/features/accounts/utils/archivedAccountDisplay';
+} from '@/src/components/accounts/archivedAccountDisplay';
 import { Opacity, withOpacity } from '@/src/constants';
 
 describe('archivedAccountDisplay', () => {

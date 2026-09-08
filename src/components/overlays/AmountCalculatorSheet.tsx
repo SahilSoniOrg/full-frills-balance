@@ -4,7 +4,7 @@ import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import {
   evaluateAmountExpression,
   formatAmountExpressionValue,
-} from '@/src/features/journal/entry/utils/amountExpression';
+} from '@/src/utils/amountExpression';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {

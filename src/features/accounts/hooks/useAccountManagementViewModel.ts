@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountBalances, useAccounts } from '@/src/hooks/useAccounts';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
 import { isBalanceSheetAccount } from '@/src/utils/accountCategory';

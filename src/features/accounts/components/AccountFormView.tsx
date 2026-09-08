@@ -1,4 +1,4 @@
-import { AccountPickerModal } from './AccountPickerModal';
+import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
 import { AccountFormEditModals } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';

@@ -15,7 +15,7 @@
     "check:unsafe-types": "node scripts/check-unsafe-type-ratchet.mjs",
     "check:journal-facade": "node scripts/check-journal-repository-facade.mjs",
     "check:read-boundaries": "node scripts/check-read-boundaries.mjs",
-    "check:feature-boundaries": "node scripts/check-feature-boundaries.mjs",
+    "check:feature-boundaries": "node --test scripts/__tests__/check-feature-boundaries.test.mjs && node scripts/check-feature-boundaries.mjs",
     "check:dependency-cycles": "node scripts/check-dependency-cycles.mjs",
     "check:privacy-policy": "node scripts/check-privacy-policy-version.mjs",
     "check:architecture-ratchets": "node --test scripts/__tests__/check-architecture-ratchets.test.mjs && node scripts/check-architecture-ratchets.mjs",

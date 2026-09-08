@@ -1,4 +1,4 @@
-import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
+import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
 import {
   ArchiveVisibilityScopeProvider,
   useArchiveVisibility,

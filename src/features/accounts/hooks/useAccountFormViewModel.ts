@@ -22,11 +22,7 @@ import {
   useAccountFormMetadata,
 } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { useAccountFormPickers } from '@/src/features/accounts/hooks/form/useAccountFormPickers';
-import {
-  useAccount,
-  useAccountBalance,
-  useAccounts,
-} from '@/src/features/accounts/hooks/useAccounts';
+import { useAccount, useAccountBalance, useAccounts } from '@/src/hooks/useAccounts';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';

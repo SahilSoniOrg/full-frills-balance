@@ -1,5 +1,5 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
+import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
 import { IconButton, InlineSearchField } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';

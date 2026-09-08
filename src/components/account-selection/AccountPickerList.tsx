@@ -2,9 +2,9 @@ import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { getArchivedAccountPickerRowPresentation } from '@/src/features/accounts/utils/archivedAccountDisplay';
-import { ShowArchivedButton } from '@/src/features/accounts/components/ShowArchivedButton';
-import { useAccountPickerList } from '@/src/features/accounts/hooks/useAccountPickerList';
+import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
+import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
+import { useAccountPickerList } from './useAccountPickerList';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';

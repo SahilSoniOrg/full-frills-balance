@@ -1,6 +1,6 @@
 import { Href, router } from 'expo-router';
-import type { TransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
-import { toLegacyJournalEntryQueryParams } from '@/src/features/journal/entry/journalEntryRouteAdapter';
+import type { TransactionIntentSeed } from '@/src/types/journalEntryRoute';
+import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';

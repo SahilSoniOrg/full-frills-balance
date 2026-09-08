@@ -1,4 +1,7 @@
-import { evaluateAmountExpression, formatAmountExpressionValue } from '../amountExpression';
+import {
+  evaluateAmountExpression,
+  formatAmountExpressionValue,
+} from '@/src/utils/amountExpression';
 
 describe('amount expression evaluator', () => {
   it('evaluates arithmetic with normal precedence', () => {

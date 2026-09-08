@@ -1,12 +1,17 @@
 import { AppConfig } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
+import type {
+  JournalEntryRouteEditorMode,
+  JournalEntrySimpleType,
+} from '@/src/types/journalEntryRoute';
+export type {
+  JournalEntryRouteEditorMode,
+  JournalEntrySimpleType,
+} from '@/src/types/journalEntryRoute';
 
 /** Internal composer views. Legacy route names are translated at the adapter boundary below. */
 export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch';
-export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
-export type JournalEntrySimpleType = 'expense' | 'income' | 'transfer';
-
 export type JournalEntryRouteParams = {
   mode?: JournalEntryRouteEditorMode;
   type?: JournalEntrySimpleType;

@@ -3,10 +3,8 @@ import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAcco
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
-import {
-  getArchivedAccountTilePresentation,
-  getAccountIcon,
-} from '@/src/components/account-selection';
+import { getAccountIcon } from '@/src/components/account-selection';
+import { getArchivedAccountTilePresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { limitQuickTileAccounts } from './accountTilePolicy';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
