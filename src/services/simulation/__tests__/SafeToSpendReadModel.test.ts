@@ -364,7 +364,7 @@ describe('SafeToSpendReadModel', () => {
         });
     });
 
-    it('falls back to empty dashboard when simulation throws', done => {
+    it('falls back without persisting when simulation rejects invalid input', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
@@ -372,13 +372,16 @@ describe('SafeToSpendReadModel', () => {
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 100 },
       ]);
-      (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(new Error('sim fail'));
+      (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(
+        new Error('[SimulationInputInvariant] starting balance for a must be finite'),
+      );
 
       safeToSpendReadModel
         .forWorkplace('test-wp' as WorkplaceId)
         .watch()
         .subscribe(result => {
           expect(result.summary.safeToSpend).toBe(0);
+          expect(snapshotService.saveCustomSnapshot).not.toHaveBeenCalled();
           done();
         });
     });

@@ -3,6 +3,7 @@ import { logger } from '@/src/utils/logger';
 import { Trace, startTrace } from '@/src/utils/TraceService';
 import { Flow, SimulationEngineResult } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
+import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
 
 export class Simulator {
   /**
@@ -21,6 +22,8 @@ export class Simulator {
   ): SimulationEngineResult {
     const trace = parentTrace || startTrace('Simulator.simulate');
     try {
+      assertValidSimulationInputs(startingBalances, flows, days, startDayOffset, startDayTimestamp);
+
       const currentBalances = new Map(startingBalances);
       const flowByDay = new Map<number, Flow[]>();
 
@@ -171,10 +174,6 @@ export class Simulator {
     changedAccountIds: Set<string>,
     liquidAccountIds: Set<string>,
   ): number {
-    if (flow.amount < 0) {
-      throw new Error(`Negative flow amount detected for ${flow.label || 'unlabeled flow'}`);
-    }
-
     let globalDelta = 0;
 
     const setBalance = (id: string, amount: number) => {

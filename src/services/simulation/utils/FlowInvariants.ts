@@ -21,11 +21,20 @@ export function assertHardInvariants(flow: Flow): void {
   if (!flow.referenceId) throwInvariant('Flow is missing referenceId', flow);
 
   // 2. Amount Integrity
+  if (!Number.isFinite(flow.amount)) {
+    throwInvariant(`Non-finite amount found: ${flow.amount}`, flow);
+  }
   if (flow.amount < 0) {
     throwInvariant(`Negative amount found: ${flow.amount}`, flow);
   }
 
   // 3. Time Consistency
+  if (!Number.isFinite(flow.dayOffset)) {
+    throwInvariant(`Non-finite dayOffset found: ${flow.dayOffset}`, flow);
+  }
+  if (!Number.isInteger(flow.dayOffset)) {
+    throwInvariant(`Non-integer dayOffset found: ${flow.dayOffset}`, flow);
+  }
   if (flow.dayOffset < 0 && flow.timeframe !== 'PAST') {
     throwInvariant(`Past dayOffset (${flow.dayOffset}) must have timeframe 'PAST'`, flow);
   }

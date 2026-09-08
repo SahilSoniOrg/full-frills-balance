@@ -57,6 +57,11 @@ describe('FlowInvariants', () => {
       expect(() => assertValidFlow(invalid)).toThrow('[FlowInvariant] Negative amount found: -50');
     });
 
+    it.each([NaN, Infinity, -Infinity])('throws if amount is non-finite (%s)', amount => {
+      const invalid = { ...validInflow, amount };
+      expect(() => assertValidFlow(invalid)).toThrow('[FlowInvariant] Non-finite amount found');
+    });
+
     it('throws if referenceId is missing', () => {
       const invalid = { ...validInflow, referenceId: undefined as any };
       expect(() => assertValidFlow(invalid)).toThrow('[FlowInvariant] Flow is missing referenceId');
@@ -64,6 +69,18 @@ describe('FlowInvariants', () => {
   });
 
   describe('Time Invariants', () => {
+    it.each([NaN, Infinity, -Infinity])('throws if dayOffset is non-finite (%s)', dayOffset => {
+      const invalid = { ...validInflow, dayOffset };
+      expect(() => assertValidFlow(invalid)).toThrow('[FlowInvariant] Non-finite dayOffset found');
+    });
+
+    it('throws if dayOffset is fractional', () => {
+      const invalid = { ...validInflow, dayOffset: 1.5 };
+      expect(() => assertValidFlow(invalid)).toThrow(
+        '[FlowInvariant] Non-integer dayOffset found: 1.5',
+      );
+    });
+
     it('throws if dayOffset < 0 but timeframe is FUTURE', () => {
       const invalid = { ...validInflow, dayOffset: -1, timeframe: 'FUTURE' as any };
       expect(() => assertValidFlow(invalid)).toThrow(
