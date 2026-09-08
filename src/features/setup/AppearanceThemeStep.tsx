@@ -17,7 +17,7 @@ import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { MotiView } from 'moti';
 import { useState, useEffect, type ReactNode } from 'react';
-import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
+import { commitFontIdAfterLoad, ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';
 import {
   GestureResponderEvent,
   PanResponder,
@@ -84,10 +84,10 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
   const fontId = props.fontId ?? persistedFontId;
 
   useEffect(() => {
-    void ensureFontSetLoaded(fontId).catch(error => {
-      logger.error(`[Fonts] Setup preview failed to load: ${fontId}`, error);
+    void ensureAllFontSetsLoaded().catch(error => {
+      logger.error('[Fonts] Failed to preload appearance font schemes', error);
     });
-  }, [fontId]);
+  }, []);
 
   const handleSelectTheme = (nextThemeId: ThemeId) => {
     void triggerHaptic('light');
@@ -101,10 +101,14 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
   const handleSelectFont = (nextFontId: FontId) => {
     void triggerHaptic('light');
     if (props.onFontChange) {
-      props.onFontChange(nextFontId);
-    } else {
-      persistFontId(nextFontId);
+      void commitFontIdAfterLoad(nextFontId, id => {
+        props.onFontChange?.(id as FontId);
+      }).catch(error => {
+        logger.error(`[Fonts] Setup preview failed to load: ${nextFontId}`, error);
+      });
+      return;
     }
+    persistFontId(nextFontId);
   };
 
   const strings = AppConfig.strings.onboarding.appearance;

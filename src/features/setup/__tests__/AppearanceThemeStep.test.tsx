@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
 import { AppearanceThemeStep } from '../AppearanceThemeStep';
 import type { ReactNode } from 'react';
 
@@ -38,7 +38,7 @@ jest.mock('../SetupStsPreview', () => ({
 }));
 
 describe('AppearanceThemeStep', () => {
-  it('reports theme and font selections to the onboarding draft', () => {
+  it('reports theme and font selections to the onboarding draft', async () => {
     const onThemeChange = jest.fn();
     const onFontChange = jest.fn();
 
@@ -61,6 +61,6 @@ describe('AppearanceThemeStep', () => {
     fireEvent.press(screen.getByTestId('onboarding-font-editorial-option'));
 
     expect(onThemeChange).toHaveBeenCalledWith('gold-obsidian');
-    expect(onFontChange).toHaveBeenCalledWith('editorial');
+    await waitFor(() => expect(onFontChange).toHaveBeenCalledWith('editorial'));
   });
 });

@@ -1,12 +1,15 @@
 import {
   ColorKey,
+  FontIds,
   getContextualTokens,
   getFontTheme,
   getThemeColors,
 } from '@/src/constants/design-tokens';
+import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useThemeOverride } from '@/src/contexts/UIContext';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
+import { isFontSetLoaded } from '@/src/utils/loadFontSet';
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
 import { useCallback, useMemo } from 'react';
 
@@ -14,10 +17,14 @@ const _contrastCache = new Map<string, string>();
 
 export function useTheme() {
   const { themeMode: uiThemeMode, themeId, fontId } = useThemePrefs();
+  const { loadedFontId } = useAppReady();
   const themeOverride = useThemeOverride();
   const themeMode = themeOverride?.mode ?? uiThemeMode;
   const resolvedThemeId = themeOverride?.themeId ?? themeId;
-  const resolvedFontId = themeOverride?.fontId ?? fontId;
+  const requestedFontId = themeOverride?.fontId ?? fontId;
+  const resolvedFontId = isFontSetLoaded(requestedFontId)
+    ? requestedFontId
+    : (loadedFontId ?? FontIds.DEEP_SPACE);
 
   // Resolve dynamic theme and fonts
   const theme = getThemeColors(resolvedThemeId, themeMode);

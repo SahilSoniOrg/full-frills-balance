@@ -4,6 +4,9 @@ import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSe
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
+import { logger } from '@/src/utils/logger';
+import { ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 type FontSelectorProps = {
@@ -31,6 +34,13 @@ const FONT_OPTIONS = [
 
 export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
   const { theme } = useTheme();
+
+  useEffect(() => {
+    void ensureAllFontSetsLoaded().catch(error => {
+      logger.error('[Fonts] Failed to preload settings font schemes', error);
+    });
+  }, []);
+
   return (
     <Stack space={0}>
       <SettingsMenuItem

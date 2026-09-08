@@ -45,6 +45,11 @@ const FONT_MAP: Record<string, FontMap> = {
 
 const loadedFontSets = new Set<string>();
 const inFlight = new Map<string, Promise<void>>();
+let commitGeneration = 0;
+
+export function isFontSetLoaded(fontId: string): boolean {
+  return loadedFontSets.has(fontId);
+}
 
 /** Load one Setup/settings font scheme. Safe to call from preview before prefs commit. */
 export async function ensureFontSetLoaded(fontId: string): Promise<void> {
@@ -74,4 +79,28 @@ export async function ensureFontSetLoaded(fontId: string): Promise<void> {
   } finally {
     inFlight.delete(fontId);
   }
+}
+
+/** Warm every scheme so picker previews never apply an unloaded family. */
+export async function ensureAllFontSetsLoaded(): Promise<void> {
+  await Promise.all(Object.keys(FONT_MAP).map(id => ensureFontSetLoaded(id)));
+}
+
+/**
+ * Load files first, then commit. Last tap wins if the user switches quickly.
+ */
+export async function commitFontIdAfterLoad(
+  fontId: string,
+  commit: (fontId: string) => void,
+): Promise<void> {
+  const generation = ++commitGeneration;
+  await ensureFontSetLoaded(fontId);
+  if (generation !== commitGeneration) return;
+  commit(fontId);
+}
+
+export function resetLoadedFontSetsForTests(): void {
+  loadedFontSets.clear();
+  inFlight.clear();
+  commitGeneration = 0;
 }

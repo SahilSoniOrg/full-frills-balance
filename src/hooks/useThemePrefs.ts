@@ -1,6 +1,7 @@
 import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
 import { preferences } from '@/src/services/preferences';
 import type { ThemeAppearance } from '@/src/services/preferences';
+import { commitFontIdAfterLoad } from '@/src/utils/loadFontSet';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -71,7 +72,9 @@ export function useThemePrefs(): ThemePrefsState {
   }, []);
 
   const setFontId = useCallback((nextFontId: FontId) => {
-    preferences.themePrefs.setFontId(nextFontId);
+    void commitFontIdAfterLoad(nextFontId, id => {
+      preferences.themePrefs.setFontId(id as FontId);
+    });
   }, []);
 
   return {

@@ -73,10 +73,9 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
     setReady(prev => ({ ...prev, isDataHydrated }));
   }, []);
 
-  const isAppReady = useMemo(
-    () => ready.isInitialized && ready.fontsReady && ready.loadedFontId === fontId,
-    [ready.isInitialized, ready.fontsReady, ready.loadedFontId, fontId],
-  );
+  // Keep the shell mounted after the first set loads; matching fontId on
+  // every switch unmounted routes while the next files were still loading.
+  const isAppReady = ready.isInitialized && ready.fontsReady && ready.loadedFontId !== null;
 
   const value = useMemo<AppReadyValue>(
     () => ({

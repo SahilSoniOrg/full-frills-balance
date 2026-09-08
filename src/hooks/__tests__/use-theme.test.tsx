@@ -4,6 +4,12 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+jest.mock('@/src/contexts/app-shell/appReady', () => ({
+  useAppReady: () => ({
+    loadedFontId: 'deep-space',
+    fontsReady: true,
+  }),
+}));
 jest.mock('@/src/hooks/useThemePrefs', () => ({
   useThemePrefs: () => ({
     themeMode: 'light',
