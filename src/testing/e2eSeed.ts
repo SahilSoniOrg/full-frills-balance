@@ -37,6 +37,9 @@ import {
   FIRST_RUN_RESTORE_SOURCE_URI,
   prepareFirstRunRestoreFixture,
 } from './fixtures/firstRunRestoreBackup';
+import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
+
+export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
 const DEFAULT_SEED = {
   name: 'E2E User',
@@ -411,6 +414,9 @@ export async function executeE2eBootstrap(config: {
   seedProfile?: E2eSeedProfile;
   backupPath?: string;
 }): Promise<void> {
+  assertE2eHarnessEnabled();
+  logger.info(E2E_DESTRUCTIVE_BOOTSTRAP_MARKER);
+
   if (config.reset) {
     await clearAppStorage();
     await databaseRepository.resetDatabase();

@@ -29,6 +29,9 @@ jobs:
       - name: Architecture guardrails
         run: bun run check:architecture
 
+      - name: Production E2E exclusion check
+        run: bun run check:production-e2e-bundle
+
       - name: Typecheck
         run: bunx tsc --noEmit
 

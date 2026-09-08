@@ -1,6 +1,5 @@
 import { FontId, FontIds } from '@/src/constants/design-tokens';
 import { AppReadyContext, type AppReadyValue } from '@/src/contexts/app-shell/appReady';
-import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -37,10 +36,13 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
       try {
         setReady(prev => ({ ...prev, isLoading: true }));
         await preferences.loadPreferences();
-        if (readE2eLaunchConfig()) {
-          const { ensureE2eBootstrap } = await import('@/src/testing/e2eBootstrap');
-          await ensureE2eBootstrap();
-          await preferences.loadPreferences();
+        if (process.env.EXPO_PUBLIC_E2E === '1') {
+          const { readE2eLaunchConfig } = await import('@/src/testing/e2eLaunchArgs');
+          if (readE2eLaunchConfig()) {
+            const { ensureE2eBootstrap } = await import('@/src/testing/e2eBootstrap');
+            await ensureE2eBootstrap();
+            await preferences.loadPreferences();
+          }
         }
         setReady(prev => ({ ...prev, isLoading: false, isInitialized: true }));
         logger.info(`[Startup] Preferences ready in ${Math.round(performance.now() - start)}ms`);

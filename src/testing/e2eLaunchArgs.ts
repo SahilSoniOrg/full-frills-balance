@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { NativeModules } from 'react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { E2E_AUTH_TOKEN, E2E_SEED_PROFILES, E2eSeedProfile } from './e2eConstants';
+import { isE2eHarnessEnabled } from './e2eRuntimeGate';
 
 export type E2eLaunchConfig = {
   reset: boolean;
@@ -50,9 +51,13 @@ function configFromScriptUrl(): E2eLaunchConfig | null {
 
 /**
  * Reads Detox / instrumentation launch arguments.
- * Honored in debug and release simulator builds when `e2eAuth` matches.
+ * Honored only in an E2E-capable build when `e2eAuth` matches.
  */
 export function readE2eLaunchConfig(): E2eLaunchConfig | null {
+  if (!isE2eHarnessEnabled()) {
+    return null;
+  }
+
   const fromLaunch = configFromArgs(LaunchArguments.value() ?? {});
   if (fromLaunch) {
     return fromLaunch;
