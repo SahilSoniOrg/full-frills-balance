@@ -36,7 +36,7 @@ export { Badge } from './Badge';
 export type { BadgeProps } from './Badge';
 
 export { AppIcon } from './AppIcon';
-export { isValidIconName } from '@/src/types/domainIcons';
+export { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 export type { IconName } from '@/src/types/domainIcons';
 export { ColoredDot } from './ColoredDot';
 export type { ColoredDotProps } from './ColoredDot';

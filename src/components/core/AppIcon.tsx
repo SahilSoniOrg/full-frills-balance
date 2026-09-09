@@ -4,7 +4,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { ViewStyle } from 'react-native';
 
 // Preserve the existing direct-module exports while definitions live neutrally.
-export { IconMap, isValidIconName } from '@/src/types/domainIcons';
+export { Icon, IconMap, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 export type { IconName } from '@/src/types/domainIcons';
 
 interface AppIconProps {

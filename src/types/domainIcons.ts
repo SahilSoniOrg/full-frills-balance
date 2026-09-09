@@ -1,3 +1,4 @@
+import type { Brand } from '@/src/types/ids';
 import {
   Activity,
   Archive,
@@ -209,111 +210,32 @@ export const IconMap = {
   terminal: Terminal,
 } as const;
 
-export type IconName =
-  | 'home'
-  | 'wallet'
-  | 'pieChart'
-  | 'reports'
-  | 'settings'
-  | 'sliders'
-  | 'eye'
-  | 'eyeOff'
-  | 'reorder'
-  | 'chevronRight'
-  | 'chevronDown'
-  | 'chevronLeft'
-  | 'chevronUp'
-  | 'add'
-  | 'close'
-  | 'back'
-  | 'more'
-  | 'menu'
-  | 'edit'
-  | 'delete'
-  | 'transaction'
-  | 'calendar'
-  | 'refresh'
-  | 'alert'
-  | 'error'
-  | 'arrowUp'
-  | 'arrowDown'
-  | 'swapHorizontal'
-  | 'document'
-  | 'archive'
-  | 'folderOpen'
-  | 'search'
-  | 'closeCircle'
-  | 'tag'
-  | 'check'
-  | 'checkCircle'
-  | 'copy'
-  | 'receipt'
-  | 'plusCircle'
-  | 'circle'
-  | 'arrowRight'
-  | 'bank'
-  | 'safe'
-  | 'creditCard'
-  | 'trendingUp'
-  | 'trendingDown'
-  | 'briefcase'
-  | 'coffee'
-  | 'shoppingCart'
-  | 'bus'
-  | 'film'
-  | 'shoppingBag'
-  | 'hierarchy'
-  | 'history'
-  | 'eject'
-  | 'helpCircle'
-  | 'repeat'
-  | 'plus'
-  | 'sparkles'
-  | 'messageCircle'
-  | 'playSquare'
-  | 'github'
-  | 'user'
-  | 'notifications'
-  | 'lock'
-  | 'shield'
-  | 'palette'
-  | 'messageSquare'
-  | 'inbox'
-  | 'barChart'
-  | 'clock'
-  | 'star'
-  | 'mic'
-  | 'micOff'
-  | 'database'
-  | 'heart'
-  | 'shieldCheck'
-  | 'trendingUpDown'
-  | 'calculator'
-  | 'pause'
-  | 'play'
-  | 'flame'
-  | 'info'
-  | 'scale'
-  | 'wrench'
-  | 'handshake'
-  | 'dashboard'
-  | 'activity'
-  | 'filter'
-  | 'timeline'
-  | 'share'
-  | 'square'
-  | 'checkSquare'
-  | 'minusSquare'
-  | 'x'
-  | 'merge'
-  | 'bug'
-  | 'save'
-  | 'zap'
-  | 'mail'
-  | 'terminal'
-  | (string & {});
+type IconKey = keyof typeof IconMap;
+
+/** Drawable catalog name. Raw strings must pass through `parseIconName`. */
+export type IconName = Brand<IconKey, 'IconName'>;
+
+type IconConstants = {
+  readonly [K in IconKey as Capitalize<K>]: Brand<K, 'IconName'>;
+};
+
+/**
+ * Keep the ergonomic PascalCase API without maintaining a second icon catalog.
+ * The runtime values are generated from `IconMap`, so adding a renderer adds
+ * the matching constant automatically.
+ */
+export const Icon = Object.freeze(
+  Object.fromEntries(
+    Object.keys(IconMap).map(name => [`${name.slice(0, 1).toUpperCase()}${name.slice(1)}`, name]),
+  ),
+) as IconConstants;
 
 /** Check whether a persisted or external string is a supported icon name. */
-export const isValidIconName = (name: string | undefined): name is IconName => {
-  return Boolean(name && name in IconMap);
+export const isValidIconName = (name: string | null | undefined): name is IconName => {
+  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(IconMap, name);
 };
+
+/** Resolve an untrusted persisted or imported string to a catalog icon. */
+export function parseIconName(raw: string | null | undefined, fallback: IconName): IconName {
+  return isValidIconName(raw) ? raw : fallback;
+}
