@@ -73,7 +73,7 @@ describe('validateImportedData', () => {
     expect(() => validateImportedData(minimalImport())).not.toThrow();
   });
 
-  it('rejects historically unbalanced journals before persistence', () => {
+  it('trusts historically unbalanced journals during restore', () => {
     const data = minimalImport({
       transactions: [
         {
@@ -88,12 +88,12 @@ describe('validateImportedData', () => {
       ],
     });
 
-    expect(() => validateImportedData(data)).toThrow(/journal "j-1" is not balanced/);
+    expect(() => validateImportedData(data)).not.toThrow();
     expect(data.journals[0].deletedAt).toBeUndefined();
     expect(data.transactions[0].deletedAt).toBeUndefined();
   });
 
-  it('rejects journals that are balanced only at a reciprocal FX quote', () => {
+  it('trusts historical FX amounts during restore', () => {
     const data = minimalImport({
       transactions: [
         {
@@ -119,7 +119,7 @@ describe('validateImportedData', () => {
     });
     data.accounts[1] = { ...data.accounts[1], currencyCode: 'EUR' };
 
-    expect(() => validateImportedData(data)).toThrow(/journal "j-1" is not balanced/);
+    expect(() => validateImportedData(data)).not.toThrow();
   });
 
   it('rejects transactions that reference a missing account', () => {

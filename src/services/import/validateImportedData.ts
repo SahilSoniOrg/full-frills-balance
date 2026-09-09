@@ -6,8 +6,6 @@ import {
 import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { TransactionType } from '@/src/types/enums';
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   const seen = new Set<string>();
@@ -170,38 +168,6 @@ function validateStructuralRules(data: BatchImportData): void {
   }
 }
 
-function validateJournalBalances(data: BatchImportData): void {
-  const transactionsByJournal = new Map<string, typeof data.transactions>();
-  for (const transaction of data.transactions) {
-    if (transaction.deletedAt != null) continue;
-    if (
-      transaction.transactionType !== TransactionType.DEBIT &&
-      transaction.transactionType !== TransactionType.CREDIT
-    ) {
-      throw new Error(
-        `Import validation failed: transaction "${transaction.id}" has invalid type "${transaction.transactionType}"`,
-      );
-    }
-    const transactions = transactionsByJournal.get(transaction.journalId) ?? [];
-    transactions.push(transaction);
-    transactionsByJournal.set(transaction.journalId, transactions);
-  }
-
-  for (const journal of data.journals) {
-    if (journal.deletedAt != null) continue;
-    const transactions = transactionsByJournal.get(journal.id) ?? [];
-    const lines = transactions.map(transaction => ({
-      amount: transaction.amount,
-      type: transaction.transactionType as TransactionType,
-      exchangeRate: transaction.exchangeRate,
-      accountCurrency: transaction.currencyCode,
-    }));
-    if (!JournalCalculator.isBalanced(lines, journal.currencyCode)) {
-      throw new Error(`Import validation failed: journal "${journal.id}" is not balanced`);
-    }
-  }
-}
-
 /** Validates structural integrity on canonical plugin output before persistence. */
 export function validateCanonicalImport(canonical: CanonicalImport): void {
   validateImportedData(batchImportDataFromCanonical(canonical));
@@ -212,10 +178,9 @@ export function validateCanonicalImport(canonical: CanonicalImport): void {
  * Account FK presence walks the shared Account reference graph inventory;
  * import-only structural rules (cycles, empty review legs, soft-deleted tx skip)
  * stay local in this adapter.
- * Historical books must satisfy the same debit≡credit invariant as newly posted journals.
+ * Historical journal amounts and FX calculations are trusted as written.
  */
 export function validateImportedData(data: BatchImportData): void {
   validateStructuralRules(data);
   validateAccountReferences(data);
-  validateJournalBalances(data);
 }

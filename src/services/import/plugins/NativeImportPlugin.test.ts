@@ -187,14 +187,14 @@ describe('NativeImportPlugin', () => {
       await expect(parseImport(context)).rejects.toThrow(/missing required data/);
     });
 
-    it('rejects historically unbalanced journals', async () => {
+    it('accepts historically unbalanced journals', async () => {
       const unbalanced = {
         ...validNativeData,
         transactions: [validNativeData.transactions[0]],
       };
       const context = { json: unbalanced } as ImportFileContext;
 
-      await expect(parseImport(context)).rejects.toThrow(/journal .* is not balanced/);
+      await expect(parseImport(context)).resolves.toBeDefined();
     });
 
     it('remaps IDs correctly and maintains references', async () => {
