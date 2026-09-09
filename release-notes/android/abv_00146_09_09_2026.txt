@@ -1,0 +1,24 @@
+New release 🚀
+
+This release gives the app a more consistent feel. Icons now match across screens, the wording is clearer and more natural, and calculations handle invalid inputs more safely.
+
+---
+
+Also in this update:
+
+* Icons: Common actions and account types use the same visual language throughout the app.
+* Copy and tone: Labels, messages, and guidance have been rewritten to feel clearer and less technical.
+* Safer calculations: Invalid simulation inputs are rejected instead of producing misleading results.
+* Workplace details: Renaming a workplace or changing its icon refreshes right away.
+* Appearance: Typeface changes apply reliably when you switch them.
+* Bug fixes: Small restore-related issues have been fixed.
+
+---
+
+Big difference you’ll notice:
+
+* The app feels more coherent from screen to screen, with familiar icons and friendlier language.
+
+---
+
+Under the hood, shared boundaries and validation now keep the app’s behavior more consistent.
