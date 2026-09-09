@@ -505,9 +505,55 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
   });
 
-  it.skip('TODO: converts statement balances for foreign-currency credit cards before obligation math', async () => {
-    // Desired behavior:
-    // For a EUR card simulated in USD, both current balance and statement balance should be normalized
-    // before remaining-statement comparison. Today only the settled amount is converted.
+  it('normalizes foreign-currency credit-card balances before obligation math', async () => {
+    const cash = makeAsset('cash', 'Checking', 'USD');
+    const euroCard = makeCreditCard('cc-eur', {
+      name: 'Euro Card',
+      statementDay: 1,
+      dueDay: 15,
+      payFromAccountId: 'cash',
+      currencyCode: 'EUR',
+    });
+
+    (convertAmount as jest.Mock).mockImplementation(
+      async ({ amount, fromCurrency, toCurrency }: any) => {
+        if (fromCurrency === toCurrency) return { ok: true, amount };
+        if (fromCurrency === 'EUR' && toCurrency === 'USD') {
+          return { ok: true, amount: amount * 2 };
+        }
+        return { ok: true, amount };
+      },
+    );
+    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+      new Map([['cc-eur', 400]]),
+    );
+    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+      totalDecrease: 100,
+      totalIncrease: 0,
+    });
+
+    const result = await simulate({
+      startingBalances: new Map<AccountId, number>([['cash' as AccountId, 2000]]),
+      liabilityAccountBalances: [{ account: euroCard, balance: 500 }],
+      allAccounts: [cash, euroCard],
+    });
+
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
+
+    expect(liabilityFlows).toHaveLength(2);
+    expect(liabilityFlows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          referenceId: 'cc-eur',
+          amount: 600,
+          dayOffset: 14,
+        }),
+        expect.objectContaining({
+          referenceId: 'cc-eur',
+          amount: 400,
+          dayOffset: 44,
+        }),
+      ]),
+    );
   });
 });
