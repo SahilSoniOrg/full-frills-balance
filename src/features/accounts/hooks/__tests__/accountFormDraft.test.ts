@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 
@@ -15,7 +16,7 @@ const defaults = {
   accountType: AccountType.ASSET,
   accountSubtype: 'CASH' as any,
   selectedCurrency: 'USD',
-  selectedIcon: 'wallet' as const,
+  selectedIcon: Icon.Wallet,
   selectedColor: '',
   parentAccountId: '' as AccountId,
 };
@@ -200,7 +201,7 @@ describe('accountFormDraft', () => {
         accountType: AccountType.ASSET,
         accountSubtype: 'CASH',
         currencyCode: 'EUR',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         color: '#F87171',
         parentAccountId: '',
       } as any;
@@ -217,7 +218,7 @@ describe('accountFormDraft', () => {
         accountType: AccountType.ASSET,
         accountSubtype: 'CASH',
         currencyCode: 'USD',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         parentAccountId: '',
       } as any;
       const core = mapAccountToCoreDraft(account, { pathname: '/account-creation' }, 'USD');

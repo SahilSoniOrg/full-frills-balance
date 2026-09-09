@@ -1,5 +1,5 @@
 import { ProgressBar } from '@/src/components/shared/ProgressBar';
-import { AppIcon, AppText, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, StyleSheet, View } from 'react-native';
@@ -19,7 +19,7 @@ export function SettingsMaintenanceOverlay({
   progress,
   progressMessage,
   hint,
-  icon = 'document',
+  icon = Icon.Document,
 }: SettingsMaintenanceOverlayProps) {
   const { theme } = useTheme();
 

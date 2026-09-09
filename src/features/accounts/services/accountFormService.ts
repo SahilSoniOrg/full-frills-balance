@@ -64,7 +64,7 @@ export function resolveAccountFormDefaults(
     accountType: initialType,
     accountSubtype: getDefaultSubtypeForType(initialType),
     selectedCurrency: route.previewCurrency || workplaceCurrency,
-    selectedIcon: resolveAccountIcon(initialType, (route.previewIcon as IconName) || null),
+    selectedIcon: resolveAccountIcon(initialType, route.previewIcon || null),
     selectedColor: '',
     parentAccountId: EMPTY_ACCOUNT_ID,
   };

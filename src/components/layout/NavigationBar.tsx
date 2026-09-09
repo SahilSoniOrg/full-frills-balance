@@ -7,7 +7,7 @@
  * - no back → left (tab roots)
  */
 
-import { AppText, IconButton } from '@/src/components/core';
+import { Icon, AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
@@ -15,7 +15,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 type NavigationBarShared = {
   title: string;
   subtitle?: string;
-  backIcon?: 'back' | 'close';
+  backIcon?: typeof Icon.Back | typeof Icon.Close;
   rightActions?: React.ReactNode;
   isSearchActive?: boolean;
   style?: ViewStyle;
@@ -29,7 +29,7 @@ export function NavigationBar({
   subtitle,
   onBack,
   showBack = false,
-  backIcon = 'back',
+  backIcon = Icon.Back,
   rightActions,
   isSearchActive = false,
   style,

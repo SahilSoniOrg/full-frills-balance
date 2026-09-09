@@ -1,5 +1,5 @@
 import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -21,7 +21,7 @@ export interface CategoryCreationBarProps {
 export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
   placeholder,
   onAdd,
-  defaultIcon = 'tag',
+  defaultIcon = Icon.Tag,
   showTypeToggle = false,
   typeLabels,
   defaultType,
@@ -47,7 +47,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
     (type: CreationItemType) => {
       setCustomType(type);
       if (showTypeToggle) {
-        setSelectedIcon(type === 'INCOME' ? 'trendingUp' : defaultIcon);
+        setSelectedIcon(type === 'INCOME' ? Icon.TrendingUp : defaultIcon);
       }
     },
     [showTypeToggle, defaultIcon],
@@ -97,7 +97,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
             justifyContent="center"
             alignItems="center"
           >
-            <AppIcon name="add" size={Size.sm} color={theme.surface} />
+            <AppIcon name={Icon.Add} size={Size.sm} color={theme.surface} />
           </Box>
         </TouchableOpacity>
       </Inline>

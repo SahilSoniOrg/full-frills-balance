@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { Icon, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { PlannedPaymentInterval, JournalDisplayType } from '@/src/types/enums';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
@@ -99,10 +99,10 @@ export function getPlannedPaymentHistoryPresentation(
 
   const typeIcon: IconName =
     journal.displayType === JournalDisplayType.INCOME
-      ? 'arrowUp'
+      ? Icon.ArrowUp
       : journal.displayType === JournalDisplayType.EXPENSE
-        ? 'arrowDown'
-        : 'swapHorizontal';
+        ? Icon.ArrowDown
+        : Icon.SwapHorizontal;
 
   return {
     label,

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { selectPreparedRestoreSources } from '../pickRestoreSource';
 import { sameRestoreSources, type RestoreSourceOutput } from '../setupTypes';
@@ -10,7 +11,7 @@ function source(name: string, index: number): RestoreSourceOutput {
       fingerprint: `fingerprint-${index}`,
       workplaceIndex: index,
     },
-    facts: { workplace: { name, icon: 'briefcase', defaultCurrencyCode: 'USD' } },
+    facts: { workplace: { name, icon: Icon.Briefcase, defaultCurrencyCode: 'USD' } },
     stats: { accounts: index + 1, journals: 0, transactions: 0, skippedTransactions: 0 },
     warnings: [],
     ...(index === 0 ? {} : { operationId: asWorkplaceId(`operation-${index}`) }),

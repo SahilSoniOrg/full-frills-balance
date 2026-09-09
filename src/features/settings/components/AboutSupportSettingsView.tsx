@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -23,7 +23,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
       >
         <SettingsMenuItem
           searchId="telegram"
-          leftIcon="messageCircle"
+          leftIcon={Icon.MessageCircle}
           iconColor
           title={AppConfig.strings.settings.community.telegramTitle}
           description={AppConfig.strings.settings.community.telegramDesc}
@@ -31,7 +31,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
         />
         <SettingsMenuItem
           searchId="release-notes"
-          leftIcon="document"
+          leftIcon={Icon.Document}
           iconColor
           title={AppConfig.strings.settings.community.releaseNotesTitle}
           description={AppConfig.strings.settings.community.releaseNotesDesc}
@@ -40,7 +40,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
         />
         <SettingsMenuItem
           searchId="play-store"
-          leftIcon="star"
+          leftIcon={Icon.Star}
           iconColor
           title={AppConfig.strings.settings.community.playStoreTitle}
           description={AppConfig.strings.settings.community.playStoreDesc}
@@ -48,7 +48,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
         />
         <SettingsMenuItem
           searchId="github"
-          leftIcon="github"
+          leftIcon={Icon.Github}
           iconColor
           title={AppConfig.strings.settings.community.githubTitle}
           description={AppConfig.strings.settings.community.githubDesc}
@@ -56,7 +56,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
         />
         <SettingsMenuItem
           searchId="report-bug"
-          leftIcon="bug"
+          leftIcon={Icon.Bug}
           iconColor
           title="Report a Bug"
           description="Share app logs and device info to help fix issues"
@@ -69,7 +69,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               >
                 <Box padding="xs">
-                  <AppIcon name="share" size={20} color={theme.primary} />
+                  <AppIcon name={Icon.Share} size={20} color={theme.primary} />
                 </Box>
               </TouchableOpacity>
               <TouchableOpacity
@@ -77,7 +77,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               >
                 <Box padding="xs">
-                  <AppIcon name="save" size={20} color={theme.primary} />
+                  <AppIcon name={Icon.Save} size={20} color={theme.primary} />
                 </Box>
               </TouchableOpacity>
             </Inline>

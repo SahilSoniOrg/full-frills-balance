@@ -2,7 +2,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
-import { AppText, IconButton } from '@/src/components/core';
+import { Icon, AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { getAccountActivityFlowLabels } from '@/src/features/accounts/helpers/accountActivityFlowLabels';
@@ -51,7 +51,7 @@ export function AccountActivitySection({
           <View style={styles.activityActions}>
             {onReconcile ? (
               <IconButton
-                name="checkCircle"
+                name={Icon.CheckCircle}
                 onPress={onReconcile}
                 variant="surface"
                 iconColor={reconcileColor}

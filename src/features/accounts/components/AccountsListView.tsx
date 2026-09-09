@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
 import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
-import { AppIcon, AppTabs, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppTabs, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
@@ -125,7 +125,7 @@ export function AccountsListView({
                   style={{ color: section.totalColor }}
                 />
                 <AppIcon
-                  name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
+                  name={section.isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
                   size={Size.iconSm}
                   color={theme.textSecondary}
                 />
@@ -159,7 +159,9 @@ export function AccountsListView({
                   },
                 ]}
               >
-                {isAllSectionSelected && <AppIcon name="check" size={12} color={theme.onPrimary} />}
+                {isAllSectionSelected && (
+                  <AppIcon name={Icon.Check} size={12} color={theme.onPrimary} />
+                )}
                 {isSomeSectionSelected && (
                   <View
                     style={{

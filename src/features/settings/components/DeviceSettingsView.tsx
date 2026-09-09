@@ -1,4 +1,4 @@
-import { AppText } from '@/src/components/core';
+import { Icon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -22,7 +22,7 @@ export function DeviceSettingsView({
         <SettingsMenu header="This Device" focusId="devices">
           <SettingsMenuItem
             searchId="local-device"
-            leftIcon="settings"
+            leftIcon={Icon.Settings}
             title="Local device"
             description="Preferences here apply only to this installation."
             hasArrow={false}
@@ -34,7 +34,7 @@ export function DeviceSettingsView({
           <SettingsMenu header="Device Preferences">
             <SettingsToggleItem
               searchId="sms-import"
-              leftIcon="zap"
+              leftIcon={Icon.Zap}
               title={AppConfig.strings.settings.personalization.smsImportTitle}
               description="Automatically scan for transaction messages on this device."
               value={isSmsImportEnabled}
@@ -47,7 +47,7 @@ export function DeviceSettingsView({
         <SettingsMenu header="Future Sessions">
           <SettingsMenuItem
             searchId="other-devices"
-            leftIcon="briefcase"
+            leftIcon={Icon.Briefcase}
             title="Other devices"
             description="Remote sessions and sync will appear here when multi-device support is available."
             hasArrow={false}

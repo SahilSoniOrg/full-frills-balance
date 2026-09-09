@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -38,7 +39,7 @@ export const InlineSearchField = ({
         accessibilityRole="search"
         accessibilityLabel={placeholder}
       >
-        <AppIcon name="search" size={Size.sm} color={theme.text} />
+        <AppIcon name={Icon.Search} size={Size.sm} color={theme.text} />
       </TouchableOpacity>
     );
   }
@@ -54,7 +55,7 @@ export const InlineSearchField = ({
         Shape.elevation.sm,
       ]}
     >
-      <AppIcon name="search" size={Size.sm} color={theme.textSecondary} style={styles.icon} />
+      <AppIcon name={Icon.Search} size={Size.sm} color={theme.textSecondary} style={styles.icon} />
       <TextInput
         ref={inputRef}
         style={[styles.input, { color: theme.text }]}
@@ -72,7 +73,7 @@ export const InlineSearchField = ({
         accessibilityRole="button"
         accessibilityLabel={value.length > 0 ? 'Clear search' : 'Collapse search'}
       >
-        <AppIcon name="close" size={Size.sm} color={theme.textSecondary} />
+        <AppIcon name={Icon.Close} size={Size.sm} color={theme.textSecondary} />
       </TouchableOpacity>
     </View>
   );

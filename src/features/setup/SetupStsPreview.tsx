@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
@@ -228,7 +228,12 @@ function OnboardingProjectionChart({
             borderRadius: 100,
           }}
         >
-          <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={12} color={theme.success} />
+          <AppIcon
+            name={Icon.CheckCircle}
+            fallbackIcon={Icon.CheckCircle}
+            size={12}
+            color={theme.success}
+          />
           <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 10 }}>
             Safe for {AppConfig.defaults.safeToSpendDays}d
           </AppText>

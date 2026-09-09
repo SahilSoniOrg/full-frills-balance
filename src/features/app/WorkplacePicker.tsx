@@ -1,4 +1,4 @@
-import { AppIcon, AppText, LoadingView } from '@/src/components/core';
+import { Icon, AppIcon, AppText, LoadingView } from '@/src/components/core';
 import { SettingsMenu } from '@/src/components/settings/SettingsMenu';
 import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
 import { AppConfig } from '@/src/constants/app-config';
@@ -36,7 +36,7 @@ export function WorkplacePicker({
     >
       <View style={styles.intro}>
         <View style={[styles.icon, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppIcon name="briefcase" size={28} color={theme.primary} />
+          <AppIcon name={Icon.Briefcase} size={28} color={theme.primary} />
         </View>
         <View style={styles.introCopy}>
           <AppText variant="heading">{copy.title}</AppText>
@@ -47,7 +47,7 @@ export function WorkplacePicker({
       </View>
       {transitionError && (
         <View style={[styles.error, { backgroundColor: theme.errorLight }]}>
-          <AppIcon name="alert" size={20} color={theme.error} />
+          <AppIcon name={Icon.Alert} size={20} color={theme.error} />
           <AppText variant="caption" color="error" accessibilityRole="alert">
             {transitionError}
           </AppText>
@@ -72,7 +72,7 @@ export function WorkplacePicker({
       <View style={styles.startAnother}>
         <SettingsMenu header="Start another">
           <SettingsMenuItem
-            leftIcon="plus"
+            leftIcon={Icon.Plus}
             title={copy.create}
             description="Set up a new set of books"
             onPress={onCreate}
@@ -80,7 +80,7 @@ export function WorkplacePicker({
             testID="workplace-picker-create"
           />
           <SettingsMenuItem
-            leftIcon="folderOpen"
+            leftIcon={Icon.FolderOpen}
             title={copy.import}
             description="Restore books from a backup"
             onPress={onImport}

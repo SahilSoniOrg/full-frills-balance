@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Keyboard, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -34,7 +34,7 @@ export function BudgetPeriodStepper({
         activeOpacity={Opacity.heavy}
         accessibilityLabel="Previous period"
       >
-        <AppIcon name="chevronLeft" size={Size.sm} color={theme.textSecondary} />
+        <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
       </TouchableOpacity>
 
       <View style={[styles.labelContainer, { backgroundColor: theme.surface }, Shape.elevation.sm]}>
@@ -75,7 +75,7 @@ export function BudgetPeriodStepper({
         accessibilityLabel="Next period"
       >
         <AppIcon
-          name="chevronRight"
+          name={Icon.ChevronRight}
           size={Size.sm}
           color={canGoNext ? theme.textSecondary : theme.border}
         />

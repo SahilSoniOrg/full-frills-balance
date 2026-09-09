@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -122,7 +122,7 @@ export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewPr
               {accountMap.get(item.sourceAccountId) || item.sourceAccountId}
             </AppText>
             <AppIcon
-              name="arrowRight"
+              name={Icon.ArrowRight}
               size={14}
               color={theme.textSecondary}
               style={{ marginHorizontal: Spacing.xs }}

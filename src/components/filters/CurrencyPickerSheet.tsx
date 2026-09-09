@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -62,7 +62,7 @@ export function CurrencyPickerSheet({
               accessibilityLabel="Close"
               accessibilityRole="button"
             >
-              <AppIcon name="close" size={Size.iconMd} color={theme.text} />
+              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
             </TouchableOpacity>
           </View>
 
@@ -71,7 +71,7 @@ export function CurrencyPickerSheet({
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              leftIcon="search"
+              leftIcon={Icon.Search}
               containerStyle={{ marginBottom: Spacing.sm }}
             />
           </View>
@@ -106,7 +106,7 @@ export function CurrencyPickerSheet({
                     <AppText variant="subheading">{item.symbol}</AppText>
                     {isSelected && (
                       <AppIcon
-                        name="checkCircle"
+                        name={Icon.CheckCircle}
                         size={Size.iconSm}
                         color={theme.primary}
                         style={{ marginLeft: Spacing.sm }}

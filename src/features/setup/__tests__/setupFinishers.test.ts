@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
@@ -46,7 +47,7 @@ jest.mock('@/src/services/preferences', () => ({
 const operationId = asWorkplaceId('operation');
 const workplace: WorkplaceSetupOutput = {
   name: { value: 'Edited', source: 'user_entered' },
-  icon: { value: 'home', source: 'user_entered' },
+  icon: { value: Icon.Home, source: 'user_entered' },
   baseCurrency: { value: 'EUR', source: 'imported' },
   selectedAccounts: [],
   selectedCategories: [],
@@ -124,11 +125,11 @@ describe('restore finishers', () => {
     getWorkplace.mockResolvedValue({
       id: operationId,
       name: 'Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
     await expect(finishSetup(restoreDraft())).resolves.toBe(operationId);
-    expect(updateWorkplace).toHaveBeenCalledWith(operationId, { name: 'Edited', icon: 'home' });
+    expect(updateWorkplace).toHaveBeenCalledWith(operationId, { name: 'Edited', icon: Icon.Home });
     expect(preferences.device.setActiveWorkplaceId).toHaveBeenCalledWith(operationId);
   });
 
@@ -140,7 +141,7 @@ describe('restore finishers', () => {
     getWorkplace.mockResolvedValue({
       id: operationId,
       name: 'Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
     getPublishedBookStats.mockResolvedValue({ accounts: 4, categories: 6, journals: 2 });
@@ -177,7 +178,7 @@ describe('restore finishers', () => {
     getWorkplace.mockImplementation(async (id: string) => ({
       id,
       name: id === operationId ? 'Books' : 'Books 2',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: id === operationId ? 'USD' : 'EUR',
     }));
     getPublishedBookStats.mockResolvedValue({ accounts: 4, categories: 6, journals: 2 });
@@ -193,7 +194,7 @@ describe('restore finishers', () => {
     getWorkplace.mockResolvedValue({
       id: operationId,
       name: 'Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
     await discardPublishedRestore(restoreDraft());
@@ -210,7 +211,7 @@ describe('restore finishers', () => {
     getWorkplace.mockImplementation(async (id: string) => ({
       id,
       name: 'Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     }));
     const draft = {

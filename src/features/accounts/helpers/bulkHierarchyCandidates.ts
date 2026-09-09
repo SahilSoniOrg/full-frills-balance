@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import type { IconName } from '@/src/types/domainIcons';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 

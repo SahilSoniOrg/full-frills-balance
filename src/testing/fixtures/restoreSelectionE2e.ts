@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { generator } from '@/src/data/database/idGenerator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
 import type { RestoreSourceOutput } from '@/src/features/setup/setupTypes';
@@ -30,7 +31,7 @@ export function bulkRestoreSelectionSources(): RestoreSourceOutput[] {
       fingerprint: `e2e-bulk-${index}`,
     },
     facts: {
-      workplace: { name, icon: 'briefcase', defaultCurrencyCode: currency },
+      workplace: { name, icon: Icon.Briefcase, defaultCurrencyCode: currency },
     },
     stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
     warnings: [],

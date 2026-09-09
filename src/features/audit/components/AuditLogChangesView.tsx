@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { AuditAccountMap, asTransactionSnapshots } from '@/src/features/audit/auditLogDiffDisplay';
@@ -272,7 +272,7 @@ function BeforeAfterChangesView({
                 />
               </View>
               <View style={{ justifyContent: 'center', paddingTop: Spacing.xs }}>
-                <AppIcon name="arrowRight" size={Size.xxs} color={theme.textTertiary} />
+                <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
               </View>
               <View style={{ flex: 1 }}>
                 <ChangeValueRenderer

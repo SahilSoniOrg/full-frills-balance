@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
@@ -52,7 +52,7 @@ export function RestoreWorkplaceSelectionSheet({
         >
           <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
             <AppIcon
-              name={allSelected ? 'checkSquare' : 'square'}
+              name={allSelected ? Icon.CheckSquare : Icon.Square}
               size={Size.iconSm}
               color={allSelected ? theme.primary : theme.textSecondary}
             />
@@ -79,7 +79,7 @@ export function RestoreWorkplaceSelectionSheet({
               >
                 <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
                   <AppIcon
-                    name={selected ? 'checkSquare' : 'square'}
+                    name={selected ? Icon.CheckSquare : Icon.Square}
                     size={Size.iconSm}
                     color={selected ? theme.primary : theme.textSecondary}
                   />

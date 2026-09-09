@@ -1,4 +1,4 @@
-import { isValidIconName, type IconName } from '@/src/types/domainIcons';
+import { isValidIconName } from '@/src/types/domainIcons';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import {
   primaryRestoreSource,
@@ -52,7 +52,7 @@ export function getRestoreAppearancePrefill(draft: SetupDraft): AppearanceSetupO
 
 function workplacePrefill(workplace: {
   readonly name?: string;
-  readonly icon?: IconName | string;
+  readonly icon?: string;
   readonly defaultCurrencyCode?: string;
 }): WorkplaceSetupPrefill {
   const name = workplace.name?.trim();
@@ -70,7 +70,7 @@ function workplacePrefill(workplace: {
 
 function workplaceFromFacts(workplace: {
   readonly name?: string;
-  readonly icon?: IconName | string;
+  readonly icon?: string;
   readonly defaultCurrencyCode?: string;
 }): WorkplaceSetupOutput | undefined {
   const prefill = workplacePrefill(workplace);

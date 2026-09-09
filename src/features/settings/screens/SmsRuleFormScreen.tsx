@@ -7,6 +7,7 @@ import { AccountId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 export default function SmsRuleFormScreen() {
   const params = useLocalSearchParams<{
@@ -28,13 +29,13 @@ export default function SmsRuleFormScreen() {
     () => ({
       screenTitle: params.id ? 'Edit SMS Rule' : 'New SMS Rule',
       showBack: true,
-      backIcon: 'back',
+      backIcon: Icon.Back,
       onBack: AppNavigation.back,
       headerActions: params.id ? (
         <ScreenHeaderActions
           actions={[
             {
-              name: 'delete',
+              name: Icon.Delete,
               onPress: vm.handleDelete,
               iconColor: theme.error,
               variant: 'surface',

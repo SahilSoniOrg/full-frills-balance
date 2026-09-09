@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
 import { ThemeIds, FontIds } from '@/src/constants';
@@ -24,7 +25,7 @@ const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
     sources: [
       {
         source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-        facts: { workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'USD' } },
+        facts: { workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' } },
       },
     ],
     handoffs: [
@@ -41,7 +42,7 @@ const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
   device: { displayName: { value: 'Typed', source: 'user_entered' } },
   workplace: {
     name: { value: 'Books', source: 'imported' },
-    icon: { value: 'briefcase', source: 'imported' },
+    icon: { value: Icon.Briefcase, source: 'imported' },
     baseCurrency: { value: 'USD', source: 'imported' },
     selectedAccounts: [],
     selectedCategories: [],
@@ -62,7 +63,7 @@ describe('SetupSummarySlice', () => {
     load.mockResolvedValue([
       {
         name: 'Books',
-        icon: 'briefcase',
+        icon: Icon.Briefcase,
         currency: 'USD',
         accounts: 4,
         categories: 6,
@@ -98,7 +99,7 @@ describe('SetupSummarySlice', () => {
     load.mockResolvedValue([
       {
         name: 'Books',
-        icon: 'briefcase',
+        icon: Icon.Briefcase,
         currency: 'USD',
         accounts: 4,
         categories: 6,

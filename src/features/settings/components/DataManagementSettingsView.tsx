@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -26,7 +27,7 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
       <Stack space="xxl">
         <SettingsMenu header="Sharing">
           <SettingsSegmentedControl
-            leftIcon="share"
+            leftIcon={Icon.Share}
             focusId="share-format"
             title={AppConfig.strings.settings.data.shareFormatTitle}
             description={AppConfig.strings.settings.data.shareFormatDesc}
@@ -40,7 +41,7 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
         <SettingsMenu header={AppConfig.strings.settings.data.reviewHeader}>
           <SettingsMenuItem
             searchId="audit-log"
-            leftIcon="history"
+            leftIcon={Icon.History}
             title={AppConfig.strings.settings.data.auditBtn}
             description={AppConfig.strings.settings.data.auditDesc}
             onPress={vm.onAuditLog}

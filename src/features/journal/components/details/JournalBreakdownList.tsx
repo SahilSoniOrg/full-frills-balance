@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Section } from '@/src/components/shared/Section';
-import { AppIcon, ListRow } from '@/src/components/core';
+import { Icon, AppIcon, ListRow } from '@/src/components/core';
 import { Size, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { JournalSplitItemViewModel } from '@/src/features/journal/hooks/journalDetailsSplitItems';
@@ -69,7 +69,11 @@ export const JournalBreakdownList = React.memo(({ splitItems }: JournalBreakdown
                 variant="subheading"
                 color={item.amountColor as ComponentVariant}
               />
-              <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
+              <AppIcon
+                name={Icon.ChevronRight}
+                size={Typography.sizes.sm}
+                color={theme.textSecondary}
+              />
             </Inline>
           }
           onPress={item.onPress}

@@ -1,3 +1,4 @@
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { BudgetPeriodInput, BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
@@ -14,7 +15,7 @@ export interface BudgetUsageViewModel {
   statusColor: ColorKey;
   statusBadge: {
     variant: 'default' | 'error' | 'warning' | 'success';
-    icon: 'alert' | 'pieChart' | 'time';
+    icon: IconName;
     text: string;
   };
   spent: number;
@@ -32,7 +33,7 @@ export interface BudgetListCardViewModel {
   statusColor: ColorKey;
   previousPeriodLabel?: string;
   previousPeriodColor: 'error' | 'success';
-  previousPeriodIcon: 'trendingDown' | 'trendingUp';
+  previousPeriodIcon: IconName;
 }
 
 export function resolveBudgetStatus(usagePercent: number): {
@@ -44,7 +45,7 @@ export function resolveBudgetStatus(usagePercent: number): {
       statusColor: 'error',
       statusBadge: {
         variant: 'error',
-        icon: 'alert',
+        icon: Icon.Alert,
         text: AppConfig.strings.budget.statusOverBudget,
       },
     };
@@ -55,7 +56,7 @@ export function resolveBudgetStatus(usagePercent: number): {
       statusColor: 'warning',
       statusBadge: {
         variant: 'warning',
-        icon: 'time',
+        icon: Icon.Clock,
         text: AppConfig.strings.budget.statusNearLimit,
       },
     };
@@ -65,7 +66,7 @@ export function resolveBudgetStatus(usagePercent: number): {
     statusColor: 'primary',
     statusBadge: {
       variant: 'success',
-      icon: 'pieChart',
+      icon: Icon.PieChart,
       text: AppConfig.strings.budget.statusOnTrack,
     },
   };
@@ -103,7 +104,7 @@ export function presentBudgetListCard(
 
   let previousPeriodLabel: string | undefined;
   let previousPeriodColor: 'error' | 'success' = 'success';
-  let previousPeriodIcon: 'trendingDown' | 'trendingUp' = 'trendingUp';
+  let previousPeriodIcon: IconName = Icon.TrendingUp;
 
   if (previousUsage) {
     const wasOver = previousUsage.remaining < 0;
@@ -111,7 +112,7 @@ export function presentBudgetListCard(
       ? AppConfig.strings.budget.overLastPeriod
       : AppConfig.strings.budget.underLastPeriod;
     previousPeriodColor = wasOver ? 'error' : 'success';
-    previousPeriodIcon = wasOver ? 'trendingDown' : 'trendingUp';
+    previousPeriodIcon = wasOver ? Icon.TrendingDown : Icon.TrendingUp;
   }
 
   return {

@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Inset, Separator, Stack } from '@/src/design-system';
@@ -84,7 +84,7 @@ export default function PrivacyNoticeScreen() {
     : {
         screenTitle: copy.title,
         showBack: true as const,
-        backIcon: 'back' as const,
+        backIcon: Icon.Back,
         onBack: AppNavigation.back,
       };
 
@@ -115,7 +115,7 @@ export default function PrivacyNoticeScreen() {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <AppIcon name="shieldCheck" size={Size.iconSm} color="background" />
+                  <AppIcon name={Icon.ShieldCheck} size={Size.iconSm} color="background" />
                 </Box>
                 <AppText variant="heading">{copy.heroCalloutTitle}</AppText>
               </Box>
@@ -128,17 +128,22 @@ export default function PrivacyNoticeScreen() {
           <Stack space="md">
             <AppText variant="subheading">{copy.dataSectionTitle}</AppText>
             <AppCard variant="default" paddingSize="none">
-              <PrivacyRow icon="edit" title={copy.manualTitle} body={copy.manualBody} />
-              <PrivacyRow icon="database" title={copy.localTitle} body={copy.localBody} />
-              <PrivacyRow icon="share" title={copy.onlineTitle} body={copy.onlineBody} last />
+              <PrivacyRow icon={Icon.Edit} title={copy.manualTitle} body={copy.manualBody} />
+              <PrivacyRow icon={Icon.Database} title={copy.localTitle} body={copy.localBody} />
+              <PrivacyRow icon={Icon.Share} title={copy.onlineTitle} body={copy.onlineBody} last />
             </AppCard>
           </Stack>
 
           <Stack space="md">
             <AppText variant="subheading">{copy.controlsSectionTitle}</AppText>
             <AppCard variant="outline" paddingSize="none">
-              <PrivacyRow icon="archive" title={copy.backupTitle} body={copy.backupBody} />
-              <PrivacyRow icon="lock" title={copy.controlsTitle} body={copy.controlsBody} last />
+              <PrivacyRow icon={Icon.Archive} title={copy.backupTitle} body={copy.backupBody} />
+              <PrivacyRow
+                icon={Icon.Lock}
+                title={copy.controlsTitle}
+                body={copy.controlsBody}
+                last
+              />
             </AppCard>
           </Stack>
 

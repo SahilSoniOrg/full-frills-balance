@@ -1,4 +1,4 @@
-import { AppIcon, AppCard, AppText, Badge } from '@/src/components/core';
+import { Icon, AppIcon, AppCard, AppText, Badge } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
 import { useMemo } from 'react';
@@ -47,42 +47,42 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
       if (senderContains.trim()) {
         list.push({
           label: `Sender: ${senderContains.trim()}`,
-          icon: 'mail',
+          icon: Icon.Mail,
           color: theme.primary,
         });
       }
       if (accountSourceContains.trim()) {
         list.push({
           label: `Source: ${accountSourceContains.trim()}`,
-          icon: 'creditCard',
+          icon: Icon.CreditCard,
           color: theme.primary,
         });
       }
       if (bodyContains.trim()) {
         list.push({
           label: `Body: ${bodyContains.trim()}`,
-          icon: 'messageSquare',
+          icon: Icon.MessageSquare,
           color: theme.primary,
         });
       }
       if (merchantContains.trim()) {
         list.push({
           label: `Merchant: ${merchantContains.trim()}`,
-          icon: 'tag',
+          icon: Icon.Tag,
           color: theme.primary,
         });
       }
       if (currencyCode.trim()) {
         list.push({
           label: `Currency: ${currencyCode.trim().toUpperCase()}`,
-          icon: 'transaction',
+          icon: Icon.Transaction,
           color: theme.primary,
         });
       }
       if (direction) {
         list.push({
           label: direction === 'debit' ? 'Debit Only' : 'Credit Only',
-          icon: direction === 'debit' ? 'arrowUp' : 'arrowDown',
+          icon: direction === 'debit' ? Icon.ArrowUp : Icon.ArrowDown,
           color: direction === 'debit' ? theme.error : theme.success,
         });
       }
@@ -99,7 +99,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
           amountOperator === 'between' ? `${amountValue} - ${amountSecondaryValue}` : amountValue;
         list.push({
           label: `Amount ${opLabel} ${valText}`,
-          icon: 'calculator',
+          icon: Icon.Calculator,
           color: theme.primary,
         });
       }
@@ -107,14 +107,14 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
       if (legacySenderMatch.trim()) {
         list.push({
           label: `Sender Regex: ${legacySenderMatch.trim()}`,
-          icon: 'terminal',
+          icon: Icon.Terminal,
           color: theme.warning,
         });
       }
       if (legacyBodyMatch.trim()) {
         list.push({
           label: `Body Regex: ${legacyBodyMatch.trim()}`,
-          icon: 'terminal',
+          icon: Icon.Terminal,
           color: theme.warning,
         });
       }
@@ -142,7 +142,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
         return {
           label: 'Auto-Post',
           sub: 'Creates journal immediately',
-          icon: 'zap' as const,
+          icon: Icon.Zap,
           color: theme.success,
           bg: withOpacity(theme.success, 0.1),
         };
@@ -150,7 +150,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
         return {
           label: 'Ignore Message',
           sub: 'Dismisses matching SMS',
-          icon: 'closeCircle' as const,
+          icon: Icon.CloseCircle,
           color: theme.textSecondary,
           bg: withOpacity(theme.textSecondary, 0.1),
         };
@@ -159,7 +159,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
         return {
           label: 'Require Review',
           sub: 'Leaves matches in Inbox',
-          icon: 'eye' as const,
+          icon: Icon.Eye,
           color: theme.warning,
           bg: withOpacity(theme.warning, 0.1),
         };
@@ -170,7 +170,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
     <AppCard paddingSize="md" variant="secondary" style={styles.flowCard}>
       <View style={styles.flowCardHeader}>
         <View style={styles.flowCardHeaderTitle}>
-          <AppIcon name="activity" size={16} color={theme.primary} />
+          <AppIcon name={Icon.Activity} size={16} color={theme.primary} />
           <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1 }}>
             LIVE RULE FLOW PREVIEW
           </AppText>
@@ -300,7 +300,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
                   ]}
                 >
                   <AppIcon
-                    name="creditCard"
+                    name={Icon.CreditCard}
                     size={12}
                     color={sourceAccount ? theme.primary : theme.textSecondary}
                   />
@@ -319,7 +319,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
 
                 {/* Direction flow connector */}
                 <View style={styles.ledgerFlowArrow}>
-                  <AppIcon name="arrowRight" size={14} color={theme.textSecondary} />
+                  <AppIcon name={Icon.ArrowRight} size={14} color={theme.textSecondary} />
                 </View>
 
                 {/* Category Account card */}
@@ -339,7 +339,7 @@ export function RuleFlowPreview({ vm }: { vm: SmsRuleFormViewModel }) {
                   ]}
                 >
                   <AppIcon
-                    name="tag"
+                    name={Icon.Tag}
                     size={12}
                     color={categoryAccount ? theme.primary : theme.textSecondary}
                   />

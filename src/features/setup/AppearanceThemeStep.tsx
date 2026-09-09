@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import {
   AppConfig,
   FontId,
@@ -261,7 +261,7 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
             testID="onboarding-theme-previous-button"
             style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 4 }}
           >
-            <AppIcon name="chevronLeft" size={20} color={theme.textSecondary} />
+            <AppIcon name={Icon.ChevronLeft} size={20} color={theme.textSecondary} />
             <ThemeLabelMotion
               motionKey={`prev-${themeId}`}
               fromX={slideDirection * 10}
@@ -320,7 +320,7 @@ function AppearanceThemeStepContent(props: AppearanceThemeStepProps) {
                 {getThemeLabel(1)}
               </AppText>
             </ThemeLabelMotion>
-            <AppIcon name="chevronRight" size={20} color={theme.textSecondary} />
+            <AppIcon name={Icon.ChevronRight} size={20} color={theme.textSecondary} />
           </Pressable>
         </View>
 

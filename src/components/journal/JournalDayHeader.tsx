@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -56,7 +56,7 @@ export function JournalDayHeader({
             )}
             {isCollapsed && reconciledAt && (
               <View style={styles.reconciledBadgeWrapper}>
-                <Badge variant="success" size="sm" icon="shieldCheck">
+                <Badge variant="success" size="sm" icon={Icon.ShieldCheck}>
                   {formatReconciledTime(reconciledAt, resolvedHourCycle)}
                 </Badge>
               </View>
@@ -84,7 +84,7 @@ export function JournalDayHeader({
             />
           )}
           <AppIcon
-            name={isCollapsed ? 'chevronRight' : 'chevronDown'}
+            name={isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
             size={16}
             color={theme.textSecondary}
           />

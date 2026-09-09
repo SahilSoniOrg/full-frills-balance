@@ -4,7 +4,7 @@ import { WorkplaceAccountSelectionStep } from '@/src/features/setup/components/w
 import { WorkplaceCategorySelectionStep } from '@/src/features/setup/components/workplace-setup/WorkplaceCategorySelectionStep';
 import { WorkplaceCurrencyStep } from '@/src/features/setup/components/workplace-setup/WorkplaceCurrencyStep';
 import { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
-import { AppButton } from '@/src/components/core';
+import { Icon, AppButton } from '@/src/components/core';
 import { useLayoutEffect, useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
@@ -68,7 +68,9 @@ export function WorkplaceSetupSlice({
   const [defaultWorkplaceName, setDefaultWorkplaceName] = useState(() => generateWorkplaceName());
   const [workplaceName, setWorkplaceName] = useState(initial?.name?.value ?? '');
   const [hasEditedWorkplaceName, setHasEditedWorkplaceName] = useState(false);
-  const [workplaceIcon, setWorkplaceIcon] = useState<IconName>(initial?.icon?.value ?? 'briefcase');
+  const [workplaceIcon, setWorkplaceIcon] = useState<IconName>(
+    initial?.icon?.value ?? Icon.Briefcase,
+  );
   const [currency, setCurrency] = useState(
     initial?.baseCurrency?.value ?? AppConfig.defaultCurrency,
   );

@@ -1,4 +1,4 @@
-import { IconButton } from '@/src/components/core';
+import { Icon, IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { useArchiveVisibility } from '@/src/contexts/ArchiveVisibilityScope';
 import { hasArchivedAccountsInList } from '@/src/utils/accountArchive';
@@ -19,7 +19,7 @@ export function ShowArchivedButton({ accounts }: { accounts: readonly ArchiveAcc
 
   return (
     <IconButton
-      name="archive"
+      name={Icon.Archive}
       size={Size.iconSm}
       variant={showArchived ? 'primary' : 'surface'}
       onPress={() => setShowArchived(!showArchived)}

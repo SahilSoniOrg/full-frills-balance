@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
+import { Icon, AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
@@ -73,26 +73,26 @@ export function AccountSummaryCard({
                 onPress={onShowSubAccounts}
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <Badge variant={accountTypeVariant} icon="hierarchy">
+                <Badge variant={accountTypeVariant} icon={Icon.Hierarchy}>
                   {subAccountCount} {subAccountCount === 1 ? 'SUB-ACCOUNT' : 'SUB-ACCOUNTS'}
                 </Badge>
               </Pressable>
             ) : null}
             {isDeleted ? <Badge variant="expense">DELETED</Badge> : null}
             {isArchived ? (
-              <Badge variant="default" icon="archive">
+              <Badge variant="default" icon={Icon.Archive}>
                 {AppConfig.strings.accounts.archive.archivedBadge}
               </Badge>
             ) : null}
             {reconciledAtMs != null ? (
-              <Badge variant="success" icon="shieldCheck">
+              <Badge variant="success" icon={Icon.ShieldCheck}>
                 {formatRelativeReconciledDate(reconciledAtMs, resolvedHourCycle)}
               </Badge>
             ) : null}
           </View>
         </View>
         <IconButton
-          name="history"
+          name={Icon.History}
           onPress={onAuditPress}
           variant="surface"
           iconColor={theme.textSecondary}

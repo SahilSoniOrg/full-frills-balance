@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
 import { storage } from '@/src/utils/storage';
@@ -73,10 +74,10 @@ describe('SetupDraftStore', () => {
       acceptedSlices: ['device', 'workplace'],
       workplace: {
         name: { value: "Sahil's Personal workplace", source: 'defaulted' },
-        icon: { value: 'briefcase', source: 'defaulted' },
+        icon: { value: Icon.Briefcase, source: 'defaulted' },
         baseCurrency: { value: 'USD', source: 'defaulted' },
-        selectedAccounts: [{ name: 'Cash', type: AccountType.ASSET, icon: 'wallet' }],
-        selectedCategories: [{ name: 'Salary', type: AccountType.INCOME, icon: 'trendingUp' }],
+        selectedAccounts: [{ name: 'Cash', type: AccountType.ASSET, icon: Icon.Wallet }],
+        selectedCategories: [{ name: 'Salary', type: AccountType.INCOME, icon: Icon.TrendingUp }],
         acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
       },
     };

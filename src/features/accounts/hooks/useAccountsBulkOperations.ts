@@ -1,6 +1,5 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
-import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/plainDtos';
+import { Icon, IconName } from '@/src/components/core';
 import {
   getBulkHierarchyCandidates,
   type HierarchyCandidateAccount,
@@ -26,11 +25,9 @@ import { getAccountIcon } from '@/src/utils/accountIcon';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 
-type AccountListItem = AccountFields | PlainAccount;
-
 interface UseAccountsBulkOperationsInput {
   workplaceId?: WorkplaceId;
-  accounts: AccountListItem[];
+  accounts: PlainAccount[];
   selection: UseSelectionResult<AccountId>;
   isBulkHierarchyOpen: boolean;
   openModal: (modal: AccountsListActiveModal) => void;
@@ -40,7 +37,7 @@ interface UseAccountsBulkOperationsInput {
 
 function buildInverseBulkUpdates(
   requests: AccountBulkUpdate[],
-  accountsById: Map<AccountId, AccountListItem>,
+  accountsById: Map<AccountId, PlainAccount>,
 ): AccountBulkUpdate[] {
   return requests.map(req => {
     const original = accountsById.get(req.accountId);
@@ -48,7 +45,7 @@ function buildInverseBulkUpdates(
     if (original) {
       if (req.updates.name !== undefined) undoUpdates.name = original.name;
       if (req.updates.color !== undefined) undoUpdates.color = original.color ?? '';
-      if (req.updates.icon !== undefined) undoUpdates.icon = original.icon as IconName;
+      if (req.updates.icon !== undefined) undoUpdates.icon = original.icon;
     }
     return { accountId: req.accountId, updates: undoUpdates };
   });
@@ -65,10 +62,7 @@ export function useAccountsBulkOperations({
 }: UseAccountsBulkOperationsInput) {
   const { theme, onContrast } = useTheme();
 
-  const { itemsById: accountsById, runUndoableAction } = useListSelection<
-    AccountListItem,
-    AccountId
-  >({
+  const { itemsById: accountsById, runUndoableAction } = useListSelection<PlainAccount, AccountId>({
     items: accounts,
     selection,
     onCloseModal: closeModal,
@@ -280,7 +274,7 @@ export function useAccountsBulkOperations({
     const definitions = [
       {
         action: {
-          name: 'edit' as const,
+          name: Icon.Edit,
           label: 'Rename',
           onPress: () => openModal({ type: 'bulkRename' }),
           accessibilityLabel: 'Edit account names',
@@ -289,7 +283,7 @@ export function useAccountsBulkOperations({
       },
       {
         action: {
-          name: 'palette' as const,
+          name: Icon.Palette,
           label: 'Change Color',
           onPress: () => openModal({ type: 'bulkAppearance', mode: 'color' }),
           accessibilityLabel: 'Change account color',
@@ -298,7 +292,7 @@ export function useAccountsBulkOperations({
       },
       {
         action: {
-          name: 'tag' as const,
+          name: Icon.Tag,
           label: 'Change Icon',
           onPress: () => openModal({ type: 'bulkAppearance', mode: 'icon' }),
           accessibilityLabel: 'Change account icon',
@@ -307,7 +301,7 @@ export function useAccountsBulkOperations({
       },
       {
         action: {
-          name: 'hierarchy' as const,
+          name: Icon.Hierarchy,
           label: 'Move Hierarchy',
           onPress: () => openModal({ type: 'bulkHierarchy' }),
           accessibilityLabel: 'Move accounts hierarchy',
@@ -316,7 +310,7 @@ export function useAccountsBulkOperations({
       },
       {
         action: {
-          name: 'archive' as const,
+          name: Icon.Archive,
           label: 'Archive / Unarchive',
           onPress: handleBulkArchive,
           variant: 'surface' as const,

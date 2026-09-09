@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { isValidIconName, type IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { mapJournalLegSplitPresentation } from '@/src/services/journal/journalDetailsHelpers';
 import { getAccountFallbackIcon } from '@/src/components/account-selection';
@@ -37,7 +37,7 @@ export function buildJournalSplitItems(
       currencyCode: presentation.currencyCode,
       amountPrefix: presentation.amountPrefix,
       amountColor: presentation.amountColor,
-      iconName: item.icon || null,
+      iconName: isValidIconName(item.icon) ? item.icon : null,
       fallbackIcon: getAccountFallbackIcon(item.accountType),
       iconColor: presentation.iconColor,
       iconBackground: presentation.iconBackground,

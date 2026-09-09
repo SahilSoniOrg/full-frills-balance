@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import {
   createSetupCoordinator,
@@ -18,7 +19,7 @@ const operationId = asWorkplaceId('operation');
 
 const workplace: WorkplaceSetupOutput = {
   name: { value: 'Personal', source: 'user_entered' },
-  icon: { value: 'briefcase', source: 'defaulted' },
+  icon: { value: Icon.Briefcase, source: 'defaulted' },
   baseCurrency: { value: 'USD', source: 'user_entered' },
   selectedAccounts: [],
   selectedCategories: [],
@@ -533,7 +534,7 @@ describe('SetupCoordinator', () => {
     };
     const workplace: WorkplaceSetupOutput = {
       name: { value: 'Workplace', source: 'imported' },
-      icon: { value: 'briefcase', source: 'imported' },
+      icon: { value: Icon.Briefcase, source: 'imported' },
       baseCurrency: { value: 'USD', source: 'imported' },
       selectedAccounts: [],
       selectedCategories: [],

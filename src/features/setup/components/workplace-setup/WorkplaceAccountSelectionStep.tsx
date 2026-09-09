@@ -1,6 +1,6 @@
 import { CategoryCreationBar } from '@/src/features/setup/components/CategoryCreationBar';
 import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
-import { AppText, IconName } from '@/src/components/core';
+import { Icon, AppText, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -96,7 +96,7 @@ export function WorkplaceAccountSelectionStep({
               setShowValidation(false);
             }
           }}
-          defaultIcon="wallet"
+          defaultIcon={Icon.Wallet}
           showTypeToggle
           defaultType="ASSET"
           typeOptions={[

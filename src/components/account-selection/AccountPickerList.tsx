@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -61,7 +61,7 @@ const AccountPickerRow = React.memo(
             name={getAccountIcon(item)}
             size={Size.iconMd}
             color={accentColor}
-            fallbackIcon="wallet"
+            fallbackIcon={Icon.Wallet}
           />
         }
         trailing={
@@ -69,12 +69,12 @@ const AccountPickerRow = React.memo(
             {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
             {isMultiple ? (
               <AppIcon
-                name={isSelected ? 'checkCircle' : 'circle'}
+                name={isSelected ? Icon.CheckCircle : Icon.Circle}
                 size={Size.iconMd}
                 color={isSelected ? theme.primary : theme.textTertiary}
               />
             ) : isSelected ? (
-              <AppIcon name="check" size={Size.iconMd} color={theme.primary} />
+              <AppIcon name={Icon.Check} size={Size.iconMd} color={theme.primary} />
             ) : undefined}
           </View>
         }
@@ -128,7 +128,7 @@ const AccountPickerPill = React.memo(
           name={getAccountIcon(item)}
           size={Size.iconSm}
           color={accentColor}
-          fallbackIcon="wallet"
+          fallbackIcon={Icon.Wallet}
         />
         <AppText
           variant="caption"
@@ -143,12 +143,12 @@ const AccountPickerPill = React.memo(
         {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
         {isMultiple ? (
           <AppIcon
-            name={isSelected ? 'checkCircle' : 'circle'}
+            name={isSelected ? Icon.CheckCircle : Icon.Circle}
             size={Size.iconSm}
             color={isSelected ? accentColor : theme.textTertiary}
           />
         ) : isSelected ? (
-          <AppIcon name="check" size={Size.iconSm} color={accentColor} />
+          <AppIcon name={Icon.Check} size={Size.iconSm} color={accentColor} />
         ) : null}
       </TouchableOpacity>
     );
@@ -237,7 +237,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
-        <AppIcon name="search" size={Size.iconLg} color={theme.textTertiary} opacity={0.5} />
+        <AppIcon name={Icon.Search} size={Size.iconLg} color={theme.textTertiary} opacity={0.5} />
         <AppText variant="body" color="secondary" style={styles.emptyText}>
           {isSearchMode
             ? AppConfig.strings.accounts.picker.noResults(searchQuery.trim())
@@ -299,12 +299,12 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   style={styles.actionButton}
                   accessibilityLabel={`Create ${title} account`}
                 >
-                  <AppIcon name="plus" size={Size.iconSm} color={theme.primary} />
+                  <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
                 </TouchableOpacity>
               )}
               {!isSearchMode && (
                 <AppIcon
-                  name={isCollapsed ? 'chevronRight' : 'chevronDown'}
+                  name={isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
                   size={Size.iconSm}
                   color={theme.textSecondary}
                 />
@@ -376,7 +376,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
               onChangeText={setSearchQuery}
               placeholder={AppConfig.strings.accounts.picker.searchPlaceholder}
               testID="account-picker-search-input"
-              leftIcon="search"
+              leftIcon={Icon.Search}
               variant="default"
               background="surfaceSecondary"
               borderColor="transparent"

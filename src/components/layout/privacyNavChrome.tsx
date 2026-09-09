@@ -1,12 +1,13 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { Icon } from '@/src/types/domainIcons';
 
 /** Stack screen with privacy eye only — Hub, Reports, InsightDetails, etc. */
 export function privacyNavChrome(screenTitle: string, onBack: () => void): ScreenNavChrome {
   return {
     screenTitle,
     showBack: true,
-    backIcon: 'back',
+    backIcon: Icon.Back,
     onBack,
     headerActions: <PrivacyToggleButton />,
   };

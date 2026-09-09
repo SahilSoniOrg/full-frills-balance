@@ -1,5 +1,5 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
-import type { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -205,7 +205,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           statusLabel: '',
           typeLabel: '',
           typeColorKey: 'primary',
-          iconName: 'document',
+          iconName: Icon.Document,
           nextOccurrenceText: pDate ? new Date(parseInt(pDate)).toLocaleDateString() : '...',
           isAutoPost: false,
           fromAccount: null,
@@ -278,10 +278,10 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       typeColorKey,
       iconName:
         displayType === JournalDisplayType.INCOME
-          ? 'arrowUp'
+          ? Icon.ArrowUp
           : displayType === JournalDisplayType.EXPENSE
-            ? 'arrowDown'
-            : 'swapHorizontal',
+            ? Icon.ArrowDown
+            : Icon.SwapHorizontal,
       displayType,
 
       // Recurrence Details

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext } from '@/src/services/import/types';
@@ -7,7 +8,7 @@ export const FIRST_RUN_RESTORE_BACKUP = {
   version: '1.4.0',
   workplace: {
     name: 'Imported Books',
-    icon: 'briefcase',
+    icon: Icon.Briefcase,
     defaultCurrencyCode: 'USD',
   },
   accounts: [
@@ -16,14 +17,14 @@ export const FIRST_RUN_RESTORE_BACKUP = {
       name: 'Cash',
       accountType: 'ASSET',
       currencyCode: 'USD',
-      icon: 'wallet',
+      icon: Icon.Wallet,
     },
     {
       id: 'food',
       name: 'Food & Drink',
       accountType: 'EXPENSE',
       currencyCode: 'USD',
-      icon: 'tag',
+      icon: Icon.Tag,
     },
   ],
   journals: [

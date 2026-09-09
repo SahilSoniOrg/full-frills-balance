@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppButton, AppCard, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Spacing } from '@/src/constants';
@@ -202,7 +202,7 @@ function EditReparseModalContent({
             paddingSize="md"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name="zap" size={14} color={theme.primary} />
+              <AppIcon name={Icon.Zap} size={14} color={theme.primary} />
               <AppText variant="caption" weight="bold" color="primary">
                 PARSER OUTPUT
               </AppText>

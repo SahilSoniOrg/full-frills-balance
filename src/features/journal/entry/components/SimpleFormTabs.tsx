@@ -1,5 +1,5 @@
 import { AppConfig, Spacing } from '@/src/constants';
-import { AppSegmentedControl } from '@/src/components/core';
+import { Icon, AppSegmentedControl } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
 import { StyleSheet, View } from 'react-native';
@@ -17,9 +17,9 @@ export function SimpleFormTabs({ type, setType, activeColor }: SimpleFormTabsPro
     <View style={styles.typeTabs}>
       <AppSegmentedControl
         options={[
-          { id: 'expense', label: AppConfig.strings.journal.expense, icon: 'arrowDown' },
-          { id: 'income', label: AppConfig.strings.journal.income, icon: 'arrowUp' },
-          { id: 'transfer', label: AppConfig.strings.journal.transfer, icon: 'swapHorizontal' },
+          { id: 'expense', label: AppConfig.strings.journal.expense, icon: Icon.ArrowDown },
+          { id: 'income', label: AppConfig.strings.journal.income, icon: Icon.ArrowUp },
+          { id: 'transfer', label: AppConfig.strings.journal.transfer, icon: Icon.SwapHorizontal },
         ]}
         value={type}
         onChange={next => setType(next as TabType)}

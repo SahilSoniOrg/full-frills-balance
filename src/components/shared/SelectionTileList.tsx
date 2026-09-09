@@ -1,5 +1,5 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { useRevealHorizontalItem } from '@/src/components/filters/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
@@ -95,9 +95,14 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
         />
         {accessory}
         {item.icon ? (
-          <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
+          <AppIcon
+            name={item.icon}
+            size={Size.iconXs}
+            color={item.color}
+            fallbackIcon={Icon.Wallet}
+          />
         ) : (
-          <AppIcon name="wallet" size={Size.iconXs} color={item.color} />
+          <AppIcon name={Icon.Wallet} size={Size.iconXs} color={item.color} />
         )}
         <AppText
           variant="body"
@@ -113,7 +118,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
         </AppText>
         <View style={styles.checkmarkSlot}>
           {showCheckmark ? (
-            <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
+            <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color={item.color} />
           ) : null}
         </View>
       </Inline>

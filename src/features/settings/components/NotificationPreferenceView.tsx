@@ -1,5 +1,5 @@
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
@@ -54,7 +54,7 @@ export const NotificationPreferenceView = ({
     <Stack space={0}>
       <SettingsMenuItem
         searchId="notifications"
-        leftIcon="notifications"
+        leftIcon={Icon.Notifications}
         title={AppConfig.strings.settings.notifications.title}
         description={AppConfig.strings.settings.notifications.description}
         hasArrow={false}
@@ -90,7 +90,7 @@ export const NotificationPreferenceView = ({
                 {displayTime}
               </AppText>
               <AppIcon
-                name="clock"
+                name={Icon.Clock}
                 size={14}
                 color={theme.textSecondary}
                 style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}

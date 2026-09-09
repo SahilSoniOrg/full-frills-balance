@@ -1,6 +1,6 @@
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountIcon } from '@/src/components/account-selection';
@@ -131,7 +131,7 @@ export const AccountTileList = React.memo(function AccountTileList({
                 paddingVertical: Spacing.sm,
               }}
             >
-              <AppIcon name="search" size={Size.iconXs} color={theme.primary} />
+              <AppIcon name={Icon.Search} size={Size.iconXs} color={theme.primary} />
               <AppText variant="caption" weight="bold" color="primary">
                 Browse all
               </AppText>

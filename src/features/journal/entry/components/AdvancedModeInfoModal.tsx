@@ -1,5 +1,5 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -54,7 +54,7 @@ export const AdvancedModeInfoModal = ({
         <View style={[styles.exampleBox, { borderColor: theme.border }]}>
           {str.exampleItems.map((item, index) => (
             <View key={index} style={styles.exampleItem}>
-              <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
+              <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.primary} />
               <AppText variant="caption" weight="medium" style={{ flex: 1 }}>
                 {item}
               </AppText>

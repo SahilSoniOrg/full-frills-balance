@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
@@ -73,10 +73,10 @@ export const CommittedStepBreakdown = ({
                         <AppIcon
                           name={
                             det.type === 'BUDGET'
-                              ? 'pieChart'
+                              ? Icon.PieChart
                               : det.type === 'PLANNED_PAYMENT'
-                                ? 'calendar'
-                                : 'refresh'
+                                ? Icon.Calendar
+                                : Icon.Refresh
                           }
                           size={Size.xxs}
                           color={theme.textSecondary}

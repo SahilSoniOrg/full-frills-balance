@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
@@ -72,7 +72,7 @@ export function BackupScopeSheet({
                 </AppText>
               </Stack>
               {scope === option.scope && (
-                <AppIcon name="checkCircle" size={Size.iconSm} color="primary" />
+                <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color="primary" />
               )}
             </Box>
           </TouchableOpacity>
@@ -95,7 +95,7 @@ export function BackupScopeSheet({
                 >
                   <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
                     <AppIcon
-                      name={selected ? 'checkSquare' : 'square'}
+                      name={selected ? Icon.CheckSquare : Icon.Square}
                       size={Size.iconSm}
                       color={selected ? 'primary' : 'secondary'}
                     />

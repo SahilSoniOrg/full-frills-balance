@@ -1,6 +1,6 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
@@ -59,7 +59,7 @@ export function BudgetUsageSummary({
             style={{ flexShrink: 1, alignSelf: 'flex-end' }}
           >
             <Row align="center" gap="xs" flexShrink={1}>
-              {isOver && <AppIcon name="alert" size={12} color={theme.error} />}
+              {isOver && <AppIcon name={Icon.Alert} size={12} color={theme.error} />}
               <AppText
                 variant="caption"
                 weight="bold"
@@ -97,7 +97,7 @@ export function BudgetUsageSummary({
             {remainingLabel}
           </AppText>
           <Row align="center" gap="xs">
-            {isOver && <AppIcon name="alert" size={14} color={theme.error} />}
+            {isOver && <AppIcon name={Icon.Alert} size={14} color={theme.error} />}
             <MoneyText
               amount={Math.abs(remaining)}
               currencyCode={currencyCode}

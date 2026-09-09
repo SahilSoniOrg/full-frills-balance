@@ -1,5 +1,5 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppCard, AppIcon, IconButton, IvyIcon } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, IconButton, IvyIcon } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
@@ -136,7 +136,7 @@ export function AccountCardBase({
                     align="center"
                     gap="xs"
                   >
-                    <AppIcon name="shieldCheck" color={resolvedTextColor} size={Size.iconXs} />
+                    <AppIcon name={Icon.ShieldCheck} color={resolvedTextColor} size={Size.iconXs} />
                     <Text
                       weight="medium"
                       variant="xs"
@@ -160,7 +160,7 @@ export function AccountCardBase({
                       },
                     ]}
                   >
-                    {isSelected && <AppIcon name="check" size={12} color={theme.onPrimary} />}
+                    {isSelected && <AppIcon name={Icon.Check} size={12} color={theme.onPrimary} />}
                   </View>
                 )}
               </Row>
@@ -197,7 +197,7 @@ export function AccountCardBase({
                 }
               >
                 <IvyIcon
-                  name={account.isExpanded ? 'chevronUp' : 'hierarchy'}
+                  name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
                   color={resolvedTextColor}
                   size={Size.iconSm}
                 />
@@ -205,7 +205,7 @@ export function AccountCardBase({
             )}
             {onActionPress && !isSelectionModeActive && (
               <IconButton
-                name="more"
+                name={Icon.More}
                 size={Size.iconSm}
                 variant="clear"
                 onPress={event => {

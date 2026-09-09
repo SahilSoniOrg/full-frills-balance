@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText, type IconName } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
@@ -32,7 +32,7 @@ export const JournalDetailsActions = React.memo(
           key: 'post',
           variant: 'primary',
           label: 'Post Transaction Now',
-          icon: 'check',
+          icon: Icon.Check,
           onPress: onPost,
           textColor: theme.onPrimary,
           iconColor: theme.onPrimary,
@@ -44,7 +44,7 @@ export const JournalDetailsActions = React.memo(
           key: 'skip',
           variant: 'outline',
           label: 'Skip This Occurrence',
-          icon: 'close',
+          icon: Icon.Close,
           onPress: onSkip,
           textColor: theme.text,
           iconColor: theme.text,
@@ -56,7 +56,7 @@ export const JournalDetailsActions = React.memo(
           key: 'revert',
           variant: 'outline',
           label: revertButtonLabel || 'Revert to Scheduled',
-          icon: 'history',
+          icon: Icon.History,
           onPress: onRevertToScheduled,
           textColor: theme.primary,
           iconColor: theme.primary,

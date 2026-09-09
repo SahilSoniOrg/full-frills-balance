@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,7 +17,7 @@ export function SettingsSelectionIndicator({ selected }: { selected: boolean }) 
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {selected ? <AppIcon name="check" size={13} color={theme.onPrimary} /> : null}
+      {selected ? <AppIcon name={Icon.Check} size={13} color={theme.onPrimary} /> : null}
     </View>
   );
 }

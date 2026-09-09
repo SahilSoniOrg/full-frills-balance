@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
@@ -74,7 +75,7 @@ describe('resolveNextSetupAction', () => {
         sources: [
           {
             source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
-            facts: { workplace: { name: 'Books', icon: 'briefcase' } },
+            facts: { workplace: { name: 'Books', icon: Icon.Briefcase } },
           },
         ],
       },
@@ -94,7 +95,7 @@ describe('resolveNextSetupAction', () => {
     });
     const output: SetupSliceOutput = {
       name: { value: 'Imported', source: 'imported' },
-      icon: { value: 'briefcase', source: 'imported' },
+      icon: { value: Icon.Briefcase, source: 'imported' },
       baseCurrency: { value: 'USD', source: 'imported' },
       selectedAccounts: [],
       selectedCategories: [],
@@ -120,7 +121,7 @@ describe('resolveNextSetupAction', () => {
           {
             source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
             facts: {
-              workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+              workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'usd' },
             },
           },
         ],

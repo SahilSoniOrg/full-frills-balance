@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import {
   getRestoreAppearancePrefill,
@@ -26,7 +27,7 @@ describe('getRestoreAutoOutput', () => {
     source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
     facts: {
       user: { name: 'Imported' },
-      workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+      workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'usd' },
     },
   } satisfies RestoreSourceOutput;
 
@@ -50,7 +51,7 @@ describe('getRestoreAutoOutput', () => {
   it('prefills present Workplace facts when currency is missing', () => {
     const draft = restore({
       ...completeSource,
-      facts: { workplace: { name: 'Books', icon: 'briefcase' } },
+      facts: { workplace: { name: 'Books', icon: Icon.Briefcase } },
     });
     expect(getRestoreWorkplacePrefill(draft)).toEqual({
       name: { value: 'Books', source: 'imported' },

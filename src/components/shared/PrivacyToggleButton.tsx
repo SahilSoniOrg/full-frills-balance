@@ -1,4 +1,4 @@
-import { IconButton } from '@/src/components/core';
+import { Icon, IconButton } from '@/src/components/core';
 import type { IconButtonVariant } from '@/src/components/core/IconButton';
 import { Size } from '@/src/constants';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -26,7 +26,7 @@ export function PrivacyToggleButton({
 
   return (
     <IconButton
-      name={isPrivacyMode ? 'eyeOff' : 'eye'}
+      name={isPrivacyMode ? Icon.EyeOff : Icon.Eye}
       size={size}
       variant={variant}
       onPress={togglePrivacyMode}

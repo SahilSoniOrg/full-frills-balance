@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { BackupScopeSheet } from '@/src/features/app/BackupScopeSheet';
 import { Box, Stack } from '@/src/design-system';
@@ -181,7 +181,12 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
             alignItems="center"
             justifyContent="center"
           >
-            <AppIcon name="sparkles" size={Size.iconLg} color={theme.primary} strokeWidth={1.8} />
+            <AppIcon
+              name={Icon.Sparkles}
+              size={Size.iconLg}
+              color={theme.primary}
+              strokeWidth={1.8}
+            />
           </Box>
 
           <Stack gap="sm" alignItems="center">
@@ -208,7 +213,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
               background="surfaceSecondary"
               gap="md"
             >
-              <AppIcon name="document" size={Size.iconMd} color={theme.primary} />
+              <AppIcon name={Icon.Document} size={Size.iconMd} color={theme.primary} />
               <Stack gap="xs" flex={1}>
                 <AppText weight="semibold">{AppConfig.strings.update.viewChangelog}</AppText>
                 <AppText variant="caption" color="secondary">
@@ -216,7 +221,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
                   {state.policy.changelog.length === 1 ? '' : 's'}
                 </AppText>
               </Stack>
-              <AppIcon name="arrowRight" size={Size.iconSm} color={theme.textSecondary} />
+              <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color={theme.textSecondary} />
             </Box>
           )}
 

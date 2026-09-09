@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -58,7 +58,7 @@ export function RestoreSummarySlice({
           {ready ? (
             <AppCard elevation="sm" paddingSize="lg" style={styles.completeCard}>
               <View style={[styles.successMark, { backgroundColor: theme.success + '22' }]}>
-                <AppIcon name="check" size={Size.iconMd} color={theme.success} />
+                <AppIcon name={Icon.Check} size={Size.iconMd} color={theme.success} />
               </View>
               <AppText variant="heading" align="center" style={styles.completeTitle}>
                 Restore is ready

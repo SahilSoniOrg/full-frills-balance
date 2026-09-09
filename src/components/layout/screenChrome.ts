@@ -1,8 +1,8 @@
-import type { IconName } from '@/src/components/core';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import type { ReactNode } from 'react';
 import type { ViewStyle } from 'react-native';
 
-export type NavBackIcon = 'back' | 'close';
+export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 
 export type ScreenFabChrome = {
   onPress: () => void;

@@ -1,4 +1,4 @@
-import type { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppConfig, ColorKey } from '@/src/constants';
 import { AuditAction } from '@/src/types/enums';
 import {
@@ -36,13 +36,13 @@ export function useAuditLogItemMeta({ item, entityStatusMap }: UseAuditLogItemMe
   const actionIcon = useMemo<IconName>(() => {
     switch (item.action) {
       case AuditAction.CREATE:
-        return 'plusCircle';
+        return Icon.PlusCircle;
       case AuditAction.UPDATE:
-        return 'edit';
+        return Icon.Edit;
       case AuditAction.DELETE:
-        return 'delete';
+        return Icon.Delete;
       default:
-        return 'circle';
+        return Icon.Circle;
     }
   }, [item.action]);
 

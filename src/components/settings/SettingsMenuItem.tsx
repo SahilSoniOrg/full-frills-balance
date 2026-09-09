@@ -1,4 +1,4 @@
-import { AppIcon, AppText, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -60,7 +60,7 @@ export function SettingsMenuItem({
             transition={{ type: 'timing', duration: 1000, loop: true, repeatReverse: false }}
           >
             <AppIcon
-              name="refresh"
+              name={Icon.Refresh}
               size={16}
               color={theme.textSecondary}
               style={{ opacity: Opacity.medium }}
@@ -75,7 +75,7 @@ export function SettingsMenuItem({
         {rightContent}
         {hasArrow && onPress && (
           <AppIcon
-            name="chevronRight"
+            name={Icon.ChevronRight}
             size={16}
             color={theme.textSecondary}
             style={{ opacity: Opacity.medium }}

@@ -1,5 +1,5 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -109,7 +109,7 @@ function BulkChangeJournalAccountModalContent({
             >
               <View style={styles.optionHeader}>
                 <AppIcon
-                  name="arrowRight"
+                  name={Icon.ArrowRight}
                   size={20}
                   color={eligibility.canEditDebit ? theme.primary : theme.textTertiary}
                 />
@@ -149,7 +149,7 @@ function BulkChangeJournalAccountModalContent({
             >
               <View style={styles.optionHeader}>
                 <AppIcon
-                  name="arrowLeft"
+                  name={Icon.Back}
                   size={20}
                   color={eligibility.canEditCredit ? theme.primary : theme.textTertiary}
                 />

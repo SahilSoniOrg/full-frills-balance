@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
@@ -30,12 +30,12 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
     <FormSectionGroup title="Action">
       <SelectionTileList
         items={[
-          { id: 'auto_post', label: 'Auto-Post', icon: 'checkCircle', color: theme.success },
-          { id: 'review', label: 'Require Review', icon: 'eye', color: theme.warning },
+          { id: 'auto_post', label: 'Auto-Post', icon: Icon.CheckCircle, color: theme.success },
+          { id: 'review', label: 'Require Review', icon: Icon.Eye, color: theme.warning },
           {
             id: 'ignore',
             label: 'Ignore Message',
-            icon: 'closeCircle',
+            icon: Icon.CloseCircle,
             color: theme.textSecondary,
           },
         ]}
@@ -51,7 +51,7 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
         <AppInput
           label="Rule Evaluation Priority"
-          leftIcon="trendingUp"
+          leftIcon={Icon.TrendingUp}
           value={priority}
           onChangeText={setPriority}
           keyboardType="number-pad"
@@ -79,7 +79,7 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
             <AppInput
               label="Custom Description / Notes Template"
-              leftIcon="document"
+              leftIcon={Icon.Document}
               value={journalDescription}
               onChangeText={setJournalDescription}
               placeholder="e.g. Bought coffee from {merchant} ({ref})"
@@ -123,7 +123,11 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
         <View style={styles.switchRow}>
           <View style={styles.switchRowLabelGroup}>
-            <AppIcon name="zap" size={16} color={isActive ? theme.success : theme.textSecondary} />
+            <AppIcon
+              name={Icon.Zap}
+              size={16}
+              color={isActive ? theme.success : theme.textSecondary}
+            />
             <AppText variant="body" weight="medium">
               Rule Active
             </AppText>

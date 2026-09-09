@@ -1,6 +1,6 @@
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
-import { AppIcon, IconButton } from '@/src/components/core';
+import { Icon, AppIcon, IconButton } from '@/src/components/core';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -29,7 +29,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
           <SettingsMenu header="Workplace Actions">
             <SettingsMenuItem
               searchId="create-workplace"
-              leftIcon="plus"
+              leftIcon={Icon.Plus}
               title="Create Workplace"
               description="Start a new set of books and preferences"
               onPress={vm.startCreateWorkplace}
@@ -54,19 +54,21 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                     }}
                     leftIcon={workplace.icon}
                     rightContent={
-                      isActive ? <AppIcon name="check" color={theme.success} size={20} /> : null
+                      isActive ? (
+                        <AppIcon name={Icon.Check} color={theme.success} size={20} />
+                      ) : null
                     }
                     rightAction={
                       <Box flexDirection="row" alignItems="center">
                         <IconButton
-                          name="edit"
+                          name={Icon.Edit}
                           variant="clear"
                           accessibilityLabel={`Edit ${workplace.name}`}
                           testID={`workplace-edit-${workplace.id}`}
                           onPress={() => setEditingWorkplace(workplace)}
                         />
                         <IconButton
-                          name="delete"
+                          name={Icon.Delete}
                           variant="clear"
                           iconColor={theme.error}
                           accessibilityLabel={`Delete ${workplace.name}`}
@@ -91,7 +93,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
             </SettingsMenu>
           ) : (
             <EmptyStateView
-              icon="briefcase"
+              icon={Icon.Briefcase}
               title="No workplaces found"
               subtitle="Create a new workspace to get started."
               primaryActionLabel="Create Workspace"

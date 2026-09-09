@@ -4,7 +4,7 @@ import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormField } from '@/src/components/forms/FormField';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
-import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
+import { Icon, AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -38,7 +38,7 @@ export function PlannedPaymentFormView({
         ? AppConfig.strings.plannedPayments.formTitleEdit
         : AppConfig.strings.plannedPayments.formTitleNew,
       showBack: true,
-      backIcon: 'back',
+      backIcon: Icon.Back,
       onBack,
     }),
     [id, onBack],

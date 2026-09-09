@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import {
@@ -79,7 +79,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
           ]}
         >
           <View style={styles.header}>
-            <IconButton name="close" onPress={onClose} />
+            <IconButton name={Icon.Close} onPress={onClose} />
             <View style={styles.headerTitle}>
               <AppText variant="subheading" weight="bold">
                 Voice Input
@@ -118,7 +118,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                     onPress={startRecording}
                     style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
                   >
-                    <AppIcon name="mic" size={28} color={theme.onPrimary} />
+                    <AppIcon name={Icon.Mic} size={28} color={theme.onPrimary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -194,7 +194,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       },
                     ]}
                   >
-                    <AppIcon name="sparkles" size={14} color={theme.primary} />
+                    <AppIcon name={Icon.Sparkles} size={14} color={theme.primary} />
                     <AppText
                       variant="caption"
                       color="primary"
@@ -313,7 +313,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                         : 'Resolved Asset (Source)'}
                     </AppText>
                     <View style={styles.resolvedAccountBox}>
-                      <AppIcon name="creditCard" size={14} color={theme.textSecondary} />
+                      <AppIcon name={Icon.CreditCard} size={14} color={theme.textSecondary} />
                       <AppText variant="body" weight="bold">
                         {parserOutput.transactions[0].accountNameHint || 'Default account'}
                       </AppText>
@@ -327,7 +327,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                         : 'Resolved Category (Destination)'}
                     </AppText>
                     <View style={styles.resolvedAccountBox}>
-                      <AppIcon name="tag" size={14} color={theme.textSecondary} />
+                      <AppIcon name={Icon.Tag} size={14} color={theme.textSecondary} />
                       <AppText variant="body" weight="bold">
                         {parserOutput.transactions[0].categoryNameHint || 'Default category'}
                       </AppText>

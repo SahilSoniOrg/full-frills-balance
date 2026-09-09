@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import {
@@ -40,7 +41,7 @@ export function HourCycleSelectorView({
 }: HourCycleSelectorProps) {
   return (
     <SettingsSegmentedControl
-      leftIcon="clock"
+      leftIcon={Icon.Clock}
       focusId={focusId}
       title={AppConfig.strings.settings.appearance.hourCycleTitle}
       description={AppConfig.strings.settings.appearance.hourCycleDesc}

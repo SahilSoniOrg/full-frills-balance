@@ -21,6 +21,7 @@ import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
@@ -190,7 +191,7 @@ export function useJournalsBulkOperations({
       buildActions([
         {
           action: {
-            name: 'edit' as const,
+            name: Icon.Edit,
             label: 'Rename',
             onPress: handleOpenBulkRename,
             variant: 'surface',
@@ -200,7 +201,7 @@ export function useJournalsBulkOperations({
         },
         {
           action: {
-            name: 'copy' as const,
+            name: Icon.Copy,
             label: 'Duplicate',
             onPress: handleBulkDuplicate,
             variant: 'surface',
@@ -210,7 +211,7 @@ export function useJournalsBulkOperations({
         },
         {
           action: {
-            name: 'merge' as const,
+            name: Icon.Merge,
             label: 'Merge',
             onPress: handleOpenMerge,
             variant: 'surface',
@@ -220,7 +221,7 @@ export function useJournalsBulkOperations({
         },
         {
           action: {
-            name: 'swapHorizontal' as const,
+            name: Icon.SwapHorizontal,
             label: 'Change Account',
             onPress: handleOpenChangeAccount,
             variant: 'surface',
@@ -230,7 +231,7 @@ export function useJournalsBulkOperations({
         },
         {
           action: {
-            name: 'share' as const,
+            name: Icon.Share,
             label: 'Share',
             onPress: onShareSelected,
             variant: 'primary',
@@ -241,7 +242,7 @@ export function useJournalsBulkOperations({
         },
         {
           action: {
-            name: 'delete' as const,
+            name: Icon.Delete,
             label: 'Delete',
             onPress: handleBulkDelete,
             variant: 'error',

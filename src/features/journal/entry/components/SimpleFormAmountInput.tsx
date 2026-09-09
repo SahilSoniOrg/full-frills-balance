@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
@@ -82,7 +83,7 @@ export function SimpleFormAmountInput({
             >
               {amount || '0'}
             </AppText>
-            <AppIcon name="calculator" size={Size.iconSm} color={resolvedActiveColor} />
+            <AppIcon name={Icon.Calculator} size={Size.iconSm} color={resolvedActiveColor} />
           </TouchableOpacity>
         ) : (
           <TextInput

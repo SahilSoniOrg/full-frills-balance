@@ -1,5 +1,5 @@
 import { CurrencyPickerSheet } from '@/src/components/filters/CurrencyPickerSheet';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -67,7 +67,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
         )}
         {isPill && (
           <AppIcon
-            name="chevronRight"
+            name={Icon.ChevronRight}
             size={Size.sm}
             color={theme.text}
             style={{ marginLeft: Spacing.xs }}

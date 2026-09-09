@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
@@ -18,7 +19,7 @@ describe('Account Hierarchy Integration', () => {
     await workplaceRepository.create({
       id: workplaceId,
       name: 'Test Workplace',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
   });
@@ -41,7 +42,7 @@ describe('Account Hierarchy Integration', () => {
       name: 'Parent Asset',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'bank',
+      icon: Icon.Bank,
       workplaceId,
     });
 
@@ -49,7 +50,7 @@ describe('Account Hierarchy Integration', () => {
       name: 'Child Asset',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'wallet',
+      icon: Icon.Wallet,
       parentAccountId: parent.id,
       workplaceId,
     });

@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -41,7 +41,7 @@ export const FormulaStepRow = ({
           {amountText}
         </AppText>
         <AppIcon
-          name={isExpanded ? 'chevronUp' : 'chevronDown'}
+          name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
           size={Size.sm}
           color={theme.textSecondary}
         />

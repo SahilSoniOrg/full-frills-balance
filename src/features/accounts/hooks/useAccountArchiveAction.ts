@@ -15,6 +15,7 @@ import {
 } from '@/src/utils/accountArchive';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo, useState } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 export type UseAccountArchiveActionArgs = {
   enabled: boolean;
@@ -124,7 +125,7 @@ export function useAccountArchiveAction({
 
     return [
       {
-        name: 'archive',
+        name: Icon.Archive,
         onPress,
         variant: 'surface',
         iconColor: isArchived ? theme.primary : theme.textSecondary,

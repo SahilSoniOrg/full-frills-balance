@@ -36,9 +36,6 @@ export const IvyIcon = ({
   const iconSize = size * 0.6;
   const labelSize = size * 0.5;
 
-  const hasValidIcon = isValidIconName(name);
-  const hasValidFallback = isValidIconName(fallbackIcon);
-
   return (
     <View
       style={[
@@ -52,9 +49,9 @@ export const IvyIcon = ({
         style,
       ]}
     >
-      {hasValidIcon ? (
-        <AppIcon name={name as IconName} size={iconSize} color={textColor} />
-      ) : hasValidFallback ? (
+      {isValidIconName(name) ? (
+        <AppIcon name={name} size={iconSize} color={textColor} />
+      ) : isValidIconName(fallbackIcon) ? (
         <AppIcon name={fallbackIcon} size={iconSize} color={textColor} />
       ) : label ? (
         <AppText

@@ -1,4 +1,4 @@
-import { AppIcon, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AdvancedModeInfoModal } from '@/src/features/journal/entry/components/AdvancedModeInfoModal';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
@@ -24,7 +24,7 @@ export const JournalEntryHeader = ({ title, onClose, mode }: JournalEntryHeaderP
         accessibilityLabel={AppConfig.strings.common.cancel}
         accessibilityRole="button"
       >
-        <AppIcon name="close" size={Size.iconMd} color={theme.text} />
+        <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
       </TouchableOpacity>
 
       <View style={styles.titleWrap}>
@@ -37,7 +37,7 @@ export const JournalEntryHeader = ({ title, onClose, mode }: JournalEntryHeaderP
         </AppText>
       </View>
       <IconButton
-        name="helpCircle"
+        name={Icon.HelpCircle}
         variant="clear"
         size={Size.iconSm}
         onPress={() => setInfoModalVisible(true)}

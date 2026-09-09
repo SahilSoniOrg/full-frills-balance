@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { mapLiabilityFlowsToPlannedOccurrences } from '@/src/features/planned-payments/mappers/plannedOccurrenceMapper';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/ids';
@@ -7,8 +8,8 @@ describe('plannedOccurrenceMapper', () => {
   const todayStartMs = Date.UTC(2026, 6, 31); // 2026-07-31
 
   const accountMap = new Map([
-    ['checking', { name: 'Everyday Checking', icon: 'wallet' } as any],
-    ['cc-visa', { name: 'Visa Card', icon: 'creditCard' } as any],
+    ['checking', { name: 'Everyday Checking', icon: Icon.Wallet } as any],
+    ['cc-visa', { name: 'Visa Card', icon: Icon.CreditCard } as any],
   ]);
 
   it('maps liability outflows to SIMULATED_LIABILITY occurrences without synthetic_ ids', () => {
@@ -72,14 +73,14 @@ describe('plannedOccurrenceMapper', () => {
         name: 'Everyday Checking',
         accountType: 'ASSET',
         role: 'SOURCE',
-        icon: 'wallet',
+        icon: Icon.Wallet,
       },
       {
         id: 'cc-visa',
         name: 'Visa Card',
         accountType: 'LIABILITY',
         role: 'DESTINATION',
-        icon: 'creditCard',
+        icon: Icon.CreditCard,
       },
     ]);
   });

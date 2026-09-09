@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { BulkRenameAccountsModal } from '../BulkRenameAccountsModal';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
@@ -12,7 +13,7 @@ const mockAccounts: AccountCardViewModel[] = [
     balance: 1000,
     currencyCode: 'USD',
     depth: 0,
-    icon: 'wallet',
+    icon: Icon.Wallet,
     categoryColor: '#4F46E5',
     accountColor: '#EEF2FF',
     textColor: '#1E1B4B',
@@ -30,7 +31,7 @@ const mockAccounts: AccountCardViewModel[] = [
     balance: 5000,
     currencyCode: 'USD',
     depth: 0,
-    icon: 'bank',
+    icon: Icon.Bank,
     categoryColor: '#4F46E5',
     accountColor: '#EEF2FF',
     textColor: '#1E1B4B',

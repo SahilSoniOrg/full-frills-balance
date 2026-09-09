@@ -1,4 +1,4 @@
-import { IconButton } from '@/src/components/core';
+import { Icon, IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
@@ -41,7 +41,7 @@ export const SafeToSpendHeader = ({
           {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
         </Text>
         <IconButton
-          name="helpCircle"
+          name={Icon.HelpCircle}
           variant="clear"
           size={Size.sm}
           iconColor={isOverCommitted ? theme.error : theme.textSecondary}

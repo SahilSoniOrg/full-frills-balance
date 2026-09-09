@@ -1,5 +1,5 @@
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { AppIcon, AppText, IvyIcon } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IvyIcon } from '@/src/components/core';
 import { Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTreeProjection';
@@ -112,7 +112,7 @@ export function AccountManagementTreeRow({
             {row.sectionLabel}
           </AppText>
           <AppIcon
-            name={row.isSectionCollapsed ? 'chevronRight' : 'chevronDown'}
+            name={row.isSectionCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
             size={Size.iconXs}
             color={theme.textTertiary}
           />
@@ -211,7 +211,7 @@ export function AccountManagementTreeRow({
             </View>
             {row.childCount > 0 && (
               <AppIcon
-                name={row.isExpanded ? 'chevronDown' : 'chevronRight'}
+                name={row.isExpanded ? Icon.ChevronDown : Icon.ChevronRight}
                 size={Size.iconXs}
                 color={theme.textTertiary}
               />

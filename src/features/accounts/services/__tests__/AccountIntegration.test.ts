@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import {
   AccountSubtype,
   AccountType,
@@ -108,7 +109,7 @@ describe('AccountRepository', () => {
         accountSubtype: AccountSubtype.CASH,
         currencyCode: 'USD',
         workplaceId,
-        icon: 'wallet',
+        icon: Icon.Wallet,
       });
       const child = await accountWriteRepository.create({
         name: 'Cash Sub',

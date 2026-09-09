@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Tabs } from 'expo-router';
@@ -35,7 +35,7 @@ export function TabsLayout() {
           tabBarButtonTestID: 'tab-dashboard',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
-              name="home"
+              name={Icon.Home}
               size={size}
               color={color as string}
               strokeWidth={focused ? 2.5 : 2}
@@ -50,7 +50,7 @@ export function TabsLayout() {
           tabBarButtonTestID: 'tab-accounts',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
-              name="wallet"
+              name={Icon.Wallet}
               size={size}
               color={color as string}
               strokeWidth={focused ? 2.5 : 2}
@@ -65,7 +65,7 @@ export function TabsLayout() {
           tabBarButtonTestID: 'tab-commitments',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
-              name="handshake"
+              name={Icon.Handshake}
               size={size}
               color={color as string}
               strokeWidth={focused ? 2.5 : 2}
@@ -74,13 +74,13 @@ export function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="activity"
+        name={Icon.Activity}
         options={{
           title: 'Activity',
           tabBarButtonTestID: 'tab-activity',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
-              name="activity"
+              name={Icon.Activity}
               size={size}
               color={color as string}
               strokeWidth={focused ? 2.5 : 2}
@@ -89,13 +89,13 @@ export function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name={Icon.Settings}
         options={{
           title: 'Settings',
           tabBarButtonTestID: 'tab-settings',
           tabBarIcon: ({ color, size, focused }) => (
             <AppIcon
-              name="settings"
+              name={Icon.Settings}
               size={size}
               color={color as string}
               strokeWidth={focused ? 2.5 : 2}

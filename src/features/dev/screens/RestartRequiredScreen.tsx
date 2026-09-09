@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -49,7 +49,7 @@ export const RestartRequiredScreen = () => {
           ]}
         >
           <IvyIcon
-            name={isSuccess ? 'checkCircle' : 'delete'}
+            name={isSuccess ? Icon.CheckCircle : Icon.Delete}
             size={Size.avatarMd}
             color={isSuccess ? theme.success : theme.error}
           />

@@ -1,5 +1,5 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { IconButton } from '@/src/components/core';
+import { Icon, IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -24,7 +24,7 @@ export function DashboardHeaderActions({
   return (
     <View style={styles.headerActions}>
       <IconButton
-        name="search"
+        name={Icon.Search}
         size={Size.iconSm}
         variant="clear"
         onPress={onSearchPress}
@@ -35,7 +35,7 @@ export function DashboardHeaderActions({
       {onSmsPress ? (
         <View style={styles.badgeContainer}>
           <IconButton
-            name="messageSquare"
+            name={Icon.MessageSquare}
             size={Size.iconSm}
             variant="clear"
             onPress={onSmsPress}
@@ -50,7 +50,7 @@ export function DashboardHeaderActions({
       ) : null}
       <View style={styles.badgeContainer}>
         <IconButton
-          name="sparkles"
+          name={Icon.Sparkles}
           size={Size.iconSm}
           variant="clear"
           onPress={onNotificationsPress}

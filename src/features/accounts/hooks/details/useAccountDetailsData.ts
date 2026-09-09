@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
@@ -9,8 +9,8 @@ import { formatAccountSubtypeLabel, isAccountType } from '@/src/types/accountSub
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { type AccountFields } from '@/src/types/plainDtos';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { PlainAccount } from '@/src/types/plainDtos';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -22,9 +22,9 @@ export interface AccountDetailsData {
   accountId: AccountId;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  account: AccountFields | null;
+  account: PlainAccount | null;
   balanceData: AccountBalance | null;
-  accounts: AccountFields[];
+  accounts: PlainAccount[];
   rawSubBalances: AccountBalance[];
   dashboardLoading: boolean;
   accountLoading: boolean;
@@ -120,7 +120,7 @@ export function useAccountDetailsData(): AccountDetailsData {
   const pType = params.pType;
   const pColor = params.pColor;
 
-  const account = useMemo<AccountFields | null>(
+  const account = useMemo<PlainAccount | null>(
     () =>
       dbAccount ||
       (pName
@@ -129,7 +129,10 @@ export function useAccountDetailsData(): AccountDetailsData {
             name: pName,
             accountType: pType && isAccountType(pType) ? pType : AccountType.ASSET,
             currencyCode: pCurrency || workplaceCurrency,
-            icon: (pIcon || getAccountFallbackIcon(pType)) as IconName,
+            icon: parseIconName(
+              pIcon,
+              getAccountFallbackIcon(pType && isAccountType(pType) ? pType : AccountType.ASSET),
+            ),
             color: pColor,
             deletedAt: undefined,
           }
@@ -223,7 +226,7 @@ export function useAccountDetailsData(): AccountDetailsData {
     accountType,
     accountSubtypeLabel,
     accountTypeVariant,
-    accountIcon: account?.icon || null,
+    accountIcon: account ? getAccountIcon(account) : null,
     accountTypeColorKey,
     accountColor: account?.color || '',
     isDeleted,

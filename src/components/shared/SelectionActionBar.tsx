@@ -1,5 +1,5 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppIcon, AppText, IconButton, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IconButton, type IconName } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Box, Inline, Inset } from '@/src/design-system';
@@ -96,15 +96,15 @@ export const SelectionActionBar = ({
   const isBarActive = isVisible && selectedCount > 0;
   const isModalVisible = isOverflowOpen && isBarActive;
 
-  const finalActions = useMemo(() => {
+  const finalActions: SelectionAction[] = useMemo(() => {
     if (actions) return actions;
     if (onShare) {
       return [
         {
-          name: 'share' as IconName,
+          name: Icon.Share,
           label: 'Share',
           onPress: onShare,
-          variant: 'primary' as const,
+          variant: 'primary',
           isPrimary: true,
           disabled: selectedCount === 0,
           accessibilityLabel: 'Share selected items',
@@ -130,11 +130,11 @@ export const SelectionActionBar = ({
   const selectIcon = useMemo(() => {
     switch (selectionState) {
       case 'all':
-        return 'checkSquare';
+        return Icon.CheckSquare;
       case 'partial':
-        return 'minusSquare';
+        return Icon.MinusSquare;
       default:
-        return 'square';
+        return Icon.Square;
     }
   }, [selectionState]);
 
@@ -185,7 +185,7 @@ export const SelectionActionBar = ({
                   {/* LEFT: Exit & Count */}
                   <Inline align="center" gap="xs">
                     <IconButton
-                      name="close"
+                      name={Icon.Close}
                       size={Size.iconSm}
                       onPress={handleClear}
                       variant="clear"
@@ -233,7 +233,7 @@ export const SelectionActionBar = ({
 
                     {overflowActions.length > 0 && (
                       <IconButton
-                        name="more"
+                        name={Icon.More}
                         variant="surface"
                         size={Size.iconSm}
                         onPress={() => setIsOverflowOpen(true)}
@@ -299,7 +299,7 @@ export const SelectionActionBar = ({
                     </AppText>
                   </View>
                   <AppIcon
-                    name="chevronRight"
+                    name={Icon.ChevronRight}
                     size={Size.iconSm}
                     color={isDisabled ? theme.textTertiary : theme.textSecondary}
                   />

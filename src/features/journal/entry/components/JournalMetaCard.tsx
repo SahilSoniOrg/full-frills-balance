@@ -1,5 +1,5 @@
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -145,7 +145,7 @@ export function JournalMetaCard({
                 }}
                 activeOpacity={0.7}
               >
-                <AppIcon name="mic" size={Size.iconXs} color={theme.primary} />
+                <AppIcon name={Icon.Mic} size={Size.iconXs} color={theme.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -184,7 +184,7 @@ export function JournalMetaCard({
             }}
           >
             <AppIcon
-              name="document"
+              name={Icon.Document}
               size={Size.iconXs}
               color={theme.textTertiary}
               style={{ marginTop: 4 }}
@@ -219,7 +219,7 @@ export function JournalMetaCard({
                 zIndex: 1,
               }}
             >
-              <AppIcon name="x" size={14} color={theme.textTertiary} />
+              <AppIcon name={Icon.X} size={14} color={theme.textTertiary} />
             </TouchableOpacity>
           </View>
         )}
@@ -235,7 +235,7 @@ export function JournalMetaCard({
               marginTop: -Spacing.xs,
             }}
           >
-            <AppIcon name="plus" size={14} color={theme.primary} />
+            <AppIcon name={Icon.Plus} size={14} color={theme.primary} />
             <AppText variant="caption" color="primary" weight="medium">
               Add Notes
             </AppText>
@@ -265,11 +265,11 @@ export function JournalMetaCard({
               borderRadius: Shape.radius.full,
             }}
           >
-            <AppIcon name="calendar" size={Size.iconXs} color={theme.textSecondary} />
+            <AppIcon name={Icon.Calendar} size={Size.iconXs} color={theme.textSecondary} />
             <AppText variant="caption" color="secondary" weight="medium">
               {formatDateKeepingPattern(`${date}T${time}`, 'DD MMM YYYY', resolvedHourCycle)}
             </AppText>
-            <AppIcon name="chevronDown" size={12} color={theme.textTertiary} />
+            <AppIcon name={Icon.ChevronDown} size={12} color={theme.textTertiary} />
           </TouchableOpacity>
         </View>
 

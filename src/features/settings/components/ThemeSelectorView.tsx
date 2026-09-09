@@ -1,5 +1,5 @@
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
-import { AppText } from '@/src/components/core';
+import { Icon, AppText } from '@/src/components/core';
 import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
@@ -42,7 +42,7 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
     <Stack space={0}>
       <SettingsMenuItem
         searchId="appearance"
-        leftIcon="palette"
+        leftIcon={Icon.Palette}
         title={AppConfig.strings.settings.appearance.themeTitle}
         description={AppConfig.strings.settings.appearance.themeDesc}
         hasArrow={false}

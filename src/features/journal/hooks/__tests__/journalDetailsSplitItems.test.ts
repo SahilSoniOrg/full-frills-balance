@@ -3,6 +3,7 @@ import { AccountId } from '@/src/types/ids';
 import { DisplayTransaction } from '@/src/types/domainReadModels';
 
 import { buildJournalSplitItems } from '../journalDetailsSplitItems';
+import { Icon } from '@/src/types/domainIcons';
 
 describe('journalDetailsSplitItems', () => {
   it('maps split lines and delegates account navigation', () => {
@@ -30,7 +31,7 @@ describe('journalDetailsSplitItems', () => {
       amount: 25,
       currencyCode: 'USD',
       amountPrefix: '+',
-      fallbackIcon: 'wallet',
+      fallbackIcon: Icon.Wallet,
       iconColor: 'income',
     });
 

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AccountsListView } from '../AccountsListView';
 import { AccountSectionViewModel, AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
@@ -11,7 +12,7 @@ const mockAccount: AccountCardViewModel = {
   balance: 1500,
   currencyCode: 'USD',
   depth: 0,
-  icon: 'wallet',
+  icon: Icon.Wallet,
   categoryColor: '#4F46E5',
   accountColor: '#EEF2FF',
   textColor: '#1E1B4B',
@@ -38,7 +39,7 @@ const mockSections: AccountSectionViewModel[] = [
 
 const mockChrome = {
   rightAction: {
-    icon: 'plus' as const,
+    icon: Icon.Plus,
     onPress: jest.fn(),
     accessibilityLabel: 'Add account',
   },
@@ -248,7 +249,7 @@ describe('AccountsListView', () => {
           exitSelectionMode: onClearSelection,
           actions: [
             {
-              name: 'archive',
+              name: Icon.Archive,
               onPress: jest.fn(),
               accessibilityLabel: 'Archive selected',
             },
@@ -353,7 +354,7 @@ describe('AccountsListView', () => {
     expect(getByText('Done')).toBeTruthy();
     fireEvent.press(getByText('Done'));
     expect(onAppearanceUpdate).toHaveBeenCalledWith({
-      icon: 'wallet',
+      icon: Icon.Wallet,
       color: '#EEF2FF',
     });
   });

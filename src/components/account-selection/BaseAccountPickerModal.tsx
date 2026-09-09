@@ -1,5 +1,5 @@
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ReactNode } from 'react';
@@ -47,7 +47,7 @@ export function BaseAccountPickerModal({
               accessibilityRole="button"
               style={styles.headerIconButton}
             >
-              <AppIcon name="close" size={Size.iconMd} color={theme.textSecondary} />
+              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 

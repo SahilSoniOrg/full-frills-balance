@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -22,7 +22,7 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
     >
       <View style={[styles.reconciledLine, { backgroundColor: theme.income }]} />
       <View style={styles.reconciledContent}>
-        <AppIcon name="shield" size={14} color={theme.income} />
+        <AppIcon name={Icon.Shield} size={14} color={theme.income} />
         <AppText
           variant="caption"
           style={[

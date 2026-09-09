@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -61,7 +61,7 @@ export function SubAccountListModal({
                 Details for &quot;{parentName}&quot;
               </AppText>
             </View>
-            <AppIcon name="hierarchy" size={Size.iconSm} color={theme.textTertiary} />
+            <AppIcon name={Icon.Hierarchy} size={Size.iconSm} color={theme.textTertiary} />
           </View>
 
           <ScrollView

@@ -1,6 +1,6 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
-import { IconButton, InlineSearchField } from '@/src/components/core';
+import { Icon, IconButton, InlineSearchField } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 
@@ -28,7 +28,7 @@ export function AccountsListHeaderActions({
       {!isSearching ? (
         <>
           <IconButton
-            name="hierarchy"
+            name={Icon.Hierarchy}
             size={Size.iconSm}
             variant="surface"
             onPress={onManageHierarchy}

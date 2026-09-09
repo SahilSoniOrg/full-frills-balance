@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { SetupReviewStep } from '../SetupReviewStep';
+import { Icon } from '@/src/types/domainIcons';
 
 jest.mock('@/src/hooks/useThemePrefs', () => ({
   useThemePrefs: () => ({
@@ -25,7 +26,7 @@ describe('SetupReviewStep', () => {
       <SetupReviewStep
         name="Sahil"
         workplaceName="Sahil's Personal workplace"
-        workplaceIcon="briefcase"
+        workplaceIcon={Icon.Briefcase}
         selectedCurrency="USD"
         accountCount={3}
         categoryCount={6}
@@ -70,7 +71,7 @@ describe('SetupReviewStep', () => {
       <SetupReviewStep
         name="Sahil"
         workplaceName="Imported workplace"
-        workplaceIcon="briefcase"
+        workplaceIcon={Icon.Briefcase}
         selectedCurrency="USD"
         accountCount={46}
         categoryCount={65}
@@ -102,7 +103,7 @@ describe('SetupReviewStep', () => {
       <SetupReviewStep
         name=""
         workplaceName="New workplace"
-        workplaceIcon="briefcase"
+        workplaceIcon={Icon.Briefcase}
         selectedCurrency="USD"
         accountCount={2}
         categoryCount={4}

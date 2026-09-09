@@ -1,9 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { DateRange } from '@/src/utils/dateUtils';
@@ -13,7 +12,7 @@ import { useCallback, useState } from 'react';
 
 export interface UseAccountDetailsActionsOptions {
   accountId: AccountId;
-  account: AccountFields | PlainAccount | null;
+  account: PlainAccount | null;
   accountType: AccountType;
   isDeleted: boolean;
   dateRange: DateRange | null;

@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -66,7 +66,7 @@ export const JournalLineItem = React.memo(
                 {line.accountName || AppConfig.strings.advancedEntry.selectAccount}
               </AppText>
             </View>
-            <AppIcon name="chevronDown" size={14} color={theme.textTertiary} />
+            <AppIcon name={Icon.ChevronDown} size={14} color={theme.textTertiary} />
           </TouchableOpacity>
 
           {/* Amount Input - Prominent but integrated */}
@@ -186,7 +186,7 @@ export const JournalLineItem = React.memo(
                 { backgroundColor: withOpacity(theme.error, Opacity.soft) },
               ]}
             >
-              <AppIcon name="delete" size={Size.iconXs} color={theme.error} />
+              <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.error} />
             </TouchableOpacity>
           )}
         </View>
@@ -211,7 +211,7 @@ export const JournalLineItem = React.memo(
                 <View
                   style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
                 >
-                  <AppIcon name="refresh" size={12} color={theme.primary} />
+                  <AppIcon name={Icon.Refresh} size={12} color={theme.primary} />
                   <AppText variant="caption" color="primary" weight="medium">
                     ≈{' '}
                     {CurrencyFormatter.format(
@@ -244,14 +244,14 @@ export const JournalLineItem = React.memo(
                         onPress={() => rateInputRef.current?.focus()}
                         style={{ paddingHorizontal: 2 }}
                       >
-                        <AppIcon name="edit" size={12} color={theme.textTertiary} />
+                        <AppIcon name={Icon.Edit} size={12} color={theme.textTertiary} />
                       </TouchableOpacity>
                       {onAutoFetchRate && (
                         <TouchableOpacity
                           onPress={() => onAutoFetchRate(true)}
                           style={{ paddingHorizontal: 2 }}
                         >
-                          <AppIcon name="refresh" size={12} color={theme.primary} />
+                          <AppIcon name={Icon.Refresh} size={12} color={theme.primary} />
                         </TouchableOpacity>
                       )}
                     </View>

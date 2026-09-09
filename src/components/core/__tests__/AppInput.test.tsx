@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppInput } from '@/src/components/core/AppInput';
 import { Spacing } from '@/src/constants';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
@@ -35,7 +36,7 @@ describe('AppInput', () => {
         label="Search"
         error="Required"
         variant="minimal"
-        leftIcon="search"
+        leftIcon={Icon.Search}
         containerStyle={{ marginTop: 12 }}
         inputStyle={{ fontSize: 20 }}
         placeholder="Find"

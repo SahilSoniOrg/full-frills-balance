@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppText, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -112,8 +112,8 @@ export const SafeToSpendChart = ({
               ]}
             >
               <AppIcon
-                name="checkCircle"
-                fallbackIcon="checkCircle"
+                name={Icon.CheckCircle}
+                fallbackIcon={Icon.CheckCircle}
                 size={12}
                 color={theme.success}
               />
@@ -141,8 +141,8 @@ export const SafeToSpendChart = ({
             ]}
           >
             <AppIcon
-              name="checkCircle"
-              fallbackIcon="checkCircle"
+              name={Icon.CheckCircle}
+              fallbackIcon={Icon.CheckCircle}
               size={12}
               color={theme.success}
             />
@@ -220,7 +220,7 @@ export const SafeToSpendChart = ({
                     </AppText>
                     {!point.isHistory && (
                       <AppIcon
-                        name="trendingUpDown"
+                        name={Icon.TrendingUpDown}
                         size={12}
                         color={theme.primary}
                         style={{ opacity: Opacity.strong }}
@@ -247,7 +247,7 @@ export const SafeToSpendChart = ({
                           }}
                         >
                           <Inline gap="xs" alignItems="center">
-                            <AppIcon name="flame" size={10} color={theme.error} />
+                            <AppIcon name={Icon.Flame} size={10} color={theme.error} />
                             <AppText
                               variant="caption"
                               weight="bold"
@@ -273,7 +273,7 @@ export const SafeToSpendChart = ({
                         >
                           {plannedInflowTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name="calendar" size={10} color={theme.success} />
+                              <AppIcon name={Icon.Calendar} size={10} color={theme.success} />
                               <AppText
                                 variant="caption"
                                 weight="bold"
@@ -287,7 +287,7 @@ export const SafeToSpendChart = ({
                           )}
                           {toBeSpentTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name="creditCard" size={10} color={theme.error} />
+                              <AppIcon name={Icon.CreditCard} size={10} color={theme.error} />
                               <AppText
                                 variant="caption"
                                 weight="bold"
@@ -309,18 +309,18 @@ export const SafeToSpendChart = ({
                           const isCcDate = detail.type === 'CC_DATE';
 
                           // Map context/type to consistent icons
-                          let iconName: IconName = 'receipt';
-                          if (detail.context === 'BUDGET') iconName = 'pieChart';
+                          let iconName: IconName = Icon.Receipt;
+                          if (detail.context === 'BUDGET') iconName = Icon.PieChart;
                           else if (
                             detail.context === 'PLANNED' ||
                             detail.context === 'PLANNED_PAYMENT' ||
                             detail.context === 'PLANNED_JOURNAL' ||
                             detail.context === 'RESOLVED'
                           )
-                            iconName = 'calendar';
-                          else if (detail.context === 'LIABILITY') iconName = 'creditCard';
-                          else if (detail.context === 'TRANSFER') iconName = 'refresh';
-                          else if (isCcDate) iconName = 'calendar';
+                            iconName = Icon.Calendar;
+                          else if (detail.context === 'LIABILITY') iconName = Icon.CreditCard;
+                          else if (detail.context === 'TRANSFER') iconName = Icon.Refresh;
+                          else if (isCcDate) iconName = Icon.Calendar;
 
                           const color = isInflow
                             ? theme.success

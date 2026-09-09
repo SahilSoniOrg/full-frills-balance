@@ -8,6 +8,7 @@ import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo, useState } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 export type DeleteMergeEntityLabel = 'Account' | 'Category';
 
@@ -141,7 +142,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     if (canDelete) {
       return [
         {
-          name: 'delete',
+          name: Icon.Delete,
           onPress: onDelete,
           variant: 'surface',
           iconColor: theme.error,
@@ -153,7 +154,7 @@ export function useAccountDeleteMergeActions(options: UseAccountDeleteMergeActio
     if (canMerge) {
       return [
         {
-          name: 'merge',
+          name: Icon.Merge,
           onPress: onMerge,
           variant: 'surface',
           iconColor: theme.error,

@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -13,7 +13,7 @@ export function ArchivedAccountIndicator({ emphasized = false }: ArchivedAccount
   return (
     <View style={styles.container}>
       <AppIcon
-        name="archive"
+        name={Icon.Archive}
         size={Size.iconSm}
         color={theme.textTertiary}
         opacity={emphasized ? 1 : Opacity.medium}

@@ -1,6 +1,6 @@
 import { CategoryCreationBar } from '@/src/features/setup/components/CategoryCreationBar';
 import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
-import { AppIcon, AppText, IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -66,7 +66,7 @@ export function WorkplaceCategorySelectionStep({
     const behaviorColor = categoryType === 'INCOME' ? theme.success : theme.error;
     return (
       <AppIcon
-        name={item.icon as IconName}
+        name={item.icon}
         size={Size.iconSm}
         color={isSelected ? behaviorColor : theme.textSecondary}
       />
@@ -131,7 +131,7 @@ export function WorkplaceCategorySelectionStep({
               setShowValidation(false);
             }
           }}
-          defaultIcon="tag"
+          defaultIcon={Icon.Tag}
           showTypeToggle={true}
           typeLabels={AppConfig.strings.onboarding.categories.typeLabels}
         />

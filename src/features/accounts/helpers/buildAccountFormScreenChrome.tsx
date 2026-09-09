@@ -3,6 +3,7 @@ import {
   type ScreenHeaderActionItem,
 } from '@/src/components/shared/ScreenHeaderActions';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { Icon } from '@/src/types/domainIcons';
 
 export function buildAccountFormScreenChrome(
   heroTitle: string,
@@ -12,7 +13,7 @@ export function buildAccountFormScreenChrome(
   return {
     screenTitle: heroTitle,
     showBack: true,
-    backIcon: 'back',
+    backIcon: Icon.Back,
     onBack,
     headerActions:
       headerActionItems.length > 0 ? (

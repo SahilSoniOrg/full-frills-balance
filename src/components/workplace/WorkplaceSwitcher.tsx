@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import {
   SelectionPickerSheet,
   type SelectionOption,
@@ -69,9 +69,13 @@ export function WorkplaceSwitcher() {
         style={[styles.trigger, { backgroundColor: theme.surfaceSecondary }]}
       >
         {isSwitching ? (
-          <AppIcon name="refresh" size={21} color={theme.primary} />
+          <AppIcon name={Icon.Refresh} size={21} color={theme.primary} />
         ) : (
-          <AppIcon name={currentWorkplace?.icon ?? 'briefcase'} size={21} color={theme.primary} />
+          <AppIcon
+            name={currentWorkplace?.icon ?? Icon.Briefcase}
+            size={21}
+            color={theme.primary}
+          />
         )}
       </TouchableOpacity>
       <SelectionPickerSheet

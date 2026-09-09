@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import {
   partitionSelectionActions,
   type SelectionAction,
@@ -12,9 +13,9 @@ describe('partitionSelectionActions', () => {
 
   it('keeps up to three applicable actions on the bar', () => {
     const result = partitionSelectionActions([
-      action('edit'),
-      action('copy'),
-      action('share', { isPrimary: true }),
+      action(Icon.Edit),
+      action(Icon.Copy),
+      action(Icon.Share, { isPrimary: true }),
     ]);
 
     expect(result.barActions.map(item => item.name)).toEqual(['edit', 'copy', 'share']);
@@ -23,10 +24,10 @@ describe('partitionSelectionActions', () => {
 
   it('moves actions beyond three into overflow', () => {
     const result = partitionSelectionActions([
-      action('edit'),
-      action('copy'),
-      action('share', { isPrimary: true }),
-      action('delete', { isPrimary: true }),
+      action(Icon.Edit),
+      action(Icon.Copy),
+      action(Icon.Share, { isPrimary: true }),
+      action(Icon.Delete, { isPrimary: true }),
     ]);
 
     expect(result.barActions.map(item => item.name)).toEqual(['share', 'delete']);
@@ -35,9 +36,9 @@ describe('partitionSelectionActions', () => {
 
   it('hides disabled actions before partitioning', () => {
     const result = partitionSelectionActions([
-      action('edit'),
-      action('merge', { disabled: true }),
-      action('delete', { isPrimary: true }),
+      action(Icon.Edit),
+      action(Icon.Merge, { disabled: true }),
+      action(Icon.Delete, { isPrimary: true }),
     ]);
 
     expect(result.barActions.map(item => item.name)).toEqual(['edit', 'delete']);

@@ -1,6 +1,6 @@
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Theme } from '@/src/constants/design-tokens';
@@ -79,7 +79,7 @@ const SplitRowItem = React.memo(function SplitRowItem({
               colors={{ accentColor: categoryStyles.text, categoryColor: categoryStyles.marker }}
             />
             <AppIcon
-              name="chevronDown"
+              name={Icon.ChevronDown}
               size={12}
               color={categoryAccount ? categoryStyles.icon : theme.textTertiary}
               style={styles.categoryChevron}
@@ -112,7 +112,7 @@ const SplitRowItem = React.memo(function SplitRowItem({
         hitSlop={Spacing.sm}
       >
         <AppIcon
-          name="delete"
+          name={Icon.Delete}
           size={Size.iconXs}
           color={canRemove ? theme.textSecondary : 'transparent'}
         />
@@ -207,7 +207,7 @@ export function SplitForm({
                   colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
                 />
                 <AppIcon
-                  name="chevronDown"
+                  name={Icon.ChevronDown}
                   size={12}
                   color={sourceStyles.icon}
                   style={styles.categoryChevron}
@@ -257,7 +257,7 @@ export function SplitForm({
                 accessibilityLabel={str.remainingZero}
                 accessibilityRole="text"
               >
-                <AppIcon name="checkCircle" size={Size.iconXs} color={theme.primary} />
+                <AppIcon name={Icon.CheckCircle} size={Size.iconXs} color={theme.primary} />
               </View>
             ) : (
               <AppText
@@ -296,7 +296,7 @@ export function SplitForm({
 
         {validationMessage && totals.total > 0 && (
           <View style={styles.errorRow}>
-            <AppIcon name="error" size={Size.iconXs} color={theme.error} />
+            <AppIcon name={Icon.Error} size={Size.iconXs} color={theme.error} />
             <AppText variant="caption" color="error" weight="semibold" style={styles.errorText}>
               {validationMessage}
             </AppText>

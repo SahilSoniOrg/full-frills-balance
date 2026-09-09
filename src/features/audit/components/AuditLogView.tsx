@@ -1,4 +1,4 @@
-import { AppIcon, EmptyStateView, LoadingView } from '@/src/components/core';
+import { Icon, AppIcon, EmptyStateView, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
@@ -29,7 +29,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
           <LoadingView loading={isLoading} />
         ) : logs.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <AppIcon name="document" size={Size.fab} color={theme.textSecondary} />
+            <AppIcon name={Icon.Document} size={Size.fab} color={theme.textSecondary} />
             <EmptyStateView
               title={AppConfig.strings.audit.emptyLogs}
               style={styles.emptyStateText}

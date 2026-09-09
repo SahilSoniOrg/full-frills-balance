@@ -1,5 +1,5 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppSurface } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { presentBudgetListCard } from '@/src/features/budget/helpers/budgetCardPresentation';
@@ -45,7 +45,7 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                 background={vm.statusColor}
                 backgroundOpacity="soft"
               >
-                <AppIcon name="pieChart" color={vm.statusColor} size={20} />
+                <AppIcon name={Icon.PieChart} color={vm.statusColor} size={20} />
               </Box>
               <Column flex={1} style={{ minWidth: 0 }}>
                 <Text variant="lg" weight="bold" numberOfLines={1}>

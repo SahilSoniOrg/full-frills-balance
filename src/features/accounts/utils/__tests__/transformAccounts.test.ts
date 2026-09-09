@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { Theme } from '@/src/constants/design-tokens';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
@@ -28,7 +29,7 @@ describe('transformAccountsToSections', () => {
       name: 'Checking Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'wallet',
+      icon: Icon.Wallet,
     };
 
     const sectionsV1 = transformAccountsToSections([accountV1], defaultOptions);
@@ -38,7 +39,7 @@ describe('transformAccountsToSections', () => {
     // Update icon to 'creditCard'
     const accountV2: PlainAccount = {
       ...accountV1,
-      icon: 'creditCard',
+      icon: Icon.CreditCard,
     };
 
     const sectionsV2 = transformAccountsToSections([accountV2], defaultOptions);
@@ -68,7 +69,7 @@ describe('transformAccountsToSections', () => {
       name: 'Old Name',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'bank',
+      icon: Icon.Bank,
     };
 
     const sectionsV1 = transformAccountsToSections([accountV1], defaultOptions);
@@ -89,7 +90,7 @@ describe('transformAccountsToSections', () => {
       name: 'Parent Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'bank',
+      icon: Icon.Bank,
     };
 
     const withoutChild = transformAccountsToSections([parent], defaultOptions);
@@ -100,7 +101,7 @@ describe('transformAccountsToSections', () => {
       name: 'Child Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      icon: 'wallet',
+      icon: Icon.Wallet,
       parentAccountId: parent.id,
     };
 

@@ -1,5 +1,5 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppSurface, Badge } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface, Badge, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
@@ -22,12 +22,12 @@ export interface PlannedPaymentCardViewModel {
   intervalLabel: string;
   statusBadge: {
     variant: 'default' | 'error' | 'warning' | 'success';
-    icon: 'alert' | 'time' | 'calendar' | 'document';
+    icon: IconName;
     text: string;
   };
   dateLabel: string;
   dateColor: string;
-  iconName: 'trendingDown' | 'trendingUp';
+  iconName: IconName;
   isOverdue: boolean;
 }
 
@@ -67,26 +67,26 @@ export function presentPlannedPaymentCard(
 
   let statusBadge: PlannedPaymentCardViewModel['statusBadge'] = {
     variant: 'success',
-    icon: 'calendar',
+    icon: Icon.Calendar,
     text: 'Active',
   };
 
   if (item.status === PlannedPaymentStatus.PAUSED) {
     statusBadge = {
       variant: 'default',
-      icon: 'document',
+      icon: Icon.Document,
       text: AppConfig.strings.plannedPayments.statusPaused,
     };
   } else if (isOverdue) {
     statusBadge = {
       variant: 'error',
-      icon: 'alert',
+      icon: Icon.Alert,
       text: 'Overdue',
     };
   } else if (isDueSoon) {
     statusBadge = {
       variant: 'warning',
-      icon: 'time',
+      icon: Icon.Clock,
       text: 'Due Soon',
     };
   }
@@ -100,7 +100,7 @@ export function presentPlannedPaymentCard(
     statusBadge,
     dateLabel: `Next: ${getSmartDateLabel(item.nextOccurrence)}`,
     dateColor,
-    iconName: item.amount < 0 ? 'trendingDown' : 'trendingUp',
+    iconName: item.amount < 0 ? Icon.TrendingDown : Icon.TrendingUp,
     isOverdue,
   };
 }
@@ -164,12 +164,16 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
 
           <Row justify="space-between" align="center">
             <Row align="center" gap="xs">
-              <AppIcon name={vm.isOverdue ? 'alert' : 'calendar'} size={14} color={vm.dateColor} />
+              <AppIcon
+                name={vm.isOverdue ? Icon.Alert : Icon.Calendar}
+                size={14}
+                color={vm.dateColor}
+              />
               <Text variant="xs" weight="medium" style={{ color: vm.dateColor }}>
                 {vm.dateLabel}
               </Text>
             </Row>
-            <AppIcon name="chevronRight" size={16} color={theme.textSecondary} opacity={0.4} />
+            <AppIcon name={Icon.ChevronRight} size={16} color={theme.textSecondary} opacity={0.4} />
           </Row>
         </Column>
       </AppSurface>

@@ -1,4 +1,12 @@
-import { AppButton, AppIcon, AppInput, AppText, IconButton, IconName } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppInput,
+  AppText,
+  IconButton,
+  IconName,
+} from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -74,7 +82,7 @@ export function WorkplaceBasicInfoStep({
                     borderRadius="full"
                     padding="xs"
                   >
-                    <AppIcon name="edit" size={14} color={theme.surface} />
+                    <AppIcon name={Icon.Edit} size={14} color={theme.surface} />
                   </Box>
                 </TouchableOpacity>
               </Stack>
@@ -97,7 +105,7 @@ export function WorkplaceBasicInfoStep({
               </Box>
               {onGenerateName && (
                 <IconButton
-                  name="refresh"
+                  name={Icon.Refresh}
                   variant="surface"
                   iconColor="primary"
                   onPress={onGenerateName}

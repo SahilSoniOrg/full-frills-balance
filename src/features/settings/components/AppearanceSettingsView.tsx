@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { Stack } from '@/src/design-system';
@@ -26,7 +27,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
         <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
 
         <SettingsSegmentedControl
-          leftIcon="sliders"
+          leftIcon={Icon.Sliders}
           focusId="mode"
           title={AppConfig.strings.settings.appearance.modeTitle}
           description="Choose how the selected theme follows your device."
@@ -47,7 +48,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
         <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
           <SettingsToggleItem
             searchId="compact-account-picker"
-            leftIcon="wallet"
+            leftIcon={Icon.Wallet}
             title={AppConfig.strings.settings.accountPicker.title}
             description={AppConfig.strings.settings.accountPicker.description}
             value={vm.useCompactAccountPicker}
@@ -55,7 +56,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
           />
           <SettingsToggleItem
             searchId="account-statistics"
-            leftIcon="barChart"
+            leftIcon={Icon.BarChart}
             title={AppConfig.strings.settings.stats.title}
             description={AppConfig.strings.settings.stats.description}
             value={vm.showAccountMonthlyStats}
@@ -63,7 +64,7 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
           />
           <SettingsToggleItem
             searchId="safe-to-spend-chart"
-            leftIcon="trendingUp"
+            leftIcon={Icon.TrendingUp}
             title={AppConfig.strings.settings.stsChart.title}
             description={AppConfig.strings.settings.stsChart.description}
             value={vm.showSafeToSpendChart}

@@ -27,7 +27,6 @@ export function SettingsIcon({
 }: SettingsIconProps) {
   const { theme } = useTheme();
   const size = prominent ? SETTINGS_PROMINENT_ICON_SLOT : SETTINGS_ROW_ICON_SLOT;
-  const isNamedIcon = typeof icon === 'string' && isValidIconName(icon);
 
   return (
     <Box
@@ -48,9 +47,9 @@ export function SettingsIcon({
       justifyContent="center"
       style={{ width: size, height: size }}
     >
-      {isNamedIcon ? (
+      {typeof icon === 'string' && isValidIconName(icon) ? (
         <AppIcon
-          name={icon as IconName}
+          name={icon}
           size={prominent ? 21 : 20}
           color={
             disabled

@@ -6,7 +6,7 @@ import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/d
 import { useTheme } from '@/src/hooks/use-theme';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
-import type { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { Animated, PanResponder, StyleSheet, View, TouchableOpacity } from 'react-native';
 
 export function ToastContainer() {
@@ -137,14 +137,14 @@ function getToastColors(type: ToastPayload['type'], theme: Theme) {
 function getToastIcon(type: ToastPayload['type']): IconName {
   switch (type) {
     case 'success':
-      return 'checkCircle';
+      return Icon.CheckCircle;
     case 'error':
-      return 'error';
+      return Icon.Error;
     case 'warning':
-      return 'alert';
+      return Icon.Alert;
     case 'info':
     default:
-      return 'helpCircle';
+      return Icon.HelpCircle;
   }
 }
 

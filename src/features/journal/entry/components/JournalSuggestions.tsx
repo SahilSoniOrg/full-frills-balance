@@ -1,6 +1,6 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -121,7 +121,7 @@ export function JournalSuggestions({
                     name={icon}
                     size={Size.iconXs}
                     color={accentColor}
-                    fallbackIcon="wallet"
+                    fallbackIcon={Icon.Wallet}
                   />
                   <AppText
                     variant="caption"
@@ -177,7 +177,7 @@ export function JournalSuggestions({
               >
                 <View style={styles.itemContent}>
                   <View style={styles.leftContent}>
-                    <AppIcon name="clock" size={12} color={theme.textTertiary} />
+                    <AppIcon name={Icon.Clock} size={12} color={theme.textTertiary} />
                     <AppText
                       variant="body"
                       color="text"

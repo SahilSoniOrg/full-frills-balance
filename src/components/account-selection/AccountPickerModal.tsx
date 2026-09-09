@@ -4,7 +4,7 @@ import { PlainAccount } from '@/src/types/plainDtos';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity } from 'react-native';
@@ -68,11 +68,11 @@ export function AccountPickerModal({
           accessibilityRole="button"
           accessibilityLabel={noneLabel}
         >
-          <AppIcon name="eject" size={Size.iconMd} color={theme.primary} />
+          <AppIcon name={Icon.Eject} size={Size.iconMd} color={theme.primary} />
           <AppText variant="body" color="primary" weight="bold" style={styles.noneLabel}>
             {noneLabel}
           </AppText>
-          {!selectedId && <AppIcon name="check" size={Size.iconMd} color={theme.primary} />}
+          {!selectedId && <AppIcon name={Icon.Check} size={Size.iconMd} color={theme.primary} />}
         </TouchableOpacity>
       ) : null}
       <AccountPickerList

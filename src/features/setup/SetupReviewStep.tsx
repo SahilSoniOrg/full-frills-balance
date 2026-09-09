@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText, IconName } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, FontId, FontIds, Size, Spacing, ThemeId, ThemeIds } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -170,7 +170,7 @@ export function SetupReviewStep({
 
         <Box background="surfaceSecondary" borderRadius="r2" padding="md" marginBottom="md">
           <Inline align="center" space="sm">
-            <AppIcon name="checkCircle" size={Size.sm} color="primary" />
+            <AppIcon name={Icon.CheckCircle} size={Size.sm} color="primary" />
             <Stack space="xs" style={styles.readyText}>
               <AppText weight="semibold">Almost ready</AppText>
               <AppText variant="caption" color="secondary">
@@ -188,7 +188,7 @@ export function SetupReviewStep({
               label={strings.profile}
               value={name}
               onChange={onChangeProfile}
-              icon="user"
+              icon={Icon.User}
             />
           ) : null}
           <ReviewRow
@@ -228,7 +228,7 @@ export function SetupReviewStep({
               label={strings.appearance}
               value={`${THEME_LABELS[themeId]} · ${FONT_LABELS[fontId]}`}
               onChange={onChangeAppearance}
-              icon="palette"
+              icon={Icon.Palette}
             />
           )}
         </AppCard>

@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -39,7 +39,7 @@ export function TransactionInboxItemCardView({
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
 
-  const channelIcon = item.channel === 'voice' ? 'mic' : 'messageSquare';
+  const channelIcon = item.channel === 'voice' ? Icon.Mic : Icon.MessageSquare;
   const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
 
   return (

@@ -1,5 +1,5 @@
 import { CustomDateTimePicker } from '@/src/components/filters/CustomDateTimePicker';
-import { AppIcon, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IconButton } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
@@ -24,7 +24,7 @@ export function DateRangeCalendarStep({
     <View style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          name="back"
+          name={Icon.Back}
           onPress={onBack}
           variant="surface"
           iconColor={theme.textSecondary}
@@ -51,7 +51,7 @@ export function DateRangeCalendarStep({
           },
         ]}
       >
-        <AppIcon name="calendar" size={16} color={theme.primary} />
+        <AppIcon name={Icon.Calendar} size={16} color={theme.primary} />
         <AppText variant="body" style={{ fontFamily: fonts.semibold }}>
           {(date || dayjs()).format('DD MMM YYYY')}
         </AppText>

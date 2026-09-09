@@ -1,6 +1,6 @@
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { LoadingView } from '@/src/components/shared/LoadingView';
-import { AppText } from '@/src/components/core';
+import { Icon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Inset, Separator, Stack } from '@/src/design-system';
@@ -36,7 +36,7 @@ export function JournalDetailsView({
       body = (
         <EmptyStateView
           title="Transaction not found"
-          icon="error"
+          icon={Icon.Error}
           primaryActionLabel="Go Back"
           onPrimaryAction={onBack}
         />

@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
-import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
+import { Icon, AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
 import { BudgetPeriodStepper } from '@/src/features/budget/components/BudgetPeriodStepper';
 import { BudgetUsageSummary } from '@/src/features/budget/components/BudgetUsageSummary';
@@ -46,7 +46,7 @@ export function BudgetDetailHeader({
       <AppCard elevation="sm" style={styles.heroCard} overflow="visible">
         <View style={styles.cardHeader}>
           <IvyIcon
-            name="pieChart"
+            name={Icon.PieChart}
             label={budget.name}
             color={stripColor}
             size={Size.avatarMd}

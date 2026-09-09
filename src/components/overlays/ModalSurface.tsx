@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -100,7 +100,7 @@ export function ModalSurface({
               hitSlop={Spacing.sm}
               testID={closeTestID}
             >
-              <AppIcon name="close" size={Size.sm} color={theme.textSecondary} />
+              <AppIcon name={Icon.Close} size={Size.sm} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 

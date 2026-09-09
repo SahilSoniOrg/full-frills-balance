@@ -6,6 +6,7 @@ import {
 import type { Theme } from '@/src/constants/design-tokens';
 import { Typography } from '@/src/constants';
 import type { ComponentProps } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 type PrivacyToggleProps = ComponentProps<typeof PrivacyToggleButton>;
 
@@ -39,14 +40,14 @@ export function moneyDetailEditDeleteActions(
 ): ScreenHeaderActionItem[] {
   return [
     {
-      name: 'edit',
+      name: Icon.Edit,
       onPress: onEdit,
       iconColor: theme.text,
       size: Typography.sizes.xl,
       testID: 'edit-button',
     },
     {
-      name: 'delete',
+      name: Icon.Delete,
       onPress: onDelete,
       iconColor: theme.error,
       size: Typography.sizes.xl,

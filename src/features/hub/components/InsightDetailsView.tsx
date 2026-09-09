@@ -1,7 +1,7 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
@@ -42,7 +42,7 @@ export function InsightDetailsView({
             { backgroundColor: withOpacity(header.severityColor, Opacity.hover) },
           ]}
         >
-          <AppIcon name="alert" size={12} color={header.severityColor} />
+          <AppIcon name={Icon.Alert} size={12} color={header.severityColor} />
           <AppText variant="caption" weight="medium" style={{ color: header.severityColor }}>
             {header.severityLabel}
           </AppText>
@@ -86,7 +86,7 @@ export function InsightDetailsView({
           style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
         >
           <View style={styles.actionHeader}>
-            <AppIcon name="checkCircle" size={16} color={theme.textSecondary} />
+            <AppIcon name={Icon.CheckCircle} size={16} color={theme.textSecondary} />
             <AppText variant="caption" color="secondary" weight="semibold">
               {header.recommendedActionLabel}
             </AppText>

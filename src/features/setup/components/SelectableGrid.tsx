@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -126,7 +126,9 @@ const SelectableGridItem = React.memo(
                 </AppText>
               ) : null}
             </Box>
-            {isSelected && <AppIcon name="checkCircle" size={Size.iconMd} color={accentColor} />}
+            {isSelected && (
+              <AppIcon name={Icon.CheckCircle} size={Size.iconMd} color={accentColor} />
+            )}
           </Inline>
 
           <Stack space="xs">

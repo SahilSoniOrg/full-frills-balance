@@ -4,7 +4,7 @@ import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { FormField } from '@/src/components/forms/FormField';
 import { CurrencySelector, MultiAccountPickerModal } from '@/src/features/accounts';
-import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
+import { Icon, AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -49,7 +49,7 @@ export function BudgetEditView({
     () => ({
       screenTitle: AppConfig.strings.common.loading,
       showBack: true,
-      backIcon: 'back',
+      backIcon: Icon.Back,
       onBack: onCancel,
       headerActions: (
         <AppButton variant="ghost" onPress={onCancel}>
@@ -66,7 +66,7 @@ export function BudgetEditView({
         ? AppConfig.strings.budget.formTitleEdit
         : AppConfig.strings.budget.formTitleNew,
       showBack: true,
-      backIcon: 'back',
+      backIcon: Icon.Back,
       onBack: onCancel,
     }),
     [budget, onCancel],

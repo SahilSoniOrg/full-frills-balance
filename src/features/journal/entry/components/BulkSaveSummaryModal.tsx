@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -24,7 +24,7 @@ export function BulkSaveSummaryModal({
       <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
           <View style={styles.successHeader}>
-            <AppIcon name="checkCircle" size={Size.iconLg} color={theme.primary} />
+            <AppIcon name={Icon.CheckCircle} size={Size.iconLg} color={theme.primary} />
             <AppText variant="heading" weight="bold" style={styles.modalTitle}>
               Saved Successfully
             </AppText>

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { prepareFirstRunRestoreFixture } from '../fixtures/firstRunRestoreBackup';
 
 describe('first-run restore fixture', () => {
@@ -6,7 +7,7 @@ describe('first-run restore fixture', () => {
     expect(prepared.fingerprint).toMatch(/^restore-v1:/);
     expect(prepared.facts.workplace).toEqual({
       name: 'Imported Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
     expect(prepared.stats).toMatchObject({

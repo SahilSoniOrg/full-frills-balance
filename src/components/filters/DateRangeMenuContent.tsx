@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
@@ -80,7 +80,7 @@ export function DateRangeMenuContent({
               },
             ]}
           >
-            <AppIcon name="calendar" size={16} color={theme.primary} />
+            <AppIcon name={Icon.Calendar} size={16} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.panelTitleRow}>
@@ -179,7 +179,7 @@ export function DateRangeMenuContent({
             ]}
           >
             <AppIcon
-              name="timeline"
+              name={Icon.Timeline}
               size={16}
               color={customPanelActive ? theme.primary : theme.warning}
             />
@@ -309,7 +309,7 @@ export function DateRangeMenuContent({
             ]}
           >
             <AppIcon
-              name="refresh"
+              name={Icon.Refresh}
               size={16}
               color={rollingPanelActive ? theme.primary : theme.success}
             />

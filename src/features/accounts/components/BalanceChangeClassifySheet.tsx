@@ -1,7 +1,7 @@
 import { AccountPickerList } from '@/src/components/account-selection/AccountPickerList';
 import { BaseAccountPickerModal } from '@/src/components/account-selection/BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
-import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
@@ -167,7 +167,7 @@ export function BalanceChangeClassifySheet({
                 { backgroundColor: withOpacity(theme.equity, Opacity.soft) },
               ]}
             >
-              <AppIcon name="scale" size={Size.iconSm} color={theme.equity} />
+              <AppIcon name={Icon.Scale} size={Size.iconSm} color={theme.equity} />
             </Box>
             <View style={styles.adjustmentCopy}>
               <AppText variant="body" weight="medium">

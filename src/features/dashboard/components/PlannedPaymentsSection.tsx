@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -70,7 +70,7 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
           )}
         </View>
         <AppIcon
-          name={isExpanded ? 'chevronUp' : 'chevronDown'}
+          name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
           size={20}
           color={theme.textSecondary}
         />
@@ -126,7 +126,7 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
                 <View style={styles.left}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
                     <AppIcon
-                      name={isSimulated ? 'creditCard' : 'calendar'}
+                      name={isSimulated ? Icon.CreditCard : Icon.Calendar}
                       size={14}
                       color={typeColor || theme.textSecondary}
                     />

@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
-import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppSurface, Badge, IvyIcon } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
@@ -78,7 +78,7 @@ export function PlannedPaymentDetailsView({
         </Column>
       ) : isMissing ? (
         <Column flex={1} align="center" justify="center" gap="md">
-          <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
+          <AppIcon name={Icon.Error} size={Size.xxl} color={theme.textSecondary} />
           <Text variant="subheading">Planned Payment not found</Text>
           <AppButton variant="ghost" onPress={onBack} style={{ marginTop: Spacing.lg }}>
             Go Back
@@ -106,7 +106,7 @@ export function PlannedPaymentDetailsView({
                   background={typeColorKey}
                   backgroundOpacity="soft"
                 >
-                  <AppIcon name={iconName as IconName} size={32} color={accentColor} />
+                  <AppIcon name={iconName} size={32} color={accentColor} />
                 </Box>
                 <Column flex={1} justify="center">
                   <Text variant="xl" weight="bold" marginBottom="xs">
@@ -189,7 +189,7 @@ export function PlannedPaymentDetailsView({
                   </Row>
 
                   <Row align="center" paddingLeft="xs" marginVertical={-2}>
-                    <AppIcon name="arrowDown" size={14} color={theme.textTertiary} />
+                    <AppIcon name={Icon.ArrowDown} size={14} color={theme.textTertiary} />
                   </Row>
 
                   <Row align="center" gap="md">
@@ -215,7 +215,7 @@ export function PlannedPaymentDetailsView({
                 style={{ width: '100%', marginBottom: Spacing.md }}
               >
                 <Row align="center" justify="center" gap="sm">
-                  <AppIcon name="check" size={18} color={theme.onPrimary} />
+                  <AppIcon name={Icon.Check} size={18} color={theme.onPrimary} />
                   <Text variant="base" weight="bold" style={{ color: theme.onPrimary }}>
                     Record Next Occurrence
                   </Text>
@@ -225,7 +225,7 @@ export function PlannedPaymentDetailsView({
               <Row gap="md">
                 <AppButton variant="outline" onPress={onSkip} style={{ flex: 1 }}>
                   <Row align="center" justify="center" gap="sm">
-                    <AppIcon name="close" size={18} color={theme.text} />
+                    <AppIcon name={Icon.Close} size={18} color={theme.text} />
                     <Text variant="base" weight="bold">
                       Skip Next
                     </Text>
@@ -235,7 +235,7 @@ export function PlannedPaymentDetailsView({
                 <AppButton variant="secondary" onPress={onToggleStatus} style={{ flex: 1 }}>
                   <Row align="center" justify="center" gap="sm">
                     <AppIcon
-                      name={statusLabel === 'ACTIVE' ? 'pause' : 'play'}
+                      name={statusLabel === 'ACTIVE' ? Icon.Pause : Icon.Play}
                       size={16}
                       color={theme.text}
                     />

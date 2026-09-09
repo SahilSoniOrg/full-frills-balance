@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
@@ -74,7 +75,7 @@ describe('visibleSetupProgress', () => {
           {
             source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
             facts: {
-              workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+              workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'usd' },
             },
           },
         ],

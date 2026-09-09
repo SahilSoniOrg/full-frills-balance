@@ -1,11 +1,10 @@
 import { IconName } from '@/src/components/core';
-import type { AccountFields } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface SubAccountViewModel {
@@ -22,8 +21,8 @@ export interface SubAccountViewModel {
 
 export interface UseAccountHierarchyTreeOptions {
   accountId: AccountId;
-  account: AccountFields | PlainAccount | null;
-  accounts: (AccountFields | PlainAccount)[];
+  account: PlainAccount | null;
+  accounts: PlainAccount[];
   rawSubBalances: AccountBalance[];
   workplaceCurrency: string;
   dashboardLoading: boolean;
@@ -57,8 +56,8 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
     const buildSubTree = (
       parentId: string,
       level: number,
-    ): { account: AccountFields | PlainAccount; level: number }[] => {
-      const result: { account: AccountFields | PlainAccount; level: number }[] = [];
+    ): { account: PlainAccount; level: number }[] => {
+      const result: { account: PlainAccount; level: number }[] = [];
       const children = accounts
         .filter(a => a.parentAccountId === parentId && a.deletedAt === null)
         .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));

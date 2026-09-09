@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
@@ -31,7 +31,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         <SettingsMenuItem
           searchId="data-export"
           testID="data-export"
-          leftIcon="document"
+          leftIcon={Icon.Document}
           title={AppConfig.strings.settings.data.exportBtn}
           description={AppConfig.strings.settings.data.exportDesc}
           onPress={vm.onExport}
@@ -40,7 +40,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         <SettingsMenuItem
           searchId="data-import"
           testID="data-import"
-          leftIcon="refresh"
+          leftIcon={Icon.Refresh}
           title={AppConfig.strings.settings.data.importBtn}
           description={AppConfig.strings.settings.data.importDesc}
           onPress={onImport}
@@ -64,7 +64,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
             <View style={styles.modalIconRow}>
-              <AppIcon name="document" size={40} color={theme.primary} />
+              <AppIcon name={Icon.Document} size={40} color={theme.primary} />
             </View>
 
             <AppText variant="subheading" style={styles.modalTitle}>
@@ -77,7 +77,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               value={vm.exportFilename}
               onChangeText={vm.setExportFilename}
               containerStyle={{ width: '100%', marginBottom: Spacing.xl }}
-              leftIcon="document"
+              leftIcon={Icon.Document}
               autoFocus
             />
 
@@ -92,7 +92,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                 </AppText>
                 <AppText weight="semibold">{scopeLabel}</AppText>
               </View>
-              <AppIcon name="chevronRight" size={Size.iconSm} color={theme.textSecondary} />
+              <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color={theme.textSecondary} />
             </TouchableOpacity>
 
             <View style={styles.modalActionRow}>
@@ -134,7 +134,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                 {AppConfig.strings.update.exportScopeTitle}
               </AppText>
               <TouchableOpacity onPress={() => vm.setIsScopePickerVisible(false)}>
-                <AppIcon name="close" size={Size.iconMd} color={theme.text} />
+                <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
               </TouchableOpacity>
             </View>
             {(['active', 'all', 'selected'] as BackupScope[]).map(scope => {
@@ -169,7 +169,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                     </AppText>
                   </View>
                   {selected && (
-                    <AppIcon name="checkCircle" size={Size.iconSm} color={theme.primary} />
+                    <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color={theme.primary} />
                   )}
                 </TouchableOpacity>
               );
@@ -192,7 +192,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                     >
                       <AppText>{workplace.name}</AppText>
                       {selected && (
-                        <AppIcon name="check" size={Size.iconSm} color={theme.primary} />
+                        <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.primary} />
                       )}
                     </TouchableOpacity>
                   );

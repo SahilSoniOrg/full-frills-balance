@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
@@ -48,7 +49,7 @@ describe('accountFormService', () => {
         accountType: AccountType.ASSET,
         accountSubtype: undefined,
         currencyCode: 'GBP',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         parentAccountId: 'parent-1' as AccountId,
       } as any;
 
@@ -97,7 +98,7 @@ describe('accountFormService', () => {
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
         selectedCurrency: 'USD',
-        selectedIcon: 'wallet',
+        selectedIcon: Icon.Wallet,
         selectedColor: '',
         initialBalance: 'not-a-number',
         parentAccountId: EMPTY_ACCOUNT_ID,
@@ -114,7 +115,7 @@ describe('accountFormService', () => {
         accountType: AccountType.ASSET,
         accountSubtype: AccountSubtype.CASH,
         selectedCurrency: 'USD',
-        selectedIcon: 'wallet',
+        selectedIcon: Icon.Wallet,
         selectedColor: '#7DD3A8',
         initialBalance: '100',
         parentAccountId: EMPTY_ACCOUNT_ID,
@@ -137,7 +138,7 @@ describe('accountFormService', () => {
         accountType: AccountType.EXPENSE,
         accountSubtype: AccountSubtype.FOOD,
         selectedCurrency: 'USD',
-        selectedIcon: 'tag',
+        selectedIcon: Icon.Tag,
         selectedColor: '',
         initialBalance: '99',
         parentAccountId: EMPTY_ACCOUNT_ID,
@@ -163,7 +164,7 @@ describe('accountFormService', () => {
         accountType: AccountType.LIABILITY,
         accountSubtype: AccountSubtype.CREDIT_CARD,
         selectedCurrency: 'USD',
-        selectedIcon: 'creditCard',
+        selectedIcon: Icon.CreditCard,
         selectedColor: '',
         initialBalance: '0',
         parentAccountId: EMPTY_ACCOUNT_ID,

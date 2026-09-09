@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
 import { RestoreSummarySlice } from '../RestoreSummarySlice';
 import type { RestoreSetupDraft } from '../setupTypes';
+import { Icon } from '@/src/types/domainIcons';
 
 const draft: RestoreSetupDraft = {
   schemaVersion: 1,
@@ -23,7 +24,7 @@ const draft: RestoreSetupDraft = {
   },
   workplace: {
     name: { value: 'Books', source: 'imported' },
-    icon: { value: 'briefcase', source: 'imported' },
+    icon: { value: Icon.Briefcase, source: 'imported' },
     baseCurrency: { value: 'USD', source: 'imported' },
     selectedAccounts: [],
     selectedCategories: [],

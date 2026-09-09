@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { Icon, AppIcon } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -43,7 +43,7 @@ const SelectionIndicator = memo(
           },
         ]}
       >
-        {isSelected && <AppIcon name="check" size={12} color="white" />}
+        {isSelected && <AppIcon name={Icon.Check} size={12} color="white" />}
       </Box>
     );
   },

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
 import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { AppConfig, Opacity, withOpacity } from '@/src/constants';
@@ -32,7 +33,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           <SettingsMenu header="Current Workplace">
             <SettingsMenuItem
               searchId="workplace"
-              leftIcon={vm.activeWorkplace?.icon ?? 'briefcase'}
+              leftIcon={vm.activeWorkplace?.icon ?? Icon.Briefcase}
               title={vm.activeWorkplace?.name || 'Current workplace'}
               description="Rename this workplace or change its icon"
               onPress={() => setIsEditorVisible(true)}
@@ -43,7 +44,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           <SettingsMenu header="Workplace">
             <SettingsMenuItem
               searchId="manage-workplaces"
-              leftIcon="briefcase"
+              leftIcon={Icon.Briefcase}
               title="Manage workplaces"
               description="Switch, create, or delete workplaces"
               onPress={AppNavigation.toWorkplaceSettings}
@@ -54,7 +55,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
           <SettingsMenu header={AppConfig.strings.settings.sections.moneyDefaults}>
             <SettingsMenuItem
               searchId="currency"
-              leftIcon="bank"
+              leftIcon={Icon.Bank}
               title={AppConfig.strings.settings.currency.title}
               description={`${AppConfig.strings.settings.currency.description} for ${vm.workplaceName || 'current workplace'}`}
               hasArrow={false}
@@ -73,7 +74,7 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
 
           <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
             <SettingsSegmentedControl
-              leftIcon="trendingUp"
+              leftIcon={Icon.TrendingUp}
               focusId="safe-to-spend-forecast"
               title={AppConfig.strings.settings.personalization.forecastTitle}
               description={AppConfig.strings.settings.personalization.forecastDesc}

@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
@@ -95,7 +96,7 @@ export function SettingsView({
             <SettingsMenu header="Your Account">
               <SettingsMenuItem
                 searchId="profile"
-                leftIcon="user"
+                leftIcon={Icon.User}
                 title={AppConfig.strings.settings.sections.profile}
                 description="Your name, documents, and device settings"
                 onPress={onProfile}
@@ -106,7 +107,7 @@ export function SettingsView({
             <SettingsMenu header="Workplaces">
               <SettingsMenuItem
                 searchId="workplace"
-                leftIcon={currentWorkplace?.icon ?? 'briefcase'}
+                leftIcon={currentWorkplace?.icon ?? Icon.Briefcase}
                 title={
                   currentWorkplace?.name ?? AppConfig.strings.settings.sections.currentWorkplace
                 }
@@ -119,7 +120,7 @@ export function SettingsView({
             <SettingsMenu header="Preferences">
               <SettingsMenuItem
                 searchId="notifications"
-                leftIcon="notifications"
+                leftIcon={Icon.Notifications}
                 title={notificationTitle}
                 description={notificationDescription}
                 onPress={onAutomation}
@@ -127,7 +128,7 @@ export function SettingsView({
               />
               <SettingsMenuItem
                 searchId="appearance"
-                leftIcon="palette"
+                leftIcon={Icon.Palette}
                 title={AppConfig.strings.settings.sections.appearance}
                 description="Theme, typography, time, and display options"
                 onPress={onAppearance}
@@ -135,7 +136,7 @@ export function SettingsView({
               />
               <SettingsMenuItem
                 searchId="privacy-security"
-                leftIcon="shieldCheck"
+                leftIcon={Icon.ShieldCheck}
                 title={AppConfig.strings.settings.sections.privacyAndSecurity}
                 description="Hide balances, protect widgets, and lock the app"
                 onPress={onPrivacy}
@@ -146,7 +147,7 @@ export function SettingsView({
             <SettingsMenu header="Data">
               <SettingsMenuItem
                 searchId="data-management"
-                leftIcon="database"
+                leftIcon={Icon.Database}
                 title={AppConfig.strings.settings.sections.dataManagement}
                 description="Back up, restore, share, and review workplace data"
                 onPress={onDataManagement}
@@ -154,7 +155,7 @@ export function SettingsView({
               />
               <SettingsMenuItem
                 searchId="maintenance"
-                leftIcon="wrench"
+                leftIcon={Icon.Wrench}
                 title={AppConfig.strings.settings.sections.maintenanceAndReset}
                 description="Verify books, purge deleted records, or reset the app"
                 onPress={onMaintenance}
@@ -165,7 +166,7 @@ export function SettingsView({
             <SettingsMenu header="Support">
               <SettingsMenuItem
                 searchId="about-support"
-                leftIcon="info"
+                leftIcon={Icon.Info}
                 title={AppConfig.strings.settings.sections.aboutAndSupport}
                 description="Community, ratings, source code, and version"
                 onPress={onAbout}

@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FilterChipRow } from '@/src/components/filters/FilterChipRow';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
@@ -42,8 +42,8 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
     <FormSectionGroup title="Match Mode">
       <SelectionTileList
         items={[
-          { id: 'builder', label: 'Rule Builder', icon: 'sparkles', color: theme.primary },
-          { id: 'regex', label: 'Advanced Regex', icon: 'edit', color: theme.warning },
+          { id: 'builder', label: 'Rule Builder', icon: Icon.Sparkles, color: theme.primary },
+          { id: 'regex', label: 'Advanced Regex', icon: Icon.Edit, color: theme.warning },
         ]}
         selectedId={mode}
         onSelect={value => setMode((value || 'builder') as 'builder' | 'regex')}
@@ -61,7 +61,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               <View style={styles.inputCol}>
                 <AppInput
                   label="Sender Contains"
-                  leftIcon="mail"
+                  leftIcon={Icon.Mail}
                   value={senderContains}
                   onChangeText={setSenderContains}
                   placeholder="e.g. HDFCBK"
@@ -71,7 +71,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               <View style={styles.inputCol}>
                 <AppInput
                   label="Account Ref Contains"
-                  leftIcon="creditCard"
+                  leftIcon={Icon.CreditCard}
                   value={accountSourceContains}
                   onChangeText={setAccountSourceContains}
                   placeholder="e.g. 1234 or UPI"
@@ -83,7 +83,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               <View style={styles.inputCol}>
                 <AppInput
                   label="Message Contains"
-                  leftIcon="messageSquare"
+                  leftIcon={Icon.MessageSquare}
                   value={bodyContains}
                   onChangeText={setBodyContains}
                   placeholder="e.g. UPI"
@@ -92,7 +92,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               <View style={styles.inputCol}>
                 <AppInput
                   label="Merchant Contains"
-                  leftIcon="tag"
+                  leftIcon={Icon.Tag}
                   value={merchantContains}
                   onChangeText={setMerchantContains}
                   placeholder="e.g. SWIGGY"
@@ -104,7 +104,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               <View style={styles.inputCol}>
                 <AppInput
                   label="Currency Code"
-                  leftIcon="transaction"
+                  leftIcon={Icon.Transaction}
                   value={currencyCode}
                   onChangeText={setCurrencyCode}
                   autoCapitalize="characters"
@@ -122,13 +122,13 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
                 {
                   id: 'debit',
                   label: 'Debit (Expense)',
-                  icon: 'arrowUp',
+                  icon: Icon.ArrowUp,
                   color: theme.error,
                 },
                 {
                   id: 'credit',
                   label: 'Credit (Income)',
-                  icon: 'arrowDown',
+                  icon: Icon.ArrowDown,
                   color: theme.success,
                 },
               ]}
@@ -193,7 +193,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
                 },
               ]}
             >
-              <AppIcon name="alert" size={16} color={theme.warning} />
+              <AppIcon name={Icon.Alert} size={16} color={theme.warning} />
               <AppText variant="caption" color="secondary" style={styles.calloutText}>
                 Regular expressions are compiled as case-insensitive, global patterns. Ensure
                 special regex syntax characters (e.g. *, +, ?, $) are correctly escaped.
@@ -202,14 +202,14 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
             <AppInput
               label="Sender Match Regex"
-              leftIcon="terminal"
+              leftIcon={Icon.Terminal}
               value={legacySenderMatch}
               onChangeText={setLegacySenderMatch}
               placeholder="e.g. SWIGGY|HDFCBK"
             />
             <AppInput
               label="Body Match Regex (Optional)"
-              leftIcon="terminal"
+              leftIcon={Icon.Terminal}
               value={legacyBodyMatch}
               onChangeText={setLegacyBodyMatch}
               placeholder="e.g. UPI|\\*\\*1234"

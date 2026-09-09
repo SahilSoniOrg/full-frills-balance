@@ -1,4 +1,4 @@
-import { AppButton, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppButton, AppText, IconButton } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
@@ -92,7 +92,7 @@ export function DateRangePickerView({
                   </AppText>
                 </View>
                 <IconButton
-                  name="close"
+                  name={Icon.Close}
                   onPress={onClose}
                   variant="surface"
                   iconColor={theme.textSecondary}

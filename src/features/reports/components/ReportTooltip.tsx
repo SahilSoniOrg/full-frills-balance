@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
@@ -53,7 +53,7 @@ const TooltipBase = ({
         }}
       >
         <AppIcon
-          name="arrowRight"
+          name={Icon.ArrowRight}
           size={REPORT_CHART_LAYOUT.tooltipIconSize}
           color={onContrast(resolvedBg)}
         />
@@ -203,7 +203,7 @@ export const NetWorthTooltipContent = ({
         <AppText variant="caption" weight="bold" style={{ color: contrastColor }}>
           {AppConfig.strings.reports.viewDetails}
         </AppText>
-        <AppIcon name="arrowRight" size={10} color={contrastColor} style={{ marginLeft: 4 }} />
+        <AppIcon name={Icon.ArrowRight} size={10} color={contrastColor} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
     </View>
   );
@@ -333,7 +333,7 @@ export const IncomeExpenseTooltipContent = ({
         <AppText variant="caption" weight="bold" style={{ color: contrastColor }}>
           {AppConfig.strings.reports.viewDetails}
         </AppText>
-        <AppIcon name="arrowRight" size={10} color={contrastColor} style={{ marginLeft: 4 }} />
+        <AppIcon name={Icon.ArrowRight} size={10} color={contrastColor} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
     </View>
   );

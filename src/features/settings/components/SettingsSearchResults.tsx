@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
@@ -32,7 +32,7 @@ export function SettingsSearchResults({
           value={query}
           onChangeText={onQueryChange}
           placeholder="Search settings…"
-          leftIcon="search"
+          leftIcon={Icon.Search}
           inputStyle={hasQuery ? styles.inputWithClear : undefined}
           autoCorrect={false}
           returnKeyType="search"
@@ -52,14 +52,14 @@ export function SettingsSearchResults({
             style={styles.clearButton}
             hitSlop={8}
           >
-            <AppIcon name="close" size={18} color={theme.textSecondary} />
+            <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
 
       {!hasQuery ? null : results.length === 0 ? (
         <Box alignItems="center" paddingVertical="xl" paddingHorizontal="lg">
-          <AppIcon name="search" size={28} color={theme.textSecondary} />
+          <AppIcon name={Icon.Search} size={28} color={theme.textSecondary} />
           <AppText variant="body" weight="semibold" style={{ marginTop: 10 }}>
             No settings found
           </AppText>

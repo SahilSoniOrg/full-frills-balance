@@ -1,7 +1,7 @@
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { MultiAccountPickerModal } from '@/src/features/accounts';
-import { AppIcon, AppText, FilterChipButton } from '@/src/components/core';
+import { Icon, AppIcon, AppText, FilterChipButton } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportFilters } from '@/src/features/reports/hooks/useReportFilters';
 import { ReportSubPeriod } from '@/src/features/reports/hooks/useReportsViewModel';
@@ -54,12 +54,12 @@ export function ReportFilterBar({
             accessibilityRole="button"
             accessibilityLabel={AppConfig.strings.reports.filterByAccounts}
           >
-            <AppIcon name="wallet" size={Size.iconSm} color={theme.textSecondary} />
+            <AppIcon name={Icon.Wallet} size={Size.iconSm} color={theme.textSecondary} />
             <AppText variant="caption" style={{ marginLeft: Spacing.xs }}>
               {accountLabel}
             </AppText>
             <AppIcon
-              name="chevronDown"
+              name={Icon.ChevronDown}
               size={Size.iconSm}
               color={theme.textSecondary}
               style={{ marginLeft: Spacing.xs }}
@@ -69,7 +69,7 @@ export function ReportFilterBar({
           {subPeriodLabel ? (
             <FilterChipButton
               label={subPeriodLabel}
-              icon="close"
+              icon={Icon.Close}
               isActive
               onPress={onClearSubPeriod}
               style={{ marginLeft: Spacing.sm }}

@@ -8,7 +8,7 @@ import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
-import { AppIcon, AppText, IconName, isValidIconName, IvyIcon } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -106,7 +106,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               ]}
             >
               <IvyIcon
-                name={selectedIcon as IconName}
+                name={selectedIcon}
                 fallbackIcon={getAccountFallbackIcon(accountType)}
                 color={effectiveAccentColor}
                 size={Size.iconLg}
@@ -159,7 +159,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
                       {selectedCurrency} (Locked)
                     </AppText>
                     <AppIcon
-                      name="helpCircle"
+                      name={Icon.HelpCircle}
                       size={Size.iconSm}
                       color={theme.textSecondary}
                       opacity={Opacity.heavy}
@@ -264,7 +264,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         onClose={() => setIsAppearancePickerVisible(false)}
         onIconSelect={setSelectedIcon}
         onColorSelect={setSelectedColor}
-        selectedIcon={isValidIconName(selectedIcon) ? (selectedIcon as IconName) : 'wallet'}
+        selectedIcon={selectedIcon}
         selectedColor={selectedColor}
         accountType={accountType}
       />

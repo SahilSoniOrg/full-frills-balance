@@ -1,4 +1,4 @@
-import { AppButton, AppInput, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppInput, AppIcon, AppText } from '@/src/components/core';
 import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants';
@@ -95,7 +95,7 @@ export function WorkplaceEditorModal({
                   borderRadius="full"
                   padding="xs"
                 >
-                  <AppIcon name="edit" size={Size.xs} color={theme.surface} />
+                  <AppIcon name={Icon.Edit} size={Size.xs} color={theme.surface} />
                 </Box>
               </Box>
               <AppText variant="caption" color="secondary">

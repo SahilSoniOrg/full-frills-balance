@@ -1,4 +1,4 @@
-import type { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -86,7 +86,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
           >
             {inputField}
             <View pointerEvents="none" style={styles.calculatorButton}>
-              <AppIcon name="calculator" size={20} color="primary" />
+              <AppIcon name={Icon.Calculator} size={20} color="primary" />
             </View>
           </TouchableOpacity>
         ) : (

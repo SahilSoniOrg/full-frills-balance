@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange, formatDate, formatShortDate } from '@/src/utils/dateUtils';
@@ -56,7 +56,7 @@ export function DateRangeTrigger({
           style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
           activeOpacity={Opacity.heavy}
         >
-          <AppIcon name="chevronLeft" size={Size.sm} color={theme.textSecondary} />
+          <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
         </TouchableOpacity>
       ) : null}
 
@@ -73,7 +73,7 @@ export function DateRangeTrigger({
         }}
         activeOpacity={Opacity.heavy}
       >
-        <AppIcon name="calendar" size={Size.sm} color={theme.primary} />
+        <AppIcon name={Icon.Calendar} size={Size.sm} color={theme.primary} />
         <AppText
           variant="body"
           style={[styles.text, { flexShrink: 1, fontFamily: fonts.medium }]}
@@ -81,7 +81,7 @@ export function DateRangeTrigger({
         >
           {displayText}
         </AppText>
-        <AppIcon name="chevronDown" size={Size.xs} color={theme.textSecondary} />
+        <AppIcon name={Icon.ChevronDown} size={Size.xs} color={theme.textSecondary} />
       </TouchableOpacity>
 
       {showNavigation ? (
@@ -93,7 +93,7 @@ export function DateRangeTrigger({
           style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
           activeOpacity={Opacity.heavy}
         >
-          <AppIcon name="chevronRight" size={Size.sm} color={theme.textSecondary} />
+          <AppIcon name={Icon.ChevronRight} size={Size.sm} color={theme.textSecondary} />
         </TouchableOpacity>
       ) : null}
     </View>

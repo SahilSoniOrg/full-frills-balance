@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { NotificationPreferenceView } from '@/src/features/settings/components/NotificationPreferenceView';
@@ -42,7 +43,7 @@ export function AutomationSettingsView({
           <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
             <SettingsMenuItem
               searchId="sms-inbox"
-              leftIcon="messageSquare"
+              leftIcon={Icon.MessageSquare}
               title={AppConfig.strings.settings.personalization.smsInboxTitle}
               description={AppConfig.strings.settings.personalization.smsInboxDesc}
               onPress={onOpenInbox}
@@ -52,7 +53,7 @@ export function AutomationSettingsView({
               <>
                 <SettingsMenuItem
                   searchId="sms-rules"
-                  leftIcon="terminal"
+                  leftIcon={Icon.Terminal}
                   title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
                   description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
                   onPress={onOpenSmsRules}

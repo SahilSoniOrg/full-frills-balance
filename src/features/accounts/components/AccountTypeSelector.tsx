@@ -1,5 +1,5 @@
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
-import type { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 
@@ -15,14 +15,14 @@ interface AccountTypeSelectorProps {
 }
 
 const TYPE_METADATA: Record<AccountType, { label: string; icon: IconName }> = {
-  [AccountType.ASSET]: { label: AppConfig.strings.accounts.types.asset, icon: 'wallet' },
+  [AccountType.ASSET]: { label: AppConfig.strings.accounts.types.asset, icon: Icon.Wallet },
   [AccountType.LIABILITY]: {
     label: AppConfig.strings.accounts.types.liability,
-    icon: 'creditCard',
+    icon: Icon.CreditCard,
   },
-  [AccountType.EQUITY]: { label: AppConfig.strings.accounts.types.equity, icon: 'bank' },
-  [AccountType.INCOME]: { label: AppConfig.strings.accounts.types.income, icon: 'trendingUp' },
-  [AccountType.EXPENSE]: { label: AppConfig.strings.accounts.types.expense, icon: 'arrowDown' },
+  [AccountType.EQUITY]: { label: AppConfig.strings.accounts.types.equity, icon: Icon.Bank },
+  [AccountType.INCOME]: { label: AppConfig.strings.accounts.types.income, icon: Icon.TrendingUp },
+  [AccountType.EXPENSE]: { label: AppConfig.strings.accounts.types.expense, icon: Icon.ArrowDown },
 };
 
 export const AccountTypeSelector: React.FC<AccountTypeSelectorProps> = ({

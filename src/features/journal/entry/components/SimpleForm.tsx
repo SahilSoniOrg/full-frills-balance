@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
@@ -78,7 +79,7 @@ export const SimpleForm = ({
           ) : displayedRate ? (
             <View style={styles.fxContent}>
               <View style={styles.fxRateRow}>
-                <AppIcon name="refresh" size={Size.iconXs} color={theme.primary} />
+                <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
                 <AppText variant="body" color="primary" weight="bold">
                   1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
                   {displayedRate.destinationCurrency}

@@ -1,7 +1,7 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { useState } from 'react';
@@ -63,7 +63,7 @@ export function BulkHierarchyMoveModal({
         accessibilityLabel="None (Root Level)"
       >
         <View style={[styles.rootIconFrame, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppIcon name="hierarchy" size={Size.iconSm} color={theme.primary} />
+          <AppIcon name={Icon.Hierarchy} size={Size.iconSm} color={theme.primary} />
         </View>
         <AppText variant="body" weight="medium" style={styles.itemText}>
           None (Root Level)
@@ -86,7 +86,7 @@ export function BulkHierarchyMoveModal({
           accessibilityLabel={candidate.name}
         >
           <AppIcon
-            name={candidate.icon}
+            name={getAccountIcon(candidate)}
             fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
             size={Size.iconMd}
             color={theme.textSecondary}

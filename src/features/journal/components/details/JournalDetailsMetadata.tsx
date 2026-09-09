@@ -1,5 +1,5 @@
 import { Section } from '@/src/components/shared/Section';
-import { AppIcon, AppText, ListRow } from '@/src/components/core';
+import { Icon, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -62,7 +62,7 @@ export const JournalDetailsMetadata = React.memo(
             <AppText variant="body" color="primary">
               View Edit History
             </AppText>
-            <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
+            <AppIcon name={Icon.ChevronRight} size={Typography.sizes.sm} color={theme.primary} />
           </Inline>
         ),
         onPress: onHistoryPress,

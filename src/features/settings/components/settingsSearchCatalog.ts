@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { IconName } from '@/src/components/core';
+import { Icon, type IconName } from '@/src/components/core';
 import { Platform } from 'react-native';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 
@@ -16,35 +16,35 @@ export type SettingsSearchItem = {
 };
 
 const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
-  'profile-name': 'user',
-  devices: 'settings',
-  workplace: 'briefcase',
-  currency: 'bank',
-  'safe-to-spend-forecast': 'safe',
-  notifications: 'notifications',
-  'share-format': 'share',
-  appearance: 'palette',
-  'appearance-mode': 'sliders',
-  typography: 'sparkles',
-  'time-format': 'clock',
-  'compact-account-picker': 'wallet',
-  'account-statistics': 'barChart',
-  'safe-to-spend-chart': 'trendingUp',
-  'privacy-security': 'shield',
-  'widget-privacy': 'eyeOff',
-  'app-lock': 'lock',
-  'privacy-notice': 'document',
-  'data-management': 'database',
-  'data-import': 'folderOpen',
-  'audit-log': 'history',
-  maintenance: 'wrench',
-  cleanup: 'delete',
-  reset: 'refresh',
-  'about-support': 'info',
-  'release-notes': 'document',
-  'sms-inbox': 'messageSquare',
-  'sms-rules': 'terminal',
-  'sms-import': 'zap',
+  'profile-name': Icon.User,
+  devices: Icon.Settings,
+  workplace: Icon.Briefcase,
+  currency: Icon.Bank,
+  'safe-to-spend-forecast': Icon.Safe,
+  notifications: Icon.Notifications,
+  'share-format': Icon.Share,
+  appearance: Icon.Palette,
+  'appearance-mode': Icon.Sliders,
+  typography: Icon.Sparkles,
+  'time-format': Icon.Clock,
+  'compact-account-picker': Icon.Wallet,
+  'account-statistics': Icon.BarChart,
+  'safe-to-spend-chart': Icon.TrendingUp,
+  'privacy-security': Icon.Shield,
+  'widget-privacy': Icon.EyeOff,
+  'app-lock': Icon.Lock,
+  'privacy-notice': Icon.Document,
+  'data-management': Icon.Database,
+  'data-import': Icon.FolderOpen,
+  'audit-log': Icon.History,
+  maintenance: Icon.Wrench,
+  cleanup: Icon.Delete,
+  reset: Icon.Refresh,
+  'about-support': Icon.Info,
+  'release-notes': Icon.Document,
+  'sms-inbox': Icon.MessageSquare,
+  'sms-rules': Icon.Terminal,
+  'sms-import': Icon.Zap,
 };
 
 export function getSettingsSearchIcon(id: string): IconName | undefined {

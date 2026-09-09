@@ -3,6 +3,7 @@ import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountIn
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
+  Icon,
   AppInput,
   AppSegmentedControl,
   AppText,
@@ -34,7 +35,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             value={vm.searchQuery}
             onChangeText={vm.setSearchQuery}
             containerStyle={styles.searchInput}
-            leftIcon="search"
+            leftIcon={Icon.Search}
             autoFocus
           />
         </View>
@@ -57,7 +58,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           <View style={{ marginLeft: Spacing.sm }}>
             <FilterChipButton
               label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
-              icon="wallet"
+              icon={Icon.Wallet}
               isActive={vm.accountIds.length > 0}
               onPress={() => {
                 Keyboard.dismiss();
@@ -106,7 +107,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             vm.maxAmount ||
             vm.displayType) && (
             <IconButton
-              name="close"
+              name={Icon.Close}
               size={Size.iconXs}
               onPress={vm.clearFilters}
               style={styles.clearButton}

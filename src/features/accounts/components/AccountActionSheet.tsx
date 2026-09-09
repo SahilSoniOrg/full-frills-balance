@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { AppIcon, AppText, IvyIcon, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, IvyIcon, type IconName } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -45,7 +45,7 @@ export function AccountActionSheet({
     {
       id: 'details',
       label: 'View Details',
-      icon: 'fileText',
+      icon: Icon.Document,
       onPress: () => {
         onClose();
         onViewDetails?.(account);
@@ -54,7 +54,7 @@ export function AccountActionSheet({
     {
       id: 'edit',
       label: 'Edit Account',
-      icon: 'edit',
+      icon: Icon.Edit,
       onPress: () => {
         onClose();
         onEdit?.(account);
@@ -63,7 +63,7 @@ export function AccountActionSheet({
     {
       id: 'appearance',
       label: 'Appearance',
-      icon: 'palette',
+      icon: Icon.Palette,
       onPress: () => {
         onClose();
         onRecolor?.(account);
@@ -72,7 +72,7 @@ export function AccountActionSheet({
     {
       id: 'reconcile',
       label: 'Reconcile',
-      icon: 'shieldCheck',
+      icon: Icon.ShieldCheck,
       onPress: () => {
         onClose();
         onReconcile?.(account);
@@ -81,7 +81,7 @@ export function AccountActionSheet({
     {
       id: 'archive',
       label: account.isArchived ? 'Unarchive Account' : 'Archive Account',
-      icon: 'archive',
+      icon: Icon.Archive,
       onPress: () => {
         onClose();
         onToggleArchive?.(account);
@@ -90,7 +90,7 @@ export function AccountActionSheet({
     {
       id: 'delete',
       label: 'Delete Account',
-      icon: 'trash',
+      icon: Icon.Delete,
       destructive: true,
       onPress: () => {
         onClose();
@@ -162,7 +162,7 @@ export function AccountActionSheet({
                     {action.label}
                   </AppText>
                 </View>
-                <AppIcon name="chevronRight" size={Size.iconSm} color={theme.textSecondary} />
+                <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color={theme.textSecondary} />
               </TouchableOpacity>
             );
           })}

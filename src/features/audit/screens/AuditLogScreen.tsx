@@ -4,6 +4,7 @@ import { AuditLogView } from '@/src/features/audit/components/AuditLogView';
 import { useAuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 export default function AuditLogScreen() {
   const vm = useAuditLogViewModel();
@@ -13,7 +14,7 @@ export default function AuditLogScreen() {
         ? AppConfig.strings.audit.editHistory
         : AppConfig.strings.audit.logTitle,
       showBack: true,
-      backIcon: 'back',
+      backIcon: Icon.Back,
       onBack: AppNavigation.back,
     }),
     [vm.isFiltered],

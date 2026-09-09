@@ -11,6 +11,7 @@ import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guide
 import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Icon } from '@/src/types/domainIcons';
 
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
@@ -67,7 +68,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
               ? 'The transaction could not be loaded. Go back and try again.'
               : 'This transaction may have been deleted or moved.'
           }
-          icon="error"
+          icon={Icon.Error}
           primaryActionLabel="Go Back"
           onPrimaryAction={vm.onClose}
         />

@@ -94,7 +94,7 @@ let oldBucket = new Map<string, AccountCardViewModel>();
 const BUCKET_LIMIT = 1000;
 
 export function transformAccountsToSections(
-  accounts: (AccountFields | PlainAccount)[],
+  accounts: PlainAccount[],
   options: TransformOptions,
 ): AccountSectionViewModel[] {
   const startTime = Date.now();
@@ -130,7 +130,7 @@ export function transformAccountsToSections(
     else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
 
     const typeAccounts = section.data;
-    const accountsByParent = new Map<string, (AccountFields | PlainAccount)[]>();
+    const accountsByParent = new Map<string, AccountFields[]>();
     typeAccounts.forEach(a => {
       if (a.parentAccountId) {
         const children = accountsByParent.get(a.parentAccountId) || [];
@@ -142,7 +142,7 @@ export function transformAccountsToSections(
     const rootAccounts = getVisibleRoots(typeAccounts);
     const flattenedData: AccountCardViewModel[] = [];
 
-    const flatten = (account: AccountFields | PlainAccount, depth: number) => {
+    const flatten = (account: AccountFields, depth: number) => {
       totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;

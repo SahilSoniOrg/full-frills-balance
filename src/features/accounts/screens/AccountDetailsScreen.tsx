@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { MoneyDetailHeaderActions } from '@/src/components/shared/MoneyDetailHeaderActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
@@ -48,7 +49,7 @@ function AccountDetailsScreen() {
           : {
               onPress: onAddPress,
               label: 'Add Transaction',
-              icon: 'plusCircle',
+              icon: Icon.PlusCircle,
               placement: 'end',
               accessibilityLabel: 'Add transaction for this account',
             },

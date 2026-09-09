@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,7 +74,7 @@ export function SelectionPickerSheet<T extends string | number>({
               {title}
             </AppText>
             <TouchableOpacity onPress={closeAndReset}>
-              <AppIcon name="close" size={Size.iconMd} color={theme.text} />
+              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
             </TouchableOpacity>
           </View>
 
@@ -84,7 +84,7 @@ export function SelectionPickerSheet<T extends string | number>({
                 placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                leftIcon="search"
+                leftIcon={Icon.Search}
               />
             </View>
           )}
@@ -98,7 +98,7 @@ export function SelectionPickerSheet<T extends string | number>({
               style={[styles.action, { borderBottomColor: theme.border }]}
               testID={actionTestID}
             >
-              <AppIcon name="plus" size={20} color={theme.primary} />
+              <AppIcon name={Icon.Plus} size={20} color={theme.primary} />
               <AppText variant="body" weight="semibold" style={{ color: theme.primary }}>
                 {actionLabel}
               </AppText>
@@ -141,7 +141,9 @@ export function SelectionPickerSheet<T extends string | number>({
                       </AppText>
                     )}
                   </View>
-                  {isSelected && <AppIcon name="checkCircle" size={18} color={theme.primary} />}
+                  {isSelected && (
+                    <AppIcon name={Icon.CheckCircle} size={18} color={theme.primary} />
+                  )}
                 </TouchableOpacity>
               );
             }}

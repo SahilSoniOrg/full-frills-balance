@@ -3,6 +3,7 @@ import type { AccountDetailsViewModel } from '@/src/features/accounts/hooks/deta
 import type { Theme } from '@/src/constants/design-tokens';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 import { AccountType } from '@/src/types/enums';
+import { Icon } from '@/src/types/domainIcons';
 
 type AccountDetailsHeaderActions = AccountDetailsViewModel['headerActions'];
 
@@ -15,7 +16,7 @@ export function buildAccountDetailsHeaderActions(
   if (headerActions.canRecover) {
     return [
       {
-        name: 'refresh',
+        name: Icon.Refresh,
         onPress: headerActions.onRecover,
         variant: surface,
         iconColor: theme.income,
@@ -27,7 +28,7 @@ export function buildAccountDetailsHeaderActions(
 
   if (headerActions.onSearch) {
     actions.push({
-      name: 'search',
+      name: Icon.Search,
       onPress: headerActions.onSearch,
       variant: surface,
       iconColor: theme.text,
@@ -37,7 +38,7 @@ export function buildAccountDetailsHeaderActions(
   }
 
   actions.push({
-    name: 'edit',
+    name: Icon.Edit,
     onPress: headerActions.onEdit,
     variant: surface,
     iconColor: theme.text,

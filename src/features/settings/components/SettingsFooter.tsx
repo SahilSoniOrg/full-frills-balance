@@ -1,4 +1,4 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import * as Application from 'expo-application';
@@ -22,7 +22,7 @@ export function SettingsFooter() {
           <AppText variant="caption" color="secondary">
             Made with
           </AppText>
-          <AppIcon name="heart" size={12} color={theme.error} />
+          <AppIcon name={Icon.Heart} size={12} color={theme.error} />
           <AppText variant="caption" color="secondary">
             for financial freedom
           </AppText>

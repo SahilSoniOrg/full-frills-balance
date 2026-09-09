@@ -1,6 +1,6 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -96,7 +96,7 @@ function MergeJournalsModalContent({
               { backgroundColor: theme.surfaceSecondary, borderColor: theme.error },
             ]}
           >
-            <AppIcon name="alert" size={20} color={theme.error} />
+            <AppIcon name={Icon.Alert} size={20} color={theme.error} />
             <AppText style={[styles.errorText, { color: theme.error }]}>
               {preview.reason || 'These entries cannot be merged.'}
             </AppText>

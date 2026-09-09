@@ -1,5 +1,6 @@
+import { Icon } from '@/src/types/domainIcons';
 import { act, renderHook } from '@testing-library/react-native';
-import type { AccountFields } from '@/src/types/plainDtos';
+import type { PlainAccount } from '@/src/types/plainDtos';
 import { useAccountsListActions } from '../useAccountsListActions';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
@@ -26,7 +27,7 @@ describe('useAccountsListActions', () => {
       currencyCode: 'USD',
       accountType: AccountType.ASSET,
       icon: undefined,
-    }) as unknown as AccountFields;
+    }) as PlainAccount;
 
   const balance = {
     accountId: childId,
@@ -78,7 +79,7 @@ describe('useAccountsListActions', () => {
         name: childId,
         balance: 42,
         currency: 'EUR',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         type: AccountType.ASSET,
       },
     });

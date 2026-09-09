@@ -9,7 +9,7 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
-import { AppButton, AppText, AppIcon } from '@/src/components/core';
+import { Icon, AppButton, AppText, AppIcon } from '@/src/components/core';
 import {
   AppConfig,
   MAX_BULK_JOURNAL_ROWS,
@@ -157,7 +157,7 @@ export const BulkEntryGrid = React.memo(
               },
             ]}
           >
-            <AppIcon name="info" size={Size.iconSm} color={theme.textTertiary} />
+            <AppIcon name={Icon.Info} size={Size.iconSm} color={theme.textTertiary} />
             <AppText variant="caption" color="tertiary" style={styles.emptyHintText}>
               {AppConfig.strings.transactionFlow.bulkEntryHint}
             </AppText>

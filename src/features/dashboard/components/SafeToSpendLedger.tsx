@@ -1,5 +1,5 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack, Text } from '@/src/design-system';
@@ -117,7 +117,7 @@ export const SafeToSpendLedger = ({
                           {acc.accountName}
                         </AppText>
                         <AppIcon
-                          name="chevronRight"
+                          name={Icon.ChevronRight}
                           size={10}
                           color={theme.textSecondary}
                           style={{ opacity: Opacity.medium }}
@@ -173,10 +173,10 @@ export const SafeToSpendLedger = ({
                         }}
                       >
                         {acc.usageDetails.topOutflows.map((item, ii) => {
-                          let icon: IconName = 'arrowDown';
-                          if (item.source === 'BUDGET') icon = 'pieChart';
-                          else if (item.source === 'PLANNED_PAYMENT') icon = 'calendar';
-                          else if (item.source === 'LIABILITY') icon = 'creditCard';
+                          let icon: IconName = Icon.ArrowDown;
+                          if (item.source === 'BUDGET') icon = Icon.PieChart;
+                          else if (item.source === 'PLANNED_PAYMENT') icon = Icon.Calendar;
+                          else if (item.source === 'LIABILITY') icon = Icon.CreditCard;
 
                           return (
                             <View
@@ -224,7 +224,7 @@ export const SafeToSpendLedger = ({
                                   </AppText>
                                   {item.id && item.source === 'PLANNED_PAYMENT' && (
                                     <AppIcon
-                                      name="chevronRight"
+                                      name={Icon.ChevronRight}
                                       size={8}
                                       color={theme.textSecondary}
                                       style={{ opacity: Opacity.muted }}
@@ -270,7 +270,7 @@ export const SafeToSpendLedger = ({
                               }}
                             >
                               <AppIcon
-                                name="trendingUp"
+                                name={Icon.TrendingUp}
                                 size={11}
                                 color={theme.textSecondary}
                                 strokeWidth={1.2}

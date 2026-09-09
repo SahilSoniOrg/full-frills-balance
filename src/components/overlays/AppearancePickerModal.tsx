@@ -1,5 +1,5 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppButton, AppIcon, AppText, IconName, IvyIcon } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText, IconName, IvyIcon } from '@/src/components/core';
 import {
   ACCOUNT_COLOR_PALETTE,
   ACCOUNT_ICON_PALETTE,
@@ -38,7 +38,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
   onIconSelect,
   onColorSelect,
   onSave,
-  selectedIcon = 'wallet',
+  selectedIcon = Icon.Wallet,
   selectedColor = '',
   accountType = AccountType.ASSET,
   mode = 'both',
@@ -257,7 +257,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
                     accessibilityLabel={`Color ${color}`}
                   >
                     {selected && (
-                      <AppIcon name="check" size={Size.iconSm} color={theme.background} />
+                      <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.background} />
                     )}
                   </TouchableOpacity>
                 );

@@ -1,4 +1,4 @@
-import { AppInput } from '@/src/components/core';
+import { Icon, AppInput } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -20,7 +20,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
         <SettingsMenu header={AppConfig.strings.settings.sections.profile}>
           <SettingsMenuItem
             searchId="profile-name"
-            leftIcon="user"
+            leftIcon={Icon.User}
             title={AppConfig.strings.settings.personalization.yourName}
             description={AppConfig.strings.settings.personalization.yourNameDesc}
             hasArrow={false}
@@ -43,7 +43,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
         <SettingsMenu header={AppConfig.strings.settings.sections.documents}>
           <SettingsMenuItem
             searchId="privacy-notice"
-            leftIcon="document"
+            leftIcon={Icon.Document}
             title={PRIVACY_NOTICE_STRINGS.title}
             description={PRIVACY_NOTICE_STRINGS.subtitle}
             onPress={vm.onOpenPrivacyNotice}
@@ -54,7 +54,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
         <SettingsMenu header={AppConfig.strings.settings.sections.devicesAndSessions}>
           <SettingsMenuItem
             searchId="devices"
-            leftIcon="settings"
+            leftIcon={Icon.Settings}
             title={AppConfig.strings.settings.sections.devicesAndSessions}
             description="This device, local preferences, and future sessions"
             onPress={AppNavigation.toDeviceSettings}

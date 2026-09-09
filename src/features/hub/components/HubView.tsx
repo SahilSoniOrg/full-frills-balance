@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
@@ -36,10 +36,12 @@ export function HubView({
         {unreadSmsCount > 0 && activeTab === 'active' ? (
           <ListRow
             onPress={onOpenInbox}
-            leading={<AppIcon name="notifications" size={Size.md} color={theme.primary} />}
+            leading={<AppIcon name={Icon.Notifications} size={Size.md} color={theme.primary} />}
             title={strings.unreadSmsTitle(unreadSmsCount)}
             subtitle={strings.unreadSmsSubtitle}
-            trailing={<AppIcon name="chevronRight" size={Size.sm} color={theme.textTertiary} />}
+            trailing={
+              <AppIcon name={Icon.ChevronRight} size={Size.sm} color={theme.textTertiary} />
+            }
             background="surfaceSecondary"
             borderRadius="lg"
             borderWidth={1}
@@ -60,7 +62,7 @@ export function HubView({
             />
           ) : unreadSmsCount === 0 ? (
             <EmptyStateView
-              icon="info"
+              icon={Icon.Info}
               title={strings.emptyState}
               style={{ marginTop: Spacing.xxxl }}
             />
@@ -76,7 +78,7 @@ export function HubView({
                 borderColor="border"
                 leading={
                   <AppIcon
-                    name={item.type === 'subscription-amnesiac' ? 'history' : 'trendingUp'}
+                    name={item.type === 'subscription-amnesiac' ? Icon.History : Icon.TrendingUp}
                     size={Size.xs}
                     color={theme.text}
                   />
@@ -97,7 +99,7 @@ export function HubView({
           </Stack>
         ) : (
           <EmptyStateView
-            icon="info"
+            icon={Icon.Info}
             title={strings.noDismissed}
             style={{ marginTop: Spacing.xxxl }}
           />

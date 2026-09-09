@@ -1,5 +1,5 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
@@ -70,7 +70,7 @@ export const PlannedPaymentHistoryCard = ({
         <Row flex={1} marginRight="sm" align="center" gap="xs">
           {isSelectionModeActive ? (
             <AppIcon
-              name={isSelected ? 'checkboxChecked' : 'checkboxBlank'}
+              name={isSelected ? Icon.CheckSquare : Icon.Square}
               size={18}
               color={isSelected ? theme.primary : theme.textTertiary}
             />
@@ -115,7 +115,7 @@ export const PlannedPaymentHistoryCard = ({
                   padding={2}
                   borderRadius="full"
                 >
-                  <AppIcon name="error" size={12} color={theme.warning} />
+                  <AppIcon name={Icon.Error} size={12} color={theme.warning} />
                 </Box>
               )}
             </Row>
@@ -147,7 +147,7 @@ export const PlannedPaymentHistoryCard = ({
                   padding={2}
                   borderRadius="full"
                 >
-                  <AppIcon name="edit" size={12} color={theme.primary} />
+                  <AppIcon name={Icon.Edit} size={12} color={theme.primary} />
                 </Box>
               )}
             </Row>

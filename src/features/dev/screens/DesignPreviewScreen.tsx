@@ -19,6 +19,7 @@
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
+  Icon,
   AppButton,
   AppCard,
   AppIcon,
@@ -56,7 +57,7 @@ const PREVIEW_TAB_OPTIONS = [
 
 const PREVIEW_SEGMENT_OPTIONS = [
   { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month', icon: 'calendar' as const },
+  { id: 'month', label: 'Month', icon: Icon.Calendar },
   { id: 'year', label: 'Year' },
 ] as const;
 
@@ -295,7 +296,7 @@ export default function DesignPreviewScreen() {
                 <Badge variant="success" solid size="sm">
                   Small
                 </Badge>
-                <Badge variant="income" icon="trendingUp">
+                <Badge variant="income" icon={Icon.TrendingUp}>
                   With icon
                 </Badge>
               </Inline>
@@ -327,7 +328,7 @@ export default function DesignPreviewScreen() {
                     title="Row with Leading Icon"
                     subtitle="Custom leading content"
                     leading={<TokenBox size={Spacing.lg} radius={Shape.radius.lg} />}
-                    trailing={<AppIcon name="chevronRight" size={14} />}
+                    trailing={<AppIcon name={Icon.ChevronRight} size={14} />}
                   />
                 </Stack>
               </Stack>
@@ -346,7 +347,7 @@ export default function DesignPreviewScreen() {
                     label="Account name"
                     placeholder="Checking"
                     error="Name is required"
-                    leftIcon="wallet"
+                    leftIcon={Icon.Wallet}
                   />
                 </Box>
 
@@ -356,7 +357,7 @@ export default function DesignPreviewScreen() {
                       Default field
                     </AppText>
                   </Box>
-                  <AppInputField placeholder="Search..." leftIcon="search" />
+                  <AppInputField placeholder="Search..." leftIcon={Icon.Search} />
                 </Box>
 
                 <Box>
@@ -408,13 +409,13 @@ export default function DesignPreviewScreen() {
             <PreviewSectionCard title="Icon Buttons & FAB">
               <AppText variant="subheading">IconButton</AppText>
               <Inline space="md" flexWrap="wrap" alignItems="center">
-                <IconButton name="settings" variant="surface" accessibilityLabel="Settings" />
-                <IconButton name="add" variant="primary" accessibilityLabel="Add" />
-                <IconButton name="close" variant="clear" accessibilityLabel="Close" />
-                <IconButton name="trash" variant="error" accessibilityLabel="Delete" />
-                <IconButton name="check" variant="success" accessibilityLabel="Confirm" />
+                <IconButton name={Icon.Settings} variant="surface" accessibilityLabel="Settings" />
+                <IconButton name={Icon.Add} variant="primary" accessibilityLabel="Add" />
+                <IconButton name={Icon.Close} variant="clear" accessibilityLabel="Close" />
+                <IconButton name={Icon.Delete} variant="error" accessibilityLabel="Delete" />
+                <IconButton name={Icon.Check} variant="success" accessibilityLabel="Confirm" />
                 <IconButton
-                  name="settings"
+                  name={Icon.Settings}
                   variant="surface"
                   disabled
                   accessibilityLabel="Disabled"
@@ -432,7 +433,7 @@ export default function DesignPreviewScreen() {
                   <FloatingActionButton
                     onPress={() => {}}
                     label="Log"
-                    icon="add"
+                    icon={Icon.Add}
                     style={{ position: 'relative', bottom: undefined, right: undefined }}
                   />
                 </Inline>
@@ -461,13 +462,13 @@ export default function DesignPreviewScreen() {
                 <Inline space="sm" flexWrap="wrap">
                   <FilterChipButton
                     label="All"
-                    icon="filter"
+                    icon={Icon.Filter}
                     isActive={filterChipActive}
                     onPress={() => setFilterChipActive(true)}
                   />
                   <FilterChipButton
                     label="Expenses"
-                    icon="trendingDown"
+                    icon={Icon.TrendingDown}
                     isActive={!filterChipActive}
                     onPress={() => setFilterChipActive(false)}
                   />
@@ -485,11 +486,11 @@ export default function DesignPreviewScreen() {
             <PreviewSectionCard title="Icons & Indicators">
               <AppText variant="subheading">AppIcon</AppText>
               <Inline space="lg" alignItems="center" flexWrap="wrap">
-                <AppIcon name="wallet" size={Size.iconMd} />
-                <AppIcon name="calendar" size={Size.iconMd} color="primary" />
-                <AppIcon name="trendingUp" size={Size.iconMd} color="income" />
-                <AppIcon name="trendingDown" size={Size.iconMd} color="expense" />
-                <AppIcon name="chevronRight" size={Size.iconSm} color="textSecondary" />
+                <AppIcon name={Icon.Wallet} size={Size.iconMd} />
+                <AppIcon name={Icon.Calendar} size={Size.iconMd} color="primary" />
+                <AppIcon name={Icon.TrendingUp} size={Size.iconMd} color="income" />
+                <AppIcon name={Icon.TrendingDown} size={Size.iconMd} color="expense" />
+                <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color="textSecondary" />
               </Inline>
 
               <AppText variant="subheading">ColoredDot (semantic)</AppText>
@@ -507,7 +508,7 @@ export default function DesignPreviewScreen() {
                   <EmptyStateView
                     title="No transactions yet"
                     subtitle="Log your first entry to see activity here."
-                    icon="receipt"
+                    icon={Icon.Receipt}
                     primaryActionLabel="Log transaction"
                     onPrimaryAction={() => {}}
                     style={{ flex: 0 }}

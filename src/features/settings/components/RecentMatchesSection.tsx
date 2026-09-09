@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -184,7 +184,7 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
 
               {disposition === 'ignore' ? (
                 <View style={styles.dismissedBanner}>
-                  <AppIcon name="closeCircle" size={14} color={theme.textSecondary} />
+                  <AppIcon name={Icon.CloseCircle} size={14} color={theme.textSecondary} />
                   <AppText variant="caption" color="secondary" italic>
                     Silent dismissal. SMS will be discarded from inbox.
                   </AppText>
@@ -198,7 +198,7 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
                     ]}
                   >
                     <AppIcon
-                      name="creditCard"
+                      name={Icon.CreditCard}
                       size={10}
                       color={sourceAccount ? theme.primary : theme.textSecondary}
                     />
@@ -214,7 +214,7 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
                     </AppText>
                   </View>
 
-                  <AppIcon name="arrowRight" size={10} color={theme.textSecondary} />
+                  <AppIcon name={Icon.ArrowRight} size={10} color={theme.textSecondary} />
 
                   <View
                     style={[
@@ -223,7 +223,7 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
                     ]}
                   >
                     <AppIcon
-                      name="tag"
+                      name={Icon.Tag}
                       size={10}
                       color={categoryAccount ? theme.primary : theme.textSecondary}
                     />

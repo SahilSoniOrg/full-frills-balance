@@ -1,5 +1,5 @@
 import { FontIds, ThemeIds } from '@/src/constants';
-import { AppButton, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { SetupReviewStep } from './SetupReviewStep';
 import { View } from 'react-native';
@@ -106,7 +106,7 @@ export function SetupSummarySlice({
       <SetupReviewStep
         name={name}
         workplaceName={workplace?.name.value ?? ''}
-        workplaceIcon={workplace?.icon.value ?? 'briefcase'}
+        workplaceIcon={workplace?.icon.value ?? Icon.Briefcase}
         selectedCurrency={selectedCurrency}
         accountCount={accounts}
         categoryCount={categories}

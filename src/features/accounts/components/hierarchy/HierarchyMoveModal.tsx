@@ -1,8 +1,8 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import {
@@ -77,12 +77,12 @@ export function HierarchyMoveModal({
                       selectedAccountId && void onAssignParent(selectedAccountId, null)
                     }
                   >
-                    <AppIcon name="eject" size={Size.iconSm} color={theme.textSecondary} />
+                    <AppIcon name={Icon.Eject} size={Size.iconSm} color={theme.textSecondary} />
                     <AppText variant="body" style={{ flex: 1 }}>
                       Top level (no group)
                     </AppText>
                     {!selectedAccount?.parentAccountId && (
-                      <AppIcon name="check" size={Size.iconSm} color={theme.success} />
+                      <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
                     )}
                   </TouchableOpacity>
                   {parentCandidates.map(candidate => (
@@ -98,7 +98,7 @@ export function HierarchyMoveModal({
                       }
                     >
                       <AppIcon
-                        name={candidate.icon}
+                        name={getAccountIcon(candidate)}
                         fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
                         size={Size.iconSm}
                         color={theme.textSecondary}
@@ -107,7 +107,7 @@ export function HierarchyMoveModal({
                         {candidate.name}
                       </AppText>
                       {selectedAccount?.parentAccountId === candidate.id && (
-                        <AppIcon name="check" size={Size.iconSm} color={theme.success} />
+                        <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
                       )}
                     </TouchableOpacity>
                   ))}

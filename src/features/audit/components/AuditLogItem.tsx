@@ -1,4 +1,4 @@
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
@@ -78,7 +78,7 @@ export const AuditLogItem = ({
             </AppText>
           </Stack>
           <AppIcon
-            name={isExpanded ? 'chevronUp' : 'chevronDown'}
+            name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
             size={Size.sm}
             color={theme.textSecondary}
           />
@@ -101,7 +101,7 @@ export const AuditLogItem = ({
                   onView(item.entityType, item.entityId, entityDisplayName || undefined)
                 }
               >
-                <AppIcon name="eye" size={Size.xs} color={theme.textSecondary} />
+                <AppIcon name={Icon.Eye} size={Size.xs} color={theme.textSecondary} />
                 <AppText variant="caption" weight="semibold">
                   {AppConfig.strings.audit.viewCta}
                 </AppText>
@@ -115,7 +115,7 @@ export const AuditLogItem = ({
                 ]}
                 onPress={() => onRevert(item.id)}
               >
-                <AppIcon name="refresh" size={Size.xs} color={theme.warning} />
+                <AppIcon name={Icon.Refresh} size={Size.xs} color={theme.warning} />
                 <AppText variant="caption" weight="semibold">
                   {AppConfig.strings.audit.revertCta}
                 </AppText>

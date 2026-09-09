@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, TouchableOpacity, Keyboard } from 'react-native';
-import { AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -118,7 +118,7 @@ export const BulkEntryRow = React.memo(
             style={styles.deleteButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <AppIcon name="delete" size={Size.iconXs} color={theme.textSecondary} />
+            <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -130,7 +130,7 @@ export const BulkEntryRow = React.memo(
             ]}
           >
             <AppIcon
-              name="document"
+              name={Icon.Document}
               size={Size.iconXs}
               color={theme.textTertiary}
               style={styles.notesIcon}
@@ -153,7 +153,7 @@ export const BulkEntryRow = React.memo(
               style={styles.notesClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="x" size={14} color={theme.textTertiary} />
+              <AppIcon name={Icon.X} size={14} color={theme.textTertiary} />
             </TouchableOpacity>
           </View>
         )}
@@ -164,7 +164,7 @@ export const BulkEntryRow = React.memo(
             style={styles.addNotesButton}
             testID={`bulk-add-notes-${row.id}`}
           >
-            <AppIcon name="plus" size={14} color={theme.primary} />
+            <AppIcon name={Icon.Plus} size={14} color={theme.primary} />
             <AppText variant="caption" color="primary" weight="medium">
               Add Notes
             </AppText>
@@ -183,7 +183,7 @@ export const BulkEntryRow = React.memo(
               onDatePickerRequest(row.id);
             }}
           >
-            <AppIcon name="calendar" size={12} color={theme.textSecondary} />
+            <AppIcon name={Icon.Calendar} size={12} color={theme.textSecondary} />
             <AppText variant="caption" weight="semibold" style={styles.dateText}>
               {formattedDate}
             </AppText>
@@ -239,11 +239,11 @@ export const BulkEntryRow = React.memo(
               textColor={sourceStyles.text}
               colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
             />
-            <AppIcon name="chevronDown" size={12} color={sourceStyles.icon} />
+            <AppIcon name={Icon.ChevronDown} size={12} color={sourceStyles.icon} />
           </TouchableOpacity>
 
           <View style={styles.arrowContainer}>
-            <AppIcon name="arrowRight" size={Size.iconXs} color={theme.textTertiary} />
+            <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color={theme.textTertiary} />
           </View>
 
           <TouchableOpacity
@@ -268,7 +268,7 @@ export const BulkEntryRow = React.memo(
               textColor={destStyles.text}
               colors={{ accentColor: destStyles.text, categoryColor: destStyles.marker }}
             />
-            <AppIcon name="chevronDown" size={12} color={theme.textTertiary} />
+            <AppIcon name={Icon.ChevronDown} size={12} color={theme.textTertiary} />
           </TouchableOpacity>
         </View>
 
@@ -294,7 +294,7 @@ export const BulkEntryRow = React.memo(
         {/* Validation error — shown below all content */}
         {row.error && (
           <View style={[styles.errorBar, { backgroundColor: theme.error + '12' }]}>
-            <AppIcon name="error" size={Size.iconXs} color={theme.error} />
+            <AppIcon name={Icon.Error} size={Size.iconXs} color={theme.error} />
             <AppText variant="caption" color="error" weight="semibold" style={styles.errorText}>
               {row.error}
             </AppText>

@@ -1,4 +1,4 @@
-import { AppText, IconButton } from '@/src/components/core';
+import { Icon, AppText, IconButton } from '@/src/components/core';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
@@ -46,7 +46,7 @@ export function DateView({ date, onChange }: DateViewProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          name="chevronLeft"
+          name={Icon.ChevronLeft}
           onPress={handlePrevMonth}
           variant="surface"
           iconColor={theme.textSecondary}
@@ -58,7 +58,7 @@ export function DateView({ date, onChange }: DateViewProps) {
           </AppText>
         </View>
         <IconButton
-          name="chevronRight"
+          name={Icon.ChevronRight}
           onPress={handleNextMonth}
           variant="surface"
           iconColor={theme.textSecondary}

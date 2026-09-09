@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { BulkHierarchyMoveModal } from '../BulkHierarchyMoveModal';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
@@ -8,13 +9,13 @@ const mockCandidates = [
     id: 'parent-1' as AccountId,
     name: 'Parent Asset Account',
     accountType: AccountType.ASSET,
-    icon: 'folder' as const,
+    icon: Icon.FolderOpen,
   },
   {
     id: 'parent-2' as AccountId,
     name: 'Parent Bank Account',
     accountType: AccountType.ASSET,
-    icon: 'bank' as const,
+    icon: Icon.Bank,
   },
 ];
 
@@ -27,7 +28,7 @@ describe('BulkHierarchyMoveModal', () => {
       <BulkHierarchyMoveModal
         visible={true}
         selectedCount={2}
-        parentCandidates={mockCandidates as any}
+        parentCandidates={mockCandidates}
         onClose={onClose}
         onAssignParent={onAssignParent}
       />,

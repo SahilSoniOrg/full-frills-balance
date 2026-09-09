@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AccountsListModals } from '../AccountsListModals';
 import { AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
@@ -11,7 +12,7 @@ const mockAccount: AccountCardViewModel = {
   balance: 1500,
   currencyCode: 'USD',
   depth: 0,
-  icon: 'wallet',
+  icon: Icon.Wallet,
   categoryColor: '#4F46E5',
   accountColor: '#EEF2FF',
   textColor: '#1E1B4B',
@@ -71,7 +72,7 @@ describe('AccountsListModals', () => {
     expect(getByText('Account appearance')).toBeTruthy();
     fireEvent.press(getByText('Done'));
     expect(onAppearanceUpdate).toHaveBeenCalledWith({
-      icon: 'wallet',
+      icon: Icon.Wallet,
       color: '#EEF2FF',
     });
   });

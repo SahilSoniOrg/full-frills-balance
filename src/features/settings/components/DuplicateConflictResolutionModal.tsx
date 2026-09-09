@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
@@ -138,7 +138,7 @@ export function DuplicateConflictResolutionModal({
             paddingSize="md"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name="messageSquare" size={14} color={theme.primary} />
+              <AppIcon name={Icon.MessageSquare} size={14} color={theme.primary} />
               <AppText variant="caption" weight="bold" color="primary">
                 INCOMING SMS / DRAFT
               </AppText>
@@ -211,7 +211,7 @@ export function DuplicateConflictResolutionModal({
             paddingSize="md"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name="bookOpen" size={14} color={theme.textSecondary} />
+              <AppIcon name={Icon.Document} size={14} color={theme.textSecondary} />
               <AppText variant="caption" weight="bold" color="secondary">
                 EXISTING ENTRY
               </AppText>

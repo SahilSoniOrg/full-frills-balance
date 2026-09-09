@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -104,7 +104,7 @@ export const HubWidget = ({
               accessibilityRole="button"
               accessibilityLabel="Manage dismissed notifications"
             >
-              <AppIcon name="history" size={14} color={theme.textSecondary} />
+              <AppIcon name={Icon.History} size={14} color={theme.textSecondary} />
               <AppText variant="caption" color="secondary">
                 {AppConfig.strings.dashboard.manageDismissed}
               </AppText>
@@ -138,7 +138,7 @@ export const HubWidget = ({
                 >
                   <View style={styles.metaRow}>
                     <View style={[styles.severityChip, { backgroundColor: severity.chipBg }]}>
-                      <AppIcon name="alert" size={12} color={severity.color} />
+                      <AppIcon name={Icon.Alert} size={12} color={severity.color} />
                       <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
                         {severity.label}
                       </AppText>
@@ -154,7 +154,11 @@ export const HubWidget = ({
                         ]}
                       >
                         <AppIcon
-                          name={insight.type === 'subscription-amnesiac' ? 'history' : 'trendingUp'}
+                          name={
+                            insight.type === 'subscription-amnesiac'
+                              ? Icon.History
+                              : Icon.TrendingUp
+                          }
                           size={Size.xs}
                           color={severity.color}
                         />
@@ -239,7 +243,7 @@ export const HubWidget = ({
                       <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
                         {getPrimaryActionLabel(insight.type)}
                       </AppText>
-                      <AppIcon name="chevronRight" size={14} color={severity.color} />
+                      <AppIcon name={Icon.ChevronRight} size={14} color={severity.color} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -251,7 +255,7 @@ export const HubWidget = ({
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss insight"
                     >
-                      <AppIcon name="close" size={14} color={theme.textSecondary} />
+                      <AppIcon name={Icon.Close} size={14} color={theme.textSecondary} />
                       <AppText variant="caption" color="secondary">
                         {AppConfig.strings.dashboard.hub.dismiss}
                       </AppText>

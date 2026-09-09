@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
@@ -15,7 +16,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
       <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
         <SettingsMenuItem
           searchId="integrity"
-          leftIcon="search"
+          leftIcon={Icon.Search}
           title={AppConfig.strings.settings.maintenance.integrityBtn}
           description={AppConfig.strings.settings.maintenance.integrityDesc}
           onPress={vm.onFixIntegrity}
@@ -24,7 +25,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
         {__DEV__ && (
           <SettingsMenuItem
             searchId="seed-mock-data"
-            leftIcon="database"
+            leftIcon={Icon.Database}
             title={AppConfig.strings.settings.maintenance.seedMockBtn}
             description={AppConfig.strings.settings.maintenance.seedMockDesc}
             onPress={vm.onSeedMockData}
@@ -33,7 +34,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
         )}
         <SettingsMenuItem
           searchId="cleanup"
-          leftIcon="delete"
+          leftIcon={Icon.Delete}
           title={AppConfig.strings.settings.danger.cleanupBtn}
           description={AppConfig.strings.settings.danger.cleanupDesc}
           onPress={vm.onCleanup}
@@ -44,7 +45,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
       <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
         <SettingsMenuItem
           searchId="reset"
-          leftIcon="alert"
+          leftIcon={Icon.Alert}
           title={AppConfig.strings.settings.danger.resetBtn}
           description={AppConfig.strings.settings.danger.resetDesc}
           onPress={vm.onFactoryReset}
@@ -62,7 +63,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           vm.integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait
         }
         hint={AppConfig.strings.settings.maintenance.integrityHint}
-        icon="search"
+        icon={Icon.Search}
       />
 
       <SettingsMaintenanceOverlay
@@ -73,7 +74,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           vm.seedingProgressMessage || AppConfig.strings.settings.maintenance.seedMockWait
         }
         hint={AppConfig.strings.settings.maintenance.seedMockHint}
-        icon="database"
+        icon={Icon.Database}
       />
     </SettingsLayout>
   );

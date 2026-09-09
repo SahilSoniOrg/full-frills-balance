@@ -1,4 +1,4 @@
-import { AppText, IvyIcon } from '@/src/components/core';
+import { Icon, AppText, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -69,7 +69,7 @@ export const FormSelectorField: React.FC<FormSelectorFieldProps> = ({
               </AppText>
             </TouchableOpacity>
           )}
-          <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
+          <IvyIcon name={Icon.ChevronDown} size={Size.iconSm} color={theme.textSecondary} />
         </View>
       </TouchableOpacity>
     </View>

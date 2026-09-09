@@ -1,6 +1,6 @@
 import { FontIds, ThemeIds, type FontId, type ThemeId } from '@/src/constants/design-tokens';
 import { AccountType } from '@/src/types/enums';
-import { isValidIconName, type IconName } from '@/src/types/domainIcons';
+import { type IconName } from '@/src/types/domainIcons';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type {
   RestoreFacts as ImportedRestoreFacts,
@@ -258,10 +258,6 @@ export function sameRestoreSources(
       item.operationId === other.operationId
     );
   });
-}
-
-export function isIconName(value: unknown): value is IconName {
-  return typeof value === 'string' && isValidIconName(value);
 }
 
 export function isAccountType(value: unknown): value is AccountType {

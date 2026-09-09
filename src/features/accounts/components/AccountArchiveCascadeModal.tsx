@@ -1,4 +1,4 @@
-import { AppIcon, AppText, ListRow } from '@/src/components/core';
+import { Icon, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -84,7 +84,7 @@ function CascadeSelectionEditor({
                 padding="md"
                 leading={
                   <AppIcon
-                    name={isSelected ? 'checkSquare' : 'square'}
+                    name={isSelected ? Icon.CheckSquare : Icon.Square}
                     size={Size.iconMd}
                     color={isSelected ? theme.primary : theme.textTertiary}
                   />

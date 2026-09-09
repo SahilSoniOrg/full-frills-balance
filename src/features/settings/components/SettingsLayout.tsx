@@ -13,6 +13,7 @@ import React, { useRef } from 'react';
 import type { ScrollViewProps } from 'react-native';
 import type { ScrollView } from 'react-native-gesture-handler';
 import type { Edge } from 'react-native-safe-area-context';
+import { Icon } from '@/src/types/domainIcons';
 
 interface SettingsLayoutProps {
   title: string;
@@ -36,7 +37,7 @@ export function SettingsLayout({
   headerActions,
   fab,
   showBack = true,
-  backIcon = 'back',
+  backIcon = Icon.Back,
   scrollable = true,
   children,
   edges,

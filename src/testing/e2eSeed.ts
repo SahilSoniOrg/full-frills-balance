@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -74,17 +75,17 @@ async function seedWorkplace(name: string): Promise<WorkplaceId> {
   finishDeviceSetup({ displayName: { value: name, source: 'user_entered' } });
   const workplaceId = await finishWorkplaceSetup(generator() as WorkplaceId, {
     name: { value: `${name}'s Personal workplace`, source: 'user_entered' },
-    icon: { value: 'briefcase', source: 'defaulted' },
+    icon: { value: Icon.Briefcase, source: 'defaulted' },
     baseCurrency: { value: DEFAULT_SEED.selectedCurrency, source: 'user_entered' },
     selectedAccounts: DEFAULT_SEED.selectedAccounts.map(accountName => ({
       name: accountName,
       type: AccountType.ASSET,
-      icon: 'wallet',
+      icon: Icon.Wallet,
     })),
     selectedCategories: DEFAULT_SEED.selectedCategories.map(categoryName => ({
       name: categoryName,
       type: AccountType.EXPENSE,
-      icon: 'tag',
+      icon: Icon.Tag,
     })),
     acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
   });
@@ -125,7 +126,7 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
     acceptedSlices: ['restore_source', 'workplace'],
     workplace: {
       name: { value: workplaceFacts.name, source: 'imported' },
-      icon: { value: 'briefcase', source: 'imported' },
+      icon: { value: Icon.Briefcase, source: 'imported' },
       baseCurrency: { value: workplaceFacts.defaultCurrencyCode, source: 'imported' },
       selectedAccounts: [],
       selectedCategories: [],
@@ -184,7 +185,7 @@ async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
     accountType: AccountType.ASSET,
     currencyCode: 'USD',
     initialBalance: 0,
-    icon: 'bank',
+    icon: Icon.Bank,
     workplaceId,
   });
   await createAccount(workplaceId, {
@@ -192,7 +193,7 @@ async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
     accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
     initialBalance: 0,
-    icon: 'home',
+    icon: Icon.Home,
     workplaceId,
   });
 }
@@ -336,7 +337,7 @@ async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
     accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
     initialBalance: 0,
-    icon: 'activity',
+    icon: Icon.Activity,
     workplaceId,
   });
   const legs = [
@@ -440,7 +441,7 @@ export async function executeE2eBootstrap(config: {
         operationId,
         corrections: {
           name: prepared.facts.workplace.name ?? 'Imported workplace',
-          icon: prepared.facts.workplace.icon ?? 'briefcase',
+          icon: prepared.facts.workplace.icon ?? Icon.Briefcase,
           defaultCurrencyCode:
             prepared.facts.workplace.defaultCurrencyCode ?? AppConfig.defaultCurrency,
         },

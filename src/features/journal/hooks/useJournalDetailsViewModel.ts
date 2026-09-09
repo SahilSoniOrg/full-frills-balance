@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { Icon, parseIconName, type IconName } from '@/src/types/domainIcons';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
@@ -33,7 +33,7 @@ export interface JournalDetailsViewModel {
   isLoading: boolean;
   isMissing: boolean;
   title: string;
-  backIcon: 'close';
+  backIcon: typeof Icon.Close;
   headerActions: {
     onCopy: () => void;
     onEdit: () => void;
@@ -247,7 +247,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     isLoading,
     isMissing: !isLoading && !journalInfo,
     title: 'Journal details',
-    backIcon: 'close',
+    backIcon: Icon.Close,
     headerActions: {
       onCopy: handleCopy,
       onEdit: handleEdit,
@@ -284,6 +284,6 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
         : undefined,
     splitItems,
     isExpense,
-    displayIcon: (paramTypeIcon as IconName) || (isExpense ? 'receipt' : 'receiptLong'),
+    displayIcon: parseIconName(paramTypeIcon, isExpense ? Icon.Receipt : Icon.TrendingUp),
   };
 }

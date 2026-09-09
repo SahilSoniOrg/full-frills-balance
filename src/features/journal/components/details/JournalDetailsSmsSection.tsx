@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Section } from '@/src/components/shared/Section';
-import { AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Box, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo, useState } from 'react';
@@ -67,7 +67,7 @@ export const JournalDetailsSmsSection = React.memo(
               Imported From SMS{smsInfo.length > 1 ? ` (${smsInfo.length})` : ''}
             </AppText>
             <AppIcon
-              name={isExpanded ? 'chevronDown' : 'chevronRight'}
+              name={isExpanded ? Icon.ChevronDown : Icon.ChevronRight}
               size={18}
               color={theme.textSecondary}
             />

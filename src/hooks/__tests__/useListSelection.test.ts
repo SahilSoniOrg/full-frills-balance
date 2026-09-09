@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import {
   buildListSelectionActions,
   type SelectionActionDefinition,
@@ -5,7 +6,7 @@ import {
 
 describe('buildListSelectionActions', () => {
   const action = {
-    name: 'edit' as const,
+    name: Icon.Edit,
     onPress: jest.fn(),
   };
 

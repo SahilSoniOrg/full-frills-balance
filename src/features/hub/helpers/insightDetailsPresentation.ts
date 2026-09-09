@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import type { Theme } from '@/src/constants/design-tokens';
-import type { IconName } from '@/src/components/core';
+import { Icon, type IconName } from '@/src/components/core';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 
 export type InsightDetailsRouteParams = {
@@ -53,7 +53,7 @@ export function buildInsightDetailsHeader(
   return {
     severityColor,
     severityLabel,
-    iconName: params.id?.startsWith('sub_') ? 'refresh' : 'trendingUp',
+    iconName: params.id?.startsWith('sub_') ? Icon.Refresh : Icon.TrendingUp,
     message: params.message ?? '',
     amount,
     currencyCode: params.currencyCode ?? '',

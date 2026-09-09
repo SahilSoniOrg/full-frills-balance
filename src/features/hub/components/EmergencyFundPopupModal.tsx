@@ -1,5 +1,5 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
-import { AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -43,19 +43,19 @@ export function EmergencyFundPopupModal({
       <View style={styles.modalSection}>
         <AppText variant="heading">{strings.fixTitle}</AppText>
         <View style={styles.modalStepRow}>
-          <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
+          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.primary} />
           <AppText variant="caption" color="secondary" style={styles.modalStepText}>
             {strings.step1}
           </AppText>
         </View>
         <View style={styles.modalStepRow}>
-          <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
+          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.primary} />
           <AppText variant="caption" color="secondary" style={styles.modalStepText}>
             {strings.step2}
           </AppText>
         </View>
         <View style={styles.modalStepRow}>
-          <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
+          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.primary} />
           <AppText variant="caption" color="secondary" style={styles.modalStepText}>
             {strings.step3}
           </AppText>

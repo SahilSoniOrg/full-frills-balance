@@ -7,6 +7,7 @@ import { JournalDetailsView } from '@/src/features/journal/components/JournalDet
 import { useJournalDetailsViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';
+import { Icon } from '@/src/types/domainIcons';
 
 function JournalDetailsScreen() {
   const vm = useJournalDetailsViewModel();
@@ -18,27 +19,27 @@ function JournalDetailsScreen() {
     return buildDetailNavChrome({
       phase,
       readyTitle: vm.title,
-      missingBackIcon: 'close',
+      missingBackIcon: Icon.Close,
       onBack: vm.onBack,
       headerActions: (
         <MoneyDetailHeaderActions
           actions={[
             {
-              name: 'copy',
+              name: Icon.Copy,
               onPress: vm.headerActions.onCopy,
               iconColor: theme.text,
               size: Typography.sizes.xl,
               testID: 'copy-button',
             },
             {
-              name: 'edit',
+              name: Icon.Edit,
               onPress: vm.headerActions.onEdit,
               iconColor: theme.text,
               size: Typography.sizes.xl,
               testID: 'edit-button',
             },
             {
-              name: 'delete',
+              name: Icon.Delete,
               onPress: vm.headerActions.onDelete,
               iconColor: theme.error,
               size: Typography.sizes.xl,

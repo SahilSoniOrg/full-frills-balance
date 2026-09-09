@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { Icon, isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants/app-config';
 import type { PlainAccountMetadata } from '@/src/types/plainDtos';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
@@ -53,13 +53,10 @@ export function createDefaultAccountMetadataValues(
   };
 }
 
-export function resolveAccountIcon(
-  accountType: AccountType,
-  customIcon?: IconName | null,
-): IconName {
-  if (customIcon) return customIcon;
+export function resolveAccountIcon(accountType: AccountType, customIcon?: string | null): IconName {
+  if (isValidIconName(customIcon)) return customIcon;
   const isCategory = accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
-  return isCategory ? 'tag' : 'wallet';
+  return isCategory ? Icon.Tag : Icon.Wallet;
 }
 
 export function validateAccountMetadata(

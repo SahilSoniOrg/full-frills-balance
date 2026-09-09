@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
@@ -14,7 +15,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
       <SettingsMenu header={AppConfig.strings.settings.sections.protectFinancialDetails}>
         <SettingsToggleItem
           searchId="privacy-security"
-          leftIcon="shield"
+          leftIcon={Icon.Shield}
           title={AppConfig.strings.settings.privacy.title}
           description={AppConfig.strings.settings.privacy.description}
           value={vm.isPrivacyMode}
@@ -22,7 +23,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
         />
         <SettingsToggleItem
           searchId="widget-privacy"
-          leftIcon="eyeOff"
+          leftIcon={Icon.EyeOff}
           title={AppConfig.strings.settings.privacy.widgetPrivacyTitle}
           description={AppConfig.strings.settings.privacy.widgetPrivacyDesc}
           value={vm.isWidgetPrivacyEnabled}
@@ -30,7 +31,7 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
         />
         <SettingsToggleItem
           searchId="app-lock"
-          leftIcon="lock"
+          leftIcon={Icon.Lock}
           title={AppConfig.strings.settings.privacy.appLockTitle}
           description={AppConfig.strings.settings.privacy.appLockDesc}
           value={vm.isAppLockEnabled}
