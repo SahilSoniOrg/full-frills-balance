@@ -1,13 +1,13 @@
-import { isValidIconName, type IconName } from '@/src/types/domainIcons';
+import { Icon, parseIconName, type IconName } from '@/src/types/domainIcons';
 import { PlainWorkplace } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
-export const DEFAULT_WORKPLACE_ICON: IconName = 'briefcase';
+export const DEFAULT_WORKPLACE_ICON: IconName = Icon.Briefcase;
 
 export function toWorkplaceIcon(icon: string | undefined): IconName {
-  return isValidIconName(icon) ? icon : DEFAULT_WORKPLACE_ICON;
+  return parseIconName(icon, DEFAULT_WORKPLACE_ICON);
 }
 
 export default class Workplace extends Model {

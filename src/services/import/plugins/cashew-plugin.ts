@@ -12,7 +12,7 @@ import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/types/enums';
-import { IconName } from '@/src/types/domainIcons';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { files } from '@/src/utils/files';
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
@@ -103,38 +103,38 @@ interface CashewAppSetting {
 }
 
 const getAppIconFromCashewIcon = (cashewIcon: string | null): IconName => {
-  if (!cashewIcon) return 'star';
+  if (!cashewIcon) return Icon.Star;
   const mapping: Record<string, IconName> = {
-    'cutlery.png': 'coffee',
-    'groceries.png': 'shoppingBag',
-    'shopping.png': 'shoppingCart',
-    'tram.png': 'bus',
-    'popcorn.png': 'film',
-    'bills.png': 'receipt',
-    'gift.png': 'sparkles',
-    'flower.png': 'sparkles',
-    'briefcase.png': 'briefcase',
-    'plane.png': 'bus',
-    'coin.png': 'transaction',
-    'bank.png': 'bank',
-    'wallet.png': 'creditCard',
-    'home.png': 'home',
-    'car.png': 'bus',
-    'heart.png': 'heart',
-    'music.png': 'playSquare',
-    'game-controller.png': 'playSquare',
-    'camera.png': 'film',
-    'phone.png': 'messageCircle',
-    'laptop.png': 'database',
-    'book.png': 'document',
-    'coffee.png': 'coffee',
-    'dumbbell.png': 'trendingUp',
-    'stethoscope.png': 'shieldCheck',
-    'graduation-cap.png': 'briefcase',
-    'shirt.png': 'shoppingBag',
-    'beach-umbrella.png': 'palette',
+    'cutlery.png': Icon.Coffee,
+    'groceries.png': Icon.ShoppingBag,
+    'shopping.png': Icon.ShoppingCart,
+    'tram.png': Icon.Bus,
+    'popcorn.png': Icon.Film,
+    'bills.png': Icon.Receipt,
+    'gift.png': Icon.Sparkles,
+    'flower.png': Icon.Sparkles,
+    'briefcase.png': Icon.Briefcase,
+    'plane.png': Icon.Bus,
+    'coin.png': Icon.Transaction,
+    'bank.png': Icon.Bank,
+    'wallet.png': Icon.CreditCard,
+    'home.png': Icon.Home,
+    'car.png': Icon.Bus,
+    'heart.png': Icon.Heart,
+    'music.png': Icon.PlaySquare,
+    'game-controller.png': Icon.PlaySquare,
+    'camera.png': Icon.Film,
+    'phone.png': Icon.MessageCircle,
+    'laptop.png': Icon.Database,
+    'book.png': Icon.Document,
+    'coffee.png': Icon.Coffee,
+    'dumbbell.png': Icon.TrendingUp,
+    'stethoscope.png': Icon.ShieldCheck,
+    'graduation-cap.png': Icon.Briefcase,
+    'shirt.png': Icon.ShoppingBag,
+    'beach-umbrella.png': Icon.Palette,
   };
-  return mapping[cashewIcon] || 'star';
+  return mapping[cashewIcon] || Icon.Star;
 };
 
 const mapFrequency = (reoccurrence: number | null): PlannedPaymentInterval => {
@@ -257,7 +257,7 @@ export const cashewPlugin: ImportPlugin = {
             accountType: isLent ? AccountType.ASSET : AccountType.LIABILITY,
             accountSubtype: AccountSubtype.LOAN,
             currencyCode: walletCurrencies.get(objective.wallet_fk) || workplaceCurrency,
-            icon: (objective.icon_name as IconName) || 'handshake',
+            icon: getAppIconFromCashewIcon(objective.icon_name),
             color: mapToNearestAccountColor(normalizeHexColor(objective.colour)),
             orderNum: objective.order,
           });

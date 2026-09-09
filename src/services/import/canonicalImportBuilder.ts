@@ -13,7 +13,8 @@ import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/types/enums';
-import { IconName } from '@/src/types/domainIcons';
+import { Icon, isValidIconName, parseIconName, type IconName } from '@/src/types/domainIcons';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import {
   CANONICAL_IMPORT_VERSION_V1,
   CanonicalAccount,
@@ -36,7 +37,7 @@ export interface ImportAccountInput {
   accountType?: AccountType | string;
   accountSubtype?: AccountSubtype | string;
   description?: string;
-  icon?: IconName;
+  icon?: string;
   color?: string;
   orderNum?: number;
   reconciledAt?: number;
@@ -48,7 +49,7 @@ export interface ImportCategoryInput {
   name: string;
   defaultType?: AccountType.EXPENSE | AccountType.INCOME;
   description?: string;
-  icon?: IconName;
+  icon?: string;
   color?: string;
 }
 
@@ -121,7 +122,8 @@ export interface ImportIssue {
     | 'DUPLICATE_CATEGORY_ID'
     | 'INVALID_TRANSFER_DESTINATION'
     | 'INVALID_AMOUNT'
-    | 'INVALID_ENUM';
+    | 'INVALID_ENUM'
+    | 'INVALID_ICON';
   message: string;
   details?: Record<string, unknown>;
 }
@@ -269,6 +271,25 @@ export class CanonicalImportBuilder {
     return getDefaultSubtypeForType(type);
   }
 
+  private parseIconWithIssue(
+    raw: string | null | undefined,
+    fallback: IconName,
+    entity: 'account' | 'category',
+    sourceId: string,
+    issues: ImportIssue[],
+  ): IconName {
+    if (raw !== undefined && raw !== null && !isValidIconName(raw)) {
+      issues.push({
+        severity: 'warning',
+        entity,
+        sourceId,
+        code: 'INVALID_ICON',
+        message: `Invalid ${entity} icon '${raw}'. Falling back to '${fallback}'.`,
+      });
+    }
+    return parseIconName(raw, fallback);
+  }
+
   private parsePlannedPaymentIntervalWithIssue(
     val?: PlannedPaymentInterval | string,
     sourceId?: string,
@@ -326,6 +347,13 @@ export class CanonicalImportBuilder {
 
       const type = this.parseAccountTypeWithIssue(raw.accountType, raw.id, issues);
       const subtype = this.parseAccountSubtypeWithIssue(type, raw.accountSubtype, raw.id, issues);
+      const icon = this.parseIconWithIssue(
+        raw.icon,
+        getAccountFallbackIcon(type),
+        'account',
+        raw.id,
+        issues,
+      );
 
       canonicalAccounts.push({
         id: internalId,
@@ -334,7 +362,7 @@ export class CanonicalImportBuilder {
         accountSubtype: subtype,
         currencyCode: raw.currencyCode || this.defaultCurrency,
         description: raw.description,
-        icon: raw.icon,
+        icon,
         color: raw.color,
         orderNum: raw.orderNum ?? canonicalAccounts.length + 1,
         reconciledAt: raw.reconciledAt,
@@ -400,6 +428,7 @@ export class CanonicalImportBuilder {
     categoryStats: Map<string, CategoryUsageStat>,
     categoryAccountMap: Map<string, AccountId>,
     accountCountOffset: number,
+    issues: ImportIssue[],
   ): CanonicalAccount[] {
     const categoryAccounts: CanonicalAccount[] = [];
 
@@ -411,6 +440,13 @@ export class CanonicalImportBuilder {
       const primaryType =
         catInfo.defaultType ??
         (stat && stat.incomeCount > stat.expenseCount ? AccountType.INCOME : AccountType.EXPENSE);
+      const icon = this.parseIconWithIssue(
+        catInfo.icon,
+        primaryType === AccountType.INCOME ? Icon.TrendingUp : Icon.Tag,
+        'category',
+        catId,
+        issues,
+      );
 
       for (const currency of currencies) {
         const catKey = `${catId}:::${currency}`;
@@ -425,7 +461,7 @@ export class CanonicalImportBuilder {
             accountSubtype: getDefaultSubtypeForType(primaryType),
             currencyCode: currency,
             description: catInfo.description,
-            icon: catInfo.icon,
+            icon,
             color: catInfo.color,
             orderNum: accountCountOffset + categoryAccounts.length + 1,
           });
@@ -725,6 +761,7 @@ export class CanonicalImportBuilder {
       categoryStats,
       categoryAccountMap,
       canonicalAccounts.length,
+      buildIssues,
     );
     canonicalAccounts.push(...categoryAccounts);
 

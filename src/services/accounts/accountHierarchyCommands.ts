@@ -53,6 +53,19 @@ export type AccountSaveUpdate = AccountDetailsUpdate & {
   parentAccountId?: AccountId | null;
 };
 
+type AccountPersistedFieldUpdate = {
+  name?: string;
+  accountType?: AccountPersistenceInput['accountType'];
+  accountSubtype?: AccountPersistenceInput['accountSubtype'];
+  currencyCode?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  metadata?: AccountPersistenceInput['metadata'];
+  parentAccountId?: AccountId | null;
+  orderNum?: number;
+};
+
 function siblingListState(
   accounts: readonly Pick<Account, 'id' | 'accountType' | 'parentAccountId' | 'orderNum'>[],
   parentAccountId: AccountId | undefined,
@@ -227,7 +240,7 @@ export type AccountFieldUpdateContext = {
 
 function buildAccountUpdateAuditChanges(
   context: AccountFieldUpdateContext,
-  after: Partial<CreateAccountData>,
+  after: AccountPersistedFieldUpdate,
 ) {
   return {
     before: {
@@ -309,7 +322,7 @@ export async function prepareAccountFieldUpdate(
 /** Analytics + type-change rebuild after a successful field persist. */
 export function emitAccountUpdateSideEffects(
   ctx: AccountFieldUpdateContext,
-  updates: AccountSaveUpdate,
+  updates: AccountPersistedFieldUpdate,
   workplaceId: WorkplaceId,
 ): void {
   analytics.trackFeatureUsage('account', 'update', {
@@ -366,7 +379,7 @@ export async function saveAccount(
   updates: AccountSaveUpdate,
 ): Promise<Account> {
   let sideEffectContext: AccountFieldUpdateContext | undefined;
-  let sideEffectUpdates: AccountSaveUpdate = updates;
+  let sideEffectUpdates: AccountPersistedFieldUpdate = updates;
 
   const saved = await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const snapshot = createAccountTreeSnapshot(accounts);
@@ -455,7 +468,7 @@ export async function saveAccount(
       ...plannedDetail.normalizedUpdates,
       ...(currentPlacement || {}),
     };
-    const auditAfter: AccountSaveUpdate & { orderNum?: number } = {
+    const auditAfter: AccountPersistedFieldUpdate = {
       ...plannedDetail.normalizedUpdates,
       ...(parentWasSpecified || parentChanged ? { parentAccountId: nextParentId || null } : {}),
       ...(currentPlacement ? { orderNum: currentPlacement.orderNum } : {}),

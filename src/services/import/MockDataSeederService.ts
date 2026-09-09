@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import {
   AccountType,
@@ -65,7 +66,7 @@ export class MockDataSeederService {
     // Make sure name, icon, and defaultCurrencyCode are set correctly
     await workplaceService.updateWorkplace(targetWorkplaceId, {
       name: 'Demo Workspace',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 
@@ -97,7 +98,7 @@ export class MockDataSeederService {
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         description: 'Primary checking account',
-        icon: 'briefcase',
+        icon: Icon.Briefcase,
         orderNum: 1,
       },
       {
@@ -106,7 +107,7 @@ export class MockDataSeederService {
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         description: 'Emergency fund & savings',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         orderNum: 2,
       },
       {
@@ -115,7 +116,7 @@ export class MockDataSeederService {
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
         description: 'Physical cash on hand',
-        icon: 'wallet',
+        icon: Icon.Wallet,
         orderNum: 3,
       },
       {
@@ -124,7 +125,7 @@ export class MockDataSeederService {
         accountType: AccountType.LIABILITY,
         currencyCode: 'USD',
         description: 'Credit card for daily rewards',
-        icon: 'creditCard',
+        icon: Icon.CreditCard,
         orderNum: 4,
       },
       {
@@ -133,7 +134,7 @@ export class MockDataSeederService {
         accountType: AccountType.EQUITY,
         currencyCode: 'USD',
         description: 'System account that stores opening balances',
-        icon: 'scale',
+        icon: Icon.Scale,
         orderNum: 5,
       },
       {
@@ -142,7 +143,7 @@ export class MockDataSeederService {
         accountType: AccountType.INCOME,
         currencyCode: 'USD',
         description: 'Income category',
-        icon: 'trendingUp',
+        icon: Icon.TrendingUp,
         orderNum: 6,
       },
       {
@@ -151,7 +152,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Grocery stores and food markets',
-        icon: 'tag',
+        icon: Icon.Tag,
         orderNum: 7,
       },
       {
@@ -160,7 +161,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Monthly rent or mortgage',
-        icon: 'home',
+        icon: Icon.Home,
         orderNum: 8,
       },
       {
@@ -169,7 +170,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Restaurants, cafes, and bars',
-        icon: 'tag',
+        icon: Icon.Tag,
         orderNum: 9,
       },
       {
@@ -178,7 +179,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Recurring SaaS or media services',
-        icon: 'notifications',
+        icon: Icon.Notifications,
         orderNum: 10,
       },
       {
@@ -187,7 +188,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Water, gas, electricity, internet',
-        icon: 'tag',
+        icon: Icon.Tag,
         orderNum: 11,
       },
       {
@@ -196,7 +197,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Gas, subway, public transit, Uber',
-        icon: 'tag',
+        icon: Icon.Tag,
         orderNum: 12,
       },
       {
@@ -205,7 +206,7 @@ export class MockDataSeederService {
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
         description: 'Movies, concerts, events',
-        icon: 'tag',
+        icon: Icon.Tag,
         orderNum: 13,
       },
     ];

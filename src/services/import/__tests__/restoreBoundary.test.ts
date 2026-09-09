@@ -45,6 +45,7 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
+import { Icon } from '@/src/types/domainIcons';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
   prepareRestore,
@@ -97,7 +98,7 @@ function prepared(overrides: Partial<PreparedRestore> = {}): PreparedRestore {
     }),
     facts: {
       user: { name: 'Backup User' },
-      workplace: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      workplace: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
     },
     stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
     warnings: [],
@@ -121,7 +122,7 @@ describe('restore service boundary', () => {
           themeId: ThemeIds.DEEP_SPACE,
           fontId: FontIds.IVY,
         },
-        workplace: { name: ' Books ', icon: 'briefcase', defaultCurrencyCode: 'usd' },
+        workplace: { name: ' Books ', icon: Icon.Briefcase, defaultCurrencyCode: 'usd' },
         workplacePreferences: { safeToSpendDays: 60 },
       }),
       context,
@@ -130,7 +131,7 @@ describe('restore service boundary', () => {
     expect(result.fingerprint).toBe(fingerprintRestoreSource(context.rawBytes));
     expect(result.facts).toMatchObject({
       user: { name: 'Backup User' },
-      workplace: { name: 'Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
       appearance: { theme: 'dark', themeId: ThemeIds.DEEP_SPACE, fontId: FontIds.IVY },
       workplacePreferences: { safeToSpendDays: 60 },
     });
@@ -143,12 +144,12 @@ describe('restore service boundary', () => {
     (importRepository.batchInsertNewWorkplace as jest.Mock).mockResolvedValue({
       id: operationId,
       name: 'Imported Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
     await publishRestore(prepared(), {
       operationId,
-      corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
     });
 
     expect(importRepository.batchInsertNewWorkplace).toHaveBeenCalledTimes(1);
@@ -170,13 +171,13 @@ describe('restore service boundary', () => {
     (workplaceRepository.find as jest.Mock).mockResolvedValue({
       id: operationId,
       name: 'Imported Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 
     const result = await publishRestore(prepared(), {
       operationId,
-      corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
     });
 
     expect(importRepository.batchInsertNewWorkplace).not.toHaveBeenCalled();
@@ -200,11 +201,11 @@ describe('restore service boundary', () => {
 
     await publishRestore(prepared(), {
       operationId,
-      corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
     });
     await publishRestore(prepared(), {
       operationId,
-      corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+      corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
     });
 
     expect(importRepository.batchInsertNewWorkplace).toHaveBeenCalledTimes(1);
@@ -217,14 +218,14 @@ describe('restore service boundary', () => {
     (workplaceRepository.find as jest.Mock).mockResolvedValue({
       id: operationId,
       name: 'Imported Books',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 
     await expect(
       publishRestore(prepared({ fingerprint: 'restore-v1:different' }), {
         operationId,
-        corrections: { name: 'Imported Books', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+        corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
       }),
     ).rejects.toThrow('different backup source');
     expect(workplaceRepository.find).not.toHaveBeenCalled();
@@ -235,7 +236,7 @@ describe('restore service boundary', () => {
     await expect(
       publishRestore(prepared(), {
         operationId,
-        corrections: { name: '', icon: 'briefcase', defaultCurrencyCode: 'USD' },
+        corrections: { name: '', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
       }),
     ).rejects.toThrow('Workplace name');
     expect(importRepository.batchInsertNewWorkplace).not.toHaveBeenCalled();

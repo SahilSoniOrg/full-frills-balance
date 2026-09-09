@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
@@ -27,13 +28,13 @@ describe('AccountListMetricsQueries workplace isolation', () => {
     await workplaceRepository.create({
       id: WORKPLACE_ONE,
       name: 'Account List Workplace One',
-      icon: 'home',
+      icon: Icon.Home,
       defaultCurrencyCode: 'USD',
     });
     await workplaceRepository.create({
       id: WORKPLACE_TWO,
       name: 'Account List Workplace Two',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 

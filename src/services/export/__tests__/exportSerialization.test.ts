@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import {
   serializeExportPayload,
   serializeExportPayloadFromSources,
@@ -143,7 +144,7 @@ describe('serializeExportPayload', () => {
           workplace: {
             id: 'home',
             name: 'Home',
-            icon: 'wallet',
+            icon: Icon.Wallet,
             defaultCurrencyCode: 'USD',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',

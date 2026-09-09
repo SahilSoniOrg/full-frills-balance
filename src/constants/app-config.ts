@@ -1,3 +1,4 @@
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import { UI_STRINGS } from './copy/ui-strings';
 
 /**
@@ -152,14 +153,19 @@ export const AppConfig = {
   systemAccounts: {
     openingBalances: {
       namePrefix: 'Opening Balances',
-      icon: 'scale',
+      icon: Icon.Scale,
       description: 'System account that stores opening balances',
-    },
+    } satisfies { namePrefix: string; icon: IconName; description: string },
     balanceCorrections: {
       namePrefix: 'Balance Corrections',
-      icon: 'wrench',
+      icon: Icon.Wrench,
       description: 'System account that stores balance corrections',
       legacyNames: ['Balance Corrections', 'Balance Correction', 'Balance Corrections ()'],
+    } satisfies {
+      namePrefix: string;
+      icon: IconName;
+      description: string;
+      legacyNames: readonly string[];
     },
   },
 

@@ -1,4 +1,4 @@
-import { IconName } from '@/src/types/domainIcons';
+import { Icon, isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { AccountFields } from '@/src/types/plainDtos';
 import { AccountType } from '@/src/types/enums';
@@ -10,42 +10,40 @@ import { toAccountType } from '@/src/utils/accountCategory';
  * whereas financial accounts (ASSET, LIABILITY, EQUITY) get wallet.
  */
 export function getAccountFallbackIcon(accountType?: AccountType | string | null): IconName {
-  if (!accountType) return 'wallet';
+  if (!accountType) return Icon.Wallet;
   const type = toAccountType(accountType);
-  if (type === AccountType.EXPENSE) return 'tag';
-  if (type === AccountType.INCOME) return 'trendingUp';
-  return 'wallet';
+  if (type === AccountType.EXPENSE) return Icon.Tag;
+  if (type === AccountType.INCOME) return Icon.TrendingUp;
+  return Icon.Wallet;
 }
 
 export type AccountLikeForIcon =
   | AccountFields
   | {
       name?: string;
-      icon?: IconName | string | null;
+      icon?: string | null;
       accountType?: AccountType | string | null;
     };
 
 /**
  * Reliable way to get an icon for an account,
  * handling special cases for system accounts (OBE, Balance Corrections)
- * and falling back to type-appropriate default icons when missing in DB.
+ * and falling back to type-appropriate default icons when missing or unknown in DB.
  */
 export function getAccountIcon(account: AccountLikeForIcon): IconName {
-  if (account.icon) return account.icon as IconName;
+  if (isValidIconName(account.icon)) return account.icon;
 
   const name = account.name || '';
   if (name) {
     const { openingBalances, balanceCorrections } = AppConfig.systemAccounts;
     const lowerName = name.toLowerCase();
 
-    // Opening Balances (OBE)
     if (lowerName.includes(openingBalances.namePrefix.toLowerCase())) {
-      return openingBalances.icon as IconName;
+      return openingBalances.icon;
     }
 
-    // Balance Corrections
     if (lowerName.includes(balanceCorrections.namePrefix.toLowerCase())) {
-      return balanceCorrections.icon as IconName;
+      return balanceCorrections.icon;
     }
   }
 

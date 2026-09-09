@@ -7,7 +7,6 @@ import {
   JournalDisplayType,
 } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
-import { IconName } from '@/src/types/domainIcons';
 
 export interface ImportedAccount {
   id: string;
@@ -17,7 +16,7 @@ export interface ImportedAccount {
   currencyCode: string;
   parentAccountId?: AccountId;
   description?: string;
-  icon?: IconName;
+  icon?: string;
   color?: string;
   orderNum?: number;
   reconciledAt?: number;

@@ -8,6 +8,7 @@ import {
   PlannedPaymentStatus,
   TransactionType,
 } from '@/src/types/enums';
+import { Icon } from '@/src/types/domainIcons';
 
 jest.mock('@/src/data/database/idGenerator', () => {
   let counter = 0;
@@ -117,9 +118,65 @@ describe('CanonicalImportBuilder', () => {
       const enumIssues = issues.filter(i => i.code === 'INVALID_ENUM');
       expect(enumIssues).toHaveLength(2);
     });
+
+    it('normalizes invalid account icons to the account-type fallback', () => {
+      const builder = new CanonicalImportBuilder('USD');
+
+      builder.addAccount({
+        id: 'acc-bad-icon',
+        name: 'Bad Icon',
+        currencyCode: 'USD',
+        accountType: AccountType.EXPENSE,
+        icon: 'ivy-food-icon',
+      });
+
+      const { canonical, issues } = builder.build();
+
+      expect(canonical.accounts[0].icon).toBe(Icon.Tag);
+      expect(issues).toContainEqual(
+        expect.objectContaining({
+          entity: 'account',
+          sourceId: 'acc-bad-icon',
+          code: 'INVALID_ICON',
+        }),
+      );
+    });
   });
 
   describe('2. Category Level', () => {
+    it('normalizes invalid category icons to the category-type fallback', () => {
+      const builder = new CanonicalImportBuilder('USD');
+
+      builder.registerCategory({
+        id: 'cat-bad-icon',
+        name: 'Bad Icon Category',
+        defaultType: AccountType.INCOME,
+        icon: 'ivy-category-icon',
+      });
+      builder.addTransaction({
+        id: 'tx-bad-icon',
+        amount: 10,
+        currencyCode: 'USD',
+        type: 'INCOME',
+        sourceAccountId: 'missing-source',
+        categoryId: 'cat-bad-icon',
+      });
+
+      const { canonical, issues } = builder.build();
+      const category = canonical.accounts.find(account =>
+        account.name.startsWith('Bad Icon Category'),
+      );
+
+      expect(category?.icon).toBe(Icon.TrendingUp);
+      expect(issues).toContainEqual(
+        expect.objectContaining({
+          entity: 'category',
+          sourceId: 'cat-bad-icon',
+          code: 'INVALID_ICON',
+        }),
+      );
+    });
+
     it('creates single accounts for valid categories and distinct accounts for unknown categories', () => {
       const builder = new CanonicalImportBuilder('USD');
 

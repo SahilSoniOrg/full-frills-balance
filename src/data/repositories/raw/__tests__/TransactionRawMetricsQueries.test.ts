@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
@@ -23,13 +24,13 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
     await workplaceRepository.create({
       id: WORKPLACE_ONE,
       name: 'Metrics Workplace One',
-      icon: 'home',
+      icon: Icon.Home,
       defaultCurrencyCode: 'USD',
     });
     await workplaceRepository.create({
       id: WORKPLACE_TWO,
       name: 'Metrics Workplace Two',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 

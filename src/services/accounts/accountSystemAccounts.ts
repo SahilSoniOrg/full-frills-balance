@@ -3,8 +3,6 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { IconName } from '@/src/types/domainIcons';
-
 import { getOpeningBalancesAccountInput } from './accountSystemAccountInputs';
 
 export {
@@ -78,7 +76,7 @@ export async function findOrCreateBalanceCorrectionAccount(
       accountSubtype: AccountSubtype.OPENING_BALANCE,
       currencyCode: targetCurrency,
       description: balanceCorrections.description,
-      icon: balanceCorrections.icon as IconName,
+      icon: balanceCorrections.icon,
       workplaceId,
     })
   ).id;

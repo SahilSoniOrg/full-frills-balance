@@ -9,8 +9,6 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
-
-import { IconName } from '@/src/types/domainIcons';
 import { UIPreferences } from '@/src/services/preferences';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
@@ -64,7 +62,7 @@ export interface CanonicalAccount {
   currencyCode: string;
   parentAccountId?: AccountId;
   description?: string;
-  icon?: IconName;
+  icon?: string;
   color?: string;
   orderNum?: number;
   reconciledAt?: number;

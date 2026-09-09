@@ -1,5 +1,4 @@
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import type { IconName } from '@/src/types/domainIcons';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import type { CanonicalImport } from '@/src/services/import/canonicalImport';
 import {
@@ -186,7 +185,7 @@ export const ivyPlugin: ImportPlugin = {
         currencyCode: ivyAcc.currency || ivyBaseCurrency,
         accountType: mappedType,
         description: 'Imported from Ivy Wallet',
-        icon: ivyAcc.icon as IconName,
+        icon: ivyAcc.icon,
         color: mapToNearestAccountColor(normalizeIvyColor(ivyAcc.color)),
         reconciledAt: ivyAcc.reconciliationDate,
         archivedAt: ivyAcc.archived ? Date.now() : undefined,
@@ -200,7 +199,7 @@ export const ivyPlugin: ImportPlugin = {
       builder.registerCategory({
         id: c.id,
         name: c.name,
-        icon: c.icon as IconName,
+        icon: c.icon,
         color: mapToNearestAccountColor(normalizeIvyColor(c.color)),
       });
     });
@@ -285,15 +284,18 @@ export const ivyPlugin: ImportPlugin = {
     // 5. Ingest Transactions
     onProgress?.('Mapping transactions...', 0.5);
     const skippedItems: { id: string; reason: string; description?: string }[] = [];
+    let skippedTransactionCount = 0;
 
     data.transactions.forEach(tx => {
       const txDesc = tx.title || tx.description || 'Unknown Transaction';
 
       if (tx.isDeleted) {
+        skippedTransactionCount += 1;
         skippedItems.push({ id: tx.id, reason: 'Deleted', description: txDesc });
         return;
       }
       if (tx.dueDate) {
+        skippedTransactionCount += 1;
         skippedItems.push({ id: tx.id, reason: 'Planned Payment', description: txDesc });
         return;
       }
@@ -381,7 +383,7 @@ export const ivyPlugin: ImportPlugin = {
         budgets: canonical.budgets?.length || 0,
         plannedPayments: canonical.plannedPayments?.length || 0,
         auditLogs: 0,
-        skippedTransactions: skippedItems.length,
+        skippedTransactions: skippedTransactionCount,
         skippedItems,
       },
     };

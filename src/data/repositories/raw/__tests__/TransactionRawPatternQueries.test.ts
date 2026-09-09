@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
@@ -27,13 +28,13 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
     await workplaceRepository.create({
       id: workplaceOne,
       name: 'Pattern Workplace One',
-      icon: 'home',
+      icon: Icon.Home,
       defaultCurrencyCode: 'USD',
     });
     await workplaceRepository.create({
       id: workplaceTwo,
       name: 'Pattern Workplace Two',
-      icon: 'briefcase',
+      icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });
 

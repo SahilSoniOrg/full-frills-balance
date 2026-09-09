@@ -52,7 +52,7 @@ export class WorkplaceService {
       workplace = await workplaceRepository.createWithStarterAccounts({
         id: workplaceId,
         name,
-        icon: icon as IconName,
+        icon,
         defaultCurrencyCode: options.currencyCode,
         accounts: options.initialAccounts ?? [],
         categories: options.initialCategories ?? [],

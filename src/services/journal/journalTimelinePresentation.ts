@@ -4,6 +4,7 @@ import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { buildTimelineAccountBadges } from '@/src/services/accounting/timelineAccountBadges';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType, SemanticType } from '@/src/types/enums';
+import { Icon } from '@/src/types/domainIcons';
 import {
   JournalTimelineIconKey,
   JournalTimelineItem,
@@ -15,17 +16,17 @@ export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
   typeIcon: JournalTimelineIconKey;
   amountPrefix: string;
 } {
-  let typeIcon: JournalTimelineIconKey = 'document';
+  let typeIcon: JournalTimelineIconKey = Icon.Document;
   let amountPrefix = '';
 
   if (displayType === JournalDisplayType.INCOME) {
-    typeIcon = 'arrowUp';
+    typeIcon = Icon.ArrowUp;
     amountPrefix = '+ ';
   } else if (displayType === JournalDisplayType.EXPENSE) {
-    typeIcon = 'arrowDown';
+    typeIcon = Icon.ArrowDown;
     amountPrefix = '− ';
   } else if (displayType === JournalDisplayType.TRANSFER) {
-    typeIcon = 'swapHorizontal';
+    typeIcon = Icon.SwapHorizontal;
   }
 
   return { typeIcon, amountPrefix };
@@ -36,7 +37,7 @@ export function ledgerLineChrome(isIncrease: boolean): {
   amountPrefix: string;
 } {
   return {
-    typeIcon: isIncrease ? 'arrowUp' : 'arrowDown',
+    typeIcon: isIncrease ? Icon.ArrowUp : Icon.ArrowDown,
     amountPrefix: isIncrease ? '+ ' : '− ',
   };
 }

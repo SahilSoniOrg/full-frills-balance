@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -21,7 +22,7 @@ describe('ImportRepository', () => {
         {
           id: 'import-operation' as WorkplaceId,
           name: 'Imported ledger',
-          icon: 'briefcase',
+          icon: Icon.Briefcase,
           defaultCurrencyCode: 'USD',
         },
         {

@@ -23,8 +23,8 @@ import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
-import { roundToPrecision } from '@/src/utils/money';
 import { isValidHexColor } from '@/src/utils/accountCategory';
+import { roundToPrecision } from '@/src/utils/money';
 
 /** Caller-owned fields for creating an account (form / onboarding data only). */
 export interface CreateAccountCommandInput {

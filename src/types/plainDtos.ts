@@ -24,7 +24,7 @@ export interface AccountFields {
   currencyCode: string;
   parentAccountId?: AccountId;
   description?: string;
-  icon?: IconName;
+  icon?: string;
   color?: string;
   orderNum?: number;
   reconciledAt?: Date | number;

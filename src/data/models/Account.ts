@@ -1,5 +1,5 @@
-import { IconName } from '@/src/types/domainIcons';
 import type AccountMetadata from '@/src/data/models/AccountMetadata';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
 import { AccountId } from '@/src/types/ids';
@@ -24,7 +24,7 @@ export default class Account extends BaseScopedModel<AccountId> {
   @field('currency_code') currencyCode!: string;
   @field('parent_account_id') parentAccountId?: AccountId;
   @field('description') description?: string;
-  @field('icon') icon?: IconName;
+  @field('icon') icon?: string;
   @field('color') color?: string;
   @field('order_num') orderNum?: number;
   @date('reconciled_at') reconciledAt?: Date;
@@ -49,7 +49,7 @@ export function toPlainAccount(a: Account): PlainAccount {
     currencyCode: a.currencyCode,
     parentAccountId: a.parentAccountId,
     description: a.description,
-    icon: a.icon,
+    icon: getAccountIcon(a),
     color: a.color,
     orderNum: a.orderNum,
     reconciledAt: a.reconciledAt?.getTime(),

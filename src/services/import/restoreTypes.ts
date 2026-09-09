@@ -6,7 +6,6 @@ import type {
   ParsedImportResult,
 } from '@/src/services/import/types';
 import type { FontId, ThemeId } from '@/src/constants/design-tokens';
-import type { IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { UIPreferences } from '@/src/services/preferences';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
@@ -18,7 +17,7 @@ export interface RestoreFacts {
   };
   readonly workplace: {
     readonly name?: string;
-    readonly icon?: IconName | string;
+    readonly icon?: string;
     readonly defaultCurrencyCode?: string;
   };
   readonly appearance?: {

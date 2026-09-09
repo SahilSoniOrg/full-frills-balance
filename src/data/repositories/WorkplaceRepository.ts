@@ -48,7 +48,7 @@ export class WorkplaceRepository {
   async createWithStarterAccounts(data: {
     id: WorkplaceId;
     name: string;
-    icon: IconName;
+    icon: string;
     defaultCurrencyCode: string;
     accounts: { name: string; type: AccountType; icon: IconName }[];
     categories: { name: string; type: AccountType; icon: IconName }[];

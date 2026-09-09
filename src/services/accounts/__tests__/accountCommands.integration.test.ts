@@ -1,3 +1,4 @@
+import { Icon } from '@/src/types/domainIcons';
 import {
   AccountSubtype,
   AccountType,
@@ -731,7 +732,7 @@ describe('account commands (integration)', () => {
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
       workplaceId: WP,
-      icon: 'wallet',
+      icon: Icon.Wallet,
     });
     const child = await createAccount(WP, {
       name: 'Cash Sub',
@@ -739,7 +740,7 @@ describe('account commands (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
       parentAccountId: parent.id,
-      icon: 'wallet',
+      icon: Icon.Wallet,
     });
 
     const applied = await applyAccountArchiveChanges(WP, {

@@ -3,6 +3,7 @@ import { ImportFileContext } from '@/src/services/import/types';
 import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/services/import/canonicalImport';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
+import { Icon } from '@/src/types/domainIcons';
 
 // Mock ID generator
 jest.mock('@/src/data/database/idGenerator', () => ({
@@ -92,11 +93,11 @@ describe('IvyImportPlugin', () => {
       const walletAcc = lastBatch.accounts.find((a: any) => a.name === 'Wallet');
       const foodAcc = lastBatch.accounts.find((a: any) => a.name === 'Food (USD)');
 
-      expect(walletAcc.icon).toBe('wallet-icon');
+      expect(walletAcc.icon).toBe(Icon.Wallet);
       expect(walletAcc.color).toBe('#155E75');
       expect(walletAcc.archivedAt).toEqual(expect.any(Number));
       expect(walletAcc.reconciledAt).toBe(1704067200000);
-      expect(foodAcc.icon).toBe('food-icon');
+      expect(foodAcc.icon).toBe(Icon.Tag);
       expect(foodAcc.color).toBe('#FB923C');
 
       // Should create 3 accounts (1 original + 1 transaction category + 1 budget category)
@@ -249,7 +250,7 @@ describe('IvyImportPlugin', () => {
       const plannedAcc = lastBatch.accounts.find((a: any) => a.name === 'Planned Category (INR)');
 
       expect(plannedAcc).toBeDefined();
-      expect(plannedAcc.icon).toBe('planned-icon');
+      expect(plannedAcc.icon).toBe(Icon.Tag);
       expect(stats.budgets).toBe(1);
       expect(lastBatch.budgetScopes).toHaveLength(1);
       expect(lastBatch.budgetScopes[0].accountId).toBe(plannedAcc.id);

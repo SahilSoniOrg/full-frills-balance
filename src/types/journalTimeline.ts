@@ -1,11 +1,13 @@
+import { Icon } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
-export type JournalTimelineViewer = { accountId: AccountId };
+/** Icon keys align with catalog members; services import `Icon` from domainIcons, not UI. */
+export type JournalTimelineIconKey =
+  typeof Icon.Document | typeof Icon.ArrowUp | typeof Icon.ArrowDown | typeof Icon.SwapHorizontal;
 
-/** Icon keys align with AppIcon names; kept as strings so services avoid UI imports. */
-export type JournalTimelineIconKey = 'document' | 'arrowUp' | 'arrowDown' | 'swapHorizontal';
+export type JournalTimelineViewer = { accountId: AccountId };
 
 export interface JournalTimelinePresentation {
   label: string;
