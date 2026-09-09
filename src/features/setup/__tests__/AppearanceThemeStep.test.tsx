@@ -6,6 +6,7 @@ jest.mock('@/src/components/core', () => {
   const { Text, TouchableOpacity, View } = jest.requireActual(
     'react-native',
   ) as typeof import('react-native');
+  const { Icon: mockIcon } = jest.requireActual('@/src/types/domainIcons');
   return {
     AppButton: ({ children, ...props }: { children: ReactNode }) => (
       <TouchableOpacity {...props}>
@@ -19,6 +20,7 @@ jest.mock('@/src/components/core', () => {
     AppText: ({ children, ...props }: { children: ReactNode }) => (
       <Text {...props}>{children}</Text>
     ),
+    Icon: mockIcon,
   };
 });
 

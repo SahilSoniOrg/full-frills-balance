@@ -1,10 +1,15 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
+import {
+  useAccountDeleteMergeActions,
+  type UseAccountDeleteMergeActionsOptions,
+} from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { type AccountFields } from '@/src/types/plainDtos';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { Icon } from '@/src/types/domainIcons';
+import { AllTheProviders } from '@/src/utils/test-utils';
 
 jest.mock('@/src/utils/alerts', () => ({
   confirm: { show: jest.fn() },
@@ -55,47 +60,46 @@ describe('useAccountDeleteMergeActions', () => {
     jest.clearAllMocks();
   });
 
+  const renderActionsHook = (options: UseAccountDeleteMergeActionsOptions) =>
+    renderHook(() => useAccountDeleteMergeActions(options), { wrapper: AllTheProviders });
+
   it('exposes delete when enabled with no transactions', () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount, targetAccount],
-        transactionCount: 0,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount, targetAccount],
+      transactionCount: 0,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     expect(result.current.headerActionItems[0]).toMatchObject({
-      name: 'delete',
+      name: Icon.Delete,
       testID: 'delete-button',
     });
     expect(result.current.mergePickerModal).toBeNull();
   });
 
   it('exposes merge when enabled with transactions', () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount, targetAccount],
-        transactionCount: 3,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount, targetAccount],
+      transactionCount: 3,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     expect(result.current.headerActionItems[0]).toMatchObject({
-      name: 'merge',
+      name: Icon.Merge,
       testID: 'merge-button',
     });
     expect(result.current.mergePickerModal).toMatchObject({
@@ -106,20 +110,18 @@ describe('useAccountDeleteMergeActions', () => {
   });
 
   it('shows a toast when merge has no eligible targets', () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount],
-        transactionCount: 2,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount],
+      transactionCount: 2,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     act(() => result.current.headerActionItems[0]?.onPress?.());
 
@@ -128,20 +130,18 @@ describe('useAccountDeleteMergeActions', () => {
   });
 
   it('opens the merge modal when candidates exist', () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount, targetAccount],
-        transactionCount: 2,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount, targetAccount],
+      transactionCount: 2,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     act(() => result.current.headerActionItems[0]?.onPress?.());
 
@@ -149,20 +149,18 @@ describe('useAccountDeleteMergeActions', () => {
   });
 
   it('deletes the account and navigates away on confirm', async () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount],
-        transactionCount: 0,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount],
+      transactionCount: 0,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     act(() => result.current.headerActionItems[0]?.onPress?.());
 
@@ -177,20 +175,18 @@ describe('useAccountDeleteMergeActions', () => {
   });
 
   it('restores the account when undo is pressed after delete', async () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount],
-        transactionCount: 0,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount],
+      transactionCount: 0,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     act(() => result.current.headerActionItems[0]?.onPress?.());
 
@@ -210,20 +206,18 @@ describe('useAccountDeleteMergeActions', () => {
   });
 
   it('merges into the selected account on confirm', async () => {
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount, targetAccount],
-        transactionCount: 2,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount, targetAccount],
+      transactionCount: 2,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     await act(async () => {
       await result.current.onConfirmMerge(targetId);
@@ -242,20 +236,18 @@ describe('useAccountDeleteMergeActions', () => {
   it('reports merge failures', async () => {
     mergeAccounts.mockRejectedValueOnce(new Error('db locked'));
 
-    const { result } = renderHook(() =>
-      useAccountDeleteMergeActions({
-        accountId,
-        account: sourceAccount,
-        accounts: [sourceAccount, targetAccount],
-        transactionCount: 2,
-        isDeleted: false,
-        enabled: true,
-        entityLabel: 'Account',
-        deleteAccount,
-        recoverAction,
-        mergeAccounts,
-      }),
-    );
+    const { result } = renderActionsHook({
+      accountId,
+      account: sourceAccount,
+      accounts: [sourceAccount, targetAccount],
+      transactionCount: 2,
+      isDeleted: false,
+      enabled: true,
+      entityLabel: 'Account',
+      deleteAccount,
+      recoverAction,
+      mergeAccounts,
+    });
 
     await act(async () => {
       await result.current.onConfirmMerge(targetId);

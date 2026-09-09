@@ -12,10 +12,12 @@ jest.mock('react-native/Libraries/Modal/Modal', () => ({
 jest.mock('@/src/components/core', () => {
   const mockReactNative = jest.requireActual('react-native');
   const mockReact = jest.requireActual('react');
+  const { Icon: mockIcon } = jest.requireActual('@/src/types/domainIcons');
   return {
     AppText: ({ children, ...props }: { children: React.ReactNode }) =>
       mockReact.createElement(mockReactNative.Text, props, children),
     AppIcon: () => null,
+    Icon: mockIcon,
   };
 });
 

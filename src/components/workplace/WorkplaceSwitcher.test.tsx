@@ -5,9 +5,11 @@ import { fireEvent, render, screen } from '@/src/utils/test-utils';
 jest.mock('@/src/components/core', () => {
   const React = require('react');
   const { Text: MockText } = require('react-native');
+  const { Icon: mockIcon } = require('@/src/types/domainIcons');
   return {
     AppIcon: () => null,
     AppText: ({ children, ...props }: any) => React.createElement(MockText, props, children),
+    Icon: mockIcon,
   };
 });
 
@@ -17,18 +19,26 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useOptionalWorkplace: () => ({ workplaceId: 'wp-1', setWorkplaceId: mockSetWorkplaceId }),
 }));
 
-jest.mock('@/src/hooks/useWorkplaceSnapshot', () => ({
-  useWorkplaceSnapshot: () => ({ data: { id: 'wp-1', name: 'Household', icon: 'home' } }),
-}));
+jest.mock('@/src/hooks/useWorkplaceSnapshot', () => {
+  const { Icon: mockIcon } = require('@/src/types/domainIcons');
+  return {
+    useWorkplaceSnapshot: () => ({
+      data: { id: 'wp-1', name: 'Household', icon: mockIcon.Home },
+    }),
+  };
+});
 
-jest.mock('@/src/hooks/useObservable', () => ({
-  useObservable: () => ({
-    data: [
-      { id: 'wp-2', name: 'Business', icon: 'bank' },
-      { id: 'wp-1', name: 'Household', icon: 'home' },
-    ],
-  }),
-}));
+jest.mock('@/src/hooks/useObservable', () => {
+  const { Icon: mockIcon } = require('@/src/types/domainIcons');
+  return {
+    useObservable: () => ({
+      data: [
+        { id: 'wp-2', name: 'Business', icon: mockIcon.Bank },
+        { id: 'wp-1', name: 'Household', icon: mockIcon.Home },
+      ],
+    }),
+  };
+});
 
 jest.mock('@/src/components/filters/SelectionPickerSheet', () => ({
   SelectionPickerSheet: ({ visible, options, onSelect }: any) => {
