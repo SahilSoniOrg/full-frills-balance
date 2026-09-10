@@ -33,7 +33,12 @@ export function SmsRulesView({
         <ScreenSectionHeader title="Suggested Rules" style={styles.suggestionsTitle} />
         {suggestions.map(suggestion => (
           <TouchableOpacity
-            key={`${suggestion.senderMatch}-${suggestion.categoryAccountId}`}
+            key={JSON.stringify([
+              suggestion.senderMatch,
+              suggestion.bodyMatch ?? '',
+              suggestion.sourceAccountId,
+              suggestion.categoryAccountId,
+            ])}
             activeOpacity={Opacity.heavy}
             onPress={() => onOpenSuggestion(suggestion)}
           >
