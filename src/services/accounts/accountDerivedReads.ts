@@ -66,13 +66,14 @@ export function observeAccountPeriodMetrics(
   startDate: number,
   endDate: number,
   accountType: AccountType,
+  accountIds: AccountId[] = accountId ? [accountId] : [],
 ) {
   if (!accountId || !workplaceId) {
     return of({ totalIncrease: 0, totalDecrease: 0 });
   }
   return transactionRawRepository.observeAccountPeriodMetricsRaw(
     workplaceId,
-    accountId,
+    accountIds,
     startDate,
     endDate,
     accountType,

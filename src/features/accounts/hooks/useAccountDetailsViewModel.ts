@@ -10,6 +10,7 @@ import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/u
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
 import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
+import { createAccountTreeSnapshot, isUndeletedAccount } from '@/src/services/accounts/accountTree';
 import { useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
@@ -51,6 +52,16 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
   const { recoverAccount: recoverAction, reconcileAccount } = useAccountActions(workplaceId);
 
+  const accountTreeSnapshot = useMemo(() => createAccountTreeSnapshot(accounts), [accounts]);
+  const accountDetailsScope = useMemo(() => {
+    const descendantIdsSet = accountTreeSnapshot.getDescendants(accountId);
+    const descendantIds = accounts
+      .filter(account => descendantIdsSet.has(account.id))
+      .filter(isUndeletedAccount)
+      .map(account => account.id);
+    return { accountIds: [accountId, ...descendantIds], descendantIds };
+  }, [accountTreeSnapshot, accounts, accountId]);
+
   const metrics = useAccountDetailsMetrics({
     accountId,
     workplaceId,
@@ -58,12 +69,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     balanceCurrency,
     dateRange,
     balanceData,
+    accountIds: accountDetailsScope.accountIds,
   });
 
   const hierarchy = useAccountHierarchyTree({
     accountId,
     account,
-    accounts,
+    treeSnapshot: accountTreeSnapshot,
     rawSubBalances,
     workplaceCurrency,
     dashboardLoading,
@@ -74,8 +86,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const journalList = useJournalEntryList({
     workplaceId,
     dateRange: dateRange ?? undefined,
-    queryOptions: { accountIds: [accountId] },
+    queryOptions: { accountIds: accountDetailsScope.accountIds },
     viewer,
+    expandScopedLegs:
+      accountDetailsScope.descendantIds.length > 0 ? accountDetailsScope.accountIds : undefined,
     shareTitle: `Entries for ${account?.name || 'Account'}`,
     paginationPolicy: 'default',
   });

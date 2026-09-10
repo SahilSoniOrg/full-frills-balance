@@ -7,7 +7,7 @@ import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { from, Observable } from 'rxjs';
+import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { transactionRawMetricsQueries } from './raw/TransactionRawMetricsQueries';
 import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries';
@@ -481,7 +481,7 @@ export class TransactionRawRepository {
 
   observeAccountPeriodMetricsRaw(
     workplaceId: WorkplaceId,
-    accountId: AccountId,
+    accountIds: AccountId[],
     startDate: number,
     endDate: number,
     accountType: AccountType,
@@ -489,7 +489,26 @@ export class TransactionRawRepository {
     return transactionObserveQueries.observeActiveCount(workplaceId).pipe(
       switchMap(() =>
         from(
-          this.getAccountPeriodMetricsRaw(workplaceId, accountId, startDate, endDate, accountType),
+          this.getBulkAccountPeriodMetricsRaw(
+            workplaceId,
+            accountIds.map(accountId => ({ accountId, accountType })),
+            startDate,
+            endDate,
+          ),
+        ).pipe(
+          map(metricsByAccount =>
+            accountIds.reduce(
+              (totals, accountId) => {
+                const metrics = metricsByAccount.get(accountId);
+                if (!metrics) return totals;
+                return {
+                  totalIncrease: totals.totalIncrease + metrics.totalIncrease,
+                  totalDecrease: totals.totalDecrease + metrics.totalDecrease,
+                };
+              },
+              { totalIncrease: 0, totalDecrease: 0 },
+            ),
+          ),
         ),
       ),
       distinctUntilChanged(

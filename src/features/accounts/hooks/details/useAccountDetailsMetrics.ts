@@ -30,10 +30,19 @@ export interface UseAccountDetailsMetricsOptions {
   balanceCurrency: string;
   dateRange: DateRange | null;
   balanceData: AccountBalance | null;
+  accountIds: AccountId[];
 }
 
 export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOptions) {
-  const { accountId, workplaceId, accountType, balanceCurrency, dateRange, balanceData } = options;
+  const {
+    accountId,
+    workplaceId,
+    accountType,
+    balanceCurrency,
+    dateRange,
+    balanceData,
+    accountIds,
+  } = options;
 
   const { precision } = useCurrencyPrecision(balanceCurrency);
 
@@ -47,7 +56,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
 
   const { data: periodMetricsResult, isLoading: metricsLoading } = useObservable<PeriodMetrics>(
     () => {
-      if (!dateRange || !accountId || !accountType) {
+      if (!accountId || !accountType) {
         return of({
           totalIncrease: 0,
           totalDecrease: 0,
@@ -56,31 +65,34 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
           isLoading: false,
         });
       }
+      const startDate = dateRange?.startDate ?? 0;
+      const endDate = dateRange?.endDate ?? Number.MAX_SAFE_INTEGER;
       return observeAccountPeriodMetrics(
         workplaceId,
         accountId,
-        dateRange.startDate,
-        dateRange.endDate,
+        startDate,
+        endDate,
         accountType,
+        accountIds,
       ).pipe(
         map(metrics => {
           const netChange = metrics.totalIncrease - metrics.totalDecrease;
-          const ds = new Date(dateRange.startDate);
-          const de = new Date(dateRange.endDate);
-          const days = Math.max(
-            1,
-            Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay),
-          );
+          const days = dateRange
+            ? Math.max(
+                1,
+                Math.ceil((dateRange.endDate - dateRange.startDate) / AppConfig.time.msPerDay),
+              )
+            : null;
           return {
             ...metrics,
             netChange,
-            dailyAverage: netChange / days,
+            dailyAverage: days === null ? null : netChange / days,
             isLoading: false,
           };
         }),
       );
     },
-    [accountId, dateRange, accountType, workplaceId],
+    [accountId, accountIds, dateRange?.startDate, dateRange?.endDate, accountType, workplaceId],
     { totalIncrease: 0, totalDecrease: 0, netChange: 0, dailyAverage: null, isLoading: true },
   );
 
@@ -108,7 +120,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         ),
       );
     },
-    [workplaceId, accountId, dateRange],
+    [workplaceId, accountId, dateRange?.startDate, dateRange?.endDate],
     [],
   );
 

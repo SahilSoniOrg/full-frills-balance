@@ -76,6 +76,10 @@ export const getAccountTreeSiblingListKey = (
 ) => (parentId ? `parent:${parentId}` : `root:${rootKey(accountType)}`);
 const isPresent = (value: unknown): boolean => value !== undefined && value !== null;
 
+export function isUndeletedAccount(account: Pick<OrderedAccount, 'deletedAt'>): boolean {
+  return !isPresent(account.deletedAt);
+}
+
 function ordered<T extends OrderedAccount>(accounts: readonly T[]): T[] {
   return [...accounts].sort(
     (a, b) => (a.orderNum ?? 0) - (b.orderNum ?? 0) || a.id.localeCompare(b.id),

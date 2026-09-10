@@ -1,6 +1,7 @@
 import {
   collectAccountDescendantIds,
   createAccountTreeSnapshot,
+  isUndeletedAccount,
   planAccountTreeBulkMove,
   planAccountTreeMove,
   planAccountTreePlacementChange,
@@ -121,6 +122,12 @@ describe('createAccountTreeSnapshot', () => {
     expect(snapshot.getParentCandidates('asset-root' as never).map(account => account.id)).toEqual([
       'asset-other',
     ]);
+  });
+
+  it('treats undefined deletedAt as an undeleted account', () => {
+    expect(isUndeletedAccount({ deletedAt: undefined })).toBe(true);
+    expect(isUndeletedAccount({ deletedAt: null })).toBe(true);
+    expect(isUndeletedAccount({ deletedAt: new Date() })).toBe(false);
   });
 });
 

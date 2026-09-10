@@ -3,6 +3,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
+import { isUndeletedAccount, type AccountTreeSnapshot } from '@/src/services/accounts/accountTree';
 import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { useCallback, useMemo, useState } from 'react';
@@ -22,27 +23,27 @@ export interface SubAccountViewModel {
 export interface UseAccountHierarchyTreeOptions {
   accountId: AccountId;
   account: PlainAccount | null;
-  accounts: PlainAccount[];
+  treeSnapshot: AccountTreeSnapshot<PlainAccount>;
   rawSubBalances: AccountBalance[];
   workplaceCurrency: string;
   dashboardLoading: boolean;
 }
 
 export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions) {
-  const { accountId, account, accounts, rawSubBalances, workplaceCurrency, dashboardLoading } =
+  const { accountId, account, treeSnapshot, rawSubBalances, workplaceCurrency, dashboardLoading } =
     options;
   const { theme } = useTheme();
 
   const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
 
   const isParent = useMemo(
-    () => accounts.some(a => a.parentAccountId === accountId && a.deletedAt === null),
-    [accounts, accountId],
+    () => treeSnapshot.getChildren(accountId).some(isUndeletedAccount),
+    [accountId, treeSnapshot],
   );
 
   const subAccountCount = useMemo(
-    () => accounts.filter(a => a.parentAccountId === accountId && a.deletedAt === null).length,
-    [accounts, accountId],
+    () => treeSnapshot.getChildren(accountId).filter(isUndeletedAccount).length,
+    [accountId, treeSnapshot],
   );
 
   const subBalances = useMemo(
@@ -52,15 +53,13 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
   );
 
   const descendants = useMemo(() => {
-    if (!account || !accounts.length) return [];
+    if (!account) return [];
     const buildSubTree = (
-      parentId: string,
+      parentId: AccountId,
       level: number,
     ): { account: PlainAccount; level: number }[] => {
       const result: { account: PlainAccount; level: number }[] = [];
-      const children = accounts
-        .filter(a => a.parentAccountId === parentId && a.deletedAt === null)
-        .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
+      const children = treeSnapshot.getChildren(parentId).filter(isUndeletedAccount);
       for (const child of children) {
         result.push({ account: child, level });
         result.push(...buildSubTree(child.id, level + 1));
@@ -68,14 +67,14 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
       return result;
     };
     return buildSubTree(accountId, 0);
-  }, [account, accounts, accountId]);
+  }, [account, accountId, treeSnapshot]);
 
   const subAccounts = useMemo(() => {
     return descendants.map(({ account: child, level }) => {
       const subBalance = subBalances.get(child.id);
       const categoryColor = getAccountAccentColor(child.accountType, theme);
       const accountColor = resolveAccountAccentColor(child, theme);
-      const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
+      const isGroup = treeSnapshot.getChildren(child.id).some(isUndeletedAccount);
       const currencyCode = subBalance?.currencyCode || child.currencyCode || workplaceCurrency;
       return {
         id: child.id,
@@ -89,7 +88,7 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
         isGroup,
       };
     });
-  }, [descendants, subBalances, workplaceCurrency, theme, accounts]);
+  }, [descendants, subBalances, workplaceCurrency, theme, treeSnapshot]);
 
   const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
   const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);
