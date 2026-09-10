@@ -37,12 +37,11 @@ export type AccountObservationSnapshot = {
 };
 
 export function snapshotAccountObservation(accounts: Account[]): AccountObservationSnapshot {
-  // reconciled_at, color, icon, and name are included so account-list rows (e.g. AccountCard badge / theme color) refresh
-  // when reconciliation or appearance changes, independent of balance recomputation.
+  // Include fields that can change account-list rows or hierarchy state without changing balances.
   const signature = accounts
     .map(
       account =>
-        `${account.id}:${account.color ?? ''}:${account.icon ?? ''}:${account.name}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
+        `${account.id}:${account.color ?? ''}:${account.icon ?? ''}:${account.name}:${account.parentAccountId ?? 'null'}:${account.orderNum ?? 'null'}:${account.archivedAt?.getTime() ?? 'null'}:${account.updatedAt?.getTime() ?? 'null'}:${account.reconciledAt?.getTime() ?? 'null'}`,
     )
     .join('|');
   return { accounts, signature };
