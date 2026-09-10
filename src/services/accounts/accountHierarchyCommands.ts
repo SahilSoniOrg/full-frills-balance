@@ -475,49 +475,61 @@ export async function saveAccount(
     };
     const currentAudit = buildAccountUpdateAuditChanges(context, auditAfter);
 
-    const ops = [
-      ...accountWriteRepository.prepareUpdateBatchOps(
-        account,
-        currentUpdates,
-        plannedDetail.existingMetadata,
-      ),
-      auditRepository.prepareLog(
-        {
-          entityType: 'account',
-          entityId: accountId,
-          action: AuditAction.UPDATE,
-          changes: currentAudit,
-        },
-        workplaceId,
-      ),
-    ];
-
     const accountsById = snapshot.accountsById;
-    for (const [changedAccountId, placement] of placementChanges) {
-      if (changedAccountId === accountId) continue;
-      const sibling = accountsById.get(changedAccountId);
-      if (!sibling) throw new Error('Account not found');
-      const before = {
-        parentAccountId: sibling.parentAccountId || undefined,
-        orderNum: sibling.orderNum ?? 0,
-      };
-      ops.push(
-        ...accountWriteRepository.prepareUpdateBatchOps(sibling, placement, null),
+    const siblingChanges = [...placementChanges]
+      .filter(([changedAccountId]) => changedAccountId !== accountId)
+      .map(([changedAccountId, placement]) => {
+        const sibling = accountsById.get(changedAccountId);
+        if (!sibling) throw new Error('Account not found');
+        return {
+          sibling,
+          placement,
+          before: {
+            parentAccountId: sibling.parentAccountId || undefined,
+            orderNum: sibling.orderNum ?? 0,
+          },
+        };
+      });
+
+    const prepareOps = () => {
+      const ops = [
+        ...accountWriteRepository.prepareUpdateBatchOps(
+          account,
+          currentUpdates,
+          plannedDetail.existingMetadata,
+        ),
         auditRepository.prepareLog(
           {
             entityType: 'account',
-            entityId: sibling.id,
+            entityId: accountId,
             action: AuditAction.UPDATE,
-            changes: { before, after: placement, reason: 'account_save_tree_normalization' },
+            changes: currentAudit,
           },
           workplaceId,
         ),
-      );
-    }
+      ];
+
+      for (const { sibling, placement, before } of siblingChanges) {
+        ops.push(
+          ...accountWriteRepository.prepareUpdateBatchOps(sibling, placement, null),
+          auditRepository.prepareLog(
+            {
+              entityType: 'account',
+              entityId: sibling.id,
+              action: AuditAction.UPDATE,
+              changes: { before, after: placement, reason: 'account_save_tree_normalization' },
+            },
+            workplaceId,
+          ),
+        );
+      }
+
+      return ops;
+    };
 
     sideEffectContext = context;
     sideEffectUpdates = auditAfter;
-    return { ops, result: account };
+    return { prepareOps, result: account };
   });
 
   if (sideEffectContext) {
@@ -569,7 +581,7 @@ export async function moveAccounts(
     const changes = planAccountTreeBulkMove(accounts, accountIds, destination, snapshot);
     if (changes.size === 0) {
       return {
-        ops: [],
+        prepareOps: () => [],
         result: {
           workplaceId,
           movedAccountIds: [...accountIds],
@@ -614,19 +626,34 @@ export async function moveAccounts(
     const afterLists = [...touchedLists.values()].map(({ parentAccountId, accountType }) =>
       siblingListState(projectedAccounts, parentAccountId, accountType),
     );
-    const before = [];
-    const after = [];
-    const ops = [];
-    for (const [changedAccountId, updates] of changes) {
+    const before: AccountTreeRowState[] = [];
+    const after: AccountTreeRowState[] = [];
+    const changedAccountPlacements = [...changes].map(([changedAccountId, updates]) => {
       const changedAccount = accountsById.get(changedAccountId);
       if (!changedAccount) throw new Error('Account not found');
-      const mutation = prepareAccountTreePlacementMutation(changedAccount, updates, workplaceId);
-      before.push(mutation.before);
-      after.push(mutation.after);
-      ops.push(...mutation.ops);
-    }
+      before.push({
+        accountId: changedAccount.id,
+        accountType: changedAccount.accountType,
+        parentAccountId: changedAccount.parentAccountId || undefined,
+        orderNum: changedAccount.orderNum ?? 0,
+      });
+      after.push({
+        accountId: changedAccount.id,
+        accountType: changedAccount.accountType,
+        parentAccountId: updates.parentAccountId,
+        orderNum: updates.orderNum,
+      });
+      return { changedAccount, updates };
+    });
+    const prepareOps = () => {
+      const ops = [];
+      for (const { changedAccount, updates } of changedAccountPlacements) {
+        ops.push(...prepareAccountTreePlacementMutation(changedAccount, updates, workplaceId).ops);
+      }
+      return ops;
+    };
     return {
-      ops,
+      prepareOps,
       result: {
         workplaceId,
         movedAccountIds: [...accountIds],
@@ -732,17 +759,18 @@ export async function saveAccountTreeDraft(
       changedAccounts.push(account);
     }
 
-    const ops = changedAccounts.flatMap(account => {
-      const placement = placements.get(account.id)!;
-      return prepareAccountTreePlacementMutation(
-        account,
-        placement,
-        workplaceId,
-        'account_tree_draft_save',
-      ).ops;
-    });
+    const prepareOps = () =>
+      changedAccounts.flatMap(account => {
+        const placement = placements.get(account.id)!;
+        return prepareAccountTreePlacementMutation(
+          account,
+          placement,
+          workplaceId,
+          'account_tree_draft_save',
+        ).ops;
+      });
 
-    return { ops, result: undefined };
+    return { prepareOps, result: undefined };
   });
 }
 
@@ -782,16 +810,27 @@ export async function restoreAccountTreeMove(
       }
     }
 
-    const ops = [];
-    for (const target of receipt.before) {
+    const beforeTargets = receipt.before.map(target => {
       const account = accountsById.get(target.accountId);
       if (!account) throw new Error('Account tree changed; undo is no longer available');
-      ops.push(
-        ...prepareAccountTreePlacementMutation(account, target, workplaceId, 'account_tree_restore')
-          .ops,
-      );
-    }
-    return { ops, result: undefined };
+      return { account, target };
+    });
+
+    const prepareOps = () => {
+      const ops = [];
+      for (const { account, target } of beforeTargets) {
+        ops.push(
+          ...prepareAccountTreePlacementMutation(
+            account,
+            target,
+            workplaceId,
+            'account_tree_restore',
+          ).ops,
+        );
+      }
+      return ops;
+    };
+    return { prepareOps, result: undefined };
   });
 }
 

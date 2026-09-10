@@ -595,4 +595,47 @@ describe('saveAccount', () => {
     });
     expect(accounts.find(account => account.id === remainingAsset.id)?.orderNum).toBe(0);
   });
+
+  it('batches hierarchy updates before React Native microtasks run', async () => {
+    const child = await accountWriteRepository.create({
+      name: 'Child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+    const parent = await accountWriteRepository.create({
+      name: 'Parent',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+    await accountWriteRepository.create({
+      name: 'Other root',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    const originalNextTick = process.nextTick;
+    const diagnostics: Error[] = [];
+    const rnLikeNextTick: typeof process.nextTick = (callback, ...args) => {
+      queueMicrotask(() => {
+        try {
+          callback(...args);
+        } catch (error) {
+          diagnostics.push(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+    };
+    process.nextTick = rnLikeNextTick;
+
+    try {
+      await saveAccount(workplaceId, child.id, { parentAccountId: parent.id });
+      await new Promise(resolve => setImmediate(resolve));
+    } finally {
+      process.nextTick = originalNextTick;
+    }
+
+    expect(diagnostics).toEqual([]);
+  });
 });

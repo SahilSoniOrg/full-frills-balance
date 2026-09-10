@@ -5,7 +5,11 @@ import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 
 export interface AccountTreeTransactionPlan<T> {
-  ops: readonly Model[];
+  /**
+   * Prepare all Watermelon operations synchronously immediately before batch.
+   * The planner may perform async reads, but must not call prepare* methods.
+   */
+  prepareOps: () => readonly Model[];
   result: T;
 }
 
@@ -23,8 +27,9 @@ export class AccountTreeTransactionCoordinator {
       // receipt describe the same workplace-scoped state that is committed.
       const accounts = await accountQueryRepository.findAll(workplaceId);
       const prepared = await plan(accounts);
-      if (prepared.ops.length > 0) {
-        await database.batch(...prepared.ops);
+      const ops = prepared.prepareOps();
+      if (ops.length > 0) {
+        await database.batch(...ops);
       }
       return prepared.result;
     });
