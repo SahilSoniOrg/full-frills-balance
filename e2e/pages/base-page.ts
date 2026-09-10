@@ -66,7 +66,7 @@ export class BasePage {
     const journalFab = this.page.getByRole('button', { name: /Open new entry options/i });
     await expect(journalFab).toBeVisible({ timeout: 45000 });
     await journalFab.click({ force: true });
-    await expect(this.page.getByPlaceholder('What is this journal entry for?')).toBeVisible({
+    await expect(this.page.getByTestId('journal-entry-screen')).toBeVisible({
       timeout: 30000,
     });
   }
@@ -86,7 +86,14 @@ export class BasePage {
   }
 
   async switchToReports() {
-    await this.page.goto('/reports');
+    await this.ensureAppShell();
+    await this.page.getByRole('tab', { name: 'Activity', exact: true }).click();
+    const reportsButton = this.page.getByRole('button', { name: 'View Analytics', exact: true });
+    await expect(reportsButton).toBeVisible({ timeout: 30000 });
+    await reportsButton.click();
+    await expect(this.page.getByText('Reports', { exact: true }).first()).toBeVisible({
+      timeout: 30000,
+    });
   }
 
   async switchToSettings() {

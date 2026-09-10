@@ -49,7 +49,10 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
         )}
       </ReportChartCard>
 
-      <ReportChartCard title={AppConfig.strings.reports.spendingByCategory}>
+      <ReportChartCard
+        title={AppConfig.strings.reports.spendingByCategory}
+        testID="report-spending-by-category"
+      >
         {expenseCategoryViewState.hasData ? (
           <BreakdownDonutCard
             donutData={expenseCategoryViewState.donutData}
@@ -66,7 +69,10 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
         )}
       </ReportChartCard>
 
-      <ReportChartCard title={AppConfig.strings.reports.incomeByCategory}>
+      <ReportChartCard
+        title={AppConfig.strings.reports.incomeByCategory}
+        testID="report-income-by-category"
+      >
         {incomeCategoryViewState.hasData ? (
           <BreakdownDonutCard
             donutData={incomeCategoryViewState.donutData}

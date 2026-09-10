@@ -154,7 +154,7 @@ export class JournalEntryPage extends BasePage {
   }
 
   async enterDescription(description: string) {
-    await this.page.getByPlaceholder('What is this journal entry for?').fill(description);
+    await this.page.getByTestId('journal-description-input').fill(description);
   }
 
   async save() {
@@ -164,7 +164,7 @@ export class JournalEntryPage extends BasePage {
       })
       .toBeTruthy();
     await this.page.getByTestId('submit-footer-button').click();
-    await expect(this.page.getByPlaceholder('What is this journal entry for?')).not.toBeVisible({
+    await expect(this.page.getByTestId('journal-entry-screen')).not.toBeVisible({
       timeout: 30000,
     });
   }

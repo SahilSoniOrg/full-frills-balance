@@ -3,21 +3,13 @@ import { expect, test } from './fixtures';
 test.describe('Reports and Analytics', () => {
   test.setTimeout(120 * 1000);
 
-  test.beforeEach(async ({ onboardingPage, accountsPage }) => {
+  test.beforeEach(async ({ onboardingPage }) => {
     await onboardingPage.clearAppState();
     await onboardingPage.goto('/');
     await onboardingPage.completeOnboarding('Reports User');
-
-    // Setup accounts for reporting
-    await accountsPage.navigateToCreation();
-    await accountsPage.createAccount('Reporting Asset', 'Asset');
-    await accountsPage.navigateToCreation();
-    await accountsPage.createAccount('Reporting Expense', 'Expense');
-    await accountsPage.navigateToCreation();
-    await accountsPage.createAccount('Reporting Income', 'Income');
   });
 
-  test('should reflect transactions in Net Worth and Summaries', async ({
+  test('should not leak income into spending categories', async ({
     dashboardPage,
     journalEntryPage,
   }) => {
@@ -32,35 +24,35 @@ test.describe('Reports and Analytics', () => {
     await dashboardPage.clickPlusButton();
     await journalEntryPage.selectType('INCOME');
     await journalEntryPage.enterAmount('1000');
-    await journalEntryPage.selectSourceAccount('Reporting Income');
-    await journalEntryPage.selectDestinationAccount('Reporting Asset');
+    await journalEntryPage.selectSourceAccount('Salary');
+    await journalEntryPage.selectDestinationAccount('Bank');
     await journalEntryPage.enterDescription('Salary Payment');
     await journalEntryPage.save();
 
     await dashboardPage.switchToDashboard();
     // Net worth should now be $1,000.00
-    await expect(dashboardPage.page.getByText('$1,000.00')).toBeVisible({ timeout: 15000 });
+    await expect(
+      dashboardPage.page
+        .getByTestId('dashboard-screen')
+        .getByText(/\$1,000\.00/)
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
 
-    // Add Expense: -$250
-    await dashboardPage.clickPlusButton();
-    await journalEntryPage.selectType('EXPENSE');
-    await journalEntryPage.enterAmount('250');
-    await journalEntryPage.selectSourceAccount('Reporting Asset');
-    await journalEntryPage.selectDestinationAccount('Reporting Expense');
-    await journalEntryPage.enterDescription('Shopping');
-    await journalEntryPage.save();
-
-    await dashboardPage.switchToDashboard();
-    // Net worth should now be $750.00
-    await expect(dashboardPage.page.getByText('$750.00')).toBeVisible({ timeout: 15000 });
-
-    // Go to Reports tab and check summaries if any
+    // Go to Reports and verify the income category is populated.
     await dashboardPage.switchToReports();
-    // Verify we are on Reports screen
-    await expect(dashboardPage.page.getByText(/Reports|Analysis|Analytics/i).first()).toBeVisible();
+    await expect(dashboardPage.page.getByText('Reports', { exact: true }).first()).toBeVisible();
 
-    // Verify income/expense totals on reports if present
-    await expect(dashboardPage.page.getByText('$1,000.00')).toBeVisible();
-    await expect(dashboardPage.page.getByText('$250.00')).toBeVisible();
+    // The category views share the same period deltas. Income must not appear
+    // in the spending category card when no expense exists.
+    await dashboardPage.page.getByRole('tab', { name: 'Spending', exact: true }).click();
+
+    const spendingByCategory = dashboardPage.page.getByTestId('report-spending-by-category');
+    await expect(spendingByCategory).toBeVisible();
+    await expect(spendingByCategory).toContainText('No activity in this period');
+    await expect(spendingByCategory.getByText(/\$1,000\.00/)).toHaveCount(0);
+
+    const incomeByCategory = dashboardPage.page.getByTestId('report-income-by-category');
+    await expect(incomeByCategory).toBeVisible();
+    await expect(incomeByCategory.getByText(/\$1,000\.00/).first()).toBeVisible();
   });
 });

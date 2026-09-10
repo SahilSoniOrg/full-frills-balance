@@ -25,8 +25,11 @@ export class OnboardingPage extends BasePage {
     // Step 6: Finalize
     await this.clickFinish();
 
-    // Should redirect to main app tabs
-    await expect(this.page).toHaveURL(/(accounts|activity|settings|\(tabs\)|$)/);
+    // Setup publication is asynchronous; do not let callers race the first
+    // account navigation against the workplace becoming active.
+    await expect(this.page.getByRole('tab', { name: 'Dashboard', exact: true })).toBeVisible({
+      timeout: 30000,
+    });
   }
 
   async assertOnboardingStarted() {
@@ -40,6 +43,22 @@ export class OnboardingPage extends BasePage {
 
   async clickContinue() {
     await this.page.getByTestId('onboarding-continue-button').click({ force: true });
+
+    // The first continue click opens the privacy sheet when acknowledgement is
+    // missing; acknowledging it resumes the pending onboarding action.
+    const acknowledgePrivacy = this.page.getByRole('button', {
+      name: 'Acknowledge & continue',
+      exact: true,
+    });
+    try {
+      await acknowledgePrivacy.waitFor({ state: 'visible', timeout: 5000 });
+    } catch {
+      // Privacy is already acknowledged in this browser profile.
+      return;
+    }
+
+    await acknowledgePrivacy.click({ force: true });
+    await expect(acknowledgePrivacy).not.toBeVisible({ timeout: 10000 });
   }
 
   async clickGridContinue() {
@@ -64,12 +83,15 @@ export class OnboardingPage extends BasePage {
   }
 
   async selectCurrency(currency: string) {
-    const gridItem = this.page.getByTestId(`grid-item-${currency}`);
-    if ((await gridItem.count()) > 0) {
-      await gridItem.click({ force: true });
-    } else {
-      await this.page.getByText(currency).first().click({ force: true });
-    }
+    const selectedOption = this.page.getByRole('button', {
+      name: `${currency}, selected`,
+      exact: true,
+    });
+    if ((await selectedOption.count()) > 0) return;
+
+    await this.page
+      .getByRole('button', { name: `${currency}, not selected`, exact: true })
+      .click({ force: true });
   }
 
   async clickGetStarted() {

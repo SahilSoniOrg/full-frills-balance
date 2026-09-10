@@ -6,6 +6,7 @@ import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface ReportChartCardProps {
   title?: string;
+  testID?: string;
   children: React.ReactNode;
   headerContent?: React.ReactNode;
   zIndex?: number;
@@ -14,6 +15,7 @@ interface ReportChartCardProps {
 
 export function ReportChartCard({
   title,
+  testID,
   children,
   headerContent,
   zIndex = 1,
@@ -22,7 +24,11 @@ export function ReportChartCard({
   return (
     <>
       {title && <ScreenSectionHeader title={title} style={styles.sectionTitle} />}
-      <AppCard style={[styles.chartCard, { zIndex, overflow: 'visible' }, style]} paddingSize="lg">
+      <AppCard
+        testID={testID}
+        style={[styles.chartCard, { zIndex, overflow: 'visible' }, style]}
+        paddingSize="lg"
+      >
         {headerContent && <View style={styles.headerRow}>{headerContent}</View>}
         {children}
       </AppCard>
