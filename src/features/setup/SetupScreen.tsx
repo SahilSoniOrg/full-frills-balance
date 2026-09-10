@@ -286,6 +286,7 @@ function SetupJourneyScreen({
           <WorkplaceSetupSlice
             initial={workplaceInitial}
             initialStep={workplaceTargetStep}
+            resumeStep={workplaceTargetStep ?? workplaceStep}
             books={isRestoreJourneyId(journeyId) ? 'imported' : 'starters'}
             identityMode={recipe.workplaceIdentity}
             isCompleting={submittingSlice === 'workplace'}

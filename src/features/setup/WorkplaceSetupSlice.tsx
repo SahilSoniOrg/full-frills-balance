@@ -45,6 +45,7 @@ export function WorkplaceSetupSlice({
   identityMode = 'editable',
   books = 'starters',
   initialStep,
+  resumeStep,
   isCompleting,
   onContinue,
   onBack,
@@ -56,6 +57,8 @@ export function WorkplaceSetupSlice({
   readonly identityMode?: 'automatic' | 'editable';
   readonly books?: 'starters' | 'imported';
   readonly initialStep?: WorkplaceCheckpoint;
+  /** Parent-owned checkpoint used to restore the local step after a remount. */
+  readonly resumeStep?: WorkplaceCheckpoint;
   readonly isCompleting: boolean;
   readonly onContinue: (output: WorkplaceSetupOutput) => void;
   readonly onBack: () => void;
@@ -63,7 +66,12 @@ export function WorkplaceSetupSlice({
   readonly onCheckpointChange?: (step: WorkplaceCheckpoint) => void;
 }) {
   const [step, setStep] = useState<WorkplaceCheckpoint>(() =>
-    resolveWorkplaceStartCheckpoint({ identityMode, books, initial, initialStep }),
+    resolveWorkplaceStartCheckpoint({
+      identityMode,
+      books,
+      initial,
+      initialStep: initialStep ?? resumeStep,
+    }),
   );
   const [defaultWorkplaceName, setDefaultWorkplaceName] = useState(() => generateWorkplaceName());
   const [workplaceName, setWorkplaceName] = useState(initial?.name?.value ?? '');
