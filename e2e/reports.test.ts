@@ -9,7 +9,7 @@ test.describe('Reports and Analytics', () => {
     await onboardingPage.completeOnboarding('Reports User');
   });
 
-  test('should not leak income into spending categories', async ({
+  test('should isolate income and expense categories', async ({
     dashboardPage,
     journalEntryPage,
   }) => {
@@ -38,21 +38,42 @@ test.describe('Reports and Analytics', () => {
         .first(),
     ).toBeVisible({ timeout: 15000 });
 
-    // Go to Reports and verify the income category is populated.
+    // Add Expense: -$250
+    await dashboardPage.clickPlusButton();
+    await journalEntryPage.selectType('EXPENSE');
+    await journalEntryPage.enterAmount('250');
+    await journalEntryPage.selectSourceAccount('Bank');
+    await journalEntryPage.selectDestinationAccount('Food & Drink');
+    await journalEntryPage.enterDescription('Groceries');
+    await journalEntryPage.save();
+
+    await dashboardPage.switchToDashboard();
+    await expect(
+      dashboardPage.page
+        .getByTestId('dashboard-screen')
+        .getByText(/\$750\.00/)
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    // Go to Reports and verify both sides of the category split.
     await dashboardPage.switchToReports();
     await expect(dashboardPage.page.getByText('Reports', { exact: true }).first()).toBeVisible();
 
-    // The category views share the same period deltas. Income must not appear
-    // in the spending category card when no expense exists.
+    // The category views share the same period deltas. Expense must appear in
+    // spending, while income must remain isolated to income categories.
     await dashboardPage.page.getByRole('tab', { name: 'Spending', exact: true }).click();
 
     const spendingByCategory = dashboardPage.page.getByTestId('report-spending-by-category');
     await expect(spendingByCategory).toBeVisible();
-    await expect(spendingByCategory).toContainText('No activity in this period');
+    await expect(spendingByCategory).not.toContainText('No activity in this period');
+    await expect(spendingByCategory.getByText('Food', { exact: true })).toBeVisible();
+    await expect(spendingByCategory.getByText(/\$250\.00/).first()).toBeVisible();
     await expect(spendingByCategory.getByText(/\$1,000\.00/)).toHaveCount(0);
 
     const incomeByCategory = dashboardPage.page.getByTestId('report-income-by-category');
     await expect(incomeByCategory).toBeVisible();
     await expect(incomeByCategory.getByText(/\$1,000\.00/).first()).toBeVisible();
+    await expect(incomeByCategory.getByText(/\$250\.00/)).toHaveCount(0);
+    await expect(incomeByCategory.getByText('Food', { exact: true })).toHaveCount(0);
   });
 });

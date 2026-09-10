@@ -3,6 +3,7 @@ import { Animation } from '@/src/constants';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
+  observeWorkplaceActiveTransactionCount,
   observeWorkplaceAccounts,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
@@ -38,6 +39,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     return combineLatest([
       observeWorkplaceAccounts(workplaceId),
       observeWorkplaceJournalMeta(workplaceId),
+      observeWorkplaceActiveTransactionCount(workplaceId),
     ]).pipe(
       firstFastDebounce(Animation.dataRefreshDebounce),
       map(() => 0),
