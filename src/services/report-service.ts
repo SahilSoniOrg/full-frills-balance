@@ -211,7 +211,10 @@ export class ReportService {
     const accountSubtypeMap = new Map(accounts.map(a => [a.id, a.accountSubtype]));
     const items = deltas
       .map(d => {
-        if (!d.accountId) return null;
+        // The same period deltas power both category views. Only keep deltas
+        // belonging to the accounts for the view being built; otherwise
+        // income accounts leak into expense as "Other" (and vice versa).
+        if (!d.accountId || !accountSubtypeMap.has(d.accountId)) return null;
         const category =
           accountSubtypeMap.get(d.accountId) || AppConfig.strings.reports.categoryOther;
         const val = d.delta ?? d.amount ?? 0;

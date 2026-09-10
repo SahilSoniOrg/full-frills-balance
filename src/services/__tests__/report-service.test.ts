@@ -37,6 +37,7 @@ function mockIncomeExpenseAccounts() {
             name: 'Salary',
             accountType: AccountType.INCOME,
             currencyCode: 'USD',
+            accountSubtype: 'salary',
           },
         ]);
       if (type === AccountType.EXPENSE)
@@ -46,6 +47,7 @@ function mockIncomeExpenseAccounts() {
             name: 'Food',
             accountType: AccountType.EXPENSE,
             currencyCode: 'USD',
+            accountSubtype: 'food',
           },
         ]);
       return Promise.resolve([]);
@@ -126,11 +128,47 @@ describe('ReportService', () => {
 
       expect(result.incomeVsExpense).toEqual({ income: 2000, expense: 100 });
       expect(result.expenseBreakdown[0].accountName).toBe('Food');
-      expect(result.incomeCategoryBreakdown.length).toBeGreaterThan(0);
+      expect(result.expenseCategoryBreakdown).toEqual([
+        expect.objectContaining({
+          category: 'food',
+          amount: 100,
+          accountIds: ['food'],
+        }),
+      ]);
+      expect(result.incomeCategoryBreakdown).toEqual([
+        expect.objectContaining({
+          category: 'salary',
+          amount: 2000,
+          accountIds: ['salary'],
+        }),
+      ]);
       expect(result.incomeVsExpenseHistory.length).toBeGreaterThan(0);
       expect(result.dailyIncomeVsExpense.length).toBeGreaterThan(0);
 
       expect(transactionQueryRepository.findByAccountsAndDateRange).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not leak out-of-scope deltas into a filtered category breakdown', async () => {
+      mockIncomeExpenseAccounts();
+      (transactionRawRepository.getAccountDeltasGroupedRaw as jest.Mock).mockResolvedValue([
+        { accountId: 'salary', currencyCode: 'USD', delta: 2000 },
+        { accountId: 'food', currencyCode: 'USD', delta: 100 },
+      ]);
+      (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getReportSnapshot(
+        'wp-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+        undefined,
+        ['food'],
+      );
+
+      expect(result.expenseCategoryBreakdown).toEqual([
+        expect.objectContaining({ category: 'food', amount: 100, accountIds: ['food'] }),
+      ]);
+      expect(result.incomeCategoryBreakdown).toEqual([]);
     });
 
     it('excludes negative net expense accounts from breakdown percentages', async () => {
