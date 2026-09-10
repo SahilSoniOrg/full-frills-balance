@@ -74,4 +74,20 @@ describe('AppInput', () => {
     expect(flattenedStyle.paddingRight).toBe(Spacing.xxxl + Spacing.sm);
     expect(flattenedStyle.fontSize).toBe(18);
   });
+
+  it('gives calculator inputs the full available row width', () => {
+    render(
+      <AppInput
+        calculator
+        testID="amount"
+        calculatorTestID="amount-calculator"
+        placeholder="Amount"
+      />,
+    );
+
+    const calculatorButton = screen.getByTestId('amount-calculator');
+    const calculatorRowStyle = StyleSheet.flatten(calculatorButton.parent?.props.style);
+
+    expect(calculatorRowStyle.width).toBe('100%');
+  });
 });

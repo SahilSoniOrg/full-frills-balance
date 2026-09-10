@@ -1,9 +1,17 @@
 import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
 import { AppInput } from '@/src/components/core/AppInput';
-import { Typography } from '@/src/constants';
+import { Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { StyleProp, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
+
+const HERO_AMOUNT_FONT_SIZE = Typography.sizes.hero / 1.5;
+const MIN_HERO_AMOUNT_FONT_SIZE = Typography.sizes.xxl;
+
+export function getHeroAmountFontSize(value: string): number {
+  const overflowLength = Math.max(0, value.trim().length - 9);
+  return Math.max(MIN_HERO_AMOUNT_FONT_SIZE, HERO_AMOUNT_FONT_SIZE - overflowLength * Spacing.xs);
+}
 
 interface CalculatorAmountInputProps {
   value: string;
@@ -46,9 +54,10 @@ export function CalculatorAmountInput({
           isHero && {
             color: theme.text,
             fontFamily: fonts.semibold,
-            fontSize: Typography.sizes.hero / 1.5,
+            fontSize: getHeroAmountFontSize(value),
             letterSpacing: -1,
-            minWidth: 150,
+            minWidth: 0,
+            flexShrink: 1,
             textAlign: 'center',
           },
           inputStyle,
@@ -75,7 +84,7 @@ export function CalculatorAmountInput({
 
 const styles = StyleSheet.create({
   heroInput: {
-    width: 'auto',
-    minWidth: 210,
+    width: '100%',
+    minWidth: 0,
   },
 });

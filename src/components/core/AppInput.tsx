@@ -61,7 +61,10 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
 
       {(() => {
         const inputField = (
-          <View pointerEvents={calculator ? 'none' : 'auto'}>
+          <View
+            pointerEvents={calculator ? 'none' : 'auto'}
+            style={calculator ? styles.calculatorInputField : undefined}
+          >
             <AppInputField
               ref={ref}
               variant={variant}
@@ -123,6 +126,10 @@ const styles = StyleSheet.create({
   },
   calculatorRow: {
     position: 'relative',
+    width: '100%',
+  },
+  calculatorInputField: {
+    width: '100%',
   },
   calculatorTextInput: {
     // Keep right-aligned values clear of the 20px icon and its hit area.
