@@ -22,7 +22,12 @@ import {
   useAccountFormMetadata,
 } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { useAccountFormPickers } from '@/src/features/accounts/hooks/form/useAccountFormPickers';
-import { useAccount, useAccountBalance, useAccounts } from '@/src/hooks/useAccounts';
+import {
+  useAccount,
+  useAccountBalance,
+  useAccountBalances,
+  useAccounts,
+} from '@/src/hooks/useAccounts';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
@@ -128,6 +133,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     workplaceCurrency,
   );
   const { accounts } = useAccounts(workplaceId);
+  const { balancesByAccountId } = useAccountBalances(workplaceId, accounts, workplaceCurrency);
 
   const { data: isParent } = useObservable(
     () => (accountId ? accountQueries.observeHasChildren(workplaceId, accountId) : of(false)),
@@ -237,9 +243,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       filterPotentialParentAccounts(accounts, {
         accountId,
         accountType: core.accountType,
-        selectedCurrency: core.selectedCurrency,
+        hasDirectTransactions: account => {
+          const balance = balancesByAccountId.get(account.id);
+          return balance == null || (balance.directTransactionCount || 0) > 0;
+        },
       }),
-    [accounts, accountId, core.accountType, core.selectedCurrency],
+    [accounts, accountId, balancesByAccountId, core.accountType],
   );
 
   const parentAccountName = useMemo(() => {

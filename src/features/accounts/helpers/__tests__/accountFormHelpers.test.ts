@@ -41,22 +41,54 @@ describe('accountFormHelpers', () => {
     expect(accountFirst.heroTitle).toContain('First');
   });
 
-  it('filters parent and pay-from account options', () => {
+  it('returns all eligible parent candidates and excludes accounts with transactions', () => {
     const accounts = [
-      { id: 'a1', accountType: AccountType.ASSET, currencyCode: 'USD', parentAccountId: null },
-      { id: 'a2', accountType: AccountType.ASSET, currencyCode: 'USD', parentAccountId: 'p' },
-      { id: 'a3', accountType: AccountType.LIABILITY, currencyCode: 'USD', parentAccountId: null },
+      { id: 'parent', accountType: AccountType.ASSET, currencyCode: 'USD', parentAccountId: null },
+      { id: 'leaf', accountType: AccountType.ASSET, currencyCode: 'USD', parentAccountId: null },
+      {
+        id: 'child',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        parentAccountId: 'parent',
+      },
+      {
+        id: 'busy',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        parentAccountId: null,
+      },
+      {
+        id: 'other',
+        accountType: AccountType.LIABILITY,
+        currencyCode: 'USD',
+        parentAccountId: null,
+      },
     ] as any[];
 
     expect(
       filterPotentialParentAccounts(accounts, {
-        accountId: 'a1' as AccountId,
         accountType: AccountType.ASSET,
-        selectedCurrency: 'USD',
-      }),
-    ).toHaveLength(0);
+        hasDirectTransactions: account => account.id === 'busy',
+      })
+        .map(account => account.id)
+        .sort(),
+    ).toEqual(['child', 'leaf', 'parent']);
 
-    expect(filterPayFromAccountOptions(accounts, 'a1' as AccountId)).toEqual([accounts[1]]);
+    expect(
+      filterPotentialParentAccounts(accounts, {
+        accountId: 'parent' as AccountId,
+        accountType: AccountType.ASSET,
+        hasDirectTransactions: account => account.id === 'busy',
+      })
+        .map(account => account.id)
+        .sort(),
+    ).toEqual(['leaf']);
+
+    expect(filterPayFromAccountOptions(accounts, 'parent' as AccountId)).toEqual([
+      accounts[1],
+      accounts[2],
+      accounts[3],
+    ]);
     expect(isCategoryAccountType(AccountType.INCOME)).toBe(true);
   });
 

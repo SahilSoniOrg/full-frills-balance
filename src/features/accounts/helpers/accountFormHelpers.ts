@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
+import { getAccountTreeParentCandidates } from '@/src/services/accounts/accountTree';
 import { isCategoryAccountType } from '@/src/utils/accountCategory';
 
 export { isCategoryAccountType };
@@ -87,15 +88,24 @@ export function resolveAccountFormHeroCopy(input: {
 
 export function filterPotentialParentAccounts(
   accounts: AccountFields[],
-  input: { accountId?: AccountId; accountType: AccountType; selectedCurrency: string },
+  input: {
+    accountId?: AccountId;
+    accountType: AccountType;
+    hasDirectTransactions?: (account: AccountFields) => boolean;
+  },
 ): AccountFields[] {
-  return accounts.filter(
-    a =>
-      a.id !== input.accountId &&
-      a.accountType === input.accountType &&
-      a.currencyCode === input.selectedCurrency &&
-      !a.parentAccountId,
-  );
+  return [
+    ...getAccountTreeParentCandidates(
+      accounts,
+      {
+        accountId: input.accountId,
+        accountType: input.accountType,
+      },
+      {
+        hasDirectTransactions: input.hasDirectTransactions,
+      },
+    ),
+  ];
 }
 
 export function filterPayFromAccountOptions(

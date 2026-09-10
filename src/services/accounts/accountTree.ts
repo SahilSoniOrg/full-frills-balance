@@ -82,6 +82,35 @@ function ordered<T extends OrderedAccount>(accounts: readonly T[]): T[] {
   );
 }
 
+function resolveParentCandidatesFromSnapshot<T extends OrderedAccount>(
+  accounts: readonly T[],
+  accountsById: ReadonlyMap<AccountId, T>,
+  getDescendants: (accountId: AccountId) => ReadonlySet<AccountId>,
+  input: { accountId?: AccountId; accountType?: string },
+  options?: { hasDirectTransactions?: (account: T) => boolean },
+): readonly T[] {
+  const account = input.accountId ? accountsById.get(input.accountId) : undefined;
+  const accountType = account?.accountType ?? input.accountType;
+  if (!accountType) return Object.freeze([]);
+
+  const blocked = input.accountId
+    ? new Set([input.accountId, ...getDescendants(input.accountId)])
+    : new Set<AccountId>();
+
+  return Object.freeze(
+    accounts
+      .filter(
+        candidate =>
+          candidate.accountType === accountType &&
+          !blocked.has(candidate.id) &&
+          !isPresent(candidate.deletedAt) &&
+          !isPresent(candidate.archivedAt) &&
+          !options?.hasDirectTransactions?.(candidate),
+      )
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '') || a.id.localeCompare(b.id)),
+  );
+}
+
 /** Build one immutable-in-use view of an account hierarchy. */
 export function createAccountTreeSnapshot<T extends OrderedAccount>(
   accounts: readonly T[],
@@ -150,21 +179,12 @@ export function createAccountTreeSnapshot<T extends OrderedAccount>(
     accountId: AccountId,
     options?: { hasDirectTransactions?: (account: T) => boolean },
   ): readonly T[] => {
-    const account = accountsById.get(accountId);
-    if (!account) return Object.freeze([]);
-    const blocked = new Set([accountId, ...getDescendants(accountId)]);
-    return Object.freeze(
-      accounts
-        .filter(
-          candidate =>
-            candidate.id !== accountId &&
-            candidate.accountType === account.accountType &&
-            !blocked.has(candidate.id) &&
-            !isPresent(candidate.deletedAt) &&
-            !isPresent(candidate.archivedAt) &&
-            !options?.hasDirectTransactions?.(candidate),
-        )
-        .sort((a, b) => (a.name || '').localeCompare(b.name || '') || a.id.localeCompare(b.id)),
+    return resolveParentCandidatesFromSnapshot(
+      accounts,
+      accountsById,
+      getDescendants,
+      { accountId },
+      options,
     );
   };
 
@@ -178,6 +198,22 @@ export function createAccountTreeSnapshot<T extends OrderedAccount>(
     getDescendants,
     getParentCandidates,
   };
+}
+
+/** Resolve eligible parents for either an existing account or a new account. */
+export function getAccountTreeParentCandidates<T extends OrderedAccount>(
+  accounts: readonly T[],
+  input: { accountId?: AccountId; accountType?: string },
+  options?: { hasDirectTransactions?: (account: T) => boolean },
+): readonly T[] {
+  const snapshot = createAccountTreeSnapshot(accounts);
+  return resolveParentCandidatesFromSnapshot(
+    accounts,
+    snapshot.accountsById,
+    snapshot.getDescendants,
+    input,
+    options,
+  );
 }
 
 /** Validate structural invariants that do not require a database query. */
