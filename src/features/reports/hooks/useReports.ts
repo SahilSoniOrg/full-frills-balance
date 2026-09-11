@@ -11,6 +11,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
 import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
+import { getPreviousEquivalentReportRange } from '@/src/services/reports/reportPeriods';
 import { wealthService } from '@/src/services/wealth-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
@@ -34,6 +35,11 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     getLastNRange(AppConfig.defaults.reportDays, 'days'),
   );
   const [accountIds, setAccountIds] = useState<AccountId[]>([]);
+
+  const comparisonRange = useMemo(
+    () => getPreviousEquivalentReportRange(dateRange, periodFilter),
+    [dateRange, periodFilter],
+  );
 
   const triggerObservable = useMemo(() => {
     return combineLatest([
@@ -83,15 +89,36 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
           accountIds,
         });
       }
-      return await reportService.getReportSnapshot(
-        workplaceId,
-        startDate,
-        endDate,
-        targetCurrency,
-        accountIds,
-      );
+      const [snapshot, previousIncomeVsExpense] = await Promise.all([
+        reportService.getReportSnapshot(
+          workplaceId,
+          startDate,
+          endDate,
+          targetCurrency,
+          accountIds,
+        ),
+        comparisonRange
+          ? reportService.getIncomeVsExpense(
+              workplaceId,
+              comparisonRange.startDate,
+              comparisonRange.endDate,
+              targetCurrency,
+              accountIds,
+            )
+          : Promise.resolve(null),
+      ]);
+
+      return { ...snapshot, previousIncomeVsExpense };
     },
-    [workplaceId, dateRange, triggerObservable, targetCurrency, accountIds],
+    [
+      workplaceId,
+      dateRange,
+      periodFilter,
+      comparisonRange,
+      triggerObservable,
+      targetCurrency,
+      accountIds,
+    ],
     {
       expenseBreakdown: [],
       expenseCategoryBreakdown: [],
@@ -102,6 +129,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
       sankeyData: emptySankeyData(),
       spendingHeatmap: [],
       calendarHeatmap: [],
+      previousIncomeVsExpense: null,
     },
   );
 
@@ -160,6 +188,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     incomeCategories,
     incomeVsExpenseHistory: data.incomeVsExpenseHistory,
     incomeVsExpense: data.incomeVsExpense,
+    previousIncomeVsExpense: data.previousIncomeVsExpense,
     dailyIncomeVsExpense: data.dailyIncomeVsExpense,
     sankeyData: data.sankeyData,
     spendingHeatmap: data.spendingHeatmap,
