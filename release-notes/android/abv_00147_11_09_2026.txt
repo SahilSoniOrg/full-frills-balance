@@ -1,0 +1,24 @@
+New release 🚀
+
+This update fixes a few frustrating rough edges. Entering long amounts no longer clips off digits, setting up a new workplace flows smoothly, and reports update right away with cleaner category charts.
+
+---
+
+Also in this update:
+
+* Amount fields: Long numbers scale down to fit comfortably so digits don't get cut off.
+* Workplace setup: Creating a workplace now moves through each step reliably and remembers where you left off.
+* Live reports: Reports update the moment you add a transaction, keeping income and expense categories strictly separate.
+* Account organizing: Nesting or moving accounts updates parent totals right away.
+* Parent account picker: Only eligible accounts show up when choosing a parent for a subaccount.
+* SMS rules: Cleaned up duplicate merchant suggestions in settings.
+
+---
+
+Big difference you’ll notice:
+
+* You can type out large amounts without numbers getting cut off, and creating a new workplace works without getting stuck.
+
+---
+
+Under the hood, report calculations and account tree updates are more reliable and run with fewer intermediate steps.
