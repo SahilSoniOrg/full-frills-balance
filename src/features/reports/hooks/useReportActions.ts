@@ -4,14 +4,13 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
 interface UseReportActionsProps {
-  selectedPeriod: { start: number; end: number } | null;
   dateRange: { startDate: number; endDate: number };
 }
 
 /**
  * Hook to manage report-related actions like navigation and transaction viewing.
  */
-export function useReportActions({ selectedPeriod, dateRange }: UseReportActionsProps) {
+export function useReportActions({ dateRange }: UseReportActionsProps) {
   const onViewTransactions = useCallback((start: number, end?: number) => {
     analytics.trackFeatureUsage('reports', 'drilldown_transactions');
     const startDate = new Date(start).setHours(0, 0, 0, 0);
@@ -22,11 +21,17 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
     AppNavigation.toJournalSearch({ startDate, endDate });
   }, []);
 
-  const onViewSelectedTransactions = useCallback(() => {
-    if (selectedPeriod) {
-      onViewTransactions(selectedPeriod.start, selectedPeriod.end);
-    }
-  }, [selectedPeriod, onViewTransactions]);
+  const onViewCurrentTransactions = useCallback(
+    (accountIds: AccountId[] = []) => {
+      analytics.trackFeatureUsage('reports', 'drilldown_transactions');
+      AppNavigation.toJournalSearch({
+        ...(accountIds.length > 0 ? { accountIds } : {}),
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+    },
+    [dateRange.endDate, dateRange.startDate],
+  );
 
   const onLegendRowPress = useCallback(
     (accountIds: AccountId[]) => {
@@ -36,21 +41,18 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
         account_count: accountIds.length,
       });
 
-      const start = selectedPeriod?.start ?? dateRange.startDate;
-      const end = selectedPeriod?.end ?? dateRange.endDate;
-
       AppNavigation.toJournalSearch({
         accountIds,
-        startDate: start,
-        endDate: end,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
       });
     },
-    [dateRange.endDate, dateRange.startDate, selectedPeriod],
+    [dateRange.endDate, dateRange.startDate],
   );
 
   return {
     onViewTransactions,
-    onViewSelectedTransactions,
+    onViewCurrentTransactions,
     onLegendRowPress,
   };
 }

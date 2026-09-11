@@ -1,18 +1,14 @@
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { MultiAccountPickerModal } from '@/src/features/accounts';
-import { Icon, AppIcon, AppText, FilterChipButton } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportFilters } from '@/src/features/reports/hooks/useReportFilters';
-import { ReportSubPeriod } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-export function ReportFilterBar({
-  subPeriod,
-  ...filters
-}: ReportFilters & { subPeriod: ReportSubPeriod }) {
+export function ReportFilterBar(filters: ReportFilters) {
   const { theme } = useTheme();
   const {
     showDatePicker,
@@ -28,8 +24,6 @@ export function ReportFilterBar({
     onAccountSelect,
     accounts,
   } = filters;
-  const { label: subPeriodLabel, onClear: onClearSubPeriod } = subPeriod;
-
   const accountLabel =
     accountIds.length === 0
       ? AppConfig.strings.reports.allAccounts
@@ -65,16 +59,6 @@ export function ReportFilterBar({
               style={{ marginLeft: Spacing.xs }}
             />
           </TouchableOpacity>
-
-          {subPeriodLabel ? (
-            <FilterChipButton
-              label={subPeriodLabel}
-              icon={Icon.Close}
-              isActive
-              onPress={onClearSubPeriod}
-              style={{ marginLeft: Spacing.sm }}
-            />
-          ) : null}
         </View>
       </ScrollView>
 

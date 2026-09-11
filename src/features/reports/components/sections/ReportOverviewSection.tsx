@@ -1,8 +1,8 @@
 import { ReportOverviewTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { NetWorthTrendWidget } from '@/src/features/reports/components/widgets/NetWorthTrendWidget';
-import { IncomeExpenseTrendWidget } from '@/src/features/reports/components/widgets/IncomeExpenseTrendWidget';
 import { IncomeExpenseBalanceWidget } from '@/src/features/reports/components/widgets/IncomeExpenseBalanceWidget';
 import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/MoneyFlowWidget';
+import { ReportSummaryCard } from '@/src/features/reports/components/ReportSummaryCard';
 
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
@@ -14,35 +14,25 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     currentNetWorth,
     netWorthSeries,
     onViewTransactions,
-    barChartData,
     income,
     expense,
     incomeBarFlex,
     expenseBarFlex,
     sankeyData,
     targetCurrency,
-    onViewSelectedTransactions,
-    selectedBarIndex,
-    onSelectBarIndex,
+    summary,
   } = vm;
 
   return (
     <>
+      <ReportSummaryCard summary={summary} currencyCode={targetCurrency} />
+
       <NetWorthTrendWidget
         series={netWorthSeries}
         currentNetWorth={currentNetWorth}
         currencyCode={targetCurrency}
         chartWidth={chartWidth}
         onViewTransactions={onViewTransactions}
-      />
-
-      <IncomeExpenseTrendWidget
-        barChartData={barChartData}
-        currencyCode={targetCurrency}
-        chartWidth={chartWidth}
-        selectedIndex={selectedBarIndex}
-        onSelectIndex={onSelectBarIndex}
-        onViewSelectedTransactions={onViewSelectedTransactions}
       />
 
       <IncomeExpenseBalanceWidget

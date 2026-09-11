@@ -5,19 +5,17 @@ import { useMemo } from 'react';
 
 interface UseBreakdownViewStateParams {
   globalBreakdown: BreakdownLegendEntry[];
-  selectedBreakdown: BreakdownLegendEntry[] | null;
   expanded: boolean;
   fallbackColor: string;
 }
 
 export function useBreakdownViewState({
   globalBreakdown,
-  selectedBreakdown,
   expanded,
   fallbackColor,
 }: UseBreakdownViewStateParams): ReportBreakdownViewState {
   return useMemo(() => {
-    const source = selectedBreakdown ?? globalBreakdown;
+    const source = globalBreakdown;
     const displayLimit = expanded ? source.length : REPORT_CHART_LAYOUT.donutLegendCollapsedLimit;
 
     return {
@@ -40,5 +38,5 @@ export function useBreakdownViewState({
       totalCount: source.length,
       showExpansionButton: source.length > REPORT_CHART_LAYOUT.donutLegendCollapsedLimit,
     };
-  }, [expanded, fallbackColor, globalBreakdown, selectedBreakdown]);
+  }, [expanded, fallbackColor, globalBreakdown]);
 }

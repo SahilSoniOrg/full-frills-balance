@@ -1,5 +1,14 @@
 import { HeatmapPoint, SankeyData } from '@/src/services/reports/reportSnapshot';
+import { ReportSummary } from '@/src/services/reports/reportSummary';
 import { AccountId } from '@/src/types/ids';
+
+export interface ReportSummaryVm extends ReportSummary {
+  onViewIncomeTransactions: () => void;
+  onViewExpenseTransactions: () => void;
+  onViewNetFlowTransactions: () => void;
+  onViewLargestCategoryTransactions: () => void;
+  onViewHighestSpendingDayTransactions: () => void;
+}
 
 export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
 
@@ -51,19 +60,16 @@ export type ReportDailyPoint = {
 };
 
 export interface ReportOverviewTabVm {
+  summary: ReportSummaryVm;
   currentNetWorth: number;
   netWorthSeries: ReportNetWorthPoint[];
-  barChartData: ReportBarChartDatum[];
   income: number;
   expense: number;
   incomeBarFlex: number;
   expenseBarFlex: number;
   sankeyData: SankeyData;
   targetCurrency: string;
-  selectedBarIndex: number | undefined;
-  onSelectBarIndex: (index: number | undefined) => void;
   onViewTransactions: (start: number, end?: number) => void;
-  onViewSelectedTransactions: () => void;
 }
 
 export interface ReportSpendingTabVm {

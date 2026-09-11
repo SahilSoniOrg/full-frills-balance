@@ -57,7 +57,10 @@ describe('useReportsViewModel', () => {
       { date: 2, netWorth: 2000, totalAssets: 2200, totalLiabilities: 200 },
     ],
     expenses: [],
-    expenseCategories: [],
+    expenseCategories: [
+      { category: 'food', amount: 300, percentage: 60, accountIds: ['food-1'] },
+      { category: 'travel', amount: 200, percentage: 40, accountIds: ['travel-1'] },
+    ],
     incomeCategories: [{ category: 'Salary', amount: 1000, percentage: 100, accountIds: ['a1'] }],
     incomeVsExpenseHistory: [
       {
@@ -76,6 +79,7 @@ describe('useReportsViewModel', () => {
       },
     ],
     incomeVsExpense: { income: 1300, expense: 500 },
+    previousIncomeVsExpense: { income: 1000, expense: 400 },
     loading: false,
     dateRange: { startDate: 1704067200000, endDate: 1706745599999 },
     periodFilter: { type: 'ALL' },
@@ -106,9 +110,44 @@ describe('useReportsViewModel', () => {
     expect(result.current.activeTab).toBe('OVERVIEW');
     expect(result.current.filters).toBeDefined();
     expect(result.current.overview.netWorthSeries).toBeDefined();
-    expect(result.current.overview.barChartData).toBeDefined();
     expect(result.current.spending).toBeDefined();
     expect(result.current.wealth).toBeDefined();
+  });
+
+  it('should expose the answer-first summary and scoped transaction actions', () => {
+    const { result } = renderHook(() => useReportsViewModel());
+
+    expect(result.current.overview.summary.income).toBe(1300);
+    expect(result.current.overview.summary.expense).toBe(500);
+    expect(result.current.overview.summary.netFlow).toBe(800);
+    expect(result.current.overview.summary.comparison).toEqual({
+      incomeChange: 300,
+      expenseChange: 100,
+      netFlowChange: 200,
+    });
+    expect(result.current.overview.summary.largestSpendingCategory).toEqual(
+      expect.objectContaining({ category: 'food', amount: 300 }),
+    );
+
+    act(() => {
+      result.current.overview.summary.onViewIncomeTransactions();
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['a1'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+    });
+
+    act(() => {
+      result.current.overview.summary.onViewNetFlowTransactions();
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenLastCalledWith({
+      accountIds: ['a1', 'food-1', 'travel-1'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+    });
   });
 
   it('should populate dailyData correctly on the wealth tab', () => {
@@ -198,20 +237,6 @@ describe('useReportsViewModel', () => {
       'food-1',
       'food-2',
     ]);
-  });
-
-  it('should clear sub-period selection via subPeriod callback', () => {
-    const { result } = renderHook(() => useReportsViewModel());
-
-    act(() => {
-      result.current.overview.onSelectBarIndex(0);
-    });
-    expect(result.current.subPeriod.label).toBe('Jan');
-
-    act(() => {
-      result.current.subPeriod.onClear();
-    });
-    expect(result.current.subPeriod.label).toBeNull();
   });
 
   it('should not navigate to journal search when legend row has no account ids', () => {

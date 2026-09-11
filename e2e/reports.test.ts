@@ -58,6 +58,16 @@ test.describe('Reports and Analytics', () => {
     // Go to Reports and verify both sides of the category split.
     await dashboardPage.switchToReports();
     await expect(dashboardPage.page.getByText('Reports', { exact: true }).first()).toBeVisible();
+    await expect(dashboardPage.page.getByText('Income vs Expense', { exact: true })).toHaveCount(0);
+
+    const summary = dashboardPage.page.getByTestId('report-summary');
+    await expect(summary).toBeVisible();
+    await expect(summary.getByTestId('report-summary-income')).toContainText('$1,000.00');
+    await expect(summary.getByTestId('report-summary-expense')).toContainText('$250.00');
+    await expect(summary.getByTestId('report-summary-net-flow')).toContainText('$750.00');
+    await expect(summary.getByTestId('report-summary-largest-category')).toContainText('Food');
+    await expect(summary.getByTestId('report-summary-highest-day')).toContainText('$250.00');
+    await expect(summary).toContainText('Compared with previous period');
 
     // The category views share the same period deltas. Expense must appear in
     // spending, while income must remain isolated to income categories.

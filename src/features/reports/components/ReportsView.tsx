@@ -19,7 +19,7 @@ interface ReportsViewProps {
 
 export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const { theme } = useTheme();
-  const { filters, subPeriod, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
+  const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
 
   const { width } = useWindowDimensions();
   const CHART_WIDTH = width - (Spacing.md * 2 + Spacing.lg * 2);
@@ -29,7 +29,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
       <Inset space="md" vertical="md" flex={1}>
         <Stack space="xl" flex={1}>
           <View style={styles.filterBar}>
-            <ReportFilterBar {...filters} subPeriod={subPeriod} />
+            <ReportFilterBar {...filters} />
           </View>
           <ReportTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

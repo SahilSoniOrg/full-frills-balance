@@ -13,15 +13,10 @@ import { ReportFilters, useReportFilters } from './useReportFilters';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
-import { useSelectedReportPeriod } from './useSelectedReportPeriod';
-export interface ReportSubPeriod {
-  label: string | null;
-  onClear: () => void;
-}
+import { calculateReportSummary } from '@/src/services/reports/reportSummary';
 
 export interface ReportsViewModel {
   filters: ReportFilters;
-  subPeriod: ReportSubPeriod;
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
@@ -42,6 +37,7 @@ export function useReportsViewModel(): ReportsViewModel {
     incomeCategories,
     incomeVsExpenseHistory,
     incomeVsExpense,
+    previousIncomeVsExpense,
     loading,
     targetCurrency,
     dateRange,
@@ -55,16 +51,6 @@ export function useReportsViewModel(): ReportsViewModel {
   } = useReports(workplaceId, defaultCurrencyCode);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
-  const [selectedBarIndex, setSelectedBarIndex] = useState<number | undefined>();
-
-  const selectedPeriod = useSelectedReportPeriod({
-    workplaceId,
-    accountIds,
-    targetCurrency,
-    incomeVsExpenseHistory,
-    selectedBarIndex,
-    theme,
-  });
 
   const chartData = useReportChartData({
     netWorthHistory,
@@ -81,18 +67,12 @@ export function useReportsViewModel(): ReportsViewModel {
     globalExpenses,
     expenseCategories,
     incomeCategories,
-    periodSnapshot: selectedPeriod.isActive ? selectedPeriod.snapshot : null,
     theme,
   });
 
-  const clearSubPeriod = useCallback(() => {
-    setSelectedBarIndex(undefined);
-  }, []);
-
   const resetSelections = useCallback(() => {
     breakdownDetails.setExpandedExpenses(false);
-    clearSubPeriod();
-  }, [breakdownDetails, clearSubPeriod]);
+  }, [breakdownDetails]);
 
   const filters = useReportFilters({
     accounts,
@@ -105,35 +85,45 @@ export function useReportsViewModel(): ReportsViewModel {
   });
 
   const actions = useReportActions({
-    selectedPeriod: selectedPeriod.range,
     dateRange,
   });
 
-  const onSelectBarIndex = useCallback((index: number | undefined) => {
-    setSelectedBarIndex(index);
-    if (index !== undefined && index !== -1) {
-      analytics.logChartInteracted('income_expense', 'point_select');
-    }
-  }, []);
-
-  const scopedIncomeExpense = selectedPeriod.isActive
-    ? selectedPeriod.snapshot.incomeVsExpense
-    : incomeVsExpense;
+  const summaryData = calculateReportSummary({
+    incomeVsExpense,
+    previousIncomeVsExpense,
+    expenseCategoryBreakdown: expenseCategories,
+    dailyIncomeVsExpense,
+  });
+  const incomeAccountIds = Array.from(
+    new Set(incomeCategories.flatMap(category => category.accountIds)),
+  );
+  const expenseAccountIds = Array.from(
+    new Set(expenseCategories.flatMap(category => category.accountIds)),
+  );
+  const flowAccountIds = Array.from(new Set([...incomeAccountIds, ...expenseAccountIds]));
 
   const overview: ReportOverviewTabVm = {
+    summary: {
+      ...summaryData,
+      onViewIncomeTransactions: () => actions.onViewCurrentTransactions(incomeAccountIds),
+      onViewExpenseTransactions: () => actions.onViewCurrentTransactions(expenseAccountIds),
+      onViewNetFlowTransactions: () => actions.onViewCurrentTransactions(flowAccountIds),
+      onViewLargestCategoryTransactions: () =>
+        actions.onViewCurrentTransactions(summaryData.largestSpendingCategory?.accountIds ?? []),
+      onViewHighestSpendingDayTransactions: () =>
+        summaryData.highestSpendingDay
+          ? actions.onViewTransactions(summaryData.highestSpendingDay.date)
+          : undefined,
+    },
     netWorthSeries: chartData.netWorthSeries,
-    barChartData: chartData.barChartData,
     currentNetWorth: chartData.currentNetWorth,
-    income: scopedIncomeExpense.income,
-    expense: scopedIncomeExpense.expense,
-    incomeBarFlex: scopedIncomeExpense.income || 1,
-    expenseBarFlex: scopedIncomeExpense.expense || 1,
-    sankeyData: selectedPeriod.isActive ? selectedPeriod.snapshot.sankeyData : chartData.sankeyData,
+    income: incomeVsExpense.income,
+    expense: incomeVsExpense.expense,
+    incomeBarFlex: incomeVsExpense.income || 1,
+    expenseBarFlex: incomeVsExpense.expense || 1,
+    sankeyData: chartData.sankeyData,
     targetCurrency,
-    selectedBarIndex,
-    onSelectBarIndex,
     onViewTransactions: actions.onViewTransactions,
-    onViewSelectedTransactions: actions.onViewSelectedTransactions,
   };
 
   const spending: ReportSpendingTabVm = {
@@ -162,10 +152,6 @@ export function useReportsViewModel(): ReportsViewModel {
 
   return {
     filters,
-    subPeriod: {
-      label: selectedPeriod.label,
-      onClear: clearSubPeriod,
-    },
     activeTab,
     setActiveTab: (tab: ReportTab) => {
       setActiveTab(tab);
