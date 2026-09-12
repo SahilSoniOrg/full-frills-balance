@@ -1,4 +1,5 @@
 import { AppNavigation, buildRoute } from '../navigation';
+import { readJournalSearchScope } from '../journalSearchScope';
 import { asAccountId } from '@/src/types/ids';
 
 jest.mock('expo-router', () => ({
@@ -47,6 +48,40 @@ describe('buildRoute', () => {
         maxAmount: 50,
       }),
     ).toBe('/journal-search?q=coffee&maxAmount=50');
+  });
+
+  it('serializes journal scopes for report drill-downs', () => {
+    AppNavigation.toJournalSearch({
+      startDate: 1000,
+      endDate: 2000,
+      accountIds: ['food', 'dining'],
+      journalIds: ['journal-1', 'journal-2'],
+    });
+
+    expect(router.push).toHaveBeenCalledWith(
+      '/journal-search?startDate=1000&endDate=2000&accountIds=food%2Cdining&journalIds=journal-1%2Cjournal-2',
+    );
+  });
+
+  it('keeps large journal scopes out of the navigation URL', () => {
+    const journalIds = Array.from({ length: 2138 }, (_, index) => `journal-${index}`);
+
+    AppNavigation.toJournalSearch({ journalIds });
+
+    const route = router.push.mock.calls[0][0] as string;
+    expect(route.length).toBeLessThan(400);
+    expect(route).toContain('journalScope=');
+    expect(route).not.toContain('journalIds=');
+    const scopeId = new URL(route, 'https://reports.test').searchParams.get('journalScope');
+    expect(readJournalSearchScope(scopeId ?? undefined)).toEqual(journalIds);
+  });
+
+  it('opens the Reports V2 route separately from the legacy Reports route', () => {
+    AppNavigation.toReports();
+    AppNavigation.toReportsV2();
+
+    expect(router.push).toHaveBeenNthCalledWith(1, '/reports');
+    expect(router.push).toHaveBeenNthCalledWith(2, '/reports-v2');
   });
 
   it('handles boolean values', () => {

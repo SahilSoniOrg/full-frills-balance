@@ -1,5 +1,6 @@
 import { analytics } from '@/src/services/analytics';
-import { AccountId } from '@/src/types/ids';
+import { readJournalSearchScope } from '@/src/utils/journalSearchScope';
+import { AccountId, JournalId } from '@/src/types/ids';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -8,6 +9,8 @@ export interface JournalSearchFilterParams {
   startDate?: string;
   endDate?: string;
   accountIds?: string;
+  journalIds?: string;
+  journalScope?: string;
   minAmount?: string;
   maxAmount?: string;
   displayType?: string;
@@ -19,6 +22,8 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     startDate,
     endDate,
     accountIds: accountIdsParam,
+    journalIds: journalIdsParam,
+    journalScope: journalScopeParam,
     minAmount: minAmountParam,
     maxAmount: maxAmountParam,
     displayType: displayTypeParam,
@@ -36,6 +41,11 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
   );
   const [accountIds, setAccountIds] = useState<AccountId[]>(() =>
     accountIdsParam ? (accountIdsParam.split(',') as AccountId[]) : [],
+  );
+  const [journalIds] = useState<JournalId[]>(() =>
+    journalIdsParam
+      ? (journalIdsParam.split(',') as JournalId[])
+      : [...readJournalSearchScope(journalScopeParam)],
   );
   const [minAmount, setMinAmount] = useState(minAmountParam || '');
   const [maxAmount, setMaxAmount] = useState(maxAmountParam || '');
@@ -101,8 +111,9 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
       maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
       displayType: displayType || undefined,
       accountIds: accountIds.length > 0 ? accountIds : undefined,
+      journalIds: journalIds.length > 0 ? journalIds : undefined,
     }),
-    [minAmount, maxAmount, displayType, accountIds],
+    [minAmount, maxAmount, displayType, accountIds, journalIds],
   );
 
   return {

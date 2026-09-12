@@ -79,6 +79,8 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     startDate: params.startDate as string,
     endDate: params.endDate as string,
     accountIds: params.accountIds as string,
+    journalIds: params.journalIds as string,
+    journalScope: params.journalScope as string,
     minAmount: params.minAmount as string,
     maxAmount: params.maxAmount as string,
     displayType: params.displayType as string,

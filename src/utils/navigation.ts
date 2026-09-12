@@ -4,8 +4,10 @@ import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
+import { saveJournalSearchScope } from './journalSearchScope';
 
 const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
+const MAX_INLINE_JOURNAL_IDS = 100;
 let lastJournalEntryNavigation: { href: string; timestamp: number } | null = null;
 
 /**
@@ -590,6 +592,13 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to the Reports V2 screen.
+   */
+  toReportsV2: () => {
+    router.push('/reports-v2' as Href);
+  },
+
+  /**
    * Navigate to the Journal Search/Filter screen.
    */
   toJournalSearch: (params?: {
@@ -597,16 +606,27 @@ export const AppNavigation = {
     startDate?: number;
     endDate?: number;
     accountIds?: string[];
+    journalIds?: string[];
     minAmount?: number;
     maxAmount?: number;
     displayType?: string;
   }) => {
+    const journalScope =
+      params?.journalIds && params.journalIds.length > MAX_INLINE_JOURNAL_IDS
+        ? saveJournalSearchScope(params.journalIds)
+        : undefined;
     router.push(
       buildRoute('/journal-search', {
         q: params?.searchQuery,
         startDate: params?.startDate,
         endDate: params?.endDate,
         accountIds: params?.accountIds?.length ? params.accountIds.join(',') : undefined,
+        journalIds: journalScope
+          ? undefined
+          : params?.journalIds?.length
+            ? params.journalIds.join(',')
+            : undefined,
+        journalScope,
         minAmount: params?.minAmount,
         maxAmount: params?.maxAmount,
         displayType: params?.displayType,
