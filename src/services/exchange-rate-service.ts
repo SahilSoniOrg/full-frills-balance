@@ -9,6 +9,10 @@
 
 import { AppConfig } from '@/src/constants/app-config';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
+import {
+  fetchHistoricalRate,
+  type HistoricalRate,
+} from '@/src/services/currency/historicalExchangeRateProvider';
 import { logger } from '@/src/utils/logger';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
@@ -17,6 +21,8 @@ export class ExchangeRateService {
   private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
     new Map();
   private inFlightRequests: Map<string, Promise<Record<string, number>>> = new Map();
+  private historicalMemoryCache: Map<string, HistoricalRate> = new Map();
+  private historicalInFlightRequests: Map<string, Promise<HistoricalRate>> = new Map();
 
   /**
    * Get exchange rate, using cache if available and recent
@@ -53,6 +59,99 @@ export class ExchangeRateService {
       logger.error(`Exchange rate failure (${fromCurrency} -> ${toCurrency}):`, error);
       return 1.0; // Graceful fallback
     }
+  }
+
+  /**
+   * Get the exchange rate for an exact UTC calendar day.
+   * Historical requests are deliberately separate from latest-rate requests so a
+   * current spot rate can never silently become a historical valuation.
+   */
+  async getHistoricalRate(
+    fromCurrency: string,
+    toCurrency: string,
+    transactionDate: number,
+  ): Promise<HistoricalRate> {
+    const from = fromCurrency.trim().toUpperCase();
+    const to = toCurrency.trim().toUpperCase();
+
+    if (!from || !to) {
+      throw new Error('Currency codes are required for historical exchange rates');
+    }
+    if (!Number.isFinite(transactionDate)) {
+      throw new Error('A valid transaction date is required for historical exchange rates');
+    }
+
+    const date = new Date(transactionDate);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error('A valid transaction date is required for historical exchange rates');
+    }
+
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    const effectiveDate = Date.UTC(year, month - 1, day);
+    const isoDate = `${year.toString().padStart(4, '0')}-${month
+      .toString()
+      .padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    const cacheKey = `${from}:${to}:${isoDate}`;
+
+    const memoryCached = this.historicalMemoryCache.get(cacheKey);
+    if (memoryCached !== undefined) return memoryCached;
+
+    if (from === to) {
+      const quote = {
+        rate: 1,
+        requestedDate: effectiveDate,
+        effectiveDate,
+        source: 'identity',
+      } satisfies HistoricalRate;
+      this.historicalMemoryCache.set(cacheKey, quote);
+      return quote;
+    }
+
+    const existingRequest = this.historicalInFlightRequests.get(cacheKey);
+    if (existingRequest) return existingRequest;
+
+    const requestPromise = (async () => {
+      const databaseCached = await exchangeRateRepository.getCachedRateForDate(
+        from,
+        to,
+        effectiveDate,
+      );
+      if (databaseCached && Number.isFinite(databaseCached.rate) && databaseCached.rate > 0) {
+        const quote = {
+          rate: databaseCached.rate,
+          requestedDate: databaseCached.requestedDate ?? effectiveDate,
+          effectiveDate: databaseCached.effectiveDate,
+          source: databaseCached.source,
+        } satisfies HistoricalRate;
+        this.historicalMemoryCache.set(cacheKey, quote);
+        return quote;
+      }
+
+      const quote = await fetchHistoricalRate(from, to, isoDate);
+      const result = { ...quote, requestedDate: effectiveDate } satisfies HistoricalRate;
+      this.historicalMemoryCache.set(cacheKey, result);
+      try {
+        await exchangeRateRepository.cacheHistoricalRate({
+          fromCurrency: from,
+          toCurrency: to,
+          rate: result.rate,
+          requestedDate: effectiveDate,
+          effectiveDate: result.effectiveDate,
+          source: result.source,
+        });
+      } catch (error) {
+        logger.warn('[ExchangeRateService] Historical rate cache failed', { error });
+      }
+
+      return result;
+    })().finally(() => {
+      this.historicalInFlightRequests.delete(cacheKey);
+    });
+
+    this.historicalInFlightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
 
   /**

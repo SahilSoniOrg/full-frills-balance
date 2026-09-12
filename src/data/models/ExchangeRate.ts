@@ -9,6 +9,7 @@ export default class ExchangeRate extends Model {
   @field('to_currency') toCurrency!: string;
   @field('rate') rate!: number;
   @field('effective_date') effectiveDate!: number;
+  @field('requested_date') requestedDate?: number;
   @field('source') source!: string; // API source (e.g., 'exchangerate-api.com')
 
   @date('created_at') createdAt!: Date;
@@ -20,6 +21,7 @@ export function toPlainExchangeRate(rate: ExchangeRate): PlainExchangeRate {
     fromCurrency: rate.fromCurrency,
     toCurrency: rate.toCurrency,
     rate: rate.rate,
+    requestedDate: rate.requestedDate,
     effectiveDate: rate.effectiveDate,
   };
 }

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 31,
+  version: 32,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -142,6 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions (accoun
         { name: 'to_currency', type: 'string', isIndexed: true },
         { name: 'rate', type: 'number' },
         { name: 'effective_date', type: 'number', isIndexed: true },
+        { name: 'requested_date', type: 'number', isOptional: true, isIndexed: true },
         { name: 'source', type: 'string' }, // API source name
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },

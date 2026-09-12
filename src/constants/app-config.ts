@@ -120,6 +120,12 @@ export const AppConfig = {
   // External API endpoints
   api: {
     exchangeRateBaseUrl: 'https://api.exchangerate-api.com/v4/latest',
+    // Historical snapshots are published as date-versioned JSON through npm's
+    // jsDelivr CDN. The matching Cloudflare host is used as a fallback.
+    exchangeRateHistoricalBaseUrl: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@',
+    exchangeRateHistoricalFallbackBaseUrl: 'https://',
+    exchangeRateHistoricalEarliestDate: '2024-03-02',
+    exchangeRateHistoricalFrankfurterEcbUrl: 'https://api.frankfurter.dev/v2/providers/ecb/rate',
     // Set this when the version-policy endpoint is ready. Keeping it empty
     // makes the app-side gate inert until the remote policy is deployed.
     versionPolicyUrl: process.env.EXPO_PUBLIC_VERSION_POLICY_URL ?? '',

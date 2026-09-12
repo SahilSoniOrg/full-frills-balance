@@ -13,7 +13,16 @@ export async function fetchCrossCurrencyRates(
   workplaceCurrency: string,
   fetchRate: FetchCurrencyRate,
 ): Promise<CrossCurrencyRates | null> {
-  if (sourceCurrency === destCurrency) return null;
+  if (sourceCurrency === destCurrency) {
+    if (sourceCurrency === workplaceCurrency) return null;
+
+    const baseRate = await fetchRate(sourceCurrency, workplaceCurrency);
+    return {
+      sourceBaseRate: baseRate,
+      destBaseRate: baseRate,
+      exchangeRate: 1,
+    };
+  }
 
   const [sourceBaseRate, destBaseRate] = await Promise.all([
     sourceCurrency === workplaceCurrency

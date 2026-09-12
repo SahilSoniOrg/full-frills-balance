@@ -9,5 +9,12 @@ export function useExchangeRate() {
     [],
   );
 
-  return { fetchRate };
+  const fetchHistoricalRate = useCallback(
+    async (fromCurrency: string, toCurrency: string, transactionDate: number) => {
+      return exchangeRateService.getHistoricalRate(fromCurrency, toCurrency, transactionDate);
+    },
+    [],
+  );
+
+  return { fetchRate, fetchHistoricalRate };
 }

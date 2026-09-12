@@ -18,4 +18,16 @@ describe('fetchCrossCurrencyRates', () => {
     await expect(fetchCrossCurrencyRates('INR', 'INR', 'INR', fetchRate)).resolves.toBeNull();
     expect(fetchRate).not.toHaveBeenCalled();
   });
+
+  it('fetches one workplace-relative rate when both lines share a foreign currency', async () => {
+    const fetchRate = jest.fn(async () => 95.51);
+
+    await expect(fetchCrossCurrencyRates('USD', 'USD', 'INR', fetchRate)).resolves.toEqual({
+      sourceBaseRate: 95.51,
+      destBaseRate: 95.51,
+      exchangeRate: 1,
+    });
+    expect(fetchRate).toHaveBeenCalledTimes(1);
+    expect(fetchRate).toHaveBeenCalledWith('USD', 'INR');
+  });
 });

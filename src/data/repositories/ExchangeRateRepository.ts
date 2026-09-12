@@ -30,6 +30,38 @@ class ExchangeRateRepository {
     return rates[0] || null;
   }
 
+  /** Get a cached rate recorded for an exact UTC calendar day. */
+  async getCachedRateForDate(
+    fromCurrency: string,
+    toCurrency: string,
+    requestedDate: number,
+  ): Promise<ExchangeRate | null> {
+    const requestedRates = await this.collection
+      .query(
+        Q.where('from_currency', fromCurrency),
+        Q.where('to_currency', toCurrency),
+        Q.where('requested_date', requestedDate),
+        Q.take(1),
+      )
+      .fetch();
+
+    if (requestedRates[0]) return requestedRates[0];
+
+    // Historical rows written before requested_date existed used the requested
+    // day as effective_date. Keep those rows readable after the migration.
+    const legacyRates = await this.collection
+      .query(
+        Q.where('from_currency', fromCurrency),
+        Q.where('to_currency', toCurrency),
+        Q.where('effective_date', requestedDate),
+        Q.where('requested_date', null),
+        Q.take(1),
+      )
+      .fetch();
+
+    return legacyRates[0] || null;
+  }
+
   /**
    * Get all cached rates for a base currency
    */
@@ -88,6 +120,44 @@ class ExchangeRateRepository {
       );
 
       await database.batch(operations);
+    });
+  }
+
+  /** Persist one historical rate keyed by the requested day. */
+  async cacheHistoricalRate(input: {
+    fromCurrency: string;
+    toCurrency: string;
+    rate: number;
+    requestedDate: number;
+    effectiveDate: number;
+    source: string;
+  }): Promise<void> {
+    await database.write(async () => {
+      const existing = await this.getCachedRateForDate(
+        input.fromCurrency,
+        input.toCurrency,
+        input.requestedDate,
+      );
+
+      if (existing) {
+        await existing.update(record => {
+          record.rate = input.rate;
+          record.requestedDate = input.requestedDate;
+          record.effectiveDate = input.effectiveDate;
+          record.source = input.source;
+        });
+        return;
+      }
+
+      const operation = this.collection.prepareCreate(record => {
+        record.fromCurrency = input.fromCurrency;
+        record.toCurrency = input.toCurrency;
+        record.rate = input.rate;
+        record.requestedDate = input.requestedDate;
+        record.effectiveDate = input.effectiveDate;
+        record.source = input.source;
+      });
+      await database.batch([operation]);
     });
   }
 

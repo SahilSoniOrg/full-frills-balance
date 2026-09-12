@@ -130,6 +130,7 @@ export interface PlainExchangeRate {
   fromCurrency: string;
   toCurrency: string;
   rate: number;
+  requestedDate?: number;
   effectiveDate: number;
 }
 

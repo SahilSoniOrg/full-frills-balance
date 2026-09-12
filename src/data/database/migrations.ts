@@ -912,5 +912,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 32,
+      steps: [
+        addColumns({
+          table: 'exchange_rates',
+          columns: [{ name: 'requested_date', type: 'number', isOptional: true, isIndexed: true }],
+        }),
+      ],
+    },
   ],
 });
