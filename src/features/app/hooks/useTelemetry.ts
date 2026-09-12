@@ -87,6 +87,7 @@ const ROUTE_METADATA_MAP: Record<
 
   // Reports, Hub & Insights
   reports: { screenType: 'reports', flowContext: 'financial_reporting', isModal: false },
+  'reports-v2': { screenType: 'reports', flowContext: 'financial_reporting_v2', isModal: false },
   hub: { screenType: 'hub', flowContext: 'intelligence_hub', isModal: false },
   'insight-details': { screenType: 'hub', flowContext: 'insight_inspection', isModal: true },
   'audit-log': { screenType: 'audit', flowContext: 'audit_review', isModal: false },

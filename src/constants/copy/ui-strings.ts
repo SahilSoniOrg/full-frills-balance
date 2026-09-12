@@ -266,6 +266,10 @@ export const UI_STRINGS = {
     categoryOther: 'Other',
     chartNoData: 'No activity to show yet',
     moneyFlowTitle: 'Where Your Money Goes',
+    filtersTitle: 'Report filters',
+    filtersSubtitle: 'Choose the date range and accounts for this report.',
+    applyFilters: 'Apply Filters',
+    dateFilter: 'Date',
     filterByAccounts: 'Filter by Accounts',
     allAccounts: 'All Accounts',
     accountCount: (count: number) => (count === 1 ? '1 Account' : `${count} Accounts`),
@@ -278,6 +282,9 @@ export const UI_STRINGS = {
     sankeySpendingColumn: 'Spending',
     sankeyIncomeLabel: (name: string) => `Income · ${name}`,
     sankeyExpenseLabel: (name: string) => `Spent · ${name}`,
+  },
+  reportsV2: {
+    title: 'Money overview',
   },
   settings: {
     title: 'Settings',
