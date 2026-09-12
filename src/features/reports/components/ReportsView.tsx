@@ -2,14 +2,14 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Inset, Stack } from '@/src/design-system';
-import { ReportFilterBar } from '@/src/features/reports/components/ReportFilterBar';
+import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
 import { ReportWealthSection } from '@/src/features/reports/components/sections/ReportWealthSection';
 import { ReportTabs } from '@/src/features/reports/components/ReportTabs';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface ReportsViewProps {
@@ -28,9 +28,6 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <Inset space="md" vertical="md" flex={1}>
         <Stack space="xl" flex={1}>
-          <View style={styles.filterBar}>
-            <ReportFilterBar {...filters} />
-          </View>
           <ReportTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <ScrollView
@@ -53,14 +50,12 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
           </ScrollView>
         </Stack>
       </Inset>
+      <ReportFilterChrome filters={filters} />
     </ScreenWithChrome>
   );
 }
 
 const styles = StyleSheet.create({
-  filterBar: {
-    marginTop: Spacing.sm,
-  },
   content: {
     paddingVertical: Spacing.lg,
     paddingBottom: Size.xxl * 2,
