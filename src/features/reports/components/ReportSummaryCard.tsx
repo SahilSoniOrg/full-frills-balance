@@ -1,10 +1,11 @@
-import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppButton, AppCard, AppText } from '@/src/components/core';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
+import { Row } from '@/src/design-system';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
+import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
 import { formatDate } from '@/src/utils/dateUtils';
-import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
 interface ReportSummaryCardProps {
@@ -134,7 +135,7 @@ function SummaryMetric({
   onPress?: () => void;
 }) {
   return (
-    <View testID={testID} style={styles.metric}>
+    <Row style={styles.metric} align="center" justify="flex-start" space={20}>
       <AppText variant="caption" color="secondary">
         {label}
       </AppText>
@@ -148,7 +149,7 @@ function SummaryMetric({
       {onPress ? (
         <ViewTransactionsButton testID={`${testID}-view-transactions`} onPress={onPress} />
       ) : null}
-    </View>
+    </Row>
   );
 }
 
@@ -226,7 +227,7 @@ function ViewTransactionsButton({ testID, onPress }: { testID: string; onPress: 
   return (
     <AppButton
       testID={testID}
-      variant="ghost"
+      variant="secondary"
       size="sm"
       onPress={onPress}
       style={styles.viewButton}
