@@ -10,6 +10,7 @@ import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { backfillHistoricalExchangeRates } from '@/src/services/import/historicalExchangeRateBackfill';
 import { integrityService } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -163,7 +164,12 @@ export async function publishRestore(
     assertOperationMatch(existing, normalizedCorrections);
     report(onProgress, 'Restore already published; verifying Workplace...', 0.72);
   } else {
-    const data = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
+    const sourceData = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
+    const backfilled = await backfillHistoricalExchangeRates(
+      sourceData,
+      normalizedCorrections.defaultCurrencyCode,
+    );
+    warnings.push(...backfilled.warnings);
     // The repository owns the database transaction and balance preparation. Keeping this
     // call as one operation is what prevents a partially published Workplace graph.
     report(onProgress, 'Saving restored Workplace...', 0.28);
@@ -176,7 +182,7 @@ export async function publishRestore(
           icon: normalizedCorrections.icon,
           defaultCurrencyCode: normalizedCorrections.defaultCurrencyCode,
         },
-        data,
+        backfilled.data,
         (message, progress) => report(onProgress, message, 0.28 + (progress ?? 0) * 0.44),
       );
     } catch (error) {

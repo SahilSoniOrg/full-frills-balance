@@ -9,7 +9,15 @@ jest.mock('@/src/services/currency-init-service', () => ({
   currencyInitService: { initialize: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('@/src/services/exchange-rate-service', () => ({
-  exchangeRateService: { syncTodayRates: jest.fn().mockResolvedValue(undefined) },
+  exchangeRateService: {
+    getHistoricalRate: jest.fn().mockResolvedValue({
+      rate: 1.1,
+      requestedDate: Date.UTC(2020, 0, 2),
+      effectiveDate: Date.UTC(2020, 0, 2),
+      source: 'frankfurter/ecb:historical',
+    }),
+    syncTodayRates: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 jest.mock('@/src/services/integrity', () => ({
   integrityService: { forceRunCheck: jest.fn().mockResolvedValue(undefined) },
@@ -46,6 +54,7 @@ jest.mock('@/src/data/database/Database', () => ({
 }));
 
 import { Icon } from '@/src/types/domainIcons';
+import { JournalDisplayType } from '@/src/types/enums';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
   prepareRestore,
@@ -58,9 +67,10 @@ import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { database } from '@/src/data/database/Database';
 import { preferences } from '@/src/services/preferences';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import type { ImportPlugin } from '@/src/services/import/types';
 import type { PreparedRestore } from '@/src/services/import/restoreTypes';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { WorkplaceId, AccountId, JournalId } from '@/src/types/ids';
 
 const operationId = 'restore-operation' as WorkplaceId;
 const context = {
@@ -165,6 +175,54 @@ describe('restore service boundary', () => {
     expect(preferences.restoreImportedPreferences).not.toHaveBeenCalled();
     expect(preferences.device.setDeviceRegistered).not.toHaveBeenCalled();
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
+  });
+
+  it('backfills missing foreign transaction rates before publication', async () => {
+    (importRepository.batchInsertNewWorkplace as jest.Mock).mockResolvedValue({
+      id: operationId,
+      name: 'Imported Books',
+      icon: Icon.Briefcase,
+      defaultCurrencyCode: 'USD',
+    });
+
+    const canonicalData = canonicalImportFromBatchImportData({
+      accounts: [],
+      journals: [
+        {
+          id: 'journal-1',
+          journalDate: Date.UTC(2020, 0, 2, 12),
+          currencyCode: 'USD',
+          status: 'POSTED',
+          totalAmount: 100,
+          transactionCount: 2,
+          displayType: JournalDisplayType.EXPENSE,
+        },
+      ],
+      transactions: [
+        {
+          id: 'transaction-1',
+          journalId: 'journal-1' as JournalId,
+          accountId: 'account-1' as AccountId,
+          amount: 100,
+          transactionType: 'DEBIT',
+          currencyCode: 'EUR',
+          transactionDate: Date.UTC(2020, 0, 2, 12),
+        },
+      ],
+    });
+
+    await publishRestore(prepared({ canonicalData }), {
+      operationId,
+      corrections: { name: 'Imported Books', icon: Icon.Briefcase, defaultCurrencyCode: 'USD' },
+    });
+
+    const importedData = (importRepository.batchInsertNewWorkplace as jest.Mock).mock.calls[0][1];
+    expect(importedData.transactions[0].exchangeRate).toBe(1.1);
+    expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledWith(
+      'EUR',
+      'USD',
+      Date.UTC(2020, 0, 2, 12),
+    );
   });
 
   it('does not publish twice when the operation ID already owns a Workplace', async () => {
