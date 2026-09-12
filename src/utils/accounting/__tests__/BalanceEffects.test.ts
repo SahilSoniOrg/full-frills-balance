@@ -64,6 +64,26 @@ describe('BalanceEffects', () => {
       expect(result.totalDebits).toBe(120);
     });
 
+    it('can allow one minor unit of foreign-currency rounding without weakening default checks', () => {
+      const lines = [
+        { amount: 76.82, type: TransactionType.DEBIT, exchangeRate: 2.89 },
+        { amount: 222, type: TransactionType.CREDIT },
+      ];
+
+      expect(checkJournal(lines, 2).isValid).toBe(false);
+      expect(checkJournal(lines, 2, { allowExchangeRateRounding: true }).isValid).toBe(true);
+    });
+
+    it('scales foreign-currency rounding tolerance with the exchange rate', () => {
+      const lines = [
+        { amount: 4.11, type: TransactionType.DEBIT, exchangeRate: 12.17 },
+        { amount: 50, type: TransactionType.CREDIT },
+      ];
+
+      expect(checkJournal(lines, 2).isValid).toBe(false);
+      expect(checkJournal(lines, 2, { allowExchangeRateRounding: true }).isValid).toBe(true);
+    });
+
     it('handles precision-aware imbalance', () => {
       const result = checkJournal(
         [

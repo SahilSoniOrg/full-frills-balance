@@ -206,7 +206,7 @@ export function resolveTransactionIntent(
       destinations = [
         {
           account: destination,
-          amount: amountInput,
+          amount: intent.destinationAmount ?? amountInput,
           exchangeRate: intent.destinationExchangeRate,
           notes: intent.notes?.trim() || '',
           id: 'intent-destination',
@@ -349,12 +349,19 @@ export function validatePostingPlan(
     issues.push({ code: 'missing_account', message: 'A posting plan needs two distinct accounts' });
 
   if (issues.length === 0) {
+    const hasForeignCurrencyLine = plan.lines.some(line => {
+      const currency = line.accountCurrency?.trim().toUpperCase();
+      const rate = Number(line.exchangeRate?.trim());
+      return Boolean(currency && currency !== baseCurrency && Number.isFinite(rate) && rate !== 1);
+    });
     const balance = checkJournal(
       plan.lines.map(line => ({
         amount: sanitizeAmount(line.amount) ?? 0,
         type: line.transactionType,
         exchangeRate: line.exchangeRate ? Number.parseFloat(line.exchangeRate) : 1,
       })),
+      undefined,
+      { allowExchangeRateRounding: hasForeignCurrencyLine },
     );
     if (!balance.isValid) {
       issues.push({

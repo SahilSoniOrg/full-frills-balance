@@ -175,6 +175,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const { fetchRatesForLines } = useJournalEditorExchangeRates({
     lines,
     workplaceCurrency,
+    journalDate,
     isLoading,
     isSubmitting,
     updateLines,

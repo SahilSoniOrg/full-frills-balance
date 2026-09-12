@@ -34,6 +34,14 @@ export type JournalCheckResult = {
   totalCredits: number;
 };
 
+export type JournalCheckOptions = {
+  /**
+   * Permit the discrepancy introduced when foreign amounts are rounded to their
+   * currency precision before being converted to the base currency.
+   */
+  allowExchangeRateRounding?: boolean;
+};
+
 export type FoldBalanceStep = {
   amount: number;
   accountType: AccountType;
@@ -125,6 +133,7 @@ export function foldBalances(
 export function checkJournal(
   lines: readonly JournalLineForCheck[],
   precision: number = AppConfig.constants.precision,
+  options: JournalCheckOptions = {},
 ): JournalCheckResult {
   const totalDebits = lines
     .filter(l => l.type === TransactionType.DEBIT)
@@ -135,9 +144,17 @@ export function checkJournal(
     .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
 
   const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
+  const minorUnit = Math.pow(10, -precision);
+  const exchangeRateRoundingBound = lines.reduce(
+    (sum, line) => sum + (minorUnit / 2) * Math.abs(line.exchangeRate || 1),
+    0,
+  );
+  const tolerance = options.allowExchangeRateRounding
+    ? Math.max(minorUnit, Math.ceil(exchangeRateRoundingBound / minorUnit) * minorUnit)
+    : Math.pow(10, -(precision + 1));
 
   return {
-    isValid: Math.abs(imbalance) < Math.pow(10, -(precision + 1)),
+    isValid: Math.abs(imbalance) <= tolerance,
     imbalance,
     totalDebits: roundToPrecision(totalDebits, precision),
     totalCredits: roundToPrecision(totalCredits, precision),

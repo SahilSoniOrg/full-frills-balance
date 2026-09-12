@@ -1,7 +1,8 @@
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import type { JournalEntryShell } from './useJournalEntryShell';
 import type { JournalEntryModeBodyProps } from '../components/JournalEntryModeBody';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import { logger } from '@/src/utils/logger';
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntrySubmitLabel,
@@ -28,6 +29,23 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
     isAdvancedValid: isPlanValid,
     isSplitValid: vm.splitValidation.valid,
   });
+
+  useEffect(() => {
+    logger.debug('[DEBUG-FX-SAVE] submit button state', {
+      activeMode: vm.activeMode,
+      isPlanValid,
+      isSubmitDisabled,
+      postingPlanIssues: vm.postingPlanValidation.issues,
+      splitIssues: vm.splitValidation.valid ? [] : [vm.splitValidation.error],
+    });
+  }, [
+    isPlanValid,
+    isSubmitDisabled,
+    vm.activeMode,
+    vm.postingPlanValidation.issues,
+    vm.splitValidation.valid ? null : vm.splitValidation.error,
+    vm.splitValidation.valid,
+  ]);
   const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;
   const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
   const onDescriptionFocus = useCallback(() => {

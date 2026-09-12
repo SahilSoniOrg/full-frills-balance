@@ -78,19 +78,30 @@ export class JournalCalculator {
    * Checks if the journal is balanced (delegates to BalanceEffects.checkJournal).
    */
   static isBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
-    const forCheck: JournalLineForCheck[] = lines.map(line => ({
-      amount: JournalCalculator.getLineBaseAmount(
-        {
-          amount: line.amount,
-          exchangeRate: line.exchangeRate,
-          accountCurrency: line.accountCurrency,
-        },
-        baseCurrency,
-      ),
-      type: line.type,
-      exchangeRate: 1,
-    }));
-    return checkJournal(forCheck, AppConfig.constants.precision).isValid;
+    const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
+    const forCheck: JournalLineForCheck[] = lines.map(line => {
+      const currency = line.accountCurrency?.trim().toUpperCase();
+      const rate = Number(line.exchangeRate);
+      const isForeignCurrencyLine = Boolean(
+        currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
+      );
+
+      return {
+        amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
+        type: line.type,
+        exchangeRate: isForeignCurrencyLine ? rate : 1,
+      };
+    });
+    const hasForeignCurrencyLine = lines.some(line => {
+      const currency = line.accountCurrency?.trim().toUpperCase();
+      const rate = Number(line.exchangeRate);
+      return Boolean(
+        currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
+      );
+    });
+    return checkJournal(forCheck, AppConfig.constants.precision, {
+      allowExchangeRateRounding: hasForeignCurrencyLine,
+    }).isValid;
   }
 
   /**

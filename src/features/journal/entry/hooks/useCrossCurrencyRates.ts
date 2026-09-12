@@ -7,6 +7,7 @@ export interface UseCrossCurrencyRatesParams {
   sourceCurrency?: string;
   destCurrency?: string;
   workplaceCurrency: string;
+  journalDate?: string;
   /** When false, rates are cleared and no fetch runs. */
   enabled: boolean;
 }
@@ -27,9 +28,10 @@ export function useCrossCurrencyRates({
   sourceCurrency,
   destCurrency,
   workplaceCurrency,
+  journalDate,
   enabled,
 }: UseCrossCurrencyRatesParams): CrossCurrencyRatesState {
-  const { fetchRate } = useExchangeRate();
+  const { fetchRate, fetchHistoricalRate } = useExchangeRate();
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [sourceBaseRate, setSourceBaseRate] = useState<number | null>(null);
@@ -45,7 +47,12 @@ export function useCrossCurrencyRates({
 
     const isLatest = () => !cancelled && requestId === requestIdRef.current;
 
-    if (!enabled || !sourceCurrency || !destCurrency || sourceCurrency === destCurrency) {
+    if (
+      !enabled ||
+      !sourceCurrency ||
+      !destCurrency ||
+      (sourceCurrency === destCurrency && sourceCurrency === workplaceCurrency)
+    ) {
       const clearId = setTimeout(() => {
         if (!isLatest()) return;
         setExchangeRate(null);
@@ -68,20 +75,43 @@ export function useCrossCurrencyRates({
 
       setIsLoadingRate(true);
       setRateError(null);
+      setExchangeRate(null);
+      setSourceBaseRate(null);
+      setDestBaseRate(null);
 
       try {
+        const historicalTimestamp = journalDate
+          ? Date.parse(`${journalDate}T00:00:00.000Z`)
+          : Number.NaN;
+        const rateFetcher =
+          Number.isFinite(historicalTimestamp) && fetchHistoricalRate
+            ? async (fromCurrency: string, toCurrency: string) =>
+                (await fetchHistoricalRate(fromCurrency, toCurrency, historicalTimestamp)).rate
+            : fetchRate;
         const resolved = await resolveCrossCurrencyRate(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
-          fetchRate,
+          rateFetcher,
         );
         if (!isLatest() || !resolved) return;
+        logger.debug('[DEBUG-FX-SAVE] cross-currency rate resolved', {
+          sourceCurrency,
+          destCurrency,
+          workplaceCurrency,
+          journalDate,
+          sourceBaseRate: resolved.sourceBaseRate,
+          destBaseRate: resolved.destBaseRate,
+          exchangeRate: resolved.exchangeRate,
+        });
         setSourceBaseRate(resolved.sourceBaseRate);
         setDestBaseRate(resolved.destBaseRate);
         setExchangeRate(resolved.exchangeRate);
       } catch (error) {
         if (!isLatest()) return;
+        setExchangeRate(null);
+        setSourceBaseRate(null);
+        setDestBaseRate(null);
         setRateError('Rate unavailable');
         logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
       } finally {
@@ -97,7 +127,15 @@ export function useCrossCurrencyRates({
       cancelled = true;
       requestIdRef.current += 1;
     };
-  }, [enabled, sourceCurrency, destCurrency, fetchRate, workplaceCurrency]);
+  }, [
+    enabled,
+    sourceCurrency,
+    destCurrency,
+    fetchRate,
+    fetchHistoricalRate,
+    workplaceCurrency,
+    journalDate,
+  ]);
 
   return {
     exchangeRate,

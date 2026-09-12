@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 interface UseJournalEditorExchangeRatesProps {
   lines: JournalEntryLine[];
   workplaceCurrency: string;
+  journalDate: string;
   isLoading: boolean;
   isSubmitting: boolean;
   updateLines: (batch: Record<string, Partial<JournalEntryLine>>) => void;
@@ -15,12 +16,16 @@ interface UseJournalEditorExchangeRatesProps {
 export function useJournalEditorExchangeRates({
   lines,
   workplaceCurrency,
+  journalDate,
   isLoading,
   isSubmitting,
   updateLines,
 }: UseJournalEditorExchangeRatesProps) {
-  const { fetchRate } = useExchangeRate();
+  const { fetchRate, fetchHistoricalRate } = useExchangeRate();
   const autoFetchedLines = useRef<Set<string>>(new Set());
+  const previousJournalDate = useRef(journalDate);
+  const previousWorkplaceCurrency = useRef(workplaceCurrency);
+  const previousLineCurrencies = useRef(new Map<string, string | undefined>());
 
   const fetchRatesForLines = useCallback(
     async (ids: string[], forceRefresh = false) => {
@@ -37,7 +42,12 @@ export function useJournalEditorExchangeRates({
             if (currency === workplaceCurrency) {
               updates[line.id] = { exchangeRate: '' };
             } else {
-              const rate = await fetchRate(currency, workplaceCurrency, forceRefresh);
+              const historicalTimestamp = Date.parse(`${journalDate}T00:00:00.000Z`);
+              const rate =
+                Number.isFinite(historicalTimestamp) && fetchHistoricalRate
+                  ? (await fetchHistoricalRate(currency, workplaceCurrency, historicalTimestamp))
+                      .rate
+                  : await fetchRate(currency, workplaceCurrency, forceRefresh);
               updates[line.id] = { exchangeRate: rate.toString() };
             }
           }),
@@ -48,30 +58,56 @@ export function useJournalEditorExchangeRates({
         showErrorAlert('Failed to fetch exchange rates');
       }
     },
-    [lines, fetchRate, updateLines, workplaceCurrency],
+    [lines, fetchRate, fetchHistoricalRate, updateLines, workplaceCurrency, journalDate],
   );
 
   useEffect(() => {
+    if (isLoading) return;
+
+    const dateChanged = previousJournalDate.current !== journalDate;
+    if (dateChanged && isSubmitting) return;
+    previousJournalDate.current = journalDate;
+
     const idsToFetch: string[] = [];
+    const staleRateUpdates: Record<string, Partial<JournalEntryLine>> = {};
+    const workplaceCurrencyChanged = previousWorkplaceCurrency.current !== workplaceCurrency;
 
     lines.forEach(line => {
-      if (
-        line.accountCurrency &&
-        line.accountCurrency !== workplaceCurrency &&
-        !line.exchangeRate &&
-        !isLoading &&
-        !isSubmitting
-      ) {
-        const cacheKey = `${line.id}_${line.accountCurrency}`;
+      const currency = line.accountCurrency?.trim().toUpperCase();
+      const normalizedWorkplaceCurrency = workplaceCurrency.trim().toUpperCase();
+      const isForeignLine = Boolean(currency && currency !== normalizedWorkplaceCurrency);
+      const lineCurrencyChanged =
+        previousLineCurrencies.current.has(line.id) &&
+        previousLineCurrencies.current.get(line.id) !== line.accountCurrency;
+      const rateContextChanged = dateChanged || workplaceCurrencyChanged || lineCurrencyChanged;
+
+      if (rateContextChanged && line.exchangeRate) {
+        staleRateUpdates[line.id] = { exchangeRate: '' };
+      }
+
+      if (isForeignLine && (!line.exchangeRate || rateContextChanged) && !isSubmitting) {
+        const cacheKey = `${line.id}_${line.accountCurrency}_${journalDate}`;
         if (!autoFetchedLines.current.has(cacheKey)) {
           autoFetchedLines.current.add(cacheKey);
           idsToFetch.push(line.id);
         }
       }
-    });
 
+      previousLineCurrencies.current.set(line.id, line.accountCurrency);
+    });
+    previousWorkplaceCurrency.current = workplaceCurrency;
+
+    if (Object.keys(staleRateUpdates).length > 0) updateLines(staleRateUpdates);
     if (idsToFetch.length > 0) fetchRatesForLines(idsToFetch);
-  }, [lines, workplaceCurrency, fetchRatesForLines, isLoading, isSubmitting]);
+  }, [
+    lines,
+    workplaceCurrency,
+    journalDate,
+    fetchRatesForLines,
+    isLoading,
+    isSubmitting,
+    updateLines,
+  ]);
 
   return { fetchRatesForLines };
 }

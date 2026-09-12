@@ -13,6 +13,8 @@ export interface TransactionIntent {
   type?: TabType;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
+  /** Amount posted to the destination account when it uses a different currency. */
+  destinationAmount?: string;
   sourceExchangeRate?: string;
   destinationExchangeRate?: string;
   allocations?: TransactionAllocation[];

@@ -76,6 +76,7 @@ export function resolveJournalTimestamp(
 
 export function validateJournalEntryBalance(
   lines: JournalEntryLine[],
+  baseCurrency?: string,
 ): JournalSaveValidationError | null {
   const domainLines = lines.map(line => ({
     amount: sanitizeAmount(line.amount) || 0,
@@ -84,7 +85,19 @@ export function validateJournalEntryBalance(
     accountCurrency: line.accountCurrency,
   }));
 
-  const balanceValidation = checkJournal(domainLines);
+  const normalizedBaseCurrency = baseCurrency?.trim().toUpperCase();
+  const hasForeignCurrencyLine = normalizedBaseCurrency
+    ? lines.some(line => {
+        const currency = line.accountCurrency?.trim().toUpperCase();
+        const rate = Number(line.exchangeRate?.trim());
+        return Boolean(
+          currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
+        );
+      })
+    : false;
+  const balanceValidation = checkJournal(domainLines, undefined, {
+    allowExchangeRateRounding: hasForeignCurrencyLine,
+  });
   if (!balanceValidation.isValid) {
     return {
       success: false,
@@ -153,11 +166,11 @@ export async function assembleCreateJournalData(
     return { success: false, error: timestampResult.error };
   }
 
-  const balanceError = validateJournalEntryBalance(params.lines);
-  if (balanceError) return balanceError;
-
   const currencyCode =
     params.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
+
+  const balanceError = validateJournalEntryBalance(params.lines, currencyCode);
+  if (balanceError) return balanceError;
 
   const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId, params.workplaceId);
   const metadata =

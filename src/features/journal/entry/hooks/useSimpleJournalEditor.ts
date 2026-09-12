@@ -14,6 +14,7 @@ import {
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
@@ -103,13 +104,19 @@ export function useSimpleJournalEditor({
   const destCurrency = destAccount?.currencyCode;
 
   const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
+  const needsWorkplaceRate = !!(
+    sourceCurrency &&
+    destCurrency &&
+    (sourceCurrency !== workplaceCurrency || destCurrency !== workplaceCurrency)
+  );
 
   const { exchangeRate, sourceBaseRate, destBaseRate, isLoadingRate, rateError } =
     useCrossCurrencyRates({
       sourceCurrency,
       destCurrency,
       workplaceCurrency,
-      enabled: isCrossCurrency,
+      journalDate: editor.journalDate,
+      enabled: needsWorkplaceRate,
     });
 
   const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
@@ -140,6 +147,27 @@ export function useSimpleJournalEditor({
         exchangeRate: destinationLineExchangeRate,
         amount: destinationLineAmount,
       },
+    });
+
+    logger.debug('[DEBUG-FX-SAVE] simple line sync', {
+      sourceCurrency,
+      destCurrency,
+      workplaceCurrency,
+      amount,
+      exchangeRate,
+      sourceBaseRate,
+      destBaseRate,
+      sourceLine: {
+        id: sourceLineId,
+        amount,
+        exchangeRate: sourceLineExchangeRate,
+      },
+      destinationLine: {
+        id: destinationLineId,
+        amount: destinationLineAmount,
+        exchangeRate: destinationLineExchangeRate,
+      },
+      updates,
     });
 
     if (Object.keys(updates).length === 0) return;

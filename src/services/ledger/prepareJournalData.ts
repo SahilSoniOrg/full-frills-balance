@@ -56,6 +56,18 @@ export async function prepareJournalData(
       exchangeRate: t.exchangeRate,
     })),
     journalPrecision,
+    {
+      allowExchangeRateRounding: roundedTransactions.some(transaction => {
+        const currency = transaction.currencyCode?.trim().toUpperCase();
+        const rate = transaction.exchangeRate;
+        return Boolean(
+          currency &&
+          currency !== data.currencyCode.trim().toUpperCase() &&
+          Number.isFinite(rate) &&
+          rate !== 1,
+        );
+      }),
+    },
   );
 
   if (!validation.isValid) {

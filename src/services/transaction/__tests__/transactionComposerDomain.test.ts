@@ -132,6 +132,135 @@ describe('transaction composer domain', () => {
       );
     });
 
+    it('accepts a rounded foreign-currency amount within one base-currency minor unit', () => {
+      const fxAccounts = [
+        ...accounts,
+        {
+          id: asAccountId('inr-bank'),
+          name: 'INR Bank',
+          accountType: AccountType.ASSET,
+          currencyCode: 'INR',
+        },
+        {
+          id: asAccountId('thb-expense'),
+          name: 'Trip Stay',
+          accountType: AccountType.EXPENSE,
+          currencyCode: 'THB',
+        },
+      ];
+      const roundedForeignPlan: PostingPlan = {
+        lines: [
+          {
+            id: asTransactionId('thb-debit'),
+            accountId: asAccountId('thb-expense'),
+            accountName: 'Trip Stay',
+            accountType: AccountType.EXPENSE,
+            accountCurrency: 'THB',
+            amount: '76.82',
+            transactionType: TransactionType.DEBIT,
+            notes: '',
+            exchangeRate: '2.89',
+          },
+          {
+            id: asTransactionId('inr-credit'),
+            accountId: asAccountId('inr-bank'),
+            accountName: 'INR Bank',
+            accountType: AccountType.ASSET,
+            accountCurrency: 'INR',
+            amount: '222',
+            transactionType: TransactionType.CREDIT,
+            notes: '',
+            exchangeRate: '',
+          },
+        ],
+        currencyCode: 'INR',
+        description: 'Trip Stay',
+        date: Date.now(),
+      };
+
+      expect(validatePostingPlan(roundedForeignPlan, fxAccounts)).toEqual({
+        valid: true,
+        issues: [],
+      });
+    });
+
+    it('keeps separate source and destination amounts for a simple foreign-currency entry', () => {
+      const fxAccounts = [
+        ...accounts,
+        {
+          id: asAccountId('inr-bank'),
+          name: 'INR Bank',
+          accountType: AccountType.ASSET,
+          currencyCode: 'INR',
+        },
+        {
+          id: asAccountId('thb-expense'),
+          name: 'Trip Stay',
+          accountType: AccountType.EXPENSE,
+          currencyCode: 'THB',
+        },
+      ];
+      const resolved = resolveTransactionIntent(
+        {
+          description: 'Trip Stay',
+          amount: '500',
+          destinationAmount: '173.01',
+          date: '2026-09-12',
+          type: 'expense',
+          sourceAccountId: asAccountId('inr-bank'),
+          destinationAccountId: asAccountId('thb-expense'),
+          destinationExchangeRate: '2.89',
+        },
+        { accounts: fxAccounts, currencyCode: 'INR' },
+      );
+
+      expect(resolved.resolved).toBe(true);
+      if (!resolved.resolved) return;
+      expect(resolved.plan.lines.map(line => line.amount)).toEqual(['500', '173.01']);
+      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
+        valid: true,
+        issues: [],
+      });
+    });
+
+    it('accepts higher-rate foreign amounts whose conversion rounds by more than one base minor unit', () => {
+      const fxAccounts = [
+        ...accounts,
+        {
+          id: asAccountId('inr-bank'),
+          name: 'INR Bank',
+          accountType: AccountType.ASSET,
+          currencyCode: 'INR',
+        },
+        {
+          id: asAccountId('hkd-expense'),
+          name: 'Trip Exchange',
+          accountType: AccountType.EXPENSE,
+          currencyCode: 'HKD',
+        },
+      ];
+      const resolved = resolveTransactionIntent(
+        {
+          description: 'Trip Exchange',
+          amount: '50',
+          destinationAmount: '4.11',
+          date: '2026-09-12',
+          type: 'expense',
+          sourceAccountId: asAccountId('inr-bank'),
+          destinationAccountId: asAccountId('hkd-expense'),
+          destinationExchangeRate: '12.17',
+        },
+        { accounts: fxAccounts, currencyCode: 'INR' },
+      );
+
+      expect(resolved.resolved).toBe(true);
+      if (!resolved.resolved) return;
+      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
+        valid: true,
+        issues: [],
+      });
+    });
+
     it('provides a boolean predicate for a valid plan', () => {
       const resolved = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
       if (!resolved.resolved) throw new Error('expected a resolved plan');

@@ -54,6 +54,42 @@ describe('JournalCalculator', () => {
     expect(JournalCalculator.isBalanced(lines, 'USD')).toBe(true);
   });
 
+  it('accepts the minor-unit rounding caused by a rounded foreign amount', () => {
+    const lines = [
+      {
+        amount: 76.82,
+        type: TransactionType.DEBIT,
+        exchangeRate: 2.89,
+        accountCurrency: 'THB',
+      },
+      {
+        amount: 222,
+        type: TransactionType.CREDIT,
+        accountCurrency: 'INR',
+      },
+    ];
+
+    expect(JournalCalculator.isBalanced(lines, 'INR')).toBe(true);
+  });
+
+  it('scales foreign-currency rounding tolerance for higher exchange rates', () => {
+    const lines = [
+      {
+        amount: 4.11,
+        type: TransactionType.DEBIT,
+        exchangeRate: 12.17,
+        accountCurrency: 'HKD',
+      },
+      {
+        amount: 50,
+        type: TransactionType.CREDIT,
+        accountCurrency: 'INR',
+      },
+    ];
+
+    expect(JournalCalculator.isBalanced(lines, 'INR')).toBe(true);
+  });
+
   it('applyImbalanceRateCorrectionToLines returns null when checkJournal considers balanced', () => {
     const lines = [
       {

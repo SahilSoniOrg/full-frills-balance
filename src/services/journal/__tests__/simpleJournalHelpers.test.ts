@@ -1,6 +1,7 @@
 import {
   computeSimpleConvertedAmount,
   deriveCrossCurrencyDisplayRate,
+  buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
   isSimpleTargetAccountUnset,
   resolveSimpleCrossCurrencyRates,
@@ -53,6 +54,27 @@ describe('simpleJournalHelpers cross-currency', () => {
     it('multiplies by exchange rate when cross-currency', () => {
       expect(computeSimpleConvertedAmount(100, true, 0.5)).toBe(50);
       expect(computeSimpleConvertedAmount(100, true, null)).toBe(100);
+    });
+  });
+
+  it('keeps workplace-relative rates for two lines in the same foreign currency', () => {
+    const updates = buildSimpleCrossCurrencyLineUpdates({
+      isCrossCurrency: false,
+      exchangeRate: 1,
+      sourceBaseRate: 95.51,
+      destBaseRate: 95.51,
+      sourceCurrency: 'USD',
+      destCurrency: 'USD',
+      baseCurrency: 'INR',
+      amount: '5.99',
+      convertedAmount: 5.99,
+      sourceLine: { id: 'source' as any, exchangeRate: '', amount: '5.99' },
+      destinationLine: { id: 'destination' as any, exchangeRate: '', amount: '5.99' },
+    });
+
+    expect(updates).toEqual({
+      source: { exchangeRate: '95.510000' },
+      destination: { exchangeRate: '95.510000' },
     });
   });
 });

@@ -92,8 +92,18 @@ export function buildSimpleCrossCurrencyLineUpdates(
   } = input;
 
   const updates: Record<string, Partial<JournalEntryLine>> = {};
+  const needsBaseCurrencyRates = Boolean(
+    sourceCurrency &&
+    destCurrency &&
+    (sourceCurrency !== baseCurrency || destCurrency !== baseCurrency),
+  );
+  const hasResolvedBaseRates =
+    Number.isFinite(sourceBaseRate) &&
+    Number.isFinite(destBaseRate) &&
+    (sourceBaseRate ?? 0) > 0 &&
+    (destBaseRate ?? 0) > 0;
 
-  if (isCrossCurrency && exchangeRate) {
+  if ((isCrossCurrency && exchangeRate) || (needsBaseCurrencyRates && hasResolvedBaseRates)) {
     const formattedConverted = convertedAmount.toFixed(2);
 
     if (sourceCurrency !== baseCurrency && sourceBaseRate) {
@@ -114,13 +124,13 @@ export function buildSimpleCrossCurrencyLineUpdates(
       updates[destinationLine.id] = { exchangeRate: '' };
     }
 
-    if (destinationLine.amount !== formattedConverted) {
+    if (isCrossCurrency && destinationLine.amount !== formattedConverted) {
       updates[destinationLine.id] = {
         ...updates[destinationLine.id],
         amount: formattedConverted,
       };
     }
-  } else if (!isCrossCurrency) {
+  } else if (!isCrossCurrency && !needsBaseCurrencyRates) {
     if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
     if (destinationLine.exchangeRate) updates[destinationLine.id] = { exchangeRate: '' };
     if (destinationLine.amount !== amount) {

@@ -9,12 +9,13 @@ import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { validateSplitState } from '@/src/services/journal/splitJournalHelpers';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
   resolveTransactionIntent,
   validatePostingPlan,
 } from '@/src/services/transaction/transactionComposerDomain';
 import { buildSimpleDefaultDescription } from '@/src/services/journal/simpleJournalHelpers';
+import { logger } from '@/src/utils/logger';
 import { useJournalEditor, UseJournalEditorOptions } from './useJournalEditor';
 
 export type UseTransactionComposerSessionOptions = UseJournalEditorOptions & {
@@ -84,6 +85,7 @@ export function useTransactionComposerSession(
       type: editor.transactionType,
       sourceAccountId: sourceLine?.accountId ?? EMPTY_ACCOUNT_ID,
       destinationAccountId: destinationLines[0]?.accountId,
+      destinationAmount: destinationLines.length === 1 ? destinationLines[0]?.amount : undefined,
       sourceExchangeRate: sourceLine?.exchangeRate,
       destinationExchangeRate: destinationLines[0]?.exchangeRate,
       allocations:
@@ -122,6 +124,24 @@ export function useTransactionComposerSession(
     () => (postingPlan ? validatePostingPlan(postingPlan, accounts) : { valid: false, issues: [] }),
     [accounts, postingPlan],
   );
+
+  useEffect(() => {
+    logger.debug('[DEBUG-FX-SAVE] posting-plan validation', {
+      currencyCode,
+      resolved: intentResolution.resolved,
+      resolutionIssues: intentResolution.resolved ? [] : intentResolution.issues,
+      valid: postingPlanValidation.valid,
+      validationIssues: postingPlanValidation.issues,
+      lines: editor.lines.map(line => ({
+        id: line.id,
+        accountId: line.accountId,
+        accountCurrency: line.accountCurrency,
+        amount: line.amount,
+        transactionType: line.transactionType,
+        exchangeRate: line.exchangeRate,
+      })),
+    });
+  }, [currencyCode, editor.lines, intentResolution, postingPlanValidation]);
 
   const splitValidation = useMemo(
     () =>

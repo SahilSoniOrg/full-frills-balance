@@ -7,7 +7,10 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { assembleCreateJournalData } from '@/src/services/journal/journalSaveHelpers';
+import {
+  assembleCreateJournalData,
+  validateJournalEntryBalance,
+} from '@/src/services/journal/journalSaveHelpers';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
@@ -20,6 +23,38 @@ describe('journalSaveHelpers workplace isolation', () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
+  });
+
+  it('accepts a rounded foreign-currency journal during manual-save validation', () => {
+    expect(
+      validateJournalEntryBalance(
+        [
+          {
+            id: 'thb-debit' as any,
+            accountId: 'acc-thb' as AccountId,
+            accountName: 'Trip Stay',
+            accountType: 'EXPENSE' as any,
+            accountCurrency: 'THB',
+            amount: '76.82',
+            transactionType: TransactionType.DEBIT,
+            notes: '',
+            exchangeRate: '2.89',
+          },
+          {
+            id: 'inr-credit' as any,
+            accountId: 'acc-inr' as AccountId,
+            accountName: 'INR Bank',
+            accountType: 'ASSET' as any,
+            accountCurrency: 'INR',
+            amount: '222',
+            transactionType: TransactionType.CREDIT,
+            notes: '',
+            exchangeRate: '',
+          },
+        ],
+        'INR',
+      ),
+    ).toBeNull();
   });
 
   it('populates smsMetadataJson when SMS record belongs to the same workplace', async () => {

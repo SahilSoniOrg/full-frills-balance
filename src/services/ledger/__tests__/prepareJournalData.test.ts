@@ -84,4 +84,38 @@ describe('prepareJournalData account validation', () => {
     expect(prepared.transactions).toHaveLength(2);
     expect(prepared.accountsToRebuild.has('acc-cash' as AccountId)).toBe(true);
   });
+
+  it('accepts a rounded foreign-currency journal at the ledger boundary', async () => {
+    (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
+      { id: 'acc-thb-expense', accountType: AccountType.EXPENSE, currencyCode: 'THB' },
+      { id: 'acc-inr-bank', accountType: AccountType.ASSET, currencyCode: 'INR' },
+    ]);
+
+    const prepared = await prepareJournalData(
+      {
+        journalDate: Date.now(),
+        description: 'Trip Stay',
+        currencyCode: 'INR',
+        status: JournalStatus.POSTED,
+        transactions: [
+          {
+            accountId: 'acc-thb-expense' as AccountId,
+            amount: 76.82,
+            transactionType: TransactionType.DEBIT,
+            currencyCode: 'THB',
+            exchangeRate: 2.89,
+          },
+          {
+            accountId: 'acc-inr-bank' as AccountId,
+            amount: 222,
+            transactionType: TransactionType.CREDIT,
+            currencyCode: 'INR',
+          },
+        ],
+      },
+      workplaceId,
+    );
+
+    expect(prepared.transactions).toHaveLength(2);
+  });
 });

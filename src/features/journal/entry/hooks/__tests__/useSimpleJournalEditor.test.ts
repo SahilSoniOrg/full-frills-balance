@@ -5,9 +5,11 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useCallback, useState } from 'react';
 
 const mockFetchRate = jest.fn();
+const mockFetchHistoricalRate = jest.fn();
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
+    fetchHistoricalRate: mockFetchHistoricalRate,
   }),
 }));
 
@@ -41,9 +43,11 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
     workplaceId: 'wp-1',
     activeWorkplaceId: 'wp-1',
     activeWorkplace: { id: 'wp-1', name: 'Personal' },
-    defaultCurrencyCode: 'USD',
+    defaultCurrencyCode: mockWorkplaceCurrency,
   }),
 }));
+
+let mockWorkplaceCurrency = 'USD';
 
 function createEditor(options?: { crossCurrency?: boolean }) {
   const crossCurrency = options?.crossCurrency ?? false;
@@ -110,7 +114,12 @@ describe('useSimpleJournalEditor', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWorkplaceCurrency = 'USD';
     mockFetchRate.mockResolvedValue(1.0);
+    mockFetchHistoricalRate.mockReset();
+    mockFetchHistoricalRate.mockImplementation(async (from: string, to: string) => ({
+      rate: await mockFetchRate(from, to),
+    }));
   });
 
   it('applies cross-currency rates to editor lines when they differ', async () => {
@@ -142,6 +151,37 @@ describe('useSimpleJournalEditor', () => {
     expect(lastBatch['1'].exchangeRate).toBe((1.1).toFixed(6));
     expect(lastBatch['2'].exchangeRate).toBe((1.25).toFixed(6));
     expect(lastBatch['2'].amount).toBe(((100 * 1.1) / 1.25).toFixed(2));
+  });
+
+  it('applies one historical workplace rate to equal foreign currencies', async () => {
+    mockWorkplaceCurrency = 'INR';
+    mockFetchHistoricalRate.mockResolvedValue({ rate: 95.51 });
+
+    const editor = createEditor();
+    editor.journalDate = '2024-10-03';
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isCrossCurrency).toBe(false);
+      expect(editor.updateLines).toHaveBeenCalled();
+    });
+
+    const lastBatch = (editor.updateLines as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(lastBatch['1'].exchangeRate).toBe('95.510000');
+    expect(lastBatch['2'].exchangeRate).toBe('95.510000');
+    expect(lastBatch['2'].amount).toBeUndefined();
+    expect(mockFetchHistoricalRate).toHaveBeenCalledWith(
+      'USD',
+      'INR',
+      Date.parse('2024-10-03T00:00:00.000Z'),
+    );
   });
 
   it('does not call updateLines again when line fields already match rates', async () => {
