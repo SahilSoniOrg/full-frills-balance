@@ -153,7 +153,7 @@ function SectionFilters({
     onToggle();
   }, [onToggle, reduceMotion]);
   return (
-    <AppCard variant="secondary" paddingSize="md">
+    <AppCard variant="ghost" paddingSize="md">
       <Pressable
         onPress={handleToggle}
         accessibilityRole="button"
@@ -170,17 +170,13 @@ function SectionFilters({
         </View>
         <View style={styles.filterDisclosureCopy}>
           <View style={styles.filterDisclosureTitle}>
-            <AppText variant="heading" weight="semibold">
-              Report filters
-            </AppText>
             <AppText variant="caption" color="secondary" numberOfLines={1}>
               {isExpanded ? 'Change what is included' : `${basisLabel} · ${comparisonLabel}`}
             </AppText>
           </View>
           {!isExpanded ? (
             <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {vm.filters.periodLabel} · {vm.filters.accountScopeLabel} ·{' '}
-              {vm.filters.targetCurrency}
+              {vm.filters.periodLabel} · {vm.filters.accountScopeLabel}
             </AppText>
           ) : null}
         </View>
@@ -193,16 +189,6 @@ function SectionFilters({
 
       {isExpanded ? (
         <Stack gap="md" style={[styles.filterPanel, { borderTopColor: theme.divider }]}>
-          <View style={styles.filterHeading}>
-            <View style={styles.filterTitleBlock}>
-              <AppText variant="caption" color="secondary" weight="semibold">
-                Included activity
-              </AppText>
-            </View>
-            <AppText variant="caption" color="secondary" weight="semibold">
-              {vm.filters.targetCurrency}
-            </AppText>
-          </View>
           <FilterChipGroup
             label="Period"
             options={periodOptions}
@@ -224,20 +210,13 @@ function SectionFilters({
             onChange={value => vm.filters.onComparisonChange(value as never)}
           />
 
-          <View style={styles.filterActions}>
-            <FilterChipButton
-              label={vm.filters.accountScopeLabel}
-              icon={Icon.Wallet}
-              isActive={vm.filters.accountIds.length > 0}
-              onPress={() => vm.filters.onRequestAccountScope?.()}
-            />
-            <FilterChipButton
-              label={vm.filters.periodPreset === 'custom' ? 'Change dates' : 'Custom range'}
-              icon={Icon.Calendar}
-              isActive={vm.filters.periodPreset === 'custom'}
-              onPress={() => vm.filters.onRequestCustomRange?.()}
-            />
-          </View>
+          <FilterLabel>Accounts</FilterLabel>
+          <FilterChipButton
+            label={vm.filters.accountScopeLabel}
+            icon={Icon.Wallet}
+            isActive={vm.filters.accountIds.length > 0}
+            onPress={() => vm.filters.onRequestAccountScope?.()}
+          />
         </Stack>
       ) : null}
     </AppCard>
@@ -815,7 +794,6 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
               <ReportStatusNotice state={vm.state} onRetry={vm.onRetry} />
             ) : null}
             <View style={styles.sectionNav}>
-              <FilterLabel>Explore</FilterLabel>
               <ReportSectionTabs
                 options={sectionOptions}
                 value={vm.activeSection}
@@ -867,8 +845,6 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
 const styles = StyleSheet.create({
   content: { paddingBottom: Spacing.xxxxl, gap: Spacing.xl },
   eyebrow: { letterSpacing: 1.2 },
-  filterHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  filterTitleBlock: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   filterDisclosure: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   filterDisclosurePressed: { opacity: 0.78 },
   filterDisclosureIcon: {
@@ -888,13 +864,6 @@ const styles = StyleSheet.create({
   filterPanel: { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1 },
   filterGroup: { gap: Spacing.xs },
   filterLabel: { letterSpacing: 0.8 },
-  filterActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
   sectionNav: { gap: Spacing.xs },
   sectionTabs: { borderBottomWidth: 1 },
   sectionTabsContent: { flexDirection: 'row', gap: Spacing.lg, paddingHorizontal: Spacing.xs },
