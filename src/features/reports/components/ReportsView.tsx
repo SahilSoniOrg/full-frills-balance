@@ -1,7 +1,9 @@
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Size, Spacing } from '@/src/constants';
-import { Inset, Stack } from '@/src/design-system';
+import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
+import { AppConfig, Size, Spacing } from '@/src/constants';
+import { Inset } from '@/src/design-system';
+import { Icon } from '@/src/components/core';
 import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
@@ -11,6 +13,7 @@ import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewMod
 import { useTheme } from '@/src/hooks/use-theme';
 import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useCallback, useState } from 'react';
 
 interface ReportsViewProps {
   vm: ReportsViewModel;
@@ -20,35 +23,67 @@ interface ReportsViewProps {
 export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const { theme } = useTheme();
   const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
+  const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
 
   const { width } = useWindowDimensions();
   const CHART_WIDTH = width - (Spacing.md * 2 + Spacing.lg * 2);
+  const toggleFilters = useCallback(() => setAreFiltersExpanded(expanded => !expanded), []);
+  const accountLabel =
+    filters.accountIds.length === 0
+      ? AppConfig.strings.reports.allAccounts
+      : AppConfig.strings.reports.accountCount(filters.accountIds.length);
 
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <Inset space="md" vertical="md" flex={1}>
-        <Stack space="xl" flex={1}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={filters.onRefresh}
+              tintColor={theme.primary}
+            />
+          }
+        >
+          <FilterDisclosure
+            isExpanded={areFiltersExpanded}
+            onToggle={toggleFilters}
+            collapsedTitle={AppConfig.strings.reports.filtersTitle}
+            collapsedDetails={`${filters.dateLabel} · ${accountLabel}`}
+            groups={[
+              {
+                label: 'Period',
+                chip: {
+                  label: filters.dateLabel,
+                  icon: Icon.Calendar,
+                  isActive: true,
+                  onPress: filters.onOpenDatePicker,
+                  testID: 'reports-date-filter',
+                },
+              },
+              {
+                label: 'Accounts',
+                chip: {
+                  label: accountLabel,
+                  icon: Icon.Wallet,
+                  isActive: filters.accountIds.length > 0,
+                  onPress: filters.onOpenAccountPicker,
+                  testID: 'reports-account-filter',
+                },
+              },
+            ]}
+            testID="reports-filters-toggle"
+          />
           <ReportTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-          <ScrollView
-            contentContainerStyle={styles.content}
-            refreshControl={
-              <RefreshControl
-                refreshing={loading}
-                onRefresh={filters.onRefresh}
-                tintColor={theme.primary}
-              />
-            }
-          >
-            {activeTab === 'OVERVIEW' && (
-              <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
-            )}
-            {activeTab === 'SPENDING' && (
-              <ReportSpendingSection vm={spending} chartWidth={CHART_WIDTH} />
-            )}
-            {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
-          </ScrollView>
-        </Stack>
+          {activeTab === 'OVERVIEW' && (
+            <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
+          )}
+          {activeTab === 'SPENDING' && (
+            <ReportSpendingSection vm={spending} chartWidth={CHART_WIDTH} />
+          )}
+          {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
+        </ScrollView>
       </Inset>
       <ReportFilterChrome filters={filters} />
     </ScreenWithChrome>
@@ -57,7 +92,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingVertical: Spacing.lg,
     paddingBottom: Size.xxl * 2,
+    gap: Spacing.xl,
   },
 });

@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { ReportTab } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ReportTabsProps {
   activeTab: ReportTab;
@@ -20,42 +20,53 @@ export function ReportTabs({ activeTab, onTabChange }: ReportTabsProps) {
 
   return (
     <View style={[styles.container, { borderBottomColor: theme.border }]}>
-      {tabs.map(tab => {
-        const isActive = activeTab === tab.id;
-        return (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tab, isActive && { borderBottomColor: theme.primary }]}
-            onPress={() => onTabChange(tab.id)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-          >
-            <AppText
-              variant="caption"
-              weight={isActive ? 'semibold' : 'regular'}
-              style={[styles.tabText, { color: isActive ? theme.primary : theme.textSecondary }]}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsContent}
+      >
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tab, isActive && { borderBottomColor: theme.primary }]}
+              onPress={() => onTabChange(tab.id)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
             >
-              {tab.label}
-            </AppText>
-          </TouchableOpacity>
-        );
-      })}
+              <AppText
+                variant="caption"
+                weight={isActive ? 'semibold' : 'regular'}
+                style={[styles.tabText, { color: isActive ? theme.primary : theme.textSecondary }]}
+              >
+                {tab.label}
+              </AppText>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
     borderBottomWidth: 1,
-    marginBottom: Spacing.md,
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
   },
   tab: {
+    minHeight: 44,
     paddingVertical: Spacing.sm,
-    marginRight: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
+    justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    marginBottom: -1,
   },
   tabText: {
     textTransform: 'uppercase',

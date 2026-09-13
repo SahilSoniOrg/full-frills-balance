@@ -1,5 +1,6 @@
 import { MultiAccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
+import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { useCallback, useMemo, useState } from 'react';
 import {
   AppCard,
@@ -7,7 +8,6 @@ import {
   AppIcon,
   AppText,
   EmptyStateView,
-  FilterChipButton,
   Icon,
   LoadingView,
   type AppTextProps,
@@ -20,16 +20,14 @@ import { LineChart, type DataPoint } from '@/src/components/charts/LineChart';
 import { ReportChartCard } from '../../reports/components/ReportChartCard';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import { Inset, Inline, Stack } from '@/src/design-system';
+import { Inset, Stack } from '@/src/design-system';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import type { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import {
   ActivityIndicator,
-  LayoutAnimation,
   RefreshControl,
   Pressable,
   ScrollView,
@@ -83,42 +81,6 @@ function metricTone(measure: ReportMeasure): 'income' | 'expense' | 'default' {
   return measure.amount < 0 ? 'expense' : 'income';
 }
 
-function FilterLabel({ children }: { children: string }) {
-  return (
-    <AppText variant="caption" color="secondary" weight="bold" style={styles.filterLabel}>
-      {children.toUpperCase()}
-    </AppText>
-  );
-}
-
-function FilterChipGroup({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: readonly SegmentedOption<string>[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <View style={styles.filterGroup}>
-      <FilterLabel>{label}</FilterLabel>
-      <Inline gap="sm" wrap>
-        {options.map(option => (
-          <FilterChipButton
-            key={option.id}
-            label={option.label}
-            isActive={option.id === value}
-            onPress={() => onChange(option.id)}
-          />
-        ))}
-      </Inline>
-    </View>
-  );
-}
-
 function SectionFilters({
   vm,
   isExpanded,
@@ -128,8 +90,6 @@ function SectionFilters({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const { theme } = useTheme();
-  const reduceMotion = useReducedMotion();
   const periodOptions: readonly SegmentedOption<string>[] = [
     { id: 'month', label: 'Month' },
     { id: 'quarter', label: 'Quarter' },
@@ -148,78 +108,44 @@ function SectionFilters({
   ];
   const basisLabel = vm.filters.basis === 'ACTUAL_PLUS_PLANNED' ? 'Actual + planned' : 'Actual';
   const comparisonLabel = vm.filters.comparison === 'NONE' ? 'No comparison' : 'Compared';
-  const handleToggle = useCallback(() => {
-    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    onToggle();
-  }, [onToggle, reduceMotion]);
+  const groups = [
+    {
+      label: 'Period',
+      options: periodOptions,
+      value: vm.filters.periodPreset,
+      onChange: (value: string) => vm.filters.onPeriodPresetChange(value as never),
+    },
+    {
+      label: 'Basis',
+      options: basisOptions,
+      value: vm.filters.basis,
+      onChange: (value: string) => vm.filters.onBasisChange(value as never),
+    },
+    {
+      label: 'Compare with',
+      options: comparisonOptions,
+      value: vm.filters.comparison,
+      onChange: (value: string) => vm.filters.onComparisonChange(value as never),
+    },
+    {
+      label: 'Accounts',
+      chip: {
+        label: vm.filters.accountScopeLabel,
+        icon: Icon.Wallet,
+        isActive: vm.filters.accountIds.length > 0,
+        onPress: () => vm.filters.onRequestAccountScope?.(),
+      },
+    },
+  ];
   return (
-    <AppCard variant="ghost" paddingSize="md">
-      <Pressable
-        onPress={handleToggle}
-        accessibilityRole="button"
-        accessibilityLabel={`${isExpanded ? 'Collapse' : 'Expand'} report filters`}
-        accessibilityState={{ expanded: isExpanded }}
-        testID="reports-v2-filters-toggle"
-        style={({ pressed }) => [
-          styles.filterDisclosure,
-          pressed && styles.filterDisclosurePressed,
-        ]}
-      >
-        <View style={[styles.filterDisclosureIcon, { backgroundColor: theme.primaryLight }]}>
-          <AppIcon name={Icon.Sliders} size={17} color="primary" />
-        </View>
-        <View style={styles.filterDisclosureCopy}>
-          <View style={styles.filterDisclosureTitle}>
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {isExpanded ? 'Change what is included' : `${basisLabel} · ${comparisonLabel}`}
-            </AppText>
-          </View>
-          {!isExpanded ? (
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {vm.filters.periodLabel} · {vm.filters.accountScopeLabel}
-            </AppText>
-          ) : null}
-        </View>
-        <AppIcon
-          name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={18}
-          color="textSecondary"
-        />
-      </Pressable>
-
-      {isExpanded ? (
-        <Stack gap="md" style={[styles.filterPanel, { borderTopColor: theme.divider }]}>
-          <FilterChipGroup
-            label="Period"
-            options={periodOptions}
-            value={vm.filters.periodPreset}
-            onChange={value => vm.filters.onPeriodPresetChange(value as never)}
-          />
-
-          <FilterChipGroup
-            label="Basis"
-            options={basisOptions}
-            value={vm.filters.basis}
-            onChange={value => vm.filters.onBasisChange(value as never)}
-          />
-
-          <FilterChipGroup
-            label="Compare with"
-            options={comparisonOptions}
-            value={vm.filters.comparison}
-            onChange={value => vm.filters.onComparisonChange(value as never)}
-          />
-
-          <FilterLabel>Accounts</FilterLabel>
-          <FilterChipButton
-            label={vm.filters.accountScopeLabel}
-            icon={Icon.Wallet}
-            isActive={vm.filters.accountIds.length > 0}
-            onPress={() => vm.filters.onRequestAccountScope?.()}
-          />
-        </Stack>
-      ) : null}
-    </AppCard>
+    <FilterDisclosure
+      isExpanded={isExpanded}
+      onToggle={onToggle}
+      collapsedTitle={`${basisLabel} · ${comparisonLabel}`}
+      collapsedDetails={`${vm.filters.periodLabel} · ${vm.filters.accountScopeLabel}`}
+      groups={groups}
+      testID="reports-v2-filters-toggle"
+    />
   );
 }
 
@@ -845,25 +771,6 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
 const styles = StyleSheet.create({
   content: { paddingBottom: Spacing.xxxxl, gap: Spacing.xl },
   eyebrow: { letterSpacing: 1.2 },
-  filterDisclosure: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  filterDisclosurePressed: { opacity: 0.78 },
-  filterDisclosureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterDisclosureCopy: { flex: 1, gap: Spacing.xs },
-  filterDisclosureTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  filterPanel: { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1 },
-  filterGroup: { gap: Spacing.xs },
-  filterLabel: { letterSpacing: 0.8 },
   sectionNav: { gap: Spacing.xs },
   sectionTabs: { borderBottomWidth: 1 },
   sectionTabsContent: { flexDirection: 'row', gap: Spacing.lg, paddingHorizontal: Spacing.xs },

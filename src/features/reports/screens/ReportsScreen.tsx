@@ -20,14 +20,6 @@ function ReportsScreen() {
         <ScreenHeaderActions
           actions={[
             {
-              name: Icon.Filter,
-              size: Size.iconSm,
-              variant: 'clear',
-              onPress: vm.filters.filterChrome.onOpen,
-              accessibilityLabel: 'Open report filters',
-              testID: 'reports-filter-header-button',
-            },
-            {
               name: Icon.Sparkles,
               size: Size.iconSm,
               variant: 'primary',
@@ -40,7 +32,7 @@ function ReportsScreen() {
         />
       ),
     }),
-    [vm.filters.filterChrome.onOpen],
+    [],
   );
 
   return <ReportsView vm={vm} chrome={chrome} />;

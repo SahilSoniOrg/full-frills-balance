@@ -13,14 +13,16 @@ interface FilterChipButtonProps {
   isActive?: boolean;
   onPress: () => void;
   style?: ViewStyle;
+  testID?: string;
 }
 
 export const FilterChipButton = memo(
-  ({ label, icon, isActive, onPress, style }: FilterChipButtonProps) => {
+  ({ label, icon, isActive, onPress, style, testID }: FilterChipButtonProps) => {
     const { theme } = useTheme();
 
     return (
       <TouchableOpacity
+        testID={testID}
         accessibilityRole="button"
         accessibilityState={{ selected: !!isActive }}
         activeOpacity={0.7}
