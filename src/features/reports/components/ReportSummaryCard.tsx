@@ -1,7 +1,6 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
-import { Row } from '@/src/design-system';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
@@ -135,7 +134,7 @@ function SummaryMetric({
   onPress?: () => void;
 }) {
   return (
-    <Row style={styles.metric} align="center" justify="flex-start" space={20}>
+    <View testID={testID} style={styles.metric}>
       <AppText variant="caption" color="secondary">
         {label}
       </AppText>
@@ -149,7 +148,7 @@ function SummaryMetric({
       {onPress ? (
         <ViewTransactionsButton testID={`${testID}-view-transactions`} onPress={onPress} />
       ) : null}
-    </Row>
+    </View>
   );
 }
 

@@ -15,6 +15,9 @@ import {
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { BarChart, type BarChartDataPoint } from '@/src/components/charts/BarChart';
+import { LineChart, type DataPoint } from '@/src/components/charts/LineChart';
+import { ReportChartCard } from '../../reports/components/ReportChartCard';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { Inset, Inline, Stack } from '@/src/design-system';
@@ -54,7 +57,9 @@ interface ReportsV2ViewProps {
 type NonMoneyMeasure = Exclude<ReportMeasure, { kind: 'MONEY' }>;
 
 function measureText(measure: NonMoneyMeasure): string {
-  if (measure.kind === 'PERCENTAGE') return `${measure.value.toFixed(1)}%`;
+  if (measure.kind === 'PERCENTAGE') {
+    return measure.value === null ? 'Unavailable' : `${measure.value.toFixed(1)}%`;
+  }
   if (measure.kind === 'COUNT') return `${measure.value}`;
   return measure.value.toFixed(2);
 }
@@ -70,7 +75,7 @@ function MeasureText({ measure, ...textProps }: MeasureTextProps) {
 }
 
 function measureNumber(measure: ReportMeasure): number {
-  return measure.kind === 'MONEY' ? measure.amount : measure.value;
+  return measure.kind === 'MONEY' ? measure.amount : (measure.value ?? 0);
 }
 
 function metricTone(measure: ReportMeasure): 'income' | 'expense' | 'default' {
@@ -453,57 +458,123 @@ function MetricGrid({ section }: { section: ReportSection }) {
 function Trend({ visualization }: { visualization: ReportVisualization }) {
   const privateMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
-  const series = visualization.kind === 'WATERFALL' ? [] : visualization.series;
-  const maximum = Math.max(
-    1,
-    ...series.flatMap(item => item.points.map(point => Math.abs(point.value.amount))),
+  const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
+  const waterfall = visualization.kind === 'WATERFALL' ? visualization : null;
+  const reportSeries = visualization.kind === 'WATERFALL' ? null : visualization.series;
+  const series = useMemo(() => reportSeries ?? [], [reportSeries]);
+  const chartSeries = useMemo(
+    () =>
+      waterfall
+        ? [
+            { id: 'opening', label: 'Opening', value: waterfall.opening },
+            ...waterfall.changes.flatMap(change =>
+              change.value.kind === 'MONEY'
+                ? [{ id: change.id, label: change.label, value: change.value }]
+                : [],
+            ),
+            { id: 'closing', label: 'Closing', value: waterfall.closing },
+          ]
+        : null,
+    [waterfall],
+  );
+  const barData = useMemo<BarChartDataPoint[]>(() => {
+    if (chartSeries) {
+      return chartSeries.map(item => ({
+        label: item.label,
+        values: [item.value.amount],
+        colors: [item.value.amount < 0 ? theme.error : theme.primary],
+      }));
+    }
+    const points = series[0]?.points ?? [];
+    return points.map((point, index) => ({
+      label: chartLabel(point.date),
+      values: series.map(item => item.points[index]?.value.amount ?? 0),
+      colors: series.map(item =>
+        item.points[index]?.value.amount < 0 ? theme.error : theme.primary,
+      ),
+    }));
+  }, [chartSeries, series, theme.error, theme.primary]);
+  const lineData = useMemo<DataPoint[]>(
+    () => (series[0]?.points ?? []).map(point => ({ x: point.date, y: point.value.amount })),
+    [series],
+  );
+  const secondaryLineData = useMemo<DataPoint[]>(
+    () => (series[1]?.points ?? []).map(point => ({ x: point.date, y: point.value.amount })),
+    [series],
+  );
+  const tooltip = useCallback(
+    (index: number) => {
+      if (chartSeries) {
+        const item = chartSeries[index];
+        return item ? (
+          <MoneyText amount={item.value.amount} currencyCode={item.value.currencyCode} />
+        ) : null;
+      }
+      return series.map(item => {
+        const point = item.points[index];
+        return point ? (
+          <AppText key={item.id} variant="caption">
+            {item.label}:{' '}
+            <MoneyText amount={point.value.amount} currencyCode={point.value.currencyCode} />
+          </AppText>
+        ) : null;
+      });
+    },
+    [chartSeries, series],
+  );
+  const chart = chartSeries ? (
+    <BarChart
+      data={barData}
+      currencyCode={waterfall!.closing.currencyCode}
+      selectedIndex={selectedIndex}
+      onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
+      renderTooltipContent={tooltip}
+    />
+  ) : visualization.kind === 'LINE' ? (
+    <LineChart
+      data={lineData}
+      secondaryData={secondaryLineData.length > 0 ? secondaryLineData : undefined}
+      currencyCode={series[0]?.points[0]?.value.currencyCode ?? ''}
+      selectedIndex={selectedIndex}
+      onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
+      renderTooltipContent={tooltip}
+    />
+  ) : (
+    <BarChart
+      data={barData}
+      currencyCode={series[0]?.points[0]?.value.currencyCode ?? ''}
+      stacked={visualization.kind === 'STACKED_BAR'}
+      selectedIndex={selectedIndex}
+      onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
+      renderTooltipContent={tooltip}
+    />
   );
   return (
-    <AppCard paddingSize="md">
-      <View style={styles.chartHeader}>
-        <View>
-          <AppText variant="heading" weight="semibold">
-            Trend
-          </AppText>
-          <AppText variant="caption" color="secondary">
-            Period activity
-          </AppText>
-        </View>
-        <View style={styles.chartLegend}>
-          {series.map(item => (
+    <ReportChartCard
+      title="Trend"
+      headerContent={
+        <View style={styles.chartLegend} accessibilityLabel="Trend series">
+          {(chartSeries ?? series).map(item => (
             <AppText key={item.id} variant="caption" color="secondary">
               ● {item.label}
             </AppText>
           ))}
         </View>
+      }
+      testID="reports-v2-trend"
+    >
+      <View accessibilityRole="image" accessibilityLabel="Report trend chart">
+        {chart}
       </View>
-      <View
-        style={[styles.chart, { borderBottomColor: theme.divider }]}
-        accessibilityLabel="Report trend chart"
-      >
-        {series.map(item => (
-          <View key={item.id} style={styles.chartSeries}>
-            {item.points.slice(-12).map((point, index) => {
-              const height = Math.max(3, (Math.abs(point.value.amount) / maximum) * 72);
-              const color = point.value.amount < 0 ? theme.error : theme.primary;
-              return (
-                <View
-                  key={`${point.date}-${index}`}
-                  style={[styles.chartBar, { height, backgroundColor: color }]}
-                />
-              );
-            })}
-          </View>
-        ))}
-      </View>
-      {series[0]?.points.length ? (
-        <AppText variant="caption" color="secondary">
-          {series[0].points[0].value.currencyCode} ·{' '}
-          {privateMode ? 'Values hidden' : 'Tap a category below to inspect its journals'}
-        </AppText>
-      ) : null}
-    </AppCard>
+      <AppText variant="caption" color="secondary">
+        {privateMode ? 'Values hidden' : 'Tap the chart to inspect a point'}
+      </AppText>
+    </ReportChartCard>
   );
+}
+
+function chartLabel(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function Breakdown({
@@ -520,6 +591,7 @@ function Breakdown({
   interactive?: boolean;
 }) {
   const { theme } = useTheme();
+  const [expanded, setExpanded] = useState(false);
   if (!section.rows?.length)
     return (
       <EmptyStateView
@@ -545,7 +617,7 @@ function Breakdown({
           {section.rows.length} items
         </AppText>
       </View>
-      {section.rows.slice(0, 12).map((item, index) => (
+      {(expanded ? section.rows : section.rows.slice(0, 12)).map((item, index) => (
         <Pressable
           key={item.id}
           onPress={() => {
@@ -585,15 +657,32 @@ function Breakdown({
           </View>
           <View style={styles.rowValue}>
             <MeasureText measure={item.value} variant="body" weight="semibold" />
-            {item.percentage ? (
+            {item.percentage && item.percentage.value !== null ? (
               <AppText variant="caption" color="secondary">
                 {item.percentage.value.toFixed(1)}%
+              </AppText>
+            ) : item.percentage ? (
+              <AppText variant="caption" color="secondary">
+                Unavailable
               </AppText>
             ) : null}
           </View>
           <AppIcon name={Icon.ChevronRight} size={17} color="textTertiary" />
         </Pressable>
       ))}
+      {section.rows.length > 12 ? (
+        <AppButton
+          variant="ghost"
+          size="sm"
+          onPress={() => setExpanded(value => !value)}
+          accessibilityLabel={
+            expanded ? 'Show fewer details' : `Show all ${section.rows.length} details`
+          }
+          style={styles.showMoreButton}
+        >
+          {expanded ? 'Show less' : `Show all ${section.rows.length}`}
+        </AppButton>
+      ) : null}
     </AppCard>
   );
 }
@@ -883,6 +972,7 @@ const styles = StyleSheet.create({
   rowCopy: { flex: 1, gap: Spacing.sm },
   rowTrack: { height: 5, borderRadius: 5, overflow: 'hidden' },
   rowFill: { height: 5, borderRadius: 5 },
+  showMoreButton: { alignSelf: 'center', marginVertical: Spacing.sm },
   rowValue: { alignItems: 'flex-end', minWidth: 76, gap: Spacing.xs },
   statusNotice: {
     flexDirection: 'row',

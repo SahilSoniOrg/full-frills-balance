@@ -6,7 +6,12 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|@sentry/react-native|native-base|react-native-svg|@nozbe/watermelondb|moti)',
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.worktrees/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/e2e/',
+    '/.worktrees/',
+    '/src/services/reports-v2/__tests__/fixtures/',
+  ],
   collectCoverage: true,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

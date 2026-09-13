@@ -9,7 +9,8 @@ export interface MoneyMeasure {
 
 export interface PercentageMeasure {
   readonly kind: 'PERCENTAGE';
-  readonly value: number;
+  /** null means the percentage is unavailable, not zero. */
+  readonly value: number | null;
 }
 
 export interface CountMeasure {

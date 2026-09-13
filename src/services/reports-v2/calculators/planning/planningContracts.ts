@@ -72,6 +72,11 @@ export type PlanningBudget = {
   name?: string;
   amount: number;
   currencyCode?: string;
+  intervalType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
   leafAccountIds?: readonly string[];
   scopedLeafAccountIds?: readonly string[];
   accountScope?: readonly string[] | ReadonlySet<string>;

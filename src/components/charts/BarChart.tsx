@@ -29,6 +29,7 @@ interface BarChartProps {
   renderTooltipContent?: (index: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
+  stacked?: boolean;
 }
 
 interface BarChartSvgProps {
@@ -49,6 +50,7 @@ interface BarChartSvgProps {
   startXOffset: number;
   selectedIndex?: number;
   onPress?: (index: number) => void;
+  stacked?: boolean;
 }
 
 // Scroll position only affects the overlay tooltip. Keeping the SVG subtree
@@ -71,6 +73,7 @@ const BarChartSvg = React.memo(function BarChartSvg({
   startXOffset,
   selectedIndex,
   onPress,
+  stacked = false,
 }: BarChartSvgProps) {
   return (
     <Svg height={height} width={svgWidth}>
@@ -103,11 +106,19 @@ const BarChartSvg = React.memo(function BarChartSvg({
         return (
           <React.Fragment key={index}>
             {point.values.map((val, vIndex) => {
-              const x = xGroupCenter + startXOffset + vIndex * (barWidth + barSpacing);
-              const zeroY = yForValue(0);
-              const valueY = yForValue(val);
-              const y = Math.min(valueY, zeroY);
-              const barHeight = Math.max(Math.abs(zeroY - valueY), 1);
+              const x = stacked
+                ? xGroupCenter + startXOffset
+                : xGroupCenter + startXOffset + vIndex * (barWidth + barSpacing);
+              const previousValue = point.values
+                .slice(0, vIndex)
+                .filter(value => Math.sign(value) === Math.sign(val))
+                .reduce((total, value) => total + value, 0);
+              const startValue = stacked ? previousValue : 0;
+              const endValue = stacked ? startValue + val : val;
+              const startY = yForValue(startValue);
+              const endY = yForValue(endValue);
+              const y = Math.min(startY, endY);
+              const barHeight = Math.max(Math.abs(startY - endY), 1);
               const isSelected = selectedIndex === index;
               const opacity =
                 selectedIndex !== undefined && selectedIndex !== -1 && !isSelected
@@ -166,6 +177,7 @@ export const BarChart = ({
   tooltipWidth,
   tooltipHeight,
   currencyCode,
+  stacked = false,
 }: BarChartProps) => {
   const { theme } = useTheme();
   const { width: windowWidth } = Dimensions.get('window');
@@ -186,7 +198,13 @@ export const BarChart = ({
   const { processedData, domainMin, domainMax, domainRange } = useMemo(() => {
     if (data.length === 0) return { processedData: [], domainMin: 0, domainMax: 1, domainRange: 1 };
 
-    const allValues = data.flatMap(d => d.values);
+    const allValues = data.flatMap(d => {
+      if (!stacked) return d.values;
+      return [
+        d.values.filter(value => value >= 0).reduce((total, value) => total + value, 0),
+        d.values.filter(value => value < 0).reduce((total, value) => total + value, 0),
+      ];
+    });
     const min = Math.min(...allValues, 0);
     const max = Math.max(...allValues, 0);
     const valueRange = max - min || 1;
@@ -202,7 +220,7 @@ export const BarChart = ({
       domainMax: adjustedMax,
       domainRange: adjustedRange,
     };
-  }, [data]);
+  }, [data, stacked]);
 
   const chartHeight = height - PADDING_VERTICAL - PADDING_BOTTOM;
   const yForValue = useCallback(
@@ -216,7 +234,9 @@ export const BarChart = ({
   const labelStartY = height - PADDING_BOTTOM + Spacing.sm;
   // Calculate total width of a group of bars (barWidth * numSeries + spacing)
   const seriesCount = hasData ? data[0].values.length : 0;
-  const totalGroupBarWidth = seriesCount * barWidth + (seriesCount - 1) * BAR_SPACING;
+  const totalGroupBarWidth = stacked
+    ? barWidth
+    : seriesCount * barWidth + (seriesCount - 1) * BAR_SPACING;
   const startXOffset = -totalGroupBarWidth / 2;
 
   const tooltipElement = useMemo(() => {
@@ -339,6 +359,7 @@ export const BarChart = ({
                 startXOffset={startXOffset}
                 selectedIndex={selectedIndex}
                 onPress={onPress}
+                stacked={stacked}
               />
             </View>
           </ScrollView>

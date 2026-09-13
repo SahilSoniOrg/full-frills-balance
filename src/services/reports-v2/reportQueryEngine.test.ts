@@ -2,6 +2,86 @@ import { buildSections } from './reportQueryEngine';
 import type { ReportQuery } from './types/query';
 
 describe('Reports V2 result rows', () => {
+  it('preserves unavailable percentages instead of converting them to zero', () => {
+    const query = {
+      workplaceId: 'workplace-1',
+      period: { startDate: 0, endDate: 1, timeZone: 'UTC' },
+      targetCurrency: 'INR',
+      basis: 'ACTUAL',
+      comparison: 'NONE',
+      granularity: 'AUTO',
+    } as unknown as ReportQuery;
+    const result = buildSections(
+      query,
+      {
+        grossIncome: 0,
+        netIncome: 0,
+        netExpense: 0,
+        netFlow: 0,
+        savingsRate: null,
+        buckets: [],
+        topSpendingCategories: [],
+        comparison: null,
+      } as never,
+      {
+        cashInflows: 0,
+        cashOutflows: 0,
+        netCashFlow: 0,
+        openingCashBalance: 0,
+        closingCashBalance: 0,
+        buckets: [],
+        bySubtype: [],
+      } as never,
+      {
+        grossExpense: 0,
+        refunds: 0,
+        netExpense: 0,
+        journalCount: 0,
+        averageTransactionSize: 0,
+        buckets: [],
+        bySubtype: [],
+      } as never,
+      {
+        grossIncome: 0,
+        incomeReversals: 0,
+        netIncome: 0,
+        journalCount: 0,
+        buckets: [],
+        bySubtype: [],
+      } as never,
+      { closing: null, change: { netWorth: 0 }, history: [] } as never,
+      {
+        totals: { budgetedAmount: 0, actualNetExpense: 0, plannedNetExpense: 0 },
+        budgets: [],
+      } as never,
+      {
+        totals: {
+          openingBalance: 0,
+          closingBalance: 0,
+          borrowings: 0,
+          totalPayments: 0,
+          utilizationPercent: null,
+        },
+        accounts: [],
+      } as never,
+      {
+        totals: { plannedInflow: 0, plannedOutflow: 0, endingProjectedBalance: 0 },
+        timeline: [],
+        upcoming: [],
+      } as never,
+      { summary: { errorCount: 0, warningCount: 0, infoCount: 0 }, diagnostics: [] } as never,
+    );
+
+    expect(
+      result.sections
+        .find(section => section.id === 'overview')
+        ?.metrics?.find(metric => metric.id === 'savings-rate')?.value,
+    ).toEqual({
+      kind: 'PERCENTAGE',
+      value: null,
+    });
+  });
+
   it('keeps report-health diagnostics as counts instead of currency', () => {
     const query = {
       workplaceId: 'workplace-1',

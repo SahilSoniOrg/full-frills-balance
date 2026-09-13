@@ -239,60 +239,127 @@ export function granularityFor(query: ReportQuery, period: ReportPeriod): Report
   return 'MONTH';
 }
 
-function utcDayStart(timestamp: number): number {
-  const date = new Date(timestamp);
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+type ZonedDateParts = { year: number; month: number; day: number; weekday: number };
+
+function zonedParts(timestamp: number, timeZone: string): ZonedDateParts {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  }).formatToParts(timestamp);
+  const value = (type: string) => parts.find(part => part.type === type)?.value ?? '';
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(value('weekday'));
+  return {
+    year: Number(value('year')),
+    month: Number(value('month')),
+    day: Number(value('day')),
+    weekday: weekday < 0 ? 0 : weekday,
+  };
 }
 
-function bucketStartFor(timestamp: number, granularity: ReportGranularity): number {
-  const date = new Date(timestamp);
-  if (granularity === 'DAY') return utcDayStart(timestamp);
-  if (granularity === 'MONTH') {
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+/** Converts a local calendar midnight in an IANA zone to its UTC timestamp. */
+function zonedMidnight(parts: Omit<ZonedDateParts, 'weekday'>, timeZone: string): number {
+  let candidate = Date.UTC(parts.year, parts.month - 1, parts.day);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const actual = zonedPartsWithTime(candidate, timeZone);
+    const desired = Date.UTC(parts.year, parts.month - 1, parts.day);
+    const actualAsUtc = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second,
+    );
+    const corrected = candidate + desired - actualAsUtc;
+    if (corrected === candidate) break;
+    candidate = corrected;
   }
-
-  const day = date.getUTCDay();
-  const daysFromMonday = (day + 6) % 7;
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - daysFromMonday);
+  return candidate;
 }
 
-function bucketEndFor(startDate: number, granularity: ReportGranularity): number {
-  const date = new Date(startDate);
-  if (granularity === 'DAY') return startDate + 86_400_000 - 1;
-  if (granularity === 'MONTH') {
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) - 1;
+function zonedPartsWithTime(timestamp: number, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(timestamp);
+  const value = (type: string) => Number(parts.find(part => part.type === type)?.value ?? 0);
+  return {
+    year: value('year'),
+    month: value('month'),
+    day: value('day'),
+    hour: value('hour'),
+    minute: value('minute'),
+    second: value('second'),
+  };
+}
+
+function calendarStart(
+  timestamp: number,
+  granularity: ReportGranularity,
+  timeZone: string,
+): number {
+  const date = zonedParts(timestamp, timeZone);
+  if (granularity === 'MONTH')
+    return zonedMidnight({ year: date.year, month: date.month, day: 1 }, timeZone);
+  const daysFromMonday = (date.weekday + 6) % 7;
+  const monday = new Date(Date.UTC(date.year, date.month - 1, date.day - daysFromMonday));
+  if (granularity === 'WEEK') {
+    return zonedMidnight(
+      { year: monday.getUTCFullYear(), month: monday.getUTCMonth() + 1, day: monday.getUTCDate() },
+      timeZone,
+    );
   }
-  return startDate + 7 * 86_400_000 - 1;
+  return zonedMidnight({ year: date.year, month: date.month, day: date.day }, timeZone);
 }
 
-function nextBucketStart(startDate: number, granularity: ReportGranularity): number {
-  const date = new Date(startDate);
-  if (granularity === 'DAY') return startDate + 86_400_000;
-  if (granularity === 'MONTH') return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
-  return startDate + 7 * 86_400_000;
+function nextCalendarStart(
+  startDate: number,
+  granularity: ReportGranularity,
+  timeZone: string,
+): number {
+  const date = zonedParts(startDate, timeZone);
+  const utcDate = new Date(Date.UTC(date.year, date.month - 1, date.day));
+  if (granularity === 'MONTH') utcDate.setUTCMonth(utcDate.getUTCMonth() + 1, 1);
+  else utcDate.setUTCDate(utcDate.getUTCDate() + (granularity === 'WEEK' ? 7 : 1));
+  return zonedMidnight(
+    { year: utcDate.getUTCFullYear(), month: utcDate.getUTCMonth() + 1, day: utcDate.getUTCDate() },
+    timeZone,
+  );
 }
 
-function bucketLabel(startDate: number, granularity: ReportGranularity): string {
-  const date = new Date(startDate);
-  if (granularity === 'MONTH') {
-    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-  }
-  const iso = date.toISOString().slice(0, 10);
-  return granularity === 'WEEK' ? `Week of ${iso}` : iso;
+function bucketLabel(startDate: number, granularity: ReportGranularity, timeZone: string): string {
+  const date = zonedParts(startDate, timeZone);
+  const iso = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+  return granularity === 'MONTH'
+    ? iso.slice(0, 7)
+    : granularity === 'WEEK'
+      ? `Week of ${iso}`
+      : iso;
 }
 
 export function makeBuckets(period: ReportPeriod, granularity: ReportGranularity): ReportBucket[] {
+  const timeZone = period.timeZone || 'UTC';
   const buckets: ReportBucket[] = [];
-  let cursor = bucketStartFor(period.startDate, granularity);
-  const finalBucketStart = bucketStartFor(period.endDate, granularity);
+  let cursor = calendarStart(period.startDate, granularity, timeZone);
+  const finalBucketStart = calendarStart(period.endDate, granularity, timeZone);
 
   while (cursor <= finalBucketStart) {
+    const next = nextCalendarStart(cursor, granularity, timeZone);
     buckets.push({
       startDate: Math.max(cursor, period.startDate),
-      endDate: Math.min(bucketEndFor(cursor, granularity), period.endDate),
-      label: bucketLabel(cursor, granularity),
+      endDate: Math.min(next - 1, period.endDate),
+      label: bucketLabel(cursor, granularity, timeZone),
     });
-    cursor = nextBucketStart(cursor, granularity);
+    cursor = next;
   }
   return buckets;
 }

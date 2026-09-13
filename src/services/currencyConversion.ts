@@ -10,6 +10,8 @@ export type ConvertAmountInput = {
   toCurrency: string;
   mode: ConversionMode;
   storedExchangeRate?: number;
+  /** Calendar date used for a historical lookup when no stored rate exists. */
+  rateDate?: number;
   precision?: number;
 };
 
@@ -39,6 +41,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
     toCurrency,
     mode,
     storedExchangeRate,
+    rateDate,
     precision = AppConfig.constants.precision,
   } = input;
 
@@ -55,6 +58,13 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
   if (mode === 'historical') {
     if (isValidRate(storedExchangeRate)) {
       rate = storedExchangeRate;
+    } else if (rateDate !== undefined) {
+      try {
+        rate = (await exchangeRateService.getHistoricalRate(fromCurrency, toCurrency, rateDate))
+          .rate;
+      } catch {
+        return { ok: false, reason: 'missing_rate' };
+      }
     } else {
       rate = await exchangeRateService.getRate(fromCurrency, toCurrency);
     }

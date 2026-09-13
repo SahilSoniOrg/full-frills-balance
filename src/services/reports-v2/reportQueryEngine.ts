@@ -29,6 +29,10 @@ import type {
   ReportingFact as CoreFact,
 } from './calculators/core/coreTypes';
 import { resolveComparisonPeriod } from './calculators/core/coreUtils';
+import {
+  DEFAULT_CURRENCY_VALUATION_POLICY,
+  resolveCurrencyValuation,
+} from './policy/currencyValuationPolicy';
 import { classifyFactFlow } from './classification/journalClassification';
 import {
   readReportLedger,
@@ -45,6 +49,7 @@ import {
   type ReportWarning,
 } from './types/result';
 import type { MoneyMeasure, ReportMeasure } from './types/measure';
+import type { ReportingFact } from './types/fact';
 
 export interface ReportsV2QueryEngine {
   run(query: ReportQuery): Promise<ReportResult>;
@@ -60,7 +65,7 @@ function count(value: number) {
 }
 
 function percentage(value: number | null) {
-  return { kind: 'PERCENTAGE' as const, value: value ?? 0 };
+  return { kind: 'PERCENTAGE' as const, value };
 }
 
 function metric(
@@ -129,12 +134,55 @@ function coreQuery(query: ReportQuery): CalculatorInput['query'] {
   };
 }
 
-function coreFacts(facts: readonly import('./types/fact').ReportingFact[]): CoreFact[] {
-  return facts as unknown as CoreFact[];
+function coreFacts(facts: readonly ReportingFact[]): CoreFact[] {
+  return facts.map(fact => ({
+    workplaceId: fact.workplaceId,
+    journalId: fact.journalId,
+    transactionId: fact.transactionId,
+    journalDate: fact.journalDate,
+    journalStatus: fact.journalStatus,
+    accountId: fact.accountId,
+    accountType: fact.accountType,
+    accountSubtype: fact.accountSubtype,
+    parentAccountId: fact.parentAccountId,
+    accountPath: fact.accountPath,
+    isLeafAccount: fact.isLeafAccount,
+    transactionType: fact.transactionType,
+    amount: fact.amount,
+    currencyCode: fact.currencyCode,
+    historicalBaseAmount: fact.historicalBaseAmount,
+    signedBalanceDelta: fact.signedBalanceDelta,
+    journalDisplayType: fact.journalDisplayType,
+    semanticType: fact.semanticType,
+    description: fact.description,
+    notes: fact.notes,
+    plannedPaymentId: fact.plannedPaymentId,
+  }));
 }
 
-function planningFacts(facts: readonly import('./types/fact').ReportingFact[]): PlanningFact[] {
-  return facts as unknown as PlanningFact[];
+function planningFacts(facts: readonly ReportingFact[]): PlanningFact[] {
+  return facts.map(fact => ({
+    workplaceId: fact.workplaceId,
+    journalId: fact.journalId,
+    transactionId: fact.transactionId,
+    journalDate: fact.journalDate,
+    journalStatus: fact.journalStatus,
+    accountId: fact.accountId,
+    accountType: fact.accountType,
+    accountSubtype: fact.accountSubtype,
+    accountPath: fact.accountPath,
+    isLeafAccount: fact.isLeafAccount,
+    transactionType: fact.transactionType,
+    amount: fact.amount,
+    currencyCode: fact.currencyCode,
+    historicalBaseAmount: fact.historicalBaseAmount,
+    signedBalanceDelta: fact.signedBalanceDelta,
+    journalDisplayType: fact.journalDisplayType,
+    semanticType: fact.semanticType,
+    description: fact.description,
+    notes: fact.notes,
+    plannedPaymentId: fact.plannedPaymentId,
+  }));
 }
 
 function accountToPlanning(
@@ -180,11 +228,18 @@ async function readBalanceInputs(
   for (const account of accounts) {
     const balance = balanceById.get(account.id);
     if (!balance) continue;
+    const valuation = resolveCurrencyValuation(DEFAULT_CURRENCY_VALUATION_POLICY, {
+      purpose: 'BALANCE',
+      sourceCurrencyCode: account.currencyCode,
+      targetCurrencyCode: query.targetCurrency,
+      periodEndpoint: asOfDate,
+    });
     const converted = await convertAmount({
       amount: balance.balance,
       fromCurrency: account.currencyCode,
       toCurrency: query.targetCurrency,
-      mode: 'spot',
+      mode: 'historical',
+      rateDate: valuation.rateDate,
     });
     if (!converted.ok) {
       warnings.push({
@@ -213,8 +268,10 @@ async function readBalanceInputs(
 
 async function readBudgets(
   workplaceId: ReportQuery['workplaceId'],
+  targetCurrency: string,
+  period: ReportQuery['period'],
   scopedAccountIds?: ReadonlySet<string>,
-): Promise<PlanningBudget[]> {
+): Promise<{ budgets: PlanningBudget[]; warnings: ReportWarning[] }> {
   const budgets = await database.collections
     .get<Budget>('budgets')
     .query(Q.where('workplace_id', workplaceId), Q.where('active', true))
@@ -229,19 +286,48 @@ async function readBudgets(
     ids.push(scope.accountId);
     accountIdsByBudget.set(scope.budgetId, ids);
   }
-  return budgets
-    .map(budget => ({
+  const warnings: ReportWarning[] = [];
+  const valuedBudgets: PlanningBudget[] = [];
+  for (const budget of budgets) {
+    const leafAccountIds = accountIdsByBudget.get(budget.id) ?? [];
+    if (scopedAccountIds && !leafAccountIds.some(accountId => scopedAccountIds.has(accountId))) {
+      continue;
+    }
+    const converted = await convertAmount({
+      amount: budget.amount,
+      fromCurrency: budget.currencyCode,
+      toCurrency: targetCurrency,
+      mode: 'historical',
+      rateDate: period.endDate,
+    });
+    if (!converted.ok) {
+      warnings.push({
+        code: 'MISSING_EXCHANGE_RATE',
+        severity: 'WARNING',
+        message: 'A budget could not be valued in the report currency.',
+        count: 1,
+      });
+      continue;
+    }
+    const startDate =
+      budget.startDate ??
+      (/^\d{4}-\d{2}$/.test(budget.startMonth)
+        ? new Date(`${budget.startMonth}-01T00:00:00`).getTime()
+        : undefined);
+    valuedBudgets.push({
       id: budget.id,
       name: budget.name,
-      amount: budget.amount,
-      currencyCode: budget.currencyCode,
-      leafAccountIds: accountIdsByBudget.get(budget.id) ?? [],
-    }))
-    .filter(
-      budget =>
-        !scopedAccountIds ||
-        budget.leafAccountIds?.some(accountId => scopedAccountIds.has(accountId)),
-    );
+      amount: converted.amount,
+      currencyCode: targetCurrency,
+      intervalType: budget.intervalType,
+      intervalN: budget.intervalN,
+      startDate,
+      recurrenceDay: budget.recurrenceDay,
+      recurrenceMonth: budget.recurrenceMonth,
+      leafAccountIds,
+    });
+  }
+  return { budgets: valuedBudgets, warnings };
 }
 
 export function buildSections(
@@ -728,17 +814,29 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       openingBalances: opening.balances.filter(balance => isCashSubtype(balance.accountSubtype)),
       closingBalances: closing.balances.filter(balance => isCashSubtype(balance.accountSubtype)),
     };
-    const [accountsMetadata, budgets] = await Promise.all([
+    const healthSnapshotPromise =
+      query.accountIds || query.accountTypes || !query.includeArchivedAccounts
+        ? readReportLedger({
+            ...query,
+            accountIds: undefined,
+            accountTypes: undefined,
+            includeArchivedAccounts: true,
+          })
+        : Promise.resolve(snapshot);
+    const [accountsMetadata, budgetRead, healthSnapshot] = await Promise.all([
       accountQueryRepository.findMetadataByAccountIds(
         query.workplaceId,
         scopedAccounts.map(account => account.id),
       ),
-      readBudgets(query.workplaceId, scopedAccountIds),
+      readBudgets(query.workplaceId, query.targetCurrency, period, scopedAccountIds),
+      healthSnapshotPromise,
     ]);
+    const budgets = budgetRead.budgets;
     const metadataByAccount = new Map(accountsMetadata.map(item => [item.accountId, item]));
     const planningAccounts = scopedAccounts.map(account =>
       accountToPlanning(account, metadataByAccount.get(account.id)),
     );
+    const healthAccounts = healthSnapshot.accounts.map(account => accountToPlanning(account));
     const actualPlanningFacts = planningFacts(snapshot.actualFacts);
     const plannedPlanningFacts = planningFacts(snapshot.plannedFacts);
     const [budget, debt, forecast, health] = await Promise.all([
@@ -784,10 +882,10 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       ),
       Promise.resolve(
         calculateReportHealth({
-          accounts: planningAccounts,
+          accounts: healthAccounts,
           period,
-          actualFacts: actualPlanningFacts,
-          plannedFacts: plannedPlanningFacts,
+          actualFacts: planningFacts(healthSnapshot.actualFacts),
+          plannedFacts: planningFacts(healthSnapshot.plannedFacts),
           targetCurrency: query.targetCurrency,
           supportedAccountSubtypes: Object.values(AccountSubtype),
         }),
@@ -823,7 +921,15 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
         ...(item.journalIds ? { journalIds: item.journalIds as JournalId[] } : {}),
         ...(item.accountIds ? { accountIds: item.accountIds as AccountId[] } : {}),
       }));
-    const additionalWarnings = [...snapshot.warnings, ...opening.warnings, ...closing.warnings];
+    // The unscoped health snapshot contains every ledger warning, including
+    // warnings that a selected account scope would otherwise hide. Reusing it
+    // here avoids presenting the same warning twice when the snapshots match.
+    const additionalWarnings = [
+      ...healthSnapshot.warnings,
+      ...budgetRead.warnings,
+      ...opening.warnings,
+      ...closing.warnings,
+    ];
     const built = buildSections(
       query,
       overview,

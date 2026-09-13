@@ -1,6 +1,6 @@
-import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import type { AccountSubtype, AccountType, SemanticType } from '@/src/types/enums';
 import type { FlowClassification } from '@/src/services/reports-v2/classification/classificationTypes';
+import type { AccountSubtype, AccountType, SemanticType } from '@/src/types/enums';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { ReportBasis, ReportComparison, ReportGranularity, ReportPeriod } from './period';
 
 /** The single shared context inherited by every V2 report section. */

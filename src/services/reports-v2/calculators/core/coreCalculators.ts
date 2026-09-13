@@ -56,6 +56,7 @@ function groupFacts(
   labelFor: (fact: ReportingFact) => string,
 ): ReportGroup[] {
   const groups = new Map<string, ReportGroup>();
+  const journalIdsByGroup = new Map<string, Set<string>>();
   for (const fact of facts) {
     const key = keyFor(fact);
     const current = groups.get(key) ?? {
@@ -75,13 +76,14 @@ function groupFacts(
     };
     const delta = signedDelta(fact);
     if (!current.accountIds.includes(fact.accountId)) current.accountIds.push(fact.accountId);
+    const journalIds = journalIdsByGroup.get(key) ?? new Set<string>();
+    journalIds.add(fact.journalId);
+    journalIdsByGroup.set(key, journalIds);
     current.grossAmount = round(current.grossAmount + positive(delta));
     current.reversalAmount = round(current.reversalAmount + negativeMagnitude(delta));
     current.netAmount = round(current.grossAmount - current.reversalAmount);
     current.amount = current.netAmount;
-    current.journalCount = unique(
-      facts.filter(candidate => keyFor(candidate) === key).map(candidate => candidate.journalId),
-    ).length;
+    current.journalCount = journalIds.size;
     current.averageTransactionSize =
       current.journalCount > 0 ? round(current.grossAmount / current.journalCount) : 0;
     groups.set(key, current);
@@ -518,20 +520,25 @@ export function calculateOverview(input: CalculatorInput): OverviewResult {
 function netWorthHistory(
   opening: BalanceState | null,
   facts: readonly ReportingFact[],
-  period: { startDate: number; endDate: number },
+  period: { startDate: number; endDate: number; timeZone?: string },
 ): NetWorthHistoryPoint[] {
   if (!opening) return [];
   const buckets = makeBuckets(period, 'DAY');
+  const orderedFacts = [...facts].sort((left, right) => left.journalDate - right.journalDate);
+  let factIndex = orderedFacts.findIndex(fact => fact.journalDate >= period.startDate);
+  if (factIndex === -1) factIndex = orderedFacts.length;
   let assets = opening.totalAssets;
   let liabilities = opening.totalLiabilities;
   return buckets.map(bucket => {
-    for (const fact of facts.filter(
-      candidate =>
-        candidate.journalDate >= bucket.startDate && candidate.journalDate <= bucket.endDate,
-    )) {
+    while (
+      factIndex < orderedFacts.length &&
+      orderedFacts[factIndex].journalDate <= bucket.endDate
+    ) {
+      const fact = orderedFacts[factIndex];
       const delta = signedDelta(fact);
       if (fact.accountType === AccountType.ASSET) assets = round(assets + delta);
       if (fact.accountType === AccountType.LIABILITY) liabilities = round(liabilities + delta);
+      factIndex += 1;
     }
     return {
       ...bucket,

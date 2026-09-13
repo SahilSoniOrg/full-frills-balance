@@ -8,9 +8,11 @@ import {
 import {
   calculateCashFlow,
   calculateIncome,
+  calculateNetWorth,
   calculateOverview,
   calculateSpending,
 } from '../coreCalculators';
+import { makeBuckets } from '../coreUtils';
 import type { CalculatorInput, ReportingFact } from '../coreTypes';
 
 const PERIOD = {
@@ -38,6 +40,58 @@ function input(facts: readonly ReportingFact[]): CalculatorInput {
 }
 
 describe('Reports V2 core calculators', () => {
+  it('buckets calendar days in the report timezone', () => {
+    const period = {
+      startDate: Date.UTC(2026, 0, 1, 18, 30),
+      endDate: Date.UTC(2026, 0, 3, 18, 29, 59),
+      timeZone: 'Asia/Kolkata',
+    };
+
+    expect(makeBuckets(period, 'DAY')).toEqual([
+      {
+        startDate: Date.UTC(2026, 0, 1, 18, 30),
+        endDate: Date.UTC(2026, 0, 2, 18, 29, 59, 999),
+        label: '2026-01-02',
+      },
+      {
+        startDate: Date.UTC(2026, 0, 2, 18, 30),
+        endDate: Date.UTC(2026, 0, 3, 18, 29, 59),
+        label: '2026-01-03',
+      },
+    ]);
+  });
+
+  it('does not apply pre-period facts on top of opening balances', () => {
+    const facts = [
+      fact({
+        journalDate: Date.UTC(2025, 11, 31, 12),
+        accountId: 'checking',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.BANK_CHECKING,
+        transactionType: TransactionType.DEBIT,
+        amount: 100,
+      }),
+      fact({
+        journalDate: Date.UTC(2026, 0, 5, 12),
+        accountId: 'checking',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.BANK_CHECKING,
+        transactionType: TransactionType.DEBIT,
+        amount: 25,
+      }),
+    ];
+
+    const result = calculateNetWorth({
+      facts,
+      query: { period: PERIOD, targetCurrency: 'USD', granularity: 'DAY' },
+      openingBalances: [{ accountId: 'checking', accountType: AccountType.ASSET, balance: 100 }],
+      closingBalances: [{ accountId: 'checking', accountType: AccountType.ASSET, balance: 125 }],
+    });
+
+    expect(result.history[0]?.netWorth).toBe(100);
+    expect(result.history[4]?.netWorth).toBe(125);
+  });
+
   it('separates gross, reversal, net, and cash movement measures', () => {
     const facts = [
       fact({

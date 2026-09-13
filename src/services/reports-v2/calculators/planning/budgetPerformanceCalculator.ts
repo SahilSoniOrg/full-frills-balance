@@ -6,6 +6,9 @@ import type {
   PlanningBudget,
   PlanningFact,
 } from './planningContracts';
+import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
+import type { RecurrenceRule } from '@/src/services/forward-finance/recurrence/types';
+import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import {
   accountIds,
   inPeriod,
@@ -60,6 +63,45 @@ function factsForBudget(facts: readonly PlanningFact[], budget: PlanningBudget):
   return ids === undefined ? [...facts] : facts.filter(fact => ids.includes(fact.accountId));
 }
 
+function recurrenceRuleFor(budget: PlanningBudget): RecurrenceRule {
+  return {
+    intervalType: budget.intervalType || 'MONTHLY',
+    intervalN: Math.max(1, budget.intervalN || 1),
+    startDate: budget.startDate,
+    recurrenceDay: budget.recurrenceDay,
+    recurrenceMonth: budget.recurrenceMonth,
+  };
+}
+
+function budgetCycleCount(
+  budget: PlanningBudget,
+  period: BudgetPerformanceInput['period'],
+): number {
+  if (!period) return 1;
+  const rule = recurrenceRuleFor(budget);
+  // An all-time report starts at epoch, but a budget must not accrue cycles
+  // before its own anchor. For a bounded report that starts mid-cycle, using
+  // the report start still preserves the overlapping active cycle.
+  const referenceDate = Math.max(period.startDate, rule.startDate ?? period.startDate);
+  let cycle = BudgetPeriodUtils.getCurrentPeriod(rule, referenceDate);
+  let count = 0;
+  let guard = 0;
+  while (cycle.endDate < period.startDate && guard < 10000) {
+    const nextStart = RecurrenceEngine.getNextOccurrence(cycle.startDate, rule);
+    if (nextStart <= cycle.startDate) return 0;
+    cycle = BudgetPeriodUtils.getCurrentPeriod(rule, nextStart);
+    guard += 1;
+  }
+  while (cycle.startDate <= period.endDate && cycle.endDate >= period.startDate && guard < 10000) {
+    count += 1;
+    const nextStart = RecurrenceEngine.getNextOccurrence(cycle.startDate, rule);
+    if (nextStart <= cycle.startDate) break;
+    cycle = BudgetPeriodUtils.getCurrentPeriod(rule, nextStart);
+    guard += 1;
+  }
+  return count;
+}
+
 function mergeSummary(
   actual: BudgetAmountSummary,
   planned: BudgetAmountSummary,
@@ -68,16 +110,17 @@ function mergeSummary(
   precision: number,
 ): BudgetPerformanceRow {
   const progress = period ? periodProgress(period, precision) : null;
-  const remainingAmount = roundAmount(budget.amount - actual.netExpense, precision);
+  const budgetedAmount = roundAmount(budget.amount * budgetCycleCount(budget, period), precision);
+  const remainingAmount = roundAmount(budgetedAmount - actual.netExpense, precision);
   return {
     budgetId: budget.id,
     name: budget.name ?? budget.id,
-    budgetedAmount: roundAmount(budget.amount, precision),
+    budgetedAmount,
     remainingAmount,
     percentageUsed:
-      budget.amount === 0
+      budgetedAmount === 0
         ? null
-        : roundAmount((actual.netExpense / budget.amount) * 100, precision),
+        : roundAmount((actual.netExpense / budgetedAmount) * 100, precision),
     variance: remainingAmount,
     expectedSpendAtCurrentPace:
       progress && progress > 0 ? roundAmount(actual.netExpense / progress, precision) : null,
