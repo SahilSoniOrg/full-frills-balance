@@ -1,3 +1,5 @@
-import OnboardingV2Screen from '@/src/features/onboarding-v2';
+import { Redirect } from 'expo-router';
 
-export default OnboardingV2Screen;
+export default function OnboardingV2Redirect() {
+  return <Redirect href="/onboarding" />;
+}

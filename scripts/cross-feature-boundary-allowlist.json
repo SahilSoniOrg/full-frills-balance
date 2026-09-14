@@ -4,7 +4,8 @@
   ],
   "app": [
     "dev",
-    "setup"
+    "setup",
+    "onboarding-v2"
   ],
   "budget": [
     "accounts",

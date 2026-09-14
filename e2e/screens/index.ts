@@ -1,5 +1,10 @@
 export const onboarding = {
   screen: 'onboarding-screen',
+  cashClarityScreen: 'onboarding-v2-screen',
+  cashClarityInput: 'onboarding-v2-you-input',
+  cashClarityStart: 'onboarding-v2-start',
+  cashClaritySkip: 'onboarding-v2-skip',
+  cashClarityContinue: 'onboarding-v2-continue',
   nameInput: 'onboarding-name-input',
   gridContinue: 'selectable-grid-continue-button',
   themeContinue: 'onboarding-theme-continue-button',

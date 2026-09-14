@@ -66,19 +66,26 @@ export function shouldRenderGateChildren(
 ): boolean {
   if (!(kind === 'setup' || kind === 'picker')) return false;
   if (kind === 'setup' && journeyId === 'first_run') {
-    return pathname === '/onboarding-v2' || pathname === '/privacy-notice';
+    return pathname === '/onboarding' || pathname === '/privacy-notice';
   }
   return GATE_ROUTES.has(pathname);
 }
 
-export function setupEntryPath(journeyId: string): '/onboarding' | '/onboarding-v2' {
-  return journeyId === 'first_run' ? '/onboarding-v2' : '/onboarding';
+export function setupEntryPath(_journeyId?: string): '/onboarding' {
+  return '/onboarding';
+}
+
+export function shouldShowCashClarity(
+  journeyId: string | undefined,
+  routeJourney?: string,
+): boolean {
+  if (routeJourney && routeJourney !== 'first_run') return false;
+  return journeyId === 'first_run' || routeJourney === 'first_run';
 }
 
 export function shouldRedirectSetupToEntry(journeyId: string, pathname: string): boolean {
   if (pathname === '/privacy-notice') return false;
-  const href = setupEntryPath(journeyId);
-  if (href === '/onboarding-v2') return pathname !== '/onboarding-v2';
+  if (journeyId === 'first_run') return pathname !== '/onboarding';
   return !GATE_ROUTES.has(pathname);
 }
 
@@ -236,6 +243,7 @@ export function LaunchCoordinatorProvider({
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
     if (!isSetupJourneyId(resolution.journeyId)) return;
     if (loadSetupDraft()) return;
+    if (resolution.journeyId === 'first_run') return;
     saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
   }, [resolution]);
 

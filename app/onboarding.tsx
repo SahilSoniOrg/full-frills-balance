@@ -1,2 +1,1 @@
-import { SetupScreen } from '@/src/features/setup';
-export default SetupScreen;
+export { OnboardingRoute as default } from '@/src/features/app';

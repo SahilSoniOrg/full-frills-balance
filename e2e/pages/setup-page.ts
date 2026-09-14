@@ -1,7 +1,7 @@
 import { by, element, expect, waitFor } from 'detox';
 import { onboarding as setupIds } from '../screens';
 import { ONBOARDING_TIMEOUT_MS } from '../constants/timeouts';
-import { tapById } from '../actions/mobile/elementActions';
+import { tapById, tapByLabel } from '../actions/mobile/elementActions';
 
 export class SetupPage {
   async waitForDeviceSlice(): Promise<void> {
@@ -75,11 +75,42 @@ export class SetupPage {
     await expect(element(by.text(name))).toExist();
   }
 
+  async waitForCashClarityWelcome(): Promise<void> {
+    await waitFor(element(by.id(setupIds.cashClarityScreen)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+    await waitFor(element(by.id(setupIds.cashClarityInput)))
+      .toExist()
+      .withTimeout(ONBOARDING_TIMEOUT_MS);
+  }
+
+  async enterCashClarityName(name: string): Promise<void> {
+    const input = element(by.id(setupIds.cashClarityInput));
+    await input.tap();
+    await input.replaceText(name);
+  }
+
+  async acknowledgePrivacyIfNeeded(): Promise<void> {
+    try {
+      await tapByLabel('Acknowledge & continue', 5000);
+    } catch {
+      // Already acknowledged in this install.
+    }
+  }
+
   async completeFirstRun(name: string): Promise<void> {
-    await this.waitForDeviceSlice();
-    await this.enterDisplayName(name);
-    await this.continueWorkplaceSetup();
-    await this.finishAppearanceAndSummary();
+    await this.waitForCashClarityWelcome();
+    await this.enterCashClarityName(name);
+    await tapById(setupIds.cashClarityStart, ONBOARDING_TIMEOUT_MS);
+    await this.acknowledgePrivacyIfNeeded();
+    await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.cashClarityContinue, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
   }
 
   async completeFromWorkplace(includeAppearance = true): Promise<void> {
