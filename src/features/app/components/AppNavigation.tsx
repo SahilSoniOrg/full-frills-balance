@@ -49,6 +49,16 @@ export function NavigationStack() {
           gestureDirection: 'vertical',
         }}
       />
+      <Stack.Screen
+        name="onboarding-v2"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+          animation: 'slide_from_bottom',
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
+      />
       <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
       <Stack.Screen name="account-details" options={{ headerShown: false }} />
       <Stack.Screen name="journal-details" options={{ headerShown: false }} />

@@ -43,6 +43,21 @@ export async function updatePlannedPayment(
   return plannedPaymentRepository.update(workplaceId, existing, updates);
 }
 
+export async function upsertPlannedPaymentByName(
+  workplaceId: WorkplaceId,
+  input: PlannedPaymentCommandInput,
+): Promise<void> {
+  const existing = await plannedPaymentRepository.findAllActive(workplaceId);
+  const match = existing.find(
+    payment => payment.name.trim().toLowerCase() === input.name.trim().toLowerCase(),
+  );
+  if (match) {
+    await updatePlannedPayment(workplaceId, match.id, input);
+    return;
+  }
+  await createPlannedPayment(workplaceId, input);
+}
+
 export async function deletePlannedPayment(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,

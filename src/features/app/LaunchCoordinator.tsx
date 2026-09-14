@@ -44,7 +44,12 @@ export type LaunchCoordinatorState =
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
   | Extract<LaunchResolution, { kind: 'open' }>;
 
-const GATE_ROUTES = new Set(['/onboarding', '/import-selection', '/privacy-notice']);
+const GATE_ROUTES = new Set([
+  '/onboarding',
+  '/onboarding-v2',
+  '/import-selection',
+  '/privacy-notice',
+]);
 
 const LaunchCoordinatorContext = createContext<LaunchCoordinatorState | undefined>(undefined);
 
@@ -57,8 +62,24 @@ export function useLaunchCoordinator(): LaunchCoordinatorState {
 export function shouldRenderGateChildren(
   kind: LaunchCoordinatorState['kind'],
   pathname: string,
+  journeyId?: string,
 ): boolean {
-  return GATE_ROUTES.has(pathname) && (kind === 'setup' || kind === 'picker');
+  if (!(kind === 'setup' || kind === 'picker')) return false;
+  if (kind === 'setup' && journeyId === 'first_run') {
+    return pathname === '/onboarding-v2' || pathname === '/privacy-notice';
+  }
+  return GATE_ROUTES.has(pathname);
+}
+
+export function setupEntryPath(journeyId: string): '/onboarding' | '/onboarding-v2' {
+  return journeyId === 'first_run' ? '/onboarding-v2' : '/onboarding';
+}
+
+export function shouldRedirectSetupToEntry(journeyId: string, pathname: string): boolean {
+  if (pathname === '/privacy-notice') return false;
+  const href = setupEntryPath(journeyId);
+  if (href === '/onboarding-v2') return pathname !== '/onboarding-v2';
+  return !GATE_ROUTES.has(pathname);
 }
 
 export function shouldRedirectToPrivacyNotice(
@@ -269,9 +290,9 @@ export function LaunchCoordinatorContent({
     privacyRedirectInFlight.current = false;
 
     if (state.kind === 'setup') {
-      if (!GATE_ROUTES.has(pathname)) {
-        // Prevent a direct books deep link from mounting without a Workplace.
-        router.replace('/onboarding');
+      if (shouldRedirectSetupToEntry(state.journeyId, pathname)) {
+        // Keep first-run off the legacy wizard and books-only deep links.
+        router.replace(setupEntryPath(state.journeyId));
       }
       return;
     }
@@ -475,9 +496,16 @@ export function LaunchCoordinatorContent({
     return <LoadingView loading text={AppConfig.strings.common.loading} />;
   }
   if (gateChildren && state.kind === 'setup' && !GATE_ROUTES.has(pathname)) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href={setupEntryPath(state.journeyId)} />;
   }
-  if (gateChildren && shouldRenderGateChildren(state.kind, pathname)) {
+  if (
+    gateChildren &&
+    shouldRenderGateChildren(
+      state.kind,
+      pathname,
+      state.kind === 'setup' ? state.journeyId : undefined,
+    )
+  ) {
     return <>{gateChildren}</>;
   }
   if (state.kind === 'picker') {
@@ -496,5 +524,7 @@ export function LaunchCoordinatorContent({
       />
     );
   }
-  return <Redirect href="/onboarding" />;
+  return (
+    <Redirect href={state.kind === 'setup' ? setupEntryPath(state.journeyId) : '/onboarding'} />
+  );
 }

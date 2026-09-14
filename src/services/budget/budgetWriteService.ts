@@ -52,9 +52,23 @@ export class BudgetWriteService {
     return updatedBudget;
   }
 
-  /**
-   * Hard-deletes a budget and all its scopes.
-   */
+  async upsertByName(
+    workplaceId: WorkplaceId,
+    data: BudgetInput,
+    accountIds: AccountId[],
+  ): Promise<void> {
+    const existing = await budgetRepository.findAllActive(workplaceId);
+    const match = existing.find(
+      budget => budget.name.trim().toLowerCase() === data.name.trim().toLowerCase(),
+    );
+    if (match) {
+      await this.updateBudget(workplaceId, match.id, data, accountIds);
+      return;
+    }
+    await this.createBudget(workplaceId, data, accountIds);
+  }
+
+  /** Hard-deletes a budget and all its scopes. */
   async deleteBudget(workplaceId: WorkplaceId, budgetId: BudgetId): Promise<void> {
     const budget = await budgetRepository.find(workplaceId, budgetId);
     if (!budget) {

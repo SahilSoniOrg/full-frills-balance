@@ -204,6 +204,12 @@ export class BudgetRepository {
       .fetch();
   }
 
+  async findAllActive(workplaceId: WorkplaceId): Promise<Budget[]> {
+    return this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('active', true))
+      .fetch();
+  }
+
   async findAllWithAssetAccountIds(workplaceId: WorkplaceId): Promise<Budget[]> {
     return await this.budgets
       .query(Q.where('workplace_id', workplaceId), Q.where('asset_account_ids', Q.notEq(null)))

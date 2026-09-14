@@ -21,6 +21,9 @@
   "hub": [
     "journal"
   ],
+  "onboarding-v2": [
+    "setup"
+  ],
   "journal": [],
   "planned-payments": [
     "accounts",

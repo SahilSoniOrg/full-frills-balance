@@ -1,9 +1,9 @@
-import Account from '@/src/data/models/Account';
 import { LiabilityFlowGenerator } from '@/src/services/simulation/engines/LiabilityFlowGenerator';
 import { Flow, LiabilityMetadata, SimulationContext } from '@/src/services/simulation/types';
+import type { AccountFields } from '@/src/types/plainDtos';
 
 export interface LiabilityProjectionInput {
-  liabilityBalances: { account: Account; balance: number }[];
+  liabilityBalances: { account: AccountFields; balance: number }[];
   metadataMap: Map<string, LiabilityMetadata>;
   statementBalances: Map<string, number>;
   settledSinceStatement: Map<string, number>;

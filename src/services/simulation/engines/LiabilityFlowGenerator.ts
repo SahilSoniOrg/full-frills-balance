@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account from '@/src/data/models/Account';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import dayjs from 'dayjs';
 import { AccountSubtype } from '@/src/types/enums';
+import type { AccountFields } from '@/src/types/plainDtos';
 import {
   Flow,
   FlowCategory,
@@ -24,7 +24,7 @@ export class LiabilityFlowGenerator {
   static generate(
     context: SimulationContext,
     previousFlows: Flow[],
-    liabilityBalances: { account: Account; balance: number }[],
+    liabilityBalances: { account: AccountFields; balance: number }[],
     metadataMap: Map<string, LiabilityMetadata>,
     statementBalances: Map<string, number>,
     settledSinceStatement: Map<string, number>,
@@ -130,7 +130,7 @@ export class LiabilityFlowGenerator {
   }
 
   private static generateObligations(
-    acc: Account,
+    acc: AccountFields,
     currentBalance: number,
     metadata: LiabilityMetadata | undefined,
     statementBalance: number,

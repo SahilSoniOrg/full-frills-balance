@@ -145,6 +145,7 @@ const ROUTE_METADATA_MAP: Record<
   // Data Import & Onboarding
   'import-selection': { screenType: 'data_management', flowContext: 'data_import', isModal: false },
   onboarding: { screenType: 'onboarding', flowContext: 'user_setup', isModal: true },
+  'onboarding-v2': { screenType: 'onboarding', flowContext: 'cash_clarity_setup', isModal: true },
 
   // Dev & Preview
   '_design-preview': { screenType: 'developer', flowContext: 'design_preview', isModal: false },
