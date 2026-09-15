@@ -8,6 +8,7 @@ jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
   workplaceRepository: {
     findAll: jest.fn(),
     find: jest.fn(),
+    update: jest.fn(),
     createWithStarterAccounts: jest.fn(),
   },
 }));
@@ -40,7 +41,7 @@ jest.mock('@/src/services/preferences', () => ({
     },
     workplace: { clear: jest.fn() },
   },
-  preferencesMigration: { legacyCurrencyCode: undefined },
+  preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
 
 jest.mock('@/src/utils/SnapshotService', () => ({
@@ -52,11 +53,18 @@ const mockDatabaseRepository = databaseRepository as jest.Mocked<typeof database
 const { snapshotService } = jest.requireMock('@/src/utils/SnapshotService') as {
   snapshotService: { clearSnapshotsForWorkplace: jest.Mock };
 };
+const { preferencesMigration } = jest.requireMock('@/src/services/preferences') as {
+  preferencesMigration: {
+    legacyCurrencyCode?: string;
+    clearLegacyCurrencyCode: jest.Mock;
+  };
+};
 
 describe('WorkplaceService transitions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (preferences.device as any).activeWorkplaceId = undefined;
+    preferencesMigration.legacyCurrencyCode = undefined;
   });
 
   it('clears the active pointer when deleting the active workplace', async () => {
@@ -136,5 +144,46 @@ describe('WorkplaceService transitions', () => {
         currencyCode: 'USD',
       }),
     ).resolves.toBe(published);
+  });
+
+  it('applies and then clears a legacy global currency', async () => {
+    preferencesMigration.legacyCurrencyCode = 'INR';
+    const first = { id: 'first-wp', defaultCurrencyCode: 'USD' } as any;
+    const second = { id: 'second-wp', defaultCurrencyCode: 'EUR' } as any;
+    mockWorkplaces.findAll.mockResolvedValue([first, second]);
+
+    await workplaceService.migrateLegacyCurrency();
+
+    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(1, first, {
+      defaultCurrencyCode: 'INR',
+    });
+    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(2, second, {
+      defaultCurrencyCode: 'INR',
+    });
+    expect(preferencesMigration.clearLegacyCurrencyCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a legacy global currency when there are no workplaces yet', async () => {
+    preferencesMigration.legacyCurrencyCode = 'INR';
+    mockWorkplaces.findAll.mockResolvedValue([]);
+
+    await workplaceService.migrateLegacyCurrency();
+
+    expect(preferencesMigration.clearLegacyCurrencyCode).not.toHaveBeenCalled();
+  });
+
+  it('only migrates workplaces captured before onboarding creates a new one', async () => {
+    preferencesMigration.legacyCurrencyCode = 'INR';
+    const existing = { id: 'existing-wp', defaultCurrencyCode: 'USD' } as any;
+    const createdLater = { id: 'created-later', defaultCurrencyCode: 'EUR' } as any;
+    mockWorkplaces.findAll.mockResolvedValue([existing, createdLater]);
+
+    await workplaceService.migrateLegacyCurrency(['existing-wp' as any]);
+
+    expect(mockWorkplaces.update).toHaveBeenCalledWith(existing, {
+      defaultCurrencyCode: 'INR',
+    });
+    expect(mockWorkplaces.update).not.toHaveBeenCalledWith(createdLater, expect.anything());
+    expect(preferencesMigration.clearLegacyCurrencyCode).toHaveBeenCalledTimes(1);
   });
 });

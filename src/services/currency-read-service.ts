@@ -33,10 +33,6 @@ export class CurrencyReadService {
   async getAllPrecisions(): Promise<Map<string, number>> {
     return currencyRepository.getAllPrecisions();
   }
-
-  async findAll(): Promise<Currency[]> {
-    return currencyRepository.findAll();
-  }
 }
 
 export const currencyReadService = new CurrencyReadService();

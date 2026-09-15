@@ -282,23 +282,6 @@ export class ExchangeRateService {
   }
 
   /**
-   * Convert amount between currencies
-   */
-  async convert(
-    amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): Promise<{ convertedAmount: number; rate: number }> {
-    const rate = await this.getRate(fromCurrency, toCurrency);
-    const convertedAmount = amount * rate;
-
-    return {
-      convertedAmount,
-      rate,
-    };
-  }
-
-  /**
    * Synchronizes today's rates for a specific base currency.
    * If rates are missing or stale, it performs a network fetch and persists to DB.
    */

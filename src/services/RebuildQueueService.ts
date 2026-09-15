@@ -217,20 +217,6 @@ class RebuildQueueService {
     this.syncQueueToDisk();
   }
 
-  /**
-   * Get the current queue size for debugging/monitoring.
-   */
-  get pendingCount(): number {
-    return this.queue.size;
-  }
-
-  /**
-   * Check if there are pending rebuilds.
-   */
-  get hasPending(): boolean {
-    return this.queue.size > 0 || this.isProcessing || this.pendingRetries.size > 0;
-  }
-
   private scheduleProcessing(): void {
     this.clearProcessingTimer();
     const generation = this.lifecycleGeneration;

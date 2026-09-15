@@ -10,7 +10,7 @@ import {
 } from '@/src/services/accounts/accountDerivedReads';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { useObservable } from '@/src/hooks/useObservable';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -111,7 +111,7 @@ export function useAccountBalances(
         firstFastDebounce(Animation.dataRefreshDebounce),
         switchMap(async () => {
           const targetCurrency = currencyCode;
-          const balances = await balanceService.getAccountBalances(
+          const balances = await balanceReadService.getAccountBalances(
             workplaceId,
             undefined,
             targetCurrency,

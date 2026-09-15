@@ -8,7 +8,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { analytics } from '@/src/services/analytics';
-import { preferences } from '@/src/services/preferences';
+import { preferences, preferencesMigration } from '@/src/services/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
@@ -67,14 +67,6 @@ export class WorkplaceService {
     }
     analytics.logWorkplaceCreated(name, icon);
     return workplace;
-  }
-
-  getActiveWorkplaceId(): string {
-    const id = preferences.device.activeWorkplaceId;
-    if (!id) {
-      throw new Error('No active workplace ID found in preferences');
-    }
-    return id;
   }
 
   /** Validate the destination before publishing the Device active pointer. */
@@ -199,6 +191,29 @@ export class WorkplaceService {
       }),
       distinctUntilChanged(),
     );
+  }
+
+  /** Apply the pre-workplace global currency to every existing Workplace once. */
+  async migrateLegacyCurrency(initialWorkplaceIds?: readonly WorkplaceId[]): Promise<void> {
+    const legacyCurrency = preferencesMigration.legacyCurrencyCode;
+    if (!legacyCurrency) return;
+
+    const workplaceIds =
+      initialWorkplaceIds ?? (await this.getAllWorkplaces()).map(workplace => workplace.id);
+    if (workplaceIds.length === 0) return;
+
+    const initialIds = new Set(workplaceIds);
+    const workplaces = (await this.getAllWorkplaces()).filter(workplace =>
+      initialIds.has(workplace.id),
+    );
+    if (workplaces.length === 0) return;
+
+    logger.info(`[WorkplaceService] Migrating legacy currency ${legacyCurrency} to workplaces`);
+    for (const workplace of workplaces) {
+      if (workplace.defaultCurrencyCode === legacyCurrency) continue;
+      await workplaceRepository.update(workplace, { defaultCurrencyCode: legacyCurrency });
+    }
+    preferencesMigration.clearLegacyCurrencyCode();
   }
 }
 

@@ -3,7 +3,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import {
   transactionQueryRepository,
   transactionWriteRepository,

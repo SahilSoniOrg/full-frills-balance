@@ -31,11 +31,9 @@ function isPlaceholderInitial(value: unknown): boolean {
   return false;
 }
 
-export interface UseObservableOptions<T> {
+export interface UseObservableOptions {
   /** Keep previous data while loading new data */
   keepPreviousData?: boolean;
-  /** Optional comparator to prevent re-renders when data hasn't changed */
-  comparator?: (prev: T, next: T) => boolean;
 }
 
 /**
@@ -50,7 +48,7 @@ export function useObservable<T>(
   observableFactory: () => Observable<T>,
   deps: DependencyList,
   initialValue: T | (() => T),
-  options: UseObservableOptions<T> = {},
+  options: UseObservableOptions = {},
 ): UseObservableResult<T> {
   const factoryRef = useRef(observableFactory);
   useLayoutEffect(() => {
@@ -86,7 +84,7 @@ export function useObservable<T>(
 
   useEffect(() => {
     let isActive = true;
-    const { keepPreviousData = true, comparator } = optionsRef.current;
+    const { keepPreviousData = true } = optionsRef.current;
 
     if (!keepPreviousData) {
       setData(resolvedInitialValue);
@@ -101,11 +99,6 @@ export function useObservable<T>(
     const subscription = stableFactory().subscribe({
       next: result => {
         if (!isActive) return;
-
-        if (comparator && comparator(dataRef.current, result)) {
-          setIsLoading(false);
-          return;
-        }
 
         dataRef.current = result;
         setData(result);
@@ -145,7 +138,7 @@ export function useObservableWithEnrichment<T, E>(
   enricher: (data: T) => Promise<E>,
   deps: DependencyList,
   initialValue: E,
-  options: UseObservableOptions<E> = {},
+  options: UseObservableOptions = {},
 ): UseObservableResult<E> {
   const factoryRef = useRef(observableFactory);
   const enricherRef = useRef(enricher);
@@ -181,7 +174,7 @@ export function useObservableWithEnrichment<T, E>(
   useEffect(() => {
     let isActive = true;
     let sequence = 0;
-    const { keepPreviousData = true, comparator } = optionsRef.current;
+    const { keepPreviousData = true } = optionsRef.current;
 
     if (!keepPreviousData) {
       setData(initialSeedRef.current);
@@ -199,11 +192,6 @@ export function useObservableWithEnrichment<T, E>(
         try {
           const enriched = await stableEnricher(result);
           if (!isActive || current !== sequence) return;
-
-          if (comparator && comparator(dataRef.current, enriched)) {
-            setIsLoading(false);
-            return;
-          }
 
           dataRef.current = enriched;
           setData(enriched);
@@ -226,7 +214,7 @@ export function useObservableWithEnrichment<T, E>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, stableEnricher, depsRevision]); // data, keepPreviousData, and comparator removed Log)
+  }, [stableFactory, stableEnricher, depsRevision]);
 
   return { data, isLoading, error, version };
 }

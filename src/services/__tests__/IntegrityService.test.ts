@@ -6,25 +6,23 @@ import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { IntegrityService } from '@/src/services/integrity';
 import { repairAccountBalance } from '@/src/services/integrity/integrityRepair';
 import * as integrityVerification from '@/src/services/integrity/integrityVerification';
+import { forceRunCheck } from '@/src/services/integrity/integrityOrchestrator';
 import { Q } from '@nozbe/watermelondb';
 
-describe('IntegrityService', () => {
-  let service: IntegrityService;
+describe('Integrity checks', () => {
   let cashAccountId: string;
   let equityAccountId: string;
 
   beforeEach(async () => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-
-    service = new IntegrityService();
 
     const cash = await accountWriteRepository.create({
       name: 'Cash',
@@ -86,7 +84,7 @@ describe('IntegrityService', () => {
         'wp-1' as WorkplaceId,
       );
 
-      const balance = await service.computeBalanceFromTransactions(
+      const balance = await integrityVerification.computeBalanceFromTransactions(
         cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
@@ -128,7 +126,7 @@ describe('IntegrityService', () => {
         });
       });
 
-      const result = await service.verifyAccountBalance(
+      const result = await integrityVerification.verifyAccountBalance(
         cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
@@ -171,9 +169,9 @@ describe('IntegrityService', () => {
         });
       });
 
-      await service.repairAccountBalance('wp-1' as WorkplaceId, cashAccountId as AccountId);
+      await repairAccountBalance('wp-1' as WorkplaceId, cashAccountId as AccountId);
 
-      const result = await service.verifyAccountBalance(
+      const result = await integrityVerification.verifyAccountBalance(
         cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
@@ -385,7 +383,7 @@ describe('IntegrityService', () => {
       });
 
       // The computed balance should be 300 (100 from snapshot + 200 from tx2)
-      const balance = await service.computeBalanceFromTransactions(
+      const balance = await integrityVerification.computeBalanceFromTransactions(
         cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
@@ -425,7 +423,7 @@ describe('IntegrityService', () => {
       const batchSpy = jest.spyOn(database, 'batch');
 
       try {
-        await service.forceRunCheck('wp-1' as WorkplaceId);
+        await forceRunCheck('wp-1' as WorkplaceId);
 
         expect(scanSpy).toHaveBeenCalledWith('wp-1');
         expect(verifySpy).toHaveBeenCalledTimes(3);
@@ -442,7 +440,9 @@ describe('IntegrityService', () => {
     });
 
     it('does not notify a foreign account when repair output contains its ID', async () => {
-      jest.spyOn(service, 'scanForNullAccountTransactions').mockResolvedValue();
+      jest
+        .spyOn(integrityVerification, 'scanForNullAccountTransactions')
+        .mockResolvedValue(undefined);
 
       const foreignAccount = await accountWriteRepository.create({
         name: 'Foreign account',
@@ -456,29 +456,31 @@ describe('IntegrityService', () => {
         });
       });
 
-      jest.spyOn(service, 'verifyAccountBalance').mockImplementation(async accountId => {
-        if (accountId === cashAccountId) {
+      jest
+        .spyOn(integrityVerification, 'verifyAccountBalance')
+        .mockImplementation(async accountId => {
+          if (accountId === cashAccountId) {
+            return {
+              accountId: foreignAccount.id,
+              accountName: foreignAccount.name,
+              cachedBalance: 999,
+              computedBalance: 100,
+              matches: false,
+              discrepancy: 899,
+            };
+          }
           return {
-            accountId: foreignAccount.id,
-            accountName: foreignAccount.name,
-            cachedBalance: 999,
-            computedBalance: 100,
-            matches: false,
-            discrepancy: 899,
+            accountId,
+            accountName: 'Equity',
+            cachedBalance: 0,
+            computedBalance: 0,
+            matches: true,
+            discrepancy: 0,
           };
-        }
-        return {
-          accountId,
-          accountName: 'Equity',
-          cachedBalance: 0,
-          computedBalance: 0,
-          matches: true,
-          discrepancy: 0,
-        };
-      });
+        });
       jest.spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal').mockResolvedValue();
 
-      await service.forceRunCheck('wp-1' as WorkplaceId);
+      await forceRunCheck('wp-1' as WorkplaceId);
 
       const unchangedForeignAccount = await accountQueryRepository.find(
         'wp-2' as WorkplaceId,
@@ -504,13 +506,13 @@ describe('IntegrityService', () => {
 
       // Scanning wp-1 should not throw because the corrupted transaction is in wp-2
       await expect(
-        service.scanForNullAccountTransactions('wp-1' as WorkplaceId),
+        integrityVerification.scanForNullAccountTransactions('wp-1' as WorkplaceId),
       ).resolves.toBeUndefined();
 
       // Scanning wp-2 must throw
-      await expect(service.scanForNullAccountTransactions('wp-2' as WorkplaceId)).rejects.toThrow(
-        /CRITICAL INTEGRITY FAILURE.*Workplace: wp-2/,
-      );
+      await expect(
+        integrityVerification.scanForNullAccountTransactions('wp-2' as WorkplaceId),
+      ).rejects.toThrow(/CRITICAL INTEGRITY FAILURE.*Workplace: wp-2/);
     });
   });
 });

@@ -68,7 +68,6 @@ describe('RebuildQueueService lifecycle', () => {
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
     expect(rebuildAccountBalances).toHaveBeenNthCalledWith(1, workplaceId, accountId, 123);
     expect(rebuildAccountBalances).toHaveBeenNthCalledWith(2, workplaceId, accountId, 123);
-    expect(queue.hasPending).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -97,7 +96,6 @@ describe('RebuildQueueService lifecycle', () => {
     await flushPromise;
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
-    expect(queue.hasPending).toBe(false);
   });
 
   it('stop cancels retry timers and prevents stopped work from returning', async () => {
@@ -106,14 +104,11 @@ describe('RebuildQueueService lifecycle', () => {
 
     await jest.advanceTimersByTimeAsync(100);
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(queue.hasPending).toBe(true);
 
     queue.stop();
     await jest.advanceTimersByTimeAsync(5_000);
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(queue.pendingCount).toBe(0);
-    expect(queue.hasPending).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -135,7 +130,6 @@ describe('RebuildQueueService lifecycle', () => {
     await jest.advanceTimersByTimeAsync(5_000);
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(queue.hasPending).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -157,7 +151,6 @@ describe('RebuildQueueService lifecycle', () => {
     await Promise.resolve();
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(queue.hasPending).toBe(false);
   });
 
   it('does not replay a deliberately stopped batch, but recovers a crashed batch on restart', async () => {
@@ -222,7 +215,6 @@ describe('RebuildQueueService lifecycle', () => {
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
     expect(rebuildAccountBalances).toHaveBeenLastCalledWith(workplaceId, accountId, 100);
-    expect(queue.hasPending).toBe(false);
   });
 
   it('stops retrying after the configured terminal failure limit', async () => {
@@ -236,7 +228,6 @@ describe('RebuildQueueService lifecycle', () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Giving up on account workplace-1__account-1 after 3 attempts'),
     );
-    expect(queue.hasPending).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -256,7 +247,6 @@ describe('RebuildQueueService lifecycle', () => {
 
     expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
     expect(rebuildAccountBalances).toHaveBeenCalledWith(workplaceId, accountId, 100);
-    expect(queue.hasPending).toBe(false);
   });
 
   it('persists retry-delayed work in the durable queue snapshot', async () => {
@@ -271,9 +261,7 @@ describe('RebuildQueueService lifecycle', () => {
     expect(JSON.parse(durableWrites.at(-1)?.[1] ?? '[]')).toEqual([
       ['workplace-1__account-1', 777],
     ]);
-    expect(queue.hasPending).toBe(true);
 
     await queue.flush();
-    expect(queue.hasPending).toBe(false);
   });
 });

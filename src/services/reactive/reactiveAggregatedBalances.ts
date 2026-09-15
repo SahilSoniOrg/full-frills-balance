@@ -4,7 +4,7 @@ import { accountListMetricsQueries } from '@/src/data/repositories/account/Accou
 import { mapAccountListRowToBalance } from '@/src/data/repositories/account/accountListBalanceMapping';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
-import { balanceService } from '@/src/services/balance';
+import { balanceHierarchyAggregator } from '@/src/services/balance/balanceHierarchyAggregator';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceActiveTransactionCount,
@@ -45,13 +45,6 @@ export function snapshotAccountObservation(accounts: Account[]): AccountObservat
     )
     .join('|');
   return { accounts, signature };
-}
-
-export function clearReactiveAggregatedBalancesCache(workplaceId?: WorkplaceId): void {
-  reactiveCacheCoordinator.clearNamespace(
-    REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-    workplaceId,
-  );
 }
 
 /**
@@ -131,7 +124,7 @@ export function observeAggregatedAccountBalances(
               precisionMap.set(account.id, precision);
             }
 
-            await balanceService.aggregateBalances(
+            await balanceHierarchyAggregator.aggregateBalances(
               accounts,
               balancesMap,
               precisionMap,

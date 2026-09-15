@@ -76,7 +76,7 @@ export class AccountingRebuildService {
 
   /**
    * Internal version that DOES NOT perform its own database.write.
-   * Use this when calling from an existing transaction (e.g. IntegrityService batch).
+   * Use this when calling from an existing transaction (e.g. an integrity batch).
    */
   async rebuildAccountBalancesInternal(
     workplaceId: WorkplaceId,

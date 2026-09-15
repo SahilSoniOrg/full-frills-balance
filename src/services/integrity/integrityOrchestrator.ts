@@ -68,6 +68,7 @@ export async function forceRunCheck(
   const accounts = await accountQueryRepository.findAll(workplaceId);
   const total = accounts.length;
   const results: BalanceVerificationResult[] = [];
+  const verificationFailures: AccountId[] = [];
 
   let checkedCount = 0;
   await Promise.all(
@@ -76,6 +77,7 @@ export async function forceRunCheck(
         const result = await verifyAccountBalance(account.id, workplaceId);
         results.push(result);
       } catch (error) {
+        verificationFailures.push(account.id);
         logger.error(`[IntegrityOrchestrator] Failed to verify account ${account.id}`, error);
       } finally {
         checkedCount++;
@@ -150,6 +152,12 @@ export async function forceRunCheck(
     totalAccounts: results.length,
     discrepancies: discrepancies.length,
   });
+
+  if (verificationFailures.length > 0) {
+    throw new Error(
+      `Integrity verification failed for ${verificationFailures.length} account(s): ${verificationFailures.join(', ')}`,
+    );
+  }
 
   return {
     totalAccounts: results.length,
@@ -273,7 +281,9 @@ export async function runStartupCheck(
     }
   }
 
-  if (!signal?.aborted) {
+  const repairsComplete =
+    repairsAttempted === discrepancies.length && repairsSuccessful === repairsAttempted;
+  if (!signal?.aborted && repairsComplete) {
     markIntegrityCheckComplete(workplaceId);
   }
 

@@ -10,17 +10,6 @@ import {
 import { WorkplaceId } from '@/src/types/ids';
 import { Observable } from 'rxjs';
 
-export function clearReactiveWorkplaceObservesCache(workplaceId?: WorkplaceId): void {
-  reactiveCacheCoordinator.clearNamespaces(
-    [
-      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
-      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
-      REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
-    ],
-    workplaceId,
-  );
-}
-
 export function clearReactiveWorkplaceAccountsAndJournalMetaCache(workplaceId?: WorkplaceId): void {
   reactiveCacheCoordinator.clearNamespaces(
     [REACTIVE_CACHE_NAMESPACES.workplaceAccounts, REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta],

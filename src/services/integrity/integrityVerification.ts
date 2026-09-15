@@ -191,6 +191,7 @@ export async function verifyAllAccountBalances(
 ): Promise<BalanceVerificationResult[]> {
   const accounts = await accountQueryRepository.findAll(workplaceId);
   const results: BalanceVerificationResult[] = [];
+  const failures: AccountId[] = [];
 
   await Promise.all(
     accounts.map(async account => {
@@ -198,10 +199,17 @@ export async function verifyAllAccountBalances(
         const result = await verifyAccountBalance(account.id, workplaceId);
         results.push(result);
       } catch (error) {
+        failures.push(account.id);
         logger.error(`[IntegrityVerification] Failed to verify account ${account.id}`, error);
       }
     }),
   );
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Integrity verification failed for ${failures.length} account(s): ${failures.join(', ')}`,
+    );
+  }
 
   return results;
 }

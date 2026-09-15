@@ -12,20 +12,17 @@ import { journalListQueryRepository } from '@/src/data/repositories/journal/jour
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { balanceService } from '@/src/services/balance';
-import { IntegrityService } from '@/src/services/integrity';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import { verifyAccountBalance } from '@/src/services/integrity';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 describe('E2E Workflows', () => {
-  let integrityService: IntegrityService;
-
   beforeEach(async () => {
     rebuildQueueService.stop();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    integrityService = new IntegrityService();
   }, 30000);
 
   afterAll(() => {
@@ -59,7 +56,7 @@ describe('E2E Workflows', () => {
       });
 
       // Morning: Coffee
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Morning Coffee',
           journalDate: Date.now() + 1000,
@@ -81,7 +78,7 @@ describe('E2E Workflows', () => {
       );
 
       // Lunch
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Lunch',
           journalDate: Date.now() + 2000,
@@ -103,7 +100,7 @@ describe('E2E Workflows', () => {
       );
 
       // Bus ride
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Bus',
           journalDate: Date.now() + 3000,
@@ -128,17 +125,17 @@ describe('E2E Workflows', () => {
       await rebuildQueueService.flush();
 
       // Verify balances
-      const walletBalance = await balanceService.getAccountBalance(
+      const walletBalance = await balanceReadService.getAccountBalance(
         wallet.id,
         'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
-      const foodBalance = await balanceService.getAccountBalance(
+      const foodBalance = await balanceReadService.getAccountBalance(
         food.id,
         'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
-      const transportBalance = await balanceService.getAccountBalance(
+      const transportBalance = await balanceReadService.getAccountBalance(
         transport.id,
         'test-workplace' as WorkplaceId,
         Date.now() + 5000,
@@ -150,7 +147,7 @@ describe('E2E Workflows', () => {
       expect(transportBalance.balance).toBe(2.5);
 
       // Verify integrity
-      const walletIntegrity = await integrityService.verifyAccountBalance(
+      const walletIntegrity = await verifyAccountBalance(
         wallet.id,
         'test-workplace' as WorkplaceId,
         Date.now() + 5000,
@@ -199,7 +196,7 @@ describe('E2E Workflows', () => {
       });
 
       // Make a purchase
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Accidental purchase',
           journalDate: FIXED_DATE + 10000,
@@ -222,7 +219,7 @@ describe('E2E Workflows', () => {
 
       // Verify balance after purchase
       await rebuildQueueService.flush();
-      let cashBalance = await balanceService.getAccountBalance(
+      let cashBalance = await balanceReadService.getAccountBalance(
         cash.id,
         'test-workplace' as WorkplaceId,
       );
@@ -239,7 +236,7 @@ describe('E2E Workflows', () => {
       await rebuildQueueService.flush();
 
       // Verify balance is restored
-      cashBalance = await balanceService.getAccountBalance(
+      cashBalance = await balanceReadService.getAccountBalance(
         cash.id,
         'test-workplace' as WorkplaceId,
       );
@@ -263,7 +260,7 @@ describe('E2E Workflows', () => {
       });
 
       // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Purchase in EUR',
           journalDate: Date.now(),
@@ -288,11 +285,11 @@ describe('E2E Workflows', () => {
       // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
-      const usdBalance = await balanceService.getAccountBalance(
+      const usdBalance = await balanceReadService.getAccountBalance(
         usdCash.id,
         'test-workplace' as WorkplaceId,
       );
-      const eurBalance = await balanceService.getAccountBalance(
+      const eurBalance = await balanceReadService.getAccountBalance(
         eurExpense.id,
         'test-workplace' as WorkplaceId,
       );

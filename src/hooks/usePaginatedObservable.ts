@@ -12,18 +12,6 @@
 import { useLayoutEffect, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
-export interface DateRange {
-  startDate: number;
-  endDate: number;
-}
-
-export interface AccountDateRange extends DateRange {
-  accountId?: string;
-  accountVersion?: number;
-  journalIds?: string[];
-  plannedPaymentId?: string;
-}
-
 export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
   /** Number of items per page */
   pageSize: number;
@@ -39,8 +27,6 @@ export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
   suppressResetOnSearch?: boolean;
   /** Optional key builder for filter to bypass object identity check */
   getFilterKey?: (filter: F) => string;
-  /** Optional version key getter to force reload on version bump */
-  getVersionKey?: (filter: F) => number;
   /** Optional initial items to show while the first page loads (e.g. from cache) */
   initialItems?: E[] | (() => E[]);
 }
@@ -67,7 +53,6 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     enrich,
     suppressResetOnSearch = false,
     getFilterKey,
-    getVersionKey,
     initialItems,
   } = options;
 
@@ -109,13 +94,9 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     itemsRef.current = items;
   });
 
-  // Version key for re-fetching without clearing (if filter object supports it)
-  const versionKey = filter && getVersionKey ? getVersionKey(filter) : 0;
-
   // Track previous filter inputs to detect filter changes vs pagination
   const prevFilterRef = useRef({
     structuralKey,
-    versionKey,
     observe,
     enrich,
     pageSize,
@@ -131,7 +112,6 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       prev.observe !== observe ||
       prev.enrich !== enrich ||
       prev.pageSize !== pageSize;
-    const isVersionChange = prev.versionKey !== versionKey;
 
     const {
       observe: currentObserve,
@@ -142,9 +122,8 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       pageSize: AppPageSize,
     } = propsRef.current;
 
-    if (isStructuralChange || isVersionChange) {
-      const shouldSuppressReset =
-        currentSuppress && prev.structuralKey !== structuralKey && prev.versionKey === versionKey;
+    if (isStructuralChange) {
+      const shouldSuppressReset = currentSuppress && prev.structuralKey !== structuralKey;
 
       // Only show loading if it's a structural change or the list is currently empty.
       if (!shouldSuppressReset && (isStructuralChange || itemsRef.current.length === 0)) {
@@ -154,7 +133,6 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       setHasMore(true);
       prevFilterRef.current = {
         structuralKey,
-        versionKey,
         observe: currentObserve,
         enrich: currentEnrich,
         pageSize: AppPageSize,
@@ -210,16 +188,7 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [
-    currentLimit,
-    structuralKey,
-    versionKey,
-    retryKey,
-    observe,
-    enrich,
-    pageSize,
-    resolvedInitialItems,
-  ]); // Added stable prop dependencies Log)
+  }, [currentLimit, structuralKey, retryKey, observe, enrich, pageSize, resolvedInitialItems]);
 
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore) return;

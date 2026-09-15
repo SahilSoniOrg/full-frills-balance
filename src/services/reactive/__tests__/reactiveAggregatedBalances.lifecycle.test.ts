@@ -2,12 +2,9 @@ import { NEVER, Observable, Subject, of } from 'rxjs';
 
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
-import { balanceService } from '@/src/services/balance';
+import { balanceHierarchyAggregator } from '@/src/services/balance/balanceHierarchyAggregator';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import {
-  clearReactiveAggregatedBalancesCache,
-  observeAggregatedAccountBalances,
-} from '@/src/services/reactive/reactiveAggregatedBalances';
+import { observeAggregatedAccountBalances } from '@/src/services/reactive/reactiveAggregatedBalances';
 import {
   observeWorkplaceAccounts,
   observeWorkplaceActiveTransactionCount,
@@ -16,6 +13,10 @@ import {
 import { wealthService } from '@/src/services/wealth-service';
 import { WorkplaceId } from '@/src/types/ids';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 
 jest.mock('@/src/services/reactive/reactiveWorkplaceObserves', () => ({
   observeWorkplaceAccounts: jest.fn(),
@@ -28,8 +29,8 @@ jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
 jest.mock('@/src/data/repositories/account/AccountListMetricsQueries', () => ({
   accountListMetricsQueries: { getAccountListItemsRaw: jest.fn() },
 }));
-jest.mock('@/src/services/balance', () => ({
-  balanceService: { aggregateBalances: jest.fn() },
+jest.mock('@/src/services/balance/balanceHierarchyAggregator', () => ({
+  balanceHierarchyAggregator: { aggregateBalances: jest.fn() },
 }));
 jest.mock('@/src/services/currency-read-service', () => ({
   currencyReadService: { getAllPrecisions: jest.fn() },
@@ -44,17 +45,17 @@ jest.mock('@/src/utils/SnapshotService', () => ({
 describe('reactiveAggregatedBalances lifecycle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    clearReactiveAggregatedBalancesCache();
+    reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances);
     (observeWorkplaceJournalMeta as jest.Mock).mockReturnValue(NEVER);
     (observeWorkplaceActiveTransactionCount as jest.Mock).mockReturnValue(NEVER);
     (exchangeRateRepository.observeAll as jest.Mock).mockReturnValue(NEVER);
     (accountListMetricsQueries.getAccountListItemsRaw as jest.Mock).mockResolvedValue([]);
     (currencyReadService.getAllPrecisions as jest.Mock).mockResolvedValue(new Map());
-    (balanceService.aggregateBalances as jest.Mock).mockResolvedValue(undefined);
+    (balanceHierarchyAggregator.aggregateBalances as jest.Mock).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    clearReactiveAggregatedBalancesCache();
+    reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances);
   });
 
   it('disposes only the departing workplace upstream observation', () => {
@@ -71,12 +72,18 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     observeAggregatedAccountBalances('USD', firstWorkplace).subscribe();
     observeAggregatedAccountBalances('USD', secondWorkplace).subscribe();
 
-    clearReactiveAggregatedBalancesCache(firstWorkplace);
+    reactiveCacheCoordinator.clearNamespace(
+      REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+      firstWorkplace,
+    );
 
     expect(firstTeardown).toHaveBeenCalledTimes(1);
     expect(secondTeardown).not.toHaveBeenCalled();
 
-    clearReactiveAggregatedBalancesCache(secondWorkplace);
+    reactiveCacheCoordinator.clearNamespace(
+      REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+      secondWorkplace,
+    );
     expect(secondTeardown).toHaveBeenCalledTimes(1);
   });
 
@@ -102,7 +109,10 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     }
     expect(wealthService.calculateSummary).toHaveBeenCalled();
 
-    clearReactiveAggregatedBalancesCache(workplaceId);
+    reactiveCacheCoordinator.clearNamespace(
+      REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+      workplaceId,
+    );
     resolveWealth?.({ netWorth: 123 });
     await wealthPromise;
     await Promise.resolve();
