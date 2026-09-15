@@ -34,7 +34,7 @@ export const SafeToSpendChart = ({
   const formatSts = useStsMoneyFormat(isLoading);
 
   const { trackChartPoint } = useDashboardFeatureActions();
-  const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const analyticsTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     return () => {

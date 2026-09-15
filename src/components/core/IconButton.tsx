@@ -6,11 +6,14 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { usePressScale } from '@/src/hooks/usePressScale';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 import {
   Keyboard,
   StyleSheet,
   TouchableOpacity,
+  type GestureResponderEvent,
   type TouchableOpacityProps,
   type ViewStyle,
 } from 'react-native';
@@ -64,29 +67,54 @@ export function IconButton({
   iconColor,
   style,
   onPress,
+  onPressIn,
+  onPressOut,
   disabled,
   ...props
 }: IconButtonProps) {
   const { theme } = useTheme();
+  const { animate, transition, handlePressIn, handlePressOut } = usePressScale();
 
   const config = VARIANTS[variant](theme, disabled ?? false);
   const finalIconColor = iconColor ?? config.iconColor;
 
+  const onPressInHandler = (event: GestureResponderEvent) => {
+    onPressIn?.(event);
+    handlePressIn();
+  };
+
+  const onPressOutHandler = (event: GestureResponderEvent) => {
+    onPressOut?.(event);
+    handlePressOut();
+  };
+
   return (
     <TouchableOpacity
+      {...props}
       onPress={e => {
         Keyboard.dismiss();
         onPress?.(e);
       }}
+      onPressIn={onPressInHandler}
+      onPressOut={onPressOutHandler}
       activeOpacity={Opacity.heavy}
-      style={[styles.button, { backgroundColor: config.backgroundColor }, config.elevation, style]}
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
-      {...props}
     >
-      <AppIcon name={name} size={size} color={finalIconColor} />
+      <MotiView
+        animate={animate}
+        transition={transition}
+        style={[
+          styles.button,
+          { backgroundColor: config.backgroundColor },
+          config.elevation,
+          style,
+        ]}
+      >
+        <AppIcon name={name} size={size} color={finalIconColor} />
+      </MotiView>
     </TouchableOpacity>
   );
 }

@@ -302,12 +302,25 @@ jest.mock('react-native/Libraries/ReactNative/I18nManager', () => ({
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
   const { View } = require('react-native');
+  const Animated = {
+    call: jest.fn(),
+    View,
+    Text: View,
+    ScrollView: View,
+    Image: View,
+    createAnimatedComponent: jest.fn(c => c),
+  };
   return {
-    default: {
-      call: jest.fn(),
-    },
+    __esModule: true,
+    default: Animated,
     useSharedValue: jest.fn(val => ({ value: val })),
-    useAnimatedStyle: jest.fn(fn => ({})),
+    useAnimatedStyle: jest.fn(fn => {
+      try {
+        return typeof fn === 'function' ? fn() : {};
+      } catch {
+        return {};
+      }
+    }),
     useAnimatedGestureHandler: jest.fn(handlers => ({})),
     useAnimatedScrollHandler: jest.fn(fn => ({})),
     withTiming: jest.fn((toValue, config, cb) => toValue),

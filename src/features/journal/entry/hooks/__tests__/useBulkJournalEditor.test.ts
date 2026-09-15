@@ -3,6 +3,7 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { act, renderHook } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
@@ -16,6 +17,10 @@ jest.mock('@/src/services/journal/journalDomainService', () => ({
   journalService: {
     saveBulkJournalEntries: jest.fn(),
   },
+}));
+
+jest.mock('@/src/utils/haptics', () => ({
+  triggerHaptic: jest.fn(),
 }));
 
 describe('useBulkJournalEditor', () => {
@@ -267,6 +272,7 @@ describe('useBulkJournalEditor', () => {
     expect(onSaveSuccessMock).toHaveBeenCalledWith(1, [
       { description: 'Salary', amount: 500, currency: 'USD' },
     ]);
+    expect(triggerHaptic).toHaveBeenCalledWith('success');
   });
 
   it('coalesces rapid duplicate bulk submissions while the first save is in flight', async () => {

@@ -2,7 +2,10 @@ import { AppIcon } from '@/src/components/core/AppIcon';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
+import { usePressScale } from '@/src/hooks/usePressScale';
 import { useTheme } from '@/src/hooks/use-theme';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { MotiView } from 'moti';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,35 +32,49 @@ export const FloatingActionButton = ({
   const insets = useSafeAreaInsets();
   const isExtended = Boolean(label);
   const safeBottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
+  const { animate, transition, handlePressIn, handlePressOut } = usePressScale();
 
   return (
     <TouchableOpacity
       style={[
         styles.base,
         placement === 'center' ? styles.centerPlacement : styles.endPlacement,
-        isExtended ? styles.extended : styles.fab,
         {
-          backgroundColor: theme.primary,
           bottom: bottomOffset ?? safeBottomOffset,
         },
         style,
       ]}
-      onPress={onPress}
+      onPress={() => {
+        void triggerHaptic('light');
+        onPress();
+      }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       activeOpacity={Opacity.heavy}
       testID="fab-button"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label ?? 'Create new item'}
     >
-      <AppIcon name={icon} size={Size.iconSm} color={theme.onPrimary} />
-      {label ? (
-        <AppText
-          variant="body"
-          weight="semibold"
-          style={[styles.label, { color: theme.onPrimary }]}
-        >
-          {label}
-        </AppText>
-      ) : null}
+      <MotiView
+        animate={animate}
+        transition={transition}
+        style={[
+          styles.surface,
+          isExtended ? styles.extended : styles.fab,
+          { backgroundColor: theme.primary },
+        ]}
+      >
+        <AppIcon name={icon} size={Size.iconSm} color={theme.onPrimary} />
+        {label ? (
+          <AppText
+            variant="body"
+            weight="semibold"
+            style={[styles.label, { color: theme.onPrimary }]}
+          >
+            {label}
+          </AppText>
+        ) : null}
+      </MotiView>
     </TouchableOpacity>
   );
 };
@@ -65,9 +82,6 @@ export const FloatingActionButton = ({
 const styles = StyleSheet.create({
   base: {
     position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Shape.elevation.lg as ViewStyle),
     zIndex: ZIndex.fab,
   },
   endPlacement: {
@@ -75,6 +89,11 @@ const styles = StyleSheet.create({
   },
   centerPlacement: {
     alignSelf: 'center',
+  },
+  surface: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Shape.elevation.lg as ViewStyle),
   },
   fab: {
     width: Size.fab,

@@ -1,12 +1,12 @@
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { usePressScale } from '@/src/hooks/usePressScale';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import React, { useMemo, useState } from 'react';
+import { MotiView } from 'moti';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   StyleSheet,
   TouchableOpacity,
   type GestureResponderEvent,
@@ -38,8 +38,7 @@ export function AppButton({
   ...props
 }: AppButtonProps) {
   const { theme, fonts, getVariantColors } = useTheme();
-  const reduceMotion = useReducedMotion();
-  const [pressScale] = useState(() => new Animated.Value(1));
+  const { animate, transition, handlePressIn, handlePressOut } = usePressScale();
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
     const helperVariant: ComponentVariant =
@@ -165,24 +164,14 @@ export function AppButton({
     });
   };
 
-  const handlePressIn = (event: GestureResponderEvent) => {
+  const onPressInHandler = (event: GestureResponderEvent) => {
     onPressIn?.(event);
-    if (reduceMotion) return;
-    Animated.timing(pressScale, {
-      toValue: 0.98,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
+    handlePressIn();
   };
 
-  const handlePressOut = (event: GestureResponderEvent) => {
+  const onPressOutHandler = (event: GestureResponderEvent) => {
     onPressOut?.(event);
-    if (reduceMotion) return;
-    Animated.timing(pressScale, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
+    handlePressOut();
   };
 
   return (
@@ -191,17 +180,19 @@ export function AppButton({
       style={style}
       disabled={disabled || loading}
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onPressIn={onPressInHandler}
+      onPressOut={onPressOutHandler}
       activeOpacity={Opacity.heavy}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
     >
-      <Animated.View
-        style={[buttonCombinedStyle, buttonStyle, { transform: [{ scale: pressScale }] }]}
+      <MotiView
+        animate={animate}
+        transition={transition}
+        style={[buttonCombinedStyle, buttonStyle]}
       >
         {renderChildren()}
-      </Animated.View>
+      </MotiView>
     </TouchableOpacity>
   );
 }
