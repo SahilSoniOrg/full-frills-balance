@@ -8,7 +8,6 @@ module.exports = {
   globalTeardown: 'detox/runners/jest/globalTeardown',
   reporters: ['detox/runners/jest/reporter'],
   testEnvironment: 'detox/runners/jest/testEnvironment',
-  setupFilesAfterEnv: ['<rootDir>/e2e/config.js'],
   verbose: true,
   transform: {
     '^.+\\.[jt]sx?$': 'babel-jest',

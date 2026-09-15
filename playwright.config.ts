@@ -3,14 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.test.ts',
-  testIgnore: [
-    '**/specs/**',
-    '**/actions/**',
-    '**/screens/**',
-    '**/constants/**',
-    '**/utils/**',
-    '**/config.js',
-  ],
+  testIgnore: ['**/specs/**', '**/actions/**', '**/screens/**', '**/constants/**', '**/utils/**'],
   timeout: 120 * 1000, // Global test timeout: 120s
   expect: {
     timeout: 20000,

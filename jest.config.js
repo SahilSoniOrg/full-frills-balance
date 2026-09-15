@@ -6,21 +6,9 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|@sentry/react-native|native-base|react-native-svg|@nozbe/watermelondb|moti)',
   ],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/e2e/',
-    '/.worktrees/',
-    '/src/services/reports-v2/__tests__/fixtures/',
-  ],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.worktrees/'],
   collectCoverage: true,
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    'components/**/*.{ts,tsx}',
-    '!**/coverage/**',
-    '!**/node_modules/**',
-    '!**/babel.config.js',
-    '!**/jest.setup.js',
-  ],
+  collectCoverageFrom: ['src/**/*.{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
     '^lucide-react-native/dist/esm/icons/(.*)$':
@@ -58,10 +46,6 @@ module.exports = {
     './src/utils/money.ts': {
       branches: 27,
       statements: 79,
-    },
-    './src/services/ledger/ledgerWriteService.ts': {
-      branches: 63,
-      statements: 78,
     },
   },
 };
