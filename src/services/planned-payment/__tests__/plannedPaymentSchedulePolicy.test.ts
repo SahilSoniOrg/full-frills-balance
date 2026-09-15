@@ -25,6 +25,7 @@ describe('plannedPaymentSchedulePolicy', () => {
     intervalType: PlannedPaymentInterval.MONTHLY,
     intervalN: 1,
     nextOccurrence: new Date(2026, 3, 1).getTime(),
+    recurrenceDay: 1,
   } as Parameters<typeof isPlannedPaymentScheduleChange>[0];
 
   it('detects schedule-changing edits', () => {
@@ -45,6 +46,12 @@ describe('plannedPaymentSchedulePolicy', () => {
       isPlannedPaymentScheduleChange(existing, {
         ...baseInput,
         startDate: baseInput.startDate + 86_400_000,
+      }),
+    ).toBe(true);
+    expect(
+      isPlannedPaymentScheduleChange(existing, {
+        ...baseInput,
+        recurrenceDay: 15,
       }),
     ).toBe(true);
   });
@@ -70,5 +77,11 @@ describe('plannedPaymentSchedulePolicy', () => {
       intervalN: 2,
     });
     expect(schedule.nextOccurrence).toBe(baseInput.startDate);
+
+    const recurrenceChange = buildUpdatePersistenceInput(existing, {
+      ...baseInput,
+      recurrenceDay: 15,
+    });
+    expect(recurrenceChange.nextOccurrence).toBe(new Date(2026, 2, 15).getTime());
   });
 });

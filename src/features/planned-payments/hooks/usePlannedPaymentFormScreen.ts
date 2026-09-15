@@ -1,7 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/components/account-selection';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';

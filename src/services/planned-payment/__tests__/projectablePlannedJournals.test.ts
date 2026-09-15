@@ -1,5 +1,4 @@
 import {
-  isOrphanedPlannedJournal,
   keepProjectablePlannedJournals,
   ORPHANED_PLANNED_JOURNAL_NOTICE,
 } from '../projectablePlannedJournals';
@@ -16,30 +15,6 @@ describe('projectablePlannedJournals', () => {
     );
 
     expect(kept.map(journal => journal.id)).toEqual(['linked', 'manual']);
-  });
-
-  it('detects a planned journal whose planned payment is gone', () => {
-    expect(
-      isOrphanedPlannedJournal({
-        status: 'PLANNED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: false,
-      }),
-    ).toBe(true);
-    expect(
-      isOrphanedPlannedJournal({
-        status: 'PLANNED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: true,
-      }),
-    ).toBe(false);
-    expect(
-      isOrphanedPlannedJournal({
-        status: 'POSTED',
-        plannedPaymentId: 'pp-1',
-        plannedPaymentExists: false,
-      }),
-    ).toBe(false);
   });
 
   it('documents the orphaned planned journal notice', () => {

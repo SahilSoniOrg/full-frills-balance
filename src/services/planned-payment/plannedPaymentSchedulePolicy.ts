@@ -11,7 +11,9 @@ export function isPlannedPaymentScheduleChange(
   return (
     existing.startDate !== input.startDate ||
     existing.intervalType !== input.intervalType ||
-    existing.intervalN !== input.intervalN
+    existing.intervalN !== input.intervalN ||
+    existing.recurrenceDay !== input.recurrenceDay ||
+    existing.recurrenceMonth !== input.recurrenceMonth
   );
 }
 
@@ -40,6 +42,13 @@ export function buildUpdatePersistenceInput(
 
   return {
     ...input,
-    nextOccurrence: schedulingChanged ? input.startDate : existing.nextOccurrence,
+    nextOccurrence: schedulingChanged
+      ? computeFirstOccurrence(input.startDate, {
+          intervalN: input.intervalN,
+          intervalType: input.intervalType,
+          recurrenceDay: input.recurrenceDay,
+          recurrenceMonth: input.recurrenceMonth,
+        })
+      : existing.nextOccurrence,
   };
 }

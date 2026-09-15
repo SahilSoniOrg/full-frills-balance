@@ -4,7 +4,8 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import {
@@ -23,6 +24,8 @@ export interface PlannedOccurrenceContext {
   existingPlanned: Journal[];
 }
 
+const dueProcessingByWorkplace = new Map<WorkplaceId, Promise<void>>();
+
 /**
  * Resolves the occurrence day window and any existing PLANNED journals for that day.
  * Always workplace-scopes journal queries.
@@ -33,13 +36,7 @@ export async function resolvePlannedOccurrenceContext(
   occurrenceDate: number,
 ): Promise<PlannedOccurrenceContext> {
   const plannedPaymentId = pp.id;
-  const earliestPlanned = await journalPlannedQueries.findEarliestPlannedByPayment(
-    workplaceId,
-    plannedPaymentId,
-  );
-
-  const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
-  const normalizedDate = normalizeToStartOfDay(targetDate);
+  const normalizedDate = normalizeToStartOfDay(occurrenceDate);
   const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
 
   const existingPlanned = await journalPlannedQueries.findPlannedOnDay(
@@ -86,7 +83,7 @@ export async function postPlannedPaymentOccurrence(
     };
 
     if (existingPlanned.length > 0) {
-      await ledgerWriteService.postJournal(existingPlanned[0].id, workplaceId, {
+      await ledgerLifecycleService.postJournal(existingPlanned[0].id, workplaceId, {
         extraOps: getScheduleOp,
       });
     } else {
@@ -94,7 +91,7 @@ export async function postPlannedPaymentOccurrence(
         throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
       }
 
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           journalDate: postTime,
           description: pp.name,
@@ -156,7 +153,7 @@ export async function skipPlannedPaymentOccurrence(
         return scheduleOp ? [scheduleOp] : [];
       });
     } else {
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           journalDate: normalizedDate,
           description: pp.name,
@@ -192,6 +189,23 @@ export async function skipPlannedPaymentOccurrence(
  * Process all active planned payments and generate journals for any due occurrences.
  */
 export async function processDuePlannedPayments(
+  workplaceId: WorkplaceId,
+  signal?: AbortSignal,
+  isCurrent?: () => boolean,
+): Promise<void> {
+  const inFlight = dueProcessingByWorkplace.get(workplaceId);
+  if (inFlight) return inFlight;
+
+  const run = processDuePlannedPaymentsNow(workplaceId, signal, isCurrent).finally(() => {
+    if (dueProcessingByWorkplace.get(workplaceId) === run) {
+      dueProcessingByWorkplace.delete(workplaceId);
+    }
+  });
+  dueProcessingByWorkplace.set(workplaceId, run);
+  return run;
+}
+
+async function processDuePlannedPaymentsNow(
   workplaceId: WorkplaceId,
   signal?: AbortSignal,
   isCurrent?: () => boolean,

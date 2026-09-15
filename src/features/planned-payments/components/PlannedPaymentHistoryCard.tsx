@@ -1,6 +1,7 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';

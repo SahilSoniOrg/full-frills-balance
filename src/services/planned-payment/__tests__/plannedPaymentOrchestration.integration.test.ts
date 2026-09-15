@@ -85,6 +85,20 @@ describe('planned payment orchestration persistence', () => {
     expect(reloaded?.nextOccurrence).toBe(expectedNextOccurrence);
   }, 30000);
 
+  it('single-flights concurrent due-processing runs per workplace', async () => {
+    const payment = await createDuePayment();
+
+    await Promise.all([
+      processDuePlannedPayments(WORKPLACE_ID),
+      processDuePlannedPayments(WORKPLACE_ID),
+    ]);
+
+    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
+      payment.id,
+    ]);
+    expect(journals).toHaveLength(1);
+  }, 30000);
+
   it('does not leave a journal or schedule advance when the batch fails', async () => {
     const payment = await createDuePayment();
     await expect(

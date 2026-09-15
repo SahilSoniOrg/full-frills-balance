@@ -5,8 +5,6 @@ import { JournalDisplayType } from '@/src/types/enums';
  * Presentation DTO for the dashboard "Upcoming" planned section.
  * Discriminates real planned journals from STS-simulated liability outflows.
  */
-export type PlannedOccurrenceOrigin = 'PLANNED_JOURNAL' | 'SIMULATED_LIABILITY';
-
 export interface PlannedOccurrenceAccountRef {
   id: AccountId | string;
   name: string;
@@ -40,9 +38,3 @@ export type SimulatedLiabilityOccurrence = PlannedOccurrenceBase & {
 };
 
 export type PlannedOccurrenceViewModel = PlannedJournalOccurrence | SimulatedLiabilityOccurrence;
-
-export function isSimulatedLiabilityOccurrence(
-  item: PlannedOccurrenceViewModel,
-): item is SimulatedLiabilityOccurrence {
-  return item.origin === 'SIMULATED_LIABILITY';
-}

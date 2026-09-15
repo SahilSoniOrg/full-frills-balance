@@ -5,7 +5,7 @@ import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { useAccount } from '@/src/features/accounts';
+import { useAccount } from '@/src/hooks/useAccounts';
 import { useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
 import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';

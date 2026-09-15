@@ -4,8 +4,3 @@ export interface BudgetUsage {
   budgetAmount: number;
   usagePercent: number;
 }
-
-export interface BudgetPeriodRange {
-  startOfMonth: number;
-  endOfMonth: number;
-}

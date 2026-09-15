@@ -1,6 +1,6 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { JournalStatus } from '@/src/types/enums';
@@ -49,7 +49,7 @@ export async function generatePlannedJournalForPayment(
       plannedPaymentId: pp.id,
     };
 
-    await ledgerWriteService.createJournal(data, pp.workplaceId, {
+    await ledgerCreateService.createJournal(data, pp.workplaceId, {
       // LedgerCreateService evaluates extraOps inside its persistBatch factory. Throwing here
       // prevents the journal ops themselves from being returned after preparation completed.
       extraOps: () => {
