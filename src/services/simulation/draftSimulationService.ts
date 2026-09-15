@@ -7,6 +7,7 @@ import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
 import type {
   SimulationBudget,
+  SimulationEngineResult,
   SimulationLiabilityAccount,
   SimulationPlannedPayment,
 } from './types';
@@ -30,6 +31,7 @@ export interface DraftSimulationScenario {
 export function simulateDraftScenario(input: DraftSimulationScenario): {
   readonly safeToSpend: number;
   readonly flowSummary: ReturnType<typeof summarizeSimulationFlows>;
+  readonly projections: SimulationEngineResult['projections'];
 } {
   const liquidIds = [...input.liquidAccountIds];
   const liquidAccountIds = new Set(liquidIds);
@@ -88,5 +90,6 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
   return {
     safeToSpend: simulation.summary.safeToSpend,
     flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds),
+    projections: simulation.projections,
   };
 }

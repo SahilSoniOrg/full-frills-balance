@@ -28,6 +28,7 @@ export interface LineChartGridProps {
   todayX?: number;
   todayDataPoint?: DataPoint;
   extraHorizontalLines?: HorizontalLine[];
+  markedPoint?: DataPoint & { label?: string; caption?: string };
   primaryMaxPoint?: DataPoint;
 }
 
@@ -50,6 +51,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
   todayX,
   todayDataPoint,
   extraHorizontalLines,
+  markedPoint,
   primaryMaxPoint,
 }: LineChartGridProps) {
   const formatMoneyShort = useMoneyFormat({ style: 'short' });
@@ -216,6 +218,67 @@ export const LineChartGrid = React.memo(function LineChartGrid({
           </React.Fragment>
         );
       })}
+
+      {markedPoint
+        ? (() => {
+            const normalizedX = maxX === minX ? 0.5 : (markedPoint.x - minX) / (maxX - minX);
+            if (normalizedX < 0 || normalizedX > 1) return null;
+            const x = paddingLeft + normalizedX * plotWidth;
+            const y =
+              height -
+              paddingVertical -
+              ((markedPoint.y - displayMinY) / displayRange) * (height - paddingVertical * 2);
+            const alignEnd = normalizedX > 0.62;
+            const labelX = alignEnd ? x - 8 : x + 8;
+            const anchor = alignEnd ? 'end' : 'start';
+            return (
+              <React.Fragment>
+                <Line
+                  x1={x}
+                  y1={paddingVertical}
+                  x2={x}
+                  y2={height - paddingVertical}
+                  stroke={chartColor}
+                  strokeWidth={1.5}
+                  strokeDasharray="4,4"
+                  opacity={0.85}
+                />
+                <Circle
+                  cx={x}
+                  cy={y}
+                  r={REPORT_CHART_LAYOUT.lineChartSelectedPointRadius}
+                  fill={chartColor}
+                  stroke={theme.surface}
+                  strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedPointStrokeWidth}
+                />
+                {markedPoint.label ? (
+                  <SvgText
+                    x={labelX}
+                    y={y - 16}
+                    fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                    fontWeight="bold"
+                    fill={chartColor}
+                    textAnchor={anchor}
+                  >
+                    {markedPoint.label}
+                  </SvgText>
+                ) : null}
+                {markedPoint.caption ? (
+                  <SvgText
+                    x={labelX}
+                    y={y - 4}
+                    fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                    fill={chartColor}
+                    textAnchor={anchor}
+                    opacity={0.9}
+                  >
+                    {markedPoint.caption}
+                  </SvgText>
+                ) : null}
+              </React.Fragment>
+            );
+          })()
+        : null}
 
       {/* Max Value Annotation */}
       {primaryMaxPoint &&

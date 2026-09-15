@@ -40,6 +40,7 @@ export interface LineChartProps<T extends DataPoint = DataPoint> {
   secondaryColor?: string;
   todayX?: number;
   extraHorizontalLines?: HorizontalLine[];
+  markedPoint?: DataPoint & { label?: string; caption?: string };
   avoidPointVertical?: boolean;
   offset?: number;
 }
@@ -60,6 +61,7 @@ export const LineChart = <T extends DataPoint>({
   secondaryColor,
   todayX,
   extraHorizontalLines,
+  markedPoint,
   avoidPointVertical = false,
   offset = 15,
   tooltipWidth,
@@ -233,6 +235,7 @@ export const LineChart = <T extends DataPoint>({
                 todayX={todayX}
                 todayDataPoint={todayDataPoint}
                 extraHorizontalLines={extraHorizontalLines}
+                markedPoint={markedPoint}
                 primaryMaxPoint={primaryMaxPoint}
               />
 
