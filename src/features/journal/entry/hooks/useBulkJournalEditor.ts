@@ -6,6 +6,7 @@ import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { buildBulkJournalEntries, validateBulkJournalRow } from './bulkJournalHelpers';
 import type {
   BulkJournalRow,
@@ -281,13 +282,16 @@ export function useBulkJournalEditor({
       const result = await saveBulkJournalEntries(entries);
 
       if (!result.success) {
+        void triggerHaptic('error');
         setSubmitError(result.error || 'An error occurred while saving the journals.');
         return;
       }
 
+      void triggerHaptic('success');
       onSaveSuccess(latestRowsRef.current.length, result.summaries);
     } catch (err: unknown) {
       logger.error('Failed to save bulk journals', err);
+      void triggerHaptic('error');
       const message =
         err instanceof Error ? err.message : 'An error occurred while saving the journals.';
       setSubmitError(message);

@@ -1,7 +1,8 @@
 import { AppButton } from '@/src/components/core/AppButton';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { Animated, StyleSheet } from 'react-native';
+import { MotiView } from 'moti';
+import { StyleSheet } from 'react-native';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: jest.fn(() => false),
@@ -155,7 +156,7 @@ describe('AppButton', () => {
       </AppButton>,
     );
 
-    const animatedSurfaces = screen.UNSAFE_getAllByType(Animated.View);
+    const animatedSurfaces = screen.UNSAFE_getAllByType(MotiView);
     const animatedSurface = animatedSurfaces[animatedSurfaces.length - 1];
     expect(StyleSheet.flatten(animatedSurface.props.style)).toEqual(
       expect.objectContaining({ height: 64, borderRadius: 4 }),

@@ -2,6 +2,7 @@ import { journalReadService } from '@/src/services/journal/journalReadService';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { showErrorAlert } from '@/src/utils/alerts';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -18,6 +19,9 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('@/src/utils/alerts', () => ({
   showErrorAlert: jest.fn(),
+}));
+jest.mock('@/src/utils/haptics', () => ({
+  triggerHaptic: jest.fn(),
 }));
 
 const mockBack = jest.fn();
@@ -147,6 +151,7 @@ describe('useJournalEditor', () => {
 
     expect(journalService.postPostingPlan).toHaveBeenCalled();
     expect(mockOnSuccess).not.toHaveBeenCalled();
+    expect(triggerHaptic).toHaveBeenCalledWith('error');
   });
 
   it('should succeed submission and call onSuccess', async () => {
@@ -170,6 +175,7 @@ describe('useJournalEditor', () => {
     });
 
     expect(mockOnSuccess).toHaveBeenCalled();
+    expect(triggerHaptic).toHaveBeenCalledWith('success');
   });
 
   it('does not report a durable save as failed when a post-commit effect rejects', async () => {
