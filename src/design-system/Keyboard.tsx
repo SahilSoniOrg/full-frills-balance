@@ -1,34 +1,6 @@
 import React from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView as RNKeyboardAvoidingView,
-  KeyboardAvoidingViewProps,
-  Platform,
-} from 'react-native';
-
+import { Keyboard, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-/**
- * KeyboardAvoidingView wrapper with sensible defaults
- */
-export const KeyboardAvoidingView = ({
-  children,
-  behavior = Platform.OS === 'ios' ? 'padding' : 'height',
-  style = { flex: 1 },
-  keyboardVerticalOffset = 0,
-  ...props
-}: KeyboardAvoidingViewProps) => {
-  return (
-    <RNKeyboardAvoidingView
-      behavior={behavior}
-      style={style}
-      keyboardVerticalOffset={keyboardVerticalOffset}
-      {...props}
-    >
-      {children}
-    </RNKeyboardAvoidingView>
-  );
-};
 
 /**
  * Hook to track keyboard state

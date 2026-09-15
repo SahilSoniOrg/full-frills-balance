@@ -1,9 +1,4 @@
-import {
-  extractBoxProps,
-  processTextChildren,
-  resolvePaddingSpacing,
-  splitBoxStyles,
-} from '../utils';
+import { extractBoxProps, processTextChildren, resolvePaddingSpacing } from '../utils';
 import { createElement } from 'react';
 
 describe('Design System Utilities', () => {
@@ -61,31 +56,6 @@ describe('Design System Utilities', () => {
         nativeID: 'settings-row',
       });
       expect(restProps.onPress).toBe(props.onPress);
-    });
-  });
-
-  describe('splitBoxStyles', () => {
-    it('separates layout styles from decoration styles', () => {
-      const style = {
-        marginTop: 10,
-        padding: 20,
-        backgroundColor: 'blue',
-        position: 'absolute' as const,
-      };
-
-      const { layoutStyle, decorationStyle } = splitBoxStyles(style);
-
-      expect(layoutStyle).toEqual({ marginTop: 10, position: 'absolute' });
-      expect(decorationStyle).toEqual({ padding: 20, backgroundColor: 'blue' });
-    });
-
-    it('handles arrays of styles (flattening)', () => {
-      const style = [{ flex: 1 }, [{ borderRadius: 5 }, { margin: 10 }]];
-
-      const { layoutStyle, decorationStyle } = splitBoxStyles(style);
-
-      expect(layoutStyle).toEqual({ flex: 1, margin: 10 });
-      expect(decorationStyle).toEqual({ borderRadius: 5 });
     });
   });
 

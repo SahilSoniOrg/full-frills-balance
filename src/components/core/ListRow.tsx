@@ -159,26 +159,11 @@ export function ListRow(initialProps: ListRowProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  leading: {
-    marginRight: Spacing.md,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-  },
   title: {
     flexShrink: 1,
   },
   subtitle: {
     marginTop: Spacing.xs / 2,
     flexShrink: 1,
-  },
-  trailing: {
-    marginLeft: Spacing.md,
-    alignItems: 'flex-end',
   },
 });

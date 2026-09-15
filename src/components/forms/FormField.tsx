@@ -21,7 +21,7 @@ export function FormField({ label, subtitle, children, style }: FormFieldProps) 
           {subtitle}
         </AppText>
       ) : null}
-      <View style={styles.content}>{children}</View>
+      {children}
     </View>
   );
 }
@@ -35,8 +35,5 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginBottom: Spacing.xs,
-  },
-  content: {
-    // Spacer/margins handled by children
   },
 });

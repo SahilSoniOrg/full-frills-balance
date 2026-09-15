@@ -165,35 +165,6 @@ export type BoxPropKey = (typeof BOX_PROP_KEY_LIST)[number];
 
 export const BOX_PROP_KEYS: ReadonlySet<string> = new Set(BOX_PROP_KEY_LIST);
 
-export const LAYOUT_STYLE_KEYS = new Set([
-  'margin',
-  'marginHorizontal',
-  'marginVertical',
-  'marginTop',
-  'marginBottom',
-  'marginLeft',
-  'marginRight',
-  'position',
-  'top',
-  'bottom',
-  'left',
-  'right',
-  'zIndex',
-  'flex',
-  'flexGrow',
-  'flexShrink',
-  'flexBasis',
-  'alignSelf',
-  'width',
-  'height',
-  'minWidth',
-  'minHeight',
-  'maxWidth',
-  'maxHeight',
-  'display',
-  'aspectRatio',
-]);
-
 /**
  * Separates Box layout/system props from component-specific props.
  * Used to prevent prop leakage to native components like TextInput.
@@ -229,43 +200,3 @@ export function extractBoxProps<T extends object>(
  * 1. Layout styles (margin, flex, width, position)
  * 2. Decoration styles (padding, background, border)
  */
-export function splitBoxStyles(style?: StyleProp<ViewStyle>): {
-  layoutStyle: ViewStyle;
-  decorationStyle: ViewStyle;
-} {
-  const layoutStyle: Record<string, unknown> = {};
-  const decorationStyle: Record<string, unknown> = {};
-
-  if (!style) {
-    return {
-      layoutStyle: layoutStyle as ViewStyle,
-      decorationStyle: decorationStyle as ViewStyle,
-    };
-  }
-
-  const processStyle = (s: unknown) => {
-    if (!s || typeof s !== 'object') return;
-    if (Array.isArray(s)) {
-      for (let i = 0; i < s.length; i++) {
-        processStyle(s[i]);
-      }
-      return;
-    }
-
-    const styleObj = s as Record<string, unknown>;
-    for (const key in styleObj) {
-      if (LAYOUT_STYLE_KEYS.has(key)) {
-        layoutStyle[key] = styleObj[key];
-      } else {
-        decorationStyle[key] = styleObj[key];
-      }
-    }
-  };
-
-  processStyle(style);
-
-  return {
-    layoutStyle: layoutStyle as ViewStyle,
-    decorationStyle: decorationStyle as ViewStyle,
-  };
-}

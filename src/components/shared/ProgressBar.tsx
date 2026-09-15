@@ -1,4 +1,5 @@
-import { Spacing, withOpacity } from '@/src/constants';
+import { Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';

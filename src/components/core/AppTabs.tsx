@@ -14,7 +14,6 @@ interface AppTabsProps<T extends string | number> {
   options: readonly TabOption<T>[];
   value: T;
   onChange: (id: T) => void;
-  variant?: 'underline' | 'pill'; // For future flexibility, default to underline
   testID?: string;
 }
 

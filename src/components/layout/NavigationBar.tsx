@@ -45,7 +45,6 @@ export function NavigationBar({
               name={backIcon}
               onPress={onBack}
               variant="surface"
-              style={styles.backButton}
               testID="nav-back-button"
             />
           ) : null}
@@ -128,9 +127,6 @@ const styles = StyleSheet.create({
   rightSearchActive: {
     flex: 1,
     minWidth: 0,
-  },
-  backButton: {
-    // IconButton defaults are good
   },
   title: {
     alignSelf: 'stretch',

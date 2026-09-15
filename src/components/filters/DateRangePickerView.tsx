@@ -1,5 +1,6 @@
 import { Icon, AppButton, AppText, IconButton } from '@/src/components/core';
-import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import type { Dayjs } from 'dayjs';

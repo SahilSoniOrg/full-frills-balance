@@ -1,5 +1,6 @@
 import { AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { hour12To24, hour24To12, type ClockMeridiem } from '@/src/utils/hourCycle';

@@ -1,5 +1,6 @@
 import { Icon, AppIcon } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo } from 'react';

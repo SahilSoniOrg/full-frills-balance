@@ -1,5 +1,6 @@
 import { Icon, AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';

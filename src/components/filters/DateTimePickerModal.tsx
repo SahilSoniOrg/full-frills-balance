@@ -161,10 +161,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  tabsContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
   pickerContainer: {
     paddingHorizontal: Spacing.md,
   },

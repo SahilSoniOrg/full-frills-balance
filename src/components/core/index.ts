@@ -46,6 +46,7 @@ export type { InlineSearchFieldProps } from './InlineSearchField';
 export { FloatingActionButton } from './FloatingActionButton';
 export { IconButton } from './IconButton';
 export { IvyIcon } from './IvyIcon';
+export { SwipeToRemove } from './SwipeToRemove';
 
 export { LoadingView } from '@/src/components/shared/LoadingView';
 export type { LoadingViewProps } from '@/src/components/shared/LoadingView';
@@ -61,4 +62,4 @@ export type { SegmentedOption } from './AppSegmentedControl';
 
 export { AppTabs } from './AppTabs';
 export type { TabOption } from './AppTabs';
-export * from './FilterChipButton';
+export { FilterChipButton } from './FilterChipButton';

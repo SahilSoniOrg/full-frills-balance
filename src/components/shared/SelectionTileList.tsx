@@ -2,7 +2,8 @@ import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPi
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { useRevealHorizontalItem } from '@/src/components/filters/useRevealHorizontalItem';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Bleed, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';

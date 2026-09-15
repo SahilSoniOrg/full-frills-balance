@@ -2,11 +2,17 @@ import { Spacing, SpacingKey, Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ScrollViewProps, StyleSheet, View, ViewProps } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollViewProps,
+  StyleSheet,
+  View,
+  ViewProps,
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 import { Box } from './Box';
-import { KeyboardAvoidingView } from './Keyboard';
 
 export type PageProps = ViewProps & {
   children: React.ReactNode;
@@ -106,7 +112,7 @@ export const Page = ({
   const pageBody = (
     <>
       <Box flex={1}>{wrappedContent}</Box>
-      <Box>{footer}</Box>
+      {footer}
     </>
   );
 
@@ -116,6 +122,7 @@ export const Page = ({
       {header}
       {keyboardAvoiding ? (
         <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={keyboardVerticalOffset}
           style={styles.keyboardContainer}
         >
@@ -130,9 +137,6 @@ export const Page = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  flex: {
     flex: 1,
   },
   scrollView: {

@@ -1,5 +1,13 @@
-import { Icon, AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
-import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppSegmentedControl,
+  AppText,
+  type IconName,
+} from '@/src/components/core';
+import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs, { Dayjs } from 'dayjs';
@@ -17,6 +25,89 @@ interface DateRangeMenuContentProps {
   onShowStartDate: () => void;
   onShowEndDate: () => void;
   onUpdateLastN: (value: string, unit: 'days' | 'weeks' | 'months') => void;
+}
+
+interface DatePanelHeaderProps {
+  icon: IconName;
+  title: string;
+  summary: string;
+  active: boolean;
+  inactiveIconColor: string;
+  onPress?: () => void;
+}
+
+function DatePanelHeader({
+  icon,
+  title,
+  summary,
+  active,
+  inactiveIconColor,
+  onPress,
+}: DatePanelHeaderProps) {
+  const { theme, fonts } = useTheme();
+  const content = (
+    <>
+      <View
+        style={[
+          styles.panelIcon,
+          {
+            backgroundColor: withOpacity(
+              active ? theme.primary : inactiveIconColor,
+              active ? Opacity.active : Opacity.hover,
+            ),
+          },
+        ]}
+      >
+        <AppIcon name={icon} size={16} color={active ? theme.primary : inactiveIconColor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.panelTitleRow}>
+          <AppText
+            variant="body"
+            weight="semibold"
+            style={{ fontFamily: fonts.semibold, color: active ? theme.primary : theme.text }}
+          >
+            {title}
+          </AppText>
+          {active ? (
+            <View
+              style={[
+                styles.activeBadge,
+                {
+                  backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                  borderColor: withOpacity(theme.primary, Opacity.active),
+                },
+              ]}
+            >
+              <AppText
+                variant="caption"
+                style={{ color: theme.primary, fontFamily: fonts.semibold }}
+              >
+                Selected
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+        <AppText
+          variant="caption"
+          style={{
+            color: active ? withOpacity(theme.primary, Opacity.high) : theme.textSecondary,
+            fontFamily: active ? fonts.medium : fonts.regular,
+          }}
+        >
+          {summary}
+        </AppText>
+      </View>
+    </>
+  );
+
+  return onPress ? (
+    <TouchableOpacity style={styles.panelHeader} onPress={onPress} activeOpacity={0.7}>
+      {content}
+    </TouchableOpacity>
+  ) : (
+    <View style={styles.panelHeader}>{content}</View>
+  );
 }
 
 export function DateRangeMenuContent({
@@ -55,79 +146,24 @@ export function DateRangeMenuContent({
       : 'Enter a range length';
 
   const getMonthId = (month: number, year: number) => `${year}-${month}`;
-
+  const activePanelStyle = {
+    backgroundColor: withOpacity(theme.primary, Opacity.selection),
+    borderColor: withOpacity(theme.primary, Opacity.active),
+  };
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-      <View
-        style={[
-          styles.section,
-          monthPanelActive && styles.sectionActive,
-          monthPanelActive && {
-            backgroundColor: withOpacity(theme.primary, Opacity.selection),
-            borderColor: withOpacity(theme.primary, Opacity.active),
-          },
-        ]}
-      >
-        <View style={styles.panelHeader}>
-          <View
-            style={[
-              styles.panelIcon,
-              {
-                backgroundColor: withOpacity(
-                  theme.primary,
-                  monthPanelActive ? Opacity.active : Opacity.hover,
-                ),
-              },
-            ]}
-          >
-            <AppIcon name={Icon.Calendar} size={16} color={theme.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.panelTitleRow}>
-              <AppText
-                variant="body"
-                weight="semibold"
-                style={{
-                  fontFamily: fonts.semibold,
-                  color: monthPanelActive ? theme.primary : theme.text,
-                }}
-              >
-                Choose month
-              </AppText>
-              {monthPanelActive ? (
-                <View
-                  style={[
-                    styles.activeBadge,
-                    {
-                      backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                      borderColor: withOpacity(theme.primary, Opacity.active),
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: theme.primary, fontFamily: fonts.semibold }}
-                  >
-                    Selected
-                  </AppText>
-                </View>
-              ) : null}
-            </View>
-            <AppText
-              variant="caption"
-              style={{
-                color: monthPanelActive
-                  ? withOpacity(theme.primary, Opacity.high)
-                  : theme.textSecondary,
-                fontFamily: monthPanelActive ? fonts.medium : fonts.regular,
-              }}
-            >
-              {monthPanelActive && selectedMonthLabel
-                ? selectedMonthLabel
-                : 'Quick monthly snapshots for reports and trends.'}
-            </AppText>
-          </View>
-        </View>
+      <View style={[styles.section, monthPanelActive && activePanelStyle]}>
+        <DatePanelHeader
+          icon={Icon.Calendar}
+          title="Choose month"
+          summary={
+            monthPanelActive && selectedMonthLabel
+              ? selectedMonthLabel
+              : 'Quick monthly snapshots for reports and trends.'
+          }
+          active={monthPanelActive}
+          inactiveIconColor={theme.primary}
+        />
         <View style={{ marginTop: Spacing.sm }}>
           <AppSegmentedControl<string>
             scrollable
@@ -156,80 +192,17 @@ export function DateRangeMenuContent({
         style={[styles.divider, { backgroundColor: withOpacity(theme.border, Opacity.heavy) }]}
       />
 
-      <View
-        style={[
-          styles.section,
-          customPanelActive && styles.sectionActive,
-          customPanelActive && {
-            backgroundColor: withOpacity(theme.primary, Opacity.selection),
-            borderColor: withOpacity(theme.primary, Opacity.active),
-          },
-        ]}
-      >
-        <TouchableOpacity style={styles.panelHeader} onPress={onSelectCustom} activeOpacity={0.7}>
-          <View
-            style={[
-              styles.panelIcon,
-              {
-                backgroundColor: withOpacity(
-                  customPanelActive ? theme.primary : theme.warning,
-                  customPanelActive ? Opacity.active : Opacity.hover,
-                ),
-              },
-            ]}
-          >
-            <AppIcon
-              name={Icon.Timeline}
-              size={16}
-              color={customPanelActive ? theme.primary : theme.warning}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.panelTitleRow}>
-              <AppText
-                variant="body"
-                weight="semibold"
-                style={{
-                  fontFamily: fonts.semibold,
-                  color: customPanelActive ? theme.primary : theme.text,
-                }}
-              >
-                Custom range
-              </AppText>
-              {customPanelActive ? (
-                <View
-                  style={[
-                    styles.activeBadge,
-                    {
-                      backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                      borderColor: withOpacity(theme.primary, Opacity.active),
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: theme.primary, fontFamily: fonts.semibold }}
-                  >
-                    Selected
-                  </AppText>
-                </View>
-              ) : null}
-            </View>
-            <AppText
-              variant="caption"
-              style={{
-                color: customPanelActive
-                  ? withOpacity(theme.primary, Opacity.high)
-                  : theme.textSecondary,
-                fontFamily: customPanelActive ? fonts.medium : fonts.regular,
-              }}
-            >
-              {customPanelActive && customSummary
-                ? customSummary
-                : 'Pick exact start and end dates.'}
-            </AppText>
-          </View>
-        </TouchableOpacity>
+      <View style={[styles.section, customPanelActive && activePanelStyle]}>
+        <DatePanelHeader
+          icon={Icon.Timeline}
+          title="Custom range"
+          summary={
+            customPanelActive && customSummary ? customSummary : 'Pick exact start and end dates.'
+          }
+          active={customPanelActive}
+          inactiveIconColor={theme.warning}
+          onPress={onSelectCustom}
+        />
 
         <View style={styles.customRangeRow}>
           <TouchableOpacity
@@ -282,82 +255,17 @@ export function DateRangeMenuContent({
         style={[styles.divider, { backgroundColor: withOpacity(theme.border, Opacity.heavy) }]}
       />
 
-      <View
-        style={[
-          styles.section,
-          rollingPanelActive && styles.sectionActive,
-          rollingPanelActive && {
-            backgroundColor: withOpacity(theme.primary, Opacity.selection),
-            borderColor: withOpacity(theme.primary, Opacity.active),
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.panelHeader}
+      <View style={[styles.section, rollingPanelActive && activePanelStyle]}>
+        <DatePanelHeader
+          icon={Icon.Refresh}
+          title="Rolling window"
+          summary={
+            rollingPanelActive ? rollingSummary : 'Great for “last 7 days” or “last 3 months”.'
+          }
+          active={rollingPanelActive}
+          inactiveIconColor={theme.success}
           onPress={() => onUpdateLastN(lastNValue, lastNUnit)}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.panelIcon,
-              {
-                backgroundColor: withOpacity(
-                  rollingPanelActive ? theme.primary : theme.success,
-                  rollingPanelActive ? Opacity.active : Opacity.hover,
-                ),
-              },
-            ]}
-          >
-            <AppIcon
-              name={Icon.Refresh}
-              size={16}
-              color={rollingPanelActive ? theme.primary : theme.success}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.panelTitleRow}>
-              <AppText
-                variant="body"
-                weight="semibold"
-                style={{
-                  fontFamily: fonts.semibold,
-                  color: rollingPanelActive ? theme.primary : theme.text,
-                }}
-              >
-                Rolling window
-              </AppText>
-              {rollingPanelActive ? (
-                <View
-                  style={[
-                    styles.activeBadge,
-                    {
-                      backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                      borderColor: withOpacity(theme.primary, Opacity.active),
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: theme.primary, fontFamily: fonts.semibold }}
-                  >
-                    Selected
-                  </AppText>
-                </View>
-              ) : null}
-            </View>
-            <AppText
-              variant="caption"
-              style={{
-                color: rollingPanelActive
-                  ? withOpacity(theme.primary, Opacity.high)
-                  : theme.textSecondary,
-                fontFamily: rollingPanelActive ? fonts.medium : fonts.regular,
-              }}
-            >
-              {rollingPanelActive ? rollingSummary : 'Great for “last 7 days” or “last 3 months”.'}
-            </AppText>
-          </View>
-        </TouchableOpacity>
+        />
 
         <View style={styles.lastNRow}>
           <View
@@ -414,7 +322,6 @@ export function DateRangeMenuContent({
       <View
         style={[
           styles.allTimePanel,
-          allTimeActive && styles.sectionActive,
           allTimeActive && {
             backgroundColor: withOpacity(theme.primary, Opacity.selection),
             borderColor: withOpacity(theme.primary, Opacity.active),
@@ -489,9 +396,6 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.r4,
     marginHorizontal: -Spacing.xs,
   },
-  sectionActive: {
-    // Styling (border and background) is applied inline dynamically
-  },
   panelHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -517,16 +421,6 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-  },
-  horizontalScroll: {
-    gap: Spacing.sm,
-    paddingRight: Spacing.lg,
-  },
-  chip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
   },
   divider: {
     height: 1,

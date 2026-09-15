@@ -15,7 +15,7 @@ export function FormSectionGroup({ title, children, style, contentStyle }: FormS
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={style}>
       {title ? (
         <AppText
           variant="body"
@@ -31,9 +31,6 @@ export function FormSectionGroup({ title, children, style, contentStyle }: FormS
 }
 
 const styles = StyleSheet.create({
-  container: {
-    // Controlled by parent Stack/Layout
-  },
   title: {
     fontSize: Typography.sizes.sm,
     letterSpacing: 1.5,

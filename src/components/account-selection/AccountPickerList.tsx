@@ -1,6 +1,7 @@
 import { Icon, AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';

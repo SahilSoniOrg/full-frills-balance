@@ -10,6 +10,3 @@ export * from './limits';
 
 // App configuration - Behavior and settings only
 export * from './app-config';
-
-// Utility re-exports for theme
-export { withOpacity } from '@/src/utils/color-math';

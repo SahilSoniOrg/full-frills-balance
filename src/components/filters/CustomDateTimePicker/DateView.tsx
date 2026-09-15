@@ -1,5 +1,6 @@
 import { Icon, AppText, IconButton } from '@/src/components/core';
-import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';

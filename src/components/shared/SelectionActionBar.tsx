@@ -1,7 +1,8 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Icon, AppIcon, AppText, IconButton, type IconName } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline, Inset } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AnimatePresence, MotiView } from 'moti';

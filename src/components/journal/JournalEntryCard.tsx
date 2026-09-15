@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
-import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Size, Spacing, Typography } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';

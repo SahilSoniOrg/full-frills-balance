@@ -398,6 +398,14 @@ export const AppSegmentedControl = <T extends string | number>({
 
   const hasSize = isVertical ? containerSize.height > 0 : containerSize.width > 0;
 
+  const content =
+    hasSize || !flex ? (
+      <View style={[contentStyle, flex && !hasSize && { opacity: 0 }]}>
+        {options.length > 0 && <Animated.View style={pillStyle} />}
+        {renderedOptions}
+      </View>
+    ) : null;
+
   const containerStyle = useMemo(
     () =>
       [
@@ -427,40 +435,6 @@ export const AppSegmentedControl = <T extends string | number>({
     ],
   );
 
-  if (scrollable) {
-    return (
-      <Box
-        onLayout={handleLayout}
-        style={containerStyle}
-        borderRadius={isVertical ? 'r4' : 'full'}
-        accessibilityRole="tablist"
-        testID={testID}
-      >
-        <ScrollView
-          ref={scrollViewRef}
-          style={isVertical ? styles.verticalScroll : undefined}
-          horizontal={!isVertical}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={scrollable}
-          snapToInterval={isVertical ? layout.itemHeight : layout.itemWidth}
-          decelerationRate="fast"
-          contentContainerStyle={{
-            paddingHorizontal: !isVertical ? Spacing.md : 0,
-            paddingVertical: isVertical ? Spacing.md : 0,
-          }}
-        >
-          {(hasSize || !flex) && (
-            <View style={[contentStyle, flex && !hasSize && { opacity: 0 }]}>
-              {options.length > 0 && <Animated.View style={pillStyle} />}
-              {renderedOptions}
-            </View>
-          )}
-        </ScrollView>
-      </Box>
-    );
-  }
-
   return (
     <Box
       onLayout={handleLayout}
@@ -469,11 +443,24 @@ export const AppSegmentedControl = <T extends string | number>({
       accessibilityRole="tablist"
       testID={testID}
     >
-      {(hasSize || !flex) && (
-        <View style={[contentStyle, flex && !hasSize && { opacity: 0 }]}>
-          {options.length > 0 && <Animated.View style={pillStyle} />}
-          {renderedOptions}
-        </View>
+      {scrollable ? (
+        <ScrollView
+          ref={scrollViewRef}
+          style={isVertical ? styles.verticalScroll : undefined}
+          horizontal={!isVertical}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={isVertical ? layout.itemHeight : layout.itemWidth}
+          decelerationRate="fast"
+          contentContainerStyle={{
+            paddingHorizontal: !isVertical ? Spacing.md : 0,
+            paddingVertical: isVertical ? Spacing.md : 0,
+          }}
+        >
+          {content}
+        </ScrollView>
+      ) : (
+        content
       )}
     </Box>
   );

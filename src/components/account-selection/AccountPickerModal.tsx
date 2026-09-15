@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 

@@ -1,5 +1,6 @@
 import type { SelectionTilePresentation } from '@/src/components/shared/SelectionTileList';
-import { Opacity, withOpacity } from '@/src/constants';
+import { Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 
 export type ArchivedPickerRowPresentation = {
   opacity: number;
