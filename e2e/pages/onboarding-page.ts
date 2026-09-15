@@ -7,14 +7,13 @@ export class OnboardingPage extends BasePage {
     await this.fillName(userName);
     await this.clickGetStarted();
     await this.acknowledgePrivacyIfNeeded();
-    await this.clickWorkplaceContinue();
     await this.selectCurrency(currency);
     await this.clickGridContinue();
     await this.skipOptionalStep();
     await this.skipOptionalStep();
     await this.skipOptionalStep();
     await this.skipOptionalStep();
-    await this.page.getByTestId('onboarding-v2-continue').click({ force: true });
+    await this.page.getByTestId('onboarding-continue-button').click({ force: true });
     await this.clickFinish();
     await expect(this.page.getByRole('tab', { name: 'Dashboard', exact: true })).toBeVisible({
       timeout: 30000,
@@ -22,16 +21,16 @@ export class OnboardingPage extends BasePage {
   }
 
   async assertOnboardingStarted() {
-    const nameInput = this.page.getByTestId('onboarding-v2-you-input');
+    const nameInput = this.page.getByTestId('onboarding-name-input');
     await nameInput.waitFor({ state: 'visible', timeout: 15000 });
   }
 
   async fillName(name: string) {
-    await this.page.getByTestId('onboarding-v2-you-input').fill(name);
+    await this.page.getByTestId('onboarding-name-input').fill(name);
   }
 
   async clickGetStarted() {
-    await this.page.getByTestId('onboarding-v2-start').click({ force: true });
+    await this.page.getByTestId('onboarding-start').click({ force: true });
   }
 
   async acknowledgePrivacyIfNeeded() {
@@ -48,11 +47,11 @@ export class OnboardingPage extends BasePage {
     await expect(acknowledgePrivacy).not.toBeVisible({ timeout: 10000 });
   }
 
-  async clickWorkplaceContinue() {
+  async clickContinue() {
     await this.page
-      .getByTestId('workplace-basic-info-continue-button')
+      .getByTestId('onboarding-continue-button')
       .waitFor({ state: 'visible', timeout: 5000 });
-    await this.page.getByTestId('workplace-basic-info-continue-button').click({ force: true });
+    await this.page.getByTestId('onboarding-continue-button').click({ force: true });
   }
 
   async clickGridContinue() {
@@ -75,8 +74,8 @@ export class OnboardingPage extends BasePage {
   }
 
   async skipOptionalStep() {
-    await this.page.getByTestId('onboarding-v2-skip').waitFor({ state: 'visible', timeout: 5000 });
-    await this.page.getByTestId('onboarding-v2-skip').click({ force: true });
+    await this.page.getByTestId('onboarding-skip').waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.getByTestId('onboarding-skip').click({ force: true });
   }
 
   async clickFinish() {

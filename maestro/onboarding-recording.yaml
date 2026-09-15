@@ -33,7 +33,10 @@ appId: in.sahilsoni.fullfrillsbalance
 - inputText: 'Alex'
 - hideKeyboard
 - tapOn:
-    id: 'onboarding-continue-button'
+    id: 'onboarding-start'
+- tapOn:
+    text: 'Acknowledge & continue'
+    optional: true
 - extendedWaitUntil:
     visible:
       id: 'selectable-grid-continue-button'
@@ -42,22 +45,16 @@ appId: in.sahilsoni.fullfrillsbalance
     id: 'selectable-grid-continue-button'
 - extendedWaitUntil:
     visible:
-      id: 'selectable-grid-continue-button'
+      id: 'onboarding-skip'
     timeout: 30000
 - tapOn:
-    id: 'selectable-grid-continue-button'
-- extendedWaitUntil:
-    visible:
-      id: 'selectable-grid-continue-button'
-    timeout: 30000
+    id: 'onboarding-skip'
 - tapOn:
-    id: 'selectable-grid-continue-button'
-- extendedWaitUntil:
-    visible:
-      id: 'onboarding-theme-continue-button'
-    timeout: 30000
+    id: 'onboarding-skip'
 - tapOn:
-    id: 'onboarding-theme-continue-button'
+    id: 'onboarding-skip'
+- tapOn:
+    id: 'onboarding-skip'
 - extendedWaitUntil:
     visible:
       id: 'onboarding-finish-button'

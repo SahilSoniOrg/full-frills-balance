@@ -41,7 +41,7 @@ export async function launchFreshApp(
   });
   if (options.disableSynchronization) await device.disableSynchronization();
   if (!options.disableSynchronization) {
-    await waitFor(element(by.id('onboarding-v2-you-input')))
+    await waitFor(element(by.id('onboarding-name-input')))
       .toBeVisible()
       .withTimeout(120000);
   }

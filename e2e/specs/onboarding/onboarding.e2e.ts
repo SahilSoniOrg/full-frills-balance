@@ -18,7 +18,7 @@ describe('Onboarding', () => {
   it('completes the onboarding UI flow', async () => {
     // Startup work can remain non-idle while the first-run UI is interactive.
     await device.disableSynchronization();
-    await waitFor(element(by.id(onboarding.cashClarityInput)))
+    await waitFor(element(by.id(onboarding.nameInput)))
       .toExist()
       .withTimeout(120000);
     try {

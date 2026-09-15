@@ -76,16 +76,16 @@ export class SetupPage {
   }
 
   async waitForCashClarityWelcome(): Promise<void> {
-    await waitFor(element(by.id(setupIds.cashClarityScreen)))
+    await waitFor(element(by.id(setupIds.screen)))
       .toExist()
       .withTimeout(ONBOARDING_TIMEOUT_MS);
-    await waitFor(element(by.id(setupIds.cashClarityInput)))
+    await waitFor(element(by.id(setupIds.nameInput)))
       .toExist()
       .withTimeout(ONBOARDING_TIMEOUT_MS);
   }
 
   async enterCashClarityName(name: string): Promise<void> {
-    const input = element(by.id(setupIds.cashClarityInput));
+    const input = element(by.id(setupIds.nameInput));
     await input.tap();
     await input.replaceText(name);
   }
@@ -101,15 +101,13 @@ export class SetupPage {
   async completeFirstRun(name: string): Promise<void> {
     await this.waitForCashClarityWelcome();
     await this.enterCashClarityName(name);
-    await tapById(setupIds.cashClarityStart, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.start, ONBOARDING_TIMEOUT_MS);
     await this.acknowledgePrivacyIfNeeded();
-    await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
     await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
-    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
-    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
-    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
-    await tapById(setupIds.cashClaritySkip, ONBOARDING_TIMEOUT_MS);
-    await tapById(setupIds.cashClarityContinue, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.skip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.skip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.skip, ONBOARDING_TIMEOUT_MS);
+    await tapById(setupIds.skip, ONBOARDING_TIMEOUT_MS);
     await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
   }
 
