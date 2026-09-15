@@ -6,7 +6,7 @@ export class ScopeResolver {
    * Resolves root account IDs to all subtree account IDs (roots + all descendants).
    * Safe against cycles in parent-child references.
    */
-  static resolveSubtreeAccountIds(
+  private static resolveSubtreeAccountIds(
     rootAccountIds: (AccountId | string)[],
     allAccounts: (AccountFields | { id: string; parentAccountId?: string | null })[],
   ): Set<AccountId> {

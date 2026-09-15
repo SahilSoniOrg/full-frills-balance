@@ -153,27 +153,4 @@ describe('RecurrenceEngine', () => {
       expect(dayjs(nonLeapPeriod.endDate).format('YYYY-MM-DD')).toBe('2026-02-27');
     });
   });
-
-  describe('getOccurrences', () => {
-    it('returns all occurrences in a 90 day window', () => {
-      const range = {
-        startDate: new Date('2026-04-01T00:00:00Z').getTime(),
-        endDate: new Date('2026-06-30T23:59:59Z').getTime(),
-      };
-
-      const occurrences = RecurrenceEngine.getOccurrences(
-        {
-          intervalType: 'MONTHLY',
-          intervalN: 1,
-          startDate: new Date('2026-04-05T00:00:00Z').getTime(),
-          recurrenceDay: 5,
-        },
-        range,
-      );
-
-      expect(occurrences.length).toBe(3);
-      const dates = occurrences.map(t => dayjs(t).format('YYYY-MM-DD'));
-      expect(dates).toEqual(['2026-04-05', '2026-05-05', '2026-06-05']);
-    });
-  });
 });

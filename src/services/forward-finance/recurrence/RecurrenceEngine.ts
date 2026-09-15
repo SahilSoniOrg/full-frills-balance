@@ -116,37 +116,6 @@ export class RecurrenceEngine {
   }
 
   /**
-   * Generates all discrete occurrence timestamps within the given date range.
-   */
-  static getOccurrences(rule: RecurrenceRule, range: DateRange): number[] {
-    const occurrences: number[] = [];
-    const firstOccur = rule.startDate
-      ? this.computeFirstOccurrence(rule.startDate, rule)
-      : range.startDate;
-
-    let curr = firstOccur;
-    const maxEnd = Math.min(range.endDate, rule.endDate || Infinity);
-
-    // If start is before range, advance until within range
-    while (curr < range.startDate && curr <= maxEnd) {
-      const next = this.getNextOccurrence(curr, rule);
-      if (next <= curr) break; // guard against infinite loops
-      curr = next;
-    }
-
-    while (curr <= maxEnd) {
-      if (curr >= range.startDate) {
-        occurrences.push(curr);
-      }
-      const next = this.getNextOccurrence(curr, rule);
-      if (next <= curr) break;
-      curr = next;
-    }
-
-    return occurrences;
-  }
-
-  /**
    * Calculates the active cycle start and end dates containing referenceDate.
    */
   static getCurrentPeriod(rule: RecurrenceRule, referenceDate: number = Date.now()): DateRange {
