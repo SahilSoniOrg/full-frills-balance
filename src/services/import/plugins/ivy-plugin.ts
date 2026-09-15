@@ -1,6 +1,6 @@
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
-import type { CanonicalImport } from '@/src/services/import/canonicalImport';
+import type { CanonicalImport } from '@/src/types/importContracts';
 import {
   advanceOccurrence,
   mapToNearestAccountColor,

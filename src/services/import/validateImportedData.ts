@@ -1,9 +1,12 @@
-import { BatchImportData, ImportedAccount } from '@/src/data/repositories/importTypes';
+import type {
+  BatchImportData,
+  CanonicalAccount,
+  CanonicalImport,
+} from '@/src/types/importContracts';
 import {
   MissingImportedAccountRef,
   missingImportedAccountRefs,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { CanonicalImport } from '@/src/services/import/canonicalImport';
 import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
 
@@ -84,7 +87,7 @@ function validateStructuralRules(data: BatchImportData): void {
   // this catches longer cycles such as A → B → C → A.
   for (const account of data.accounts) {
     const visited = new Set<string>();
-    let current: ImportedAccount | undefined = account;
+    let current: CanonicalAccount | undefined = account;
     while (current?.parentAccountId) {
       if (visited.has(current.id)) {
         throw new Error(

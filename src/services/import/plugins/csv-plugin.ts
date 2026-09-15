@@ -1,9 +1,6 @@
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import {
-  CsvColumnMapping,
-  detectColumns,
   findHeaderRow,
-  HeaderDetectionResult,
   parseAmountString,
   parseCsvRows,
   parseFlexibleDate,
@@ -12,10 +9,6 @@ import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/servi
 import { AccountType } from '@/src/types/enums';
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
-
-// Re-export parser utilities for backwards compatibility & tests
-export { parseCsvRows, parseAmountString, parseFlexibleDate, detectColumns, findHeaderRow };
-export type { CsvColumnMapping, HeaderDetectionResult };
 
 export const csvPlugin: ImportPlugin = {
   id: 'csv',

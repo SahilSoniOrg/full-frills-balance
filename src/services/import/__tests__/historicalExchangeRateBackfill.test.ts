@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { BatchImportData } from '@/src/data/repositories/importTypes';
+import type { BatchImportData } from '@/src/types/importContracts';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { backfillHistoricalExchangeRates } from '@/src/services/import/historicalExchangeRateBackfill';
 import { JournalDisplayType } from '@/src/types/enums';

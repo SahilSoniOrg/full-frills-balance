@@ -19,14 +19,14 @@ import {
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import type {
   BatchImportData,
-  ImportedAccount,
-  ImportedJournal,
-  ImportedTransaction,
-  ImportedBudget,
-  ImportedBudgetScope,
-  ImportedPlannedPayment,
-} from '@/src/data/repositories/importTypes';
-import { integrityService } from '@/src/services/integrity';
+  CanonicalAccount,
+  CanonicalJournal,
+  CanonicalTransaction,
+  CanonicalBudget,
+  CanonicalBudgetScope,
+  CanonicalPlannedPayment,
+} from '@/src/types/importContracts';
+import { forceRunCheck, resetWorkplace } from '@/src/services/integrity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
@@ -61,7 +61,7 @@ export class MockDataSeederService {
 
     // Now, whether it was newly created or already existing, we wipe its scoped data to start fresh.
     onProgressSafe('Wiping existing data...', 0.05);
-    await integrityService.resetWorkplace(targetWorkplaceId, true);
+    await resetWorkplace(targetWorkplaceId, true);
 
     // Make sure name, icon, and defaultCurrencyCode are set correctly
     await workplaceService.updateWorkplace(targetWorkplaceId, {
@@ -91,7 +91,7 @@ export class MockDataSeederService {
     const catEntertainment = generateId() as AccountId;
 
     // 4. Construct Accounts list
-    const accounts: ImportedAccount[] = [
+    const accounts: CanonicalAccount[] = [
       {
         id: accChecking,
         name: 'Chase Checking',
@@ -212,8 +212,8 @@ export class MockDataSeederService {
     ];
 
     // 5. Construct Journals and Transactions list
-    const journals: ImportedJournal[] = [];
-    const transactions: ImportedTransaction[] = [];
+    const journals: CanonicalJournal[] = [];
+    const transactions: CanonicalTransaction[] = [];
 
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
@@ -576,7 +576,7 @@ export class MockDataSeederService {
 
     const currentMonthStr = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
 
-    const budgets: ImportedBudget[] = [
+    const budgets: CanonicalBudget[] = [
       {
         id: budgetIdGroceries,
         name: 'Groceries Monthly Budget',
@@ -603,7 +603,7 @@ export class MockDataSeederService {
       },
     ];
 
-    const budgetScopes: ImportedBudgetScope[] = [
+    const budgetScopes: CanonicalBudgetScope[] = [
       {
         id: generateId(),
         budgetId: budgetIdGroceries,
@@ -622,7 +622,7 @@ export class MockDataSeederService {
     ];
 
     // 7. Planned Payments Configuration
-    const plannedPayments: ImportedPlannedPayment[] = [];
+    const plannedPayments: CanonicalPlannedPayment[] = [];
 
     // Salary: expected pay check in 1 day
     const nextSalaryDate = new Date();
@@ -717,7 +717,7 @@ export class MockDataSeederService {
 
     // 10. Verify data integrity & rebuild running balances
     onProgressSafe('Verifying database integrity...', 0.85);
-    await integrityService.forceRunCheck(targetWorkplaceId, (msg, p) => {
+    await forceRunCheck(targetWorkplaceId, (msg, p) => {
       // scale integrity from 0.85 to 0.95
       onProgressSafe(msg, 0.85 + (p ?? 0) * 0.1);
     });

@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { isAccountType } from '@/src/types/accountSubtype';
 import Currency from '@/src/data/models/Currency';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import type { BatchImportData, ImportedTransaction } from '@/src/data/repositories/importTypes';
+import type { BatchImportData, CanonicalTransaction } from '@/src/types/importContracts';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -15,7 +15,7 @@ export type ImportBalancePatch = {
 };
 
 type OrderedImportTx = {
-  tx: ImportedTransaction;
+  tx: CanonicalTransaction;
   isActive: boolean;
   amount: number;
   transactionType: TransactionType;
@@ -35,7 +35,7 @@ export async function calculateImportRunningBalances(
   const journalStatusMap = new Map<string, string>();
   data.journals.forEach(j => journalStatusMap.set(j.id, j.status));
 
-  const transactionsByAccount = new Map<string, ImportedTransaction[]>();
+  const transactionsByAccount = new Map<string, CanonicalTransaction[]>();
   data.transactions.forEach(t => {
     const list = transactionsByAccount.get(t.accountId) || [];
     list.push(t);

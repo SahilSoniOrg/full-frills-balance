@@ -13,7 +13,7 @@ import {
   isAccountSubtype,
   isAccountType,
 } from '@/src/types/accountSubtype';
-import type { ImportedAccount } from '@/src/data/repositories/importTypes';
+import type { CanonicalAccount } from '@/src/types/importContracts';
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET;
 
@@ -21,7 +21,7 @@ export function toAccountType(value: AccountType | string): AccountType {
   return isAccountType(value) ? value : DEFAULT_ACCOUNT_TYPE;
 }
 
-export function pickImportedSubtype(account: ImportedAccount): AccountSubtype | undefined {
+export function pickImportedSubtype(account: CanonicalAccount): AccountSubtype | undefined {
   if (account.accountSubtype && isAccountSubtype(account.accountSubtype)) {
     return account.accountSubtype;
   }

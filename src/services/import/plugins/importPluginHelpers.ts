@@ -1,9 +1,4 @@
-import { AppConfig } from '@/src/constants';
 import { ACCOUNT_COLOR_PALETTE } from '@/src/constants/account-constants';
-import { generator } from '@/src/data/database/idGenerator';
-import { ImportedAccount } from '@/src/data/repositories/importTypes';
-import { AccountId } from '@/src/types/ids';
-import { AccountType } from '@/src/types/enums';
 
 /** Accept source colors only when they can be represented as opaque 6-digit hex. */
 export function normalizeHexColor(value: string | null | undefined): string | undefined {
@@ -51,48 +46,6 @@ export function mapToNearestAccountColor(value: string | undefined): string | un
     },
     { color: ACCOUNT_COLOR_PALETTE[0]!, distance: Number.POSITIVE_INFINITY },
   ).color;
-}
-
-/**
- * Resolves or dynamically registers a system Equity account for Opening Balances or Balance Corrections.
- */
-export function getOrCreateSystemEquityAccount({
-  isOpeningBalance,
-  currencyCode,
-  categoryAccountMap,
-  accountCurrencyMap,
-  accountImports,
-}: {
-  isOpeningBalance: boolean;
-  currencyCode: string;
-  categoryAccountMap: Map<string, AccountId>;
-  accountCurrencyMap: Map<string, string>;
-  accountImports: ImportedAccount[];
-}): AccountId {
-  const accountConfig = isOpeningBalance
-    ? AppConfig.systemAccounts.openingBalances
-    : AppConfig.systemAccounts.balanceCorrections;
-
-  const systemKey = `SYSTEM_${isOpeningBalance ? 'OPENING_BALANCE' : 'BALANCE_CORRECTION'}:::${currencyCode}`;
-
-  let existingId = categoryAccountMap.get(systemKey);
-  if (!existingId) {
-    existingId = generator() as AccountId;
-    categoryAccountMap.set(systemKey, existingId);
-    accountCurrencyMap.set(existingId, currencyCode);
-
-    accountImports.push({
-      id: existingId,
-      name: `${accountConfig.namePrefix} (${currencyCode})`,
-      accountType: AccountType.EQUITY,
-      currencyCode,
-      description: accountConfig.description,
-      icon: accountConfig.icon,
-      orderNum: accountImports.length + 1,
-    });
-  }
-
-  return existingId;
 }
 
 /**

@@ -2,17 +2,17 @@ import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { JournalDisplayType } from '@/src/types/enums';
 import {
   BatchImportData,
-  ImportedAccount,
-  ImportedJournal,
-  ImportedTransaction,
-} from '@/src/data/repositories/importTypes';
+  CanonicalAccount,
+  CanonicalJournal,
+  CanonicalTransaction,
+} from '@/src/types/importContracts';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 
 function minimalImport(overrides?: {
-  journals?: ImportedJournal[];
-  transactions?: ImportedTransaction[];
+  journals?: CanonicalJournal[];
+  transactions?: CanonicalTransaction[];
 }): BatchImportData {
-  const accounts: ImportedAccount[] = [
+  const accounts: CanonicalAccount[] = [
     {
       id: 'acc-1',
       name: 'Cash',
@@ -31,7 +31,7 @@ function minimalImport(overrides?: {
   const accountId = 'acc-1' as AccountId;
   const categoryId = 'acc-2' as AccountId;
 
-  const journals: ImportedJournal[] = overrides?.journals ?? [
+  const journals: CanonicalJournal[] = overrides?.journals ?? [
     {
       id: journalId,
       journalDate: Date.now(),
@@ -44,7 +44,7 @@ function minimalImport(overrides?: {
     },
   ];
 
-  const transactions: ImportedTransaction[] = overrides?.transactions ?? [
+  const transactions: CanonicalTransaction[] = overrides?.transactions ?? [
     {
       id: 't-1' as TransactionId,
       journalId,

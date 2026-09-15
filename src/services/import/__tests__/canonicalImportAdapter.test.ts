@@ -2,8 +2,8 @@ import {
   batchImportDataFromCanonical,
   canonicalImportFromBatchImportData,
 } from '@/src/services/import/canonicalImportAdapter';
-import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/services/import/canonicalImport';
-import { BatchImportData } from '@/src/data/repositories/importTypes';
+import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/types/importContracts';
+import type { BatchImportData } from '@/src/types/importContracts';
 import { JournalDisplayType } from '@/src/types/enums';
 
 describe('canonicalImportAdapter', () => {

@@ -9,19 +9,19 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AuditEntityType } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {
-  ImportedAccount,
-  ImportedAccountMetadata,
-  ImportedAuditLog,
-  ImportedBalanceSnapshot,
-  ImportedBudget,
-  ImportedBudgetScope,
-  ImportedJournal,
-  ImportedJournalMetadata,
-  ImportedPlannedPayment,
-  ImportedTransactionAutoPostRule,
-  ImportedTransaction,
-  ImportedTransactionInboxRecord,
-} from '@/src/data/repositories/importTypes';
+  CanonicalAccount,
+  CanonicalAccountMetadata,
+  CanonicalAuditLog,
+  CanonicalBalanceSnapshot,
+  CanonicalBudget,
+  CanonicalBudgetScope,
+  CanonicalJournal,
+  CanonicalJournalMetadata,
+  CanonicalPlannedPayment,
+  CanonicalTransactionAutoPostRule,
+  CanonicalTransaction,
+  CanonicalTransactionInboxRecord,
+} from '@/src/types/importContracts';
 
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
@@ -44,23 +44,23 @@ interface NativeImportData {
     defaultCurrencyCode?: string;
   };
   workplacePreferences?: Partial<WorkplacePreferences>;
-  accounts: ImportedAccount[];
-  journals: ImportedJournal[];
-  transactions: ImportedTransaction[];
-  auditLogs?: ImportedAuditLog[];
-  budgets?: ImportedBudget[];
-  budgetScopes?: ImportedBudgetScope[];
-  accountMetadata?: ImportedAccountMetadata[];
-  plannedPayments?: ImportedPlannedPayment[];
-  journalMetadata?: ImportedJournalMetadata[];
+  accounts: CanonicalAccount[];
+  journals: CanonicalJournal[];
+  transactions: CanonicalTransaction[];
+  auditLogs?: CanonicalAuditLog[];
+  budgets?: CanonicalBudget[];
+  budgetScopes?: CanonicalBudgetScope[];
+  accountMetadata?: CanonicalAccountMetadata[];
+  plannedPayments?: CanonicalPlannedPayment[];
+  journalMetadata?: CanonicalJournalMetadata[];
   // Support both snake_case and camelCase for legacy compatibility
-  sms_auto_post_rules?: ImportedTransactionAutoPostRule[];
-  smsAutoPostRules?: ImportedTransactionAutoPostRule[];
-  transactionAutoPostRules?: ImportedTransactionAutoPostRule[];
-  sms_inbox_records?: ImportedTransactionInboxRecord[];
-  smsInboxRecords?: ImportedTransactionInboxRecord[];
-  transactionInboxRecords?: ImportedTransactionInboxRecord[];
-  balanceSnapshots?: ImportedBalanceSnapshot[];
+  sms_auto_post_rules?: CanonicalTransactionAutoPostRule[];
+  smsAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  sms_inbox_records?: CanonicalTransactionInboxRecord[];
+  smsInboxRecords?: CanonicalTransactionInboxRecord[];
+  transactionInboxRecords?: CanonicalTransactionInboxRecord[];
+  balanceSnapshots?: CanonicalBalanceSnapshot[];
   workplace?: {
     name: string;
     icon: string;

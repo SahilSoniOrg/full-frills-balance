@@ -8,7 +8,7 @@ import {
   calculateImportRunningBalances,
   applyImportBalancePatches,
 } from '@/src/data/repositories/importBalanceCalculator';
-import type { BatchImportData } from '@/src/data/repositories/importTypes';
+import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import Workplace from '@/src/data/models/Workplace';

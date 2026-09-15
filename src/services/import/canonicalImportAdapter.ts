@@ -1,27 +1,10 @@
-import {
+import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/types/importContracts';
+import type {
   BatchImportData,
-  ImportedAccount,
-  ImportedAccountMetadata,
-  ImportedAuditLog,
-  ImportedBalanceSnapshot,
-  ImportedBudget,
-  ImportedBudgetScope,
-  ImportedCurrency,
-  ImportedExchangeRate,
-  ImportedJournal,
-  ImportedJournalMetadata,
-  ImportedPlannedPayment,
-  ImportedTransaction,
-  ImportedTransactionAutoPostRule,
-  ImportedTransactionInboxRecord,
-} from '@/src/data/repositories/importTypes';
-
-import {
-  CANONICAL_IMPORT_VERSION_V1,
   CanonicalImport,
   CanonicalImportMetadata,
   CanonicalImportV1,
-} from '@/src/services/import/canonicalImport';
+} from '@/src/types/importContracts';
 
 /** Maps canonical plugin output to the persistence batch shape (commit 29 will narrow this path). */
 export function batchImportDataFromCanonical(canonical: CanonicalImport): BatchImportData {
@@ -31,22 +14,20 @@ export function batchImportDataFromCanonical(canonical: CanonicalImport): BatchI
 
   const v1 = canonical as CanonicalImportV1;
   return {
-    accounts: v1.accounts as ImportedAccount[],
-    journals: v1.journals as ImportedJournal[],
-    transactions: v1.transactions as ImportedTransaction[],
-    budgets: v1.budgets as ImportedBudget[] | undefined,
-    budgetScopes: v1.budgetScopes as ImportedBudgetScope[] | undefined,
-    auditLogs: v1.auditLogs as ImportedAuditLog[] | undefined,
-    currencies: v1.currencies as ImportedCurrency[] | undefined,
-    exchangeRates: v1.exchangeRates as ImportedExchangeRate[] | undefined,
-    accountMetadata: v1.accountMetadata as ImportedAccountMetadata[] | undefined,
-    plannedPayments: v1.plannedPayments as ImportedPlannedPayment[] | undefined,
-    journalMetadata: v1.journalMetadata as ImportedJournalMetadata[] | undefined,
-    transactionAutoPostRules: v1.transactionAutoPostRules as
-      ImportedTransactionAutoPostRule[] | undefined,
-    transactionInboxRecords: v1.transactionInboxRecords as
-      ImportedTransactionInboxRecord[] | undefined,
-    balanceSnapshots: v1.balanceSnapshots as ImportedBalanceSnapshot[] | undefined,
+    accounts: v1.accounts,
+    journals: v1.journals,
+    transactions: v1.transactions,
+    budgets: v1.budgets,
+    budgetScopes: v1.budgetScopes,
+    auditLogs: v1.auditLogs,
+    currencies: v1.currencies,
+    exchangeRates: v1.exchangeRates,
+    accountMetadata: v1.accountMetadata,
+    plannedPayments: v1.plannedPayments,
+    journalMetadata: v1.journalMetadata,
+    transactionAutoPostRules: v1.transactionAutoPostRules,
+    transactionInboxRecords: v1.transactionInboxRecords,
+    balanceSnapshots: v1.balanceSnapshots,
   };
 }
 
@@ -60,22 +41,20 @@ export function canonicalImportFromBatchImportData(
   return {
     version: CANONICAL_IMPORT_VERSION_V1,
     sourceFormatVersion: options.sourceFormatVersion,
-    accounts: data.accounts as CanonicalImportV1['accounts'],
-    journals: data.journals as CanonicalImportV1['journals'],
-    transactions: data.transactions as CanonicalImportV1['transactions'],
-    budgets: data.budgets as CanonicalImportV1['budgets'],
-    budgetScopes: data.budgetScopes as CanonicalImportV1['budgetScopes'],
-    auditLogs: data.auditLogs as CanonicalImportV1['auditLogs'],
-    currencies: data.currencies as CanonicalImportV1['currencies'],
-    exchangeRates: data.exchangeRates as CanonicalImportV1['exchangeRates'],
-    accountMetadata: data.accountMetadata as CanonicalImportV1['accountMetadata'],
-    plannedPayments: data.plannedPayments as CanonicalImportV1['plannedPayments'],
-    journalMetadata: data.journalMetadata as CanonicalImportV1['journalMetadata'],
-    transactionAutoPostRules:
-      data.transactionAutoPostRules as CanonicalImportV1['transactionAutoPostRules'],
-    transactionInboxRecords:
-      data.transactionInboxRecords as CanonicalImportV1['transactionInboxRecords'],
-    balanceSnapshots: data.balanceSnapshots as CanonicalImportV1['balanceSnapshots'],
+    accounts: data.accounts,
+    journals: data.journals,
+    transactions: data.transactions,
+    budgets: data.budgets,
+    budgetScopes: data.budgetScopes,
+    auditLogs: data.auditLogs,
+    currencies: data.currencies,
+    exchangeRates: data.exchangeRates,
+    accountMetadata: data.accountMetadata,
+    plannedPayments: data.plannedPayments,
+    journalMetadata: data.journalMetadata,
+    transactionAutoPostRules: data.transactionAutoPostRules,
+    transactionInboxRecords: data.transactionInboxRecords,
+    balanceSnapshots: data.balanceSnapshots,
     importMetadata: options.importMetadata,
   };
 }

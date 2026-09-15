@@ -27,7 +27,7 @@ import {
   CanonicalJournal,
   CanonicalPlannedPayment,
   CanonicalTransaction,
-} from './canonicalImport';
+} from '@/src/types/importContracts';
 import { synthesizeTransactions as synthesizeTransactionPhase } from './phases/transactionSynthesizer';
 
 export interface ImportAccountInput {
@@ -214,18 +214,9 @@ export class CanonicalImportBuilder {
     return this;
   }
 
-  public addCurrency(currency: CanonicalCurrency): this {
-    this.currencies.push(currency);
-    return this;
-  }
-
   public addExchangeRate(rate: CanonicalExchangeRate): this {
     this.exchangeRates.push(rate);
     return this;
-  }
-
-  public getIssues(): readonly ImportIssue[] {
-    return this.registrationIssues;
   }
 
   // --- Pipeline Phases ---

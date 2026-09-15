@@ -1,5 +1,5 @@
-import { CanonicalImport } from '@/src/services/import/canonicalImport';
-import { UIPreferences } from '@/src/services/preferences';
+import type { CanonicalImport } from '@/src/types/importContracts';
+import type { UIPreferences } from '@/src/services/preferences';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 
 /**

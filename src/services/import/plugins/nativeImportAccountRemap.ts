@@ -3,15 +3,15 @@ import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 import {
   BatchImportData,
-  ImportedAccount,
-  ImportedAccountMetadata,
-  ImportedBalanceSnapshot,
-  ImportedBudget,
-  ImportedBudgetScope,
-  ImportedPlannedPayment,
-  ImportedTransaction,
-  ImportedTransactionAutoPostRule,
-} from '@/src/data/repositories/importTypes';
+  CanonicalAccount,
+  CanonicalAccountMetadata,
+  CanonicalBalanceSnapshot,
+  CanonicalBudget,
+  CanonicalBudgetScope,
+  CanonicalPlannedPayment,
+  CanonicalTransaction,
+  CanonicalTransactionAutoPostRule,
+} from '@/src/types/importContracts';
 import {
   AccountImportBatchDto,
   AccountImportRef,
@@ -29,16 +29,16 @@ import {
 import { logger } from '@/src/utils/logger';
 
 export type NativeImportAccountSources = {
-  accounts: ImportedAccount[];
-  transactions: ImportedTransaction[];
-  budgetScopes?: ImportedBudgetScope[];
-  accountMetadata?: ImportedAccountMetadata[];
-  plannedPayments?: ImportedPlannedPayment[];
-  balanceSnapshots?: ImportedBalanceSnapshot[];
-  budgets?: ImportedBudget[];
-  transactionAutoPostRules?: ImportedTransactionAutoPostRule[];
-  smsAutoPostRules?: ImportedTransactionAutoPostRule[];
-  sms_auto_post_rules?: ImportedTransactionAutoPostRule[];
+  accounts: CanonicalAccount[];
+  transactions: CanonicalTransaction[];
+  budgetScopes?: CanonicalBudgetScope[];
+  accountMetadata?: CanonicalAccountMetadata[];
+  plannedPayments?: CanonicalPlannedPayment[];
+  balanceSnapshots?: CanonicalBalanceSnapshot[];
+  budgets?: CanonicalBudget[];
+  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  smsAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  sms_auto_post_rules?: CanonicalTransactionAutoPostRule[];
 };
 
 function addRef(
@@ -54,7 +54,7 @@ function addRef(
 
 export function autoPostRulesFromData(
   data: NativeImportAccountSources,
-): ImportedTransactionAutoPostRule[] {
+): CanonicalTransactionAutoPostRule[] {
   return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
 }
 
@@ -167,10 +167,10 @@ export function buildPlaceholderAccountsForOrphans(args: {
   accountCurrencyMap?: Map<string, string>;
   defaultCurrencyCode: string;
   nextId: () => AccountId;
-}): { placeholderAccounts: ImportedAccount[]; plan: ImportPlan } {
+}): { placeholderAccounts: CanonicalAccount[]; plan: ImportPlan } {
   const { data, accountMap, accountCurrencyMap, defaultCurrencyCode, nextId } = args;
   const plan = importPlan(accountImportBatchFromSources(data));
-  const placeholderAccounts: ImportedAccount[] = [];
+  const placeholderAccounts: CanonicalAccount[] = [];
 
   for (const originalId of plan.missingAccountIds) {
     if (accountMap.has(originalId)) continue;
@@ -199,12 +199,12 @@ export function buildPlaceholderAccountsForOrphans(args: {
 }
 
 export function remapAutoPostRulesForImport(
-  rules: ImportedTransactionAutoPostRule[],
+  rules: CanonicalTransactionAutoPostRule[],
   accountMap: Map<string, AccountId>,
   nextId: () => string,
   parseTimestamp: (value?: number | string) => number | undefined,
   plan?: ImportPlan,
-): ImportedTransactionAutoPostRule[] {
+): CanonicalTransactionAutoPostRule[] {
   const patchesByKey = new Map((plan?.rulePatches ?? []).map(patch => [patch.ruleKey, patch]));
 
   return rules.map(rule => {

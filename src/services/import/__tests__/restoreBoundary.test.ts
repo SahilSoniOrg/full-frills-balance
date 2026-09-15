@@ -20,7 +20,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
   },
 }));
 jest.mock('@/src/services/integrity', () => ({
-  integrityService: { forceRunCheck: jest.fn().mockResolvedValue(undefined) },
+  forceRunCheck: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/src/services/import/importAccountBalanceRebuild', () => ({
   rebuildAllAccountBalancesAfterImport: jest.fn().mockResolvedValue(undefined),

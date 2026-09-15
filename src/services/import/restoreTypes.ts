@@ -1,4 +1,4 @@
-import type { CanonicalImport } from '@/src/services/import/canonicalImport';
+import type { CanonicalImport } from '@/src/types/importContracts';
 import type {
   ImportFileContext,
   ImportPlugin,

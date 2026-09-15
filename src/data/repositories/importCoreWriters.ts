@@ -9,10 +9,10 @@ import {
 } from '@/src/data/repositories/importValueParsers';
 import { setRecordTimestamps } from '@/src/data/repositories/importPersistenceAdapter';
 import type {
-  ImportedAccount,
-  ImportedJournal,
-  ImportedTransaction,
-} from '@/src/data/repositories/importTypes';
+  CanonicalAccount,
+  CanonicalJournal,
+  CanonicalTransaction,
+} from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import { Collection, Model } from '@nozbe/watermelondb';
 
@@ -24,9 +24,9 @@ export function prepareCoreImportRecords(
     transactions: Collection<Transaction>;
   },
   data: {
-    accounts: ImportedAccount[];
-    journals: ImportedJournal[];
-    transactions: ImportedTransaction[];
+    accounts: CanonicalAccount[];
+    journals: CanonicalJournal[];
+    transactions: CanonicalTransaction[];
   },
 ): Model[] {
   const accountPrepares = data.accounts.map(account =>

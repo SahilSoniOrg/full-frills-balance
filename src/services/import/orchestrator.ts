@@ -79,12 +79,6 @@ export async function extractIfZip(bytes: Uint8Array): Promise<Uint8Array> {
   }
 
   logger.info('[ImportOrchestrator] Detected ZIP file, extracting...');
-  // Check for ZIP magic number 'PK' (0x50, 0x4B)
-  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
-    logger.info('[ImportOrchestrator] Not a ZIP file, processing as raw content');
-    return bytes;
-  }
-
   try {
     const extracted = await compression.extractFirstFile(bytes);
 

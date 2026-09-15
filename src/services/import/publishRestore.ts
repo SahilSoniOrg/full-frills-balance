@@ -1,17 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
-import type {
-  BatchImportData,
-  ImportedTransactionInboxRecord,
-} from '@/src/data/repositories/importTypes';
+import type { BatchImportData, CanonicalTransactionInboxRecord } from '@/src/types/importContracts';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
 import { backfillHistoricalExchangeRates } from '@/src/services/import/historicalExchangeRateBackfill';
-import { integrityService } from '@/src/services/integrity';
+import { forceRunCheck } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { preferences } from '@/src/services/preferences';
@@ -34,7 +31,7 @@ function usedCurrencyCodes(data: BatchImportData, defaultCurrency: string): stri
   data.transactions?.forEach(record => record.currencyCode && codes.add(record.currencyCode));
   data.budgets?.forEach(record => record.currencyCode && codes.add(record.currencyCode));
   data.plannedPayments?.forEach(record => record.currencyCode && codes.add(record.currencyCode));
-  data.transactionInboxRecords?.forEach((record: ImportedTransactionInboxRecord) => {
+  data.transactionInboxRecords?.forEach((record: CanonicalTransactionInboxRecord) => {
     if (record.parsedCurrencyCode) codes.add(record.parsedCurrencyCode);
   });
   return [...codes].filter(Boolean);
@@ -102,7 +99,7 @@ async function runPostPublicationChecks(
   }
 
   try {
-    await integrityService.forceRunCheck(workplaceId, (message, progress) =>
+    await forceRunCheck(workplaceId, (message, progress) =>
       report(callback, message, 0.86 + progress * 0.07),
     );
   } catch (error) {

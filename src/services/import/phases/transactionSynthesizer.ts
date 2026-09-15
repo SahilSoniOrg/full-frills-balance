@@ -1,7 +1,11 @@
 import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { generator } from '@/src/data/database/idGenerator';
-import type { CanonicalAccount, CanonicalJournal, CanonicalTransaction } from '../canonicalImport';
+import type {
+  CanonicalAccount,
+  CanonicalJournal,
+  CanonicalTransaction,
+} from '@/src/types/importContracts';
 import type { ImportIssue, ImportTransactionInput } from '../canonicalImportBuilder';
 
 export function synthesizeTransactions(params: {

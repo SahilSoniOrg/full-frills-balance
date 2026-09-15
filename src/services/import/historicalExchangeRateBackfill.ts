@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { BatchImportData, ImportedTransaction } from '@/src/data/repositories/importTypes';
+import type { BatchImportData, CanonicalTransaction } from '@/src/types/importContracts';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 
@@ -8,7 +8,7 @@ function hasValidRate(rate: number | undefined): rate is number {
 }
 
 function transactionDate(
-  transaction: ImportedTransaction,
+  transaction: CanonicalTransaction,
   journalDates: Map<string, number>,
 ): number {
   return journalDates.get(transaction.journalId) ?? transaction.transactionDate;
@@ -26,7 +26,7 @@ export async function backfillHistoricalExchangeRates(
   const targetCurrency = defaultCurrency.trim().toUpperCase();
   const journalDates = new Map(data.journals.map(journal => [journal.id, journal.journalDate]));
 
-  type BackfillResult = { transaction: ImportedTransaction; warning?: string };
+  type BackfillResult = { transaction: CanonicalTransaction; warning?: string };
   const results: BackfillResult[] = new Array(data.transactions.length);
 
   await runTasksWithBoundedConcurrency(

@@ -1,9 +1,9 @@
+import { csvPlugin } from '@/src/services/import/plugins/csv-plugin';
 import {
-  csvPlugin,
   parseAmountString,
   parseCsvRows,
   parseFlexibleDate,
-} from '@/src/services/import/plugins/csv-plugin';
+} from '@/src/services/import/plugins/csv/csvParser';
 import { ImportFileContext } from '@/src/services/import/types';
 import { AccountType, TransactionType } from '@/src/types/enums';
 

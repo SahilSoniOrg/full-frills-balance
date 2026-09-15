@@ -1,29 +1,30 @@
-import {
+import type {
   AccountSubtype,
   AccountType,
   AuditEntityType,
-  TransactionType,
   JournalDisplayType,
   JournalStatus,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
+  TransactionType,
 } from '@/src/types/enums';
-import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
-import { UIPreferences } from '@/src/services/preferences';
+import type {
+  AccountId,
+  BudgetId,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+} from '@/src/types/ids';
+import type { UIPreferences } from '@/src/types/preferences';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
 export const CANONICAL_IMPORT_VERSION_V1 = 'canonical-import.v1' as const;
 
-export type CanonicalImportVersion = typeof CANONICAL_IMPORT_VERSION_V1;
-
-/**
- * Versioned discriminated union for plugin output. Only v1 today; add v2 as a new member.
- */
+/** Versioned contract shared by import plugins, adapters, and persistence. */
 export type CanonicalImport = CanonicalImportV1;
 
 export interface CanonicalImportV1 {
   readonly version: typeof CANONICAL_IMPORT_VERSION_V1;
-  /** Source file format version (e.g. native backup `1.4.0`), when known. */
   sourceFormatVersion?: string;
   accounts: CanonicalAccount[];
   journals: CanonicalJournal[];
@@ -39,7 +40,6 @@ export interface CanonicalImportV1 {
   transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
-  /** Preferences and workplace hints carried alongside ledger data. */
   importMetadata?: CanonicalImportMetadata;
 }
 
@@ -50,7 +50,6 @@ export interface CanonicalImportMetadata {
     defaultCurrencyCode?: string;
     icon?: string;
   };
-  /** Plugin that produced this import (e.g. `native`). */
   pluginId?: string;
 }
 
@@ -273,6 +272,20 @@ export interface CanonicalBalanceSnapshot {
   updatedAt?: number;
 }
 
-export function isCanonicalImportV1(value: CanonicalImport): value is CanonicalImportV1 {
-  return value.version === CANONICAL_IMPORT_VERSION_V1;
+/** Persistence-facing batch shape for an already-normalized import. */
+export interface BatchImportData {
+  accounts: CanonicalAccount[];
+  journals: CanonicalJournal[];
+  transactions: CanonicalTransaction[];
+  budgets?: CanonicalBudget[];
+  budgetScopes?: CanonicalBudgetScope[];
+  auditLogs?: CanonicalAuditLog[];
+  currencies?: CanonicalCurrency[];
+  exchangeRates?: CanonicalExchangeRate[];
+  accountMetadata?: CanonicalAccountMetadata[];
+  plannedPayments?: CanonicalPlannedPayment[];
+  journalMetadata?: CanonicalJournalMetadata[];
+  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  transactionInboxRecords?: CanonicalTransactionInboxRecord[];
+  balanceSnapshots?: CanonicalBalanceSnapshot[];
 }

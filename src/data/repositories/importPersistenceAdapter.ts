@@ -1,5 +1,4 @@
 import { Model } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/ids';
 
 /**
  * Watermelon `_raw` columns used during import batch insert / sync.
@@ -29,15 +28,4 @@ export function setRecordTimestamps(
 
 export function setImportPersistenceRawField(record: Model, field: string, value: unknown): void {
   getImportPersistenceRaw(record)[field] = value;
-}
-
-export function setImportSoftDeleted(record: Model, deletedAt: number, updatedAt: number): void {
-  const raw = getImportPersistenceRaw(record);
-  raw.deleted_at = deletedAt;
-  raw.updated_at = updatedAt;
-  raw._status = 'synced';
-}
-
-export function assignImportWorkplaceId(record: Model, workplaceId: WorkplaceId): void {
-  (record as Model & { workplaceId: WorkplaceId }).workplaceId = workplaceId;
 }
