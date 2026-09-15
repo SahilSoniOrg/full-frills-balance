@@ -27,12 +27,9 @@
   ],
   "journal": [],
   "planned-payments": [
-    "accounts",
     "journal"
   ],
-  "reports": [
-    "accounts"
-  ],
+  "reports": [],
   "settings": [
     "accounts"
   ]

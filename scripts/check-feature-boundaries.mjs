@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const ALLOWLIST_PATH = path.join(__dirname, 'cross-feature-boundary-allowlist.json');
 const SOURCE_FILE_RE = /\.(?:ts|tsx)$/;
-const IMPORT_RE = /(?:from\s*|import\s*\()(['"])(@\/src\/features\/([^/'"]+)([^'"]*))\1/g;
+const IMPORT_RE = /(?:from\s*|import\s*\()(['"])([^'"]+)\1/g;
 export const NEUTRAL_ROOTS = [
   'src/components',
   'src/constants',
@@ -49,6 +49,25 @@ function getSourceKind(relativePath, neutralRoots) {
   return null;
 }
 
+function resolveFeatureImport(rootDir, importerPath, specifier) {
+  let resolved;
+  if (specifier.startsWith('@/')) {
+    resolved = path.resolve(rootDir, specifier.slice(2));
+  } else if (specifier.startsWith('.')) {
+    resolved = path.resolve(path.dirname(importerPath), specifier);
+  } else {
+    return null;
+  }
+
+  const featuresRoot = path.resolve(rootDir, 'src/features');
+  const relativeToFeatures = path.relative(featuresRoot, resolved);
+  if (relativeToFeatures.startsWith('..') || path.isAbsolute(relativeToFeatures)) return null;
+
+  const [targetFeature, ...suffix] = relativeToFeatures.split(path.sep);
+  if (!targetFeature) return null;
+  return { targetFeature, isDeep: suffix.length > 0, isRelative: specifier.startsWith('.') };
+}
+
 export function analyzeFeatureBoundaries({
   rootDir = ROOT,
   allowlistPath = path.join(rootDir, 'scripts/cross-feature-boundary-allowlist.json'),
@@ -68,14 +87,21 @@ export function analyzeFeatureBoundaries({
     if (!sourceKind) return;
     const source = fs.readFileSync(absolutePath, 'utf8');
     for (const match of source.matchAll(IMPORT_RE)) {
-      const [, , specifier, targetFeature, suffix] = match;
+      const [, , specifier] = match;
+      const importedFeature = resolveFeatureImport(rootDir, absolutePath, specifier);
+      if (!importedFeature) continue;
+      const { targetFeature, isDeep, isRelative } = importedFeature;
       if (sourceKind.type === 'neutral') {
         violations.push(`${relativePath}: production-neutral module cannot import feature ${specifier}`);
         continue;
       }
       if (targetFeature === sourceKind.name) continue;
       const edge = `${sourceKind.name}->${targetFeature}`;
-      if (suffix !== '') {
+      if (isRelative) {
+        violations.push(`${relativePath}: relative cross-feature import ${specifier}`);
+        continue;
+      }
+      if (isDeep) {
         violations.push(`${relativePath}: deep cross-feature import ${specifier}`);
         continue;
       }

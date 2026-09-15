@@ -78,6 +78,18 @@ test('rejects deep cross-feature imports', () => {
   assert.ok(result.violations.some(violation => violation.includes('deep cross-feature import')));
 });
 
+test('rejects relative cross-feature imports', () => {
+  const result = analyzeFixture(
+    {
+      'src/features/accounts/components/AccountScreen.tsx':
+        "import { JournalThing } from '../../journal';",
+    },
+    { accounts: ['journal'] },
+  );
+
+  assert.ok(result.violations.some(violation => violation.includes('accounts->journal')));
+});
+
 test('rejects unapproved cross-feature public barrel imports', () => {
   const result = analyzeFixture(
     {
