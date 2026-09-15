@@ -1,7 +1,8 @@
 import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
 import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
-import { Opacity, Size, withOpacity } from '@/src/constants';
+import { Opacity, Size } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
 import { TouchableOpacity } from 'react-native';

@@ -16,16 +16,9 @@ import {
 } from '@/src/services/update/versionPolicyService';
 import { exportUpdateBackup } from '@/src/services/export';
 import type { VersionPolicy } from '@/src/services/update/types';
-import { openStoreUrl } from '@/src/services/update/storeLinking';
-// Register update insights before the Hub can observe supplemental providers.
-import '@/src/services/update/updateInsightService';
+import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { toast } from '@/src/utils/alerts';
-import {
-  clearAvailableUpdate,
-  dismissAvailableUpdate,
-  publishAvailableUpdate,
-} from '@/src/services/update/updateAvailabilityStore';
-import { AppState, Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -73,8 +66,9 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           ? { kind: 'required', policy: result.policy }
           : { kind: 'allowed', available: result.available },
       );
-      if (result.kind === 'allowed' && result.available) publishAvailableUpdate(result.available);
-      else clearAvailableUpdate();
+      if (result.kind === 'allowed' && result.available)
+        updateInsightService.publishAvailableUpdate(result.available);
+      else updateInsightService.clearAvailableUpdate();
     } catch {
       // A network outage must not brick a device that has never received a policy.
       setState(previous => (previous.kind === 'required' ? previous : { kind: 'allowed' }));
@@ -84,7 +78,9 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
   const openStore = useCallback(
     async (policy: VersionPolicy) => {
       try {
-        await openStoreUrl(policy.storeUrl);
+        const canOpen = await Linking.canOpenURL(policy.storeUrl);
+        if (!canOpen) throw new Error('Store URL cannot be opened');
+        await Linking.openURL(policy.storeUrl);
       } catch {
         if (state.kind === 'required' || state.kind === 'error') {
           setState({ kind: 'error', policy });
@@ -122,7 +118,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           label: AppConfig.strings.update.updateNow,
           onPress: () => void openStore(notice),
         },
-        onDismiss: () => dismissAvailableUpdate(notice),
+        onDismiss: () => updateInsightService.dismissAvailableUpdate(notice),
       });
     }, 0);
     return () => clearTimeout(timeoutId);

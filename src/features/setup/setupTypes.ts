@@ -1,7 +1,7 @@
 import { FontIds, ThemeIds, type FontId, type ThemeId } from '@/src/constants/design-tokens';
 import { AccountType } from '@/src/types/enums';
 import { type IconName } from '@/src/types/domainIcons';
-import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type {
   RestoreFacts as ImportedRestoreFacts,
   RestoreHandoff as ImportedRestoreHandoff,
@@ -27,6 +27,8 @@ export interface Sourced<T> {
 }
 
 export interface StarterAccountInput {
+  /** Optional stable ID for flows that need to reference the freshly-created account. */
+  readonly id?: AccountId;
   readonly name: string;
   readonly type: AccountType;
   readonly icon: IconName;
@@ -227,11 +229,6 @@ export function isFontId(value: unknown): value is FontId {
 
 export function isWorkplaceId(value: unknown): value is WorkplaceId {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-/** Keep the raw-boundary brand in one place for draft deserialization. */
-export function parseWorkplaceId(value: unknown): WorkplaceId | undefined {
-  return isWorkplaceId(value) ? asWorkplaceId(value) : undefined;
 }
 
 export function restoreSources(draft: RestoreSetupDraft): readonly RestoreSourceOutput[] {

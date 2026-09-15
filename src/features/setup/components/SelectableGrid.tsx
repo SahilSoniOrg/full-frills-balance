@@ -1,6 +1,7 @@
 import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
-import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { Layout, Opacity, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';

@@ -37,10 +37,8 @@ jest.mock('@/src/services/preferences', () => ({
       setDeviceRegistered: jest.fn(),
       setActiveWorkplaceId: jest.fn(),
     },
-    themePrefs: {
-      setThemeId: jest.fn(),
-      setFontId: jest.fn(),
-    },
+    setThemeId: jest.fn(),
+    setFontId: jest.fn(),
   },
 }));
 

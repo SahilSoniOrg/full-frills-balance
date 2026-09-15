@@ -2,7 +2,7 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { insightService } from '@/src/services/insight/InsightService';
-import { integrityService } from '@/src/services/integrity';
+import { runStartupCheck } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WorkplaceId } from '@/src/types/ids';
@@ -35,10 +35,8 @@ jest.mock('@/src/services/insight/InsightService', () => ({
   insightService: { preWarm: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('@/src/services/integrity', () => ({
-  integrityService: {
-    runStartupCheck: jest.fn().mockResolvedValue(undefined),
-    cleanupGhostWorkplaces: jest.fn().mockResolvedValue({ cleanedCount: 0 }),
-  },
+  runStartupCheck: jest.fn().mockResolvedValue(undefined),
+  cleanupGhostWorkplaces: jest.fn().mockResolvedValue({ cleanedCount: 0 }),
 }));
 jest.mock('@/src/services/notification/NotificationService', () => ({
   notificationService: { scheduleReminder: jest.fn().mockResolvedValue(undefined) },
@@ -132,7 +130,7 @@ describe('useAppBootstrap generation safety', () => {
 
     expect(insightService.preWarm).toHaveBeenCalledTimes(1);
     expect(insightService.preWarm).toHaveBeenCalledWith('workplace-b' as WorkplaceId);
-    expect(integrityService.runStartupCheck).toHaveBeenCalledWith(
+    expect(runStartupCheck).toHaveBeenCalledWith(
       'workplace-b' as WorkplaceId,
       expect.any(AbortSignal),
     );

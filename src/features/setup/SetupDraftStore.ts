@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/types/enums';
 import type { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { isValidIconName, type IconName } from '@/src/types/domainIcons';
-import { asWorkplaceId } from '@/src/types/ids';
+import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
 import {
@@ -99,10 +99,16 @@ function parseFont(value: unknown): FontId | undefined {
 }
 
 function parseStarter(value: unknown): StarterAccountInput | undefined {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['name', 'type', 'icon'])) return undefined;
+  if (!isRecord(value) || !hasOnlyKeys(value, ['id', 'name', 'type', 'icon'])) return undefined;
+  if (value.id !== undefined && !isWorkplaceId(value.id)) return undefined;
   const icon = parseIcon(value.icon);
   if (!nonEmptyString(value.name) || !isAccountType(value.type) || !icon) return undefined;
-  return { name: value.name, type: value.type, icon };
+  return {
+    ...(value.id === undefined ? {} : { id: asAccountId(value.id) }),
+    name: value.name,
+    type: value.type,
+    icon,
+  };
 }
 
 function parseStarterArray(

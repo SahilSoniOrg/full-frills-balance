@@ -13,7 +13,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { sharingService } from '@/src/services/SharingService';
-import { integrityService } from '@/src/services/integrity';
+import { cleanupGhostWorkplaces, runStartupCheck } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { WorkplaceId } from '@/src/types/ids';
@@ -91,8 +91,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             currencyReadService.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
-            integrityService.runStartupCheck(workplaceId, lease.signal),
-            integrityService.cleanupGhostWorkplaces(),
+            runStartupCheck(workplaceId, lease.signal),
+            cleanupGhostWorkplaces(),
             processDuePlannedPayments(workplaceId, lease.signal),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),

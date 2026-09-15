@@ -1,6 +1,7 @@
 import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Icon } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type {
   StarterAccountInput,
   StarterCategoryInput,
@@ -35,16 +36,32 @@ function starterFromDefault(name: string): StarterCategoryInput | undefined {
   };
 }
 
+export function draftAccountId(workplaceId: WorkplaceId, draftAccountId: string): AccountId {
+  return `${workplaceId}:onboarding-account:${draftAccountId}` as AccountId;
+}
+
+export function starterCategoryId(workplaceId: WorkplaceId, name: string): AccountId {
+  return `${workplaceId}:onboarding-category:${name.trim().toLowerCase()}` as AccountId;
+}
+
 export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSetupOutput {
   const accounts: StarterAccountInput[] = draft.accounts.map(account => {
     const meta = ACCOUNT_KIND_META[account.kind];
-    return { name: account.name || meta.name, type: meta.type, icon: meta.icon };
+    return {
+      id: draftAccountId(draft.operationId, account.id),
+      name: account.name || meta.name,
+      type: meta.type,
+      icon: meta.icon,
+    };
   });
 
   const categories = new Map<string, StarterCategoryInput>();
   const add = (item: StarterCategoryInput | undefined) => {
     if (!item) return;
-    categories.set(item.name.toLowerCase(), item);
+    categories.set(item.name.toLowerCase(), {
+      ...item,
+      id: item.id ?? starterCategoryId(draft.operationId, item.name),
+    });
   };
 
   add(starterFromDefault('Groceries'));
@@ -79,7 +96,7 @@ export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSet
     for (const item of draft.budget.items) {
       add(
         starterFromDefault(budgetLookupName(item)) ?? {
-          name: item.name,
+          name: budgetLookupName(item),
           type: AccountType.EXPENSE,
           icon: Icon.ShoppingCart,
         },

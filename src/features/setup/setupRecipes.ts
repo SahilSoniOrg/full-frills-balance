@@ -1,6 +1,4 @@
 import {
-  isRestoreJourneyId,
-  type RestoreJourneyId,
   type RestoreSummaryIntent,
   type SetupDraft,
   type SetupEffectId,
@@ -161,12 +159,6 @@ export const SETUP_RECIPES: Readonly<Record<SetupJourneyId, SetupRecipe>> = {
 
 export function getSetupRecipe(journeyId: SetupJourneyId): SetupRecipe {
   return SETUP_RECIPES[journeyId];
-}
-
-export function isRestoreRecipe(recipe: SetupRecipe): recipe is SetupRecipe & {
-  readonly journeyId: RestoreJourneyId;
-} {
-  return isRestoreJourneyId(recipe.journeyId);
 }
 
 export function recipeContainsSlice(recipe: SetupRecipe, sliceId: SetupSliceId): boolean {

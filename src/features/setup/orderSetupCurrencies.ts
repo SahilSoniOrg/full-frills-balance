@@ -1,13 +1,3 @@
-export function pinnedSetupCurrencyId(
-  alreadyPinned: string | undefined,
-  selectedId: string,
-  availableIds: readonly string[],
-): string | undefined {
-  if (alreadyPinned && availableIds.includes(alreadyPinned)) return alreadyPinned;
-  if (selectedId && availableIds.includes(selectedId)) return selectedId;
-  return alreadyPinned;
-}
-
 export function orderSetupCurrencies<T extends { id: string }>(
   items: readonly T[],
   pinnedId: string | undefined,

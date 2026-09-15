@@ -1,4 +1,4 @@
-import { orderSetupCurrencies, pinnedSetupCurrencyId } from '../orderSetupCurrencies';
+import { orderSetupCurrencies } from '../orderSetupCurrencies';
 
 const items = [
   { id: 'ZWL', subtitle: 'Zimbabwean Dollar' },
@@ -8,19 +8,11 @@ const items = [
 
 describe('orderSetupCurrencies', () => {
   it('pins the opening selection and leaves later taps in place', () => {
-    const pinned = pinnedSetupCurrencyId(
-      undefined,
-      'USD',
-      items.map(item => item.id),
-    );
+    const pinned = 'USD';
     const opened = orderSetupCurrencies(items, pinned, '');
     expect(opened.map(item => item.id)).toEqual(['USD', 'ZWL', 'INR']);
 
-    const afterTap = pinnedSetupCurrencyId(
-      pinned,
-      'INR',
-      items.map(item => item.id),
-    );
+    const afterTap = pinned;
     expect(orderSetupCurrencies(items, afterTap, '').map(item => item.id)).toEqual([
       'USD',
       'ZWL',
@@ -29,11 +21,7 @@ describe('orderSetupCurrencies', () => {
   });
 
   it('does not re-pin when search is cleared', () => {
-    const pinned = pinnedSetupCurrencyId(
-      undefined,
-      'USD',
-      items.map(item => item.id),
-    );
+    const pinned = 'USD';
     const filtered = orderSetupCurrencies(items, pinned, 'inr');
     expect(filtered.map(item => item.id)).toEqual(['INR']);
     expect(orderSetupCurrencies(items, pinned, '').map(item => item.id)[0]).toBe('USD');

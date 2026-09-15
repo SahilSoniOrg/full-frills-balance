@@ -1,29 +1,39 @@
-import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
+import { AppConfig } from '@/src/constants/app-config';
+import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
-import { RestartRequiredScreen } from '@/src/features/dev';
+import { generator } from '@/src/data/database/idGenerator';
 import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
-import { workplaceService } from '@/src/services/WorkplaceService';
+import { RestartRequiredScreen } from '@/src/features/dev';
 import {
-  resolveLaunchGate,
+  createSetupDraft,
+  loadSetupDraft,
+  saveSetupDraft,
+  SETUP_GATE_ROUTES,
+  setupEntryPath,
+  shouldRedirectSetupToEntry,
+  shouldRenderSetupGateChildren,
+  shouldSeedSetupDraft,
+} from '@/src/features/setup';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
+import {
   LaunchResolution,
   LaunchSetupDraft,
+  resolveLaunchGate,
 } from '@/src/services/launch/launchResolver';
-import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
-import { createSetupDraft, loadSetupDraft, saveSetupDraft } from '@/src/features/setup';
-import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
-import { generator } from '@/src/data/database/idGenerator';
-import { PlainWorkplace } from '@/src/types/plainDtos';
-import { WorkplaceId } from '@/src/types/ids';
-import { preferences } from '@/src/services/preferences';
-import { AppConfig } from '@/src/constants/app-config';
-import { logger } from '@/src/utils/logger';
-import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
 import {
   hasAcknowledgedCurrentPrivacyPolicy,
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
+import { preferences } from '@/src/services/preferences';
+import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
+import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
+import { WorkplaceId } from '@/src/types/ids';
+import { PlainWorkplace } from '@/src/types/plainDtos';
+import { logger } from '@/src/utils/logger';
+import { Redirect, usePathname, useRouter } from 'expo-router';
 import React, {
   createContext,
   useContext,
@@ -34,7 +44,11 @@ import React, {
   useSyncExternalStore,
 } from 'react';
 import { Observable } from 'rxjs';
-import { Redirect, usePathname, useRouter } from 'expo-router';
+export {
+  setupEntryPath,
+  shouldRedirectSetupToEntry,
+  shouldShowCashClarity,
+} from '@/src/features/setup';
 export type { LaunchSetupDraft } from '@/src/services/launch/launchResolver';
 
 export type LaunchCoordinatorState =
@@ -43,13 +57,6 @@ export type LaunchCoordinatorState =
   | Extract<LaunchResolution, { kind: 'setup' }>
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
   | Extract<LaunchResolution, { kind: 'open' }>;
-
-const GATE_ROUTES = new Set([
-  '/onboarding',
-  '/onboarding-v2',
-  '/import-selection',
-  '/privacy-notice',
-]);
 
 const LaunchCoordinatorContext = createContext<LaunchCoordinatorState | undefined>(undefined);
 
@@ -65,28 +72,9 @@ export function shouldRenderGateChildren(
   journeyId?: string,
 ): boolean {
   if (!(kind === 'setup' || kind === 'picker')) return false;
-  if (kind === 'setup' && journeyId === 'first_run') {
-    return pathname === '/onboarding' || pathname === '/privacy-notice';
-  }
-  return GATE_ROUTES.has(pathname);
-}
-
-export function setupEntryPath(_journeyId?: string): '/onboarding' {
-  return '/onboarding';
-}
-
-export function shouldShowCashClarity(
-  journeyId: string | undefined,
-  routeJourney?: string,
-): boolean {
-  if (routeJourney && routeJourney !== 'first_run') return false;
-  return journeyId === 'first_run' || routeJourney === 'first_run';
-}
-
-export function shouldRedirectSetupToEntry(journeyId: string, pathname: string): boolean {
-  if (pathname === '/privacy-notice') return false;
-  if (journeyId === 'first_run') return pathname !== '/onboarding';
-  return !GATE_ROUTES.has(pathname);
+  return kind === 'setup'
+    ? shouldRenderSetupGateChildren(pathname, journeyId)
+    : SETUP_GATE_ROUTES.has(pathname);
 }
 
 export function shouldRedirectToPrivacyNotice(
@@ -108,35 +96,64 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
     loading: boolean;
   }>({ workplaces: [], error: null, loading: true });
   const recoveryAppliedRef = React.useRef(false);
+  const legacyCurrencyMigrationRef = React.useRef<Promise<void> | null>(null);
+  const initialWorkplaceIdsRef = React.useRef<readonly WorkplaceId[] | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
+    let cancelled = false;
+    const migrateLegacyCurrency = (workplaceIds: readonly WorkplaceId[]) => {
+      if (!legacyCurrencyMigrationRef.current) {
+        legacyCurrencyMigrationRef.current = workplaceService
+          .migrateLegacyCurrency(workplaceIds)
+          .finally(() => {
+            legacyCurrencyMigrationRef.current = null;
+          });
+      }
+      return legacyCurrencyMigrationRef.current;
+    };
     const subscription = (
       workplaceService.observeAllWorkplaces() as Observable<PlainWorkplace[]>
     ).subscribe({
       next: workplaces => {
-        if (!recoveryAppliedRef.current) {
-          const recovery = decideDeviceRecovery({
-            deviceBagPresent: preferences.rawDeviceBagPresentAtStartup,
-            deviceClaimed: preferences.device.deviceRegistered,
-            workplaceCount: workplaces.length,
-            userName: preferences.userName,
-          });
-          try {
-            applyDeviceRecovery(recovery);
-            recoveryAppliedRef.current = true;
-          } catch (error) {
+        if (initialWorkplaceIdsRef.current === null) {
+          initialWorkplaceIdsRef.current = workplaces.map(workplace => workplace.id);
+        }
+        void migrateLegacyCurrency(initialWorkplaceIdsRef.current)
+          .then(() => {
+            if (cancelled) return;
+            if (!recoveryAppliedRef.current) {
+              const recovery = decideDeviceRecovery({
+                deviceBagPresent: preferences.rawDeviceBagPresentAtStartup,
+                deviceClaimed: preferences.device.deviceRegistered,
+                workplaceCount: workplaces.length,
+                userName: preferences.userName,
+              });
+              try {
+                applyDeviceRecovery(recovery);
+                recoveryAppliedRef.current = true;
+              } catch (error) {
+                setResult({
+                  workplaces: [],
+                  error: error instanceof Error ? error : new Error(String(error)),
+                  loading: false,
+                });
+                return;
+              }
+            }
+            setResult({ workplaces, error: null, loading: false });
+          })
+          .catch(error => {
+            if (cancelled) return;
             setResult({
               workplaces: [],
               error: error instanceof Error ? error : new Error(String(error)),
               loading: false,
             });
-            return;
-          }
-        }
-        setResult({ workplaces, error: null, loading: false });
+          });
       },
       error: error => {
+        if (cancelled) return;
         setResult({
           workplaces: [],
           error: error instanceof Error ? error : new Error(String(error)),
@@ -144,7 +161,10 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
         });
       },
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [enabled, retryToken]);
 
   return result;
@@ -243,7 +263,7 @@ export function LaunchCoordinatorProvider({
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
     if (!isSetupJourneyId(resolution.journeyId)) return;
     if (loadSetupDraft()) return;
-    if (resolution.journeyId === 'first_run') return;
+    if (!shouldSeedSetupDraft(resolution.journeyId)) return;
     saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
   }, [resolution]);
 
@@ -300,7 +320,7 @@ export function LaunchCoordinatorContent({
     if (state.kind === 'setup') {
       if (shouldRedirectSetupToEntry(state.journeyId, pathname)) {
         // Keep first-run off the legacy wizard and books-only deep links.
-        router.replace(setupEntryPath(state.journeyId));
+        router.replace(setupEntryPath());
       }
       return;
     }
@@ -308,7 +328,7 @@ export function LaunchCoordinatorContent({
       state.kind === 'picker' &&
       pathname !== '/' &&
       pathname !== '' &&
-      !GATE_ROUTES.has(pathname)
+      !SETUP_GATE_ROUTES.has(pathname)
     ) {
       // A books deep link has no unambiguous Workplace while the picker is open.
       router.replace('/');
@@ -503,8 +523,8 @@ export function LaunchCoordinatorContent({
   if (state.kind === 'loading') {
     return <LoadingView loading text={AppConfig.strings.common.loading} />;
   }
-  if (gateChildren && state.kind === 'setup' && !GATE_ROUTES.has(pathname)) {
-    return <Redirect href={setupEntryPath(state.journeyId)} />;
+  if (gateChildren && state.kind === 'setup' && !SETUP_GATE_ROUTES.has(pathname)) {
+    return <Redirect href={setupEntryPath()} />;
   }
   if (
     gateChildren &&
@@ -532,7 +552,5 @@ export function LaunchCoordinatorContent({
       />
     );
   }
-  return (
-    <Redirect href={state.kind === 'setup' ? setupEntryPath(state.journeyId) : '/onboarding'} />
-  );
+  return <Redirect href={state.kind === 'setup' ? setupEntryPath() : '/onboarding'} />;
 }

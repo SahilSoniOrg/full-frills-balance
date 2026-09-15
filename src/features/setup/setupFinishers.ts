@@ -20,6 +20,7 @@ function starterAccounts(output: WorkplaceSetupOutput) {
       candidate => candidate.name.toLowerCase() === item.name.toLowerCase(),
     );
     return {
+      ...(item.id ? { id: item.id } : {}),
       name: item.name,
       type: preset?.type ?? item.type,
       icon: preset?.icon ?? item.icon,
@@ -33,6 +34,7 @@ function starterCategories(output: WorkplaceSetupOutput) {
       candidate => candidate.name.toLowerCase() === item.name.toLowerCase(),
     );
     return {
+      ...(item.id ? { id: item.id } : {}),
       name: item.name,
       type:
         preset === undefined

@@ -1,20 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
-import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
-import { plannedPaymentProjectionProvider } from '@/src/services/planned-payment/plannedPaymentProjectionProvider';
-import { ProjectionComposer } from '@/src/services/simulation/ProjectionComposer';
-import { SimulationReportGenerator } from '@/src/services/simulation/SimulationReportGenerator';
-import { Simulator } from '@/src/services/simulation/Simulator';
+import { simulateDraftScenario } from '@/src/services/simulation/draftSimulationService';
 import { TimeContext } from '@/src/services/simulation/TimeContext';
-import { liabilityProjectionProvider } from '@/src/services/simulation/liability/liabilityProjectionProvider';
 import type {
   SimulationBudget,
-  SimulationContext,
+  SimulationLiabilityAccount,
   SimulationPlannedPayment,
 } from '@/src/services/simulation/types';
-import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
+import { PlannedPaymentInterval } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
-import type { AccountFields } from '@/src/types/plainDtos';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   incomeItemName,
@@ -53,18 +47,8 @@ export interface CashClarityProjection {
 const INCOME_CATEGORY_ID = 'draft-income' as AccountId;
 const COMMITMENT_CATEGORY_ID = 'draft-commitment' as AccountId;
 
-function accountId(account: DraftAccount): AccountId {
+function simulationAccountId(account: DraftAccount): AccountId {
   return `draft-account-${account.id}` as AccountId;
-}
-
-function toFields(account: DraftAccount, currency: string): AccountFields {
-  return {
-    id: accountId(account),
-    name: account.name,
-    accountType: account.kind === 'card' ? AccountType.LIABILITY : AccountType.ASSET,
-    accountSubtype: subtypeForAccount(account),
-    currencyCode: currency,
-  };
 }
 
 function inWindow(dateMs: number, start: Dayjs, days: number): boolean {
@@ -74,7 +58,7 @@ function inWindow(dateMs: number, start: Dayjs, days: number): boolean {
 
 function primaryLiquidId(accounts: readonly DraftAccount[]): AccountId | undefined {
   const spendable = accounts.find(isSpendableAccount);
-  return spendable ? accountId(spendable) : undefined;
+  return spendable ? simulationAccountId(spendable) : undefined;
 }
 
 export function projectCashClarityDraft(
@@ -87,33 +71,26 @@ export function projectCashClarityDraft(
   const currency = draft.currency;
   const omitted: string[] = [];
 
-  const accountMap = new Map<AccountId, AccountFields>();
   const startingBalances = new Map<AccountId, number>();
   const liquidIds: AccountId[] = [];
-  const liabilityBalances: { account: AccountFields; balance: number }[] = [];
+  const liabilityBalances: { account: SimulationLiabilityAccount; balance: number }[] = [];
 
   for (const account of draft.accounts) {
-    const fields = toFields(account, currency);
-    accountMap.set(fields.id, fields);
-    startingBalances.set(fields.id, account.balance);
-    if (isSpendableAccount(account)) liquidIds.push(fields.id);
+    const id = simulationAccountId(account);
+    startingBalances.set(id, account.balance);
+    if (isSpendableAccount(account)) liquidIds.push(id);
     if (account.kind === 'card' && account.balance > 0) {
-      liabilityBalances.push({ account: fields, balance: account.balance });
+      liabilityBalances.push({
+        account: {
+          id,
+          name: account.name,
+          accountSubtype: subtypeForAccount(account),
+          currencyCode: currency,
+        },
+        balance: account.balance,
+      });
     }
   }
-
-  accountMap.set(INCOME_CATEGORY_ID, {
-    id: INCOME_CATEGORY_ID,
-    name: 'Salary',
-    accountType: AccountType.INCOME,
-    currencyCode: currency,
-  });
-  accountMap.set(COMMITMENT_CATEGORY_ID, {
-    id: COMMITMENT_CATEGORY_ID,
-    name: 'Planned payment',
-    accountType: AccountType.EXPENSE,
-    currencyCode: currency,
-  });
 
   const liquidNow = draft.accounts
     .filter(isSpendableAccount)
@@ -178,7 +155,7 @@ export function projectCashClarityDraft(
       amount: account.cardPaymentAmount,
       currencyCode: currency,
       fromAccountId: payFrom,
-      toAccountId: accountId(account),
+      toAccountId: simulationAccountId(account),
       nextOccurrence: account.cardPaymentDate,
       intervalType: PlannedPaymentInterval.MONTHLY,
       intervalN: 1,
@@ -192,12 +169,6 @@ export function projectCashClarityDraft(
     draft.budget.items.forEach(item => {
       const budgetId = `draft-budget-${item.id}`;
       const categoryId = `draft-budget-cat-${item.id}` as AccountId;
-      accountMap.set(categoryId, {
-        id: categoryId,
-        name: item.name,
-        accountType: AccountType.EXPENSE,
-        currencyCode: currency,
-      });
       budgets.push({
         id: budgetId,
         name: item.name,
@@ -215,90 +186,36 @@ export function projectCashClarityDraft(
     omitted.push(copy.noBufferIncluded);
   }
 
-  const context: SimulationContext = {
+  const { safeToSpend, flowSummary } = simulateDraftScenario({
     simulationStartMs: start.valueOf(),
     simulationDays: windowDays,
-    simulationEndMs: time.getEndMs(),
     resultCurrency: currency,
-    liquidAccountIds: new Set(liquidIds),
-    orderedLiquidAccountIds: liquidIds,
-    liabilityAccountIds: new Set(liabilityBalances.map(item => item.account.id)),
-    accountMap,
-    convert: amount => amount,
-  };
-
-  const expenseAccountIds = new Set(
-    [...accountMap.values()]
-      .filter(account => account.accountType === AccountType.EXPENSE)
-      .map(account => account.id),
-  );
-
-  const scheduled = plannedPaymentProjectionProvider.projectScheduled(context, {
-    plannedPayments,
-    projectablePlannedJournals: [],
-    expenseAccountIds,
-    journalTransactionsMap: new Map(),
-  });
-
-  const capacities = budgetProjectionProvider.projectCapacities(
-    context,
-    budgets,
-    budgets.map(budget => ({
-      spent: 0,
-      remaining: budget.amount,
-      budgetAmount: budget.amount,
-      usagePercent: 0,
-    })),
-    budgetCategoryMap,
-  );
-
-  const resolvedSpending = ProjectionComposer.composeSpending(capacities, scheduled, context);
-  const liabilityFlows = liabilityProjectionProvider.projectLiabilityFlows(context, {
-    liabilityBalances,
-    metadataMap: new Map(),
-    statementBalances: new Map(),
-    settledSinceStatement: new Map(),
-    previousFlows: resolvedSpending,
-  });
-  const allFlows = ProjectionComposer.sortTimeline([...resolvedSpending, ...liabilityFlows]);
-  const simulation = Simulator.simulate(
     startingBalances,
-    allFlows,
-    windowDays,
-    context.liquidAccountIds,
-    liquidIds,
-    0,
-    start.valueOf(),
-  );
-  const report = SimulationReportGenerator.generate(
-    allFlows,
-    accountMap,
+    liquidAccountIds: liquidIds,
     liabilityBalances,
-    context.liquidAccountIds,
-  );
-
-  const expectedIncomeInWindow = report.summary.totalFutureInflow;
-  const plannedOutflowInWindow = report.summary.totalPlannedOutflow;
+    plannedPayments,
+    budgets,
+    budgetCategoryMap,
+  });
+  const expectedIncomeInWindow = flowSummary.totalFutureInflow;
+  const plannedOutflowInWindow = flowSummary.totalPlannedOutflow;
   const budgetReserve =
     draft.budget.kind === 'set'
       ? draft.budget.items.reduce((sum, item) => sum + item.amount, 0)
       : 0;
   const projectedRoom = liquidNow + expectedIncomeInWindow - plannedOutflowInWindow - budgetReserve;
-  const heldNow = Math.max(
-    0,
-    Math.round((liquidNow - simulation.summary.safeToSpend + Number.EPSILON) * 100) / 100,
-  );
+  const heldNow = Math.max(0, Math.round((liquidNow - safeToSpend + Number.EPSILON) * 100) / 100);
   const { heldLabel, today, ahead } = clarityBeats(draft, {
     windowDays,
     start,
     liquidNow,
     heldNow,
-    safeToSpend: simulation.summary.safeToSpend,
+    safeToSpend,
     projectedRoom,
   });
 
   return {
-    safeToSpend: simulation.summary.safeToSpend,
+    safeToSpend,
     windowDays,
     liquidNow,
     expectedIncomeInWindow,

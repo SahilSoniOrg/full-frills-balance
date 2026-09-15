@@ -1,6 +1,7 @@
 import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
 import { AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { orderSetupCurrencies } from '@/src/features/setup/orderSetupCurrencies';

@@ -1,7 +1,9 @@
 import { finishDeviceSetup } from '@/src/features/setup';
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
+import { asWorkplaceId } from '@/src/types/ids';
 import { createInitialDraft, type CashClarityDraft } from '../draft';
 import { commitCashClarity } from '../commitCashClarity';
+import { draftAccountId, starterCategoryId } from '../mapToWorkplaceOutput';
 
 const mockFindAll = jest.fn();
 const mockUpsertPayment = jest.fn();
@@ -10,6 +12,9 @@ const mockUpsertBudget = jest.fn();
 const mockUpdateAccount = jest.fn();
 const mockAdjustBalance = jest.fn();
 const mockClearPending = jest.fn();
+const mockGetWorkplace = jest.fn();
+const mockDeleteWorkplace = jest.fn();
+const WORKPLACE_ID = asWorkplaceId('workplace-op');
 
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { findAll: (...args: unknown[]) => mockFindAll(...args) },
@@ -42,6 +47,13 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
 
 jest.mock('@/src/services/preferences', () => ({
   preferences: { device: { setActiveWorkplaceId: jest.fn() } },
+}));
+
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getWorkplace: (...args: unknown[]) => mockGetWorkplace(...args),
+    deleteWorkplace: (...args: unknown[]) => mockDeleteWorkplace(...args),
+  },
 }));
 
 jest.mock('@/src/features/setup', () => ({
@@ -85,12 +97,13 @@ describe('commitCashClarity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFinishWorkplaceSetup.mockResolvedValue('workplace-op');
+    mockGetWorkplace.mockResolvedValue(undefined);
   });
 
   it('creates every-two-weeks income as weekly with interval 2', async () => {
     mockFindAll.mockResolvedValue([
-      account('bank-1', 'Bank', AccountType.ASSET),
-      account('salary-1', 'Salary', AccountType.INCOME),
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
     ]);
 
     await commitCashClarity(
@@ -111,16 +124,16 @@ describe('commitCashClarity', () => {
         name: 'Salary',
         intervalType: PlannedPaymentInterval.WEEKLY,
         intervalN: 2,
-        fromAccountId: 'salary-1',
-        toAccountId: 'bank-1',
+        fromAccountId: starterCategoryId(WORKPLACE_ID, 'Salary'),
+        toAccountId: draftAccountId(WORKPLACE_ID, 'main'),
       }),
     );
   });
 
   it('rethrows the same workplace id and upserts changed income on retry', async () => {
     mockFindAll.mockResolvedValue([
-      account('bank-1', 'Bank', AccountType.ASSET),
-      account('salary-1', 'Salary', AccountType.INCOME),
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
     ]);
     const first = draft({
       income: { kind: 'recurring', items: [salaryIncome] },
@@ -145,10 +158,36 @@ describe('commitCashClarity', () => {
     );
   });
 
+  it('serializes concurrent finalization attempts', async () => {
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+    ]);
+    let releaseFirst: (() => void) | undefined;
+    const firstFinished = new Promise<void>(resolve => {
+      releaseFirst = resolve;
+    });
+    mockFinishWorkplaceSetup
+      .mockImplementationOnce(async () => {
+        await firstFinished;
+        return WORKPLACE_ID;
+      })
+      .mockResolvedValue(WORKPLACE_ID);
+
+    const first = commitCashClarity(draft());
+    const second = commitCashClarity(draft());
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(mockFinishWorkplaceSetup).toHaveBeenCalledTimes(1);
+
+    releaseFirst?.();
+    await Promise.all([first, second]);
+    expect(mockFinishWorkplaceSetup).toHaveBeenCalledTimes(2);
+  });
+
   it('does not register the device if a later write fails', async () => {
     mockFindAll.mockResolvedValue([
-      account('bank-1', 'Bank', AccountType.ASSET),
-      account('salary-1', 'Salary', AccountType.INCOME),
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
     ]);
     mockUpsertPayment.mockRejectedValueOnce(new Error('write failed'));
 
@@ -160,6 +199,7 @@ describe('commitCashClarity', () => {
       ),
     ).rejects.toThrow('write failed');
     expect(finishDeviceSetup).not.toHaveBeenCalled();
+    expect(mockDeleteWorkplace).toHaveBeenCalledWith('workplace-op');
     expect(mockClearPending).not.toHaveBeenCalled();
   });
 
@@ -203,7 +243,9 @@ describe('commitCashClarity', () => {
   });
 
   it('registers the entered display name on the device', async () => {
-    mockFindAll.mockResolvedValue([account('bank-1', 'Bank', AccountType.ASSET)]);
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+    ]);
     await commitCashClarity(draft({ displayName: 'Sahil' }));
     expect(finishDeviceSetup).toHaveBeenCalledWith({
       displayName: { value: 'Sahil', source: 'user_entered' },
@@ -220,8 +262,8 @@ describe('commitCashClarity', () => {
 
   it('throws when freelance income has no Freelance category', async () => {
     mockFindAll.mockResolvedValue([
-      account('bank-1', 'Bank', AccountType.ASSET),
-      account('salary-1', 'Salary', AccountType.INCOME),
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
     ]);
 
     await expect(
@@ -272,5 +314,27 @@ describe('commitCashClarity', () => {
         }),
       ),
     ).rejects.toThrow('Could not save a spendable account for planned money.');
+  });
+
+  it('resolves a custom budget category by its stable category key', async () => {
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Dining'), 'Dining', AccountType.EXPENSE),
+    ]);
+
+    await commitCashClarity(
+      draft({
+        budget: {
+          kind: 'set',
+          items: [{ id: 'dining-budget', name: 'Food budget', category: 'Dining', amount: 8000 }],
+        },
+      }),
+    );
+
+    expect(mockUpsertBudget).toHaveBeenCalledWith(
+      'workplace-op',
+      expect.objectContaining({ name: 'Food budget' }),
+      [starterCategoryId(WORKPLACE_ID, 'Dining')],
+    );
   });
 });

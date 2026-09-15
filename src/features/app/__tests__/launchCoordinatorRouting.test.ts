@@ -29,9 +29,7 @@ describe('LaunchCoordinator gate routing', () => {
   });
 
   it('sends every setup journey through /onboarding, with cash-clarity only for first-run', () => {
-    expect(setupEntryPath('first_run')).toBe('/onboarding');
-    expect(setupEntryPath('first_run_restore')).toBe('/onboarding');
-    expect(setupEntryPath('create_workplace')).toBe('/onboarding');
+    expect(setupEntryPath()).toBe('/onboarding');
     expect(shouldShowCashClarity('first_run')).toBe(true);
     expect(shouldShowCashClarity('first_run', 'first_run')).toBe(true);
     expect(shouldShowCashClarity('first_run', 'first_run_restore')).toBe(false);

@@ -1,6 +1,6 @@
-import { useLaunchCoordinator, shouldShowCashClarity } from './LaunchCoordinator';
+import { useLaunchCoordinator } from './LaunchCoordinator';
 import OnboardingV2Screen from '@/src/features/onboarding-v2';
-import { SetupScreen } from '@/src/features/setup';
+import { SetupScreen, shouldShowCashClarity } from '@/src/features/setup';
 import { useLocalSearchParams } from 'expo-router';
 
 export function OnboardingRoute() {

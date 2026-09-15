@@ -1,7 +1,8 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { SAFE_TO_SPEND_PREVIEW, SafeToSpendPreviewFixture } from './fixtures/safeToSpendPreview';
