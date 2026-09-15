@@ -1,4 +1,4 @@
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { CollectStep } from './conversationUi';

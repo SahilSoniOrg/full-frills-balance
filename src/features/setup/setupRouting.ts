@@ -1,11 +1,6 @@
 const FIRST_RUN_JOURNEY = 'first_run';
 
-export const SETUP_GATE_ROUTES = new Set([
-  '/onboarding',
-  '/onboarding-v2',
-  '/import-selection',
-  '/privacy-notice',
-]);
+export const SETUP_GATE_ROUTES = new Set(['/onboarding', '/import-selection', '/privacy-notice']);
 
 export function setupEntryPath(): '/onboarding' {
   return '/onboarding';

@@ -1,10 +1,10 @@
-export const ONBOARDING_V2_STRINGS = {
+export const ONBOARDING_STRINGS = {
   brand: 'full frills balance',
   welcomeTagline: 'A calmer way to track money.',
   welcomeBody: 'See what you can safely spend after the money and payments you already know about.',
   startWithMoney: 'Start with my money',
   restoreBackup: 'Restore a backup',
-  privacyFootnote: 'Private by design · stays on this device',
+  privacyFootnote: 'Private · stays on this device',
   youTitle: 'What should we call you?',
   youHint: 'Your name or nickname. You can change this later.',
   youPlaceholder: 'Your name or nickname',
@@ -54,20 +54,17 @@ export const ONBOARDING_V2_STRINGS = {
   cardPaymentAmount: 'Expected payment',
   cardPay: 'Pay',
   cardPaymentReview: (date: string) => `Pay on ${date}`,
-  confirmMoneyGot: (summary: string) => `Got it. ${summary}.`,
-  confirmInAccount: (amount: string, name: string) => `${amount} in ${name}`,
-  confirmCardOutstanding: (amount: string, name: string) => `${amount} outstanding on ${name}`,
-  confirmCardPaying: (amount: string, date: string) => `paying ${amount} on ${date}`,
-  confirmIncomeKept: (summary: string) => `We’ll keep ${summary} in mind.`,
-  confirmIncomeItem: (amount: string, name: string, date: string) =>
-    `${amount} as ${name} arriving on ${date}`,
+  confirmMoneyHave: (amount: string, places: string) => `Got it. ${amount} you have in ${places}.`,
+  confirmIncomeNoted: (summary: string) => `Noted, ${summary} hits your accounts.`,
+  confirmIncomeHit: (amount: string, name: string, day: string) =>
+    `${amount} for ${name} on ${day}`,
   confirmIncomeSkipped: 'No expected income included. Safe to Spend is only cash you have.',
-  confirmPaymentSpoken: (summary: string) => `${summary} is already spoken for.`,
-  confirmPaymentItem: (name: string, amount: string, date: string) =>
-    `${name} of ${amount} on ${date}`,
-  confirmBufferHeld: (summary: string) =>
-    `We’ll hold ${summary} as an everyday buffer. It is a guardrail, not a promise that you must spend it.`,
-  confirmBufferItem: (amount: string, name: string) => `${amount} for ${name}`,
+  confirmPaymentMind: (summary: string) => `${summary} — we’ll keep that in mind.`,
+  confirmPaymentHit: (amount: string, name: string, day: string) =>
+    `${amount} for ${name} on ${day}`,
+  confirmBufferTrack: (summary: string) =>
+    `We’ll also keep track of ${summary}. That’s estimated everyday spending you can stay under.`,
+  confirmBufferMonth: (name: string, amount: string) => `${name}, ${amount} a month`,
   salaryQuestion: 'Do you earn a salary?',
   salaryYes: 'Yes, a regular salary',
   salaryNo: 'No',
@@ -136,8 +133,8 @@ export const ONBOARDING_V2_STRINGS = {
   clarityNothingPlanned: 'Nothing is held yet. Safe to Spend is simply the cash you already have.',
   clarityNoCashYet:
     'Add an account when you are ready. This number will follow the cash you actually have.',
-  clarityCallout:
-    'Safe to Spend is cash you already have, after holding what you will need before money arrives. Projected room is the same answers added up for after that money lands.',
+  clarityFooter:
+    'Safe to Spend is cash you already have, after holding what you will need before money arrives.\n\nProjected room is the same answers added up for after that money lands.\n\nThe total is what you can spend today without worrying about rent, bills, or money you’ve set aside.',
   reviewTitle: 'Your first cash picture',
   reviewIncome: 'Income',
   reviewPayments: 'Payments',

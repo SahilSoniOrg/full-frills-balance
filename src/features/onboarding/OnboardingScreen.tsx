@@ -1,7 +1,7 @@
 import { AppText, LoadingView } from '@/src/components/core';
-import { Box, Inline } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { startFirstRunRestoreFromDeviceName } from '@/src/features/setup';
 import { analytics } from '@/src/services/analytics';
 import { AppConfig } from '@/src/constants/app-config';
@@ -12,15 +12,14 @@ import {
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import type { IconName } from '@/src/types/domainIcons';
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { OnboardingV2Chrome, ONBOARDING_STAGES } from './chrome';
+import { OnboardingChrome, ONBOARDING_STAGES } from './chrome';
 import { commitCashClarity } from './commitCashClarity';
 import {
   createInitialDraft,
   hasSpendableAccount,
   type CashClarityDraft,
-  type OnboardingV2Step,
+  type OnboardingStep,
 } from './draft';
 import {
   defaultDeviceDisplayName,
@@ -35,33 +34,28 @@ import {
   MoneyScene,
   ProtectScene,
   ReserveScene,
-  ReviewScene,
   YouScene,
   WelcomeScene,
-  WorkspaceScene,
 } from './scenes';
 
-const FLOW: readonly OnboardingV2Step[] = [
+const FLOW: readonly OnboardingStep[] = [
   'welcome',
-  'workspace',
   'currency',
   'now',
   'next',
   'protect',
   'reserve',
   'clarity',
-  'review',
 ];
 
-export function OnboardingV2Screen() {
+export function OnboardingScreen() {
   const privacyAcknowledged = useSyncExternalStore(
     subscribeToPrivacyPolicyAcknowledgement,
     hasAcknowledgedCurrentPrivacyPolicy,
     hasAcknowledgedCurrentPrivacyPolicy,
   );
-  const [step, setStep] = useState<OnboardingV2Step>('welcome');
-  const [history, setHistory] = useState<OnboardingV2Step[]>([]);
-  const [editingFromReview, setEditingFromReview] = useState(false);
+  const [step, setStep] = useState<OnboardingStep>('welcome');
+  const [history, setHistory] = useState<OnboardingStep[]>([]);
   const [draft, setDraft] = useState<CashClarityDraft>(() =>
     createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
   );
@@ -72,13 +66,7 @@ export function OnboardingV2Screen() {
     step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
   const spendable = hasSpendableAccount(draft.accounts);
 
-  const go = (next: OnboardingV2Step, fromReview = false) => {
-    setEditingFromReview(fromReview);
-    if (fromReview) {
-      setHistory(current => [...current, step]);
-      setStep(next);
-      return;
-    }
+  const go = (next: OnboardingStep) => {
     const fromIndex = FLOW.indexOf(step);
     const toIndex = FLOW.indexOf(next);
     if (toIndex >= 0 && fromIndex > toIndex) {
@@ -89,11 +77,6 @@ export function OnboardingV2Screen() {
           : current.filter(entry => FLOW.indexOf(entry) < toIndex);
       });
       setStep(next);
-      return;
-    }
-    if (next === 'review') {
-      setHistory(['welcome', 'clarity']);
-      setStep('review');
       return;
     }
     setHistory(current => [...current, step]);
@@ -112,19 +95,12 @@ export function OnboardingV2Screen() {
       AppNavigation.back();
       return;
     }
-    if (previous === 'review') setEditingFromReview(false);
     setHistory(current => current.slice(0, -1));
     setStep(previous);
   };
 
-  const advance = (next: OnboardingV2Step, echo?: string) => {
-    if (!editingFromReview) setHeard(echo ?? null);
-    else setHeard(null);
-    if (editingFromReview) {
-      setEditingFromReview(false);
-      back();
-      return;
-    }
+  const advance = (next: OnboardingStep, echo?: string) => {
+    setHeard(echo ?? null);
     go(next);
   };
 
@@ -147,7 +123,7 @@ export function OnboardingV2Screen() {
   };
 
   const scene =
-    busy && step !== 'review' ? (
+    busy && step !== 'clarity' ? (
       <LoadingView loading text={copy.finishing} />
     ) : step === 'welcome' ? (
       <WelcomeScene
@@ -162,8 +138,7 @@ export function OnboardingV2Screen() {
         onStart={() => {
           const name = (draft.displayName ?? '').trim();
           if (!name) return;
-          setHeard(copy.confirmYou(name));
-          go('workspace');
+          go('currency');
         }}
         onRestore={startRestore}
       />
@@ -171,25 +146,17 @@ export function OnboardingV2Screen() {
       <YouScene
         name={draft.displayName ?? ''}
         onNameChange={displayName => setDraft(current => ({ ...current, displayName }))}
-        onContinue={heard => advance('workspace', heard)}
-        onBack={back}
-      />
-    ) : step === 'workspace' ? (
-      <WorkspaceScene
-        name={draft.workplaceName}
-        icon={draft.workplaceIcon}
-        onNameChange={name => setDraft(current => ({ ...current, workplaceName: name }))}
-        onIconChange={(icon: IconName) =>
-          setDraft(current => ({ ...current, workplaceIcon: icon }))
-        }
-        onContinue={() => advance('currency')}
+        onContinue={heard => advance('currency', heard)}
         onBack={back}
       />
     ) : step === 'currency' ? (
       <CurrencyScene
         currency={draft.currency}
         onSelectCurrency={currency => setDraft(current => ({ ...current, currency }))}
-        onContinue={() => advance('now')}
+        onContinue={() => {
+          const name = (draft.displayName ?? '').trim();
+          advance('now', name ? copy.confirmYou(name) : undefined);
+        }}
         onBack={back}
       />
     ) : step === 'now' ? (
@@ -235,38 +202,24 @@ export function OnboardingV2Screen() {
         hasSpendable={spendable}
         onNeedAccount={needAccount}
       />
-    ) : step === 'clarity' ? (
+    ) : (
       <ClarityScene
         currency={draft.currency}
-        projection={projection}
-        onContinue={() => advance('review')}
-        onBack={back}
-      />
-    ) : (
-      <ReviewScene
         draft={draft}
         projection={projection}
         finishing={busy}
         onEnter={() => void enter()}
-        onChange={() => {
-          setHeard(null);
-          setEditingFromReview(false);
-          setHistory(['review']);
-          setStep('now');
-        }}
-        onEdit={next => go(next, true)}
         onBack={back}
       />
     );
 
   return (
-    <OnboardingV2Chrome
-      testID="onboarding-v2-screen"
+    <OnboardingChrome
+      testID="onboarding-screen"
       stage={ONBOARDING_STAGES[step]}
       keyboardAvoiding={
         step === 'welcome' ||
         step === 'you' ||
-        step === 'workspace' ||
         step === 'now' ||
         step === 'next' ||
         step === 'protect' ||
@@ -274,28 +227,30 @@ export function OnboardingV2Screen() {
       }
     >
       {showSafeToSpend ? (
-        <Inline align="center" justify="space-between" paddingBottom="sm">
-          <AppText variant="caption" color="secondary">
+        <Stack gap="xs" paddingTop="sm" paddingBottom="md">
+          <AppText variant="body" color="secondary" weight="medium">
             {copy.safeToSpend}
           </AppText>
           <MoneyText
             amount={projection.safeToSpend}
             currencyCode={draft.currency}
-            formatStyle="compact"
-            variant="body"
-            weight="semibold"
-            testID="onboarding-v2-sts"
+            formatStyle="sts"
+            variant="hero"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            testID="onboarding-sts"
           />
-        </Inline>
+        </Stack>
       ) : null}
-      {heard && step !== 'welcome' && step !== 'review' ? (
+      {heard && step !== 'welcome' && step !== 'currency' && step !== 'clarity' ? (
         <Box paddingBottom="sm">
-          <AppText variant="caption" color="secondary" testID="onboarding-v2-heard">
+          <AppText variant="body" color="secondary" testID="onboarding-heard">
             {heard}
           </AppText>
         </Box>
       ) : null}
       <Box flex={1}>{scene}</Box>
-    </OnboardingV2Chrome>
+    </OnboardingChrome>
   );
 }

@@ -8,7 +8,7 @@ import {
   nextDateOnDayOfMonth,
   type CashClarityDraft,
 } from '../draft';
-import { projectCashClarityDraft } from '../projectCashClarityDraft';
+import { projectCashClarityDraft, findSafeToSpendChartPoint } from '../projectCashClarityDraft';
 import { mapDraftToWorkplaceOutput } from '../mapToWorkplaceOutput';
 import { confirmIncome, confirmMoney, confirmPayments } from '../spokenConfirm';
 
@@ -30,6 +30,7 @@ describe('projectCashClarityDraft', () => {
     const result = projectCashClarityDraft(draft(), now);
     expect(result.safeToSpend).toBe(50000);
     expect(result.liquidNow).toBe(50000);
+    expect(findSafeToSpendChartPoint(result.chart, result.safeToSpend)?.x).toBe(result.chart[0]?.x);
   });
 
   it('does not treat a credit card balance as spendable cash', () => {
@@ -82,6 +83,17 @@ describe('projectCashClarityDraft', () => {
     );
     expect(withRent.safeToSpend).toBeLessThan(without.safeToSpend);
     expect(withRent.safeToSpend).toBe(25000);
+    expect(withRent.chart).toHaveLength(withRent.windowDays);
+    expect(withRent.chart[0]?.y).toBe(50000);
+    expect(withRent.chart.find(point => point.events.some(event => event.name === 'Rent'))?.y).toBe(
+      25000,
+    );
+    expect(findSafeToSpendChartPoint(withRent.chart, withRent.safeToSpend)?.y).toBe(25000);
+    expect(
+      findSafeToSpendChartPoint(withRent.chart, withRent.safeToSpend)?.events.some(
+        event => event.name === 'Rent',
+      ),
+    ).toBe(true);
   });
 
   it('keeps income outside the projection window out of Safe to Spend', () => {
@@ -271,7 +283,7 @@ describe('mapDraftToWorkplaceOutput', () => {
 });
 
 describe('spoken confirmations', () => {
-  it('names cash, protected savings, and a planned card payment', () => {
+  it('totals cash by type instead of naming every account', () => {
     expect(
       confirmMoney(
         [
@@ -288,9 +300,7 @@ describe('spoken confirmations', () => {
         ],
         'INR',
       ),
-    ).toBe(
-      'Got it. ₹50,000 in Bank, ₹80,000 in Savings (protected), and ₹12,000 outstanding on Card, paying ₹2,000 on 1 Oct.',
-    );
+    ).toBe('Got it. ₹130,000 you have in banks and savings.');
   });
 
   it('keeps skipped income from sounding like a forecast', () => {
@@ -299,7 +309,37 @@ describe('spoken confirmations', () => {
     );
   });
 
-  it('names a protected rent payment', () => {
+  it('notes income as amounts hitting accounts', () => {
+    expect(
+      confirmIncome(
+        [
+          {
+            id: 'salary',
+            name: 'Salary',
+            source: 'salary',
+            amount: 20000,
+            interval: PlannedPaymentInterval.MONTHLY,
+            intervalN: 1,
+            nextDate: dayjs('2026-09-25').valueOf(),
+          },
+          {
+            id: 'gigs',
+            name: 'Freelance',
+            source: 'freelance',
+            amount: 50000,
+            interval: PlannedPaymentInterval.MONTHLY,
+            intervalN: 1,
+            nextDate: dayjs('2026-09-20').valueOf(),
+          },
+        ],
+        'INR',
+      ),
+    ).toBe(
+      'Noted, ₹20,000 for Salary on the 25th and ₹50,000 for Freelance on the 20th hits your accounts.',
+    );
+  });
+
+  it('keeps planned payments as a reminder, not a ledger row', () => {
     expect(
       confirmPayments(
         [
@@ -307,13 +347,13 @@ describe('spoken confirmations', () => {
             id: 'rent',
             name: 'Rent',
             type: 'rent',
-            amount: 25000,
-            dueDate: now.add(17, 'day').valueOf(),
+            amount: 5000,
+            dueDate: dayjs('2026-10-01').valueOf(),
           },
         ],
         'INR',
       ),
-    ).toBe('Rent of ₹25,000 on 1 Oct is already spoken for.');
+    ).toBe('₹5,000 for Rent on the 1st — we’ll keep that in mind.');
   });
 });
 

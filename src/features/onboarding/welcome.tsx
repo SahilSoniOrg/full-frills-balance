@@ -1,7 +1,7 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { Box, Stack } from '@/src/design-system';
 import { useState } from 'react';
@@ -43,7 +43,7 @@ export function WelcomeScene({
 
   return (
     <>
-      <Box flex={1} testID="onboarding-v2-welcome">
+      <Box flex={1} testID="onboarding-welcome">
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -72,7 +72,7 @@ export function WelcomeScene({
                   autoCapitalize="words"
                   autoCorrect={false}
                   accessibilityLabel={splash.inputLabel}
-                  testID="onboarding-v2-you-input"
+                  testID="onboarding-name-input"
                   returnKeyType="next"
                   onSubmitEditing={() => run('start')}
                 />
@@ -81,9 +81,9 @@ export function WelcomeScene({
                   size="lg"
                   onPress={() => run('start')}
                   disabled={!trimmed}
-                  testID="onboarding-v2-start"
+                  testID="onboarding-start"
                 >
-                  {splash.btnGetStarted}
+                  {copy.startWithMoney}
                 </AppButton>
                 <Stack gap="xs" align="center">
                   <AppText variant="caption" color="secondary">
@@ -93,7 +93,7 @@ export function WelcomeScene({
                     variant="ghost"
                     size="md"
                     onPress={() => run('restore')}
-                    testID="onboarding-v2-restore"
+                    testID="onboarding-restore-button"
                   >
                     {copy.restoreBackup}
                   </AppButton>
@@ -103,7 +103,7 @@ export function WelcomeScene({
 
             <Stack gap="xs" align="center" paddingHorizontal="md" paddingBottom="sm">
               <AppText variant="caption" color="secondary" align="center">
-                {PRIVACY_NOTICE_STRINGS.onboardingSummary}
+                {copy.privacyFootnote}
               </AppText>
               <AppButton
                 variant="ghost"

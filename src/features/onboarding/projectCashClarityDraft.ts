@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { simulateDraftScenario } from '@/src/services/simulation/draftSimulationService';
 import { TimeContext } from '@/src/services/simulation/TimeContext';
 import type {
@@ -28,9 +28,33 @@ export interface ClarityBeat {
   readonly emphasize?: boolean;
 }
 
+export interface ClarityChartEvent {
+  readonly name: string;
+  readonly amount: number;
+  readonly kind: 'INFLOW' | 'OUTFLOW' | 'TRANSFER';
+}
+
+export interface ClarityChartPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly events: readonly ClarityChartEvent[];
+}
+
+export function findSafeToSpendChartPoint(
+  chart: readonly ClarityChartPoint[],
+  safeToSpend: number,
+): ClarityChartPoint | undefined {
+  if (chart.length === 0) return undefined;
+  const match = chart.find(point => Math.abs(point.y - safeToSpend) <= 0.01);
+  if (match) return match;
+  if (safeToSpend <= 0) return chart.find(point => point.y <= 0) ?? chart[0];
+  return chart.reduce((lowest, point) => (point.y < lowest.y ? point : lowest));
+}
+
 export interface CashClarityProjection {
   readonly safeToSpend: number;
   readonly windowDays: number;
+  readonly chart: readonly ClarityChartPoint[];
   readonly liquidNow: number;
   readonly expectedIncomeInWindow: number;
   readonly plannedOutflowInWindow: number;
@@ -186,7 +210,7 @@ export function projectCashClarityDraft(
     omitted.push(copy.noBufferIncluded);
   }
 
-  const { safeToSpend, flowSummary } = simulateDraftScenario({
+  const { safeToSpend, flowSummary, projections } = simulateDraftScenario({
     simulationStartMs: start.valueOf(),
     simulationDays: windowDays,
     resultCurrency: currency,
@@ -217,6 +241,15 @@ export function projectCashClarityDraft(
   return {
     safeToSpend,
     windowDays,
+    chart: projections.map(point => ({
+      x: point.timestamp,
+      y: point.globalBalance,
+      events: point.flows.map(flow => ({
+        name: flow.label,
+        amount: flow.amount,
+        kind: flow.kind,
+      })),
+    })),
     liquidNow,
     expectedIncomeInWindow,
     plannedOutflowInWindow,
@@ -226,7 +259,7 @@ export function projectCashClarityDraft(
     heldLabel,
     today,
     ahead,
-    explanation: copy.clarityCallout,
+    explanation: copy.clarityFooter,
     omitted,
   };
 }

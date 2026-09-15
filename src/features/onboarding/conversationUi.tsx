@@ -9,7 +9,7 @@ import {
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -31,6 +31,7 @@ export function ConversationStep({
   subtitle,
   children,
   primaryLabel = copy.continue,
+  primaryTestID = 'onboarding-continue-button',
   onPrimary,
   primaryDisabled,
   primaryLoading,
@@ -38,10 +39,11 @@ export function ConversationStep({
   onSkip,
   onBack,
 }: {
-  readonly title: string;
+  readonly title?: string;
   readonly subtitle?: string;
   readonly children?: ReactNode;
   readonly primaryLabel?: string;
+  readonly primaryTestID?: string;
   readonly onPrimary?: () => void;
   readonly primaryDisabled?: boolean;
   readonly primaryLoading?: boolean;
@@ -55,25 +57,35 @@ export function ConversationStep({
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
       >
-        <Stack gap="lg" paddingTop="xl">
-          <Stack gap="sm" align="center">
-            <AppText variant="title" style={styles.title}>
-              {title}
-            </AppText>
-            {subtitle ? (
-              <AppText variant="body" color="secondary" style={styles.subtitle}>
-                {subtitle}
+        <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
+          {title ? (
+            <Stack gap="sm" align="center">
+              <AppText
+                variant="title"
+                align="center"
+                numberOfLines={3}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                style={styles.title}
+              >
+                {title}
               </AppText>
-            ) : null}
-          </Stack>
+              {subtitle ? (
+                <AppText variant="body" color="secondary" style={styles.subtitle}>
+                  {subtitle}
+                </AppText>
+              ) : null}
+            </Stack>
+          ) : null}
           {children}
         </Stack>
       </ScrollView>
       <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
         <Stack space="xs">
           {onSkip ? (
-            <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-v2-skip">
+            <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
               {skipLabel ?? copy.addLater}
             </AppButton>
           ) : null}
@@ -87,7 +99,7 @@ export function ConversationStep({
               }}
               disabled={primaryDisabled || primaryLoading}
               loading={primaryLoading}
-              testID="onboarding-v2-continue"
+              testID={primaryTestID}
               style={{ width: '100%' }}
             >
               {primaryLabel}
@@ -102,7 +114,7 @@ export function ConversationStep({
   );
 }
 
-/** Short labels, wrapping so every type stays on screen. */
+/** Type chips scroll horizontally inside the vertical collector scroll. */
 export function ChoiceChips({
   options,
   selectedId,
@@ -113,7 +125,12 @@ export function ChoiceChips({
   readonly onSelect: (id: string) => void;
 }) {
   return (
-    <Inline gap="sm" wrap>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chipRow}
+    >
       {options.map(option => (
         <FilterChipButton
           key={option.id}
@@ -123,7 +140,7 @@ export function ChoiceChips({
           onPress={() => onSelect(option.id)}
         />
       ))}
-    </Inline>
+    </ScrollView>
   );
 }
 
@@ -280,7 +297,7 @@ function CollectedRow({
                   onRename(item.id, name);
                 }}
                 accessibilityLabel={item.title}
-                testID={`onboarding-v2-name-${item.id}`}
+                testID={`onboarding-name-${item.id}`}
                 style={[styles.rowInput, styles.nameInput, { color: theme.text }]}
               />
               <Box style={styles.amountHit}>
@@ -300,7 +317,7 @@ function CollectedRow({
                       placeholder="0"
                       placeholderTextColor={tokens.input.placeholder}
                       accessibilityLabel={copy.currentBalance}
-                      testID={`onboarding-v2-amount-${item.id}`}
+                      testID={`onboarding-amount-${item.id}`}
                       style={[styles.rowInput, styles.amountInput, { color: theme.text }]}
                     />
                   </Box>
@@ -340,7 +357,7 @@ function CollectedRow({
                       placeholder="0"
                       placeholderTextColor={tokens.input.placeholder}
                       accessibilityLabel={copy.cardPaymentAmount}
-                      testID={`onboarding-v2-card-pay-${item.id}`}
+                      testID={`onboarding-card-pay-${item.id}`}
                       style={[
                         styles.rowInput,
                         styles.amountInput,
@@ -366,7 +383,7 @@ function CollectedRow({
                     onPress={() => setPickingInterval(true)}
                     accessibilityRole="button"
                     accessibilityLabel={copy.salaryOften}
-                    testID={`onboarding-v2-interval-${item.id}`}
+                    testID={`onboarding-interval-${item.id}`}
                     style={styles.cadenceTrigger}
                   >
                     <Inline align="center" gap="xs">
@@ -511,18 +528,22 @@ export function CollectStep({
 }
 
 const styles = StyleSheet.create({
+  chipRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingRight: Spacing.sm,
+  },
   scroll: {
     flexGrow: 1,
     paddingBottom: 24,
   },
   title: {
-    maxWidth: 350,
-    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
-    textAlign: 'center',
+    width: '100%',
+    lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
   },
   subtitle: {
     textAlign: 'center',
-    maxWidth: 330,
+    width: '100%',
   },
   rowInput: {
     minHeight: 28,

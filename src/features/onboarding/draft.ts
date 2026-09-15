@@ -5,17 +5,8 @@ import type { WorkplaceId } from '@/src/types/ids';
 import dayjs, { type Dayjs } from 'dayjs';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
 
-export type OnboardingV2Step =
-  | 'welcome'
-  | 'you'
-  | 'workspace'
-  | 'currency'
-  | 'now'
-  | 'next'
-  | 'protect'
-  | 'reserve'
-  | 'clarity'
-  | 'review';
+export type OnboardingStep =
+  'welcome' | 'you' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';
 
 export type AccountKind = 'bank' | 'cash' | 'savings' | 'card';
 

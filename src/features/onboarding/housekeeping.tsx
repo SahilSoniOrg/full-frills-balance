@@ -1,9 +1,7 @@
-import { WorkplaceCurrencyStep, WorkplaceIdentityStep } from '@/src/features/setup';
+import { WorkplaceCurrencyStep } from '@/src/features/setup';
 import { AppInput } from '@/src/components/core';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
-import { generateWorkplaceName } from '@/src/utils/workplaceName';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { ConversationStep } from './conversationUi';
-import type { CashClarityDraft } from './draft';
 
 export function YouScene({
   name,
@@ -37,38 +35,9 @@ export function YouScene({
           if (trimmed) onContinue(copy.confirmYou(trimmed));
         }}
         accessibilityLabel={copy.youLabel}
-        testID="onboarding-v2-you-input"
+        testID="onboarding-name-input"
       />
     </ConversationStep>
-  );
-}
-
-export function WorkspaceScene({
-  name,
-  icon,
-  onNameChange,
-  onIconChange,
-  onContinue,
-  onBack,
-}: {
-  readonly name: string;
-  readonly icon: CashClarityDraft['workplaceIcon'];
-  readonly onNameChange: (name: string) => void;
-  readonly onIconChange: (icon: CashClarityDraft['workplaceIcon']) => void;
-  readonly onContinue: () => void;
-  readonly onBack: () => void;
-}) {
-  return (
-    <WorkplaceIdentityStep
-      name={name}
-      icon={icon}
-      onNameChange={onNameChange}
-      onGenerateName={() => onNameChange(generateWorkplaceName())}
-      onIconChange={onIconChange}
-      onContinue={onContinue}
-      onBack={onBack}
-      isCompleting={false}
-    />
   );
 }
 

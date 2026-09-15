@@ -21,7 +21,6 @@ describe('LaunchCoordinator gate routing', () => {
 
   it('does not mount import-selection during first-run', () => {
     expect(shouldRenderGateChildren('setup', '/import-selection', 'first_run')).toBe(false);
-    expect(shouldRenderGateChildren('setup', '/onboarding-v2', 'first_run')).toBe(false);
   });
 
   it('lets first-run setup reach the name screen before showing privacy acknowledgement', () => {
@@ -40,7 +39,6 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldRedirectSetupToEntry('first_run', '/onboarding')).toBe(false);
     expect(shouldRedirectSetupToEntry('first_run', '/import-selection')).toBe(true);
     expect(shouldRedirectSetupToEntry('first_run', '/dashboard')).toBe(true);
-    expect(shouldRedirectSetupToEntry('first_run', '/onboarding-v2')).toBe(true);
     expect(shouldRedirectSetupToEntry('first_run', '/privacy-notice')).toBe(false);
     expect(shouldRedirectSetupToEntry('first_run_restore', '/onboarding')).toBe(false);
     expect(shouldRedirectSetupToEntry('first_run_restore', '/import-selection')).toBe(false);

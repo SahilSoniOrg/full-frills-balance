@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { ONBOARDING_V2_STRINGS } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS } from '@/src/constants/copy/domains/onboardingStrings';
 import * as Localization from 'expo-localization';
 
 export function defaultOnboardingCurrency(): string {
@@ -12,5 +12,5 @@ export function defaultDeviceDisplayName(): string {
 }
 
 export function defaultWorkplaceName(): string {
-  return ONBOARDING_V2_STRINGS.workspaceNameDefault;
+  return ONBOARDING_STRINGS.workspaceNameDefault;
 }

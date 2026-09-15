@@ -1,5 +1,5 @@
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { ONBOARDING_V2_STRINGS as copy } from '@/src/constants/copy/domains/onboardingV2Strings';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import dayjs from 'dayjs';
 import {
   incomeItemName,
@@ -25,37 +25,51 @@ function andList(items: readonly string[]): string {
   return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 }
 
+function spokenDay(dateMs: number): string {
+  const day = dayjs(dateMs).date();
+  const teens = day % 100;
+  const suffix =
+    teens >= 11 && teens <= 13
+      ? 'th'
+      : day % 10 === 1
+        ? 'st'
+        : day % 10 === 2
+          ? 'nd'
+          : day % 10 === 3
+            ? 'rd'
+            : 'th';
+  return `the ${day}${suffix}`;
+}
+
+function moneyPlaces(accounts: readonly DraftAccount[]): string {
+  const kinds = new Set(
+    accounts.filter(account => account.kind !== 'card').map(account => account.kind),
+  );
+  const places: string[] = [];
+  if (kinds.has('bank')) places.push('banks');
+  if (kinds.has('cash')) places.push('cash');
+  if (kinds.has('savings')) places.push('savings');
+  return andList(places);
+}
+
 export function confirmMoney(accounts: readonly DraftAccount[], currency: string): string {
-  if (accounts.length === 0) return copy.clarityNoCashYet;
-  const parts = accounts.map(account => {
-    const amount = formatDraftAmount(account.balance, currency);
-    if (account.kind === 'card') {
-      const outstanding = copy.confirmCardOutstanding(amount, account.name);
-      if (account.cardPaymentAmount && account.cardPaymentDate) {
-        return `${outstanding}, ${copy.confirmCardPaying(
-          formatDraftAmount(account.cardPaymentAmount, currency),
-          dayjs(account.cardPaymentDate).format('D MMM'),
-        )}`;
-      }
-      return outstanding;
-    }
-    const held = copy.confirmInAccount(amount, account.name);
-    return account.kind === 'savings' && account.spendable === false
-      ? `${held} (${copy.savingsProtectedShort})`
-      : held;
-  });
-  return copy.confirmMoneyGot(andList(parts));
+  const held = accounts.filter(account => account.kind !== 'card');
+  if (held.length === 0) return copy.clarityNoCashYet;
+  const total = held.reduce((sum, account) => sum + account.balance, 0);
+  const places = moneyPlaces(held);
+  if (!places) return copy.clarityNoCashYet;
+  return copy.confirmMoneyHave(formatDraftAmount(total, currency), places);
 }
 
 export function confirmIncome(items: readonly RecurringIncome[], currency: string): string {
   if (items.length === 0) return copy.confirmIncomeSkipped;
-  return copy.confirmIncomeKept(
+  return copy.confirmIncomeNoted(
     andList(
       items.map(item =>
-        copy.confirmIncomeItem(
+        copy.confirmIncomeHit(
           formatDraftAmount(item.amount, currency),
           incomeItemName(item),
-          dayjs(item.nextDate).format('D MMM'),
+          spokenDay(item.nextDate),
         ),
       ),
     ),
@@ -64,13 +78,13 @@ export function confirmIncome(items: readonly RecurringIncome[], currency: strin
 
 export function confirmPayments(items: readonly PaymentItem[], currency: string): string {
   if (items.length === 0) return copy.noPaymentIncluded;
-  return copy.confirmPaymentSpoken(
+  return copy.confirmPaymentMind(
     andList(
       items.map(item =>
-        copy.confirmPaymentItem(
-          paymentItemName(item),
+        copy.confirmPaymentHit(
           formatDraftAmount(item.amount, currency),
-          dayjs(item.dueDate).format('D MMM'),
+          paymentItemName(item),
+          spokenDay(item.dueDate),
         ),
       ),
     ),
@@ -79,10 +93,10 @@ export function confirmPayments(items: readonly PaymentItem[], currency: string)
 
 export function confirmBuffer(items: readonly BudgetItem[], currency: string): string {
   if (items.length === 0) return copy.noBufferIncluded;
-  return copy.confirmBufferHeld(
+  return copy.confirmBufferTrack(
     andList(
       items.map(item =>
-        copy.confirmBufferItem(formatDraftAmount(item.amount, currency), item.name),
+        copy.confirmBufferMonth(item.name, formatDraftAmount(item.amount, currency)),
       ),
     ),
   );
