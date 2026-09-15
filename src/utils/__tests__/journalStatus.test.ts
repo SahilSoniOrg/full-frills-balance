@@ -1,9 +1,5 @@
 import { JournalStatus } from '@/src/types/enums';
-import {
-  isActiveJournalStatus,
-  isJournalStatus,
-  isRebuildEligibleJournalStatus,
-} from '@/src/utils/journalStatus';
+import { isActiveJournalStatus, isRebuildEligibleJournalStatus } from '@/src/utils/journalStatus';
 
 describe('isRebuildEligibleJournalStatus', () => {
   it('treats undefined status as rebuild-eligible (posted default)', () => {
@@ -21,13 +17,7 @@ describe('isRebuildEligibleJournalStatus', () => {
   });
 });
 
-describe('isJournalStatus', () => {
-  it('narrows known persisted statuses and rejects unknown values', () => {
-    expect(isJournalStatus(JournalStatus.POSTED)).toBe(true);
-    expect(isJournalStatus('not-a-status')).toBe(false);
-    expect(isJournalStatus(undefined)).toBe(false);
-  });
-
+describe('isActiveJournalStatus', () => {
   it('narrows active statuses separately from other known statuses', () => {
     expect(isActiveJournalStatus(JournalStatus.POSTED)).toBe(true);
     expect(isActiveJournalStatus(JournalStatus.DRAFT)).toBe(false);

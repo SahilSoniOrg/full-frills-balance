@@ -55,34 +55,6 @@ export interface DisplayTransaction {
   updatedAt?: Date;
 }
 
-export interface JournalWithTransactionSummary {
-  id: JournalId;
-  journalDate: number;
-  description?: string;
-  currencyCode: string;
-  status: string;
-  totalDebits: number;
-  totalCredits: number;
-  transactionCount: number;
-  isBalanced: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface AccountWithBalance {
-  id: AccountId;
-  name: string;
-  accountType: AccountType;
-  currencyCode: string;
-  description?: string;
-  currentBalance: number;
-  transactionCount: number;
-  lastActivityDate?: number;
-  icon?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface EnrichedJournal {
   id: JournalId;
   journalDate: number;
@@ -104,13 +76,4 @@ export interface EnrichedJournal {
   semanticLabel?: string;
   notes?: string;
   plannedPaymentId?: PlannedPaymentId;
-}
-
-export interface AccountSummary {
-  totalAssets: number;
-  totalLiabilities: number;
-  totalEquity: number;
-  totalIncome: number;
-  totalExpenses: number;
-  netWorth: number;
 }

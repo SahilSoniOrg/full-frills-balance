@@ -68,20 +68,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to the Activity/Journal List tab.
-   */
-  toJournal: () => {
-    router.replace('/(tabs)/activity');
-  },
-
-  /**
-   * Navigate to the Commitments/Budget List tab.
-   */
-  toCommitments: () => {
-    router.replace('/(tabs)/commitments');
-  },
-
-  /**
    * Navigate to the Settings tab.
    */
   toSettings: () => {
@@ -536,28 +522,6 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to journal entry from a widget or other external launcher.
-   */
-  toWidgetJournalEntry: (options?: {
-    mode?: 'simple' | 'advanced';
-    type?: 'income' | 'expense' | 'transfer';
-    sourceAccountId?: string;
-    destinationAccountId?: string;
-  }) => {
-    AppNavigation.toJournalEntry({
-      params: {
-        source: 'widget',
-        ...(options?.mode ? { mode: options.mode } : {}),
-        ...(options?.type ? { type: options.type } : {}),
-        ...(options?.sourceAccountId ? { sourceAccountId: options.sourceAccountId } : {}),
-        ...(options?.destinationAccountId
-          ? { destinationAccountId: options.destinationAccountId }
-          : {}),
-      },
-    });
-  },
-
-  /**
    * Navigate to insight details with route params.
    */
   toInsightDetails: (params: {
@@ -632,30 +596,5 @@ export const AppNavigation = {
         displayType: params?.displayType,
       }),
     );
-  },
-
-  /**
-   * Navigate to the Design Preview screen.
-   */
-  toDesignPreview: () => {
-    router.push('/_design-preview' as Href);
-  },
-
-  /**
-   * Navigate to a custom route.
-   */
-  navigate: (route: string) => {
-    router.push(route as Href);
-  },
-
-  /**
-   * Dismiss current modal or navigate back.
-   */
-  dismiss: () => {
-    if (router.canGoBack()) {
-      router.dismiss();
-    } else {
-      router.replace('/');
-    }
   },
 };

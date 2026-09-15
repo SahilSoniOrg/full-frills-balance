@@ -288,14 +288,6 @@ export const showErrorAlert = (
   alert.show({ title, message, type: 'error' });
 };
 
-// === SUCCESS MESSAGES ===
-
-export const showSuccessAlert = (title: string, message: string) => {
-  alert.show({ title, message, type: 'info' });
-  // Also show toast for success
-  toast.success(message);
-};
-
 // === CONFIRMATION DIALOGS ===
 
 export const confirm = {
