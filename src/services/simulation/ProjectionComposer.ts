@@ -8,7 +8,6 @@ import {
   ScheduledProjection,
   SimulationContext,
 } from './types';
-import { assertValidFlow } from './utils/FlowInvariants';
 
 export class ProjectionComposer {
   /**
@@ -35,7 +34,6 @@ export class ProjectionComposer {
     );
 
     const allFlows = [...budgetFlows, ...plannedFlows];
-    allFlows.forEach(assertValidFlow);
     return allFlows;
   }
 
@@ -116,7 +114,6 @@ export class ProjectionComposer {
       }
     }
 
-    flows.forEach(assertValidFlow);
     return flows;
   }
 

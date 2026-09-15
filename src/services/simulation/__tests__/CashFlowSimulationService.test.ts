@@ -108,6 +108,33 @@ describe('CashFlowSimulationService', () => {
     expect(result.simulationResult.projections[0].globalBalance).toBe(1000);
   });
 
+  it('reports liability balances in the result currency', async () => {
+    const liabilityAccount = {
+      id: 'liability-eur' as AccountId,
+      name: 'EUR Card',
+      accountType: AccountType.LIABILITY,
+      accountSubtype: AccountSubtype.CREDIT_CARD,
+      currencyCode: 'EUR',
+      metadataRecords: { fetch: jest.fn().mockResolvedValue([]) },
+    } as any;
+
+    const result = await cashFlowSimulationService.simulate({
+      startingBalances: new Map<AccountId, number>([[liquidAccountId, 1000]]),
+      plannedPayments: [],
+      plannedJournals: [],
+      liquidAssetIds: [liquidAccountId],
+      liabilityAccountBalances: [{ account: liabilityAccount, balance: 100 }],
+      budgets: [],
+      usages: [],
+      allAccounts: [liquidAccount, liabilityAccount],
+      resultCurrency: 'USD',
+      workplaceId: 'test-wp' as WorkplaceId,
+      simulationDays: 30,
+    });
+
+    expect(result.report.liabilities.total).toBe(200);
+  });
+
   it('handles simple OUTFLOW correctly', async () => {
     const plannedPayment = {
       id: 'pp-1' as PlannedPaymentId,

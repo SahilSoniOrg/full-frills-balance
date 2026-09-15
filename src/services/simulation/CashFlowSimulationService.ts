@@ -12,9 +12,9 @@ import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
 import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
-import { plannedPaymentProjectionProvider } from '@/src/services/planned-payment/plannedPaymentProjectionProvider';
+import { PlannedFlowGenerator } from '@/src/services/simulation/engines/PlannedFlowGenerator';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
-import { liabilityProjectionProvider } from './liability/liabilityProjectionProvider';
+import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { ProjectionComposer } from './ProjectionComposer';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
 
@@ -236,12 +236,13 @@ export class CashFlowSimulationService {
     const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
     const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
 
-    const scheduledProjections = plannedPaymentProjectionProvider.projectScheduled(context, {
-      plannedPayments: normalizedPlannedPayments,
+    const scheduledProjections = PlannedFlowGenerator.generate(
+      context,
+      normalizedPlannedPayments,
       projectablePlannedJournals,
       expenseAccountIds,
-      journalTransactionsMap: journalTxsMap,
-    });
+      journalTxsMap,
+    );
 
     const budgetCapacities = budgetProjectionProvider.projectCapacities(
       context,
@@ -259,13 +260,14 @@ export class CashFlowSimulationService {
     );
 
     // 5. PHASE: GENERATE DERIVED LIABILITY OBLIGATIONS
-    const liabilityFlows = liabilityProjectionProvider.projectLiabilityFlows(context, {
-      liabilityBalances: normalizedLiabilityBalances,
+    const liabilityFlows = LiabilityFlowGenerator.generate(
+      context,
+      resolvedSpendingFlows,
+      normalizedLiabilityBalances,
       metadataMap,
       statementBalances,
       settledSinceStatement,
-      previousFlows: resolvedSpendingFlows,
-    });
+    );
     trace?.metric('flow_gen_liability');
 
     // 6. PHASE: DETERMINISTIC TIMELINE SORTING
@@ -303,7 +305,7 @@ export class CashFlowSimulationService {
     const report = SimulationReportGenerator.generate(
       allFlows,
       accountMap,
-      liabilityAccountBalances,
+      normalizedLiabilityBalances,
       context.liquidAccountIds,
     );
     trace?.metric('post_process_report');

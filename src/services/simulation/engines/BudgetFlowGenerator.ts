@@ -8,7 +8,6 @@ import {
   ScheduledProjection,
   SimulationContext,
 } from '../types';
-import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class BudgetFlowGenerator {
   /**
@@ -154,7 +153,6 @@ export class BudgetFlowGenerator {
       }
     }
 
-    budgetFlows.forEach(assertValidFlow);
     return budgetFlows;
   }
 }

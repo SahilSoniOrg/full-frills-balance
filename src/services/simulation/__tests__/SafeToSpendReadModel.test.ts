@@ -11,11 +11,14 @@ import {
   transactionQueryRepository,
 } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
-import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { BehaviorSubject, of } from 'rxjs';
@@ -32,8 +35,8 @@ jest.mock('@/src/services/currencyConversion', () => ({
   convertAmount: jest.fn(async ({ amount }: { amount: number }) => ({ ok: true, amount })),
 }));
 jest.mock('@/src/services/budget/budgetReadService');
-jest.mock('@/src/services/balance', () => ({
-  balanceService: {
+jest.mock('@/src/services/balance/balanceReadService', () => ({
+  balanceReadService: {
     getAccountBalances: jest.fn().mockResolvedValue([]),
   },
 }));
@@ -84,7 +87,11 @@ const emptySimResult = {
 describe('SafeToSpendReadModel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    clearReactiveWorkplaceObservesCache();
+    reactiveCacheCoordinator.clearNamespaces([
+      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
+      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
+      REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
+    ]);
     safeToSpendReadModel.clearCache();
 
     (accountObserveQueries.observeByType as jest.Mock).mockReturnValue(of([]));
@@ -105,7 +112,7 @@ describe('SafeToSpendReadModel', () => {
     (budgetReadService.observeBudgetUsage as jest.Mock).mockReturnValue(
       of({ remaining: 0, spent: 0 }),
     );
-    (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
+    (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([]);
     (workplaceRepository.observeById as jest.Mock).mockReturnValue(
       of({ defaultCurrencyCode: 'USD' }),
     );
@@ -138,7 +145,7 @@ describe('SafeToSpendReadModel', () => {
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(
         of([...mockAssets, ...mockLiabilities]),
       );
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
         { accountId: 'l1', balance: -1000 },
       ]);
@@ -210,7 +217,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
 
@@ -240,7 +247,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
       (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
@@ -299,7 +306,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
       (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
@@ -369,7 +376,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 100 },
       ]);
       (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(
@@ -391,7 +398,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
       (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
@@ -420,7 +427,7 @@ describe('SafeToSpendReadModel', () => {
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
       ]);
 

@@ -39,7 +39,7 @@ export type LiquidImpact = {
   amount: number;
 };
 
-export function getLiquidImpact(flow: Flow, liquidAccountIds: Set<string>): LiquidImpact {
+export function getLiquidImpact(flow: Flow, liquidAccountIds: ReadonlySet<string>): LiquidImpact {
   if (flow.kind === 'INFLOW') {
     const isLiquid = liquidAccountIds.has(flow.accountId);
     return {
@@ -83,7 +83,7 @@ export function getLiquidImpact(flow: Flow, liquidAccountIds: Set<string>): Liqu
  */
 export function findFirstMajorInflowDay(
   flows: Flow[],
-  liquidAccountIdsSet: Set<string>,
+  liquidAccountIdsSet: ReadonlySet<string>,
   threshold: number,
 ): number | null {
   const firstMajorInflow = flows.find(f => {

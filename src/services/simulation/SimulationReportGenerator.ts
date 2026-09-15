@@ -4,8 +4,9 @@ import { AccountId } from '@/src/types/ids';
 import { AccountSubtype } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
-import { findFirstMajorInflowDay, getLiquidImpact, isCommitmentFlow } from './utils/FlowPolicy';
-import { assertGlobalIntegrity } from './utils/SimulationIntegrity';
+import { findFirstMajorInflowDay } from './utils/FlowPolicy';
+import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
+import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 
 export class SimulationReportGenerator {
   static generate(
@@ -14,12 +15,7 @@ export class SimulationReportGenerator {
     liabilityAccountBalances: { account: AccountFields; balance: number }[],
     liquidAccountIdsSet: Set<string>,
   ): SimulationReport {
-    assertGlobalIntegrity(allFlows);
-
-    const roundedFlows = allFlows.map(f => ({
-      ...f,
-      amount: Math.round((f.amount + Number.EPSILON) * 100) / 100,
-    }));
+    const roundedFlows = normalizeSimulationFlows(allFlows);
 
     const now = dayjs().startOf('day');
 
@@ -38,40 +34,14 @@ export class SimulationReportGenerator {
       AppConfig.defaults.simulation.majorInflowThreshold,
     );
 
-    let totalFutureInflow = 0;
-    let totalPlannedOutflow = 0;
-    let totalCommittedPlanned = 0;
-
-    for (const f of allFlows) {
-      if (f.timeframe !== 'FUTURE') continue;
-
-      const impact = getLiquidImpact(f, liquidAccountIdsSet);
-      if (impact.direction === 'NONE') continue;
-
-      if (impact.direction === 'INFLOW') {
-        if (f.category === FlowCategory.INCOME) {
-          totalFutureInflow += impact.amount;
-        }
-      } else if (impact.direction === 'OUTFLOW') {
-        if (f.category === FlowCategory.PLANNED_EXPENSE || f.category === FlowCategory.EXPENSE) {
-          totalPlannedOutflow += impact.amount;
-        }
-      }
-
-      if (
-        isCommitmentFlow(f) &&
-        (impact.direction === 'OUTFLOW' || impact.direction === 'INTERNAL')
-      ) {
-        totalCommittedPlanned += impact.amount;
-      }
-    }
+    const summary = summarizeSimulationFlows(allFlows, liquidAccountIdsSet);
 
     return {
       firstMajorInflowDay,
-      totalFutureInflow: Math.round((totalFutureInflow + Number.EPSILON) * 100) / 100,
-      totalPlannedInflow: Math.round((totalFutureInflow + Number.EPSILON) * 100) / 100,
-      totalPlannedOutflow: Math.round((totalPlannedOutflow + Number.EPSILON) * 100) / 100,
-      totalCommittedPlanned: Math.round((totalCommittedPlanned + Number.EPSILON) * 100) / 100,
+      totalFutureInflow: summary.totalFutureInflow,
+      totalPlannedInflow: summary.totalFutureInflow,
+      totalPlannedOutflow: summary.totalPlannedOutflow,
+      totalCommittedPlanned: summary.totalCommittedPlanned,
     };
   }
 

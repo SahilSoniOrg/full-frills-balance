@@ -54,8 +54,6 @@ export interface LiabilityMetadata {
   emiAmount?: number;
 }
 
-export type FlowKind = 'INFLOW' | 'OUTFLOW' | 'TRANSFER';
-
 export interface FlowBase {
   amount: number;
   dayOffset: number;
@@ -102,8 +100,16 @@ export interface SimulationContext {
   liquidAccountIds: Set<AccountId>;
   orderedLiquidAccountIds: AccountId[];
   liabilityAccountIds: Set<AccountId>;
-  accountMap: Map<AccountId, AccountFields>;
+  accountMap?: Map<AccountId, AccountFields>;
   convert: (amount: number, from: string) => number;
+}
+
+/** Minimum account identity needed to generate liability flows. */
+export interface SimulationLiabilityAccount {
+  id: AccountId;
+  name: string;
+  accountSubtype?: AccountSubtype;
+  currencyCode: string;
 }
 
 export interface SimulationBudget {
@@ -163,10 +169,6 @@ export interface ScheduledProjection {
   categoryId?: string;
   tags?: string[];
   isTransfer?: boolean;
-}
-
-export interface ISimulationEngine {
-  generate(context: SimulationContext, previousFlows: Flow[]): Flow[];
 }
 
 export interface SimulationEngineResult {
@@ -240,16 +242,6 @@ export interface IncomeEntry {
   type: FlowSource;
 }
 
-export interface ProjectionPoint {
-  timestamp: number;
-  value: number;
-  isProjected: boolean;
-  details?: { name: string; amount: number; type: FlowType; context?: string }[];
-  dailyBurn?: number;
-  accountBalances?: Map<string, number>;
-  dayOffset?: number;
-}
-
 export interface SimulationReport {
   summary: {
     firstMajorInflowDay: number | null;
@@ -300,25 +292,5 @@ export interface AccountSimulationSummary {
       source?: string;
       isPostIncome?: boolean;
     }[];
-  };
-}
-
-export interface SimulationResult {
-  summary: {
-    safeToSpend: number;
-    shortfall: number;
-    trajectoryMinBalance: number;
-    safeDaysCount: number | null;
-    totalFutureInflow: number;
-    totalPlannedOutflow: number;
-    totalPlannedInflow: number;
-    totalCommittedPlanned: number;
-    firstMajorInflowDay: number | null;
-  };
-  accountSummaries?: AccountSimulationSummary[];
-  metadata: {
-    firstMajorInflowDay: number | null;
-    committedSubtypes: AccountSubtype[];
-    debtSubtypes: AccountSubtype[];
   };
 }

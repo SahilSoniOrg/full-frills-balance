@@ -2,7 +2,6 @@ import { AppConfig } from '@/src/constants/app-config';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import dayjs from 'dayjs';
 import { AccountSubtype } from '@/src/types/enums';
-import type { AccountFields } from '@/src/types/plainDtos';
 import {
   Flow,
   FlowCategory,
@@ -10,8 +9,8 @@ import {
   LiabilityMetadata,
   Obligation,
   SimulationContext,
+  SimulationLiabilityAccount,
 } from '../types';
-import { assertValidFlow } from '../utils/FlowInvariants';
 import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 
 export class LiabilityFlowGenerator {
@@ -24,7 +23,7 @@ export class LiabilityFlowGenerator {
   static generate(
     context: SimulationContext,
     previousFlows: Flow[],
-    liabilityBalances: { account: AccountFields; balance: number }[],
+    liabilityBalances: { account: SimulationLiabilityAccount; balance: number }[],
     metadataMap: Map<string, LiabilityMetadata>,
     statementBalances: Map<string, number>,
     settledSinceStatement: Map<string, number>,
@@ -125,12 +124,11 @@ export class LiabilityFlowGenerator {
       }
     }
 
-    flows.forEach(assertValidFlow);
     return flows;
   }
 
   private static generateObligations(
-    acc: AccountFields,
+    acc: SimulationLiabilityAccount,
     currentBalance: number,
     metadata: LiabilityMetadata | undefined,
     statementBalance: number,

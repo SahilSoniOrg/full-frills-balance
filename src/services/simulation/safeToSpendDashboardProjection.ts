@@ -6,7 +6,7 @@ import {
   FlowSource,
   FlowType,
   SimulationReport,
-  SimulationResult,
+  SimulationEngineResult,
   SimulationRunResult,
 } from '@/src/services/simulation/types';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
@@ -29,13 +29,20 @@ export interface SafeToSpendProjection {
   safeToSpend: number;
 }
 
+type SafeToSpendSummary = Pick<
+  SimulationEngineResult['summary'],
+  'safeToSpend' | 'shortfall' | 'trajectoryMinBalance' | 'firstMajorInflowDay'
+> &
+  Pick<
+    SimulationReport['summary'],
+    'totalFutureInflow' | 'totalPlannedInflow' | 'totalPlannedOutflow' | 'totalCommittedPlanned'
+  > & {
+    safeDaysCount: number | null;
+  };
+
 /** Payload from `safeToSpend.forWorkplace(id).watch()` — dashboard + chart. */
 export interface SafeToSpendDashboard {
-  summary: SimulationResult['summary'] &
-    SimulationReport['summary'] & {
-      safeCurrentBalance?: number;
-      safeDaysCount?: number | null;
-    };
+  summary: SafeToSpendSummary & { safeCurrentBalance?: number };
   report: SimulationRunResult['report'];
   accountSummaries: SimulationRunResult['accountSummaries'];
   totalLiquidAssets: number;

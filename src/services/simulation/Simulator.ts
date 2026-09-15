@@ -3,6 +3,7 @@ import { logger } from '@/src/utils/logger';
 import { Trace, startTrace } from '@/src/utils/TraceService';
 import { Flow, SimulationEngineResult } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
+import { assertValidFlow } from './utils/FlowInvariants';
 import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
 
 export class Simulator {
@@ -22,7 +23,8 @@ export class Simulator {
   ): SimulationEngineResult {
     const trace = parentTrace || startTrace('Simulator.simulate');
     try {
-      assertValidSimulationInputs(startingBalances, flows, days, startDayOffset, startDayTimestamp);
+      assertValidSimulationInputs(startingBalances, days, startDayOffset, startDayTimestamp);
+      flows.forEach(assertValidFlow);
 
       const currentBalances = new Map(startingBalances);
       const flowByDay = new Map<number, Flow[]>();

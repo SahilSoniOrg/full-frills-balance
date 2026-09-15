@@ -1,10 +1,6 @@
-import { Flow } from '../types';
-import { assertValidFlow } from './FlowInvariants';
-
 /** Validates simulation inputs before any working state or projections are allocated. */
 export function assertValidSimulationInputs(
   startingBalances: Map<string, number>,
-  flows: Flow[],
   days: number,
   startDayOffset: number,
   startDayTimestamp: number,
@@ -23,10 +19,6 @@ export function assertValidSimulationInputs(
         `starting balance for ${accountId} must be finite; received ${balance}`,
       );
     }
-  }
-
-  for (const flow of flows) {
-    assertValidFlow(flow);
   }
 }
 
