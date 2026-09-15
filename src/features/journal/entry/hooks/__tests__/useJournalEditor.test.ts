@@ -4,6 +4,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
@@ -73,19 +74,21 @@ describe('useJournalEditor', () => {
   });
 
   it('initializes a prefilled draft without moving notes into the description', () => {
+    const initialDate = '2026-08-25T12:30:00+05:30';
     const { result } = renderHook(() =>
       useJournalEditor('test-workplace' as WorkplaceId, {
         initialDescription: 'Coffee Shop',
         initialNotes: 'Imported from SMS',
         initialAmount: '12.34',
-        initialDate: '2026-08-25T12:30:00+05:30',
+        initialDate,
       }),
     );
 
     expect(result.current.description).toBe('Coffee Shop');
     expect(result.current.notes).toBe('Imported from SMS');
-    expect(result.current.journalDate).toBe('2026-08-25');
-    expect(result.current.journalTime).toBe('12:30');
+    // dayjs formats in the runtime local TZ (UTC on CI runners)
+    expect(result.current.journalDate).toBe(dayjs(initialDate).format('YYYY-MM-DD'));
+    expect(result.current.journalTime).toBe(dayjs(initialDate).format('HH:mm'));
     expect(result.current.lines.some(line => line.amount === '12.34')).toBe(true);
   });
 
