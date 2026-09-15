@@ -4,7 +4,7 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { JournalService } from '@/src/services/journal/journalDomainService';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
@@ -14,11 +14,20 @@ jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/utils/logger');
-jest.mock('@/src/services/ledger', () => ({
-  ledgerWriteService: {
+jest.mock('@/src/services/ledger/ledgerCreateService', () => ({
+  ledgerCreateService: {
     createJournal: jest.fn(),
     createMany: jest.fn(),
+    createReversalJournal: jest.fn(),
+  },
+}));
+jest.mock('@/src/services/ledger/ledgerUpdateService', () => ({
+  ledgerUpdateService: {
     updateJournal: jest.fn(),
+  },
+}));
+jest.mock('@/src/services/ledger/ledgerLifecycleService', () => ({
+  ledgerLifecycleService: {
     deleteJournal: jest.fn(),
     recoverJournal: jest.fn(),
     postJournal: jest.fn(),
@@ -60,7 +69,7 @@ describe('JournalService - saveJournalEntry', () => {
 
     it('should create new journal if no ID provided', async () => {
       const createSpy = jest
-        .spyOn(ledgerWriteService, 'createJournal')
+        .spyOn(ledgerCreateService, 'createJournal')
         .mockResolvedValue({ id: 'j1' } as any);
 
       const result = await service.saveJournalEntry({
@@ -130,7 +139,7 @@ describe('JournalService - saveJournalEntry', () => {
 
     it('should handle timestamp dates', async () => {
       const createSpy = jest
-        .spyOn(ledgerWriteService, 'createJournal')
+        .spyOn(ledgerCreateService, 'createJournal')
         .mockResolvedValue({ id: 'j1' } as any);
       const ts = Date.now();
 
@@ -164,7 +173,7 @@ describe('JournalService - saveJournalEntry', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('at most 100 entries');
-      expect(ledgerWriteService.createMany).not.toHaveBeenCalled();
+      expect(ledgerCreateService.createMany).not.toHaveBeenCalled();
     });
   });
 

@@ -15,51 +15,6 @@ import dayjs from 'dayjs';
 
 const SUGGESTION_LOOKBACK_MONTHS = 3;
 
-export function computeDominantTargetAccount(
-  accountEntries: {
-    accountId: AccountId;
-    accountName: string;
-    accountType: AccountType;
-    count: number;
-  }[],
-  dominantThreshold: number = 0.8,
-): {
-  targetAccountId?: AccountId;
-  targetAccountName?: string;
-  targetAccountType?: AccountType;
-  confidence?: number;
-} {
-  if (accountEntries.length === 0) return {};
-
-  // First prioritize category accounts (EXPENSE or INCOME)
-  const categoryAccounts = accountEntries.filter(
-    a => a.accountType === AccountType.EXPENSE || a.accountType === AccountType.INCOME,
-  );
-
-  const candidatePool = categoryAccounts.length > 0 ? categoryAccounts : accountEntries;
-  const totalCount = candidatePool.reduce((sum, a) => sum + a.count, 0);
-  if (totalCount === 0) return {};
-
-  const sorted = [...candidatePool].sort((a, b) => b.count - a.count);
-  const top = sorted[0];
-
-  const isDominant =
-    sorted.length === 1 ||
-    (top.count / totalCount >= dominantThreshold &&
-      (sorted.length === 1 || top.count > (sorted[1]?.count ?? 0)));
-
-  if (isDominant) {
-    return {
-      targetAccountId: top.accountId,
-      targetAccountName: top.accountName,
-      targetAccountType: top.accountType,
-      confidence: Math.min(1, top.count / totalCount),
-    };
-  }
-
-  return {};
-}
-
 /** Read-side enrichment and suggestion queries for journals (raw SQL + ORM fallbacks). */
 export class JournalEnrichmentQueries {
   private get journals() {

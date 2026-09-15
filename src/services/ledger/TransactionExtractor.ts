@@ -28,21 +28,3 @@ export interface TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean;
   extract(input: RawTransactionInput): Promise<ExtractedInfo>;
 }
-
-export class TransactionExtractorRegistry {
-  private extractors: TransactionExtractor[] = [];
-
-  register(extractor: TransactionExtractor) {
-    this.extractors.push(extractor);
-  }
-
-  getExtractorFor(input: RawTransactionInput): TransactionExtractor {
-    const extractor = this.extractors.find(e => e.canExtract(input));
-    if (!extractor) {
-      throw new Error(`No transaction extractor registered for channel: ${input.channel}`);
-    }
-    return extractor;
-  }
-}
-
-export const transactionExtractorRegistry = new TransactionExtractorRegistry();

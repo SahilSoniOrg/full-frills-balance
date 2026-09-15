@@ -16,7 +16,9 @@ import { transactionInboxRepository } from '@/src/data/repositories/TransactionI
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
+import { ledgerUpdateService } from '@/src/services/ledger/ledgerUpdateService';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
@@ -76,9 +78,9 @@ export class JournalService {
   ): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
     if (!smsRecord) {
-      return ledgerWriteService.createJournal(data, workplaceId);
+      return ledgerCreateService.createJournal(data, workplaceId);
     }
-    return ledgerWriteService.createJournal(data, workplaceId, {
+    return ledgerCreateService.createJournal(data, workplaceId, {
       extraOps: journal => [
         transactionInboxRepository.prepareLink(
           smsRecord,
@@ -95,12 +97,12 @@ export class JournalService {
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
-    return ledgerWriteService.updateJournal(journalId, data, workplaceId);
+    return ledgerUpdateService.updateJournal(journalId, data, workplaceId);
   }
 
   async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
     this.clearSuggestionsCache(workplaceId);
-    await ledgerWriteService.deleteJournal(journalId, workplaceId);
+    await ledgerLifecycleService.deleteJournal(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'delete', {
       journal_id: journalId,
     });
@@ -108,7 +110,7 @@ export class JournalService {
 
   async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
-    const journal = await ledgerWriteService.recoverJournal(journalId, workplaceId);
+    const journal = await ledgerLifecycleService.recoverJournal(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'recover', {
       journal_id: journalId,
       currency: journal.currencyCode,
@@ -117,7 +119,7 @@ export class JournalService {
   }
 
   async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await ledgerWriteService.postJournal(journalId, workplaceId);
+    const journal = await ledgerLifecycleService.postJournal(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'post', {
       journal_id: journalId,
       currency: journal.currencyCode,
@@ -126,7 +128,7 @@ export class JournalService {
   }
 
   async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await ledgerWriteService.revertToPlanned(journalId, workplaceId);
+    const journal = await ledgerLifecycleService.revertToPlanned(journalId, workplaceId);
     analytics.trackFeatureUsage('journal', 'revert_to_planned', {
       journal_id: journalId,
       currency: journal.currencyCode,
@@ -140,7 +142,7 @@ export class JournalService {
 
     const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
 
-    const duplicated = await ledgerWriteService.createJournal(
+    const duplicated = await ledgerCreateService.createJournal(
       {
         journalDate: Date.now(),
         description: journal.description ? `${journal.description}` : undefined,
@@ -171,7 +173,7 @@ export class JournalService {
     reason: string = 'Reversal',
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const reversalJournal = await ledgerWriteService.createReversalJournal(
+    const reversalJournal = await ledgerCreateService.createReversalJournal(
       originalJournalId,
       reason,
       workplaceId,
@@ -317,7 +319,7 @@ export class JournalService {
     }
 
     try {
-      await ledgerWriteService.createMany(
+      await ledgerCreateService.createMany(
         preparedItems.map(p => ({ data: p.data, prepared: p.prepared })),
         workplaceId,
       );

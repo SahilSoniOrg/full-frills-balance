@@ -175,33 +175,6 @@ export class JournalWriteRepository {
     return { journal, transactions, metadataRecord };
   }
 
-  async createJournalWithTransactions(
-    journalData: PrepareCreateJournalData,
-    workplaceId: WorkplaceId,
-  ): Promise<Journal> {
-    const start = Date.now();
-    return await database.write(async () => {
-      const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
-        journalData,
-        workplaceId,
-      );
-
-      const batchOps: Model[] = [journal, ...transactions];
-      if (metadataRecord) batchOps.push(metadataRecord);
-
-      await database.batch(batchOps);
-
-      logger.info(
-        `[Trace] JournalWriteRepository.createJournalWithTransactions: ${Date.now() - start}ms`,
-        {
-          txCount: journalData.transactions.length,
-        },
-      );
-
-      return journal;
-    });
-  }
-
   async updateJournalWithTransactions(
     workplaceId: WorkplaceId,
     journalId: JournalId,
@@ -309,51 +282,6 @@ export class JournalWriteRepository {
       );
 
       return existingJournal;
-    });
-  }
-
-  async updateJournalStatus(
-    journalId: JournalId,
-    status: JournalStatus,
-    workplaceId: WorkplaceId,
-  ): Promise<Journal> {
-    const journal = await journalQueryRepository.find(workplaceId, journalId);
-    if (!journal) throw new Error(`Journal ${journalId} not found`);
-
-    await database.write(async () => {
-      await journal.update(record => {
-        record.status = status;
-        record.updatedAt = new Date();
-      });
-    });
-
-    return journal;
-  }
-
-  async softDeleteJournal(workplaceId: WorkplaceId, journalId: JournalId): Promise<void> {
-    const journal = await journalQueryRepository.find(workplaceId, journalId);
-    if (!journal) return;
-
-    const associatedTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    await database.write(async () => {
-      const now = new Date();
-
-      const journalUpdate = journal.prepareUpdate(j => {
-        j.deletedAt = now;
-        j.updatedAt = now;
-      });
-
-      const transactionUpdates = associatedTransactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = now;
-          t.updatedAt = now;
-        }),
-      );
-
-      await database.batch([journalUpdate, ...transactionUpdates]);
     });
   }
 
@@ -502,116 +430,6 @@ export class JournalWriteRepository {
     await database.write(async () => {
       await database.batch([...params.reversalOps, reverseOp]);
       params.afterBatch?.();
-    });
-  }
-
-  async replaceJournalWithReversal(params: {
-    originalJournal: Journal;
-    originalTransactions: Transaction[];
-    replacementData: PrepareCreateJournalData;
-    workplaceId: WorkplaceId;
-  }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
-    const { originalJournal, originalTransactions, replacementData, workplaceId } = params;
-    this.assertModelOwnership(workplaceId, [originalJournal], originalTransactions);
-    const {
-      transactions: replacementTransactions,
-      totalAmount,
-      displayType,
-      calculatedBalances,
-      ...journalFields
-    } = replacementData;
-
-    const start = Date.now();
-    return await database.write(async () => {
-      const now = new Date();
-      const reversalDate = originalJournal.journalDate;
-
-      const reversalJournal = this.journals.prepareCreate(j => {
-        j.journalDate = reversalDate;
-        j.description = `Reversal of: ${originalJournal.description || originalJournal.id} (Edit)`;
-        j.currencyCode = originalJournal.currencyCode;
-        j.status = JournalStatus.POSTED;
-        j.originalJournalId = originalJournal.id;
-        j.totalAmount = originalJournal.totalAmount;
-        j.transactionCount = originalTransactions.length;
-        j.displayType = originalJournal.displayType;
-        j.workplaceId = workplaceId;
-        j.createdAt = now;
-        j.updatedAt = now;
-      });
-
-      const reversalTransactions = originalTransactions.map(tx =>
-        this.prepareTransaction(
-          reversalJournal.id,
-          {
-            accountId: tx.accountId,
-            amount: tx.amount,
-            currencyCode: tx.currencyCode,
-            transactionType: tx.transactionType,
-            notes: tx.notes,
-            exchangeRate: tx.exchangeRate || 1,
-          },
-          reversalDate,
-          originalJournal.currencyCode,
-          workplaceId,
-          undefined,
-          now,
-          {
-            transactionType:
-              tx.transactionType === TransactionType.DEBIT
-                ? TransactionType.CREDIT
-                : TransactionType.DEBIT,
-            notes: `Reversal: ${tx.notes || ''}`,
-          },
-        ),
-      );
-
-      const originalJournalUpdate = originalJournal.prepareUpdate(record => {
-        record.reversingJournalId = reversalJournal.id;
-        record.status = JournalStatus.REVERSED;
-        record.updatedAt = now;
-      });
-
-      const replacementJournal = this.journals.prepareCreate(j => {
-        Object.assign(j, journalFields);
-        j.status = JournalStatus.POSTED;
-        j.totalAmount = totalAmount ?? 0;
-        j.transactionCount = replacementTransactions.length;
-        j.displayType = displayType ?? JournalDisplayType.TRANSFER;
-        j.workplaceId = workplaceId;
-        j.createdAt = now;
-        j.updatedAt = now;
-      });
-
-      const newTransactions = replacementTransactions.map(txData =>
-        this.prepareTransaction(
-          replacementJournal.id,
-          txData,
-          journalFields.journalDate,
-          journalFields.currencyCode,
-          workplaceId,
-          calculatedBalances,
-          now,
-        ),
-      );
-
-      await database.batch([
-        reversalJournal,
-        ...reversalTransactions,
-        originalJournalUpdate,
-        replacementJournal,
-        ...newTransactions,
-      ]);
-
-      logger.info(
-        `[Trace] JournalWriteRepository.replaceJournalWithReversal: ${Date.now() - start}ms`,
-        {
-          newTxCount: replacementTransactions.length,
-          oldTxCount: originalTransactions.length,
-        },
-      );
-
-      return { reversalJournal, replacementJournal };
     });
   }
 

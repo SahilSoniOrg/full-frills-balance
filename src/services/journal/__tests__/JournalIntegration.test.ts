@@ -11,12 +11,12 @@ import Journal from '@/src/data/models/Journal';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { balanceService } from '@/src/services/balance';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { transactionService } from '@/src/services/transaction-ingestion';
 
 describe('Journal ledger integration', () => {
   let cashAccountId: string;
@@ -56,7 +56,7 @@ describe('Journal ledger integration', () => {
 
   describe('createJournalWithTransactions', () => {
     it('should create a balanced journal successfully', async () => {
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Lunch expense',
           journalDate: Date.now(),
@@ -85,7 +85,7 @@ describe('Journal ledger integration', () => {
 
     it('should reject unbalanced journals', async () => {
       await expect(
-        ledgerWriteService.createJournal(
+        ledgerCreateService.createJournal(
           {
             description: 'Unbalanced',
             journalDate: Date.now(),
@@ -110,7 +110,7 @@ describe('Journal ledger integration', () => {
 
     it('should handle multi-leg journals', async () => {
       // Receive salary and immediately pay some expense
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Salary with immediate expense',
           journalDate: Date.now(),
@@ -141,7 +141,7 @@ describe('Journal ledger integration', () => {
     });
 
     it('should update account balances correctly', async () => {
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Deposit',
           journalDate: Date.now(),
@@ -165,13 +165,13 @@ describe('Journal ledger integration', () => {
       // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
-      const cashBalance = await balanceService.getAccountBalance(
+      const cashBalance = await balanceReadService.getAccountBalance(
         cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
       expect(cashBalance.balance).toBe(500);
 
-      const incomeBalance = await balanceService.getAccountBalance(
+      const incomeBalance = await balanceReadService.getAccountBalance(
         incomeAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
@@ -181,7 +181,7 @@ describe('Journal ledger integration', () => {
 
   describe('updateJournalWithTransactions', () => {
     it('should update journal and recalculate balances', async () => {
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Original',
           journalDate: Date.now(),
@@ -237,7 +237,7 @@ describe('Journal ledger integration', () => {
 
   describe('duplicateJournal', () => {
     it('should duplicate a journal and its transactions', async () => {
-      const originalJournal = await ledgerWriteService.createJournal(
+      const originalJournal = await ledgerCreateService.createJournal(
         {
           description: 'Original Transaction',
           journalDate: Date.now() - 86400000, // Yesterday
@@ -270,7 +270,7 @@ describe('Journal ledger integration', () => {
       expect(duplicatedJournal.transactionCount).toBe(originalJournal.transactionCount);
 
       // Transactions should be duplicated faithfully
-      const duplicatedTransactions = await transactionService.getEnrichedByJournal(
+      const duplicatedTransactions = await transactionQueryRepository.findByJournal(
         'wp-1' as WorkplaceId,
         duplicatedJournal.id as JournalId,
       );
@@ -290,7 +290,7 @@ describe('Journal ledger integration', () => {
 
   describe('deleteJournal', () => {
     it('should soft-delete journal and its transactions', async () => {
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'To be deleted',
           journalDate: Date.now(),
@@ -321,7 +321,7 @@ describe('Journal ledger integration', () => {
 
   describe('observeEnrichedJournals search functionality', () => {
     it('should find journals by matching description', async () => {
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Unique test description',
           notes: 'Some notes',
@@ -362,7 +362,7 @@ describe('Journal ledger integration', () => {
     });
 
     it('should find journals by matching notes', async () => {
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Another entry',
           notes: 'Unique test notes',
@@ -403,7 +403,7 @@ describe('Journal ledger integration', () => {
     });
 
     it('should not find journals if query does not match description or notes', async () => {
-      await ledgerWriteService.createJournal(
+      await ledgerCreateService.createJournal(
         {
           description: 'Standard description',
           notes: 'Standard notes',
@@ -446,7 +446,7 @@ describe('Journal ledger integration', () => {
   describe('observeEnrichedJournals reactive updates', () => {
     it('should emit updated accounts when a journal accounts are modified', async () => {
       // 1. Create a journal with account A and account B
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Reactive test',
           notes: 'Standard notes',
@@ -526,7 +526,7 @@ describe('Journal ledger integration', () => {
     });
 
     it('should not list a journal on an account page after that account is removed from the journal', async () => {
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Account filter test',
           journalDate: Date.now(),
@@ -611,7 +611,7 @@ describe('Journal ledger integration', () => {
     }
 
     async function createCashExpenseJournal(description: string, amount = 10) {
-      return ledgerWriteService.createJournal(
+      return ledgerCreateService.createJournal(
         {
           description,
           journalDate: Date.now(),

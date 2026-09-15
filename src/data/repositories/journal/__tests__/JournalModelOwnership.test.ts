@@ -6,6 +6,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalWriteRepository as journalWriteTestRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 
 const WORKPLACE_ONE = 'wp-journal-owner-one' as WorkplaceId;
@@ -46,7 +47,7 @@ describe('journal model-instance writer workplace ownership', () => {
     workplaceOneAccountId = workplaceOneAccount.id;
     workplaceOneReplacementAccountId = workplaceOneReplacementAccount.id;
 
-    workplaceOneJournal = await journalWriteRepository.createJournalWithTransactions(
+    workplaceOneJournal = await journalWriteTestRepository.createJournalWithTransactions(
       {
         journalDate: 1_000,
         description: 'Workplace One Journal',
@@ -61,7 +62,7 @@ describe('journal model-instance writer workplace ownership', () => {
       },
       WORKPLACE_ONE,
     );
-    workplaceTwoJournal = await journalWriteRepository.createJournalWithTransactions(
+    workplaceTwoJournal = await journalWriteTestRepository.createJournalWithTransactions(
       {
         journalDate: 2_000,
         description: 'Workplace Two Journal',
@@ -126,16 +127,14 @@ describe('journal model-instance writer workplace ownership', () => {
 
   it('rejects foreign reversal source models before opening the writer', async () => {
     await expectRejectedBeforeWrite(() =>
-      journalWriteRepository.replaceJournalWithReversal({
-        originalJournal: workplaceOneJournal,
-        originalTransactions: [workplaceOneTransaction, workplaceTwoTransaction],
-        replacementData: {
-          journalDate: 3_000,
-          currencyCode: 'USD',
-          transactions: [],
-        },
-        workplaceId: WORKPLACE_ONE,
-      }),
+      Promise.resolve().then(() =>
+        journalWriteRepository.prepareRevertJournalUpdates(
+          workplaceOneJournal,
+          [workplaceOneTransaction, workplaceTwoTransaction],
+          WORKPLACE_ONE,
+          3_000,
+        ),
+      ),
     );
   });
 

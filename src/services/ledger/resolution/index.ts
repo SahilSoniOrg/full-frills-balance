@@ -8,10 +8,7 @@ import { getBayesTrainingData, resolveFromHistory } from './historyResolver';
 import { SYNONYM_DICTIONARY } from './synonymDictionary';
 import { ResolutionParams, ResolutionResult } from './types';
 
-export * from './types';
-export * from './synonymDictionary';
-export * from './fuzzyMatcher';
-export * from './historyResolver';
+export type { ResolutionParams, ResolutionResult } from './types';
 
 export async function resolveAccount(params: ResolutionParams): Promise<ResolutionResult> {
   const {
@@ -242,11 +239,3 @@ function buildResult(
     isReversal,
   };
 }
-
-export class AccountResolutionService {
-  resolve(params: ResolutionParams): Promise<ResolutionResult> {
-    return resolveAccount(params);
-  }
-}
-
-export const accountResolutionService = new AccountResolutionService();

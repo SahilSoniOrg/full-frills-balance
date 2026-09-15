@@ -1,9 +1,4 @@
-import {
-  ExtractedInfo,
-  RawTransactionInput,
-  TransactionExtractor,
-  transactionExtractorRegistry,
-} from './TransactionExtractor';
+import { ExtractedInfo, RawTransactionInput, TransactionExtractor } from './TransactionExtractor';
 
 export class VoiceExtractor implements TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean {
@@ -163,6 +158,3 @@ export class VoiceExtractor implements TransactionExtractor {
     return symbolMap[raw.toLowerCase()] || raw.toUpperCase();
   }
 }
-
-// Register Voice Extractor
-transactionExtractorRegistry.register(new VoiceExtractor());

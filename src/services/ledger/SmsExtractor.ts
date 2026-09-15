@@ -1,9 +1,4 @@
-import {
-  ExtractedInfo,
-  RawTransactionInput,
-  TransactionExtractor,
-  transactionExtractorRegistry,
-} from './TransactionExtractor';
+import { ExtractedInfo, RawTransactionInput, TransactionExtractor } from './TransactionExtractor';
 import { extractSmsReference } from '@/src/utils/sms/SmsReferenceExtractor';
 
 export class SmsExtractor implements TransactionExtractor {
@@ -142,6 +137,3 @@ export class SmsExtractor implements TransactionExtractor {
     return symbolMap[normalized] || normalized.replace(/\./g, '');
   }
 }
-
-// Register SMS Extractor
-transactionExtractorRegistry.register(new SmsExtractor());

@@ -5,7 +5,8 @@ import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerUpdateService } from '@/src/services/ledger/ledgerUpdateService';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
@@ -54,7 +55,7 @@ describe('ledgerWriteService write paths', () => {
   ];
 
   it('createMany returns empty array without writing', async () => {
-    const result = await ledgerWriteService.createMany([], workplaceId);
+    const result = await ledgerCreateService.createMany([], workplaceId);
     expect(result).toEqual([]);
   });
 
@@ -80,7 +81,7 @@ describe('ledgerWriteService write paths', () => {
       workplaceId,
     );
 
-    const journals = await ledgerWriteService.createMany(
+    const journals = await ledgerCreateService.createMany(
       [
         {
           data: {
@@ -111,7 +112,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('updateJournal changes description and enqueues rebuild', async () => {
-    const journal = await ledgerWriteService.createJournal(
+    const journal = await ledgerCreateService.createJournal(
       {
         description: 'Before',
         journalDate: Date.now(),
@@ -123,7 +124,7 @@ describe('ledgerWriteService write paths', () => {
     await rebuildQueueService.flush();
 
     const newDate = Date.UTC(2024, 6, 1, 12, 0, 0);
-    await ledgerWriteService.updateJournal(
+    await ledgerUpdateService.updateJournal(
       journal.id as JournalId,
       {
         description: 'After',
@@ -142,7 +143,7 @@ describe('ledgerWriteService write paths', () => {
 
   it('updateJournal throws when journal is missing', async () => {
     await expect(
-      ledgerWriteService.updateJournal(
+      ledgerUpdateService.updateJournal(
         'missing' as JournalId,
         {
           description: 'Nope',
@@ -156,7 +157,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('creates a reversal and marks the original reversed in one write', async () => {
-    const original = await ledgerWriteService.createJournal(
+    const original = await ledgerCreateService.createJournal(
       {
         description: 'Lunch',
         journalDate: Date.now(),
@@ -167,7 +168,7 @@ describe('ledgerWriteService write paths', () => {
     );
 
     const writeSpy = jest.spyOn(database, 'write');
-    const reversal = await ledgerWriteService.createReversalJournal(
+    const reversal = await ledgerCreateService.createReversalJournal(
       original.id as JournalId,
       'Refund',
       workplaceId,
@@ -185,7 +186,7 @@ describe('ledgerWriteService write paths', () => {
 
   it('does not commit a reversal when the original journal is missing', async () => {
     await expect(
-      ledgerWriteService.createReversalJournal('missing' as JournalId, 'Refund', workplaceId),
+      ledgerCreateService.createReversalJournal('missing' as JournalId, 'Refund', workplaceId),
     ).rejects.toThrow(/Original journal not found/);
 
     const listed = await journalListQueryRepository.findAll(workplaceId);
@@ -193,7 +194,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('does not commit a reversal for a foreign workplace journal', async () => {
-    const original = await ledgerWriteService.createJournal(
+    const original = await ledgerCreateService.createJournal(
       {
         description: 'Lunch',
         journalDate: Date.now(),
@@ -204,7 +205,7 @@ describe('ledgerWriteService write paths', () => {
     );
 
     await expect(
-      ledgerWriteService.createReversalJournal(
+      ledgerCreateService.createReversalJournal(
         original.id as JournalId,
         'Refund',
         'wp-other' as WorkplaceId,

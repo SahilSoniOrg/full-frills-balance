@@ -8,7 +8,8 @@ import Journal from '@/src/data/models/Journal';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 const workplaceId = 'wp-1' as WorkplaceId;
@@ -43,7 +44,7 @@ describe('ledgerWriteService lifecycle', () => {
   });
 
   async function createPlannedJournal(plannedDate: number): Promise<Journal> {
-    return ledgerWriteService.createJournal(
+    return ledgerCreateService.createJournal(
       {
         description: 'Planned expense',
         journalDate: plannedDate,
@@ -73,7 +74,7 @@ describe('ledgerWriteService lifecycle', () => {
       expect(journal.status).toBe(JournalStatus.PLANNED);
 
       const beforePost = Date.now();
-      await ledgerWriteService.postJournal(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.postJournal(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
       const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -84,12 +85,12 @@ describe('ledgerWriteService lifecycle', () => {
 
     it('throws when journal does not exist', async () => {
       await expect(
-        ledgerWriteService.postJournal('missing-id' as JournalId, workplaceId),
+        ledgerLifecycleService.postJournal('missing-id' as JournalId, workplaceId),
       ).rejects.toThrow(/Journal not found/);
     });
 
     it('rejects posting a journal that is not PLANNED', async () => {
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Already posted',
           journalDate: Date.now(),
@@ -112,7 +113,7 @@ describe('ledgerWriteService lifecycle', () => {
       expect(journal.status).toBe(JournalStatus.POSTED);
 
       await expect(
-        ledgerWriteService.postJournal(journal.id as JournalId, workplaceId),
+        ledgerLifecycleService.postJournal(journal.id as JournalId, workplaceId),
       ).rejects.toThrow(/Only PLANNED journals can be posted/);
     });
   });
@@ -121,9 +122,9 @@ describe('ledgerWriteService lifecycle', () => {
     it('changes POSTED journal status back to PLANNED with original planned date', async () => {
       const plannedDate = Date.UTC(2024, 5, 15, 12, 0, 0);
       const journal = await createPlannedJournal(plannedDate);
-      await ledgerWriteService.postJournal(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.postJournal(journal.id as JournalId, workplaceId);
 
-      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
       const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -134,7 +135,7 @@ describe('ledgerWriteService lifecycle', () => {
 
     it('rejects reverting a posted journal whose planned payment no longer exists', async () => {
       const postedAt = Date.UTC(2024, 5, 15, 12, 0, 0);
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Orphaned planned payment journal',
           journalDate: postedAt,
@@ -158,7 +159,7 @@ describe('ledgerWriteService lifecycle', () => {
       );
 
       await expect(
-        ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId),
+        ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId),
       ).rejects.toThrow(/planned payment was deleted/);
     });
 
@@ -167,13 +168,13 @@ describe('ledgerWriteService lifecycle', () => {
       expect(journal.status).toBe(JournalStatus.PLANNED);
 
       await expect(
-        ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId),
+        ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId),
       ).rejects.toThrow(/Only POSTED or SKIPPED journals can be reverted/);
     });
 
     it('reverts a SKIPPED journal back to PLANNED', async () => {
       const skippedDate = Date.UTC(2024, 7, 10, 15, 30, 0);
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Skipped bill',
           journalDate: skippedDate,
@@ -195,7 +196,7 @@ describe('ledgerWriteService lifecycle', () => {
         workplaceId,
       );
 
-      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
       const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -204,7 +205,7 @@ describe('ledgerWriteService lifecycle', () => {
 
     it('reverts using midnight when metadata has no original planned date', async () => {
       const postedAt = Date.UTC(2024, 8, 20, 18, 0, 0);
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Posted direct',
           journalDate: postedAt,
@@ -234,7 +235,7 @@ describe('ledgerWriteService lifecycle', () => {
         );
       });
 
-      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
       const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -246,7 +247,7 @@ describe('ledgerWriteService lifecycle', () => {
 
     it('reverts using midnight when metadata JSON is invalid', async () => {
       const postedAt = Date.UTC(2024, 9, 5, 9, 0, 0);
-      const journal = await ledgerWriteService.createJournal(
+      const journal = await ledgerCreateService.createJournal(
         {
           description: 'Bad meta',
           journalDate: postedAt,
@@ -280,7 +281,7 @@ describe('ledgerWriteService lifecycle', () => {
         }
       });
 
-      await ledgerWriteService.revertToPlanned(journal.id as JournalId, workplaceId);
+      await ledgerLifecycleService.revertToPlanned(journal.id as JournalId, workplaceId);
       await rebuildQueueService.flush();
 
       const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -293,13 +294,13 @@ describe('ledgerWriteService lifecycle', () => {
       const journal = await createPlannedJournal(Date.now());
       const journalId = journal.id as JournalId;
 
-      await ledgerWriteService.deleteJournal(journalId, workplaceId);
+      await ledgerLifecycleService.deleteJournal(journalId, workplaceId);
       expect(await journalQueryRepository.find(workplaceId, journalId)).toBeNull();
 
       const deleted = await journalQueryRepository.findWithDeleted(workplaceId, journalId);
       expect(deleted?.deletedAt).toBeDefined();
 
-      await ledgerWriteService.recoverJournal(journalId, workplaceId);
+      await ledgerLifecycleService.recoverJournal(journalId, workplaceId);
       await rebuildQueueService.flush();
 
       const restored = await journalQueryRepository.find(workplaceId, journalId);
@@ -310,7 +311,7 @@ describe('ledgerWriteService lifecycle', () => {
 
     it('throws when journal does not exist', async () => {
       await expect(
-        ledgerWriteService.recoverJournal('missing-id' as JournalId, workplaceId),
+        ledgerLifecycleService.recoverJournal('missing-id' as JournalId, workplaceId),
       ).rejects.toThrow(/Journal not found/);
     });
   });

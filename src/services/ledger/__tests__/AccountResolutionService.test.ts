@@ -1,10 +1,10 @@
-import { accountResolutionService } from '@/src/services/ledger/resolution';
+import { resolveAccount } from '@/src/services/ledger/resolution';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
-describe('AccountResolutionService', () => {
+describe('resolveAccount', () => {
   const workplaceId = 'test-workplace-id' as WorkplaceId;
 
   beforeEach(async () => {
@@ -17,7 +17,7 @@ describe('AccountResolutionService', () => {
   it('handles empty training data for Bayes classifier gracefully without NaN/Infinity', async () => {
     // Verify that resolving a hint when no active accounts/vocabulary are present
     // doesn't crash or result in division by zero/NaN.
-    const result = await accountResolutionService.resolve({
+    const result = await resolveAccount({
       sourceHint: 'Cash',
       destinationHint: 'Coffee',
       direction: 'debit',
@@ -45,7 +45,7 @@ describe('AccountResolutionService', () => {
       currencyCode: 'INR',
     });
 
-    const result = await accountResolutionService.resolve({
+    const result = await resolveAccount({
       sourceHint: 'hdfc bank',
       destinationHint: 'groceries',
       direction: 'debit',
@@ -123,7 +123,7 @@ describe('AccountResolutionService', () => {
     });
 
     // Resolve 'PowerCorp' in wp-1
-    const result = await accountResolutionService.resolve({
+    const result = await resolveAccount({
       destinationHint: 'PowerCorp',
       direction: 'debit',
       workplaceId,
@@ -159,7 +159,7 @@ describe('AccountResolutionService', () => {
     });
 
     // Try resolving an expense with hint "Other" - should NOT pick "Other Income" because direction is debit
-    const result = await accountResolutionService.resolve({
+    const result = await resolveAccount({
       destinationHint: 'Other',
       direction: 'debit',
       workplaceId,
