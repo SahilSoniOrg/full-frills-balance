@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics';
-import type { ExpoRouter } from 'expo-router';
+import type { HrefInputParams } from 'expo-router';
 import { usePathname, useSegments } from 'expo-router';
 import React from 'react';
 
@@ -10,11 +10,11 @@ export interface RouteMetadata {
 }
 
 /**
- * Extracts all valid route pathnames from Expo Router's auto-generated typed route tree,
- * excluding external URI schemes, relative dot-paths, and auto-generated system routes.
+ * Extracts route pathnames from Expo Router typed routes when generated.
+ * Falls back to `string` when `.expo/types` is absent (CI / fresh clones).
  */
 type RawAppRoutePath = Exclude<
-  ExpoRouter.__routes['hrefInputParams']['pathname'],
+  HrefInputParams['pathname'],
   `${string}:${string}` | `.${string}` | `/_sitemap`
 >;
 
