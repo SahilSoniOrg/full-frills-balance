@@ -41,34 +41,21 @@ export interface MultiWorkplaceExportMetadata {
   workplaces: readonly MultiWorkplaceExportEntry[];
 }
 
+/** Legacy eager table shape retained for downstream import compatibility. */
 export type ExportTable = readonly [key: string, data: readonly unknown[]];
 export type ExportTableSource = readonly [key: string, load: () => Promise<readonly unknown[]>];
 
-/** Serializes backup format independently from database/table acquisition. */
+/** @deprecated Use serializeExportPayloadFromSources to avoid retaining all tables in memory. */
 export async function serializeExportPayload(
   metadata: ExportMetadata,
   tables: readonly ExportTable[],
   onProgress?: (message: string, progress: number) => void,
 ): Promise<string> {
-  const tableCount = tables.length;
-  const report = (message: string, progress: number) => onProgress?.(message, progress);
-
-  report('Optimizing data structure...', 0);
-  await yieldToEventLoop();
-  report('Serializing metadata...', tableCount === 0 ? 1 : 0.05);
-  await yieldToEventLoop(16);
-
-  const chunks = [JSON.stringify(sanitizeExportMetadata(metadata)).slice(0, -1)];
-  for (const [index, [key, data]] of tables.entries()) {
-    const progress = tableCount === 0 ? 1 : 0.05 + ((index + 1) / tableCount) * 0.95;
-    report(`Serializing ${key}...`, progress);
-    await yieldToEventLoop();
-    const chunk = JSON.stringify(data, exportReplacer);
-    chunks.push(`,${JSON.stringify(key)}:${chunk}`);
-  }
-
-  await yieldToEventLoop(10);
-  return `${chunks.join('')}}`;
+  return serializeExportPayloadFromSources(
+    metadata,
+    tables.map(([key, data]) => [key, async () => data] as ExportTableSource),
+    onProgress,
+  );
 }
 
 /** Serialize tables on demand so fetched table arrays do not accumulate. */
@@ -85,7 +72,7 @@ export async function serializeExportPayloadFromSources(
   report('Serializing metadata...', tableCount === 0 ? 1 : 0.05);
   await yieldToEventLoop(16);
 
-  const chunks = [JSON.stringify(sanitizeExportMetadata(metadata)).slice(0, -1)];
+  const chunks = [JSON.stringify(metadata).slice(0, -1)];
   for (const [index, [key, load]] of tables.entries()) {
     const progress = tableCount === 0 ? 1 : 0.05 + ((index + 1) / tableCount) * 0.95;
     report(`Serializing ${key}...`, progress);
@@ -115,10 +102,6 @@ export function serializeMultiWorkplaceExport(
 function exportReplacer(field: string, value: unknown): unknown {
   if (field === 'runningBalance' || field === 'originalSmsBody') return undefined;
   return value;
-}
-
-function sanitizeExportMetadata(metadata: ExportMetadata): ExportMetadata {
-  return metadata;
 }
 
 function yieldToEventLoop(delayMs = 0): Promise<void> {

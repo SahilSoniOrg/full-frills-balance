@@ -1,7 +1,8 @@
 import { JournalDisplayType } from '../../types/enums';
+import { ShareFormat } from '../../types/sharing';
+import type { ShareProvider } from '../../types/sharing';
 import { CurrencyFormatter } from '../../utils/currencyFormatter';
 import { formatDate } from '../../utils/dateUtils';
-import { ShareFormat, ShareProvider } from '../SharingService';
 
 export interface ShareableJournalEntry {
   id: string;
@@ -20,7 +21,9 @@ export interface JournalShareOptions {
   includeTime?: boolean;
   sort?: 'asc' | 'desc' | 'none';
   showEmojis?: boolean;
+  /** @deprecated Use the default journal display metadata unless customization is required. */
   typeMetaOverride?: Record<JournalDisplayType, TypeMeta>;
+  /** @deprecated Journal entries now carry their own currency. */
   defaultCurrency?: string;
 }
 
@@ -70,7 +73,7 @@ export class JournalShareProvider implements ShareProvider {
     let content: string;
     switch (format) {
       case ShareFormat.CSV:
-        content = this.formatAsCSV(sorted, generatedAt);
+        content = this.formatAsCSV(sorted);
         break;
       case ShareFormat.MARKDOWN:
         content = this.formatAsMarkdown(sorted, generatedAt);
@@ -91,9 +94,6 @@ export class JournalShareProvider implements ShareProvider {
     generatedAt: number,
   ): string {
     const lines: string[] = [];
-    const typeMeta = options.typeMetaOverride || DEFAULT_TYPE_META;
-    const defaultCurrency = options.defaultCurrency;
-
     // Tier 3: Consistent header formatting
     lines.push(`💰 ${this.title.toUpperCase()}`);
     lines.push(`🕒 Generated: ${formatDate(generatedAt, { includeTime: true })}`);
@@ -112,6 +112,7 @@ export class JournalShareProvider implements ShareProvider {
       const dateStr = formatDate(t.date, { includeTime: options.includeTime ?? false });
       const amountStr = CurrencyFormatter.format(t.amount, t.currencyCode);
 
+      const typeMeta = options.typeMetaOverride ?? DEFAULT_TYPE_META;
       const meta = typeMeta[t.displayType] || typeMeta[JournalDisplayType.MIXED];
       const prefix = options.showEmojis ? `${meta.emoji} ` : '';
 
@@ -155,18 +156,10 @@ export class JournalShareProvider implements ShareProvider {
         if (isMixed) lines.push('');
       });
 
-    if (entries.length === 0) {
-      if (defaultCurrency) {
-        lines.push(`No data available for ${defaultCurrency}`);
-      } else {
-        lines.push('No journal entries available for this period');
-      }
-    }
-
     return lines.join('\n');
   }
 
-  private formatAsCSV(entries: ShareableJournalEntry[], _generatedAt: number): string {
+  private formatAsCSV(entries: ShareableJournalEntry[]): string {
     const headers = ['Date', 'Description', 'Type', 'Amount', 'Currency'];
 
     // Tier 2: CSV Injection protection

@@ -9,19 +9,11 @@ import { logger } from '../utils/logger';
 import { analytics } from './analytics';
 
 import { ShareFormat } from '@/src/types/sharing';
+import type { ShareProvider } from '@/src/types/sharing';
 import type { AnalyticsProperties } from './analytics/analyticsConfig';
 
 export { ShareFormat };
-
-export interface ShareProvider {
-  id: string;
-  title: string;
-  filename: string;
-  mimeType?: string;
-  fileExtension?: string;
-  supportedFormats?: ShareFormat[];
-  getContent(format: ShareFormat): string | Uint8Array | Promise<string | Uint8Array>;
-}
+export type { ShareProvider };
 
 const MAX_INLINE_SHARE = 50_000; // ~50KB characters (WhatsApp truncation guard)
 
@@ -69,7 +61,7 @@ class SharingService {
       if (forceFileSharing) {
         if (await Sharing.isAvailableAsync()) {
           const encoding = effectiveFormat === ShareFormat.ZIP ? 'base64' : 'utf8';
-          const fileUri = await this.writeToFile(content, filename, encoding);
+          const fileUri = await files.writeContent(filename, content, encoding);
           this.pendingFiles.push({ uri: fileUri, createdAt: now });
 
           await Sharing.shareAsync(fileUri, {
@@ -297,14 +289,6 @@ class SharingService {
     for (const file of toDelete) {
       files.deleteFile(file.uri);
     }
-  }
-
-  private async writeToFile(
-    content: string,
-    filename: string,
-    encoding: 'utf8' | 'base64' = 'utf8',
-  ): Promise<string> {
-    return files.writeContent(filename, content, encoding);
   }
 
   private getMimeType(format: ShareFormat): string {

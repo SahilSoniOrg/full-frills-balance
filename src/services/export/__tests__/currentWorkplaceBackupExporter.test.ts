@@ -1,8 +1,12 @@
 import { database } from '@/src/data/database/Database';
 import { sharingService } from '@/src/services/SharingService';
 import { preferences } from '@/src/services/preferences';
-import { exportToJSON } from '../nativeBackupExporter';
-import { exportCurrentWorkplaceBackup } from '../currentWorkplaceBackupExporter';
+import { ShareFormat } from '@/src/types/sharing';
+import { asWorkplaceId } from '@/src/types/ids';
+import { exportUpdateBackup } from '../currentWorkplaceBackupExporter';
+
+const mockExportWorkplacesToJSON = jest.fn();
+const mockGetCollection = database.collections.get as jest.Mock;
 
 jest.mock('@/src/data/database/Database', () => ({
   database: { collections: { get: jest.fn() } },
@@ -20,58 +24,71 @@ jest.mock('@/src/services/preferences', () => ({
 }));
 
 jest.mock('../nativeBackupExporter', () => ({
-  exportToJSON: jest.fn().mockResolvedValue('base64-backup'),
+  exportWorkplacesToJSON: (...args: unknown[]) => mockExportWorkplacesToJSON(...args),
 }));
 
-describe('exportCurrentWorkplaceBackup', () => {
-  const getCollection = database.collections.get as jest.Mock;
-  const activeWorkplace = { id: 'active-workplace' };
-  const fallbackWorkplace = { id: 'fallback-workplace' };
+describe('exportUpdateBackup', () => {
+  const home = { id: asWorkplaceId('home') };
+  const work = { id: asWorkplaceId('work') };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = activeWorkplace.id;
+    mockExportWorkplacesToJSON.mockResolvedValue('base64-backup');
+    (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = home.id;
+    mockGetCollection.mockReturnValue({
+      query: () => ({ fetch: jest.fn().mockResolvedValue([home, work]) }),
+    });
   });
 
-  it('exports the active workplace and saves the ZIP', async () => {
-    getCollection.mockReturnValue({
-      query: () => ({ fetch: jest.fn().mockResolvedValue([fallbackWorkplace, activeWorkplace]) }),
-    });
-    const onProgress = jest.fn();
+  it('exports every workplace by default', async () => {
+    await exportUpdateBackup();
 
-    await exportCurrentWorkplaceBackup(onProgress);
+    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith([home.id, work.id], 'all', undefined);
+  });
 
-    expect(exportToJSON).toHaveBeenCalledWith(activeWorkplace.id, onProgress);
-    expect(sharingService.save).toHaveBeenCalledWith(
+  it('exports the active workplace or falls back to the first workplace', async () => {
+    await exportUpdateBackup('active');
+    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith([home.id], 'selected', undefined);
+
+    (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = undefined;
+    await exportUpdateBackup('active');
+    expect(mockExportWorkplacesToJSON).toHaveBeenLastCalledWith([home.id], 'selected', undefined);
+  });
+
+  it('exports exactly the selected workplaces', async () => {
+    await exportUpdateBackup('selected', [work.id], jest.fn());
+
+    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith(
+      [work.id],
+      'selected',
+      expect.any(Function),
+    );
+  });
+
+  it('persists the generated payload as the mandatory ZIP backup', async () => {
+    await exportUpdateBackup('active');
+
+    const save = sharingService.save as jest.Mock;
+    expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'mandatory-update-backup',
         mimeType: 'application/zip',
         fileExtension: 'zip',
         getContent: expect.any(Function),
       }),
-      'ZIP',
-      onProgress,
+      ShareFormat.ZIP,
+      undefined,
     );
-    const saveMock = sharingService.save as jest.Mock;
-    expect(saveMock.mock.calls[0][0].getContent()).toBe('base64-backup');
+    expect(save.mock.calls[0][0].getContent()).toBe('base64-backup');
   });
 
-  it('falls back to the first workplace when no active workplace is set', async () => {
-    (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = undefined;
-    getCollection.mockReturnValue({
-      query: () => ({ fetch: jest.fn().mockResolvedValue([fallbackWorkplace, activeWorkplace]) }),
+  it('does not save when there are no workplaces to export', async () => {
+    mockGetCollection.mockReturnValue({
+      query: () => ({ fetch: jest.fn().mockResolvedValue([]) }),
     });
+    mockExportWorkplacesToJSON.mockRejectedValueOnce(new Error('No workplaces selected to export'));
 
-    await exportCurrentWorkplaceBackup();
-
-    expect(exportToJSON).toHaveBeenCalledWith(fallbackWorkplace.id, undefined);
-  });
-
-  it('fails clearly when there are no workplaces to export', async () => {
-    getCollection.mockReturnValue({ query: () => ({ fetch: jest.fn().mockResolvedValue([]) }) });
-
-    await expect(exportCurrentWorkplaceBackup()).rejects.toThrow('No workplace is available');
-    expect(exportToJSON).not.toHaveBeenCalled();
+    await expect(exportUpdateBackup()).rejects.toThrow('No workplaces selected to export');
     expect(sharingService.save).not.toHaveBeenCalled();
   });
 });
