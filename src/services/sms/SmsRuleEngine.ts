@@ -358,18 +358,6 @@ export class SmsRuleEngine {
   async deleteAutoPostRule(id: string, workplaceId: WorkplaceId) {
     await transactionAutoPostRuleRepository.delete(workplaceId, id);
   }
-
-  async prepareMergeOperations(
-    workplaceId: WorkplaceId,
-    sourceAccountIds: AccountId[],
-    targetAccountId: AccountId,
-  ): Promise<TransactionAutoPostRule[]> {
-    return transactionAutoPostRuleRepository.prepareMergeOperations(
-      workplaceId,
-      sourceAccountIds,
-      targetAccountId,
-    );
-  }
 }
 
 export const smsRuleEngine = new SmsRuleEngine();

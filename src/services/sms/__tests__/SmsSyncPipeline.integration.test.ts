@@ -15,7 +15,6 @@ import {
   SMS_TEST_WORKPLACE,
   SMS_TEST_WORKPLACE_B,
   smsJournalQueries,
-  smsSyncPipeline,
 } from '@/src/testing/smsTestHarness';
 
 jest.mock('@/src/utils/storage', () => {
@@ -360,8 +359,6 @@ describe('SmsSyncPipeline integration', () => {
         id: 'sms-exact-c3',
         date: baseDate,
       });
-      smsSyncPipeline.markSmsAsProcessed(message.id);
-
       await scanSmsInbox(SMS_TEST_WORKPLACE_B, [message]);
 
       const inbox = await fetchInboxByDeviceId('sms-exact-c3', SMS_TEST_WORKPLACE_B);

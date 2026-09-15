@@ -2,7 +2,7 @@ import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
@@ -64,7 +64,6 @@ export function processScanBatchItem(params: {
   latestProcessedIds: Set<string>;
   workplaceId: WorkplaceId;
   allAccountsToRebuild: Set<AccountId>;
-  processedMessageIds: string[];
   triggeredRuleIds: string[];
 }): {
   journalOps: Model[];
@@ -78,7 +77,6 @@ export function processScanBatchItem(params: {
     latestProcessedIds,
     workplaceId,
     allAccountsToRebuild,
-    processedMessageIds,
     triggeredRuleIds,
   } = params;
 
@@ -103,7 +101,7 @@ export function processScanBatchItem(params: {
 
   if (result.autoPost && !linkedJournalId && finalStatus === InboxProcessingStatus.PENDING) {
     const { journal, ops, accountsToRebuild } =
-      ledgerWriteService.prepareCreateJournalFromPreparedData(
+      ledgerCreateService.prepareCreateJournalFromPreparedData(
         result.autoPost.journalData,
         result.autoPost.preparedJournal,
         workplaceId,
@@ -114,7 +112,6 @@ export function processScanBatchItem(params: {
     linkedJournalId = journal.id;
     finalStatus = InboxProcessingStatus.AUTO_POSTED;
     autoPosted = true;
-    processedMessageIds.push(result.message.id);
     triggeredRuleIds.push(result.autoPost.ruleId);
   }
 

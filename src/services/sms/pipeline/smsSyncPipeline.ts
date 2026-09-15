@@ -30,11 +30,6 @@ export class SmsSyncPipeline {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
   }
 
-  markSmsAsProcessed(_smsId: string): void {
-    // Inbox status and linked journals are the durable, workplace-scoped source of truth.
-    // Keep this legacy API as a no-op so callers cannot reintroduce global SMS state.
-  }
-
   async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
     if (signal?.aborted) return 0;
     const previousScan = this.workplaceScans.get(workplaceId) ?? Promise.resolve();
@@ -186,7 +181,6 @@ export class SmsSyncPipeline {
     let importedCount = 0;
     let totalOps = 0;
     const allAccountsToRebuild = new Set<AccountId>();
-    const processedMessageIds: string[] = [];
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
@@ -230,7 +224,6 @@ export class SmsSyncPipeline {
               latestProcessedIds,
               workplaceId,
               allAccountsToRebuild,
-              processedMessageIds,
               triggeredRuleIds,
             });
 
@@ -257,7 +250,6 @@ export class SmsSyncPipeline {
       );
 
       if (committed) {
-        processedMessageIds.forEach(messageId => this.markSmsAsProcessed(messageId));
         triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
       }
     }

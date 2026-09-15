@@ -1,23 +1,21 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
-import TransactionAutoPostRule, { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
+import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   toPlainInboxRecord,
 } from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
-import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import {
   smsRuleEngine,
   SmsRulePreviewInput,
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
-import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 import { map, Observable } from 'rxjs';
 
@@ -35,16 +33,8 @@ export interface SmsSyncResult {
  * SmsSyncPipeline / SmsParser / SmsRuleEngine — import those directly.
  */
 class SmsService {
-  private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
-
   private get inbox() {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-  }
-
-  async getLatestMessages(
-    limit: number = AppConfig.pagination.smsImportScanLimit,
-  ): Promise<SmsMessage[]> {
-    return smsInboxBridge.getLatestMessages(limit);
   }
 
   async scanRecentSmsPage(
@@ -63,14 +53,6 @@ class SmsService {
     const nextCursor = cursor + pageSize;
     const importedCount = await smsSyncPipeline.scanInbox(workplaceId, nextCursor);
     return { cursor: nextCursor, importedCount };
-  }
-
-  async refreshLatestSms(
-    workplaceId: WorkplaceId,
-    pageSize: number = AppConfig.pagination.smsImportScanLimit,
-  ): Promise<SmsSyncResult> {
-    const importedCount = await smsSyncPipeline.scanInbox(workplaceId, pageSize);
-    return { cursor: pageSize, importedCount };
   }
 
   async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
@@ -118,21 +100,6 @@ class SmsService {
       .observeCount();
   }
 
-  async getInboxRecord(
-    workplaceId: WorkplaceId,
-    id: string,
-  ): Promise<TransactionInboxRecord | null> {
-    return transactionInboxRepository.find(workplaceId, id);
-  }
-
-  async findByLinkedJournalId(
-    workplaceId: WorkplaceId,
-    journalId: string,
-  ): Promise<TransactionInboxRecord | null> {
-    const records = await this.findAllByLinkedJournalId(workplaceId, journalId);
-    return records[0] || null;
-  }
-
   async findAllByLinkedJournalId(
     workplaceId: WorkplaceId,
     journalId: string,
@@ -172,14 +139,6 @@ class SmsService {
     await this.linkSmsToJournal(workplaceId, recordId, journalId, InboxProcessingStatus.IMPORTED);
   }
 
-  clearProcessedMessages(): void {
-    storage.remove(this.PROCESSED_SMS_KEY);
-  }
-
-  markSmsAsProcessed(smsId: string): void {
-    smsSyncPipeline.markSmsAsProcessed(smsId);
-  }
-
   async previewRuleMatches(
     workplaceId: WorkplaceId,
     inputOrSender: SmsRulePreviewInput | string,
@@ -213,14 +172,6 @@ class SmsService {
   ) {
     const rule = await smsRuleEngine.getMatchingRule(address, body, parsed, workplaceId);
     return rule ? toPlainSmsRule(rule) : null;
-  }
-
-  async prepareMergeOperations(
-    workplaceId: WorkplaceId,
-    sourceAccountIds: AccountId[],
-    targetAccountId: AccountId,
-  ): Promise<TransactionAutoPostRule[]> {
-    return smsRuleEngine.prepareMergeOperations(workplaceId, sourceAccountIds, targetAccountId);
   }
 
   private getProcessingStatusesForFilter(statusFilter?: string): InboxProcessingStatus[] {

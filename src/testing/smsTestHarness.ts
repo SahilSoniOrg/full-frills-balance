@@ -11,10 +11,9 @@ import {
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
-import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -26,7 +25,6 @@ export const SMS_TEST_WORKPLACE_B = 'wp-sms-test-b' as WorkplaceId;
 
 export async function resetSmsTestDb(): Promise<void> {
   rebuildQueueService.stop();
-  smsService.clearProcessedMessages();
   await database.write(async () => {
     await database.unsafeResetDatabase();
   });
@@ -67,7 +65,7 @@ export async function seedExpenseJournal(params: {
   };
 }): Promise<{ id: JournalId; totalAmount: number }> {
   const workplaceId = params.workplaceId ?? SMS_TEST_WORKPLACE;
-  const journal = await ledgerWriteService.createJournal(
+  const journal = await ledgerCreateService.createJournal(
     {
       description: params.description,
       journalDate: params.journalDate,

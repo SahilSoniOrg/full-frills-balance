@@ -4,17 +4,16 @@ import { PlainSmsRule } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { map, Observable } from 'rxjs';
 
-export class SmsRuleReadService {
-  observeAll(workplaceId: WorkplaceId): Observable<PlainSmsRule[]> {
-    return transactionAutoPostRuleRepository
-      .observeAllByWorkplace(workplaceId)
-      .pipe(map(rules => rules.map(toPlainSmsRule)));
-  }
-
-  async find(workplaceId: WorkplaceId, id: string): Promise<PlainSmsRule | undefined> {
-    const rule = await transactionAutoPostRuleRepository.find(workplaceId, id);
-    return rule ? toPlainSmsRule(rule) : undefined;
-  }
+export function observeSmsRules(workplaceId: WorkplaceId): Observable<PlainSmsRule[]> {
+  return transactionAutoPostRuleRepository
+    .observeAllByWorkplace(workplaceId)
+    .pipe(map(rules => rules.map(toPlainSmsRule)));
 }
 
-export const smsRuleReadService = new SmsRuleReadService();
+export async function findSmsRule(
+  workplaceId: WorkplaceId,
+  id: string,
+): Promise<PlainSmsRule | undefined> {
+  const rule = await transactionAutoPostRuleRepository.find(workplaceId, id);
+  return rule ? toPlainSmsRule(rule) : undefined;
+}
