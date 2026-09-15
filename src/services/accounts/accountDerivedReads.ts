@@ -16,7 +16,7 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/journalTi
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 
@@ -38,7 +38,7 @@ export function observeAccountBalance(
     firstFastDebounce(Animation.dataRefreshDebounce),
     switchMap(async ([account]) => {
       if (!account) return null;
-      return balanceService.getAccountBalance(accountId, workplaceId);
+      return balanceReadService.getAccountBalance(accountId, workplaceId);
     }),
   );
 }

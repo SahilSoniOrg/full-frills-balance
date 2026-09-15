@@ -19,11 +19,3 @@ export function findDuplicateAccountNameError(
   }
   return null;
 }
-
-export function isDuplicateAccountName(
-  name: string,
-  accounts: AccountFields[],
-  currentAccountId?: string,
-): boolean {
-  return findDuplicateAccountNameError(name, accounts, currentAccountId) !== null;
-}

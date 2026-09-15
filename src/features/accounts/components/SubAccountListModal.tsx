@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Animated, Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -97,7 +98,6 @@ export function SubAccountListModal({
                             width: Spacing.lg,
                             borderLeftWidth: 1,
                             borderLeftColor: withOpacity(theme.textTertiary, Opacity.hover),
-                            marginLeft: i === 0 ? 0 : 0,
                           },
                         ]}
                       />
@@ -190,14 +190,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
   },
   accountName: {
     maxWidth: '50%',

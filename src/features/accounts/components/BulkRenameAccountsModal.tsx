@@ -1,6 +1,7 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { AppInput, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { AccountId } from '@/src/types/ids';
 import { useState } from 'react';

@@ -13,7 +13,8 @@ import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
 import { logger } from '@/src/utils/logger';
 
-import { Opacity, withOpacity } from '@/src/constants';
+import { Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 
 export interface AccountCardViewModel {
   id: AccountId;

@@ -69,18 +69,6 @@ export function getAccountTreeRowGeometry(
   return { top: getRowTop(rows, index, heights), height: resolveRowHeight(row, heights) };
 }
 
-export function getAccountTreeDragContentY(
-  sourceIndex: number,
-  translationY: number,
-  rowHeight: number,
-  scrollDelta = 0,
-): number {
-  // The source index is already in list-content coordinates. Gesture
-  // translation is a delta, so scrolling changes the row's viewport position
-  // but not the content-space insertion point.
-  return sourceIndex * rowHeight + translationY + scrollDelta + rowHeight / 2;
-}
-
 export function getAccountTreeDragContentYFromGeometry(
   sourceTop: number,
   sourceHeight: number,

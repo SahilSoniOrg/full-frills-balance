@@ -2,7 +2,8 @@ import { AccountPickerList } from '@/src/components/account-selection/AccountPic
 import { BaseAccountPickerModal } from '@/src/components/account-selection/BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
 import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';

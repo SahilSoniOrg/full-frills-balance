@@ -150,15 +150,6 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: Spacing.xs,
   },
-  simulationHeader: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
-    gap: Spacing.xs,
-  },
-  simulationTitle: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-  },
   fieldGroup: {
     marginBottom: Spacing.md,
   },

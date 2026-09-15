@@ -19,7 +19,7 @@ import {
   findAccountByName,
   getOpeningBalancesAccountInput,
 } from '@/src/services/accounts/accountSystemAccounts';
-import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
@@ -153,7 +153,7 @@ export async function createAccount(
             input.accountType,
             input.initialBalance!,
           );
-          const prepared = await ledgerWriteService.prepareCreateJournal(
+          const prepared = await ledgerCreateService.prepareCreateJournal(
             {
               journalDate,
               description: `Initial Balance: ${input.name}`,

@@ -6,8 +6,6 @@ import {
   coreFromDefaults,
   createAccountFormDraft,
   mapAccountToCoreDraft,
-  mapBalanceToDraftBalance,
-  mapMetadataToDraft,
   shouldSeedAccountBalanceDraft,
   shouldSeedAccountCoreDraft,
   shouldSeedAccountMetadataDraft,
@@ -15,7 +13,9 @@ import {
 import {
   AccountFormDefaults,
   AccountFormRouteContext,
+  resolveAccountInitialBalance,
 } from '@/src/features/accounts/services/accountFormService';
+import { createDefaultAccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
 import { AccountId } from '@/src/types/ids';
 import { Dispatch, useReducer } from 'react';
 
@@ -81,13 +81,13 @@ export function useAccountFormDraft(args: {
     dispatch({
       type: 'SEED_BALANCE',
       accountId,
-      initialBalance: mapBalanceToDraftBalance(balanceData),
+      initialBalance: resolveAccountInitialBalance(balanceData),
     });
   } else if (canSeedMetadata && accountId && existingMetadata) {
     dispatch({
       type: 'SEED_METADATA',
       accountId,
-      metadata: mapMetadataToDraft(existingMetadata),
+      metadata: createDefaultAccountMetadataValues(existingMetadata),
     });
   }
 

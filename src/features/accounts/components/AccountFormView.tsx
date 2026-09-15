@@ -9,7 +9,8 @@ import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { Icon, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { AppConfig } from '@/src/constants/app-config';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
@@ -333,57 +334,6 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  title: {
-    fontSize: Typography.sizes.xxl,
-    textAlign: 'left',
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    textAlign: 'left',
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    marginBottom: Spacing.xs,
-  },
-  divider: {
-    height: 1,
-    marginVertical: Spacing.md,
-  },
-  errorContainer: {
-    padding: Spacing.md,
-    borderRadius: Shape.radius.sm,
-    borderWidth: 1,
-    marginBottom: Spacing.md,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    alignItems: 'flex-start',
-  },
-  currencyWrapper: {
-    width: 100,
-  },
-  metadataSection: {
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: Typography.sizes.sm,
-    letterSpacing: 1.5,
-    marginBottom: Spacing.sm,
-  },
-  metadataRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
   iconButton: {
     padding: Spacing.md,
     borderRadius: Shape.radius.full,

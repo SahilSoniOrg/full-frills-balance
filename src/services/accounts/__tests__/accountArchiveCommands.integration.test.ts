@@ -6,7 +6,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
 import { firstValueFrom } from 'rxjs';
 
@@ -72,7 +72,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
       workplaceId: WP,
     });
 
-    const balanceBefore = await balanceService.getAccountBalance(account.id, WP);
+    const balanceBefore = await balanceReadService.getAccountBalance(account.id, WP);
     const applied = await applyAccountArchiveChanges(WP, {
       toArchive: [account.id],
       toUnarchive: [],
@@ -83,7 +83,7 @@ describe('applyAccountArchiveChanges (integration)', () => {
     const refreshed = await accountQueryRepository.find(WP, account.id);
     expect(refreshed?.archivedAt).toBeTruthy();
 
-    const balanceAfter = await balanceService.getAccountBalance(account.id, WP);
+    const balanceAfter = await balanceReadService.getAccountBalance(account.id, WP);
     expect(balanceAfter.balance).toBe(balanceBefore.balance);
 
     const audits = await auditRepository.findByEntity('account', account.id, WP);

@@ -2,7 +2,8 @@ import {
   getArchivedAccountPickerRowPresentation,
   getArchivedAccountTilePresentation,
 } from '@/src/components/accounts/archivedAccountDisplay';
-import { Opacity, withOpacity } from '@/src/constants';
+import { Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 
 describe('archivedAccountDisplay', () => {
   it('tiles stay full opacity with dashed border and no checkmark', () => {

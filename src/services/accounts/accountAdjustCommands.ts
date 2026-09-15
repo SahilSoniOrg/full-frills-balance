@@ -1,5 +1,5 @@
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import {
   isBalanceAdjustmentNeeded,
@@ -7,7 +7,7 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { findOrCreateBalanceCorrectionAccount } from '@/src/services/accounts/accountSystemAccounts';
-import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
@@ -25,7 +25,7 @@ export async function adjustAccountBalance(
   counterparty: BalanceChangeCounterparty = { kind: 'adjustment' },
 ): Promise<void> {
   const precision = await currencyReadService.getPrecision(account.currencyCode);
-  const currentBalanceData = await balanceService.getAccountBalance(account.id, workplaceId);
+  const currentBalanceData = await balanceReadService.getAccountBalance(account.id, workplaceId);
   const currentBalance = currentBalanceData.balance;
 
   const discrepancy = roundToPrecision(targetBalance - currentBalance, precision);
@@ -64,7 +64,7 @@ export async function adjustAccountBalance(
       ? `Balance Adjustment: ${account.name}`
       : `Balance update: ${account.name}`;
 
-  await ledgerWriteService.createJournal(
+  await ledgerCreateService.createJournal(
     {
       journalDate: Date.now(),
       description,

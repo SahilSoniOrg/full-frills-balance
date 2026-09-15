@@ -22,7 +22,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { Q } from '@nozbe/watermelondb';
@@ -32,7 +32,7 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { assertNoLiveAccountReferences } from '@/src/services/accounts/accountReferenceGraph';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 
 const WP = 'wp-acct-cmd' as WorkplaceId;
 
@@ -55,7 +55,7 @@ describe('account commands (integration)', () => {
     expect(created.name).toBe('Checking');
     expect(created.accountSubtype).toBe(AccountSubtype.CASH);
 
-    const balance = await balanceService.getAccountBalance(created.id, WP);
+    const balance = await balanceReadService.getAccountBalance(created.id, WP);
     expect(balance.balance).toBe(500);
 
     const audits = await auditRepository.findByEntity('account', created.id, WP);
@@ -193,7 +193,7 @@ describe('account commands (integration)', () => {
       WP,
     );
     await adjustAccountBalance(WP, asset, 250);
-    const balance = await balanceService.getAccountBalance(asset.id, WP);
+    const balance = await balanceReadService.getAccountBalance(asset.id, WP);
     expect(balance.balance).toBe(250);
   });
 
@@ -216,7 +216,7 @@ describe('account commands (integration)', () => {
       accountId: income.id,
     });
 
-    const balance = await balanceService.getAccountBalance(asset.id, WP);
+    const balance = await balanceReadService.getAccountBalance(asset.id, WP);
     expect(balance.balance).toBe(75);
   });
 

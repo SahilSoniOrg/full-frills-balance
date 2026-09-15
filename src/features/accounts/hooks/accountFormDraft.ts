@@ -8,7 +8,6 @@ import {
   AccountFormDefaults,
   AccountFormRouteContext,
   resolveAccountFormDefaults,
-  resolveAccountInitialBalance,
 } from '@/src/features/accounts/services/accountFormService';
 import {
   AccountMetadataValues,
@@ -119,14 +118,6 @@ export function mapAccountToCoreDraft(
 ): AccountFormCoreDraft {
   const defaults = resolveAccountFormDefaults(route, workplaceCurrency, account);
   return coreFromDefaults(defaults);
-}
-
-export function mapBalanceToDraftBalance(balanceData?: { balance: number } | null): string {
-  return resolveAccountInitialBalance(balanceData);
-}
-
-export function mapMetadataToDraft(metadata?: PlainAccountMetadata | null): AccountMetadataValues {
-  return createDefaultAccountMetadataValues(metadata ?? null);
 }
 
 /**

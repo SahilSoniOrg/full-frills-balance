@@ -3,7 +3,6 @@ import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTre
 import {
   getAccountTreeDragContentYFromGeometry,
   getAccountTreeAutoScrollVelocity,
-  getAccountTreeDragContentY,
   projectAccountTreeDragLayout,
   resolveAccountTreeVisualHover,
 } from '../accountTreeDragLayout';
@@ -146,15 +145,7 @@ describe('projectAccountTreeDragLayout', () => {
   });
 });
 
-describe('getAccountTreeDragContentY', () => {
-  it('uses the source row content coordinate without a scroll offset', () => {
-    expect(getAccountTreeDragContentY(4, 56, 56)).toBe(4 * 56 + 56 + 28);
-  });
-
-  it('adds only scrolling performed after the drag began', () => {
-    expect(getAccountTreeDragContentY(4, 56, 56, 84)).toBe(4 * 56 + 56 + 84 + 28);
-  });
-
+describe('getAccountTreeDragContentYFromGeometry', () => {
   it('uses measured source geometry', () => {
     expect(getAccountTreeDragContentYFromGeometry(72, 96, 12, 20)).toBe(152);
   });

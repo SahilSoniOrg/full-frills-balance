@@ -14,8 +14,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
-import { balanceService } from '@/src/services/balance';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
@@ -63,7 +63,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      const balance = await balanceService.getAccountBalance(account.id, workplaceId);
+      const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
       expect(balance.balance).toBe(1000);
     });
 
@@ -163,7 +163,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      const balance = await balanceService.getAccountBalance(account.id, workplaceId);
+      const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
       expect(balance.balance).toBe(0);
       expect(balance.transactionCount).toBe(0);
     });
@@ -238,7 +238,7 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      const balance = await balanceService.getAccountBalance(asset.id, workplaceId);
+      const balance = await balanceReadService.getAccountBalance(asset.id, workplaceId);
       expect(balance.balance).toBe(700);
       expect(balance.transactionCount).toBeDefined();
     });
@@ -315,7 +315,7 @@ describe('AccountRepository', () => {
       );
 
       // Balance at earlier point
-      const earlierBalance = await balanceService.getAccountBalance(
+      const earlierBalance = await balanceReadService.getAccountBalance(
         asset.id,
         workplaceId,
         earlierTime + 1,
@@ -323,7 +323,7 @@ describe('AccountRepository', () => {
       expect(earlierBalance.balance).toBe(500);
 
       // Current balance
-      const currentBalance = await balanceService.getAccountBalance(asset.id, workplaceId);
+      const currentBalance = await balanceReadService.getAccountBalance(asset.id, workplaceId);
       expect(currentBalance.balance).toBe(700);
     });
   });

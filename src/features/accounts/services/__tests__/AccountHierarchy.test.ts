@@ -4,8 +4,8 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { balanceService } from '@/src/services/balance';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { saveAccount, updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 
@@ -86,7 +86,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     });
 
-    await ledgerWriteService.createJournal(
+    await ledgerCreateService.createJournal(
       {
         journalDate: Date.now(),
         description: 'Child Tx',
@@ -107,7 +107,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     );
 
-    const balances = await balanceService.getAccountBalances(workplaceId);
+    const balances = await balanceReadService.getAccountBalances(workplaceId);
     const parentBalance = balances.find(b => b.accountId === parent.id);
     const childBalance = balances.find(b => b.accountId === child.id);
 
@@ -144,7 +144,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     });
 
-    await ledgerWriteService.createJournal(
+    await ledgerCreateService.createJournal(
       {
         journalDate: Date.now(),
         description: 'C Tx',
@@ -165,7 +165,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     );
 
-    const balances = await balanceService.getAccountBalances(workplaceId);
+    const balances = await balanceReadService.getAccountBalances(workplaceId);
     const balanceA = balances.find(bl => bl.accountId === a.id);
     const balanceB = balances.find(bl => bl.accountId === b.id);
     const balanceC = balances.find(bl => bl.accountId === c.id);
@@ -258,7 +258,7 @@ describe('Account Hierarchy Integration', () => {
     });
 
     // Add a transaction
-    await ledgerWriteService.createJournal(
+    await ledgerCreateService.createJournal(
       {
         journalDate: Date.now(),
         description: 'Tx',
