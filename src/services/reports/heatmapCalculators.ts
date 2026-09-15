@@ -40,54 +40,6 @@ export function calculateSpendingHeatmapFromTransactions(
   return points;
 }
 
-export function calculateCalendarHeatmapFromTransactions(
-  transactions: ConvertedReportTransaction[],
-  startDate: number,
-  endDate: number,
-): HeatmapPoint[] {
-  const densityMap = new Map<string, number>();
-
-  for (const tx of transactions) {
-    if (tx.transactionType !== TransactionType.DEBIT) continue;
-
-    const dt = dayjs(tx.transactionDate);
-    const key = dt.format('YYYY-MM-DD');
-    densityMap.set(key, (densityMap.get(key) || 0) + tx.amount);
-  }
-
-  const points: HeatmapPoint[] = [];
-  const start = dayjs(startDate).startOf('week');
-  const end = dayjs(endDate).endOf('day');
-
-  let current = start;
-  let lastMonth = -1;
-
-  while (current.isBefore(end) || current.isSame(end, 'day')) {
-    const x = current.day();
-    const absoluteWeekIndex = Math.floor(current.diff(start, 'weeks'));
-    const key = current.format('YYYY-MM-DD');
-
-    let monthLabel: string | undefined;
-    if (current.month() !== lastMonth) {
-      monthLabel = current.format('MMM');
-      lastMonth = current.month();
-    }
-
-    const value = densityMap.get(key) || 0;
-    points.push({
-      x,
-      y: absoluteWeekIndex,
-      value,
-      label: current.date().toString(),
-      monthLabel,
-      timestamp: current.valueOf(),
-    });
-    current = current.add(1, 'day');
-  }
-
-  return points;
-}
-
 export function calculateCalendarHeatmapFromHistory(
   history: IncomeVsExpenseHistoryPoint[],
 ): HeatmapPoint[] {

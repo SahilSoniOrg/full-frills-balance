@@ -4,10 +4,6 @@ import { WorkplaceId, AccountId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import {
-  observeWorkplaceActiveTransactionCount,
-  observeWorkplaceJournalMeta,
-} from '@/src/services/reactive/reactiveWorkplaceObserves';
-import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,
 } from '@/src/services/reports/heatmapCalculators';
@@ -37,8 +33,6 @@ import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
-import { combineLatest, from, Observable } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -156,28 +150,6 @@ export class ReportService {
       spendingHeatmap,
       calendarHeatmap,
     };
-  }
-
-  /**
-   * Reactive version of getReportSnapshot.
-   */
-  observeReportSnapshot(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    targetCurrency?: string,
-    filterAccountIds?: string[],
-  ): Observable<ReportSnapshot> {
-    return combineLatest([
-      observeWorkplaceJournalMeta(workplaceId),
-      observeWorkplaceActiveTransactionCount(workplaceId),
-    ]).pipe(
-      switchMap(() =>
-        from(
-          this.getReportSnapshot(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
-        ),
-      ),
-    );
   }
 
   private scopeAccounts(
