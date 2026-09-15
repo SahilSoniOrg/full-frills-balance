@@ -143,6 +143,7 @@ export class AnalyticsService {
    * Identify the user/device with enhanced properties
    */
   identify(distinctId: string, properties?: Record<string, string | number | boolean>) {
+    Sentry.setUser({ id: distinctId });
     if (!this.posthog) return;
 
     try {

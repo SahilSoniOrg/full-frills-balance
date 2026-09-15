@@ -56,6 +56,16 @@ describe('plannedPaymentSchedulePolicy', () => {
     ).toBe(true);
   });
 
+  it('treats persisted null optional recurrence fields as unchanged', () => {
+    const stored = {
+      ...existing,
+      recurrenceDay: 1,
+      recurrenceMonth: null,
+    } as unknown as Parameters<typeof isPlannedPaymentScheduleChange>[0];
+
+    expect(isPlannedPaymentScheduleChange(stored, baseInput)).toBe(false);
+  });
+
   it('buildCreatePersistenceInput assigns active status and first occurrence', () => {
     const result = buildCreatePersistenceInput(baseInput);
     expect(result.status).toBe(PlannedPaymentStatus.ACTIVE);

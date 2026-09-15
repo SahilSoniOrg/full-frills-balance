@@ -90,7 +90,7 @@ describe('planned payment commands (integration)', () => {
 
   it('schedule-changing update resets nextOccurrence to startDate', async () => {
     const created = await createPlannedPayment(WP, baseInput());
-    const newStart = new Date(2026, 5, 1).getTime();
+    const newStart = new Date(2026, 5, 15).getTime();
 
     const updated = await updatePlannedPayment(WP, created.id, {
       ...baseInput(),

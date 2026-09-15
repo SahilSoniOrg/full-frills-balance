@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { readAppVariant } from './appVariant';
 import { schema } from '@/src/data/database/schema';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
@@ -9,7 +10,7 @@ import { Platform } from 'react-native';
 
 export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-export const BUILD_TYPE = process.env.APP_VARIANT || 'development';
+export const BUILD_TYPE = readAppVariant();
 
 export type AnalyticsProperty =
   | string
@@ -41,8 +42,8 @@ export function getGlobalProperties(): AnalyticsProperties {
       $os_version: Device.osVersion || 'unknown',
       $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
       $is_dev: __DEV__ || !Device.isDevice,
-      $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
-      $build_type: BUILD_TYPE || 'unknown',
+      $app_variant: readAppVariant(),
+      $build_type: BUILD_TYPE,
       $active_workplace_id: preferences.device.activeWorkplaceId || 'none',
       $db_schema_version: schema.version,
       is_test_build: BUILD_TYPE !== 'production',

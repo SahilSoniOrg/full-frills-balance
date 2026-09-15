@@ -12,8 +12,8 @@ export function isPlannedPaymentScheduleChange(
     existing.startDate !== input.startDate ||
     existing.intervalType !== input.intervalType ||
     existing.intervalN !== input.intervalN ||
-    existing.recurrenceDay !== input.recurrenceDay ||
-    existing.recurrenceMonth !== input.recurrenceMonth
+    (existing.recurrenceDay ?? undefined) !== input.recurrenceDay ||
+    (existing.recurrenceMonth ?? undefined) !== input.recurrenceMonth
   );
 }
 

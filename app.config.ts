@@ -22,20 +22,14 @@ const gitCommit = getGitCommit();
 
 type AppVariant = keyof typeof appVariants;
 
-const getAppConfig = () => {
-  const variant = (process.env.APP_VARIANT ?? 'production') as AppVariant;
-  const appConfig = appVariants[variant];
+const variant = (process.env.APP_VARIANT ?? 'production') as AppVariant;
+const appConfig = appVariants[variant];
 
-  if (!appConfig) {
-    throw new Error(
-      `Unknown APP_VARIANT "${variant}". Expected one of: ${Object.keys(appVariants).join(', ')}.`,
-    );
-  }
-
-  return appConfig;
-};
-
-const appConfig = getAppConfig();
+if (!appConfig) {
+  throw new Error(
+    `Unknown APP_VARIANT "${variant}". Expected one of: ${Object.keys(appVariants).join(', ')}.`,
+  );
+}
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -157,6 +151,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
+    appVariant: variant,
     e2eHarnessEnabled: process.env.EXPO_PUBLIC_E2E === '1',
     e2eSeedProfile: process.env.EXPO_PUBLIC_E2E_SEED_PROFILE,
     eas: {

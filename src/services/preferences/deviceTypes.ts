@@ -4,6 +4,7 @@ import { WorkplaceId } from '@/src/types/ids';
 export interface DevicePreferences {
   deviceRegistered: boolean;
   isAppLockEnabled: boolean;
+  /** Telemetry distinct id. Prefix encodes install kind: anon_, dev_, preview_, e2e_, sim_. */
   anonymizedId?: string;
   activeWorkplaceId?: WorkplaceId;
   isSmsImportEnabled: boolean;

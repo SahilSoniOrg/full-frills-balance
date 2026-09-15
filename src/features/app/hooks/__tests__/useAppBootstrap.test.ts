@@ -5,6 +5,7 @@ import { insightService } from '@/src/services/insight/InsightService';
 import { runStartupCheck } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { preferences } from '@/src/services/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 import { purgeLocalAiCachesOnce } from '@/src/features/app/purgeLocalAiCaches';
 import { act, renderHook } from '@testing-library/react-native';
@@ -61,7 +62,7 @@ jest.mock('@/src/utils/logger', () => ({
 jest.mock('@/src/services/preferences', () => ({
   preferences: {
     device: {
-      anonymizedId: 'anonymous-test-id',
+      anonymizedId: 'anonymous-test-id' as string | undefined,
       setAnonymizedId: jest.fn(),
     },
     notifications: {
@@ -76,12 +77,18 @@ jest.mock('@/src/utils/scheduler', () => ({
   runAfterInteractions: jest.fn((task: () => void) => task()),
 }));
 
+const devicePrefs = preferences.device as unknown as {
+  anonymizedId: string | undefined;
+  setAnonymizedId: jest.Mock;
+};
+
 describe('useAppBootstrap generation safety', () => {
   const setDataHydrated = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    devicePrefs.anonymizedId = 'anonymous-test-id';
     (useAppReady as jest.Mock).mockReturnValue({ isAppReady: true, setDataHydrated });
   });
 
@@ -138,5 +145,31 @@ describe('useAppBootstrap generation safety', () => {
       'workplace-b' as WorkplaceId,
       expect.any(AbortSignal),
     );
+  });
+
+  it('mints a non-production telemetry id when this install has none', async () => {
+    devicePrefs.anonymizedId = undefined;
+
+    renderHook(() => useAppBootstrap('workplace-a' as WorkplaceId, 'USD'));
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(devicePrefs.setAnonymizedId).toHaveBeenCalledWith(expect.stringMatching(/^dev_/));
+  });
+
+  it('remints a production-shaped telemetry id on a non-prod install', async () => {
+    devicePrefs.anonymizedId = 'anon_old_id';
+
+    renderHook(() => useAppBootstrap('workplace-a' as WorkplaceId, 'USD'));
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(devicePrefs.setAnonymizedId).toHaveBeenCalledWith(expect.stringMatching(/^dev_/));
   });
 });

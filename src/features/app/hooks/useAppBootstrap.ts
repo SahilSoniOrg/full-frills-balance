@@ -1,5 +1,6 @@
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { analytics } from '@/src/services/analytics';
+import { ensureAnonymizedId } from '@/src/services/analytics/anonymizedIdentity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { logger } from '@/src/utils/logger';
@@ -73,9 +74,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           analytics.delayedInitializePostHog();
           analytics.logAppOpened();
 
-          let anonId = preferences.device.anonymizedId;
-          if (!anonId) {
-            anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          const anonId = ensureAnonymizedId(preferences.device.anonymizedId);
+          if (anonId !== preferences.device.anonymizedId) {
             preferences.device.setAnonymizedId(anonId);
           }
           analytics.identify(anonId);
