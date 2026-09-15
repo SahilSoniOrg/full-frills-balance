@@ -44,8 +44,33 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
           : undefined;
 
     const userBlob: UIPreferences = { ...DEFAULT_UI_PREFERENCES, ...user };
-    if (raw && storage.getString(USER_PREFERENCES_KEY) === undefined) {
+    const existingUserRaw = storage.getString(USER_PREFERENCES_KEY);
+    if (raw && existingUserRaw === undefined) {
+      // Keep legacy currency available until WorkplaceService can apply it to
+      // the migrated Workplace rows and acknowledge the migration.
       storage.set(USER_PREFERENCES_KEY, JSON.stringify({ ...userBlob, ...legacyCurrency }));
+    } else if (raw && existingUserRaw && Object.keys(legacyCurrency).length > 0) {
+      // A previous attempt may have created the User bag before failing. Do
+      // not lose legacy currency just because that partial bag already exists.
+      try {
+        const existingUser = JSON.parse(existingUserRaw);
+        if (
+          typeof existingUser === 'object' &&
+          existingUser !== null &&
+          !Array.isArray(existingUser)
+        ) {
+          const mergedUser = { ...(existingUser as Record<string, unknown>) };
+          let changed = false;
+          for (const [key, value] of Object.entries(legacyCurrency)) {
+            if (key in mergedUser) continue;
+            mergedUser[key] = value;
+            changed = true;
+          }
+          if (changed) storage.set(USER_PREFERENCES_KEY, JSON.stringify(mergedUser));
+        }
+      } catch {
+        // The canonical User bag will be recovered from the legacy blob below.
+      }
     }
 
     const deviceKeyExists = storage.getString(DEVICE_PREFERENCES_KEY) !== undefined;

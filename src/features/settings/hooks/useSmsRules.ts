@@ -1,8 +1,8 @@
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/components/account-selection';
 import { useObservable } from '@/src/hooks/useObservable';
 import { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
 import { smsService } from '@/src/services/sms-service';
-import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
+import { observeSmsRules } from '@/src/services/sms/smsRuleReadService';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { useMemo } from 'react';
@@ -10,7 +10,7 @@ import { from } from 'rxjs';
 
 export function useSmsRules(workplaceId: WorkplaceId) {
   const { data: rules = [] } = useObservable(
-    () => smsRuleReadService.observeAll(workplaceId),
+    () => observeSmsRules(workplaceId),
     [workplaceId],
     [] as PlainSmsRule[],
   );

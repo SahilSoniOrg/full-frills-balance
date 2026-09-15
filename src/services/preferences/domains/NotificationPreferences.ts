@@ -1,7 +1,12 @@
+import type { UIPreferences } from '@/src/types/preferences';
 import { Observable } from 'rxjs';
 import type { PreferencesStore } from '../PreferencesStore';
 
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
+export type NotificationPrefs = Pick<
+  UIPreferences,
+  'notificationCadence' | 'notificationHour' | 'notificationMinute' | 'notificationWeekday'
+>;
 
 /** Notification cadence / schedule preferences Interface. */
 export class NotificationPreferences {

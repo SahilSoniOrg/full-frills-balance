@@ -1,45 +1,12 @@
-import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
+import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { ShareFormat } from '@/src/types/sharing';
-import type { HourCyclePreference } from '@/src/utils/hourCycle';
+import type { PrivacyPolicyAcknowledgement, UIPreferences } from '@/src/types/preferences';
 
-/** Chrome and identity that follow the person across workplaces. */
-export interface PrivacyPolicyAcknowledgement {
-  version: string;
-  acknowledgedAt: string;
-}
-
-export interface UIPreferences {
-  userName?: string;
-  theme?: 'light' | 'dark' | 'system';
-  hourCyclePreference?: HourCyclePreference;
-  themeId?: ThemeId;
-  fontId?: FontId;
-  isPrivacyMode: boolean;
-  isWidgetPrivacyEnabled: boolean;
-  privacyPolicyAcknowledgement?: PrivacyPolicyAcknowledgement;
-  showAccountMonthlyStats: boolean;
-  useCompactAccountPicker: boolean;
-  advancedMode: boolean;
-  notificationCadence: 'none' | 'daily' | 'weekly';
-  notificationHour: number;
-  notificationMinute: number;
-  notificationWeekday: number; // 1-7 (Mon-Sun)
-  defaultShareFormat?: ShareFormat;
-  showSafeToSpendChart: boolean;
-}
-
-export type ThemeAppearance = 'light' | 'dark' | 'system';
-
-export type ThemePrefs = Pick<UIPreferences, 'theme' | 'themeId' | 'fontId'>;
-export type PrivacyPrefs = Pick<
+export type {
+  PrivacyPolicyAcknowledgement,
+  ThemeAppearance,
   UIPreferences,
-  'isPrivacyMode' | 'isWidgetPrivacyEnabled' | 'privacyPolicyAcknowledgement'
->;
-export type DashboardPrefs = Pick<UIPreferences, 'showSafeToSpendChart'>;
-export type NotificationPrefs = Pick<
-  UIPreferences,
-  'notificationCadence' | 'notificationHour' | 'notificationMinute' | 'notificationWeekday'
->;
+} from '@/src/types/preferences';
 
 export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   userName: '',

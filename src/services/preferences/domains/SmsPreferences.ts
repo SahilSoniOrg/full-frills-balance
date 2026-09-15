@@ -1,5 +1,8 @@
+import type { DevicePreferences } from '../deviceTypes';
 import { Observable } from 'rxjs';
 import type { DevicePreferencesStore } from '../DevicePreferencesStore';
+
+export type SmsPrefs = Pick<DevicePreferences, 'isSmsImportEnabled'>;
 
 /** Device SMS listen — one switch for this install. */
 export class SmsPreferences {

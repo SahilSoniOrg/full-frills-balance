@@ -66,9 +66,6 @@ export function useTransactionInboxModals({
           item.id,
           item.duplicateCandidate.journalId,
         );
-        if (item.channel === 'sms') {
-          smsService.markSmsAsProcessed(item.deviceSourceId);
-        }
         toast.success('SMS details merged into journal');
       } catch (error) {
         showErrorAlert(error, 'Merge Duplicate', true);

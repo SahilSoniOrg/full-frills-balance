@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/features/accounts';
+import { AccountPickerModal } from '@/src/components/account-selection';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';

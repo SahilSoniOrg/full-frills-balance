@@ -1,14 +1,11 @@
 import { createPreferencesFacade } from './PreferencesFacade';
 
-export type {
-  DashboardPrefs,
-  NotificationPrefs,
-  PrivacyPrefs,
-  PrivacyPolicyAcknowledgement,
-  ThemeAppearance,
-  ThemePrefs,
-  UIPreferences,
-} from './types';
+export type { PrivacyPolicyAcknowledgement, ThemeAppearance, UIPreferences } from './types';
+export type { DashboardPrefs } from './domains/DashboardPreferences';
+export type { NotificationPrefs } from './domains/NotificationPreferences';
+export type { PrivacyPrefs } from './domains/PrivacyPreferences';
+export type { SmsPrefs } from './domains/SmsPreferences';
+export type { ThemePrefs } from './domains/ThemePreferences';
 export type { DevicePreferences } from './deviceTypes';
 export type { WorkplacePreferences } from './workplaceTypes';
 

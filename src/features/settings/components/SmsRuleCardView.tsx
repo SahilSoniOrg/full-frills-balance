@@ -1,5 +1,6 @@
 import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';

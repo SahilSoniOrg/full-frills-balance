@@ -1,7 +1,9 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
+import type { ThemeAppearance, UIPreferences } from '@/src/types/preferences';
 import { Observable } from 'rxjs';
 import type { PreferencesStore } from '../PreferencesStore';
-import type { ThemeAppearance } from '../types';
+
+export type ThemePrefs = Pick<UIPreferences, 'theme' | 'themeId' | 'fontId'>;
 
 /** Theme / typography preferences Interface. */
 export class ThemePreferences {

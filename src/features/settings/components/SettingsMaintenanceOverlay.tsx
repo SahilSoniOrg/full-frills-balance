@@ -1,6 +1,7 @@
 import { ProgressBar } from '@/src/components/shared/ProgressBar';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, StyleSheet, View } from 'react-native';
 

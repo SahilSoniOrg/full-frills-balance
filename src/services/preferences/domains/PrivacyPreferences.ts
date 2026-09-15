@@ -1,7 +1,12 @@
 import { Observable } from 'rxjs';
+import type { PrivacyPolicyAcknowledgement, UIPreferences } from '@/src/types/preferences';
 import type { DevicePreferencesStore } from '../DevicePreferencesStore';
 import type { PreferencesStore } from '../PreferencesStore';
-import type { PrivacyPolicyAcknowledgement } from '../types';
+
+export type PrivacyPrefs = Pick<
+  UIPreferences,
+  'isPrivacyMode' | 'isWidgetPrivacyEnabled' | 'privacyPolicyAcknowledgement'
+>;
 
 /** Privacy mask is User; app lock is Device. */
 export class PrivacyPreferences {

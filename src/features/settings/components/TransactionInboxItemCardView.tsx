@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { alert } from '@/src/utils/alerts';

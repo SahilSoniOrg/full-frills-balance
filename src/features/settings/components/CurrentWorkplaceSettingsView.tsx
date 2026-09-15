@@ -1,7 +1,8 @@
 import { Icon } from '@/src/types/domainIcons';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
 import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
-import { AppConfig, Opacity, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';

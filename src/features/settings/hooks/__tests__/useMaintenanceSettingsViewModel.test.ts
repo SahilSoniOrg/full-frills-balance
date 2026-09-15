@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { analytics } from '@/src/services/analytics';
-import { integrityService } from '@/src/services/integrity';
+import { resetDatabase } from '@/src/services/integrity';
 import { confirm } from '@/src/utils/alerts';
 import { useMaintenanceSettingsViewModel } from '../useMaintenanceSettingsViewModel';
 
@@ -22,11 +22,9 @@ jest.mock('@/src/services/analytics', () => ({
 }));
 
 jest.mock('@/src/services/integrity', () => ({
-  integrityService: {
-    forceRunCheck: jest.fn(),
-    cleanupDatabase: jest.fn(),
-    resetDatabase: jest.fn(),
-  },
+  forceRunCheck: jest.fn(),
+  cleanupDatabase: jest.fn(),
+  resetDatabase: jest.fn(),
 }));
 
 jest.mock('@/src/utils/alerts', () => ({
@@ -39,7 +37,7 @@ const mockUseAppRestart = useAppRestart as jest.Mock;
 const mockUseWorkplace = useWorkplace as jest.Mock;
 const mockRequireRestart = jest.fn();
 const mockConfirmShow = confirm.show as jest.Mock;
-const mockResetDatabase = integrityService.resetDatabase as jest.Mock;
+const mockResetDatabase = resetDatabase as jest.Mock;
 const mockLogFactoryReset = analytics.logFactoryReset as jest.Mock;
 
 describe('useMaintenanceSettingsViewModel', () => {

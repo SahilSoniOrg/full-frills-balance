@@ -8,7 +8,6 @@ import { AppNavigation } from '@/src/utils/navigation';
 jest.mock('@/src/services/sms-service', () => ({
   smsService: {
     finalizeManualImport: jest.fn().mockResolvedValue(undefined),
-    markSmsAsProcessed: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -121,7 +120,6 @@ describe('useTransactionInboxModals', () => {
     });
 
     expect(smsService.finalizeManualImport).toHaveBeenCalledWith('wp-1', 'inbox-1', 'j-dup-1');
-    expect(smsService.markSmsAsProcessed).toHaveBeenCalledWith('sms-src-1');
   });
 
   it('triggers create rule navigation with sender and merchant pre-fills', () => {

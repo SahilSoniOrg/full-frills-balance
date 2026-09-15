@@ -1,5 +1,8 @@
+import type { UIPreferences } from '@/src/types/preferences';
 import { Observable } from 'rxjs';
 import type { PreferencesStore } from '../PreferencesStore';
+
+export type DashboardPrefs = Pick<UIPreferences, 'showSafeToSpendChart'>;
 
 /**
  * Dashboard display preferences (header chart, future header metric, etc.).

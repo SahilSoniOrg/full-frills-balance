@@ -116,7 +116,7 @@ class PreferencesFacadeStore extends PreferencesStore implements PreferencesFaca
 }
 
 /**
- * Build preferences façade: User, Device, and Workplace stores plus domain modules.
+ * Build the preference façade: shared stores plus the remaining domain modules.
  */
 export function createPreferencesFacade(): PreferencesFacade {
   return new PreferencesFacadeStore();

@@ -1,6 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/components/account-selection';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
 import { analytics } from '@/src/services/analytics';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
@@ -11,7 +11,7 @@ import {
   shouldShowSmsRuleAccountMapping,
   validateSmsRuleRegexPatterns,
 } from '@/src/services/sms/smsRuleFormPolicy';
-import { smsRuleReadService } from '@/src/services/sms/smsRuleReadService';
+import { findSmsRule } from '@/src/services/sms/smsRuleReadService';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
@@ -105,7 +105,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     const loadRule = async () => {
       try {
-        const rule = await smsRuleReadService.find(workplaceId, id);
+        const rule = await findSmsRule(workplaceId, id);
         if (!rule) return;
         const hydrated = hydrateSmsRuleForm(rule);
         setMode(hydrated.mode);

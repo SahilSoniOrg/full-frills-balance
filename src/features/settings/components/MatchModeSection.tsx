@@ -1,6 +1,5 @@
 import { Icon, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { FilterChipRow } from '@/src/components/filters/FilterChipRow';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -117,7 +116,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
             <AppText variant="caption" weight="medium" style={styles.inlineLabel}>
               Direction
             </AppText>
-            <FilterChipRow
+            <SelectionTileList
               items={[
                 {
                   id: 'debit',
@@ -134,12 +133,13 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               ]}
               selectedId={direction}
               onSelect={value => setDirection((value || '') as '' | 'debit' | 'credit')}
+              allowDeselect
             />
 
             <AppText variant="caption" weight="medium" style={styles.inlineLabel}>
               Amount Filter
             </AppText>
-            <FilterChipRow
+            <SelectionTileList
               items={[
                 { id: 'eq', label: 'Equals', color: theme.primary },
                 { id: 'gt', label: 'Greater Than', color: theme.primary },
@@ -150,6 +150,7 @@ export function MatchModeSection({ vm }: { vm: SmsRuleFormViewModel }) {
               onSelect={value =>
                 setAmountOperator((value || '') as '' | 'eq' | 'gt' | 'lt' | 'between')
               }
+              allowDeselect
             />
             {amountOperator ? (
               amountOperator === 'between' ? (

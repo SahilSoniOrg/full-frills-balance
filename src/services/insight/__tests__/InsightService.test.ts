@@ -14,7 +14,10 @@ import {
   transactionQueryRepository,
 } from '@/src/data/repositories/transaction';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
-import { clearReactiveWorkplaceObservesCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { firstValueFrom, of } from 'rxjs';
 import { take } from 'rxjs/operators';
 
@@ -43,7 +46,11 @@ describe('PatternService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    clearReactiveWorkplaceObservesCache();
+    reactiveCacheCoordinator.clearNamespaces([
+      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
+      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
+      REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
+    ]);
     patternService.clearCache();
 
     // Default simple mocks

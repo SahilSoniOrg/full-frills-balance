@@ -80,4 +80,31 @@ describe('legacy preference migration', () => {
     const device = JSON.parse(mockMemory.get('full_frills_balance_device_preferences') as string);
     expect(device.deviceRegistered).toBe(false);
   });
+
+  it('retains the legacy global currency for workplace migration', () => {
+    mockMemory.set(
+      'full_frills_balance_ui_preferences',
+      JSON.stringify({ defaultCurrencyCode: 'INR', userName: 'Sahil' }),
+    );
+
+    expect(migrateLegacyPreferencesIfNeeded()).toBe(true);
+
+    const user = JSON.parse(mockMemory.get('full_frills_balance_user_preferences') as string);
+    const canonical = JSON.parse(mockMemory.get('full_frills_balance_ui_preferences') as string);
+    expect(user).toMatchObject({ userName: 'Sahil', defaultCurrencyCode: 'INR' });
+    expect(canonical).not.toHaveProperty('defaultCurrencyCode');
+  });
+
+  it('recovers legacy currency when a prior split attempt already wrote User', () => {
+    mockMemory.set(
+      'full_frills_balance_ui_preferences',
+      JSON.stringify({ defaultCurrencyCode: 'INR', userName: 'Sahil' }),
+    );
+    mockMemory.set('full_frills_balance_user_preferences', JSON.stringify({ userName: 'Sahil' }));
+
+    expect(migrateLegacyPreferencesIfNeeded()).toBe(true);
+
+    const user = JSON.parse(mockMemory.get('full_frills_balance_user_preferences') as string);
+    expect(user).toMatchObject({ userName: 'Sahil', defaultCurrencyCode: 'INR' });
+  });
 });

@@ -1,5 +1,6 @@
 import { Icon, AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Stack } from '@/src/design-system';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';

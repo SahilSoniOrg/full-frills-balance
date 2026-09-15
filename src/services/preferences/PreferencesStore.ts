@@ -204,8 +204,8 @@ export class PreferencesStore {
   }
 
   /**
-   * Legacy currency fields stripped from UIPreferences into side storage.
-   * Used only by WorkplaceService migration.
+   * Legacy currency retained until the workplace migration consumes it.
+   * Used only by the one-time Workplace migration.
    */
   getLegacyCurrencyCode(): string | undefined {
     const code = this.legacyData.defaultCurrencyCode ?? this.legacyData.defaultCurrency;

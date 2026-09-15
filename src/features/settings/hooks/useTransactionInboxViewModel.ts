@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/components/account-selection';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
 import { useTransactionInboxImport } from '@/src/features/settings/hooks/useTransactionInboxImport';
 import {
@@ -96,7 +96,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     setIsRefreshing(true);
     analytics.trackFeatureUsage('sms', 'inbox_bulk_sync', { mode: 'refresh' });
     try {
-      const result = await smsService.refreshLatestSms(workplaceId, PAGE_SIZE * 2);
+      const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
       setScanCursor(result.cursor);
       toast.success('Transaction inbox refreshed');
     } catch (error) {
@@ -128,9 +128,6 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         direction: item.direction,
       });
       await smsService.markInboxRecordStatus(workplaceId, item.id, InboxProcessingStatus.DISMISSED);
-      if (item.channel === 'sms') {
-        await smsService.markSmsAsProcessed(item.deviceSourceId);
-      }
     },
     [workplaceId],
   );

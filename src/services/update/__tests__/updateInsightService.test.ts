@@ -1,6 +1,6 @@
 import type { WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
-import { readAvailableUpdate } from '../updateAvailabilityStore';
+import { storage } from '@/src/utils/storage';
 import { updateInsightService } from '../updateInsightService';
 
 jest.mock('@/src/services/preferences', () => ({
@@ -13,12 +13,17 @@ jest.mock('@/src/services/preferences', () => ({
   },
 }));
 
-jest.mock('../updateAvailabilityStore', () => ({
-  readAvailableUpdate: jest.fn(),
-  subscribeToAvailableUpdate: jest.fn(),
-}));
+jest.mock('@/src/utils/storage', () => {
+  const values = new Map<string, string>();
+  return {
+    storage: {
+      getString: (key: string) => values.get(key),
+      set: (key: string, value: string) => values.set(key, value),
+      remove: (key: string) => values.delete(key),
+    },
+  };
+});
 
-const mockedReadAvailableUpdate = jest.mocked(readAvailableUpdate);
 const mockedDismissedPatternIds = jest.mocked(preferences.insights.dismissedPatternIds);
 const mockedDismissPattern = jest.mocked(preferences.insights.dismissPattern);
 const mockedUndismissPattern = jest.mocked(preferences.insights.undismissPattern);
@@ -32,14 +37,15 @@ const policy = {
 
 describe('updateInsightService', () => {
   beforeEach(() => {
-    mockedReadAvailableUpdate.mockReturnValue({ policy, dismissed: true });
     mockedDismissedPatternIds.mockReturnValue([]);
     jest.clearAllMocks();
-    mockedReadAvailableUpdate.mockReturnValue({ policy, dismissed: true });
+    storage.remove('full_frills_balance_update_notice_dismissed_v1');
+    updateInsightService.clearAvailableUpdate();
     mockedDismissedPatternIds.mockReturnValue([]);
   });
 
   it('exposes a dismissed available update as a Hub insight', () => {
+    updateInsightService.dismissAvailableUpdate(policy);
     const insights = updateInsightService.observe('workplace-1' as WorkplaceId, false);
 
     expect(insights).toEqual([
@@ -54,13 +60,14 @@ describe('updateInsightService', () => {
 
   it('keeps the update in the dismissed tab after the user dismisses it', () => {
     mockedDismissedPatternIds.mockReturnValue(['app-update-12']);
+    updateInsightService.dismissAvailableUpdate(policy);
 
     expect(updateInsightService.observe('workplace-2' as WorkplaceId, false)).toEqual([]);
     expect(updateInsightService.observe('workplace-2' as WorkplaceId, true)).toHaveLength(1);
   });
 
   it('does not expose the update before the toast is dismissed', () => {
-    mockedReadAvailableUpdate.mockReturnValue({ policy, dismissed: false });
+    updateInsightService.publishAvailableUpdate(policy);
 
     expect(updateInsightService.observe('workplace-3' as WorkplaceId, false)).toEqual([]);
   });

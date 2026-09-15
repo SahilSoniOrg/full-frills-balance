@@ -9,7 +9,7 @@ import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMen
 import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Opacity } from '@/src/constants/design-tokens';
-import { withOpacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
