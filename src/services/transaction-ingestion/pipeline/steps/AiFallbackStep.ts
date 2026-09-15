@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/types/enums';
 
 import { analytics } from '@/src/services/analytics';
-import { accountResolutionService } from '@/src/services/ledger/resolution';
+import { resolveAccount } from '@/src/services/ledger/resolution';
 import { logger } from '@/src/utils/logger';
 import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
@@ -54,7 +54,7 @@ export class AiFallbackStep implements PipelineStep {
         // SECOND PASS RESOLUTION
         const resolvedTransactions = await Promise.all(
           aiParsed.transactions.map(async tx => {
-            const aiResolved = await accountResolutionService.resolve({
+            const aiResolved = await resolveAccount({
               sourceHint: tx.accountNameHint,
               destinationHint: tx.categoryNameHint,
               direction: tx.type === 'income' ? 'credit' : 'debit',

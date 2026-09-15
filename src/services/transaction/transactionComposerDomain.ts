@@ -373,10 +373,3 @@ export function validatePostingPlan(
 
   return { valid: issues.length === 0, issues };
 }
-
-export function isPostingPlan(
-  plan: PostingPlan,
-  accounts: TransactionResolverContext['accounts'],
-): boolean {
-  return validatePostingPlan(plan, accounts).valid;
-}

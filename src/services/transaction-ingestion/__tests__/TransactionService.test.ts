@@ -1,163 +1,83 @@
+import { firstValueFrom, take } from 'rxjs';
 import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { ledgerWriteService } from '@/src/services/ledger';
-import { transactionService } from '@/src/services/transaction-ingestion';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { transactionService } from '../TransactionService';
 
-describe('TransactionService', () => {
-  let accountId: string;
-  let equityAccountId: string;
-  let expenseAccountId: string;
+const workplaceId = asWorkplaceId('wp-1');
+
+describe('TransactionService observable reads', () => {
+  let assetAccountId: ReturnType<typeof asAccountId>;
+  let equityAccountId: ReturnType<typeof asAccountId>;
 
   beforeEach(async () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-    const account = await accountWriteRepository.create({
-      name: 'Test Account',
+
+    const asset = await accountWriteRepository.create({
+      name: 'Checking',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1' as WorkplaceId,
+      workplaceId,
     });
-    accountId = account.id;
+    assetAccountId = asAccountId(asset.id);
 
     const equity = await accountWriteRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
-      workplaceId: 'wp-1' as WorkplaceId,
+      workplaceId,
     });
-    equityAccountId = equity.id;
-
-    const expense = await accountWriteRepository.create({
-      name: 'Expense',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId: 'wp-1' as WorkplaceId,
-    });
-    expenseAccountId = expense.id;
+    equityAccountId = asAccountId(equity.id);
   });
 
-  describe('getTransactionsWithAccountInfo', () => {
-    it('should return transactions with joined account info', async () => {
-      const journal = await ledgerWriteService.createJournal(
-        {
-          description: 'Test Journal',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: accountId as AccountId,
-              amount: 100,
-              transactionType: TransactionType.DEBIT,
-            },
-            {
-              accountId: equityAccountId as AccountId,
-              amount: 100,
-              transactionType: TransactionType.CREDIT,
-            },
-          ],
-        },
-        'wp-1' as WorkplaceId,
-      );
+  it('joins account metadata and derives balance effects', async () => {
+    const journal = await ledgerCreateService.createJournal(
+      {
+        description: 'Opening balance',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: assetAccountId, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
 
-      const transactions = await transactionService.getTransactionsWithAccountInfo(
-        'wp-1' as WorkplaceId,
-        journal.id as JournalId,
-      );
+    const transactions = await firstValueFrom(
+      transactionService
+        .observeTransactionsWithAccountInfo(workplaceId, asJournalId(journal.id))
+        .pipe(take(1)),
+    );
 
-      expect(transactions).toHaveLength(2);
-
-      // Check first transaction (Debit Asset)
-      const tx1 = transactions.find(t => t.accountId === (accountId as AccountId));
-      expect(tx1).toBeDefined();
-      expect(tx1?.accountName).toBe('Test Account');
-      expect(tx1?.accountType).toBe(AccountType.ASSET);
-      expect(tx1?.balanceImpact).toBe('INCREASE'); // Debit Asset = Increase
-
-      // Check second transaction (Credit Equity)
-      const tx2 = transactions.find(t => t.accountId === (equityAccountId as AccountId));
-      expect(tx2).toBeDefined();
-      expect(tx2?.accountName).toBe('Equity');
-      expect(tx2?.accountType).toBe(AccountType.EQUITY);
-      expect(tx2?.balanceImpact).toBe('INCREASE'); // Credit Equity = Increase
-    });
+    expect(transactions).toHaveLength(2);
+    expect(transactions.find(transaction => transaction.accountId === assetAccountId)).toEqual(
+      expect.objectContaining({
+        accountName: 'Checking',
+        accountType: AccountType.ASSET,
+        balanceImpact: 'INCREASE',
+        journalDescription: 'Opening balance',
+        displayTitle: 'Opening balance',
+      }),
+    );
+    expect(transactions.find(transaction => transaction.accountId === equityAccountId)).toEqual(
+      expect.objectContaining({
+        accountName: 'Equity',
+        accountType: AccountType.EQUITY,
+        balanceImpact: 'INCREASE',
+      }),
+    );
   });
 
-  describe('getEnrichedByJournal', () => {
-    it('assigns a single counterparty in counterAccounts for two-leg journals', async () => {
-      const journal = await ledgerWriteService.createJournal(
-        {
-          description: 'Simple Transfer',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: accountId as AccountId,
-              amount: 50,
-              transactionType: TransactionType.DEBIT,
-            },
-            {
-              accountId: equityAccountId as AccountId,
-              amount: 50,
-              transactionType: TransactionType.CREDIT,
-            },
-          ],
-        },
-        'wp-1' as WorkplaceId,
-      );
-
-      const enriched = await transactionService.getEnrichedByJournal(
-        'wp-1' as WorkplaceId,
-        journal.id as JournalId,
-      );
-
-      const assetTx = enriched.find(t => t.accountId === (accountId as AccountId));
-      expect(assetTx?.counterAccounts).toHaveLength(1);
-      expect(assetTx?.counterAccounts?.[0].name).toBe('Equity');
-      expect(assetTx?.counterAccounts?.[0].id).toBe(equityAccountId);
-    });
-
-    it('assigns all counterparties for multi-line journals', async () => {
-      const journal = await ledgerWriteService.createJournal(
-        {
-          description: 'Split Transaction',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: accountId as AccountId,
-              amount: 100,
-              transactionType: TransactionType.DEBIT,
-            },
-            {
-              accountId: equityAccountId as AccountId,
-              amount: 60,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expenseAccountId as AccountId,
-              amount: 40,
-              transactionType: TransactionType.CREDIT,
-            },
-          ],
-        },
-        'wp-1' as WorkplaceId,
-      );
-
-      const enriched = await transactionService.getEnrichedByJournal(
-        'wp-1' as WorkplaceId,
-        journal.id as JournalId,
-      );
-
-      expect(enriched).toHaveLength(3);
-      const assetTx = enriched.find(t => t.accountId === (accountId as AccountId));
-      expect(assetTx?.counterAccounts).toHaveLength(2);
-
-      const equityTx = enriched.find(t => t.accountId === (equityAccountId as AccountId));
-      expect(equityTx?.counterAccounts).toHaveLength(2);
-    });
+  it('returns an empty stream when no journal is selected', async () => {
+    await expect(
+      firstValueFrom(
+        transactionService.observeTransactionsWithAccountInfo(workplaceId, asJournalId('')),
+      ),
+    ).resolves.toEqual([]);
   });
 });

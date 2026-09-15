@@ -2,7 +2,6 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, asTransactionId } from '@/src/types/ids';
 import { PostingPlan, TransactionIntent } from '@/src/types/domainTransaction';
 import {
-  isPostingPlan,
   resolveTransactionIntent,
   validatePostingPlan,
 } from '@/src/services/transaction/transactionComposerDomain';
@@ -259,12 +258,6 @@ describe('transaction composer domain', () => {
         valid: true,
         issues: [],
       });
-    });
-
-    it('provides a boolean predicate for a valid plan', () => {
-      const resolved = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
-      if (!resolved.resolved) throw new Error('expected a resolved plan');
-      expect(isPostingPlan(resolved.plan, accounts)).toBe(true);
     });
 
     it('validates a 10,000-line plan within the large-input guardrail', () => {

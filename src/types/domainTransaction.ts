@@ -59,12 +59,6 @@ export interface PostingPlan {
   notes?: string;
 }
 
-/** Identity assigned after a posting plan has been persisted. */
-export interface PostedJournal {
-  journalId: JournalId;
-  plan: PostingPlan;
-}
-
 export type TransactionDomainIssueCode =
   | 'missing_description'
   | 'missing_date'

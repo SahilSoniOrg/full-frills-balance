@@ -1,8 +1,10 @@
 import { analytics } from '@/src/services/analytics';
-import { accountResolutionService } from '@/src/services/ledger/resolution';
-import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
+import { resolveAccount } from '@/src/services/ledger/resolution';
+import { VoiceExtractor } from '@/src/services/ledger/VoiceExtractor';
 import { TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
+
+const voiceExtractor = new VoiceExtractor();
 
 export class DeterministicStep implements PipelineStep {
   async execute(context: PipelineContext): Promise<void> {
@@ -16,8 +18,7 @@ export class DeterministicStep implements PipelineStep {
       metadata: { defaultCurrencyCode: defaultCurrency },
     };
 
-    const extractor = transactionExtractorRegistry.getExtractorFor(rawInput);
-    const parsed = await extractor.extract(rawInput);
+    const parsed = await voiceExtractor.extract(rawInput);
 
     if (parsed.isReversal) {
       analytics.logAiIngestion('reversal_detected');
@@ -49,7 +50,7 @@ export class DeterministicStep implements PipelineStep {
     }
 
     // Primary Entity Resolver
-    const resolved = await accountResolutionService.resolve({
+    const resolved = await resolveAccount({
       sourceHint: parsed.sourceAccountHint,
       destinationHint: parsed.destinationCategoryHint,
       direction: parsed.direction,
