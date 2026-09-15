@@ -1,24 +1,84 @@
-import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { CommitmentsView } from '@/src/features/commitments/components/CommitmentsView';
-import { useCommitmentsViewModel } from '@/src/features/commitments/hooks/useCommitmentsViewModel';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { AppTabs } from '@/src/components/core';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
+import { Box, Stack } from '@/src/design-system';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
+import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { useMemo } from 'react';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useMemo, useState } from 'react';
+
+const TAB_OPTIONS = [
+  { id: 'budgets' as const, label: 'Budgets' },
+  { id: 'planned' as const, label: 'Planned' },
+];
+
+type CommitmentsTab = (typeof TAB_OPTIONS)[number]['id'];
+
+function BudgetsPanel() {
+  const { workplaceId } = useWorkplace();
+  const { items, isLoading, onItemPress } = useBudgetListViewModel(workplaceId);
+  return <BudgetListView items={items} isLoading={isLoading} onItemPress={onItemPress} />;
+}
+
+function PlannedPanel() {
+  const { workplaceId } = useWorkplace();
+  const { items, isLoading, onItemPress } = usePlannedPayments(workplaceId);
+  return <PlannedPaymentListView items={items} isLoading={isLoading} onItemPress={onItemPress} />;
+}
 
 function CommitmentsScreen() {
-  const vm = useCommitmentsViewModel();
+  const [activeTab, setActiveTab] = useState<CommitmentsTab>('budgets');
+  const subtitle =
+    activeTab === 'budgets'
+      ? 'Monthly category limits to keep your spending comfortable.'
+      : 'Upcoming bills, rent, and subscriptions that protect your balance.';
 
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: 'Commitments',
       showBack: false,
       headerActions: <PrivacyToggleButton />,
-      fab: vm.fab,
+      fab: {
+        onPress: () => {
+          if (activeTab === 'budgets') {
+            AppNavigation.toBudgetForm();
+          } else {
+            AppNavigation.toPlannedPaymentForm();
+          }
+        },
+        label: activeTab === 'budgets' ? 'New Budget' : 'New Recurring Bill',
+        accessibilityLabel:
+          activeTab === 'budgets' ? 'Create a new budget' : 'Create a new recurring bill',
+      },
     }),
-    [vm.fab],
+    [activeTab],
   );
 
-  return <CommitmentsView {...vm} chrome={chrome} />;
+  return (
+    <ScreenWithChrome chrome={chrome} scrollable={false}>
+      <Stack gap="lg">
+        <Box marginTop="md">
+          <AppTabs
+            testID="commitments-tabs"
+            options={TAB_OPTIONS}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
+        </Box>
+        <Box paddingHorizontal="lg">
+          <ScreenSectionHeader subtitle={subtitle} />
+        </Box>
+      </Stack>
+
+      <Box flex={1} marginTop="md">
+        {activeTab === 'budgets' ? <BudgetsPanel /> : <PlannedPanel />}
+      </Box>
+    </ScreenWithChrome>
+  );
 }
 
 export default withPrivacyScope(CommitmentsScreen);
