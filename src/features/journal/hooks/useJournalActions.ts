@@ -29,7 +29,7 @@ type BulkJournalEntry = {
 
 /**
  * Feature write gateway for journals. Editors and details actions go through here;
- * journalService still owns orchestration and delegates persist/audit/rebuild to ledgerWriteService.
+ * journalService still owns orchestration and delegates persist/audit/rebuild to the ledger services.
  */
 export function useJournalActions(workplaceId: WorkplaceId) {
   const deleteJournal = useCallback(

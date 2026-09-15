@@ -1,5 +1,6 @@
 import { AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';

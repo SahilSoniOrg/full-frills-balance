@@ -13,6 +13,7 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = vm;
   const isSubmitting = vm.editor.isSubmitting;
   const isBatchMode = vm.activeMode === 'batch';
+  const splitValidationError = vm.splitValidation.valid ? undefined : vm.splitValidation.error;
   const isPlanValid =
     vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
@@ -36,14 +37,14 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
       isPlanValid,
       isSubmitDisabled,
       postingPlanIssues: vm.postingPlanValidation.issues,
-      splitIssues: vm.splitValidation.valid ? [] : [vm.splitValidation.error],
+      splitIssues: vm.splitValidation.valid ? [] : [splitValidationError],
     });
   }, [
     isPlanValid,
     isSubmitDisabled,
     vm.activeMode,
     vm.postingPlanValidation.issues,
-    vm.splitValidation.valid ? null : vm.splitValidation.error,
+    splitValidationError,
     vm.splitValidation.valid,
   ]);
   const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;

@@ -11,7 +11,6 @@ import {
   JournalEntryScreenMode,
   resolveJournalEntryHeaderTitle,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { createSmsJournalAfterSaveHandler } from '@/src/features/journal/entry/journalEntryPostSave';
 import { parseTransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
 import {
   GuidedFooterAmount,
@@ -31,7 +30,6 @@ import {
   JournalSuggestionState,
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
-import { smsService } from '@/src/services/sms-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
@@ -94,16 +92,6 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { accounts } = useAccounts(workplaceId);
 
-  const onAfterSave = useMemo(
-    () =>
-      createSmsJournalAfterSaveHandler({
-        smsId: seed.sourceContext?.smsId,
-        markSmsAsProcessed: (smsId: string) =>
-          Promise.resolve(smsService.markSmsAsProcessed(smsId)),
-      }),
-    [seed.sourceContext?.smsId],
-  );
-
   const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
   const onSuccess = useCallback(() => leaveAfterSaveRef.current(), []);
 
@@ -124,7 +112,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialDate: seed.date,
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,
-    onAfterSave,
     onSuccess,
   });
   const { editor, splitState } = session;

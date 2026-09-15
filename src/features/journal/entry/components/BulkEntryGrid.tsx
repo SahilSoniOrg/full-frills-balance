@@ -10,14 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Icon, AppButton, AppText, AppIcon } from '@/src/components/core';
-import {
-  AppConfig,
-  MAX_BULK_JOURNAL_ROWS,
-  Spacing,
-  Shape,
-  Size,
-  Typography,
-} from '@/src/constants';
+import { AppConfig, MAX_BULK_JOURNAL_ROWS, Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
@@ -298,9 +291,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-  },
-  clearText: {
-    fontSize: Typography.sizes.sm,
   },
   emptyHint: {
     flexDirection: 'row',

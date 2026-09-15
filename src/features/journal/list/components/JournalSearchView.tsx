@@ -189,9 +189,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  amountInput: {
-    flex: 1,
-  },
   clearButton: {
     marginLeft: 'auto',
   },

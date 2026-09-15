@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
@@ -12,10 +13,6 @@ import type {
   BulkRowFieldValue,
   UseBulkJournalEditorProps,
 } from '../types/bulkJournal';
-import {
-  convertCrossCurrencyAmount,
-  resolveCrossCurrencyRate,
-} from './crossCurrencyRateCoordinator';
 
 const generateRowId = () => generateId();
 
@@ -147,7 +144,7 @@ export function useBulkJournalEditor({
       setRows(loadingRows);
 
       try {
-        const rates = await resolveCrossCurrencyRate(
+        const rates = await fetchCrossCurrencyRates(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
@@ -164,7 +161,7 @@ export function useBulkJournalEditor({
           return;
         }
         const { sourceBaseRate: srcRate, destBaseRate: dstRate, exchangeRate: crossRate } = rates;
-        const convertedAmount = convertCrossCurrencyAmount(amountStr, crossRate);
+        const convertedAmount = sanitizeAmount((parseFloat(amountStr) || 0) * crossRate) || 0;
 
         const successRows = latestRowsRef.current.map(row => {
           if (row.id !== rowId) return row;

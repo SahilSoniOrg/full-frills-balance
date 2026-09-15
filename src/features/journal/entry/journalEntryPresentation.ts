@@ -116,17 +116,6 @@ export function resolveExchangeRatePresentation(input: {
   };
 }
 
-export function isAdvancedJournalFormValid(input: {
-  isBalanced: boolean;
-  description: string;
-  lines: { accountId?: string; amount: string }[];
-  isSubmitting: boolean;
-}): boolean {
-  const hasDescription = input.description.trim().length > 0;
-  const hasIncompleteLines = input.lines.some(line => !line.accountId || !line.amount.trim());
-  return input.isBalanced && hasDescription && !hasIncompleteLines && !input.isSubmitting;
-}
-
 export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;
   simpleSubmitting: boolean;

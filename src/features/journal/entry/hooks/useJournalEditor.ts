@@ -34,11 +34,7 @@ export interface UseJournalEditorOptions {
   smsRecordId?: string;
   smsSender?: string;
   rawSmsBody?: string;
-  /**
-   * M-9 fix: callback to run after a successful save. Replaces the previous
-   * direct smsService.markSmsAsProcessed call — keeps this hook unaware of
-   * SMS concerns and avoids a feature→service boundary violation.
-   */
+  /** Callback to run after a successful save. */
   onAfterSave?: (result: {
     journalId?: JournalId;
     action?: 'created' | 'updated';

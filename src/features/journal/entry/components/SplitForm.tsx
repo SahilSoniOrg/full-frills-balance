@@ -24,10 +24,6 @@ type SplitFormProps = SplitJournalController;
 const AMOUNT_COL_WIDTH = 116;
 const DELETE_COL_WIDTH = 28;
 
-function accountChipStyles(account: AccountFields | undefined, theme: Theme) {
-  return resolveAccountChipColors(account, theme);
-}
-
 interface SplitRowItemProps {
   row: SplitJournalController['splits'][number];
   isLast: boolean;
@@ -55,7 +51,7 @@ const SplitRowItem = React.memo(function SplitRowItem({
   onRemoveRow,
   currencySymbol,
 }: SplitRowItemProps) {
-  const categoryStyles = accountChipStyles(categoryAccount, theme);
+  const categoryStyles = resolveAccountChipColors(categoryAccount, theme);
 
   return (
     <View style={[styles.gridRow, !isLast && hairlineStyle]}>
@@ -154,7 +150,7 @@ export function SplitForm({
         : theme.error;
 
   const validationMessage = validationError ? str.validation[validationError] : null;
-  const sourceStyles = accountChipStyles(sourceAccount, theme);
+  const sourceStyles = resolveAccountChipColors(sourceAccount, theme);
   const hairline = { borderBottomColor: theme.border, borderBottomWidth: StyleSheet.hairlineWidth };
   const isFullyAllocated = totals.total > 0 && totals.remaining === 0;
   const showAllocationStatus = totals.total > 0;
@@ -379,20 +375,9 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     minWidth: 0,
   },
-  sourceAccountLabel: {
-    flexShrink: 1,
-    fontSize: Typography.sizes.base,
-  },
-  splitCategoryLabel: {
-    flexShrink: 1,
-    fontSize: Typography.sizes.sm,
-  },
   categoryChevron: {
     marginLeft: Spacing.xs,
     flexShrink: 0,
-  },
-  archivedIndicatorSpacer: {
-    marginRight: Spacing.xs,
   },
   amountCell: {
     width: AMOUNT_COL_WIDTH,

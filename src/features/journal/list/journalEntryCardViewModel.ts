@@ -1,9 +1,6 @@
 import { JournalEntryCardProps } from '@/src/components/journal/JournalEntryCard';
 import { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
-import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
-import { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { EnrichedJournal } from '@/src/types/domainReadModels';
-import { JournalTimelineItem, JournalTimelineViewer } from '@/src/types/journalTimeline';
+import { JournalTimelineItem } from '@/src/types/journalTimeline';
 
 export function mapTimelineItemToEntryCardProps(
   item: JournalTimelineItem,
@@ -26,17 +23,4 @@ export function mapTimelineItemToEntryCardProps(
     })),
     notes: item.notes,
   };
-}
-
-export function mapJournalToEntryCardProps(
-  journal: EnrichedJournal,
-  viewer?: JournalTimelineViewer,
-): Omit<JournalEntryCardProps, 'onPress'> {
-  return mapTimelineItemToEntryCardProps(mapJournalToTimelineItem(journal, viewer));
-}
-
-export function mapTimelineRowToEntryCardProps(
-  row: JournalTimelineRow,
-): Omit<JournalEntryCardProps, 'onPress'> {
-  return mapJournalToEntryCardProps(row.journal, row.viewer);
 }

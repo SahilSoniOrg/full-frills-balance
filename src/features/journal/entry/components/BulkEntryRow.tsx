@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, TouchableOpacity, Keyboard } from 'react-native';
 import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { Spacing, Shape, Opacity, Size, Typography, withOpacity } from '@/src/constants';
+import { Spacing, Shape, Opacity, Size, Typography } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
@@ -436,19 +437,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: Spacing.md,
     gap: Spacing.xs,
-  },
-  accountLabel: {
-    flex: 1,
-    fontSize: Typography.sizes.sm,
-  },
-  accountLabelWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  archivedIndicatorSpacer: {
-    marginRight: Spacing.xs,
   },
   arrowContainer: {
     width: 24,

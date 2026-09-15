@@ -4,7 +4,6 @@ import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceIn
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useGuidedVoiceApplication } from '@/src/features/journal/entry/hooks/useGuidedVoiceApplication';
-import type { VoiceJournalApplyParams } from '@/src/features/journal/entry/hooks/useVoiceJournalParse';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -24,8 +23,6 @@ export type GuidedFooterAmount = {
 export type GuidedVoiceActions = {
   open: () => void;
 };
-
-export type GuidedVoiceApplyParams = VoiceJournalApplyParams;
 
 export type GuidedModePanelProps = {
   accounts: AccountFields[];

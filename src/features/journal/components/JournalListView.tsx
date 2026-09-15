@@ -1,4 +1,4 @@
-import { DateRangeFilter } from '@/src/components/filters/DateRangeFilter';
+import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { type ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
@@ -67,7 +67,7 @@ export function JournalListView(props: JournalListViewProps) {
       <View style={styles.container}>
         {periodBar ? (
           <View style={styles.periodBar}>
-            <DateRangeFilter
+            <DateRangeTrigger
               range={periodBar.range}
               onPress={periodBar.onPress}
               onPrevious={periodBar.onPrevious}

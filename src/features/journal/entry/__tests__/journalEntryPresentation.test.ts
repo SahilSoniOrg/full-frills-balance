@@ -1,5 +1,4 @@
 import {
-  isAdvancedJournalFormValid,
   isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
   resolveExchangeRatePresentation,
@@ -112,25 +111,6 @@ describe('journalEntryPresentation', () => {
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
     expect(resolveJournalEntryHeaderTitle({ isEdit: false })).toBe('New entry');
     expect(resolveJournalEntryHeaderTitle({ isEdit: true })).toBe('Edit entry');
-  });
-
-  it('isAdvancedJournalFormValid requires balance, description, and complete lines', () => {
-    expect(
-      isAdvancedJournalFormValid({
-        isBalanced: true,
-        description: 'x',
-        lines: [{ accountId: 'a', amount: '1' }],
-        isSubmitting: false,
-      }),
-    ).toBe(true);
-    expect(
-      isAdvancedJournalFormValid({
-        isBalanced: true,
-        description: ' ',
-        lines: [{ accountId: 'a', amount: '1' }],
-        isSubmitting: false,
-      }),
-    ).toBe(false);
   });
 
   it('requires a valid basic plan before submit', () => {

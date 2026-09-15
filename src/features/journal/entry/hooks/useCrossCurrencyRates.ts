@@ -1,7 +1,7 @@
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useRef, useState } from 'react';
-import { resolveCrossCurrencyRate } from './crossCurrencyRateCoordinator';
 
 export interface UseCrossCurrencyRatesParams {
   sourceCurrency?: string;
@@ -88,7 +88,7 @@ export function useCrossCurrencyRates({
             ? async (fromCurrency: string, toCurrency: string) =>
                 (await fetchHistoricalRate(fromCurrency, toCurrency, historicalTimestamp)).rate
             : fetchRate;
-        const resolved = await resolveCrossCurrencyRate(
+        const resolved = await fetchCrossCurrencyRates(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
