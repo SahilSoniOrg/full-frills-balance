@@ -3,7 +3,7 @@ import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
@@ -162,9 +162,11 @@ describe('TransactionRepository', () => {
         0,
       );
 
-      const txs = await transactionQueryRepository.findByAccount(
+      const txs = await transactionQueryRepository.findByAccountsAndDateRange(
         'wp-1' as WorkplaceId,
-        accountId as AccountId,
+        [accountId as AccountId],
+        0,
+        Number.MAX_SAFE_INTEGER,
       );
       // Sorted by date desc: T2 (2000), T1 (1000)
       expect(txs).toHaveLength(2);
@@ -244,9 +246,11 @@ describe('TransactionRepository', () => {
         accountId as AccountId,
       );
 
-      const txs = await transactionQueryRepository.findByAccount(
+      const txs = await transactionQueryRepository.findByAccountsAndDateRange(
         'wp-1' as WorkplaceId,
-        accountId as AccountId,
+        [accountId as AccountId],
+        0,
+        Number.MAX_SAFE_INTEGER,
       );
       // T3, T2, T1
       expect(txs[0].transactionDate).toBe(3000); // T3
@@ -505,9 +509,10 @@ describe('TransactionRepository', () => {
         workplaceTwo,
       );
 
-      const txs = await transactionQueryRepository.findForAccountUpToDate(
+      const txs = await transactionQueryRepository.findByAccountsAndDateRange(
         workplaceOne,
-        accountId as AccountId,
+        [accountId as AccountId],
+        0,
         5_000,
       );
 

@@ -117,18 +117,6 @@ export class TransactionWriteRepository {
     });
   }
 
-  /**
-   * Prepares WatermelonDB operations to merge transactions from multiple accounts into a target account.
-   */
-  async prepareMergeOperations(
-    workplaceId: WorkplaceId,
-    sourceAccountIds: AccountId[],
-    targetAccountId: AccountId,
-  ): Promise<Transaction[]> {
-    const transactions = await this.loadMergeRecords(workplaceId, sourceAccountIds);
-    return this.prepareLoadedMergeOperations(transactions, targetAccountId);
-  }
-
   loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
     return transactionQueryRepository.findAllByAccountIds(workplaceId, sourceAccountIds);
   }

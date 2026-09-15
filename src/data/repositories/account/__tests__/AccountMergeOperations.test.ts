@@ -1,5 +1,9 @@
 import { database } from '@/src/data/database/Database';
-import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import {
+  accountMergeOperations,
+  accountQueryRepository,
+  accountWriteRepository,
+} from '@/src/data/repositories/account';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
@@ -35,7 +39,7 @@ describe('AccountMergeOperations', () => {
     const foreignUpdatedAt = foreignSource.updatedAt.getTime();
 
     await database.write(async () => {
-      const operations = await accountWriteRepository.prepareMergeOperations(
+      const operations = await accountMergeOperations.prepareMergeOperations(
         WORKPLACE_A,
         [localSource.id, foreignSource.id],
         target.id,

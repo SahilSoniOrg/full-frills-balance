@@ -133,13 +133,6 @@ export class AuditRepository {
   }
 
   /**
-   * Count all audit logs
-   */
-  async countAll(workplaceId: WorkplaceId): Promise<number> {
-    return this.auditLogs.query(Q.where('workplace_id', workplaceId)).fetchCount();
-  }
-
-  /**
    * Cleanup legacy entity types (convert to lowercase)
    * This is an idempotent one-time migration.
    */

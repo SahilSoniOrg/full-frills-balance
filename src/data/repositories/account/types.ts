@@ -3,6 +3,7 @@ import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 
 export interface AccountPersistenceInput {
+  id?: AccountId;
   name: string;
   accountType: AccountType;
   accountSubtype?: AccountSubtype;

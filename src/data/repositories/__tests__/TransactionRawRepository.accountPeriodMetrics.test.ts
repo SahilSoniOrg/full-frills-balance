@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';

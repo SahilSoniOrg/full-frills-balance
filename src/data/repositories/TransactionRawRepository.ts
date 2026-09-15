@@ -518,21 +518,6 @@ export class TransactionRawRepository {
     );
   }
 
-  observeAccountDeltasGroupedRaw(
-    workplaceId: WorkplaceId,
-    accountIds: string[],
-    startDate: number,
-    endDate: number,
-  ): Observable<AccountDelta[]> {
-    return transactionObserveQueries
-      .observeActiveCount(workplaceId)
-      .pipe(
-        switchMap(() =>
-          from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
-        ),
-      );
-  }
-
   observeUnreconciledMetricsRaw(
     workplaceId: WorkplaceId,
     accountId: AccountId,

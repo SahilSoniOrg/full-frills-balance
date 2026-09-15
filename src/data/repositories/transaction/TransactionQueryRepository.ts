@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
@@ -27,38 +26,6 @@ export class TransactionQueryRepository {
     } catch {
       return null;
     }
-  }
-
-  async findByAccount(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    limit?: number,
-    dateRange?: { startDate: number; endDate: number },
-    sortOrder: 'asc' | 'desc' = 'desc',
-  ): Promise<Transaction[]> {
-    const qSort = sortOrder === 'asc' ? Q.asc : Q.desc;
-    const clauses = buildActiveClauses(workplaceId, [Q.where('account_id', accountId)]);
-
-    if (dateRange) {
-      clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
-      clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
-    }
-
-    let query = deterministicSort(this.transactions.query(...clauses), qSort);
-
-    if (limit) {
-      query = query.extend(Q.take(limit));
-    }
-
-    const start = Date.now();
-    const results = await query.fetch();
-
-    logger.info(`[Trace] TransactionRepository.findByAccount: ${Date.now() - start}ms`, {
-      accountId,
-      count: results.length,
-    });
-
-    return results;
   }
 
   async findByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Promise<Transaction[]> {
@@ -114,39 +81,6 @@ export class TransactionQueryRepository {
         .fetch();
       results.push(...batch);
     }
-    return results;
-  }
-
-  async findTransactionsByAccounts(
-    workplaceId: WorkplaceId,
-    accountIds: string[],
-    limit: number = AppConfig.pagination.defaultPageSize,
-    dateRange?: { startDate: number; endDate: number },
-  ): Promise<Transaction[]> {
-    const clauses = buildActiveClauses(workplaceId, [Q.where('account_id', Q.oneOf(accountIds))]);
-
-    if (dateRange) {
-      clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
-      clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
-    }
-
-    let query = deterministicSort(this.transactions.query(...clauses), Q.desc);
-
-    if (limit) {
-      query = query.extend(Q.take(limit));
-    }
-
-    const start = Date.now();
-    const results = await query.fetch();
-
-    logger.info(
-      `[Trace] TransactionRepository.findTransactionsByAccounts: ${Date.now() - start}ms`,
-      {
-        accountCount: accountIds.length,
-        resultCount: results.length,
-      },
-    );
-
     return results;
   }
 
@@ -259,48 +193,6 @@ export class TransactionQueryRepository {
     );
 
     return results;
-  }
-
-  async getCountForAccount(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    cutoffDate: number = Date.now(),
-  ): Promise<number> {
-    return this.getCountForAccountBetween(workplaceId, accountId, 0, cutoffDate);
-  }
-
-  async getCountForAccountBetween(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    startDate: number,
-    endDate: number,
-  ): Promise<number> {
-    return this.transactions
-      .query(
-        ...buildActiveClauses(workplaceId, [
-          Q.where('account_id', accountId),
-          Q.where('transaction_date', Q.gte(startDate)),
-          Q.where('transaction_date', Q.lte(endDate)),
-        ]),
-      )
-      .fetchCount();
-  }
-
-  async findForAccountUpToDate(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    cutoffDate: number,
-  ): Promise<Transaction[]> {
-    return this.transactions
-      .query(
-        ...buildActiveClauses(workplaceId, [
-          Q.where('account_id', accountId),
-          Q.where('transaction_date', Q.lte(cutoffDate)),
-        ]),
-        Q.sortBy('transaction_date', Q.asc),
-        Q.sortBy('created_at', Q.asc),
-      )
-      .fetch();
   }
 
   async hasTransactions(workplaceId: WorkplaceId, accountId: AccountId): Promise<boolean> {

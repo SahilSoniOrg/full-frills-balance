@@ -1,64 +1,14 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
-import { Observable, of } from 'rxjs';
-import { buildActiveClauses, deterministicSort } from './transactionActiveClauses';
+import { Observable } from 'rxjs';
+import { buildActiveClauses } from './transactionActiveClauses';
 
 export class TransactionObserveQueries {
   private get transactions() {
     return database.collections.get<Transaction>('transactions');
-  }
-
-  observeByAccounts(
-    workplaceId: WorkplaceId,
-    accountIds: AccountId[],
-    limit: number = AppConfig.pagination.defaultPageSize,
-    dateRange?: { startDate: number; endDate: number },
-  ): Observable<Transaction[]> {
-    const clauses = buildActiveClauses(workplaceId, [Q.where('account_id', Q.oneOf(accountIds))]);
-
-    if (dateRange) {
-      clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
-      clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
-    }
-
-    return deterministicSort(this.transactions.query(...clauses), Q.desc)
-      .extend(Q.take(limit))
-      .observeWithColumns([
-        'amount',
-        'currency_code',
-        'transaction_type',
-        'transaction_date',
-        'notes',
-        'running_balance',
-        'exchange_rate',
-        'account_id',
-        'journal_id',
-      ]);
-  }
-
-  observeByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Observable<Transaction[]> {
-    if (journalIds.length === 0) return of([] as Transaction[]);
-    return this.transactions
-      .query(
-        Q.where('journal_id', Q.oneOf(journalIds)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .observeWithColumns([
-        'amount',
-        'currency_code',
-        'transaction_type',
-        'transaction_date',
-        'notes',
-        'running_balance',
-        'exchange_rate',
-        'account_id',
-        'journal_id',
-      ]);
   }
 
   observeByJournal(
@@ -157,38 +107,6 @@ export class TransactionObserveQueries {
         Q.sortBy('transaction_date', Q.asc),
       )
       .observeWithColumns(['running_balance', 'transaction_date']);
-  }
-
-  observeCountByDateRange(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    shouldThrottle: boolean = true,
-  ): Observable<number> {
-    return this.transactions
-      .query(
-        ...buildActiveClauses(workplaceId, [
-          Q.where('transaction_date', Q.gte(startDate)),
-          Q.where('transaction_date', Q.lte(endDate)),
-        ]),
-      )
-      .observeCount(shouldThrottle);
-  }
-
-  observeByDateRangeWithColumns(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    columns: string[],
-  ): Observable<Transaction[]> {
-    return this.transactions
-      .query(
-        ...buildActiveClauses(workplaceId, [
-          Q.where('transaction_date', Q.gte(startDate)),
-          Q.where('transaction_date', Q.lte(endDate)),
-        ]),
-      )
-      .observeWithColumns(columns);
   }
 }
 

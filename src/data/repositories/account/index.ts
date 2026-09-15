@@ -7,4 +7,4 @@ export {
   accountTreeTransactionCoordinator,
   AccountTreeTransactionCoordinator,
 } from './AccountTreeTransactionCoordinator';
-export * from './types';
+export type { AccountListItemRaw, AccountPersistenceInput } from './types';

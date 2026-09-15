@@ -31,8 +31,8 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
-import { balanceService } from '@/src/services/balance';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 
@@ -106,7 +106,7 @@ describe('database migrations (LokiJS)', () => {
       workplaceId,
     });
 
-    await ledgerWriteService.createJournal(
+    await ledgerCreateService.createJournal(
       {
         description: 'Migration smoke expense',
         journalDate: Date.UTC(2024, 0, 15, 12, 0, 0),
@@ -129,7 +129,12 @@ describe('database migrations (LokiJS)', () => {
 
     await rebuildQueueService.flush();
 
-    const cashTransactions = await transactionQueryRepository.findByAccount(workplaceId, cash.id);
+    const cashTransactions = await transactionQueryRepository.findByAccountsAndDateRange(
+      workplaceId,
+      [cash.id],
+      0,
+      Number.MAX_SAFE_INTEGER,
+    );
     expect(cashTransactions).toHaveLength(1);
     const { final: foldedCashBalance } = foldBalances(0, [
       {
@@ -140,10 +145,10 @@ describe('database migrations (LokiJS)', () => {
     ]);
     expect(foldedCashBalance).toBe(-40);
 
-    const cashBalance = await balanceService.getAccountBalance(cash.id, workplaceId);
+    const cashBalance = await balanceReadService.getAccountBalance(cash.id, workplaceId);
     expect(cashBalance.balance).toBe(-40);
 
-    const expenseBalance = await balanceService.getAccountBalance(expense.id, workplaceId);
+    const expenseBalance = await balanceReadService.getAccountBalance(expense.id, workplaceId);
     expect(expenseBalance.balance).toBe(40);
   });
 

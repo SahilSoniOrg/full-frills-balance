@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';

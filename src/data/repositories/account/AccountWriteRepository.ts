@@ -38,7 +38,8 @@ export class AccountWriteRepository {
     this.validateSubtype(payload.accountType, payload.accountSubtype);
 
     const account = this.accounts.prepareCreate(acc => {
-      const { metadata, ...accountData } = payload;
+      const { metadata, id, ...accountData } = payload;
+      if (id) acc._raw.id = id;
       Object.assign(acc, accountData);
       acc.createdAt = new Date();
       acc.updatedAt = new Date();
@@ -360,18 +361,6 @@ export class AccountWriteRepository {
     if (!isSubtypeAllowedForType(accountType, subtype)) {
       throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`);
     }
-  }
-
-  async prepareMergeOperations(
-    workplaceId: WorkplaceId,
-    sourceAccountIds: AccountId[],
-    targetAccountId: AccountId,
-  ): Promise<(Account | AccountMetadata)[]> {
-    return accountMergeOperations.prepareMergeOperations(
-      workplaceId,
-      sourceAccountIds,
-      targetAccountId,
-    );
   }
 
   loadMergeRecords(

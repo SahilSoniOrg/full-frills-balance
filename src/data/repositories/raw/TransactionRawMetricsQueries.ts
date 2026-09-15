@@ -10,22 +10,6 @@ import Account from '../../models/Account';
 import Transaction from '../../models/Transaction';
 import { AccountDelta, DailyDelta, RawSQLArg } from '../TransactionTypes';
 
-export interface AccountPeriodMetrics {
-  totalIncrease: number;
-  totalDecrease: number;
-}
-
-export interface RawPeriodMetricsRow {
-  accountId: AccountId;
-  totalDebit: number;
-  totalCredit: number;
-}
-
-export interface RawUnreconciledMetricsRow {
-  count: number;
-  total: number | null;
-}
-
 interface RawDailyDeltaRow extends DailyDelta {
   dayStartStr: string;
 }

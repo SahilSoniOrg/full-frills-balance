@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { catchError, of } from 'rxjs';
 import { AccountType } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
@@ -50,8 +50,8 @@ export class WorkplaceRepository {
     name: string;
     icon: string;
     defaultCurrencyCode: string;
-    accounts: { name: string; type: AccountType; icon: IconName }[];
-    categories: { name: string; type: AccountType; icon: IconName }[];
+    accounts: { id?: AccountId; name: string; type: AccountType; icon: IconName }[];
+    categories: { id?: AccountId; name: string; type: AccountType; icon: IconName }[];
   }): Promise<Workplace> {
     const workplace = this.prepareCreate(data);
     const opening = accountWriteRepository.prepareCreateOps(
@@ -71,6 +71,7 @@ export class WorkplaceRepository {
       names.add(name.toLowerCase());
       accountOps.push(
         ...accountWriteRepository.prepareCreateOps({
+          id: starter.id,
           name,
           accountType: starter.type,
           currencyCode: data.defaultCurrencyCode,
