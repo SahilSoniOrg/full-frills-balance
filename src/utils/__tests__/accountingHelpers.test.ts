@@ -1,71 +1,12 @@
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 
 import {
-  calculateAccountPeriodFlows,
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
 
 describe('accountingHelpers aggregates', () => {
-  describe('calculateAccountPeriodFlows', () => {
-    it('calculates gross increases, decreases, and net flow for Asset account', () => {
-      const txs = [
-        { amount: 500, transactionType: TransactionType.DEBIT },
-        { amount: 120, transactionType: TransactionType.CREDIT },
-        { amount: 30, transactionType: TransactionType.CREDIT },
-      ];
-      const flows = calculateAccountPeriodFlows(AccountType.ASSET, txs);
-      expect(flows.totalIncrease).toBe(500);
-      expect(flows.totalDecrease).toBe(150);
-      expect(flows.netFlow).toBe(350);
-    });
-
-    it('calculates gross flows for Liability account', () => {
-      const txs = [
-        { amount: 1000, transactionType: TransactionType.CREDIT },
-        { amount: 200, transactionType: TransactionType.DEBIT },
-      ];
-      const flows = calculateAccountPeriodFlows(AccountType.LIABILITY, txs);
-      expect(flows.totalIncrease).toBe(1000);
-      expect(flows.totalDecrease).toBe(200);
-      expect(flows.netFlow).toBe(800);
-    });
-
-    it('treats expense debits as period increase and credits as period decrease', () => {
-      const txs = [
-        { amount: 1341, transactionType: TransactionType.DEBIT },
-        { amount: 50, transactionType: TransactionType.CREDIT },
-      ];
-      const flows = calculateAccountPeriodFlows(AccountType.EXPENSE, txs);
-      expect(flows.totalIncrease).toBe(1341);
-      expect(flows.totalDecrease).toBe(50);
-      expect(flows.netFlow).toBe(1291);
-    });
-
-    it('treats income credits as period increase and debits as period decrease', () => {
-      const txs = [
-        { amount: 2000, transactionType: TransactionType.CREDIT },
-        { amount: 25, transactionType: TransactionType.DEBIT },
-      ];
-      const flows = calculateAccountPeriodFlows(AccountType.INCOME, txs);
-      expect(flows.totalIncrease).toBe(2000);
-      expect(flows.totalDecrease).toBe(25);
-      expect(flows.netFlow).toBe(1975);
-    });
-
-    it('treats equity credits as period increase and debits as period decrease', () => {
-      const txs = [
-        { amount: 400, transactionType: TransactionType.CREDIT },
-        { amount: 50, transactionType: TransactionType.DEBIT },
-      ];
-      const flows = calculateAccountPeriodFlows(AccountType.EQUITY, txs);
-      expect(flows.totalIncrease).toBe(400);
-      expect(flows.totalDecrease).toBe(50);
-      expect(flows.netFlow).toBe(350);
-    });
-  });
-
   describe('calculateIncomeVsExpenseSummary', () => {
     it('calculates net savings and savings rate correctly', () => {
       const deltas = [

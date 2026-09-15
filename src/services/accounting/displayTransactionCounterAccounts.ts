@@ -23,25 +23,3 @@ export function counterAccountsFromJournalPeers(
 
   return counterAccounts;
 }
-
-export function buildCounterAccountChips(transaction: {
-  accountId: AccountId;
-  accountName?: string;
-  accountType?: AccountType;
-  icon?: string;
-  counterAccounts?: DisplayCounterAccount[];
-}): DisplayCounterAccount[] {
-  if (transaction.counterAccounts && transaction.counterAccounts.length > 0) {
-    return transaction.counterAccounts;
-  }
-
-  // Partial read models (e.g. getTransactionsWithAccountInfo) — no counterpart data.
-  return [
-    {
-      id: transaction.accountId,
-      name: transaction.accountName || 'Unknown',
-      accountType: (transaction.accountType as AccountType) || AccountType.ASSET,
-      icon: transaction.icon,
-    },
-  ];
-}

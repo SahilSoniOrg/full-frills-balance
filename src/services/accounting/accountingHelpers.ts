@@ -1,4 +1,4 @@
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 /**
  * Accounting aggregates that are not mere BalanceEffects wrappers.
@@ -6,44 +6,9 @@ import { AccountId } from '@/src/types/ids';
  */
 import { AppConfig } from '@/src/constants/app-config';
 
-import { effect } from '@/src/utils/accounting/BalanceEffects';
 import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
 import { toAccountType } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
-
-export interface AccountPeriodFlows {
-  totalIncrease: number;
-  totalDecrease: number;
-  netFlow: number;
-}
-
-export function calculateAccountPeriodFlows(
-  accountType: string | AccountType,
-  transactions: { amount: number; transactionType: TransactionType }[],
-  precision: number = AppConfig.constants.precision,
-): AccountPeriodFlows {
-  const type = toAccountType(accountType) || (accountType as AccountType);
-  let totalIncrease = 0;
-  let totalDecrease = 0;
-
-  for (const tx of transactions) {
-    if (effect(type, tx.transactionType).isIncrease) {
-      totalIncrease += tx.amount;
-    } else {
-      totalDecrease += tx.amount;
-    }
-  }
-
-  const roundedIncrease = roundToPrecision(totalIncrease, precision);
-  const roundedDecrease = roundToPrecision(totalDecrease, precision);
-  const netFlow = roundToPrecision(roundedIncrease - roundedDecrease, precision);
-
-  return {
-    totalIncrease: roundedIncrease,
-    totalDecrease: roundedDecrease,
-    netFlow,
-  };
-}
 
 export interface IncomeVsExpenseSummary {
   income: number;
