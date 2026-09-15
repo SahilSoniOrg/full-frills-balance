@@ -1,7 +1,8 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppText } from '@/src/components/core';
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';

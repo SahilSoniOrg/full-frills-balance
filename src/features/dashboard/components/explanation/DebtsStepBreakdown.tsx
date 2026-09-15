@@ -1,5 +1,6 @@
 import { AppText } from '@/src/components/core';
-import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';

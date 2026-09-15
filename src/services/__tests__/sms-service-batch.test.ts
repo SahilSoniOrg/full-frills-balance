@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
 import { InboxProcessingStatus } from '@/src/types/enums';
@@ -53,8 +53,8 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/services/ledger', () => ({
-  ledgerWriteService: {
+jest.mock('@/src/services/ledger/ledgerCreateService', () => ({
+  ledgerCreateService: {
     prepareCreateJournalFromPreparedData: jest.fn(),
   },
 }));
@@ -188,8 +188,8 @@ describe('SmsService Batching', () => {
       return null;
     });
 
-    // Mock ledgerWriteService to return some ops
-    (ledgerWriteService.prepareCreateJournalFromPreparedData as jest.Mock).mockReturnValue({
+    // Mock ledgerCreateService to return some ops
+    (ledgerCreateService.prepareCreateJournalFromPreparedData as jest.Mock).mockReturnValue({
       journal: { id: 'journal-1' },
       ops: [{ id: 'op-1' }, { id: 'op-2' }],
       accountsToRebuild: new Set(['acc-1']),
@@ -271,7 +271,7 @@ describe('SmsService Batching', () => {
 
     expect(database.write).toHaveBeenCalledTimes(1);
     expect(finalFetch).toHaveBeenCalledTimes(1);
-    expect(ledgerWriteService.prepareCreateJournalFromPreparedData).not.toHaveBeenCalled();
+    expect(ledgerCreateService.prepareCreateJournalFromPreparedData).not.toHaveBeenCalled();
     expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
     expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);
     expect(existingRecord.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);

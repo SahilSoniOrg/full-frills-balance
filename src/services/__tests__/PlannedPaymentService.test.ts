@@ -3,7 +3,8 @@ import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/s
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -18,7 +19,8 @@ import {
   computeFirstOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 
-jest.mock('@/src/services/ledger');
+jest.mock('@/src/services/ledger/ledgerCreateService');
+jest.mock('@/src/services/ledger/ledgerLifecycleService');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalPlannedModule');
@@ -306,8 +308,8 @@ describe('planned payment modules', () => {
       expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
-      expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
-      expect(ledgerWriteService.postJournal).not.toHaveBeenCalled();
+      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
+      expect(ledgerLifecycleService.postJournal).not.toHaveBeenCalled();
       expect(database.write).not.toHaveBeenCalled();
     });
   });
@@ -338,7 +340,7 @@ describe('planned payment modules', () => {
         mockJournal,
       );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
-      (ledgerWriteService.postJournal as jest.Mock).mockResolvedValue({} as any);
+      (ledgerLifecycleService.postJournal as jest.Mock).mockResolvedValue({} as any);
 
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -346,10 +348,7 @@ describe('planned payment modules', () => {
 
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
-      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith(
-        'wp-1',
-        'pp-1',
-      );
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
       expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
@@ -357,13 +356,13 @@ describe('planned payment modules', () => {
         expect.any(Number),
       );
       // Promote existing PLANNED journal via canonical ledger write path
-      expect(ledgerWriteService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', {
+      expect(ledgerLifecycleService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', {
         extraOps: expect.any(Function),
       });
-      expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
+      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
 
       // Trigger lazy extraOps to verify schedule advance
-      const postOptions = (ledgerWriteService.postJournal as jest.Mock).mock.calls[0][2];
+      const postOptions = (ledgerLifecycleService.postJournal as jest.Mock).mock.calls[0][2];
       expect(typeof postOptions?.extraOps).toBe('function');
       const extraOpsResult =
         typeof postOptions?.extraOps === 'function' ? postOptions.extraOps() : [];
@@ -380,7 +379,7 @@ describe('planned payment modules', () => {
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
 
       const createJournalSpy = jest
-        .spyOn(ledgerWriteService, 'createJournal')
+        .spyOn(ledgerCreateService, 'createJournal')
         .mockResolvedValue({} as any);
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -428,10 +427,7 @@ describe('planned payment modules', () => {
 
       await skipPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
-      expect(journalPlannedQueries.findEarliestPlannedByPayment).toHaveBeenCalledWith(
-        'wp-1',
-        'pp-1',
-      );
+      expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
       expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
@@ -475,13 +471,13 @@ describe('planned payment modules', () => {
 
       await processDuePlannedPayments('wp-1' as WorkplaceId, controller.signal);
 
-      expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
+      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
     });
 
     it('does not return journal operations after cancellation during preparation', async () => {
       const controller = new AbortController();
-      (ledgerWriteService.createJournal as jest.Mock).mockImplementation(
+      (ledgerCreateService.createJournal as jest.Mock).mockImplementation(
         async (_data, _workplaceId, options) => {
           controller.abort();
           options.extraOps({} as any);

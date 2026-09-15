@@ -1,5 +1,6 @@
 import type { Theme } from '@/src/constants/design-tokens';
-import { Opacity, withOpacity } from '@/src/constants';
+import { Opacity } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { resolveThemeColor } from '@/src/design-system/utils';
 
 export type InsightSeverity = 'high' | 'medium' | 'low';

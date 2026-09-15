@@ -418,22 +418,6 @@ describe('ExchangeRateService', () => {
     });
   });
 
-  describe('convert', () => {
-    it('converts amount correctly', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: { get: () => 'application/json' },
-        json: async () => ({
-          rates: { EUR: 0.85 },
-        }),
-      });
-
-      const result = await service.convert(100, 'USD', 'EUR');
-      expect(result.convertedAmount).toBe(85);
-      expect(result.rate).toBe(0.85);
-    });
-  });
-
   describe('fetchRatesForBase fallback', () => {
     it('uses stale DB records if API fails', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));

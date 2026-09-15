@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';

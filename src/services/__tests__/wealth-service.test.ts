@@ -3,7 +3,7 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
@@ -14,7 +14,7 @@ jest.mock('@/src/services/currencyConversion');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/services/balance');
+jest.mock('@/src/services/balance/balanceReadService');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     getDefaultCurrency: jest.fn().mockResolvedValue('USD'),
@@ -35,9 +35,7 @@ describe('WealthService', () => {
       ok: true,
       amount,
     }));
-    (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
-      Promise.resolve({ convertedAmount: amount, rate: 1 }),
-    );
+    (exchangeRateService.getRate as jest.Mock).mockResolvedValue(1);
     (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
@@ -121,7 +119,7 @@ describe('WealthService', () => {
 
   describe('getNetWorthHistory', () => {
     it('should return empty array if no assets/liabilities', async () => {
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([]);
       const result = await wealthService.getNetWorthHistory(
         'workplace-1' as WorkplaceId,
         START_DATE,
@@ -134,7 +132,7 @@ describe('WealthService', () => {
       const mockBalances = [
         { accountId: 'acc1', accountType: AccountType.ASSET, balance: 1000, currencyCode: 'USD' },
       ];
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
 
       const mockTransactions = [
         {
@@ -191,7 +189,7 @@ describe('WealthService', () => {
         }, // Aggregated
         { accountId: 'child1', accountType: AccountType.ASSET, balance: 1500, currencyCode: 'USD' }, // Leaf
       ];
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
       (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const history = await wealthService.getNetWorthHistory(

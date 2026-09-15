@@ -1,6 +1,7 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';

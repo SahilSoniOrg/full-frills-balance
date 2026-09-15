@@ -9,7 +9,9 @@ import {
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
 
@@ -78,7 +80,7 @@ describe('smsService.parseTransactionMessage', () => {
   });
 });
 
-describe('smsService.prepareMergeOperations', () => {
+describe('TransactionAutoPostRuleRepository.prepareMergeOperations', () => {
   test('handles dual-reference case (both source and category accounts are source accounts)', async () => {
     const sourceAccountIds = ['acc-1', 'acc-2'];
     const targetAccountId = 'target-acc';
@@ -119,7 +121,7 @@ describe('smsService.prepareMergeOperations', () => {
       query: jest.fn().mockReturnValue(mockQuery),
     } as any);
 
-    const ops = await smsService.prepareMergeOperations(
+    const ops = await transactionAutoPostRuleRepository.prepareMergeOperations(
       workplaceId as any,
       sourceAccountIds as any,
       targetAccountId as any,
@@ -236,9 +238,9 @@ describe('smsService workplace isolation', () => {
       expect.arrayContaining([currentRecord.id, secondCurrentRecord.id]),
     );
     expect(preview).toHaveLength(2);
-    expect(await smsService.getInboxRecord(workplaceId, foreignRecord.id)).toBeNull();
+    expect(await transactionInboxRepository.find(workplaceId, foreignRecord.id)).toBeNull();
     expect([currentRecord.id, secondCurrentRecord.id]).toContain(
-      (await smsService.findByLinkedJournalId(workplaceId, sharedJournalId))?.id,
+      (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId))[0]?.id,
     );
     expect(
       (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId)).map(r => r.id),

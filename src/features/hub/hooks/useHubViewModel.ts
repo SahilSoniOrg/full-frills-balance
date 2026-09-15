@@ -6,10 +6,7 @@ import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
 import { AppNavigation } from '@/src/utils/navigation';
-import {
-  dismissSupplementalInsight,
-  restoreSupplementalInsight,
-} from '@/src/services/insight/supplementalInsightStore';
+import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { useCallback, useMemo, useState } from 'react';
 
 export type HubTab = 'active' | 'dismissed';
@@ -49,7 +46,7 @@ export function useHubViewModel(): HubViewModel {
   const dismissInsight = useCallback(
     async (id: string) => {
       if (supplementalInsights.some(insight => insight.id === id)) {
-        dismissSupplementalInsight(workplaceId, id);
+        updateInsightService.dismiss(workplaceId, id);
         return;
       }
       analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
@@ -61,7 +58,7 @@ export function useHubViewModel(): HubViewModel {
   const restoreInsight = useCallback(
     async (id: string) => {
       if (dismissedSupplementalInsights.some(insight => insight.id === id)) {
-        restoreSupplementalInsight(workplaceId, id);
+        updateInsightService.restore(workplaceId, id);
         return;
       }
       analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });

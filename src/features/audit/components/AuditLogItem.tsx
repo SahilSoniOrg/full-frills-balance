@@ -1,5 +1,6 @@
 import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
 import { AuditLogEntry, EntityStatus } from '@/src/features/audit/auditLogTypes';

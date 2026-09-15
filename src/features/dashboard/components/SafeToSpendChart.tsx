@@ -1,7 +1,8 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
@@ -388,9 +389,6 @@ export const SafeToSpendChart = ({
 };
 
 const styles = StyleSheet.create({
-  projectionContainer: {
-    overflow: 'hidden',
-  },
   safetyMetricContainer: {
     flexDirection: 'row',
     alignItems: 'center',

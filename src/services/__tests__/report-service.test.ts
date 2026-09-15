@@ -5,14 +5,8 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { ReportService, ReportSnapshot } from '@/src/services/report-service';
+import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
-import { BehaviorSubject } from 'rxjs';
-
-import {
-  observeWorkplaceActiveTransactionCount,
-  observeWorkplaceJournalMeta,
-} from '@/src/services/reactive/reactiveWorkplaceObserves';
 
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/transaction');
@@ -22,7 +16,6 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
     getDailyDeltasGroupedRaw: jest.fn().mockResolvedValue([]),
   },
 }));
-jest.mock('@/src/services/balance');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
@@ -32,11 +25,6 @@ jest.mock('@/src/services/WorkplaceService', () => ({
 jest.mock('@/src/services/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
 }));
-jest.mock('@/src/services/reactive/reactiveWorkplaceObserves', () => ({
-  observeWorkplaceActiveTransactionCount: jest.fn(),
-  observeWorkplaceJournalMeta: jest.fn(),
-}));
-
 function mockIncomeExpenseAccounts() {
   (accountQueryRepository.findByType as jest.Mock).mockImplementation(
     (_wpId: string, type: string) => {
@@ -286,33 +274,6 @@ describe('ReportService', () => {
         r => r.period === dayjs(START_DATE).add(2, 'day').format('DD MMM'),
       );
       expect(day2?.expense).toBe(100);
-    });
-  });
-
-  describe('observeReportSnapshot', () => {
-    it('refreshes when the active transaction count changes', async () => {
-      const journalMeta$ = new BehaviorSubject<unknown[]>([]);
-      const activeTransactionCount$ = new BehaviorSubject(0);
-      (observeWorkplaceJournalMeta as jest.Mock).mockReturnValue(journalMeta$);
-      (observeWorkplaceActiveTransactionCount as jest.Mock).mockReturnValue(
-        activeTransactionCount$,
-      );
-
-      const getReportSnapshot = jest
-        .spyOn(service, 'getReportSnapshot')
-        .mockResolvedValue({} as ReportSnapshot);
-      const subscription = service
-        .observeReportSnapshot('wp-1' as WorkplaceId, START_DATE, END_DATE)
-        .subscribe();
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-      expect(getReportSnapshot).toHaveBeenCalledTimes(1);
-
-      activeTransactionCount$.next(1);
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(getReportSnapshot).toHaveBeenCalledTimes(2);
-      subscription.unsubscribe();
     });
   });
 });

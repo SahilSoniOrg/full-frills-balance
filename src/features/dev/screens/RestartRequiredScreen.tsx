@@ -1,5 +1,6 @@
 import { Icon, AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
+import { withOpacity } from '@/src/utils/color-math';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';

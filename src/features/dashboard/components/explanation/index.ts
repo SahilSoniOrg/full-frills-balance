@@ -1,4 +1,4 @@
-export * from './FormulaStepRow';
-export * from './IncomeStepBreakdown';
-export * from './CommittedStepBreakdown';
-export * from './DebtsStepBreakdown';
+export { FormulaStepRow } from './FormulaStepRow';
+export { IncomeStepBreakdown } from './IncomeStepBreakdown';
+export { CommittedStepBreakdown } from './CommittedStepBreakdown';
+export { DebtsStepBreakdown } from './DebtsStepBreakdown';

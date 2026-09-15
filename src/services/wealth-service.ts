@@ -7,7 +7,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
-import { balanceService } from '@/src/services/balance';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
@@ -140,7 +140,7 @@ export const wealthService = {
         .filter(Boolean) as string[],
     );
 
-    const allBalances = await balanceService.getAccountBalances(workplaceId);
+    const allBalances = await balanceReadService.getAccountBalances(workplaceId);
     let relevantBalances = allBalances.filter(
       (a: AccountBalance) =>
         !parentIds.has(a.accountId) &&
@@ -157,12 +157,8 @@ export const wealthService = {
     // 2. Convert CURRENT state to target currency — collect then reduce (H-5 fix)
     const currentBalances = await Promise.all(
       relevantBalances.map(async acc => {
-        const { convertedAmount } = await exchangeRateService.convert(
-          acc.balance,
-          acc.currencyCode,
-          currency,
-        );
-        return { type: acc.accountType, amount: convertedAmount };
+        const rate = await exchangeRateService.getRate(acc.currencyCode, currency);
+        return { type: acc.accountType, amount: acc.balance * rate };
       }),
     );
 
@@ -190,8 +186,7 @@ export const wealthService = {
     const rates = new Map<string, number>();
     await Promise.all(
       uniqueCurrencies.map(async c => {
-        const { convertedAmount } = await exchangeRateService.convert(1, c, currency);
-        rates.set(c, convertedAmount);
+        rates.set(c, await exchangeRateService.getRate(c, currency));
       }),
     );
 
