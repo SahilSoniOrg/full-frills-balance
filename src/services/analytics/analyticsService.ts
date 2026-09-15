@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
@@ -192,10 +191,6 @@ export class AnalyticsService {
     this.track('transaction_created', { mode, type, currency });
   }
 
-  logOnboardingComplete(currency: string) {
-    this.track('onboarding_complete', { currency });
-  }
-
   /** Product telemetry only. The local MMKV acknowledgement is authoritative. */
   logPrivacyPolicyAcknowledged(policyVersion: string): boolean {
     // This event follows the same pre-bootstrap policy as every other event:
@@ -203,10 +198,6 @@ export class AnalyticsService {
     return this.track('privacy_policy_acknowledged', {
       policy_version: policyVersion,
     });
-  }
-
-  logCurrencyChanged(oldCurrency: string, newCurrency: string) {
-    this.track('currency_changed', { from: oldCurrency, to: newCurrency });
   }
 
   logThemeChanged(theme: string, themeId: string, fontId: string) {
@@ -253,24 +244,8 @@ export class AnalyticsService {
     this.track('search_performed', { scope, queryLength });
   }
 
-  logDatabaseMigration(version: number, durationMs: number) {
-    this.track('database_migration', { version, duration_ms: durationMs });
-  }
-
   logIntegrityIssue(table: string, issueType: string) {
     this.track('integrity_issue', { table, issueType });
-  }
-
-  logImportCompleted(pluginId: string, stats: ImportStats) {
-    this.track('import_completed', {
-      pluginId,
-      accounts: stats.accounts,
-      journals: stats.journals,
-      transactions: stats.transactions,
-      auditLogs: stats.auditLogs || 0,
-      skippedTransactions: stats.skippedTransactions,
-      skippedItems: stats.skippedItems?.length || 0,
-    });
   }
 
   logExportCompleted(format: string) {
@@ -290,16 +265,6 @@ export class AnalyticsService {
     properties?: AnalyticsProperties,
   ) {
     this.track(`parse_${event}`, properties);
-  }
-
-  logAiCorrection(
-    type: 'account' | 'category' | 'amount' | 'undo_autosave' | 'edit_after_autosave',
-  ) {
-    this.track(`user_correction_${type}`);
-  }
-
-  logAiModelLoad(success: boolean, properties?: AnalyticsProperties) {
-    this.trackFeatureUsage('ai', success ? 'model_load_success' : 'model_load_failure', properties);
   }
 
   logFactoryReset() {
@@ -398,26 +363,6 @@ export class AnalyticsService {
     this.updateUserProperties({
       active_workplace_id: workplaceId,
       active_currency: currencyCode,
-    });
-  }
-
-  /**
-   * Sync telemetry privacy controls
-   */
-  syncPrivacySettings(enableAnalytics: boolean) {
-    if (!this._posthog) return;
-    if (enableAnalytics) {
-      this._posthog.optIn();
-    } else {
-      this._posthog.optOut();
-    }
-  }
-
-  trackOnboardingStep(step: string, completed: boolean = true) {
-    this.track('onboarding_step', {
-      step,
-      completed,
-      onboarding_progress: completed ? 'completed' : 'started',
     });
   }
 

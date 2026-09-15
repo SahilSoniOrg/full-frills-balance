@@ -1,3 +1,2 @@
-export * from './types';
-export * from './analyticsConfig';
-export * from './analyticsService';
+export { navigationIntegration } from './analyticsConfig';
+export { analytics } from './analyticsService';

@@ -1,4 +1,4 @@
-import { AnalyticsService } from '../analytics';
+import { AnalyticsService } from '../analytics/analyticsService';
 
 // Mock PostHog
 jest.mock('posthog-react-native', () => {
@@ -35,7 +35,6 @@ describe('AnalyticsService', () => {
 
   it('should not throw when calling specialized events', () => {
     expect(() => analytics.logAccountCreated('Checking', 'USD')).not.toThrow();
-    expect(() => analytics.logOnboardingComplete('USD')).not.toThrow();
     expect(() => analytics.logPrivacyPolicyAcknowledged('2026-09-07')).not.toThrow();
     expect(() => analytics.logFactoryReset()).not.toThrow();
   });

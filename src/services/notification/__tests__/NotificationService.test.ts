@@ -29,14 +29,12 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve };
 }
 
-const cancelScheduled = Notifications.cancelAllScheduledNotificationsAsync as jest.Mock;
 const getPermissions = Notifications.getPermissionsAsync as jest.Mock;
 const scheduleNotification = Notifications.scheduleNotificationAsync as jest.Mock;
 
 describe('NotificationService reminder ordering', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    cancelScheduled.mockResolvedValue(undefined);
     getPermissions.mockResolvedValue({ status: 'granted' });
     scheduleNotification.mockResolvedValue('notification-id');
   });
@@ -64,28 +62,6 @@ describe('NotificationService reminder ordering', () => {
       expect.objectContaining({
         trigger: expect.objectContaining({ hour: 19, minute: 45, weekday: 5 }),
       }),
-    );
-  });
-
-  it('lets a newer cancellation win over a schedule already in flight', async () => {
-    const inFlightSchedule = deferred<string>();
-    const scheduleStarted = deferred<void>();
-    scheduleNotification.mockImplementationOnce(() => {
-      scheduleStarted.resolve(undefined);
-      return inFlightSchedule.promise;
-    });
-    const service = new NotificationService();
-
-    const older = service.scheduleReminder('daily', 8, 15);
-    await scheduleStarted.promise;
-
-    const newer = service.cancelAll();
-    inFlightSchedule.resolve('old-notification');
-    await Promise.all([older, newer]);
-
-    expect(cancelScheduled).toHaveBeenCalledTimes(2);
-    expect(scheduleNotification.mock.invocationCallOrder[0]).toBeLessThan(
-      cancelScheduled.mock.invocationCallOrder[1],
     );
   });
 });

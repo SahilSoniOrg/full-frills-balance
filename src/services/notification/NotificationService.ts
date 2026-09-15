@@ -57,16 +57,6 @@ export class NotificationService {
     return status === 'granted';
   }
 
-  cancelAll(): Promise<void> {
-    if (Platform.OS === 'web') return Promise.resolve();
-
-    const generation = ++this.reminderGeneration;
-    return this.enqueueReminderUpdate(async () => {
-      if (!this.ownsReminderGeneration(generation)) return;
-      await this.cancelScheduledNotifications();
-    });
-  }
-
   private async cancelScheduledNotifications(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
     logger.info('Cancelled all scheduled notifications');
