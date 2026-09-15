@@ -36,9 +36,11 @@ jobs:
         run: cp .env.e2e.example .env.local
 
       # Detox iOS driver shells out to applesimutils; macos runners do not ship it.
+      # Homebrew 5+ requires an explicit trust step for third-party taps.
       - name: Install applesimutils
         run: |
           brew tap wix/brew
+          brew trust wix/brew
           brew install applesimutils
           applesimutils --version
 
