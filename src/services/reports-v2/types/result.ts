@@ -104,13 +104,3 @@ export interface ReportResult<K extends ReportKind = ReportKind> {
   readonly sections: readonly ReportSection[];
   readonly warnings: readonly ReportWarning[];
 }
-
-export type OverviewReportResult = ReportResult<'OVERVIEW'>;
-export type CashFlowReportResult = ReportResult<'CASH_FLOW'>;
-export type SpendingReportResult = ReportResult<'SPENDING'>;
-export type IncomeReportResult = ReportResult<'INCOME'>;
-export type NetWorthReportResult = ReportResult<'NET_WORTH'>;
-export type BudgetReportResult = ReportResult<'BUDGET'>;
-export type DebtReportResult = ReportResult<'DEBT'>;
-export type ForecastReportResult = ReportResult<'FORECAST'>;
-export type HealthReportResult = ReportResult<'HEALTH'>;

@@ -27,6 +27,7 @@ export interface ReportingFact {
   readonly journalStatus: JournalStatus;
 
   readonly accountId: AccountId;
+  readonly accountName?: string;
   readonly accountType: AccountType;
   readonly accountSubtype?: AccountSubtype;
   /** Root-to-leaf account path. It always includes `accountId`. */

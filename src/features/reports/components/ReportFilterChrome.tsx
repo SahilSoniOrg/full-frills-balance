@@ -1,4 +1,4 @@
-import { MultiAccountPickerModal } from '@/src/features/accounts';
+import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { AppConfig } from '@/src/constants';
 import type { ReportFilters } from '@/src/features/reports/hooks/useReportFilters';

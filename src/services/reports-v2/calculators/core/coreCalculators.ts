@@ -59,7 +59,7 @@ function groupFacts(
   const journalIdsByGroup = new Map<string, Set<string>>();
   for (const fact of facts) {
     const key = keyFor(fact);
-    const current = groups.get(key) ?? {
+    const current: ReportGroup = groups.get(key) ?? {
       key,
       label: labelFor(fact),
       accountIds: [],
@@ -216,10 +216,7 @@ function spendingResult(input: CalculatorInput, facts: readonly ReportingFact[])
     ).map(asSpendingGroup),
     netExpense,
   );
-  const period = input.query.period ?? {
-    startDate: input.query.startDate as number,
-    endDate: input.query.endDate as number,
-  };
+  const period = input.query.period;
   const buckets = makeBuckets(period, granularityFor(input.query, period));
   const bucketRows = flowBuckets(facts, buckets).map(bucket => ({
     startDate: bucket.startDate,
@@ -263,11 +260,11 @@ function spendingResult(input: CalculatorInput, facts: readonly ReportingFact[])
 }
 
 export function calculateSpending(input: CalculatorInput): SpendingResult {
-  return spendingResult(input, factsInPeriod(input.facts, input.query.period!));
+  return spendingResult(input, factsInPeriod(input.facts, input.query.period));
 }
 
 export function calculateIncome(input: CalculatorInput): IncomeResult {
-  const period = input.query.period!;
+  const period = input.query.period;
   const selected = incomeFacts(factsInPeriod(input.facts, period));
   const grossIncome = sum(selected.map(fact => positive(signedDelta(fact))));
   const incomeReversals = sum(selected.map(fact => negativeMagnitude(signedDelta(fact))));
@@ -339,7 +336,7 @@ function cashGroups(
   const groups = new Map<string, CashFlowGroup>();
   for (const fact of facts.filter(isLiquidAssetFact)) {
     const key = keyFor(fact);
-    const current = groups.get(key) ?? {
+    const current: CashFlowGroup = groups.get(key) ?? {
       key,
       label: fact.accountName ?? key,
       accountIds: [],
@@ -397,7 +394,7 @@ function balanceState(balances: readonly ReportBalanceInput[] | undefined): Bala
 }
 
 export function calculateCashFlow(input: CalculatorInput): CashFlowResult {
-  const period = input.query.period!;
+  const period = input.query.period;
   const facts = factsInPeriod(input.facts, period);
   const cash = facts.filter(isLiquidAssetFact);
   const cashInflows = sum(cash.map(fact => positive(signedDelta(fact))));
@@ -476,7 +473,7 @@ export function calculateCashFlow(input: CalculatorInput): CashFlowResult {
 }
 
 export function calculateOverview(input: CalculatorInput): OverviewResult {
-  const period = input.query.period!;
+  const period = input.query.period;
   const facts = factsInPeriod(input.facts, period);
   const income = calculateIncome({ ...input, facts });
   const spending = spendingResult(input, facts);
@@ -551,7 +548,7 @@ function netWorthHistory(
 }
 
 export function calculateNetWorth(input: NetWorthCalculatorInput): NetWorthResult {
-  const period = input.query.period!;
+  const period = input.query.period;
   const opening = balanceState(input.openingBalances);
   const closing = balanceState(input.closingBalances);
   const actualChange = round((closing?.netWorth ?? 0) - (opening?.netWorth ?? 0));

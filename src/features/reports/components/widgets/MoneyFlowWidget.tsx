@@ -8,7 +8,7 @@ import {
 } from '@/src/components/charts/sankeyLayout';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
 import { useMemo } from 'react';

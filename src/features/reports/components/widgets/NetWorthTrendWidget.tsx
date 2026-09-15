@@ -2,7 +2,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
-import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { NetWorthTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';

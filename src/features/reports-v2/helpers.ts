@@ -1,4 +1,4 @@
-import type { ReportsV2Comparison, ReportsV2PeriodPreset, ReportsV2SectionId } from './types';
+import type { ReportsV2PeriodPreset, ReportsV2SectionId } from './types';
 
 export const REPORTS_V2_SECTIONS: readonly {
   id: ReportsV2SectionId;
@@ -25,15 +25,6 @@ export const REPORTS_V2_PERIODS: readonly {
   { id: 'year', label: 'Year to date' },
   { id: 'all-time', label: 'All time' },
   { id: 'custom', label: 'Custom' },
-];
-
-export const REPORTS_V2_COMPARISONS: readonly {
-  id: ReportsV2Comparison;
-  label: string;
-}[] = [
-  { id: 'NONE', label: 'No comparison' },
-  { id: 'PREVIOUS_PERIOD', label: 'Previous period' },
-  { id: 'PREVIOUS_YEAR', label: 'Same period last year' },
 ];
 
 function startOfDay(date: Date): Date {
@@ -95,19 +86,4 @@ export function formatPeriodLabel(
     year: 'numeric',
   });
   return `${formatter.format(new Date(startDate))} – ${formatter.format(new Date(endDate))}`;
-}
-
-export function comparisonLabel(comparison: ReportsV2Comparison): string {
-  return REPORTS_V2_COMPARISONS.find(item => item.id === comparison)?.label ?? 'No comparison';
-}
-
-export function formatDelta(delta: number | undefined): string | null {
-  if (delta === undefined || !Number.isFinite(delta)) return null;
-  const rounded = Math.round(delta * 10) / 10;
-  return `${rounded > 0 ? '+' : ''}${rounded}%`;
-}
-
-export function formatCount(count: number | undefined): string | null {
-  if (count === undefined || !Number.isFinite(count)) return null;
-  return `${count} ${count === 1 ? 'item' : 'items'}`;
 }

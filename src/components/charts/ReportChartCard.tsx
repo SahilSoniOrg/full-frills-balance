@@ -1,5 +1,5 @@
-import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppCard } from '@/src/components/core';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { Spacing } from '@/src/constants';
 import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';

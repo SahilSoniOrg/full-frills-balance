@@ -2,7 +2,7 @@ import { AreaChart } from '@/src/components/charts/AreaChart';
 import { BarChart } from '@/src/components/charts/BarChart';
 import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
-import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { ReportWealthTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -41,13 +41,36 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={() => onViewTransactions(data.date)}
+          incomeLabel={AppConfig.strings.reports.totalIncome}
+          expenseLabel={AppConfig.strings.reports.totalExpense}
+          backgroundColor={theme.surface}
+        />
+      );
+    },
+    [dailyData, theme, targetCurrency, onViewTransactions],
+  );
+
+  const renderBarTooltip = useCallback(
+    (index: number) => {
+      const data = barChartData[index];
+      if (!data) return null;
+
+      return (
+        <IncomeExpenseTooltipContent
+          label={data.label}
+          income={data.values[0] ?? 0}
+          expense={data.values[1] ?? 0}
+          currencyCode={targetCurrency}
+          successColor={theme.success}
+          errorColor={theme.error}
+          onViewTransactions={() => onViewTransactions(data.startDate, data.endDate)}
           incomeLabel={AppConfig.strings.reports.assets}
           expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
         />
       );
     },
-    [dailyData, theme, targetCurrency, onViewTransactions],
+    [barChartData, theme, targetCurrency, onViewTransactions],
   );
 
   return (
@@ -64,7 +87,7 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
             width={chartWidth}
             onPress={setSelectedAreaIndex}
             selectedIndex={selectedAreaIndex}
-            renderTooltipContent={renderAreaTooltip}
+            renderTooltipContent={renderBarTooltip}
           />
         </View>
         <View style={styles.legendContainer}>

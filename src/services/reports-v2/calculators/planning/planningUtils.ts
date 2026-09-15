@@ -8,14 +8,6 @@ export function roundAmount(value: number, precision: number = DEFAULT_PRECISION
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-export function addAmount(
-  current: number,
-  value: number,
-  precision: number = DEFAULT_PRECISION,
-): number {
-  return roundAmount(current + value, precision);
-}
-
 export function upper(value: string | undefined): string {
   return value?.toUpperCase() ?? '';
 }
@@ -53,16 +45,6 @@ export function signedDelta(fact: PlanningFact): number {
     return debit ? -amount : amount;
   }
   return 0;
-}
-
-export function balanceAmount(fact: PlanningFact): number {
-  if (Number.isFinite(fact.historicalBaseAmount)) {
-    return fact.historicalBaseAmount as number;
-  }
-  if (Number.isFinite(fact.exchangeRate)) {
-    return fact.amount * (fact.exchangeRate as number);
-  }
-  return fact.amount;
 }
 
 export function inPeriod(fact: PlanningFact, period: PlanningPeriod): boolean {
@@ -115,10 +97,6 @@ export function periodDayTimestamps(period: PlanningPeriod): number[] {
 export function percentage(value: number, divisor: number, precision: number): number | null {
   if (divisor === 0) return null;
   return roundAmount((value / divisor) * 100, precision);
-}
-
-export function isFiniteAmount(value: number): boolean {
-  return Number.isFinite(value);
 }
 
 export function periodProgress(period: PlanningPeriod, precision: number): number | null {

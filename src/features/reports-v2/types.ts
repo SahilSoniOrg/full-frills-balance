@@ -1,18 +1,13 @@
 import type { AccountType } from '@/src/types/enums';
-import type { ReportDrilldownQuery, ReportQuery } from '@/src/services/reports-v2/types/query';
+import type {
+  ReportDrilldownQuery,
+  ReportQuery,
+  ReportSectionId,
+} from '@/src/services/reports-v2/types/query';
 import type { ReportResult } from '@/src/services/reports-v2/types/result';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
 
-export type ReportsV2SectionId =
-  | 'overview'
-  | 'cash-flow'
-  | 'spending'
-  | 'income'
-  | 'net-worth'
-  | 'budgets'
-  | 'debt'
-  | 'forecast'
-  | 'health';
+export type ReportsV2SectionId = ReportSectionId;
 export type ReportsV2PeriodPreset = 'month' | 'quarter' | 'year' | 'all-time' | 'custom';
 export type ReportsV2Basis = 'ACTUAL' | 'ACTUAL_PLUS_PLANNED';
 export type ReportsV2Comparison = 'NONE' | 'PREVIOUS_PERIOD' | 'PREVIOUS_YEAR';
@@ -69,6 +64,7 @@ export interface ReportsV2ViewModel {
   setActiveSection: (section: ReportsV2SectionId) => void;
   state: ReportsV2LoadState;
   result: ReportsV2Result | null;
+  renderedSection: ReportsV2Result['sections'][number] | null;
   error: Error | null;
   onRefresh: () => void;
   onRetry: () => void;

@@ -1,68 +1,22 @@
-import {
-  AccountSubtype,
-  AccountType,
-  JournalDisplayType,
-  JournalStatus,
-  SemanticType,
-  TransactionType,
-} from '@/src/types/enums';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import type { ReportingFact } from '../../types/fact';
+import type { ReportPeriod } from '../../types/period';
+import type { ReportQuery } from '../../types/query';
 
-/**
- * The calculators deliberately depend on this structural view of the V2
- * contracts. It is kept local until the shared reports-v2/types package is
- * available; every field mirrors the greenfield ReportingFact contract.
- */
-export interface ReportingFact {
-  workplaceId?: string;
-  journalId: string;
-  transactionId?: string;
-  journalDate: number;
-  journalStatus?: JournalStatus | string;
+export type { ReportingFact } from '../../types/fact';
+export type { ReportComparison, ReportGranularity, ReportPeriod } from '../../types/period';
+export type { ReportQuery } from '../../types/query';
 
-  accountId: string;
-  accountName?: string;
-  accountType: AccountType | string;
-  accountSubtype?: AccountSubtype | string;
-  parentAccountId?: string;
-  accountPath?: readonly string[];
-  isLeafAccount?: boolean;
-
-  transactionType: TransactionType | string;
-  amount: number;
-  currencyCode?: string;
-  historicalBaseAmount?: number;
-
-  signedBalanceDelta?: number;
-  journalDisplayType?: JournalDisplayType | string;
-  semanticType?: SemanticType | string;
-
-  description?: string;
-  notes?: string;
-  plannedPaymentId?: string;
-}
-
-export type ReportGranularity = 'AUTO' | 'DAY' | 'WEEK' | 'MONTH';
-export type ReportComparison = 'NONE' | 'PREVIOUS_PERIOD' | 'PREVIOUS_YEAR';
-
-export interface ReportPeriod {
-  startDate: number;
-  endDate: number;
+export type CalculatorPeriod = Pick<ReportPeriod, 'startDate' | 'endDate'> & {
   timeZone?: string;
-}
+};
 
-/** Supports both the planned nested period and the convenient flat form. */
-export interface ReportQuery {
-  period?: ReportPeriod;
-  startDate?: number;
-  endDate?: number;
-  targetCurrency?: string;
-  granularity?: ReportGranularity;
-  comparison?: ReportComparison | string;
-  comparisonPeriod?: ReportPeriod;
-  accountIds?: readonly string[];
-  accountTypes?: readonly (AccountType | string)[];
-  includeArchivedAccounts?: boolean;
-}
+export type CalculatorQuery = Pick<
+  ReportQuery,
+  'period' | 'targetCurrency' | 'comparison' | 'granularity'
+> & {
+  comparisonPeriod?: CalculatorPeriod;
+};
 
 export interface ReportBalanceInput {
   accountId: string;
@@ -77,23 +31,12 @@ export interface ReportBalanceInput {
   currencyCode?: string;
 }
 
-export interface NetWorthReconciliationInputs {
-  contributions?: number;
-  withdrawals?: number;
-  transfers?: number;
-  debtPrincipalMovement?: number;
-  currencyValuationMovement?: number;
-  assetNonCashMovement?: number;
-  unexplainedDifference?: number;
-}
-
 export interface CalculatorInput {
   facts: readonly ReportingFact[];
-  query: ReportQuery;
+  query: CalculatorQuery;
   comparisonFacts?: readonly ReportingFact[];
   openingBalances?: readonly ReportBalanceInput[];
   closingBalances?: readonly ReportBalanceInput[];
-  reconciliation?: NetWorthReconciliationInputs;
 }
 
 export interface ComparisonMetric {

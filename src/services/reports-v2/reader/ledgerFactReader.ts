@@ -12,8 +12,6 @@ import type { ReportWarning } from '../types/result';
 import type { ReportingFact } from '../types/fact';
 import type { ReportQuery } from '../types/query';
 import { classifyJournal } from '../classification/journalClassification';
-import { createAccountScopePolicy } from '../policy/accountScopePolicy';
-import { createJournalStatusPolicy } from '../policy/statusPolicy';
 
 /** The reader is the only layer allowed to know WatermelonDB model details. */
 export interface ReportLedgerSnapshot {
@@ -46,23 +44,25 @@ export function selectScopedLeafAccounts(
   const parentIds = new Set(
     accounts.map(account => account.parentAccountId).filter(Boolean) as string[],
   );
-  const policy = createAccountScopePolicy({
-    accountIds: query.accountIds,
-    accountTypes: query.accountTypes,
-    includeArchivedAccounts: query.includeArchivedAccounts,
-    leafAccountsOnly: true,
+  return accounts.filter(account => {
+    if (account.deletedAt) return false;
+    if (!query.includeArchivedAccounts && account.archivedAt) return false;
+    if (parentIds.has(account.id)) return false;
+
+    const accountPath = accountPathFor(account, accountById);
+    const selectedAccountIds = query.accountIds;
+    if (
+      selectedAccountIds !== undefined &&
+      (selectedAccountIds.length === 0 ||
+        !accountPath.some(accountId => selectedAccountIds.includes(accountId)))
+    ) {
+      return false;
+    }
+    if (query.accountTypes !== undefined && !query.accountTypes.includes(account.accountType)) {
+      return false;
+    }
+    return true;
   });
-  return accounts.filter(account =>
-    policy.matches({
-      id: account.id,
-      accountType: account.accountType,
-      accountSubtype: account.accountSubtype,
-      accountPath: accountPathFor(account, accountById),
-      isLeafAccount: !parentIds.has(account.id),
-      isArchived: !!account.archivedAt,
-      isDeleted: !!account.deletedAt,
-    }),
-  );
 }
 
 function unique<T>(values: readonly T[]): T[] {
@@ -195,6 +195,7 @@ async function buildFacts(
           journalDate: journal.journalDate,
           journalStatus: journal.status,
           accountId: account.id,
+          accountName: account.name,
           accountType: account.accountType,
           accountSubtype: account.accountSubtype,
           accountPath: accountPathFor(account, accountById),
@@ -231,8 +232,7 @@ export async function readReportLedger(query: ReportQuery): Promise<ReportLedger
       : Promise.resolve([]),
     transactionQueryRepository.findAllNonDeleted(query.workplaceId),
   ]);
-  const actualPolicy = createJournalStatusPolicy('ACTUAL');
-  const actual = actualJournals.filter(journal => actualPolicy.includes(journal.status));
+  const actual = actualJournals.filter(journal => journal.status === JournalStatus.POSTED);
   const planned = plannedJournals.filter(journal => journal.status === JournalStatus.PLANNED);
   const actualBuilt = await buildFacts(actual, transactions, accounts, query);
   const plannedBuilt =

@@ -89,6 +89,7 @@ export function useReportsV2ViewModel({
       basis,
       comparison,
       granularity,
+      sections: [activeSection],
       ...(selectedAccountIds.length > 0 ? { accountIds: selectedAccountIds } : {}),
     }),
     [
@@ -98,6 +99,7 @@ export function useReportsV2ViewModel({
       periodRange.endDate,
       periodRange.startDate,
       selectedAccountIds,
+      activeSection,
       targetCurrency,
       timeZone,
       workplaceId,
@@ -266,6 +268,13 @@ export function useReportsV2ViewModel({
       targetCurrency,
     ],
   );
+  const renderedSection = useMemo(() => {
+    if (!result) return null;
+    const requestedSection = result.sections.find(section => section.id === activeSection);
+    if (requestedSection) return requestedSection;
+    if (state === 'refreshing' || state === 'error') return result.sections[0] ?? null;
+    return null;
+  }, [activeSection, result, state]);
   return {
     query,
     filters,
@@ -273,6 +282,7 @@ export function useReportsV2ViewModel({
     setActiveSection,
     state,
     result,
+    renderedSection,
     error,
     onRefresh: () => runImmediately('refreshing'),
     onRetry: () => runImmediately('loading'),

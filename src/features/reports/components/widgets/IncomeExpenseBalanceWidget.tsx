@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
-import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 

@@ -5,7 +5,7 @@ import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { AppNavigation } from '@/src/utils/navigation';
-import { reportsV2Engine } from '@/src/services/reports-v2';
+import { reportsV2Engine } from '@/src/services/reports-v2/reportQueryEngine';
 import { ReportsV2View } from './screen/ReportsV2View';
 
 function ReportsV2Screen() {
@@ -24,7 +24,4 @@ function ReportsV2Screen() {
   );
 }
 
-export { ReportsV2Screen };
-export { useReportsV2ViewModel } from './hooks/useReportsV2ViewModel';
-export type * from './types';
 export default withPrivacyScope(ReportsV2Screen);

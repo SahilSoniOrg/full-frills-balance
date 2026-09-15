@@ -20,6 +20,41 @@ function engineMock(): jest.Mocked<ReportsV2QueryEngine> {
 }
 
 describe('useReportsV2ViewModel load lifecycle', () => {
+  it('keeps the previous section visible while a section refresh fails', async () => {
+    const engine = engineMock();
+    engine.run
+      .mockResolvedValueOnce({
+        kind: 'OVERVIEW',
+        query: {} as never,
+        period: {} as never,
+        generatedAt: Date.now(),
+        measures: {},
+        sections: [
+          { id: 'overview', title: 'Overview' },
+          { id: 'health', title: 'Health' },
+        ],
+        warnings: [],
+      })
+      .mockRejectedValueOnce(new Error('section unavailable'));
+
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'USD',
+      }),
+    );
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(1));
+    expect(result.current.renderedSection?.id).toBe('overview');
+
+    act(() => result.current.setActiveSection('income'));
+
+    expect(result.current.renderedSection?.id).toBe('overview');
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.renderedSection?.id).toBe('overview');
+  });
+
   it('loads once for a stable initial query instead of reloading on every render', async () => {
     const engine = engineMock();
     renderHook(() =>
@@ -33,6 +68,25 @@ describe('useReportsV2ViewModel load lifecycle', () => {
     await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(1));
     await new Promise(resolve => setTimeout(resolve, 40));
     expect(engine.run).toHaveBeenCalledTimes(1);
+  });
+
+  it('requests only the active section so health reads stay explicit', async () => {
+    const engine = engineMock();
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'USD',
+      }),
+    );
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(1));
+    expect(engine.run.mock.calls[0][0].sections).toEqual(['overview']);
+
+    act(() => result.current.setActiveSection('health'));
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(2));
+    expect(engine.run.mock.calls[1][0].sections).toEqual(['health']);
   });
 
   it('reloads with the selected account scope', async () => {

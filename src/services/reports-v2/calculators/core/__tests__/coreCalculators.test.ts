@@ -2,9 +2,11 @@ import {
   AccountSubtype,
   AccountType,
   JournalDisplayType,
+  JournalStatus,
   SemanticType,
   TransactionType,
 } from '@/src/types/enums';
+import { asAccountId, asJournalId, asTransactionId, asWorkplaceId } from '@/src/types/ids';
 import {
   calculateCashFlow,
   calculateIncome,
@@ -15,28 +17,69 @@ import {
 import { makeBuckets } from '../coreUtils';
 import type { CalculatorInput, ReportingFact } from '../coreTypes';
 
+type FactInput = {
+  accountId: string;
+  accountName?: string;
+  accountType: AccountType;
+  accountSubtype?: AccountSubtype;
+  transactionType: TransactionType;
+  amount: number;
+  journalId?: string;
+  journalDate?: number;
+  semanticType?: SemanticType;
+  journalDisplayType?: JournalDisplayType;
+};
+
 const PERIOD = {
   startDate: Date.UTC(2026, 0, 1),
   endDate: Date.UTC(2026, 0, 31, 23, 59, 59),
   timeZone: 'UTC',
 };
 
-function fact(
-  input: Partial<ReportingFact> &
-    Pick<ReportingFact, 'accountId' | 'accountType' | 'transactionType' | 'amount'>,
-): ReportingFact {
+function fact(input: FactInput): ReportingFact {
+  const accountId = asAccountId(input.accountId);
+  const journalId = asJournalId(
+    input.journalId ?? `${input.accountId}-${input.amount}-${input.transactionType}`,
+  );
+  const signedBalanceDelta =
+    input.accountType === AccountType.ASSET || input.accountType === AccountType.EXPENSE
+      ? input.transactionType === TransactionType.DEBIT
+        ? input.amount
+        : -input.amount
+      : input.transactionType === TransactionType.CREDIT
+        ? input.amount
+        : -input.amount;
   return {
-    journalId: `${input.accountId}-${input.amount}-${input.transactionType}`,
-    journalDate: Date.UTC(2026, 0, 5, 12),
-    accountPath: [input.accountId],
+    workplaceId: asWorkplaceId('test-workplace'),
+    journalId,
+    transactionId: asTransactionId(`${journalId}-transaction`),
+    journalDate: input.journalDate ?? Date.UTC(2026, 0, 5, 12),
+    journalStatus: JournalStatus.POSTED,
+    accountId,
+    accountName: input.accountName,
+    accountType: input.accountType,
+    accountSubtype: input.accountSubtype,
+    accountPath: [accountId],
     isLeafAccount: true,
+    transactionType: input.transactionType,
+    amount: input.amount,
     currencyCode: 'USD',
-    ...input,
+    signedBalanceDelta,
+    journalDisplayType: input.journalDisplayType ?? JournalDisplayType.EXPENSE,
+    semanticType: input.semanticType,
   };
 }
 
 function input(facts: readonly ReportingFact[]): CalculatorInput {
-  return { facts, query: { period: PERIOD, targetCurrency: 'USD', granularity: 'DAY' } };
+  return {
+    facts,
+    query: {
+      period: PERIOD,
+      targetCurrency: 'USD',
+      comparison: 'NONE',
+      granularity: 'DAY',
+    },
+  };
 }
 
 describe('Reports V2 core calculators', () => {
@@ -83,7 +126,12 @@ describe('Reports V2 core calculators', () => {
 
     const result = calculateNetWorth({
       facts,
-      query: { period: PERIOD, targetCurrency: 'USD', granularity: 'DAY' },
+      query: {
+        period: PERIOD,
+        targetCurrency: 'USD',
+        comparison: 'NONE',
+        granularity: 'DAY',
+      },
       openingBalances: [{ accountId: 'checking', accountType: AccountType.ASSET, balance: 100 }],
       closingBalances: [{ accountId: 'checking', accountType: AccountType.ASSET, balance: 125 }],
     });

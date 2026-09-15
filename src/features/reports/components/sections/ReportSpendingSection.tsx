@@ -3,7 +3,7 @@ import { HeatmapChart } from '@/src/components/charts/HeatmapChart';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
-import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
+import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
 import { ReportSpendingTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { StyleSheet } from 'react-native';

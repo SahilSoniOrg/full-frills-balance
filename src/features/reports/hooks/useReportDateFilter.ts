@@ -1,5 +1,5 @@
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { transactionReadService } from '@/src/services/transactions/transactionReadService';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   DateRange,
   formatDate,
@@ -35,7 +35,7 @@ export function useReportDateFilter({
 
       if (filter.type === 'ALL_TIME') {
         // Find earliest transaction to bound the "All Time" start date
-        const earliest = await transactionReadService.findEarliest(workplaceId);
+        const earliest = await transactionQueryRepository.findEarliest(workplaceId);
         const startTimestamp = earliest?.transactionDate ?? Date.now();
         finalRange = {
           startDate: getStartOfDay(startTimestamp),

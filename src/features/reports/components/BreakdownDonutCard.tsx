@@ -11,7 +11,6 @@ import { AccountId } from '@/src/types/ids';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface BreakdownDonutCardProps {
-  title?: string;
   donutData: { value: number; color: string; label: string }[];
   legendRows: ReportLegendRow[];
   totalCount: number;
@@ -87,12 +86,6 @@ export function BreakdownDonutCard({
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    marginBottom: Spacing.md,
-  },
-  chartCard: {
-    marginBottom: Spacing.xl,
-  },
   donutContainer: {
     flexDirection: 'row',
     alignItems: 'center',

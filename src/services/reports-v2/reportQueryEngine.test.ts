@@ -1,7 +1,41 @@
-import { buildSections } from './reportQueryEngine';
+import { buildSections, ReportsV2Engine } from './reportQueryEngine';
 import type { ReportQuery } from './types/query';
+import { asWorkplaceId } from '@/src/types/ids';
 
 describe('Reports V2 result rows', () => {
+  it('runs section gating through the reader-to-engine seam', async () => {
+    const query: ReportQuery = {
+      workplaceId: asWorkplaceId('workplace-1'),
+      period: { startDate: 0, endDate: 1, timeZone: 'UTC' },
+      targetCurrency: 'INR',
+      basis: 'ACTUAL',
+      comparison: 'NONE',
+      granularity: 'AUTO',
+      sections: ['spending'],
+    } as const;
+    const inputReader = jest.fn(async () => ({
+      snapshot: { actualFacts: [], plannedFacts: [], accounts: [], warnings: [] },
+      period: query.period,
+      comparisonPeriod: null,
+      currentFacts: [],
+      comparisonFacts: undefined,
+      opening: { balances: [], warnings: [] },
+      closing: { balances: [], warnings: [] },
+      cashBalances: { openingBalances: [], closingBalances: [] },
+      cashAccountIds: [],
+      budgetRead: { budgets: [], warnings: [] },
+      healthSnapshot: { actualFacts: [], plannedFacts: [], accounts: [], warnings: [] },
+      planningAccounts: [],
+      healthAccounts: [],
+    }));
+    const engine = new ReportsV2Engine(inputReader);
+
+    const result = await engine.run(query);
+
+    expect(inputReader).toHaveBeenCalledWith(query);
+    expect(result.sections.map(section => section.id)).toEqual(['spending']);
+  });
+
   it('preserves unavailable percentages instead of converting them to zero', () => {
     const query = {
       workplaceId: 'workplace-1',
@@ -188,5 +222,46 @@ describe('Reports V2 result rows', () => {
 
     expect(healthRow?.value).toEqual({ kind: 'COUNT', value: 2 });
     expect(healthWarnings?.value).toEqual({ kind: 'COUNT', value: 3 });
+  });
+
+  it('builds only the requested report sections', () => {
+    const query = {
+      workplaceId: 'workplace-1',
+      period: { startDate: 0, endDate: 1, timeZone: 'UTC' },
+      targetCurrency: 'INR',
+      basis: 'ACTUAL',
+      comparison: 'NONE',
+      granularity: 'AUTO',
+      sections: ['spending'],
+    } as unknown as ReportQuery;
+
+    const result = buildSections(
+      query,
+      undefined,
+      undefined,
+      {
+        grossExpense: 10,
+        refunds: 0,
+        netExpense: 10,
+        journalCount: 1,
+        averageTransactionSize: 10,
+        buckets: [],
+        bySubtype: [],
+      } as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+
+    expect(result.sections.map(section => section.id)).toEqual(['spending']);
+    expect(result.measures).toEqual(
+      expect.objectContaining({
+        grossSpending: { kind: 'MONEY', amount: 10, currencyCode: 'INR' },
+      }),
+    );
+    expect(result.measures).not.toHaveProperty('grossIncome');
   });
 });

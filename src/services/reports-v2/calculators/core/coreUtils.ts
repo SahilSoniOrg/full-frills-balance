@@ -8,12 +8,12 @@ import {
 import { roundToPrecision } from '@/src/utils/money';
 
 import type {
+  CalculatorQuery,
+  CalculatorPeriod,
   ReportBalanceInput,
   ReportBucket,
   ReportComparison,
   ReportGranularity,
-  ReportPeriod,
-  ReportQuery,
   ReportingFact,
 } from './coreTypes';
 
@@ -26,14 +26,6 @@ export const INTERNAL_TRANSFER_SEMANTICS = new Set<string>([
   SemanticType.SAVINGS_ALLOCATION,
   SemanticType.EXPENSE_RECLASSIFICATION,
   SemanticType.INCOME_RECLASSIFICATION,
-]);
-
-export const INCOME_REVERSAL_SEMANTICS = new Set<string>([SemanticType.INCOME_REVERSAL]);
-
-export const EXPENSE_REFUND_SEMANTICS = new Set<string>([
-  SemanticType.REFUND,
-  SemanticType.CREDIT_REFUND,
-  SemanticType.EXPENSE_REVERSAL,
 ]);
 
 export const LIQUID_ASSET_SUBTYPES = new Set<string>([
@@ -93,25 +85,6 @@ export function semantic(fact: ReportingFact): string | undefined {
   return fact.semanticType == null ? undefined : String(fact.semanticType);
 }
 
-export function isExpenseRefund(fact: ReportingFact): boolean {
-  const type = semantic(fact);
-  return signedDelta(fact) < 0 || (type !== undefined && EXPENSE_REFUND_SEMANTICS.has(type));
-}
-
-export function isIncomeReversal(fact: ReportingFact): boolean {
-  const type = semantic(fact);
-  return signedDelta(fact) < 0 || (type !== undefined && INCOME_REVERSAL_SEMANTICS.has(type));
-}
-
-export function isInternalTransferSemantic(fact: ReportingFact): boolean {
-  const type = semantic(fact);
-  return type !== undefined && INTERNAL_TRANSFER_SEMANTICS.has(type);
-}
-
-export function isLeafFact(fact: ReportingFact): boolean {
-  return fact.isLeafAccount !== false;
-}
-
 export function isIncomeFact(fact: ReportingFact): boolean {
   return fact.accountType === AccountType.INCOME;
 }
@@ -120,48 +93,19 @@ export function isExpenseFact(fact: ReportingFact): boolean {
   return fact.accountType === AccountType.EXPENSE;
 }
 
-export function isAssetFact(fact: ReportingFact): boolean {
-  return fact.accountType === AccountType.ASSET;
-}
-
-export function isLiabilityFact(fact: ReportingFact): boolean {
-  return fact.accountType === AccountType.LIABILITY;
-}
-
 export function isLiquidAssetFact(fact: ReportingFact): boolean {
-  return isAssetFact(fact) && LIQUID_ASSET_SUBTYPES.has(String(fact.accountSubtype));
+  return (
+    fact.accountType === AccountType.ASSET && LIQUID_ASSET_SUBTYPES.has(String(fact.accountSubtype))
+  );
 }
 
 export function isCreditCardFact(fact: ReportingFact): boolean {
-  return isLiabilityFact(fact) && fact.accountSubtype === CREDIT_CARD_SUBTYPE;
-}
-
-export function isCreditCardPurchaseSemantic(fact: ReportingFact): boolean {
-  const type = semantic(fact);
-  return type === SemanticType.EXPENSE_ON_CREDIT || type === SemanticType.PURCHASE;
+  return fact.accountType === AccountType.LIABILITY && fact.accountSubtype === CREDIT_CARD_SUBTYPE;
 }
 
 export function isDebtPaymentSemantic(fact: ReportingFact): boolean {
   const type = semantic(fact);
   return type === SemanticType.DEBT_PAYMENT || type === SemanticType.DEBT_PAYDOWN;
-}
-
-export function isBorrowingSemantic(fact: ReportingFact): boolean {
-  return semantic(fact) === SemanticType.BORROWING;
-}
-
-export function isOwnerWithdrawalSemantic(fact: ReportingFact): boolean {
-  return semantic(fact) === SemanticType.OWNER_WITHDRAWAL;
-}
-
-export function journalGroups(facts: readonly ReportingFact[]): Map<string, ReportingFact[]> {
-  const groups = new Map<string, ReportingFact[]>();
-  for (const fact of facts) {
-    const existing = groups.get(fact.journalId);
-    if (existing) existing.push(fact);
-    else groups.set(fact.journalId, [fact]);
-  }
-  return groups;
 }
 
 /**
@@ -171,7 +115,7 @@ export function journalGroups(facts: readonly ReportingFact[]): Map<string, Repo
  * spending events.
  */
 export function isNonEconomicFlowJournal(facts: readonly ReportingFact[]): boolean {
-  if (facts.some(isInternalTransferSemantic)) return true;
+  if (facts.some(fact => INTERNAL_TRANSFER_SEMANTICS.has(semantic(fact) ?? ''))) return true;
   const hasIncomeOrExpense = facts.some(fact => isIncomeFact(fact) || isExpenseFact(fact));
   return (
     facts.some(fact => fact.journalDisplayType === JournalDisplayType.TRANSFER) &&
@@ -179,28 +123,10 @@ export function isNonEconomicFlowJournal(facts: readonly ReportingFact[]): boole
   );
 }
 
-export function resolveCurrentPeriod(query: ReportQuery): ReportPeriod {
-  const period: ReportPeriod = query.period ?? {
-    startDate: query.startDate as number,
-    endDate: query.endDate as number,
-  };
-  if (!Number.isFinite(period.startDate) || !Number.isFinite(period.endDate)) {
-    throw new RangeError('Reports V2 requires finite period startDate and endDate');
-  }
-  if (period.endDate < period.startDate) {
-    throw new RangeError('Reports V2 period endDate must be >= startDate');
-  }
-  return {
-    startDate: period.startDate,
-    endDate: period.endDate,
-    timeZone: period.timeZone,
-  };
-}
-
 export function resolveComparisonPeriod(
-  query: ReportQuery,
-  current: ReportPeriod,
-): ReportPeriod | null {
+  query: CalculatorQuery,
+  current: CalculatorPeriod,
+): CalculatorPeriod | null {
   if (query.comparisonPeriod) return query.comparisonPeriod;
   const comparison = String(query.comparison ?? 'NONE') as ReportComparison;
   if (comparison === 'NONE') return null;
@@ -224,14 +150,17 @@ export function resolveComparisonPeriod(
 
 export function factsInPeriod(
   facts: readonly ReportingFact[],
-  period: ReportPeriod,
+  period: CalculatorPeriod,
 ): ReportingFact[] {
   return facts.filter(
     fact => fact.journalDate >= period.startDate && fact.journalDate <= period.endDate,
   );
 }
 
-export function granularityFor(query: ReportQuery, period: ReportPeriod): ReportGranularity {
+export function granularityFor(
+  query: CalculatorQuery,
+  period: CalculatorPeriod,
+): ReportGranularity {
   if (query.granularity && query.granularity !== 'AUTO') return query.granularity;
   const days = (period.endDate - period.startDate) / 86_400_000;
   if (days <= 31) return 'DAY';
@@ -346,7 +275,10 @@ function bucketLabel(startDate: number, granularity: ReportGranularity, timeZone
       : iso;
 }
 
-export function makeBuckets(period: ReportPeriod, granularity: ReportGranularity): ReportBucket[] {
+export function makeBuckets(
+  period: CalculatorPeriod,
+  granularity: ReportGranularity,
+): ReportBucket[] {
   const timeZone = period.timeZone || 'UTC';
   const buckets: ReportBucket[] = [];
   let cursor = calendarStart(period.startDate, granularity, timeZone);
@@ -394,35 +326,10 @@ export function comparisonMetric(
   };
 }
 
-export function reportBalanceAmount(balance: ReportBalanceInput): number {
-  const value = balance.reportCurrencyBalance ?? balance.balance;
-  return round(Number.isFinite(value) ? value : 0);
-}
-
 export function isBalanceLeaf(balance: ReportBalanceInput): boolean {
   return balance.isLeafAccount !== false;
 }
 
 export function balancePath(balance: ReportBalanceInput): string[] {
   return [...(balance.accountPath ?? [balance.accountId])];
-}
-
-export function accountGroupKey(fact: ReportingFact): string {
-  return fact.accountId;
-}
-
-export function subtypeGroupKey(fact: ReportingFact): string {
-  return String(fact.accountSubtype ?? 'OTHER');
-}
-
-export function balanceSubtypeGroupKey(balance: ReportBalanceInput): string {
-  return String(balance.accountSubtype ?? 'OTHER');
-}
-
-export function reportCurrencyFor(query: ReportQuery): string | undefined {
-  return query.targetCurrency;
-}
-
-export function periodHasDate(period: ReportPeriod, timestamp: number): boolean {
-  return timestamp >= period.startDate && timestamp <= period.endDate;
 }
