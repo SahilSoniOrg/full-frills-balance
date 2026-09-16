@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { logger } from '@/src/utils/logger';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { AppIcon } from './AppIcon';
 import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';
@@ -291,10 +292,11 @@ export const AppSegmentedControl = <T extends string | number>({
 
   const handlePress = useCallback(
     (id: T) => {
-      if (disabled || disabledSet.has(id)) return;
+      if (disabled || disabledSet.has(id) || id === value) return;
+      void triggerHaptic('light');
       onChange(id);
     },
-    [disabled, disabledSet, onChange],
+    [disabled, disabledSet, onChange, value],
   );
 
   // 6. Interpolations

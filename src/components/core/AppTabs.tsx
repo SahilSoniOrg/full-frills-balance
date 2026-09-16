@@ -1,8 +1,10 @@
 import { Opacity, Spacing } from '@/src/constants';
-import { Box, Stack, Text } from '@/src/design-system';
+import { Box, Text } from '@/src/design-system';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { memo } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { triggerHaptic } from '@/src/utils/haptics';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface TabOption<T extends string | number = string> {
   id: T;
@@ -17,9 +19,10 @@ interface AppTabsProps<T extends string | number> {
   testID?: string;
 }
 
+type TabLayout = { x: number; width: number };
+
 /**
- * AppTabs - A shared tab navigation component with a modern underline indicator.
- * Optimized for use in feature headers like Hub and Commitments.
+ * AppTabs - Shared header tabs with a springing underline (matches AppSegmentedControl feel).
  */
 function AppTabsComponent<T extends string | number>({
   options,
@@ -28,6 +31,58 @@ function AppTabsComponent<T extends string | number>({
   testID,
 }: AppTabsProps<T>) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const [layouts, setLayouts] = useState<Partial<Record<string, TabLayout>>>({});
+  const [indicatorX] = useState(() => new Animated.Value(0));
+  const [indicatorWidth] = useState(() => new Animated.Value(0));
+  const hasPlacedIndicator = useRef(false);
+
+  const selectedKey = String(value);
+  const selectedLayout = layouts[selectedKey];
+
+  useEffect(() => {
+    if (!selectedLayout || selectedLayout.width <= 0) return;
+
+    if (reduceMotion || !hasPlacedIndicator.current) {
+      indicatorX.setValue(selectedLayout.x);
+      indicatorWidth.setValue(selectedLayout.width);
+      hasPlacedIndicator.current = true;
+      return;
+    }
+
+    indicatorX.stopAnimation();
+    indicatorWidth.stopAnimation();
+    Animated.parallel([
+      Animated.spring(indicatorX, {
+        toValue: selectedLayout.x,
+        useNativeDriver: false,
+        friction: 10,
+        tension: 60,
+      }),
+      Animated.spring(indicatorWidth, {
+        toValue: selectedLayout.width,
+        useNativeDriver: false,
+        friction: 10,
+        tension: 60,
+      }),
+    ]).start();
+  }, [selectedLayout, reduceMotion, indicatorX, indicatorWidth]);
+
+  const handleTabLayout = (id: T, event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    const key = String(id);
+    setLayouts(prev => {
+      const current = prev[key];
+      if (current && current.x === x && current.width === width) return prev;
+      return { ...prev, [key]: { x, width } };
+    });
+  };
+
+  const handlePress = (id: T) => {
+    if (id === value) return;
+    void triggerHaptic('light');
+    onChange(id);
+  };
 
   return (
     <Box
@@ -38,25 +93,21 @@ function AppTabsComponent<T extends string | number>({
       accessibilityRole="tablist"
       testID={testID}
     >
-      <Stack direction="row" gap="sm">
+      {/* Plain row so onLayout x/width are relative to the indicator's parent. */}
+      <View style={styles.track}>
         {options.map(option => {
           const isSelected = option.id === value;
           return (
             <TouchableOpacity
               key={option.id}
-              onPress={() => onChange(option.id)}
+              onPress={() => handlePress(option.id)}
+              onLayout={event => handleTabLayout(option.id, event)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               accessibilityLabel={option.label}
               activeOpacity={Opacity.heavy}
               testID={testID ? `${testID}-item-${option.id}` : `tab-item-${option.id}`}
-              style={[
-                styles.tab,
-                isSelected && {
-                  borderBottomColor: theme.primary,
-                  borderBottomWidth: 2,
-                },
-              ]}
+              style={styles.tab}
             >
               <Box flexDirection="row" alignItems="center" gap="xs">
                 <Text
@@ -91,16 +142,42 @@ function AppTabsComponent<T extends string | number>({
             </TouchableOpacity>
           );
         })}
-      </Stack>
+        {selectedLayout ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.indicator,
+              {
+                backgroundColor: theme.primary,
+                width: indicatorWidth,
+                transform: [{ translateX: indicatorX }],
+              },
+            ]}
+            testID={testID ? `${testID}-indicator` : 'tab-indicator'}
+          />
+        ) : null}
+      </View>
     </Box>
   );
 }
 
 const styles = StyleSheet.create({
+  track: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: -1, // Overlap with container border
+  },
   tab: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    marginBottom: -1, // Overlap with container border
+  },
+  indicator: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    height: 2,
   },
 });
 
