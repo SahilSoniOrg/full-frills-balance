@@ -340,6 +340,7 @@ jest.mock('react-native-reanimated', () => {
     FadeOut: { duration: jest.fn(() => ({ delay: jest.fn() })) },
     SlideInRight: { duration: jest.fn(() => ({ delay: jest.fn() })) },
     SlideOutLeft: { duration: jest.fn(() => ({ delay: jest.fn() })) },
+    Easing: { out: jest.fn(fn => fn), inOut: jest.fn(fn => fn), cubic: 'cubic' },
   };
 });
 

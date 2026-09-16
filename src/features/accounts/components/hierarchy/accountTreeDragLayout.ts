@@ -1,48 +1,34 @@
+import { Spacing, Typography } from '@/src/constants';
 import type { AccountId } from '@/src/types/ids';
 import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTreeProjection';
 import type { AccountTreeDropKind } from '@/src/services/accounts/accountTreeTargets';
+
+export const ACCOUNT_TREE_ROW_MIN_HEIGHT = 56;
+export const ACCOUNT_TREE_SECTION_HEADER_HEIGHT =
+  Spacing.lg + Math.round(Typography.sizes.xs * Typography.lineHeights.tight) + Spacing.sm;
 
 export interface AccountTreeVisualHover {
   hoveredAccountId: AccountId;
   kind: AccountTreeDropKind;
 }
 
-export interface AccountTreeDragLayout {
-  rows: readonly FlattenedAccountTreeRow[];
-  activeSubtreeAccountIds: ReadonlySet<AccountId>;
-  activeTranslationAdjustment: number;
-}
-
 export type AccountTreeRowHeightSource = number | ReadonlyMap<AccountId, number>;
 
-const DEFAULT_ROW_HEIGHT = 56;
-
-/**
- * Headers are rendered inside the first root row of each type. During a drag,
- * that first row can change, so rebuild the labels from the projected order.
- */
-function normalizeSectionLabels(
-  rows: readonly FlattenedAccountTreeRow[],
-): FlattenedAccountTreeRow[] {
-  const labelsByType = new Map<string, string>();
-  for (const row of rows) {
-    if (row.accountType && row.sectionLabel) labelsByType.set(row.accountType, row.sectionLabel);
-  }
-
-  const seenTypes = new Set<string>();
-  return rows.map(row => {
-    if (row.depth !== 0 || !row.accountType) return { ...row, sectionLabel: undefined };
-    if (seenTypes.has(row.accountType)) return { ...row, sectionLabel: undefined };
-    seenTypes.add(row.accountType);
-    return { ...row, sectionLabel: labelsByType.get(row.accountType) };
-  });
+export interface AccountTreeDragDisplacements {
+  activeSubtreeAccountIds: ReadonlySet<AccountId>;
+  /** translateY for non-active rows that make room for the landing slot */
+  displacements: ReadonlyMap<AccountId, number>;
+  /** Content-space offset from the origin slot to the landing gap */
+  settleTranslationY: number;
 }
 
 function resolveRowHeight(
   row: FlattenedAccountTreeRow,
   source: AccountTreeRowHeightSource,
 ): number {
-  return typeof source === 'number' ? source : (source.get(row.accountId) ?? DEFAULT_ROW_HEIGHT);
+  return typeof source === 'number'
+    ? source
+    : (source.get(row.accountId) ?? ACCOUNT_TREE_ROW_MIN_HEIGHT);
 }
 
 function getRowTop(
@@ -110,19 +96,55 @@ function getDisplayedSubtreeEnd(
   return endIndex;
 }
 
+function getAccountTreeDragBoundaryIndex(
+  rows: readonly FlattenedAccountTreeRow[],
+  hover: AccountTreeVisualHover,
+  hoveredIndex: number,
+): number {
+  return hover.kind === 'child' || hover.kind === 'outside'
+    ? getDisplayedSubtreeEnd(rows, hoveredIndex)
+    : hoveredIndex + (hover.kind === 'sibling-after' ? 1 : 0);
+}
+
+/** Insertion boundary used for make-room / settle — stable key for haptic + thrash guards. */
+export function getAccountTreeDragInsertionKey(
+  rows: readonly FlattenedAccountTreeRow[],
+  hover: AccountTreeVisualHover | null,
+): string | null {
+  if (!hover) return null;
+  const hoveredIndex = rows.findIndex(row => row.accountId === hover.hoveredAccountId);
+  if (hoveredIndex < 0) return null;
+  return String(getAccountTreeDragBoundaryIndex(rows, hover, hoveredIndex));
+}
+
+export interface ResolveAccountTreeVisualHoverOptions {
+  /** Rows to ignore (usually the lifted subtree sitting over its origin slot). */
+  skipAccountIds?: ReadonlySet<AccountId>;
+  /** Prior hover — used for sticky zone hysteresis so make-room doesn't thrash. */
+  previous?: AccountTreeVisualHover | null;
+}
+
+const ZONE_BEFORE_ENTER = 0.28;
+const ZONE_BEFORE_EXIT = 0.36;
+const ZONE_AFTER_ENTER = 0.72;
+const ZONE_AFTER_EXIT = 0.64;
+const ZONE_MID = 0.5;
+
 /**
- * Resolves drop intent from the flattened, visible tree rather than treating a
- * parent as one ordinary row. The last visible child exposes the parent's
- * outside slot, so an expanded parent has distinct before / child / after
- * targets.
+ * Resolves drop intent from the flattened source tree. Expanded parents expose
+ * distinct before / child / outside slots; sticky zones prevent make-room thrash.
  */
 export function resolveAccountTreeVisualHover(
   rows: readonly FlattenedAccountTreeRow[],
   contentY: number,
   rowHeights: AccountTreeRowHeightSource,
   canReceiveChildren: (accountId: AccountId) => boolean,
+  options: ResolveAccountTreeVisualHoverOptions = {},
 ): AccountTreeVisualHover | null {
   if (rows.length === 0) return null;
+  const skipAccountIds = options.skipAccountIds;
+  const previous = options.previous ?? null;
+
   let hoveredIndex = 0;
   let hoveredTop = 0;
   for (let index = 0; index < rows.length; index += 1) {
@@ -133,12 +155,15 @@ export function resolveAccountTreeVisualHover(
     if (contentY < hoveredTop + height || index === rows.length - 1) break;
     hoveredTop += height;
   }
+
   const hovered = rows[hoveredIndex];
-  if (!hovered) return null;
+  if (!hovered || skipAccountIds?.has(hovered.accountId)) return null;
+
   const rowHeight = resolveRowHeight(hovered, rowHeights);
   const relativeY = Math.max(0, Math.min(rowHeight, contentY - hoveredTop));
+  const relativeRatio = rowHeight > 0 ? relativeY / rowHeight : 0;
 
-  if (relativeY > rowHeight * 0.5) {
+  if (relativeRatio > ZONE_MID) {
     for (let index = hoveredIndex - 1; index >= 0; index -= 1) {
       const parent = rows[index];
       if (
@@ -146,79 +171,109 @@ export function resolveAccountTreeVisualHover(
         parent.childCount > 0 &&
         getDisplayedSubtreeEnd(rows, index) === hoveredIndex + 1
       ) {
+        if (skipAccountIds?.has(parent.accountId)) return null;
         return { hoveredAccountId: parent.accountId, kind: 'outside' };
       }
     }
   }
 
   if (canReceiveChildren(hovered.accountId)) {
-    if (relativeY < rowHeight * 0.28) {
+    const stickySame = previous?.hoveredAccountId === hovered.accountId;
+    if (stickySame && previous.kind === 'sibling-before' && relativeRatio < ZONE_BEFORE_EXIT) {
       return { hoveredAccountId: hovered.accountId, kind: 'sibling-before' };
     }
-    if (hovered.childCount === 0 && relativeY > rowHeight * 0.72) {
+    if (
+      stickySame &&
+      previous.kind === 'sibling-after' &&
+      hovered.childCount === 0 &&
+      relativeRatio > ZONE_AFTER_EXIT
+    ) {
+      return { hoveredAccountId: hovered.accountId, kind: 'sibling-after' };
+    }
+    if (
+      stickySame &&
+      previous.kind === 'child' &&
+      relativeRatio >= ZONE_BEFORE_ENTER &&
+      (hovered.childCount > 0 || relativeRatio <= ZONE_AFTER_ENTER)
+    ) {
+      return { hoveredAccountId: hovered.accountId, kind: 'child' };
+    }
+    if (relativeRatio < ZONE_BEFORE_ENTER) {
+      return { hoveredAccountId: hovered.accountId, kind: 'sibling-before' };
+    }
+    if (hovered.childCount === 0 && relativeRatio > ZONE_AFTER_ENTER) {
       return { hoveredAccountId: hovered.accountId, kind: 'sibling-after' };
     }
     return { hoveredAccountId: hovered.accountId, kind: 'child' };
   }
 
-  if (relativeY > rowHeight * 0.5) {
+  if (relativeRatio > ZONE_MID) {
     return { hoveredAccountId: hovered.accountId, kind: 'sibling-after' };
   }
 
   return { hoveredAccountId: hovered.accountId, kind: 'sibling-before' };
 }
 
+function emptyDisplacements(
+  activeSubtreeAccountIds: ReadonlySet<AccountId> = new Set(),
+): AccountTreeDragDisplacements {
+  return { activeSubtreeAccountIds, displacements: new Map(), settleTranslationY: 0 };
+}
+
 /**
- * Repositions the dragged visible subtree in the list itself. The active row
- * remains visually under the finger via the returned translation adjustment.
- * This deliberately avoids leaving an animated transform's empty source slot.
+ * Keeps FlashList order stable and returns transform displacements so siblings
+ * slide into a live gap while the active subtree floats under the finger.
  */
-export function projectAccountTreeDragLayout(
+export function getAccountTreeDragDisplacements(
   rows: readonly FlattenedAccountTreeRow[],
   activeAccountId: AccountId | null,
   hover: AccountTreeVisualHover | null,
   rowHeights: AccountTreeRowHeightSource,
-): AccountTreeDragLayout {
-  if (!activeAccountId || !hover) {
-    return { rows, activeSubtreeAccountIds: new Set(), activeTranslationAdjustment: 0 };
-  }
+): AccountTreeDragDisplacements {
+  if (!activeAccountId) return emptyDisplacements();
 
   const activeStart = rows.findIndex(row => row.accountId === activeAccountId);
-  const hoveredIndex = rows.findIndex(row => row.accountId === hover.hoveredAccountId);
-  if (activeStart < 0 || hoveredIndex < 0) {
-    return { rows, activeSubtreeAccountIds: new Set(), activeTranslationAdjustment: 0 };
-  }
+  if (activeStart < 0) return emptyDisplacements();
 
   const activeEnd = getDisplayedSubtreeEnd(rows, activeStart);
-  const boundaryIndex =
-    hover.kind === 'child' || hover.kind === 'outside'
-      ? getDisplayedSubtreeEnd(rows, hoveredIndex)
-      : hoveredIndex + (hover.kind === 'sibling-after' ? 1 : 0);
-  const activeRows = rows.slice(activeStart, activeEnd);
-  const activeSubtreeAccountIds = new Set(activeRows.map(row => row.accountId));
+  const activeSubtreeAccountIds = new Set(
+    rows.slice(activeStart, activeEnd).map(row => row.accountId),
+  );
+  if (!hover) return emptyDisplacements(activeSubtreeAccountIds);
 
+  const hoveredIndex = rows.findIndex(row => row.accountId === hover.hoveredAccountId);
+  if (hoveredIndex < 0) return emptyDisplacements(activeSubtreeAccountIds);
+
+  const boundaryIndex = getAccountTreeDragBoundaryIndex(rows, hover, hoveredIndex);
   if (boundaryIndex >= activeStart && boundaryIndex <= activeEnd) {
-    return { rows, activeSubtreeAccountIds, activeTranslationAdjustment: 0 };
+    return emptyDisplacements(activeSubtreeAccountIds);
   }
 
-  const rowsWithoutActiveSubtree = [...rows.slice(0, activeStart), ...rows.slice(activeEnd)];
-  const insertionIndex =
-    boundaryIndex < activeStart ? boundaryIndex : boundaryIndex - activeRows.length;
-  const projectedRows = [
-    ...rowsWithoutActiveSubtree.slice(0, insertionIndex),
-    ...activeRows,
-    ...rowsWithoutActiveSubtree.slice(insertionIndex),
-  ];
-  const normalizedProjectedRows = normalizeSectionLabels(projectedRows);
+  const activeHeight =
+    getRowTop(rows, activeEnd, rowHeights) - getRowTop(rows, activeStart, rowHeights);
+  const displacements = new Map<AccountId, number>();
 
-  const projectedActiveIndex = normalizedProjectedRows.findIndex(
-    row => row.accountId === activeAccountId,
-  );
+  if (boundaryIndex > activeEnd) {
+    for (let index = activeEnd; index < boundaryIndex; index += 1) {
+      const row = rows[index];
+      if (row) displacements.set(row.accountId, -activeHeight);
+    }
+    return {
+      activeSubtreeAccountIds,
+      displacements,
+      settleTranslationY:
+        getRowTop(rows, boundaryIndex, rowHeights) - getRowTop(rows, activeEnd, rowHeights),
+    };
+  }
+
+  for (let index = boundaryIndex; index < activeStart; index += 1) {
+    const row = rows[index];
+    if (row) displacements.set(row.accountId, activeHeight);
+  }
   return {
-    rows: normalizedProjectedRows,
     activeSubtreeAccountIds,
-    activeTranslationAdjustment:
-      getRowTop(projectedRows, projectedActiveIndex, rowHeights) -
-      getRowTop(rows, activeStart, rowHeights),
+    displacements,
+    settleTranslationY:
+      getRowTop(rows, boundaryIndex, rowHeights) - getRowTop(rows, activeStart, rowHeights),
   };
 }
