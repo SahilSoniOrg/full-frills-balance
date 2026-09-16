@@ -20,14 +20,30 @@ type CommitmentsTab = (typeof TAB_OPTIONS)[number]['id'];
 
 function BudgetsPanel() {
   const { workplaceId } = useWorkplace();
-  const { items, isLoading, onItemPress } = useBudgetListViewModel(workplaceId);
-  return <BudgetListView items={items} isLoading={isLoading} onItemPress={onItemPress} />;
+  const { items, isLoading, error, retry, onItemPress } = useBudgetListViewModel(workplaceId);
+  return (
+    <BudgetListView
+      items={items}
+      isLoading={isLoading}
+      error={error}
+      onRetry={retry}
+      onItemPress={onItemPress}
+    />
+  );
 }
 
 function PlannedPanel() {
   const { workplaceId } = useWorkplace();
-  const { items, isLoading, onItemPress } = usePlannedPayments(workplaceId);
-  return <PlannedPaymentListView items={items} isLoading={isLoading} onItemPress={onItemPress} />;
+  const { items, isLoading, error, retry, onItemPress } = usePlannedPayments(workplaceId);
+  return (
+    <PlannedPaymentListView
+      items={items}
+      isLoading={isLoading}
+      error={error}
+      onRetry={retry}
+      onItemPress={onItemPress}
+    />
+  );
 }
 
 function CommitmentsScreen() {

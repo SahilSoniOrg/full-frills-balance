@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
 import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
-import { Icon, AppIcon, AppTabs, AppText } from '@/src/components/core';
+import { ErrorStateView, Icon, AppIcon, AppTabs, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
@@ -37,6 +37,8 @@ export function AccountsListView({
   modals,
   onCollapseAccount,
   isLoading,
+  error,
+  retry,
   netWorth,
   totalAssets,
   totalLiabilities,
@@ -200,6 +202,14 @@ export function AccountsListView({
     [selectedAccountIds, isSelectionModeActive],
   );
 
+  if (error && sections.length === 0) {
+    return (
+      <ScreenWithChrome chrome={chrome} scrollable={false}>
+        <ErrorStateView message="We could not load accounts." onRetry={retry} />
+      </ScreenWithChrome>
+    );
+  }
+
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <View style={styles.container}>
@@ -320,8 +330,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionSelectButton: {
-    paddingVertical: Spacing.xs,
-    paddingLeft: Spacing.xs,
+    minWidth: Size.touchTarget,
+    minHeight: Size.touchTarget,
     justifyContent: 'center',
     alignItems: 'center',
   },

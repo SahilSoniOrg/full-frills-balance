@@ -56,6 +56,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const {
     data: dashboardData,
     isLoading,
+    error,
+    retry,
     version,
   } = useObservable(
     () =>
@@ -305,6 +307,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onCreateAccount: actions.onCreateAccount,
     onManageHierarchy: actions.onManageHierarchy,
     isLoading,
+    error,
+    retry,
     version,
     netWorth,
     totalAssets,

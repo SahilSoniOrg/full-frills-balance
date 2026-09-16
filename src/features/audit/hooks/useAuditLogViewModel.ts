@@ -18,6 +18,8 @@ export interface AuditLogViewModel {
   entityStatusMap: ReturnType<typeof useAuditEntityStatus>;
   workplaceCurrency: string;
   isLoading: boolean;
+  error: Error | null;
+  retry: () => void;
   isFiltered: boolean;
   expandedIds: Set<string>;
   onToggleExpanded: (id: string) => void;
@@ -45,7 +47,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const { accountMap, isLoading: accountsLoading } = useAuditAccounts(workplaceId);
-  const { logs, isLoading } = useAuditLogs({ entityType, entityId, workplaceId });
+  const { logs, isLoading, error, retry } = useAuditLogs({ entityType, entityId, workplaceId });
 
   const hasData = logs.length > 0;
 
@@ -121,6 +123,8 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     entityStatusMap,
     workplaceCurrency,
     isLoading: isLoading || accountsLoading,
+    error,
+    retry,
     isFiltered,
     expandedIds,
     onToggleExpanded,

@@ -46,6 +46,8 @@ const mockChrome = {
 };
 
 const requiredViewProps = {
+  error: null,
+  retry: jest.fn(),
   onToggleSectionSelect: jest.fn(),
   onAccountActionPress: jest.fn(),
   selectedAccountIds: new Set<AccountId>(),

@@ -49,6 +49,8 @@ export interface AccountsListViewModel {
   onCreateAccount: () => void;
   onManageHierarchy: () => void;
   isLoading: boolean;
+  error: Error | null;
+  retry: () => void;
   version: number;
   netWorth: number;
   totalAssets: number;

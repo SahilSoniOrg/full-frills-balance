@@ -11,7 +11,12 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
-  const { data: items, isLoading } = useObservable<PlainPlannedPayment[]>(
+  const {
+    data: items,
+    isLoading,
+    error,
+    retry,
+  } = useObservable<PlainPlannedPayment[]>(
     () => observable,
     [workplaceId],
     [] as PlainPlannedPayment[],
@@ -29,6 +34,8 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
   return {
     items,
     isLoading,
+    error,
+    retry,
     onItemPress,
   };
 }

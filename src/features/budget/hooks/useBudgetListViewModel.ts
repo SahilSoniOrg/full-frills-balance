@@ -26,11 +26,12 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
     }),
   );
 
-  const { data: items = [], isLoading } = useObservable<BudgetItem[]>(
-    () => budgetsObservable,
-    [workplaceId],
-    [],
-  );
+  const {
+    data: items = [],
+    isLoading,
+    error,
+    retry,
+  } = useObservable<BudgetItem[]>(() => budgetsObservable, [workplaceId], []);
 
   const onItemPress = useCallback((item: BudgetItem) => {
     AppNavigation.toBudgetDetail(item.budget.id, {
@@ -40,5 +41,5 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
     });
   }, []);
 
-  return { items, isLoading, onItemPress };
+  return { items, isLoading, error, retry, onItemPress };
 }

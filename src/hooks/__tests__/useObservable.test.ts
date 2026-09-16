@@ -1,6 +1,6 @@
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, defer, of, Subject, throwError } from 'rxjs';
 import { WorkplaceId } from '@/src/types/ids';
 
 describe('useObservable', () => {
@@ -53,6 +53,32 @@ describe('useObservable', () => {
       expect(result.current.error).toEqual(error);
       expect(result.current.isLoading).toBe(false);
     });
+  });
+
+  it('should retry a failed subscription', async () => {
+    let attempts = 0;
+    const { result } = renderHook(() =>
+      useObservable(
+        () =>
+          defer(() => {
+            attempts += 1;
+            return attempts === 1 ? throwError(() => new Error('Test error')) : of('recovered');
+          }),
+        [],
+        'default',
+      ),
+    );
+
+    await waitFor(() => expect(result.current.error).toEqual(new Error('Test error')));
+
+    act(() => result.current.retry());
+
+    await waitFor(() => {
+      expect(result.current.data).toBe('recovered');
+      expect(result.current.error).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(attempts).toBe(2);
   });
 
   it('should unsubscribe on unmount', () => {
@@ -152,5 +178,30 @@ describe('useObservableWithEnrichment', () => {
       expect(result.current.error).toEqual(error);
       expect(result.current.isLoading).toBe(false);
     });
+  });
+
+  it('should retry enrichment after a failure', async () => {
+    const subject = new BehaviorSubject('raw');
+    let attempts = 0;
+    const enricher = jest.fn().mockImplementation(async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('Enrich failed');
+      return 'recovered';
+    });
+
+    const { result } = renderHook(() =>
+      useObservableWithEnrichment(() => subject, enricher, [], 'loading'),
+    );
+
+    await waitFor(() => expect(result.current.error).toEqual(new Error('Enrich failed')));
+
+    act(() => result.current.retry());
+
+    await waitFor(() => {
+      expect(result.current.data).toBe('recovered');
+      expect(result.current.error).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(attempts).toBe(2);
   });
 });

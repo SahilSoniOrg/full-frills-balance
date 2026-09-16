@@ -21,6 +21,7 @@ export interface UseObservableResult<T> {
   isLoading: boolean;
   error: Error | null;
   version: number;
+  retry: () => void;
 }
 
 function isPlaceholderInitial(value: unknown): boolean {
@@ -73,6 +74,13 @@ export function useObservable<T>(
   const [isLoading, setIsLoading] = useState(() => isPlaceholderInitial(resolvedInitialValue));
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
+  const [retryVersion, setRetryVersion] = useState(0);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRetryVersion(value => value + 1);
+  }, []);
 
   // Track options in a ref to keep them out of the dependency array safely
   const optionsRef = useRef(options);
@@ -117,9 +125,9 @@ export function useObservable<T>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, depsRevision, resolvedInitialValue]);
+  }, [stableFactory, depsRevision, resolvedInitialValue, retryVersion]);
 
-  return { data, isLoading, error, version };
+  return { data, isLoading, error, version, retry };
 }
 
 /**
@@ -159,6 +167,13 @@ export function useObservableWithEnrichment<T, E>(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
+  const [retryVersion, setRetryVersion] = useState(0);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRetryVersion(value => value + 1);
+  }, []);
 
   // Track refs to keep them out of the dependency array safely
   const optionsRef = useRef(options);
@@ -214,7 +229,7 @@ export function useObservableWithEnrichment<T, E>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, stableEnricher, depsRevision]);
+  }, [stableFactory, stableEnricher, depsRevision, retryVersion]);
 
-  return { data, isLoading, error, version };
+  return { data, isLoading, error, version, retry };
 }

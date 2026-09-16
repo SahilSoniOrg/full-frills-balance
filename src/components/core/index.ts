@@ -53,6 +53,8 @@ export type { LoadingViewProps } from '@/src/components/shared/LoadingView';
 
 export { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 export type { EmptyStateViewProps } from '@/src/components/shared/EmptyStateView';
+export { ErrorStateView } from '@/src/components/shared/ErrorStateView';
+export type { ErrorStateViewProps } from '@/src/components/shared/ErrorStateView';
 
 export { AppToggle } from './AppToggle';
 export type { AppToggleProps } from './AppToggle';

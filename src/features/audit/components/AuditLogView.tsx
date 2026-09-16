@@ -1,4 +1,4 @@
-import { Icon, AppIcon, EmptyStateView, LoadingView } from '@/src/components/core';
+import { EmptyStateView, ErrorStateView, Icon, AppIcon, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
@@ -16,6 +16,8 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
     entityStatusMap,
     workplaceCurrency,
     isLoading,
+    error,
+    retry,
     expandedIds,
     onToggleExpanded,
     onView,
@@ -25,7 +27,9 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
   return (
     <ScreenWithChrome chrome={chrome}>
       <View style={styles.viewContent}>
-        {isLoading ? (
+        {error && logs.length === 0 ? (
+          <ErrorStateView message="We could not load audit history." onRetry={retry} />
+        ) : isLoading ? (
           <LoadingView loading={isLoading} />
         ) : logs.length === 0 ? (
           <View style={styles.emptyContainer}>

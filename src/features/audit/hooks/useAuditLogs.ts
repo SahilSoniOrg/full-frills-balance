@@ -18,6 +18,7 @@ export function useAuditLogs(params: {
     data: rawLogs,
     isLoading,
     error,
+    retry,
     version,
   } = useObservable(
     () =>
@@ -38,5 +39,5 @@ export function useAuditLogs(params: {
     canRevert: log.canRevert,
   }));
 
-  return { logs, isLoading, error, version };
+  return { logs, isLoading, error, retry, version };
 }

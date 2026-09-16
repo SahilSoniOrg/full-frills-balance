@@ -1,4 +1,4 @@
-import { EmptyStateView, LoadingView } from '@/src/components/core';
+import { EmptyStateView, ErrorStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
@@ -8,14 +8,22 @@ import { StyleSheet, View } from 'react-native';
 export type PlannedPaymentListViewProps = {
   items: PlainPlannedPayment[];
   isLoading: boolean;
+  error: Error | null;
+  onRetry: () => void;
   onItemPress: (item: PlainPlannedPayment) => void;
 };
 
 export function PlannedPaymentListView({
   items,
   isLoading,
+  error,
+  onRetry,
   onItemPress,
 }: PlannedPaymentListViewProps) {
+  if (error && items.length === 0) {
+    return <ErrorStateView message="We could not load planned payments." onRetry={onRetry} />;
+  }
+
   if (isLoading && items.length === 0) {
     return (
       <View style={styles.loadingContainer}>
